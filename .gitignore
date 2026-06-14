@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+
+# Flutter and editor-generated files are handled by app-level ignore files.

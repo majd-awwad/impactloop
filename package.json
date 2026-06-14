@@ -1,0 +1,17 @@
+{
+  "name": "impactloop",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "workspaces": [
+    "apps/backend"
+  ],
+  "scripts": {
+    "backend:dev": "npm run dev -w apps/backend",
+    "backend:build": "npm run build -w apps/backend",
+    "backend:typecheck": "npm run typecheck -w apps/backend"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
