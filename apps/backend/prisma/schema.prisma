@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -42,24 +41,24 @@ enum RoleInvitationStatus {
 }
 
 model User {
-  id              String              @id @default(cuid())
-  displayName     String              @map("display_name")
-  email           String              @unique
-  phone           String?             @unique
-  passwordHash    String              @map("password_hash")
-  accountStatus   AccountStatus       @default(PENDING_VERIFICATION) @map("account_status")
-  profileImageUrl String?             @map("profile_image_url")
-  emailVerifiedAt DateTime?           @map("email_verified_at")
-  phoneVerifiedAt DateTime?           @map("phone_verified_at")
-  lastLoginAt     DateTime?           @map("last_login_at")
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
+  id              String               @id @default(cuid())
+  displayName     String               @map("display_name")
+  email           String               @unique
+  phone           String?              @unique
+  passwordHash    String               @map("password_hash")
+  accountStatus   AccountStatus        @default(PENDING_VERIFICATION) @map("account_status")
+  profileImageUrl String?              @map("profile_image_url")
+  emailVerifiedAt DateTime?            @map("email_verified_at")
+  phoneVerifiedAt DateTime?            @map("phone_verified_at")
+  lastLoginAt     DateTime?            @map("last_login_at")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
   roles           UserRoleAssignment[]
   authTokens      AuthToken[]
   learnerProfile  LearnerProfile?
   supplierProfile SupplierProfile?
-  invitedRoles    RoleInvitation[]    @relation("RoleInvitationInvitedBy")
-  usedInvitations RoleInvitation[]    @relation("RoleInvitationUsedByUser")
+  invitedRoles    RoleInvitation[]     @relation("RoleInvitationInvitedBy")
+  usedInvitations RoleInvitation[]     @relation("RoleInvitationUsedByUser")
   assignedRoles   UserRoleAssignment[] @relation("UserRoleAssignedBy")
 
   @@map("users")
@@ -152,20 +151,20 @@ model SupplierProfile {
 }
 
 model Location {
-  id                 String            @id @default(cuid())
-  country            String
-  city               String
-  area               String?
-  addressLine        String?           @map("address_line")
-  latitude           Decimal?          @db.Decimal(9, 6)
-  longitude          Decimal?          @db.Decimal(9, 6)
-  location           Unsupported("geography(Point,4326)")?
-  locationType       String?           @map("location_type")
-  visibility         String?           @default("PRIVATE")
-  isApproximate      Boolean           @default(true) @map("is_approximate")
-  createdAt          DateTime          @default(now()) @map("created_at")
-  updatedAt          DateTime          @updatedAt @map("updated_at")
-  supplierPickupFor  SupplierProfile[] @relation("SupplierDefaultPickupLocation")
+  id                String                                @id @default(cuid())
+  country           String
+  city              String
+  area              String?
+  addressLine       String?                               @map("address_line")
+  latitude          Decimal?                              @db.Decimal(9, 6)
+  longitude         Decimal?                              @db.Decimal(9, 6)
+  location          Unsupported("geography(Point,4326)")?
+  locationType      String?                               @map("location_type")
+  visibility        String?                               @default("PRIVATE")
+  isApproximate     Boolean                               @default(true) @map("is_approximate")
+  createdAt         DateTime                              @default(now()) @map("created_at")
+  updatedAt         DateTime                              @updatedAt @map("updated_at")
+  supplierPickupFor SupplierProfile[]                     @relation("SupplierDefaultPickupLocation")
 
   @@index([country, city])
   @@map("locations")
