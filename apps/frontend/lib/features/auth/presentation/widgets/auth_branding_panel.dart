@@ -18,9 +18,9 @@ class AuthBrandingPanel extends StatelessWidget {
   final AuthBrandingVariant variant;
 
   static const _features = [
-    (Icons.inventory_2_outlined, 'Find reusable materials nearby'),
-    (Icons.lightbulb_outline, 'Build projects smarter'),
-    (Icons.recycling_outlined, 'Reduce waste with every reservation'),
+    (Icons.inventory_2, 'Find reusable materials nearby'),
+    (Icons.lightbulb, 'Build projects smarter'),
+    (Icons.recycling, 'Reduce waste with every reservation'),
   ];
 
   @override

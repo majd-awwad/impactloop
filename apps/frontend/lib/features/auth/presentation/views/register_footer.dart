@@ -5,8 +5,8 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_link_button.dart';
 
-class LoginFooter extends StatelessWidget {
-  const LoginFooter({super.key});
+class RegisterFooter extends StatelessWidget {
+  const RegisterFooter({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,13 +15,13 @@ class LoginFooter extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: AppSpacing.xs,
       children: [
-        Text('New to ImpactLoop?', style: AppTextStyles.body(context)),
+        Text('Already have an account?', style: AppTextStyles.body(context)),
         UnconstrainedBox(
           constrainedAxis: Axis.horizontal,
           child: AppLinkButton(
-            label: 'Create account',
+            label: 'Sign in',
             alignment: Alignment.center,
-            onPressed: () => context.go('/register'),
+            onPressed: () => context.go('/login'),
           ),
         ),
       ],
