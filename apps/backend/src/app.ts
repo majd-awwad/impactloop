@@ -11,10 +11,20 @@ import { invitationsRouter } from './modules/invitations/invitations.routes.js';
 
 export const app = express();
 
-app.use(helmet());
+const isProduction = env.nodeEnv === 'production';
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: isProduction ? { policy: 'same-origin' } : false,
+  }),
+);
 app.use(
   cors({
-    origin: env.corsOrigins.length > 0 ? env.corsOrigins : true,
+    origin: isProduction
+      ? env.corsOrigins.length > 0
+        ? env.corsOrigins
+        : false
+      : true,
   }),
 );
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
