@@ -4,6 +4,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
+import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 
 class CompleteLearnerProfileForm extends StatefulWidget {
@@ -126,19 +127,15 @@ class _CompleteLearnerProfileFormState extends State<CompleteLearnerProfileForm>
           AppTextField(
             controller: _interestsController,
             label: 'Interests (optional)',
-            hint: 'Robotics, woodworking, electronics…',
+            hint: 'Arduino, robotics, electronics',
             textInputAction: TextInputAction.next,
-            minLines: 2,
-            maxLines: 3,
           ),
           const AppFieldGap(),
-          AppTextField(
+          AppTextArea(
             controller: _bioController,
             label: 'Bio (optional)',
             hint: 'Tell others a little about your learning goals',
             textInputAction: TextInputAction.done,
-            minLines: 3,
-            maxLines: 4,
             onFieldSubmitted: (_) => _handleSubmit(),
           ),
           const SizedBox(height: AppSpacing.lg),

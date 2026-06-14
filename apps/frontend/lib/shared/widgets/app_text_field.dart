@@ -37,6 +37,7 @@ class AppTextField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
+        floatingLabelBehavior: FloatingLabelBehavior.always,
       ),
       keyboardType: keyboardType,
       textInputAction: textInputAction,

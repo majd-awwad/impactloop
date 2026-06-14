@@ -4,6 +4,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
+import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 
 class CompleteSupplierProfileForm extends StatefulWidget {
@@ -102,19 +103,19 @@ class _CompleteSupplierProfileFormState
             },
           ),
           const AppFieldGap(),
-          AppTextField(
+          AppTextArea(
             controller: _descriptionController,
             label: 'Short description (optional)',
             hint: 'What kinds of materials do you usually share?',
             textInputAction: TextInputAction.next,
             minLines: 2,
-            maxLines: 3,
+            maxLines: 4,
           ),
           const AppFieldGap(),
           AppTextField(
             controller: _pickupAreaController,
             label: 'Pickup area / location',
-            hint: 'City, campus area, or neighborhood',
+            hint: 'Nablus, Rafidia',
             textInputAction: TextInputAction.done,
             onFieldSubmitted: (_) => _handleSubmit(),
             validator: (value) {

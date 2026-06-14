@@ -80,14 +80,17 @@ class _FormPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: AppColors.background,
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.xl,
-          ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.xl,
+        ),
+        child: Align(
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: AppSpacing.authFormMaxWidth),
+            constraints: const BoxConstraints(
+              maxWidth: AppSpacing.authFormMaxWidth,
+            ),
             child: child,
           ),
         ),

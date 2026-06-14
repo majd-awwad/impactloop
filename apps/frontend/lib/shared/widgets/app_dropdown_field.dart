@@ -26,6 +26,7 @@ class AppDropdownField<T> extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
+        floatingLabelBehavior: FloatingLabelBehavior.always,
       ),
       items: items,
       onChanged: onChanged,
