@@ -128,6 +128,8 @@ const createAuthSession = async (
   };
 };
 
+export const createAuthSessionForUser = createAuthSession;
+
 export const registerUser = async (
   input: RegisterInput,
 ): Promise<AuthResult> => {

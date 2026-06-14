@@ -31,4 +31,5 @@ export const env = {
   jwtAccessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   passwordResetExpiresIn: process.env.PASSWORD_RESET_EXPIRES_IN ?? '1h',
+  invitationExpiresIn: process.env.INVITATION_EXPIRES_IN ?? '7d',
 };

@@ -7,6 +7,7 @@ import { errorMiddleware } from './middlewares/error.middleware.js';
 import { notFoundMiddleware } from './middlewares/not-found.middleware.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { healthRouter } from './modules/health/health.routes.js';
+import { invitationsRouter } from './modules/invitations/invitations.routes.js';
 
 export const app = express();
 
@@ -21,6 +22,7 @@ app.use(express.json());
 
 app.use('/health', healthRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/invitations', invitationsRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
