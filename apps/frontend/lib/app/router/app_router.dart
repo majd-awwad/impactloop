@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/pages/choose_role_page.dart';
+import '../../features/auth/presentation/pages/complete_learner_profile_page.dart';
+import '../../features/auth/presentation/pages/complete_supplier_profile_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
@@ -13,6 +16,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: '/choose-role',
+        builder: (context, state) => const ChooseRolePage(),
+      ),
+      GoRoute(
+        path: '/complete-learner-profile',
+        builder: (context, state) {
+          final isBothIntent = state.uri.queryParameters['intent'] == 'both';
+
+          return CompleteLearnerProfilePage(
+            showSupplierNextHint: isBothIntent,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/complete-supplier-profile',
+        builder: (context, state) => const CompleteSupplierProfilePage(),
       ),
     ],
   );

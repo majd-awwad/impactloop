@@ -14,6 +14,8 @@ class AppTextField extends StatelessWidget {
     this.validator,
     this.autofillHints,
     this.onFieldSubmitted,
+    this.minLines,
+    this.maxLines,
   });
 
   final TextEditingController controller;
@@ -25,6 +27,8 @@ class AppTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final Iterable<String>? autofillHints;
   final ValueChanged<String>? onFieldSubmitted;
+  final int? minLines;
+  final int? maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +44,8 @@ class AppTextField extends StatelessWidget {
       validator: validator,
       autofillHints: autofillHints,
       onFieldSubmitted: onFieldSubmitted,
+      minLines: minLines,
+      maxLines: maxLines ?? (minLines != null ? null : 1),
     );
   }
 }
