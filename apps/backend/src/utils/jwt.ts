@@ -60,11 +60,15 @@ export const verifyRefreshToken = (token: string): RefreshTokenPayload => {
 };
 
 export const getRefreshTokenExpiry = (): Date => {
+  return new Date(Date.now() + getRefreshTokenMaxAgeMs());
+};
+
+export const getRefreshTokenMaxAgeMs = (): number => {
   const duration = env.jwtRefreshExpiresIn;
   const match = duration.match(/^(\d+)([smhd])$/);
 
   if (!match) {
-    return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    return 7 * 24 * 60 * 60 * 1000;
   }
 
   const amount = Number(match[1]);
@@ -77,5 +81,5 @@ export const getRefreshTokenExpiry = (): Date => {
     d: 24 * 60 * 60 * 1000,
   };
 
-  return new Date(Date.now() + amount * multipliers[unit]!);
+  return amount * multipliers[unit]!;
 };

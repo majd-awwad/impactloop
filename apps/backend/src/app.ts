@@ -25,6 +25,7 @@ app.use(
         ? env.corsOrigins
         : false
       : true,
+    credentials: true,
   }),
 );
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
