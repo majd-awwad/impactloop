@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../application/auth_controller.dart';
+import '../../application/registration_draft_notifier.dart';
+import '../../data/models/registration_draft.dart';
+import '../models/registration_intent.dart';
 
-class CompleteLearnerProfileForm extends StatefulWidget {
+class CompleteLearnerProfileForm extends ConsumerStatefulWidget {
   const CompleteLearnerProfileForm({
     super.key,
     this.showSupplierNextHint = false,
@@ -16,11 +23,12 @@ class CompleteLearnerProfileForm extends StatefulWidget {
   final bool showSupplierNextHint;
 
   @override
-  State<CompleteLearnerProfileForm> createState() =>
+  ConsumerState<CompleteLearnerProfileForm> createState() =>
       _CompleteLearnerProfileFormState();
 }
 
-class _CompleteLearnerProfileFormState extends State<CompleteLearnerProfileForm> {
+class _CompleteLearnerProfileFormState
+    extends ConsumerState<CompleteLearnerProfileForm> {
   final _formKey = GlobalKey<FormState>();
   final _interestsController = TextEditingController();
   final _bioController = TextEditingController();
@@ -49,6 +57,12 @@ class _CompleteLearnerProfileFormState extends State<CompleteLearnerProfileForm>
     super.dispose();
   }
 
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -56,23 +70,67 @@ class _CompleteLearnerProfileFormState extends State<CompleteLearnerProfileForm>
 
     setState(() => _isSubmitting = true);
 
-    // Placeholder only — API integration will replace this in a later step.
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    final intent = ref.read(registrationDraftProvider).intent;
+    final draftNotifier = ref.read(registrationDraftProvider.notifier);
 
-    if (!mounted) {
+    draftNotifier.setLearnerProfile(
+      LearnerProfileDraft(
+        learnerType: _learnerType!,
+        skillLevel: _skillLevel!,
+        interests: parseInterestsInput(_interestsController.text),
+        bio: _bioController.text.trim().isEmpty
+            ? null
+            : _bioController.text.trim(),
+      ),
+    );
+
+    if (intent == RegistrationIntent.both) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isSubmitting = false);
+      context.go('/complete-supplier-profile?intent=both');
       return;
     }
 
-    setState(() => _isSubmitting = false);
+    final request = draftNotifier.toRegisterRequest();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Learner profile placeholder: $_learnerType, $_skillLevel'
-          '${widget.showSupplierNextHint ? ' (BOTH flow — supplier profile next)' : ''}',
-        ),
-      ),
-    );
+    if (request == null) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isSubmitting = false);
+      _showError('Registration details are incomplete. Please start again.');
+      context.go('/register');
+      return;
+    }
+
+    try {
+      await ref.read(authControllerProvider.notifier).register(request);
+      ref.read(registrationDraftProvider.notifier).clear();
+
+      if (!mounted) {
+        return;
+      }
+
+      context.go('/home');
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isSubmitting = false);
+      _showError(error.displayMessage);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isSubmitting = false);
+      _showError('Something went wrong. Please try again.');
+    }
   }
 
   @override

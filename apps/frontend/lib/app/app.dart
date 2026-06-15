@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
+import '../features/auth/application/auth_providers.dart';
 
 class ImpactLoopApp extends ConsumerWidget {
   const ImpactLoopApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(authNetworkBootstrapProvider);
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(

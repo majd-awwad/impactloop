@@ -1,0 +1,167 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/errors/api_exception.dart';
+import '../data/auth_repository.dart';
+import '../data/models/register_request.dart';
+import '../data/models/user.dart';
+import 'auth_providers.dart';
+
+class AuthState {
+  const AuthState({
+    this.user,
+    this.accessToken,
+    this.isLoading = false,
+    this.error,
+  });
+
+  final User? user;
+  final String? accessToken;
+  final bool isLoading;
+  final ApiException? error;
+
+  bool get isAuthenticated =>
+      accessToken != null && accessToken!.isNotEmpty && user != null;
+
+  AuthState copyWith({
+    User? user,
+    String? accessToken,
+    bool? isLoading,
+    ApiException? error,
+    bool clearError = false,
+    bool clearUser = false,
+  }) {
+    return AuthState(
+      user: clearUser ? null : user ?? this.user,
+      accessToken: accessToken ?? this.accessToken,
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : error ?? this.error,
+    );
+  }
+}
+
+class AuthController extends Notifier<AuthState> {
+  @override
+  AuthState build() => const AuthState();
+
+  AuthRepository get _repository => ref.read(authRepositoryProvider);
+
+  void clearError() {
+    if (state.error != null) {
+      state = state.copyWith(clearError: true);
+    }
+  }
+
+  Future<User> register(RegisterRequest request) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      final user = await _repository.register(request);
+
+      state = AuthState(
+        user: user,
+        accessToken: _repository.accessToken,
+        isLoading: false,
+      );
+
+      return user;
+    } on ApiException catch (error) {
+      state = state.copyWith(isLoading: false, error: error);
+      rethrow;
+    } catch (error) {
+      final apiError = ApiException(message: error.toString());
+      state = state.copyWith(isLoading: false, error: apiError);
+      throw apiError;
+    }
+  }
+
+  Future<User> login({
+    required String email,
+    required String password,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      final user = await _repository.login(email: email, password: password);
+
+      state = AuthState(
+        user: user,
+        accessToken: _repository.accessToken,
+        isLoading: false,
+      );
+
+      return user;
+    } on ApiException catch (error) {
+      state = state.copyWith(isLoading: false, error: error);
+      rethrow;
+    } catch (error) {
+      final apiError = ApiException(message: error.toString());
+      state = state.copyWith(isLoading: false, error: apiError);
+      throw apiError;
+    }
+  }
+
+  Future<String> refresh() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      final accessToken = await _repository.refresh();
+
+      state = state.copyWith(
+        accessToken: accessToken,
+        isLoading: false,
+      );
+
+      return accessToken;
+    } on ApiException catch (error) {
+      state = state.copyWith(isLoading: false, error: error);
+      rethrow;
+    } catch (error) {
+      final apiError = ApiException(message: error.toString());
+      state = state.copyWith(isLoading: false, error: apiError);
+      throw apiError;
+    }
+  }
+
+  Future<void> logout() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      await _repository.logout();
+      state = const AuthState(isLoading: false);
+    } on ApiException catch (error) {
+      state = AuthState(isLoading: false, error: error);
+      rethrow;
+    } catch (error) {
+      final apiError = ApiException(message: error.toString());
+      state = AuthState(isLoading: false, error: apiError);
+      throw apiError;
+    }
+  }
+
+  Future<User> loadMe() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      final user = await _repository.me();
+
+      state = state.copyWith(
+        user: user,
+        accessToken: _repository.accessToken,
+        isLoading: false,
+      );
+
+      return user;
+    } on ApiException catch (error) {
+      state = state.copyWith(isLoading: false, error: error);
+      rethrow;
+    } catch (error) {
+      final apiError = ApiException(message: error.toString());
+      state = state.copyWith(isLoading: false, error: apiError);
+      throw apiError;
+    }
+  }
+}
+
+final authControllerProvider = NotifierProvider<AuthController, AuthState>(
+  AuthController.new,
+);

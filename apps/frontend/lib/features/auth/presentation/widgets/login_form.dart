@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_link_button.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../application/auth_controller.dart';
 
-class LoginForm extends StatefulWidget {
+class LoginForm extends ConsumerStatefulWidget {
   const LoginForm({super.key});
 
   @override
-  State<LoginForm> createState() => _LoginFormState();
+  ConsumerState<LoginForm> createState() => _LoginFormState();
 }
 
-class _LoginFormState extends State<LoginForm> {
+class _LoginFormState extends ConsumerState<LoginForm> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -25,6 +29,12 @@ class _LoginFormState extends State<LoginForm> {
     super.dispose();
   }
 
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -32,22 +42,32 @@ class _LoginFormState extends State<LoginForm> {
 
     setState(() => _isSubmitting = true);
 
-    // Placeholder only — API integration will replace this in a later step.
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    try {
+      await ref.read(authControllerProvider.notifier).login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-    if (!mounted) {
-      return;
+      if (!mounted) {
+        return;
+      }
+
+      context.go('/home');
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isSubmitting = false);
+      _showError(error.displayMessage);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isSubmitting = false);
+      _showError('Something went wrong. Please try again.');
     }
-
-    setState(() => _isSubmitting = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Login placeholder: ${_emailController.text.trim()}',
-        ),
-      ),
-    );
   }
 
   @override

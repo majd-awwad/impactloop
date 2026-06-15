@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../application/registration_draft_notifier.dart';
 
-class RegisterForm extends StatefulWidget {
+class RegisterForm extends ConsumerStatefulWidget {
   const RegisterForm({super.key});
 
   @override
-  State<RegisterForm> createState() => _RegisterFormState();
+  ConsumerState<RegisterForm> createState() => _RegisterFormState();
 }
 
-class _RegisterFormState extends State<RegisterForm> {
+class _RegisterFormState extends ConsumerState<RegisterForm> {
   final _formKey = GlobalKey<FormState>();
   final _displayNameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -37,22 +40,21 @@ class _RegisterFormState extends State<RegisterForm> {
 
     setState(() => _isSubmitting = true);
 
-    // Placeholder only — API integration will replace this in a later step.
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    final phone = _phoneController.text.trim();
+
+    ref.read(registrationDraftProvider.notifier).setBasicInfo(
+      displayName: _displayNameController.text.trim(),
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      phone: phone.isEmpty ? null : phone,
+    );
 
     if (!mounted) {
       return;
     }
 
     setState(() => _isSubmitting = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Register placeholder: ${_emailController.text.trim()}',
-        ),
-      ),
-    );
+    context.go('/choose-role');
   }
 
   @override

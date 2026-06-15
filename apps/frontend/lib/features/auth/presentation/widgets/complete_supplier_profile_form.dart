@@ -1,22 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../application/auth_controller.dart';
+import '../../application/registration_draft_notifier.dart';
+import '../../data/models/registration_draft.dart';
 
-class CompleteSupplierProfileForm extends StatefulWidget {
+class CompleteSupplierProfileForm extends ConsumerStatefulWidget {
   const CompleteSupplierProfileForm({super.key});
 
   @override
-  State<CompleteSupplierProfileForm> createState() =>
+  ConsumerState<CompleteSupplierProfileForm> createState() =>
       _CompleteSupplierProfileFormState();
 }
 
 class _CompleteSupplierProfileFormState
-    extends State<CompleteSupplierProfileForm> {
+    extends ConsumerState<CompleteSupplierProfileForm> {
   final _formKey = GlobalKey<FormState>();
   final _publicNameController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -40,6 +46,12 @@ class _CompleteSupplierProfileFormState
     super.dispose();
   }
 
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -47,23 +59,56 @@ class _CompleteSupplierProfileFormState
 
     setState(() => _isSubmitting = true);
 
-    // Placeholder only — API integration will replace this in a later step.
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    final draftNotifier = ref.read(registrationDraftProvider.notifier);
 
-    if (!mounted) {
+    draftNotifier.setSupplierProfile(
+      SupplierProfileDraft(
+        supplierType: _supplierType!,
+        publicName: _publicNameController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        pickupArea: _pickupAreaController.text.trim(),
+      ),
+    );
+
+    final request = draftNotifier.toRegisterRequest();
+
+    if (request == null) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isSubmitting = false);
+      _showError('Registration details are incomplete. Please start again.');
+      context.go('/register');
       return;
     }
 
-    setState(() => _isSubmitting = false);
+    try {
+      await ref.read(authControllerProvider.notifier).register(request);
+      ref.read(registrationDraftProvider.notifier).clear();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Supplier profile placeholder: $_supplierType, '
-          '${_publicNameController.text.trim()}',
-        ),
-      ),
-    );
+      if (!mounted) {
+        return;
+      }
+
+      context.go('/home');
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isSubmitting = false);
+      _showError(error.displayMessage);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isSubmitting = false);
+      _showError('Something went wrong. Please try again.');
+    }
   }
 
   @override
