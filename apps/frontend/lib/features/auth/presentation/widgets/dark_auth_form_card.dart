@@ -68,16 +68,42 @@ class DarkAuthFormCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AuthDarkDecorations.glassSurface(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          child,
-          if (footer != null) ...[
-            const SizedBox(height: AppSpacing.lg),
-            footer!,
-          ],
+    return Container(
+      decoration: BoxDecoration(
+        color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.96),
+        borderRadius: AppRadius.xlAll,
+        border: Border.all(color: AuthDarkColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: AuthDarkColors.background.withValues(alpha: 0.28),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
         ],
+      ),
+      child: AuthDarkDecorations.glassSurface(
+        borderRadius: AppRadius.xlAll,
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        useBlur: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: 4,
+              width: 72,
+              decoration: BoxDecoration(
+                color: AuthDarkColors.accent,
+                borderRadius: AppRadius.pillAll,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            child,
+            if (footer != null) ...[
+              const SizedBox(height: AppSpacing.lg),
+              footer!,
+            ],
+          ],
+        ),
       ),
     );
   }

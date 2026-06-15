@@ -22,15 +22,15 @@ abstract final class AuthDarkDecorations {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      AuthDarkColors.gradientStart,
-      Color(0xFF0F2922),
+      AuthDarkColors.backgroundElevated,
+      Color(0xFF10362E),
       AuthDarkColors.background,
     ],
   );
 
   static BoxDecoration glassCard({BorderRadius? borderRadius}) {
     return BoxDecoration(
-      color: AuthDarkColors.surface,
+      color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.94),
       borderRadius: borderRadius ?? AppRadius.lgAll,
       border: Border.all(color: AuthDarkColors.border),
     );
@@ -47,7 +47,7 @@ abstract final class AuthDarkDecorations {
   );
 
   static List<Widget> backgroundBlobs({bool compact = false}) {
-    final size = compact ? 120.0 : 220.0;
+    final size = compact ? 96.0 : 180.0;
 
     return [
       Positioned(
@@ -83,16 +83,26 @@ abstract final class AuthDarkDecorations {
     required Widget child,
     EdgeInsetsGeometry? padding,
     BorderRadius? borderRadius,
+    bool useBlur = false,
   }) {
+    final content = Container(
+      padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
+      decoration: glassCard(borderRadius: borderRadius),
+      child: child,
+    );
+
+    if (!useBlur) {
+      return ClipRRect(
+        borderRadius: borderRadius ?? AppRadius.lgAll,
+        child: content,
+      );
+    }
+
     return ClipRRect(
       borderRadius: borderRadius ?? AppRadius.lgAll,
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
-          decoration: glassCard(borderRadius: borderRadius),
-          child: child,
-        ),
+        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+        child: content,
       ),
     );
   }

@@ -44,14 +44,17 @@ class DarkAuthTextField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: const TextStyle(color: AuthDarkColors.textSecondary),
+        labelStyle: const TextStyle(
+          color: AuthDarkColors.textSecondary,
+          fontWeight: FontWeight.w500,
+        ),
         hintStyle: const TextStyle(color: AuthDarkColors.textMuted),
         floatingLabelBehavior: FloatingLabelBehavior.always,
         filled: true,
         fillColor: AuthDarkColors.surfaceSolid,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: AppSpacing.md,
+          vertical: 18,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: AppRadius.mdAll,

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/auth_dark_colors.dart';
+import '../../../../app/theme/auth_dark_decorations.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import 'auth_entry_branding_panel.dart';
 
@@ -26,33 +28,46 @@ class DarkAuthShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewportSize = MediaQuery.sizeOf(context);
-    final useSplitLayout = viewportSize.width >= _splitBreakpoint;
+    final useSplitLayout =
+        viewportSize.width >= _splitBreakpoint && viewportSize.height >= 760;
     final useCompactSpacing = viewportSize.height < 820;
 
     return Scaffold(
       backgroundColor: AuthDarkColors.landingBackground,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AuthDarkDecorations.pageGradient,
+        ),
+        child: Stack(
           children: [
-            EntryNavBar(
-              showSignIn: showSignIn,
-              showCreateAccount: showCreateAccount,
+            ...AuthDarkDecorations.backgroundBlobs(
+              compact: viewportSize.width < 900,
             ),
-            Expanded(
-              child: useSplitLayout
-                  ? _SplitBody(
-                      brandingVariant: brandingVariant,
-                      formMaxWidth: formMaxWidth,
-                      compactSpacing: useCompactSpacing,
-                      child: formContent,
-                    )
-                  : _ScrollBody(
-                      brandingVariant: brandingVariant,
-                      formMaxWidth: formMaxWidth,
-                      compactSpacing: useCompactSpacing,
-                      child: formContent,
-                    ),
+            SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  EntryNavBar(
+                    showSignIn: showSignIn,
+                    showCreateAccount: showCreateAccount,
+                  ),
+                  Expanded(
+                    child: useSplitLayout
+                        ? _SplitBody(
+                            brandingVariant: brandingVariant,
+                            formMaxWidth: formMaxWidth,
+                            compactSpacing: useCompactSpacing,
+                            child: formContent,
+                          )
+                        : _ScrollBody(
+                            brandingVariant: brandingVariant,
+                            formMaxWidth: formMaxWidth,
+                            compactSpacing: useCompactSpacing,
+                            child: formContent,
+                          ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -81,25 +96,28 @@ class _SplitBody extends StatelessWidget {
         AppSpacing.lg,
         compactSpacing ? AppSpacing.lg : AppSpacing.xl,
         AppSpacing.lg,
-        compactSpacing ? AppSpacing.md : AppSpacing.lg,
+        compactSpacing ? AppSpacing.md : AppSpacing.xl,
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1140),
+          constraints: const BoxConstraints(maxWidth: 1200),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: AuthEntryBrandingPanel(variant: brandingVariant),
+                flex: 11,
+                child: AuthEntryBrandingPanel(
+                  variant: brandingVariant,
+                  compact: compactSpacing,
+                ),
               ),
               SizedBox(width: compactSpacing ? AppSpacing.xl : AppSpacing.xxl),
               Expanded(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: formMaxWidth),
-                    child: child,
-                  ),
+                flex: 9,
+                child: _FormStage(
+                  formMaxWidth: formMaxWidth,
+                  compact: compactSpacing,
+                  child: child,
                 ),
               ),
             ],
@@ -146,6 +164,37 @@ class _ScrollBody extends StatelessWidget {
               child,
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FormStage extends StatelessWidget {
+  const _FormStage({
+    required this.formMaxWidth,
+    required this.child,
+    this.compact = false,
+  });
+
+  final double formMaxWidth;
+  final Widget child;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(compact ? AppSpacing.md : AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.78),
+        borderRadius: AppRadius.xlAll,
+        border: Border.all(color: AuthDarkColors.border),
+      ),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: formMaxWidth),
+          child: child,
         ),
       ),
     );

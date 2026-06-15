@@ -6,7 +6,7 @@ import '../theme/auth_dark_colors.dart';
 import '../theme/auth_dark_decorations.dart';
 import '../theme/auth_dark_text_styles.dart';
 
-/// Hero workshop photo with a glass stats overlay.
+/// Hero workshop photo with premium impact overlays.
 class HeroWorkshopVisual extends StatelessWidget {
   const HeroWorkshopVisual({super.key});
 
@@ -16,181 +16,367 @@ class HeroWorkshopVisual extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: AppRadius.xlAll,
-      child: Stack(
-        children: [
-          AspectRatio(
-            aspectRatio: 4 / 3,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset(
-                  _heroImageAsset,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AuthDarkColors.surfaceSolid,
-                            AuthDarkColors.backgroundElevated,
-                          ],
-                        ),
-                        border: Border.all(color: AuthDarkColors.border),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.image_not_supported_outlined,
-                          color: AuthDarkColors.textMuted,
-                          size: 48,
-                        ),
-                      ),
-                    );
-                  },
+      child: AspectRatio(
+        aspectRatio: 4 / 5,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _BackgroundImage(),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AuthDarkColors.background.withValues(alpha: 0.28),
+                    AuthDarkColors.background.withValues(alpha: 0.18),
+                    AuthDarkColors.background.withValues(alpha: 0.9),
+                  ],
+                  stops: const [0.0, 0.35, 1.0],
                 ),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        AuthDarkColors.background.withValues(alpha: 0.15),
-                        AuthDarkColors.background.withValues(alpha: 0.72),
-                      ],
-                      stops: const [0.45, 0.72, 1.0],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            left: AppSpacing.md,
-            right: AppSpacing.md,
-            bottom: AppSpacing.md,
-            child: AuthDarkDecorations.glassSurface(
-              borderRadius: AppRadius.lgAll,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final stacked = constraints.maxWidth < 340;
-
-                  if (stacked) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _impactBlurbSection(context),
-                        const SizedBox(height: AppSpacing.md),
-                        _statsSection(context),
-                      ],
-                    );
-                  }
-
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: _impactBlurbSection(context)),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(child: _statsSection(context)),
-                    ],
-                  );
-                },
               ),
+            ),
+            const Positioned(
+              top: AppSpacing.lg,
+              right: AppSpacing.lg,
+              child: _ImpactBadge(),
+            ),
+            Positioned(
+              left: AppSpacing.lg,
+              right: AppSpacing.lg,
+              bottom: AppSpacing.lg,
+              child: _ImpactCard(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BackgroundImage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      HeroWorkshopVisual._heroImageAsset,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: AuthDarkDecorations.pageGradient,
+          ),
+          child: Stack(
+            children: [
+              ...AuthDarkDecorations.backgroundBlobs(),
+              const Positioned.fill(
+                child: _AbstractWorkshopPattern(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ImpactBadge extends StatelessWidget {
+  const _ImpactBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.9),
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: AuthDarkColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.auto_awesome, size: 16, color: AuthDarkColors.accent),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            'Impact first',
+            style: AuthDarkTextStyles.body(context).copyWith(
+              color: AuthDarkColors.textPrimary,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _impactBlurbSection(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AuthDarkColors.accentSoft,
-            boxShadow: [
-              BoxShadow(
-                color: AuthDarkColors.accent.withValues(alpha: 0.25),
-                blurRadius: 16,
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.eco,
-            color: AuthDarkColors.accent,
-            size: 22,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Column(
+class _ImpactCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      decoration: BoxDecoration(
+        color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.94),
+        borderRadius: AppRadius.xlAll,
+        border: Border.all(color: AuthDarkColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Make an impact',
-                style: AuthDarkTextStyles.title(context).copyWith(fontSize: 16),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AuthDarkColors.accentSoft,
+                  borderRadius: AppRadius.mdAll,
+                ),
+                child: const Icon(
+                  Icons.eco_rounded,
+                  color: AuthDarkColors.accent,
+                  size: 20,
+                ),
               ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Every reuse helps reduce waste and build a better tomorrow.',
-                style: AuthDarkTextStyles.body(context),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Make an impact',
+                      style: AuthDarkTextStyles.title(context).copyWith(
+                        fontSize: 22,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Every successful reuse turns overlooked materials into '
+                      'projects, prototypes, and practical learning.',
+                      style: AuthDarkTextStyles.body(context).copyWith(
+                        color: AuthDarkColors.textPrimary.withValues(alpha: 0.88),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: AppSpacing.lg),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stacked = constraints.maxWidth < 360;
+
+              if (stacked) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _PrimaryMetric(maxWidth: constraints.maxWidth),
+                    const SizedBox(height: AppSpacing.md),
+                    const _ImpactTrendCard(),
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    flex: 6,
+                    child: _PrimaryMetric(maxWidth: constraints.maxWidth),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  const Expanded(
+                    flex: 4,
+                    child: _ImpactTrendCard(),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: const [
+              _MiniStatPill(label: 'Learners', value: '1.8k'),
+              _MiniStatPill(label: 'Suppliers', value: '320'),
+              _MiniStatPill(label: 'Saved kg', value: '46t'),
+            ],
+          ),
+        ],
+      ),
     );
   }
+}
 
-  Widget _statsSection(BuildContext context) {
+class _PrimaryMetric extends StatelessWidget {
+  const _PrimaryMetric({required this.maxWidth});
+
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Materials reused',
-          style: AuthDarkTextStyles.label(context),
-        ),
+        Text('Materials reused', style: AuthDarkTextStyles.label(context)),
         const SizedBox(height: AppSpacing.xs),
         Text(
           '12,584+',
           style: AuthDarkTextStyles.display(context).copyWith(
-            fontSize: 28,
-            color: AuthDarkColors.textPrimary,
+            fontSize: maxWidth < 360 ? 34 : 42,
+            height: 1.0,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
+        const SizedBox(height: AppSpacing.md),
+        const _ImpactBar(),
+      ],
+    );
+  }
+}
+
+class _ImpactTrendCard extends StatelessWidget {
+  const _ImpactTrendCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.9),
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: AuthDarkColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Monthly lift', style: AuthDarkTextStyles.label(context)),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            '+18%',
+            style: AuthDarkTextStyles.title(context).copyWith(
+              fontSize: 28,
+              color: AuthDarkColors.accent,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Momentum from workshop and campus reuse activity.',
+            style: AuthDarkTextStyles.body(context),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImpactBar extends StatelessWidget {
+  const _ImpactBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 64,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AuthDarkColors.backgroundElevated.withValues(alpha: 0.92),
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: AuthDarkColors.border),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Container(
-                height: 28,
-                decoration: BoxDecoration(
-                  borderRadius: AppRadius.smAll,
-                  gradient: LinearGradient(
-                    colors: [
-                      AuthDarkColors.accent.withValues(alpha: 0.15),
-                      AuthDarkColors.accent.withValues(alpha: 0.65),
+            constraints.maxWidth < 220
+                ? Text(
+                    'Reuse trend',
+                    style: AuthDarkTextStyles.label(context).copyWith(
+                      color: AuthDarkColors.accent,
+                    ),
+                  )
+                : Row(
+                    children: [
+                      Text(
+                        'Reuse trend',
+                        style: AuthDarkTextStyles.label(context),
+                      ),
+                      const Spacer(),
+                      Flexible(
+                        child: Text(
+                          'Steady growth',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
+                          style: AuthDarkTextStyles.label(context).copyWith(
+                            color: AuthDarkColors.accent,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                ),
-                child: CustomPaint(
-                  painter: _SparklinePainter(),
-                ),
+            const SizedBox(height: AppSpacing.sm),
+            const Expanded(
+              child: _ImpactTrendLine(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ImpactTrendLine extends StatelessWidget {
+  const _ImpactTrendLine();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.centerLeft,
+      children: [
+        Container(
+          height: 6,
+          decoration: BoxDecoration(
+            color: AuthDarkColors.surfaceSolid,
+            borderRadius: AppRadius.pillAll,
+          ),
+        ),
+        FractionallySizedBox(
+          widthFactor: 0.84,
+          child: Container(
+            height: 6,
+            decoration: BoxDecoration(
+              borderRadius: AppRadius.pillAll,
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  AuthDarkColors.accent.withValues(alpha: 0.5),
+                  AuthDarkColors.accent,
+                ],
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              '+18% this month',
-              style: AuthDarkTextStyles.label(context).copyWith(
-                color: AuthDarkColors.accent,
-              ),
-            ),
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: const [
+            _TrendDot(active: true),
+            _TrendDot(active: true),
+            _TrendDot(active: true),
+            _TrendDot(active: true),
+            _TrendDot(active: true),
+            _TrendDot(active: false),
           ],
         ),
       ],
@@ -198,25 +384,112 @@ class HeroWorkshopVisual extends StatelessWidget {
   }
 }
 
-class _SparklinePainter extends CustomPainter {
+class _TrendDot extends StatelessWidget {
+  const _TrendDot({required this.active});
+
+  final bool active;
+
   @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AuthDarkColors.textOnAccent
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round;
-
-    final path = Path()
-      ..moveTo(0, size.height * 0.75)
-      ..lineTo(size.width * 0.2, size.height * 0.55)
-      ..lineTo(size.width * 0.45, size.height * 0.62)
-      ..lineTo(size.width * 0.65, size.height * 0.35)
-      ..lineTo(size.width, size.height * 0.2);
-
-    canvas.drawPath(path, paint);
+  Widget build(BuildContext context) {
+    return Container(
+      width: active ? 10 : 8,
+      height: active ? 10 : 8,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: active
+            ? AuthDarkColors.accent
+            : AuthDarkColors.textMuted.withValues(alpha: 0.55),
+        border: Border.all(
+          color: active
+              ? AuthDarkColors.textPrimary.withValues(alpha: 0.2)
+              : Colors.transparent,
+        ),
+      ),
+    );
   }
+}
+
+class _MiniStatPill extends StatelessWidget {
+  const _MiniStatPill({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AuthDarkColors.chipUnselected,
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: AuthDarkColors.border),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: AuthDarkTextStyles.body(context),
+          children: [
+            TextSpan(
+              text: '$value ',
+              style: AuthDarkTextStyles.body(context).copyWith(
+                color: AuthDarkColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            TextSpan(text: label),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AbstractWorkshopPattern extends StatelessWidget {
+  const _AbstractWorkshopPattern();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          top: 60,
+          left: 48,
+          child: Container(
+            width: 110,
+            height: 110,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AuthDarkColors.blobAccent,
+            ),
+          ),
+        ),
+        Positioned(
+          top: 130,
+          right: 36,
+          child: Container(
+            width: 160,
+            height: 160,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AuthDarkColors.blobPrimary,
+            ),
+          ),
+        ),
+        Positioned(
+          left: 36,
+          right: 36,
+          bottom: 120,
+          child: Container(
+            height: 1,
+            color: AuthDarkColors.border,
+          ),
+        ),
+      ],
+    );
+  }
 }
