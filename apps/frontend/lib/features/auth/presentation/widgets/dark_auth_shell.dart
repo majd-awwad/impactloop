@@ -28,6 +28,7 @@ class DarkAuthShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewportSize = MediaQuery.sizeOf(context);
+    final isMobile = viewportSize.width < AppSpacing.authLayoutBreakpoint;
     final useSplitLayout =
         viewportSize.width >= _splitBreakpoint && viewportSize.height >= 760;
     final useCompactSpacing = viewportSize.height < 820;
@@ -63,6 +64,7 @@ class DarkAuthShell extends StatelessWidget {
                             brandingVariant: brandingVariant,
                             formMaxWidth: formMaxWidth,
                             compactSpacing: useCompactSpacing,
+                            mobile: isMobile,
                             child: formContent,
                           ),
                   ),
@@ -134,21 +136,23 @@ class _ScrollBody extends StatelessWidget {
     required this.formMaxWidth,
     required this.brandingVariant,
     required this.compactSpacing,
+    required this.mobile,
   });
 
   final Widget child;
   final double formMaxWidth;
   final AuthEntryBrandingVariant brandingVariant;
   final bool compactSpacing;
+  final bool mobile;
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        compactSpacing ? AppSpacing.lg : AppSpacing.xl,
+        mobile ? AppSpacing.md : compactSpacing ? AppSpacing.lg : AppSpacing.xl,
         AppSpacing.lg,
-        compactSpacing ? AppSpacing.lg : AppSpacing.xl,
+        mobile ? AppSpacing.lg : compactSpacing ? AppSpacing.lg : AppSpacing.xl,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -159,8 +163,9 @@ class _ScrollBody extends StatelessWidget {
               AuthEntryBrandingPanel(
                 variant: brandingVariant,
                 compact: true,
+                minimal: mobile,
               ),
-              SizedBox(height: compactSpacing ? AppSpacing.lg : AppSpacing.xl),
+              SizedBox(height: mobile ? AppSpacing.md : compactSpacing ? AppSpacing.lg : AppSpacing.xl),
               child,
             ],
           ),

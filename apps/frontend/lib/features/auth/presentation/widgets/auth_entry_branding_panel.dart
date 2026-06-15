@@ -14,10 +14,12 @@ class AuthEntryBrandingPanel extends StatelessWidget {
     super.key,
     required this.variant,
     this.compact = false,
+    this.minimal = false,
   });
 
   final AuthEntryBrandingVariant variant;
   final bool compact;
+  final bool minimal;
 
   static const _features = [
     (Icons.search_rounded, 'Find usable parts'),
@@ -44,7 +46,11 @@ class AuthEntryBrandingPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final padding = compact ? AppSpacing.lg : AppSpacing.xl;
+    final padding = minimal
+        ? AppSpacing.md
+        : compact
+        ? AppSpacing.lg
+        : AppSpacing.xl;
 
     return Container(
       padding: EdgeInsets.all(padding),
@@ -66,16 +72,30 @@ class AuthEntryBrandingPanel extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ImpactLoopLogo(compact: compact),
-              SizedBox(height: compact ? AppSpacing.md : AppSpacing.xl),
-              _Eyebrow(label: _spotlightLabel),
-              const SizedBox(height: AppSpacing.md),
-              _Headline(middle: _headlineMiddle, compact: compact),
-              const SizedBox(height: AppSpacing.md),
+              ImpactLoopLogo(compact: compact, showWordmark: !minimal),
+              SizedBox(
+                height: minimal
+                    ? AppSpacing.sm
+                    : compact
+                    ? AppSpacing.md
+                    : AppSpacing.xl,
+              ),
+              if (!minimal) ...[
+                _Eyebrow(label: _spotlightLabel),
+                const SizedBox(height: AppSpacing.md),
+              ],
+              _Headline(
+                middle: _headlineMiddle,
+                compact: compact,
+                minimal: minimal,
+              ),
+              SizedBox(height: minimal ? AppSpacing.sm : AppSpacing.md),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 520),
                 child: Text(
                   _description,
+                  maxLines: minimal ? 2 : null,
+                  overflow: minimal ? TextOverflow.ellipsis : TextOverflow.visible,
                   style: compact
                       ? AuthDarkTextStyles.body(context).copyWith(
                           color: AuthDarkColors.textPrimary.withValues(alpha: 0.82),
@@ -85,35 +105,44 @@ class AuthEntryBrandingPanel extends StatelessWidget {
                         ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              if (compact)
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final feature in _features) ...[
-                        _FeatureChip(icon: feature.$1, label: feature.$2),
-                        const SizedBox(width: AppSpacing.sm),
+              if (minimal) ...[
+                const SizedBox(height: AppSpacing.md),
+                _FeatureChip(
+                  icon: _features.first.$1,
+                  label: _features.first.$2,
+                  compact: true,
+                ),
+              ] else ...[
+                const SizedBox(height: AppSpacing.lg),
+                if (compact)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final feature in _features) ...[
+                          _FeatureChip(icon: feature.$1, label: feature.$2),
+                          const SizedBox(width: AppSpacing.sm),
+                        ],
                       ],
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      for (final feature in _features)
+                        _FeatureChip(icon: feature.$1, label: feature.$2),
                     ],
                   ),
-                )
-              else
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    for (final feature in _features)
-                      _FeatureChip(icon: feature.$1, label: feature.$2),
-                  ],
-                ),
-              const SizedBox(height: AppSpacing.lg),
-              if (compact)
-                const _CompactSignalCard()
-              else ...[
-                const _SignalStage(),
                 const SizedBox(height: AppSpacing.lg),
-                _MissionStrip(variant: variant),
+                if (compact)
+                  const _CompactSignalCard()
+                else ...[
+                  const _SignalStage(),
+                  const SizedBox(height: AppSpacing.lg),
+                  _MissionStrip(variant: variant),
+                ],
               ],
             ],
           ),
@@ -151,19 +180,24 @@ class _Eyebrow extends StatelessWidget {
 }
 
 class _Headline extends StatelessWidget {
-  const _Headline({required this.middle, this.compact = false});
+  const _Headline({
+    required this.middle,
+    this.compact = false,
+    this.minimal = false,
+  });
 
   final String middle;
   final bool compact;
+  final bool minimal;
 
   @override
   Widget build(BuildContext context) {
     return RichText(
       text: TextSpan(
         style: AuthDarkTextStyles.brandingHeadline(context).copyWith(
-          fontSize: compact ? 28 : 42,
+          fontSize: minimal ? 24 : compact ? 28 : 42,
           height: 1.08,
-          letterSpacing: compact ? -1.0 : -1.2,
+          letterSpacing: minimal ? -0.8 : compact ? -1.0 : -1.2,
         ),
         children: [
           const TextSpan(text: 'Learn. '),
@@ -179,16 +213,21 @@ class _Headline extends StatelessWidget {
 }
 
 class _FeatureChip extends StatelessWidget {
-  const _FeatureChip({required this.icon, required this.label});
+  const _FeatureChip({
+    required this.icon,
+    required this.label,
+    this.compact = false,
+  });
 
   final IconData icon;
   final String label;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? AppSpacing.sm : AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
@@ -203,6 +242,7 @@ class _FeatureChip extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Text(
             label,
+            overflow: TextOverflow.ellipsis,
             style: AuthDarkTextStyles.chip(context).copyWith(
               color: AuthDarkColors.textPrimary,
             ),

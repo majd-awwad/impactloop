@@ -68,6 +68,8 @@ class DarkAuthFormCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = MediaQuery.sizeOf(context).width < 420;
+
     return Container(
       decoration: BoxDecoration(
         color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.96),
@@ -83,23 +85,23 @@ class DarkAuthFormCard extends StatelessWidget {
       ),
       child: AuthDarkDecorations.glassSurface(
         borderRadius: AppRadius.xlAll,
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(isCompact ? AppSpacing.md : AppSpacing.lg),
         useBlur: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
               height: 4,
-              width: 72,
+              width: isCompact ? 56 : 72,
               decoration: BoxDecoration(
                 color: AuthDarkColors.accent,
                 borderRadius: AppRadius.pillAll,
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            SizedBox(height: isCompact ? AppSpacing.md : AppSpacing.lg),
             child,
             if (footer != null) ...[
-              const SizedBox(height: AppSpacing.lg),
+              SizedBox(height: isCompact ? AppSpacing.md : AppSpacing.lg),
               footer!,
             ],
           ],

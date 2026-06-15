@@ -58,6 +58,7 @@ class _HeroContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final isNarrow = MediaQuery.sizeOf(context).width < 520;
     final isCompactPhone = MediaQuery.sizeOf(context).width < 640;
+    final isMobileHero = MediaQuery.sizeOf(context).width < 700;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,10 +161,32 @@ class _HeroContent extends StatelessWidget {
                   ),
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth < 560) {
+        if (!isMobileHero) ...[
+          const SizedBox(height: AppSpacing.lg),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 560) {
+                return const Row(
+                  children: [
+                    Expanded(
+                      child: _HeroMetricCard(
+                        label: 'Materials reused',
+                        value: '12.5k+',
+                        icon: Icons.recycling_rounded,
+                      ),
+                    ),
+                    SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: _HeroMetricCard(
+                        label: 'Active makers',
+                        value: '420+',
+                        icon: Icons.groups_rounded,
+                      ),
+                    ),
+                  ],
+                );
+              }
+
               return const Row(
                 children: [
                   Expanded(
@@ -183,77 +206,57 @@ class _HeroContent extends StatelessWidget {
                   ),
                 ],
               );
-            }
-
-            return const Row(
-              children: [
-                Expanded(
-                  child: _HeroMetricCard(
-                    label: 'Materials reused',
-                    value: '12.5k+',
-                    icon: Icons.recycling_rounded,
-                  ),
-                ),
-                SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: _HeroMetricCard(
-                    label: 'Active makers',
-                    value: '420+',
-                    icon: Icons.groups_rounded,
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: AuthDarkColors.surface.withValues(alpha: 0.6),
-            borderRadius: AppRadius.lgAll,
-            border: Border.all(color: AuthDarkColors.border),
+            },
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 88,
-                height: 36,
-                child: Stack(
-                  children: [
-                    for (var index = 0; index < 4; index++)
-                      Positioned(
-                        left: index * 22.0,
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: _avatarColors[index],
-                          child: Icon(
-                            Icons.person,
-                            size: 18,
-                            color: AuthDarkColors.textOnAccent.withValues(
-                              alpha: 0.85,
+          const SizedBox(height: AppSpacing.lg),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: AuthDarkColors.surface.withValues(alpha: 0.6),
+              borderRadius: AppRadius.lgAll,
+              border: Border.all(color: AuthDarkColors.border),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 88,
+                  height: 36,
+                  child: Stack(
+                    children: [
+                      for (var index = 0; index < 4; index++)
+                        Positioned(
+                          left: index * 22.0,
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: _avatarColors[index],
+                            child: Icon(
+                              Icons.person,
+                              size: 18,
+                              color: AuthDarkColors.textOnAccent.withValues(
+                                alpha: 0.85,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Text(
-                  'Join a growing community of students, makers, and suppliers '
-                  'who are building with less waste.',
-                  style: AuthDarkTextStyles.body(context).copyWith(
-                    color: AuthDarkColors.textPrimary,
+                    ],
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    'Join a growing community of students, makers, and suppliers '
+                    'who are building with less waste.',
+                    style: AuthDarkTextStyles.body(context).copyWith(
+                      color: AuthDarkColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

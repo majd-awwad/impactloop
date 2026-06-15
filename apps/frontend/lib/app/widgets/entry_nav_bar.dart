@@ -31,6 +31,7 @@ class EntryNavBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final viewportWidth = MediaQuery.sizeOf(context).width;
     final isCompact = viewportWidth < 900;
+    final isPhone = viewportWidth < 640;
     final useCondensedDesktop = viewportWidth < 1320;
     final settings = ref.watch(appSettingsProvider);
 
@@ -46,7 +47,7 @@ class EntryNavBar extends ConsumerWidget {
           constraints: const BoxConstraints(maxWidth: 1180),
           child: DecoratedBox(
             decoration: AuthDarkDecorations.navBarDecoration.copyWith(
-              borderRadius: AppRadius.xlAll,
+              borderRadius: isPhone ? AppRadius.lgAll : AppRadius.xlAll,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.18),
@@ -57,7 +58,11 @@ class EntryNavBar extends ConsumerWidget {
             ),
             child: Padding(
               padding: EdgeInsets.all(
-                isCompact ? AppSpacing.md : AppSpacing.lg,
+                isPhone
+                    ? AppSpacing.sm
+                    : isCompact
+                    ? AppSpacing.md
+                    : AppSpacing.lg,
               ),
               child: isCompact
                   ? _MobileNavLayout(
@@ -175,41 +180,44 @@ class _MobileNavLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final width = MediaQuery.sizeOf(context).width;
+    final showCompactAction = width >= 480;
+
+    return Row(
       children: [
-        Row(
-          children: [
-            InkWell(
-              onTap: () => context.go(homeRoute),
-              borderRadius: AppRadius.mdAll,
-              child: const ImpactLoopLogo(
-                compact: true,
-                showWordmark: false,
-              ),
-            ),
-            const Spacer(),
-            _UtilityPills(settings: settings, ref: ref),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          'Learn. Reuse. Build.',
-          style: AuthDarkTextStyles.body(context).copyWith(
-            color: AuthDarkColors.textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        if (showSignIn || showCreateAccount) ...[
-          const SizedBox(height: AppSpacing.md),
-          _ActionCluster(
-            showSignIn: showSignIn,
-            showCreateAccount: showCreateAccount,
-            onSignIn: onSignIn,
-            onCreateAccount: onCreateAccount,
+        InkWell(
+          onTap: () => context.go(homeRoute),
+          borderRadius: AppRadius.mdAll,
+          child: const ImpactLoopLogo(
             compact: true,
+            showWordmark: false,
           ),
-        ],
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              alignment: WrapAlignment.end,
+              children: [
+                if (showCompactAction && showCreateAccount)
+                  _CompactNavLink(
+                    label: 'Create account',
+                    onPressed: onCreateAccount ?? () => context.go('/register'),
+                  )
+                else if (showCompactAction && showSignIn)
+                  _CompactNavLink(
+                    label: 'Sign in',
+                    onPressed: onSignIn ?? () => context.go('/login'),
+                  ),
+                _UtilityPills(settings: settings, ref: ref, compact: true),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -219,18 +227,20 @@ class _UtilityPills extends StatelessWidget {
   const _UtilityPills({
     required this.settings,
     required this.ref,
+    this.compact = false,
   });
 
   final AppSettings settings;
   final WidgetRef ref;
+  final bool compact;
 
   static const _languageOptions = ['en', 'ar'];
 
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
+      spacing: compact ? AppSpacing.xs : AppSpacing.sm,
+      runSpacing: compact ? AppSpacing.xs : AppSpacing.sm,
       alignment: WrapAlignment.end,
       children: [
         NavPillMenu<ThemeMode>(
@@ -264,14 +274,12 @@ class _ActionCluster extends StatelessWidget {
     required this.showCreateAccount,
     required this.onSignIn,
     required this.onCreateAccount,
-    this.compact = false,
   });
 
   final bool showSignIn;
   final bool showCreateAccount;
   final VoidCallback? onSignIn;
   final VoidCallback? onCreateAccount;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -281,7 +289,6 @@ class _ActionCluster extends StatelessWidget {
           label: 'Sign in',
           icon: Icons.login_rounded,
           onPressed: onSignIn ?? () => context.go('/login'),
-          compact: compact,
         ),
       if (showCreateAccount)
         _NavActionButton(
@@ -289,26 +296,47 @@ class _ActionCluster extends StatelessWidget {
           icon: Icons.arrow_outward_rounded,
           onPressed: onCreateAccount ?? () => context.go('/register'),
           filled: true,
-          compact: compact,
         ),
     ];
 
-    if (!compact) {
-      return Wrap(
-        spacing: AppSpacing.sm,
-        runSpacing: AppSpacing.sm,
-        alignment: WrapAlignment.end,
-        children: buttons,
-      );
-    }
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      alignment: WrapAlignment.end,
+      children: buttons,
+    );
+  }
+}
 
-    return Row(
-      children: [
-        for (var index = 0; index < buttons.length; index++) ...[
-          Expanded(child: buttons[index]),
-          if (index < buttons.length - 1) const SizedBox(width: AppSpacing.sm),
-        ],
-      ],
+class _CompactNavLink extends StatelessWidget {
+  const _CompactNavLink({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: AuthDarkColors.textPrimary,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        minimumSize: const Size(0, 32),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(
+        label,
+        style: AuthDarkTextStyles.label(context).copyWith(
+          color: AuthDarkColors.textPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }
@@ -319,14 +347,12 @@ class _NavActionButton extends StatelessWidget {
     required this.icon,
     required this.onPressed,
     this.filled = false,
-    this.compact = false,
   });
 
   final String label;
   final IconData icon;
   final VoidCallback onPressed;
   final bool filled;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -337,7 +363,7 @@ class _NavActionButton extends StatelessWidget {
               backgroundColor: AuthDarkColors.accent,
               foregroundColor: AuthDarkColors.textOnAccent,
               padding: EdgeInsets.symmetric(
-                horizontal: compact ? AppSpacing.md : AppSpacing.lg,
+                horizontal: AppSpacing.lg,
                 vertical: AppSpacing.md,
               ),
               minimumSize: const Size(0, 46),
@@ -358,7 +384,7 @@ class _NavActionButton extends StatelessWidget {
               foregroundColor: AuthDarkColors.textPrimary,
               side: const BorderSide(color: AuthDarkColors.border),
               padding: EdgeInsets.symmetric(
-                horizontal: compact ? AppSpacing.md : AppSpacing.lg,
+                horizontal: AppSpacing.lg,
                 vertical: AppSpacing.md,
               ),
               minimumSize: const Size(0, 46),
