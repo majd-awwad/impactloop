@@ -94,6 +94,38 @@ class AppTheme {
     );
   }
 
+  static ThemeData get dark {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF2DD4BF),
+      brightness: Brightness.dark,
+    ).copyWith(
+      surface: const Color(0xFF132821),
+      onSurface: const Color(0xFFF0FDFA),
+    );
+
+    return ThemeData(
+      colorScheme: colorScheme,
+      useMaterial3: true,
+      scaffoldBackgroundColor: const Color(0xFF0B0E0E),
+      textTheme: _textTheme.apply(
+        bodyColor: const Color(0xFFF0FDFA),
+        displayColor: const Color(0xFFF0FDFA),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: const Color(0xFF132821),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+        margin: EdgeInsets.zero,
+      ),
+    );
+  }
+
   static const TextTheme _textTheme = TextTheme(
     headlineLarge: TextStyle(fontSize: 34, height: 1.15),
     headlineMedium: TextStyle(fontSize: 28, height: 1.2),

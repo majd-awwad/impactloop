@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../views/register_mobile_view.dart';
-import '../views/register_web_view.dart';
+import '../views/unified_register_views.dart';
 
 class RegisterPage extends StatelessWidget {
   const RegisterPage({super.key});
@@ -15,10 +14,10 @@ class RegisterPage extends StatelessWidget {
             constraints.maxWidth >= AppSpacing.authLayoutBreakpoint;
 
         if (useWebLayout) {
-          return const RegisterWebView();
+          return const UnifiedRegisterWebView();
         }
 
-        return const RegisterMobileView();
+        return const UnifiedRegisterMobileView();
       },
     );
   }

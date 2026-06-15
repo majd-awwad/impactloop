@@ -20,6 +20,47 @@ class RegisterRequest {
   final LearnerProfileDraft? learnerProfile;
   final SupplierProfileDraft? supplierProfile;
 
+  factory RegisterRequest.fromFormValues({
+    required RegistrationIntent intent,
+    required String displayName,
+    required String email,
+    required String password,
+    String? phone,
+    LearnerProfileDraft? learnerProfile,
+    SupplierProfileDraft? supplierProfile,
+  }) {
+    final roles = switch (intent) {
+      RegistrationIntent.learner => const ['LEARNER'],
+      RegistrationIntent.supplier => const ['SUPPLIER'],
+      RegistrationIntent.both => const ['LEARNER', 'SUPPLIER'],
+    };
+
+    final needsLearnerProfile =
+        intent == RegistrationIntent.learner ||
+        intent == RegistrationIntent.both;
+    final needsSupplierProfile =
+        intent == RegistrationIntent.supplier ||
+        intent == RegistrationIntent.both;
+
+    if (needsLearnerProfile && learnerProfile == null) {
+      throw StateError('Learner profile is required for this registration');
+    }
+
+    if (needsSupplierProfile && supplierProfile == null) {
+      throw StateError('Supplier profile is required for this registration');
+    }
+
+    return RegisterRequest(
+      displayName: displayName.trim(),
+      email: email.trim(),
+      password: password,
+      phone: phone?.trim().isEmpty ?? true ? null : phone!.trim(),
+      roles: roles,
+      learnerProfile: needsLearnerProfile ? learnerProfile : null,
+      supplierProfile: needsSupplierProfile ? supplierProfile : null,
+    );
+  }
+
   factory RegisterRequest.fromDraft(RegistrationDraft draft) {
     if (!draft.hasBasicInfo || draft.intent == null) {
       throw StateError('Registration draft is incomplete');

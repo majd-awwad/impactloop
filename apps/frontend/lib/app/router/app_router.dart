@@ -10,13 +10,18 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/landing/presentation/pages/landing_page.dart';
 
-String? registrationOnboardingRedirect(
-  Ref ref,
-  GoRouterState state,
-) {
-  final draft = ref.read(registrationDraftProvider);
+String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   final path = state.matchedLocation;
+
+  if (path != '/choose-role' &&
+      path != '/complete-learner-profile' &&
+      path != '/complete-supplier-profile') {
+    return null;
+  }
+
+  final draft = ref.read(registrationDraftProvider);
 
   if (path == '/choose-role' && !draft.hasBasicInfo) {
     return '/register';
@@ -49,7 +54,8 @@ String? registrationOnboardingRedirect(
       return '/complete-learner-profile';
     }
 
-    if (draft.intent == RegistrationIntent.both && draft.learnerProfile == null) {
+    if (draft.intent == RegistrationIntent.both &&
+        draft.learnerProfile == null) {
       return '/complete-learner-profile?intent=both';
     }
   }
@@ -59,9 +65,10 @@ String? registrationOnboardingRedirect(
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    redirect: (context, state) => registrationOnboardingRedirect(ref, state),
+    redirect: (context, state) => legacyOnboardingRedirect(ref, state),
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const HealthPage()),
+      GoRoute(path: '/', builder: (context, state) => const LandingPage()),
+      GoRoute(path: '/health', builder: (context, state) => const HealthPage()),
       GoRoute(path: '/home', builder: (context, state) => const HomePage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(
