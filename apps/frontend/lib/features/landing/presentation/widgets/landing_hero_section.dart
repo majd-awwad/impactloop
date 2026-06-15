@@ -5,7 +5,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/auth_dark_colors.dart';
 import '../../../../app/theme/auth_dark_text_styles.dart';
-import 'landing_hero_visual.dart';
+import '../../../../app/widgets/hero_workshop_visual.dart';
 
 class LandingHeroSection extends StatelessWidget {
   const LandingHeroSection({super.key});
@@ -20,7 +20,7 @@ class LandingHeroSection extends StatelessWidget {
         children: [
           Expanded(child: _HeroContent(onSignIn: () => context.go('/login'))),
           const SizedBox(width: AppSpacing.xxl),
-          const Expanded(child: LandingHeroVisual()),
+          const Expanded(child: HeroWorkshopVisual()),
         ],
       );
     }
@@ -30,7 +30,7 @@ class LandingHeroSection extends StatelessWidget {
       children: [
         _HeroContent(onSignIn: () => context.go('/login')),
         const SizedBox(height: AppSpacing.xl),
-        const LandingHeroVisual(),
+        const HeroWorkshopVisual(),
       ],
     );
   }

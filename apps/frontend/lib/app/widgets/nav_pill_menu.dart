@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_radius.dart';
-import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/auth_dark_colors.dart';
+import '../theme/auth_dark_text_styles.dart';
 
-class LandingNavPillMenu<T> extends StatelessWidget {
-  const LandingNavPillMenu({
+class NavPillMenu<T> extends StatelessWidget {
+  const NavPillMenu({
     super.key,
     required this.icon,
     required this.label,
@@ -42,7 +42,7 @@ class LandingNavPillMenu<T> extends StatelessWidget {
         )),
       ),
       builder: (context, controller, child) {
-        return _PillButton(
+        return _NavPillButton(
           icon: icon,
           label: label,
           isOpen: controller.isOpen,
@@ -102,8 +102,8 @@ class LandingNavPillMenu<T> extends StatelessWidget {
   }
 }
 
-class _PillButton extends StatelessWidget {
-  const _PillButton({
+class _NavPillButton extends StatelessWidget {
+  const _NavPillButton({
     required this.icon,
     required this.label,
     required this.isOpen,
