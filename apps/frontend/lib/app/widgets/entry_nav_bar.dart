@@ -31,7 +31,9 @@ class EntryNavBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final showSignInButton = showSignIn && MediaQuery.sizeOf(context).width >= 720;
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final isCompact = viewportWidth < 560;
+    final showSignInButton = showSignIn && viewportWidth >= 720;
     final settings = ref.watch(appSettingsProvider);
 
     return Container(
@@ -41,9 +43,9 @@ class EntryNavBar extends ConsumerWidget {
         AppSpacing.md,
         0,
       ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? AppSpacing.md : AppSpacing.lg,
+        vertical: isCompact ? AppSpacing.sm : AppSpacing.md,
       ),
       decoration: AuthDarkDecorations.navBarDecoration,
       child: Row(
@@ -51,7 +53,10 @@ class EntryNavBar extends ConsumerWidget {
           InkWell(
             onTap: () => context.go(homeRoute),
             borderRadius: AppRadius.smAll,
-            child: const ImpactLoopLogo(compact: true),
+            child: ImpactLoopLogo(
+              compact: true,
+              showWordmark: !isCompact,
+            ),
           ),
           const Spacer(),
           Flexible(

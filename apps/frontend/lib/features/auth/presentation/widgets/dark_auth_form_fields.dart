@@ -27,6 +27,7 @@ class DarkAuthDropdownField<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<T>(
       initialValue: value,
+      isExpanded: true,
       items: items,
       onChanged: onChanged,
       validator: validator,

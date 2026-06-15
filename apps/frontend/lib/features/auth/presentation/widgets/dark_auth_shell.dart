@@ -25,7 +25,9 @@ class DarkAuthShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final useSplitLayout = MediaQuery.sizeOf(context).width >= _splitBreakpoint;
+    final viewportSize = MediaQuery.sizeOf(context);
+    final useSplitLayout = viewportSize.width >= _splitBreakpoint;
+    final useCompactSpacing = viewportSize.height < 820;
 
     return Scaffold(
       backgroundColor: AuthDarkColors.landingBackground,
@@ -42,11 +44,13 @@ class DarkAuthShell extends StatelessWidget {
                   ? _SplitBody(
                       brandingVariant: brandingVariant,
                       formMaxWidth: formMaxWidth,
+                      compactSpacing: useCompactSpacing,
                       child: formContent,
                     )
                   : _ScrollBody(
                       brandingVariant: brandingVariant,
                       formMaxWidth: formMaxWidth,
+                      compactSpacing: useCompactSpacing,
                       child: formContent,
                     ),
             ),
@@ -62,20 +66,22 @@ class _SplitBody extends StatelessWidget {
     required this.child,
     required this.formMaxWidth,
     required this.brandingVariant,
+    required this.compactSpacing,
   });
 
   final Widget child;
   final double formMaxWidth;
   final AuthEntryBrandingVariant brandingVariant;
+  final bool compactSpacing;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.xl,
+        compactSpacing ? AppSpacing.lg : AppSpacing.xl,
         AppSpacing.lg,
-        AppSpacing.lg,
+        compactSpacing ? AppSpacing.md : AppSpacing.lg,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -84,19 +90,15 @@ class _SplitBody extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: SingleChildScrollView(
-                  child: AuthEntryBrandingPanel(variant: brandingVariant),
-                ),
+                child: AuthEntryBrandingPanel(variant: brandingVariant),
               ),
-              const SizedBox(width: AppSpacing.xxl),
+              SizedBox(width: compactSpacing ? AppSpacing.xl : AppSpacing.xxl),
               Expanded(
-                child: SingleChildScrollView(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: formMaxWidth),
-                      child: child,
-                    ),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: formMaxWidth),
+                    child: child,
                   ),
                 ),
               ),
@@ -113,20 +115,22 @@ class _ScrollBody extends StatelessWidget {
     required this.child,
     required this.formMaxWidth,
     required this.brandingVariant,
+    required this.compactSpacing,
   });
 
   final Widget child;
   final double formMaxWidth;
   final AuthEntryBrandingVariant brandingVariant;
+  final bool compactSpacing;
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.xl,
+        compactSpacing ? AppSpacing.lg : AppSpacing.xl,
         AppSpacing.lg,
-        AppSpacing.xl,
+        compactSpacing ? AppSpacing.lg : AppSpacing.xl,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -138,7 +142,7 @@ class _ScrollBody extends StatelessWidget {
                 variant: brandingVariant,
                 compact: true,
               ),
-              const SizedBox(height: AppSpacing.xl),
+              SizedBox(height: compactSpacing ? AppSpacing.lg : AppSpacing.xl),
               child,
             ],
           ),

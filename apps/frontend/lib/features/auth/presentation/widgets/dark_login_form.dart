@@ -36,6 +36,19 @@ class _DarkLoginFormState extends ConsumerState<DarkLoginForm> {
     );
   }
 
+  String _loginErrorMessage(ApiException error) {
+    if (error.code == 'UNAUTHENTICATED') {
+      final message = error.message.trim();
+      if (message.isNotEmpty) {
+        return message;
+      }
+
+      return 'Invalid email or password.';
+    }
+
+    return error.displayMessage;
+  }
+
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -60,7 +73,7 @@ class _DarkLoginFormState extends ConsumerState<DarkLoginForm> {
       }
 
       setState(() => _isSubmitting = false);
-      _showError(error.displayMessage);
+      _showError(_loginErrorMessage(error));
     } catch (_) {
       if (!mounted) {
         return;

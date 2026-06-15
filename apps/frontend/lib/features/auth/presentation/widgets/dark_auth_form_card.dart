@@ -21,7 +21,7 @@ class AuthIntentChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: AuthDarkColors.surface.withValues(alpha: 0),
       child: InkWell(
         onTap: onTap,
         borderRadius: AppRadius.pillAll,

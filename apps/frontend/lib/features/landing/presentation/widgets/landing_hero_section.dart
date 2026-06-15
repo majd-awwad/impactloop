@@ -42,10 +42,10 @@ class _HeroContent extends StatelessWidget {
   final VoidCallback onSignIn;
 
   static const _avatarColors = [
-    Color(0xFF2DD4BF),
-    Color(0xFF14B8A6),
-    Color(0xFF0D9488),
-    Color(0xFF115E59),
+    AuthDarkColors.accent,
+    AuthDarkColors.accentMuted,
+    AuthDarkColors.gradientMid,
+    AuthDarkColors.gradientStart,
   ];
 
   @override
