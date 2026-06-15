@@ -1,8 +1,6 @@
 import type {
   AccountStatus,
-  User,
   UserRole,
-  UserRoleAssignment,
 } from '../../generated/prisma/client.js';
 
 import { env } from '../../config/env.js';
@@ -22,7 +20,23 @@ import { generateOpaqueToken, hashToken } from '../../utils/token.js';
 
 import * as authRepository from './auth.repository.js';
 
+import { formatPickupAreaLabel } from './pickup-area.js';
+
 import type { LoginInput, RegisterInput } from './auth.validation.js';
+
+export type LearnerProfileSummary = {
+  learnerType: string;
+  skillLevel: string;
+  interests: string[];
+  bio: string | null;
+};
+
+export type SupplierProfileSummary = {
+  supplierType: string;
+  publicName: string;
+  description: string | null;
+  pickupAreaLabel: string | null;
+};
 
 export type UserSummary = {
   id: string;
@@ -32,6 +46,8 @@ export type UserSummary = {
   accountStatus: AccountStatus;
   profileImageUrl: string | null;
   roles: UserRole[];
+  learnerProfile: LearnerProfileSummary | null;
+  supplierProfile: SupplierProfileSummary | null;
   emailVerifiedAt: string | null;
   createdAt: string;
 };
@@ -56,8 +72,19 @@ const PASSWORD_RESET_SAFE_MESSAGE =
   'If an account with that email exists, password reset instructions have been sent.';
 
 const toUserSummary = (
-  user: User,
-  roles: Pick<UserRoleAssignment, 'role'>[],
+  user: {
+    id: string;
+    displayName: string;
+    email: string;
+    phone: string | null;
+    accountStatus: AccountStatus;
+    profileImageUrl: string | null;
+    emailVerifiedAt: Date | null;
+    createdAt: Date;
+    roles: { role: UserRole }[];
+    learnerProfile?: authRepository.UserWithRolesAndProfiles['learnerProfile'];
+    supplierProfile?: authRepository.UserWithRolesAndProfiles['supplierProfile'];
+  },
 ): UserSummary => ({
   id: user.id,
   displayName: user.displayName,
@@ -65,7 +92,28 @@ const toUserSummary = (
   phone: user.phone,
   accountStatus: user.accountStatus,
   profileImageUrl: user.profileImageUrl,
-  roles: roles.map((assignment) => assignment.role),
+  roles: user.roles.map((assignment) => assignment.role),
+  learnerProfile: user.learnerProfile
+    ? {
+        learnerType: user.learnerProfile.learnerType ?? '',
+        skillLevel: user.learnerProfile.skillLevel ?? '',
+        interests: user.learnerProfile.interests,
+        bio: user.learnerProfile.bio,
+      }
+    : null,
+  supplierProfile: user.supplierProfile
+    ? {
+        supplierType: user.supplierProfile.supplierType ?? '',
+        publicName: user.supplierProfile.publicName ?? '',
+        description: user.supplierProfile.description,
+        pickupAreaLabel: user.supplierProfile.defaultPickupLocation
+          ? formatPickupAreaLabel({
+              city: user.supplierProfile.defaultPickupLocation.city,
+              area: user.supplierProfile.defaultPickupLocation.area,
+            })
+          : null,
+      }
+    : null,
   emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
   createdAt: user.createdAt.toISOString(),
 });
@@ -98,7 +146,7 @@ const getPasswordResetExpiry = (): Date => {
 };
 
 const createAuthSession = async (
-  user: authRepository.UserWithRoles,
+  user: Parameters<typeof toUserSummary>[0],
 ): Promise<AuthResult> => {
   const roles = user.roles.map((assignment) => assignment.role);
   const tokenId = generateOpaqueToken();
@@ -124,7 +172,7 @@ const createAuthSession = async (
   return {
     accessToken,
     refreshToken,
-    user: toUserSummary(user, user.roles),
+    user: toUserSummary(user),
   };
 };
 
@@ -149,12 +197,14 @@ export const registerUser = async (
 
   const passwordHash = await hashPassword(input.password);
 
-  const user = await authRepository.createUserWithRole({
+  const user = await authRepository.createUserWithOnboarding({
     displayName: input.displayName,
     email: input.email,
     phone: input.phone,
     passwordHash,
-    role: input.role,
+    roles: input.roles,
+    learnerProfile: input.learnerProfile,
+    supplierProfile: input.supplierProfile,
   });
 
   return createAuthSession(user);
@@ -236,7 +286,7 @@ export const getAuthenticatedUser = async (
     throw new AppError('User not found', 404, 'NOT_FOUND');
   }
 
-  return toUserSummary(user, user.roles);
+  return toUserSummary(user);
 };
 
 export const requestPasswordReset = async (

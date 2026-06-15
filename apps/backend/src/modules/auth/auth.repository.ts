@@ -1,5 +1,8 @@
 import type {
   AuthTokenType,
+  LearnerProfile,
+  Location,
+  SupplierProfile,
   User,
   UserRole,
   UserRoleAssignment,
@@ -7,7 +10,22 @@ import type {
 
 import { prisma } from '../../database/prisma.js';
 
+import {
+  DEFAULT_PICKUP_COUNTRY,
+  parsePickupArea,
+} from './pickup-area.js';
+
 export type UserWithRoles = User & { roles: UserRoleAssignment[] };
+
+export type SupplierProfileWithLocation = SupplierProfile & {
+  defaultPickupLocation: Location | null;
+};
+
+export type UserWithRolesAndProfiles = User & {
+  roles: UserRoleAssignment[];
+  learnerProfile: LearnerProfile | null;
+  supplierProfile: SupplierProfileWithLocation | null;
+};
 
 export type UserEmailIdentity = {
   id: string;
@@ -21,8 +39,38 @@ export type PasswordResetTokenRecord = {
 
 export type RefreshTokenWithUser = {
   id: string;
-  user: UserWithRoles;
+  user: UserWithRolesAndProfiles;
 };
+
+export type RegisterOnboardingInput = {
+  displayName: string;
+  email: string;
+  phone?: string;
+  passwordHash: string;
+  roles: UserRole[];
+  learnerProfile?: {
+    learnerType: string;
+    skillLevel: string;
+    interests?: string[];
+    bio?: string;
+  };
+  supplierProfile?: {
+    supplierType: string;
+    publicName: string;
+    description?: string;
+    pickupArea: string;
+  };
+};
+
+const userWithRolesAndProfilesInclude = {
+  roles: true,
+  learnerProfile: true,
+  supplierProfile: {
+    include: {
+      defaultPickupLocation: true,
+    },
+  },
+} as const;
 
 export const findUserIdByEmail = async (
   email: string,
@@ -42,52 +90,82 @@ export const findUserIdByPhone = async (
   });
 };
 
-export const createUserWithRole = async (input: {
-  displayName: string;
-  email: string;
-  phone?: string;
-  passwordHash: string;
-  role: UserRole;
-}): Promise<UserWithRoles> => {
-  return prisma.user.create({
-    data: {
-      displayName: input.displayName,
-      email: input.email,
-      phone: input.phone,
-      passwordHash: input.passwordHash,
-      roles: {
-        create: {
-          role: input.role,
-          isPrimary: true,
+export const createUserWithOnboarding = async (
+  input: RegisterOnboardingInput,
+): Promise<UserWithRolesAndProfiles> => {
+  const roleCreates = input.roles.map((role) => ({
+    role,
+    isPrimary: input.roles.length === 1 || role === 'LEARNER',
+  }));
+
+  const parsedPickupArea = input.supplierProfile
+    ? parsePickupArea(input.supplierProfile.pickupArea)
+    : null;
+
+  return prisma.$transaction(async (tx) => {
+    return tx.user.create({
+      data: {
+        displayName: input.displayName,
+        email: input.email,
+        phone: input.phone,
+        passwordHash: input.passwordHash,
+        roles: {
+          create: roleCreates,
         },
+        ...(input.learnerProfile
+          ? {
+              learnerProfile: {
+                create: {
+                  learnerType: input.learnerProfile.learnerType,
+                  skillLevel: input.learnerProfile.skillLevel,
+                  interests: input.learnerProfile.interests ?? [],
+                  bio: input.learnerProfile.bio,
+                },
+              },
+            }
+          : {}),
+        ...(input.supplierProfile && parsedPickupArea
+          ? {
+              supplierProfile: {
+                create: {
+                  supplierType: input.supplierProfile.supplierType,
+                  publicName: input.supplierProfile.publicName,
+                  description: input.supplierProfile.description,
+                  defaultPickupLocation: {
+                    create: {
+                      country: DEFAULT_PICKUP_COUNTRY,
+                      city: parsedPickupArea.city,
+                      area: parsedPickupArea.area,
+                      isApproximate: true,
+                      visibility: 'PRIVATE',
+                    },
+                  },
+                },
+              },
+            }
+          : {}),
       },
-    },
-    include: {
-      roles: true,
-    },
+      include: userWithRolesAndProfilesInclude,
+    });
   });
 };
 
 export const findUserByEmailWithRoles = async (
   email: string,
-): Promise<UserWithRoles | null> => {
+): Promise<UserWithRolesAndProfiles | null> => {
   return prisma.user.findUnique({
     where: { email },
-    include: {
-      roles: true,
-    },
+    include: userWithRolesAndProfilesInclude,
   });
 };
 
 export const updateLastLoginAt = async (
   userId: string,
-): Promise<UserWithRoles> => {
+): Promise<UserWithRolesAndProfiles> => {
   return prisma.user.update({
     where: { id: userId },
     data: { lastLoginAt: new Date() },
-    include: {
-      roles: true,
-    },
+    include: userWithRolesAndProfilesInclude,
   });
 };
 
@@ -124,9 +202,7 @@ export const findActiveRefreshToken = async (
     select: {
       id: true,
       user: {
-        include: {
-          roles: true,
-        },
+        include: userWithRolesAndProfilesInclude,
       },
     },
   });
@@ -156,12 +232,10 @@ export const revokeRefreshTokensByHash = async (
 
 export const findUserByIdWithRoles = async (
   userId: string,
-): Promise<UserWithRoles | null> => {
+): Promise<UserWithRolesAndProfiles | null> => {
   return prisma.user.findUnique({
     where: { id: userId },
-    include: {
-      roles: true,
-    },
+    include: userWithRolesAndProfilesInclude,
   });
 };
 

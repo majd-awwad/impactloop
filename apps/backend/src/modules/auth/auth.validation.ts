@@ -4,15 +4,77 @@ import { bodyEmailSchema } from '../../utils/zod-helpers.js';
 
 export const PUBLIC_SIGNUP_ROLES = ['LEARNER', 'SUPPLIER'] as const;
 
-export const registerSchema = z.object({
-  displayName: z.string().trim().min(2).max(100),
-  email: bodyEmailSchema(),
-  password: z.string().min(8).max(128),
-  role: z.enum(PUBLIC_SIGNUP_ROLES, {
-    error: 'Registration is allowed only for LEARNER or SUPPLIER',
-  }),
-  phone: z.string().trim().min(5).max(30).optional(),
+const learnerProfileSchema = z.object({
+  learnerType: z.string().trim().min(1).max(100),
+  skillLevel: z.string().trim().min(1).max(100),
+  interests: z.array(z.string().trim().min(1).max(100)).optional(),
+  bio: z.string().trim().max(2000).optional(),
 });
+
+const supplierProfileSchema = z.object({
+  supplierType: z.string().trim().min(1).max(100),
+  publicName: z.string().trim().min(1).max(100),
+  description: z.string().trim().max(2000).optional(),
+  pickupArea: z.string().trim().min(1).max(200),
+});
+
+export const registerSchema = z
+  .object({
+    displayName: z.string().trim().min(2).max(100),
+    email: bodyEmailSchema(),
+    password: z.string().min(8).max(128),
+    phone: z.string().trim().min(5).max(30).optional(),
+    roles: z
+      .array(
+        z.enum(PUBLIC_SIGNUP_ROLES, {
+          error: 'Registration is allowed only for LEARNER or SUPPLIER',
+        }),
+      )
+      .min(1)
+      .max(2)
+      .refine(
+        (roles) => new Set(roles).size === roles.length,
+        'Duplicate roles are not allowed',
+      ),
+    learnerProfile: learnerProfileSchema.optional(),
+    supplierProfile: supplierProfileSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasLearner = data.roles.includes('LEARNER');
+    const hasSupplier = data.roles.includes('SUPPLIER');
+
+    if (hasLearner && !data.learnerProfile) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'learnerProfile is required when registering as LEARNER',
+        path: ['learnerProfile'],
+      });
+    }
+
+    if (!hasLearner && data.learnerProfile) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'learnerProfile is not allowed for SUPPLIER-only registration',
+        path: ['learnerProfile'],
+      });
+    }
+
+    if (hasSupplier && !data.supplierProfile) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'supplierProfile is required when registering as SUPPLIER',
+        path: ['supplierProfile'],
+      });
+    }
+
+    if (!hasSupplier && data.supplierProfile) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'supplierProfile is not allowed for LEARNER-only registration',
+        path: ['supplierProfile'],
+      });
+    }
+  });
 
 export const loginSchema = z.object({
   email: bodyEmailSchema(),
