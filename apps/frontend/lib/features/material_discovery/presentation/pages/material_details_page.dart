@@ -11,119 +11,191 @@ import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
-import '../../data/mock_materials.dart';
+import '../../data/mock_material_discovery_repository.dart';
+import '../../domain/mock_material.dart';
+import '../material_discovery_content.dart';
 import '../widgets/nearby_map_placeholder.dart';
 
-class MaterialDetailsPage extends StatelessWidget {
+class MaterialDetailsPage extends StatefulWidget {
   const MaterialDetailsPage({super.key, required this.materialId});
 
   final String materialId;
 
   @override
-  Widget build(BuildContext context) {
-    final material = mockMaterialById(materialId);
+  State<MaterialDetailsPage> createState() => _MaterialDetailsPageState();
+}
 
-    if (material == null) {
-      return Scaffold(
-        backgroundColor: materialPageBackground,
-        body: Center(
-          child: Text(
-            const LocalizedText(
-              en: 'Material not found',
-              ar: 'المادة غير موجودة',
-            ).resolve(context),
-            style: AppTextStyles.title(
-              context,
-            ).copyWith(color: materialTextPrimary),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
+class _MaterialDetailsPageState extends State<MaterialDetailsPage> {
+  final MockMaterialDiscoveryRepository _repository =
+      const MockMaterialDiscoveryRepository();
+  late Future<MockMaterial?> _materialFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _materialFuture = _repository.getMaterialById(widget.materialId);
+  }
+
+  @override
+  void didUpdateWidget(covariant MaterialDetailsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.materialId != widget.materialId) {
+      _materialFuture = _repository.getMaterialById(widget.materialId);
     }
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: materialPageBackground,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const EntryNavBar(
-              showSignIn: true,
-              showCreateAccount: true,
-              homeRoute: '/',
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xl),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _MaterialDetailsHero(materialId: materialId),
-                    Transform.translate(
-                      offset: const Offset(0, -34),
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.symmetric(
-                          horizontal: AppSpacing.md,
-                        ),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 1400),
-                            child: LayoutBuilder(
-                              builder: (context, constraints) {
-                                final wide = constraints.maxWidth >= 980;
+        child: FutureBuilder<MockMaterial?>(
+          future: _materialFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(
+                child: CircularProgressIndicator(color: materialMint),
+              );
+            }
 
-                                final mainColumn = _DetailsMainColumn(
-                                  materialId: materialId,
-                                );
-                                final sideColumn = _DetailsSideColumn(
-                                  materialId: materialId,
-                                );
+            if (snapshot.hasError) {
+              return _SimpleStateScaffold(
+                child: Text(
+                  const LocalizedText(
+                    en: 'Unable to load material details right now.',
+                    ar: 'تعذر تحميل تفاصيل المادة حالياً.',
+                  ).resolve(context),
+                  style: AppTextStyles.title(
+                    context,
+                  ).copyWith(color: materialTextPrimary),
+                  textAlign: TextAlign.center,
+                ),
+              );
+            }
 
-                                if (!wide) {
-                                  return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      mainColumn,
-                                      const SizedBox(height: AppSpacing.lg),
-                                      sideColumn,
-                                    ],
-                                  );
-                                }
+            final material = snapshot.data;
+            if (material == null) {
+              return _SimpleStateScaffold(
+                child: Text(
+                  const LocalizedText(
+                    en: 'Material not found',
+                    ar: 'المادة غير موجودة',
+                  ).resolve(context),
+                  style: AppTextStyles.title(
+                    context,
+                  ).copyWith(color: materialTextPrimary),
+                  textAlign: TextAlign.center,
+                ),
+              );
+            }
 
-                                return Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(flex: 7, child: mainColumn),
-                                    const SizedBox(width: AppSpacing.lg),
-                                    Expanded(flex: 4, child: sideColumn),
-                                  ],
-                                );
-                              },
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const EntryNavBar(
+                  showSignIn: true,
+                  showCreateAccount: true,
+                  homeRoute: '/',
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsetsDirectional.only(
+                      bottom: AppSpacing.xl,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _MaterialDetailsHero(material: material),
+                        Transform.translate(
+                          offset: const Offset(0, -34),
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.symmetric(
+                              horizontal: AppSpacing.md,
+                            ),
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 1400,
+                                ),
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final wide = constraints.maxWidth >= 980;
+
+                                    final mainColumn = _DetailsMainColumn(
+                                      material: material,
+                                    );
+                                    final sideColumn = _DetailsSideColumn(
+                                      material: material,
+                                    );
+
+                                    if (!wide) {
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          mainColumn,
+                                          const SizedBox(height: AppSpacing.lg),
+                                          sideColumn,
+                                        ],
+                                      );
+                                    }
+
+                                    return Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(flex: 7, child: mainColumn),
+                                        const SizedBox(width: AppSpacing.lg),
+                                        Expanded(flex: 4, child: sideColumn),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class _MaterialDetailsHero extends StatelessWidget {
-  const _MaterialDetailsHero({required this.materialId});
+class _SimpleStateScaffold extends StatelessWidget {
+  const _SimpleStateScaffold({required this.child});
 
-  final String materialId;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final material = mockMaterialById(materialId)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const EntryNavBar(
+          showSignIn: true,
+          showCreateAccount: true,
+          homeRoute: '/',
+        ),
+        Expanded(child: Center(child: child)),
+      ],
+    );
+  }
+}
+
+class _MaterialDetailsHero extends StatelessWidget {
+  const _MaterialDetailsHero({required this.material});
+
+  final MockMaterial material;
+
+  @override
+  Widget build(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final heroHeight = screenWidth >= 1100
         ? 380.0
@@ -220,14 +292,12 @@ class _MaterialDetailsHero extends StatelessWidget {
 }
 
 class _DetailsMainColumn extends StatelessWidget {
-  const _DetailsMainColumn({required this.materialId});
+  const _DetailsMainColumn({required this.material});
 
-  final String materialId;
+  final MockMaterial material;
 
   @override
   Widget build(BuildContext context) {
-    final material = mockMaterialById(materialId)!;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -332,14 +402,12 @@ class _DetailsMainColumn extends StatelessWidget {
 }
 
 class _DetailsSideColumn extends StatelessWidget {
-  const _DetailsSideColumn({required this.materialId});
+  const _DetailsSideColumn({required this.material});
 
-  final String materialId;
+  final MockMaterial material;
 
   @override
   Widget build(BuildContext context) {
-    final material = mockMaterialById(materialId)!;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -400,14 +468,14 @@ class _DetailsSideColumn extends StatelessWidget {
                     horizontal: AppSpacing.md,
                     vertical: AppSpacing.sm,
                   ),
-                    decoration: BoxDecoration(
-                      color: materialCardSurfaceAlt,
-                      borderRadius: AppRadius.pillAll,
-                      border: Border.all(color: materialBorderStrong),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                  decoration: BoxDecoration(
+                    color: materialCardSurfaceAlt,
+                    borderRadius: AppRadius.pillAll,
+                    border: Border.all(color: materialBorderStrong),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       const Icon(Icons.star_rounded, color: materialLime),
                       const SizedBox(width: AppSpacing.xs),
                       Text(
