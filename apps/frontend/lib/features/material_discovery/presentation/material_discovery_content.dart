@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/models/localized_text.dart';
-import '../domain/mock_material.dart';
+import '../domain/discovery_material.dart';
 
 const materialDiscoveryStats = <LocalizedText, String>{
   LocalizedText(en: 'Materials ready', ar: 'مواد جاهزة'): '84',
@@ -40,6 +40,6 @@ const materialQuickFilters = <LocalizedText>[
   LocalizedText(en: 'Delivery', ar: 'يوجد توصيل'),
 ];
 
-List<Color> materialGradient(MockMaterial material) {
+List<Color> materialGradient(DiscoveryMaterial material) {
   return material.cardGradient.map(Color.new).toList();
 }

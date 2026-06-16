@@ -7,7 +7,7 @@ import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
-import '../../domain/mock_material.dart';
+import '../../domain/discovery_material.dart';
 import '../material_discovery_content.dart';
 import '../widgets/material_search_filters.dart';
 import '../widgets/materials_hero_section.dart';
@@ -21,16 +21,14 @@ class MaterialsDiscoveryView extends StatefulWidget {
     this.showHeroSection = true,
     this.showNearbyMap = true,
     this.showTipPanel = true,
-    this.showEmptyStatePreview = true,
     this.cardVariant = AppMaterialCardVariant.standard,
   });
 
-  final List<MockMaterial> materials;
-  final ValueChanged<MockMaterial>? onMaterialTap;
+  final List<DiscoveryMaterial> materials;
+  final ValueChanged<DiscoveryMaterial>? onMaterialTap;
   final bool showHeroSection;
   final bool showNearbyMap;
   final bool showTipPanel;
-  final bool showEmptyStatePreview;
   final AppMaterialCardVariant cardVariant;
 
   @override
@@ -189,7 +187,7 @@ class _MaterialsDiscoveryViewState extends State<MaterialsDiscoveryView> {
     );
   }
 
-  List<MockMaterial> _filteredMaterials(BuildContext context) {
+  List<DiscoveryMaterial> _filteredMaterials(BuildContext context) {
     final normalizedSearch = _searchValue.trim().toLowerCase();
     final selectedCategory = _selectedCategoryIndex == 0
         ? null

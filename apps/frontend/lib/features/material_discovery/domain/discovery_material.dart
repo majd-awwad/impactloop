@@ -4,8 +4,8 @@ import '../../../shared/models/localized_text.dart';
 import '../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../shared/widgets/materials/material_status_badge.dart';
 
-class MockMaterial {
-  const MockMaterial({
+class DiscoveryMaterial {
+  const DiscoveryMaterial({
     required this.id,
     required this.title,
     required this.description,

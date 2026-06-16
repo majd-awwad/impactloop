@@ -1,7 +1,7 @@
-import 'mock_material.dart';
+import 'discovery_material.dart';
 
 abstract class MaterialDiscoveryRepository {
-  Future<List<MockMaterial>> getMaterials();
+  Future<List<DiscoveryMaterial>> getMaterials();
 
-  Future<MockMaterial?> getMaterialById(String id);
+  Future<DiscoveryMaterial?> getMaterialById(String id);
 }

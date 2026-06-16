@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../shared/models/localized_text.dart';
 import '../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../shared/widgets/materials/material_status_badge.dart';
-import '../domain/mock_material.dart';
+import '../domain/discovery_material.dart';
 
-const mockMaterials = <MockMaterial>[
-  MockMaterial(
+const mockMaterials = <DiscoveryMaterial>[
+  DiscoveryMaterial(
     id: 'plywood-panels',
     title: LocalizedText(
       en: 'Reclaimed Birch Plywood Panels',
@@ -43,7 +43,7 @@ const mockMaterials = <MockMaterial>[
     ratingLabel: LocalizedText(en: '4.8', ar: '4.8'),
     imageUrl: 'assets/images/materials/plywood-panels.jpg',
   ),
-  MockMaterial(
+  DiscoveryMaterial(
     id: 'arduino-sensors',
     title: LocalizedText(
       en: 'Arduino Sensors Starter Bundle',
@@ -77,7 +77,7 @@ const mockMaterials = <MockMaterial>[
     ratingLabel: LocalizedText(en: '4.9', ar: '4.9'),
     imageUrl: 'assets/images/materials/arduino-sensors.jpg',
   ),
-  MockMaterial(
+  DiscoveryMaterial(
     id: 'steel-tubes',
     title: LocalizedText(
       en: 'Powder-Coated Steel Tube Cuts',
@@ -113,7 +113,7 @@ const mockMaterials = <MockMaterial>[
     cardGradient: [0xFF48515A, 0xFF1E252B],
     imageUrl: 'assets/images/materials/steel-tubes.jpg',
   ),
-  MockMaterial(
+  DiscoveryMaterial(
     id: 'plastic-crates',
     title: LocalizedText(
       en: 'Stackable Plastic Crates',
@@ -147,7 +147,7 @@ const mockMaterials = <MockMaterial>[
     ratingLabel: LocalizedText(en: '4.6', ar: '4.6'),
     imageUrl: 'assets/images/materials/plastic-crates.jpg',
   ),
-  MockMaterial(
+  DiscoveryMaterial(
     id: 'denim-rolls',
     title: LocalizedText(
       en: 'Denim Fabric Rolls',
@@ -183,7 +183,7 @@ const mockMaterials = <MockMaterial>[
     cardGradient: [0xFF39506B, 0xFF1C2432],
     imageUrl: 'assets/images/materials/denim-rolls.jpg',
   ),
-  MockMaterial(
+  DiscoveryMaterial(
     id: 'acrylic-panels',
     title: LocalizedText(
       en: 'Clear Acrylic Display Panels',
@@ -216,7 +216,7 @@ const mockMaterials = <MockMaterial>[
     cardGradient: [0xFF1E5C63, 0xFF132730],
   ),
 ];
-MockMaterial? mockMaterialById(String id) {
+DiscoveryMaterial? mockMaterialById(String id) {
   for (final material in mockMaterials) {
     if (material.id == id) {
       return material;

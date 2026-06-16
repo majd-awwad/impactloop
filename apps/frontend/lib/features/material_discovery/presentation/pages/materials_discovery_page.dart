@@ -6,25 +6,37 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../data/mock_material_discovery_repository.dart';
-import '../../domain/mock_material.dart';
+import '../../domain/discovery_material.dart';
+import '../../domain/material_discovery_repository.dart';
 import '../views/materials_discovery_view.dart';
 
 class MaterialsDiscoveryPage extends StatefulWidget {
-  const MaterialsDiscoveryPage({super.key});
+  const MaterialsDiscoveryPage({
+    super.key,
+    MaterialDiscoveryRepository? repository,
+  }) : repository = repository ?? const MockMaterialDiscoveryRepository();
+
+  final MaterialDiscoveryRepository repository;
 
   @override
   State<MaterialsDiscoveryPage> createState() => _MaterialsDiscoveryPageState();
 }
 
 class _MaterialsDiscoveryPageState extends State<MaterialsDiscoveryPage> {
-  final MockMaterialDiscoveryRepository _repository =
-      const MockMaterialDiscoveryRepository();
-  late final Future<List<MockMaterial>> _materialsFuture;
+  late Future<List<DiscoveryMaterial>> _materialsFuture;
 
   @override
   void initState() {
     super.initState();
-    _materialsFuture = _repository.getMaterials();
+    _materialsFuture = widget.repository.getMaterials();
+  }
+
+  @override
+  void didUpdateWidget(covariant MaterialsDiscoveryPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.repository != widget.repository) {
+      _materialsFuture = widget.repository.getMaterials();
+    }
   }
 
   @override
@@ -41,7 +53,7 @@ class _MaterialsDiscoveryPageState extends State<MaterialsDiscoveryPage> {
               homeRoute: '/',
             ),
             Expanded(
-              child: FutureBuilder<List<MockMaterial>>(
+              child: FutureBuilder<List<DiscoveryMaterial>>(
                 future: _materialsFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState != ConnectionState.done) {
@@ -61,7 +73,7 @@ class _MaterialsDiscoveryPageState extends State<MaterialsDiscoveryPage> {
                     );
                   }
 
-                  final materials = snapshot.data ?? const <MockMaterial>[];
+                  final materials = snapshot.data ?? const <DiscoveryMaterial>[];
 
                   return SingleChildScrollView(
                     padding: const EdgeInsetsDirectional.fromSTEB(

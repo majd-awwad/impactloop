@@ -12,35 +12,40 @@ import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../data/mock_material_discovery_repository.dart';
-import '../../domain/mock_material.dart';
+import '../../domain/discovery_material.dart';
+import '../../domain/material_discovery_repository.dart';
 import '../material_discovery_content.dart';
 import '../widgets/nearby_map_placeholder.dart';
 
 class MaterialDetailsPage extends StatefulWidget {
-  const MaterialDetailsPage({super.key, required this.materialId});
+  const MaterialDetailsPage({
+    super.key,
+    required this.materialId,
+    MaterialDiscoveryRepository? repository,
+  }) : repository = repository ?? const MockMaterialDiscoveryRepository();
 
   final String materialId;
+  final MaterialDiscoveryRepository repository;
 
   @override
   State<MaterialDetailsPage> createState() => _MaterialDetailsPageState();
 }
 
 class _MaterialDetailsPageState extends State<MaterialDetailsPage> {
-  final MockMaterialDiscoveryRepository _repository =
-      const MockMaterialDiscoveryRepository();
-  late Future<MockMaterial?> _materialFuture;
+  late Future<DiscoveryMaterial?> _materialFuture;
 
   @override
   void initState() {
     super.initState();
-    _materialFuture = _repository.getMaterialById(widget.materialId);
+    _materialFuture = widget.repository.getMaterialById(widget.materialId);
   }
 
   @override
   void didUpdateWidget(covariant MaterialDetailsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.materialId != widget.materialId) {
-      _materialFuture = _repository.getMaterialById(widget.materialId);
+    if (oldWidget.materialId != widget.materialId ||
+        oldWidget.repository != widget.repository) {
+      _materialFuture = widget.repository.getMaterialById(widget.materialId);
     }
   }
 
@@ -49,7 +54,7 @@ class _MaterialDetailsPageState extends State<MaterialDetailsPage> {
     return Scaffold(
       backgroundColor: materialPageBackground,
       body: SafeArea(
-        child: FutureBuilder<MockMaterial?>(
+        child: FutureBuilder<DiscoveryMaterial?>(
           future: _materialFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
@@ -192,7 +197,7 @@ class _SimpleStateScaffold extends StatelessWidget {
 class _MaterialDetailsHero extends StatelessWidget {
   const _MaterialDetailsHero({required this.material});
 
-  final MockMaterial material;
+  final DiscoveryMaterial material;
 
   @override
   Widget build(BuildContext context) {
@@ -294,7 +299,7 @@ class _MaterialDetailsHero extends StatelessWidget {
 class _DetailsMainColumn extends StatelessWidget {
   const _DetailsMainColumn({required this.material});
 
-  final MockMaterial material;
+  final DiscoveryMaterial material;
 
   @override
   Widget build(BuildContext context) {
@@ -404,7 +409,7 @@ class _DetailsMainColumn extends StatelessWidget {
 class _DetailsSideColumn extends StatelessWidget {
   const _DetailsSideColumn({required this.material});
 
-  final MockMaterial material;
+  final DiscoveryMaterial material;
 
   @override
   Widget build(BuildContext context) {
