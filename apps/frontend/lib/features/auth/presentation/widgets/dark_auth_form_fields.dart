@@ -14,6 +14,7 @@ class DarkAuthDropdownField<T> extends StatelessWidget {
     required this.items,
     required this.onChanged,
     this.validator,
+    this.errorText,
   });
 
   final String label;
@@ -22,6 +23,7 @@ class DarkAuthDropdownField<T> extends StatelessWidget {
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?> onChanged;
   final String? Function(T?)? validator;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +33,7 @@ class DarkAuthDropdownField<T> extends StatelessWidget {
       items: items,
       onChanged: onChanged,
       validator: validator,
+      forceErrorText: errorText,
       dropdownColor: AuthDarkColors.surfaceSolid,
       style: const TextStyle(color: AuthDarkColors.textPrimary),
       decoration: InputDecoration(
@@ -73,6 +76,8 @@ class DarkAuthTextArea extends StatelessWidget {
     this.maxLines = 5,
     this.textInputAction = TextInputAction.newline,
     this.onFieldSubmitted,
+    this.errorText,
+    this.onChanged,
   });
 
   final TextEditingController controller;
@@ -83,6 +88,8 @@ class DarkAuthTextArea extends StatelessWidget {
   final int maxLines;
   final TextInputAction textInputAction;
   final ValueChanged<String>? onFieldSubmitted;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +101,8 @@ class DarkAuthTextArea extends StatelessWidget {
       maxLines: maxLines,
       validator: validator,
       onFieldSubmitted: onFieldSubmitted,
+      onChanged: onChanged,
+      forceErrorText: errorText,
       style: const TextStyle(color: AuthDarkColors.textPrimary),
       decoration: InputDecoration(
         labelText: label,

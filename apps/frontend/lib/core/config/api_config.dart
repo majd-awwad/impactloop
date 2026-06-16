@@ -11,7 +11,11 @@ class ApiConfig {
     }
 
     if (kIsWeb) {
-      return 'http://localhost:4000';
+      final currentUri = Uri.base;
+      final scheme = currentUri.scheme.isNotEmpty ? currentUri.scheme : 'http';
+      final host = currentUri.host.isNotEmpty ? currentUri.host : 'localhost';
+
+      return '$scheme://$host:4000';
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {

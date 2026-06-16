@@ -35,15 +35,21 @@ class AuthRepository {
     return result.user;
   }
 
+  Future<User> restoreSession() async {
+    try {
+      await refresh();
+      return await me();
+    } catch (_) {
+      await _clearSession();
+      rethrow;
+    }
+  }
+
   Future<String> refresh() async {
     final storedRefreshToken = await _tokenStorage.readRefreshToken();
     final tokens = await _api.refresh(refreshToken: storedRefreshToken);
 
-    _accessTokenHolder.accessToken = tokens.accessToken;
-
-    if (tokens.refreshToken != null && tokens.refreshToken!.isNotEmpty) {
-      await _tokenStorage.saveRefreshToken(tokens.refreshToken!);
-    }
+    await _applyTokens(tokens);
 
     return tokens.accessToken;
   }
@@ -63,6 +69,10 @@ class AuthRepository {
   }
 
   Future<void> _persistSession(AuthTokens tokens, User user) async {
+    await _applyTokens(tokens);
+  }
+
+  Future<void> _applyTokens(AuthTokens tokens) async {
     _accessTokenHolder.accessToken = tokens.accessToken;
 
     if (tokens.refreshToken != null && tokens.refreshToken!.isNotEmpty) {

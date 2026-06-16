@@ -9,6 +9,7 @@ class AppDropdownField<T> extends StatelessWidget {
     required this.onChanged,
     this.validator,
     this.hint,
+    this.errorText,
   });
 
   final String label;
@@ -17,6 +18,7 @@ class AppDropdownField<T> extends StatelessWidget {
   final ValueChanged<T?> onChanged;
   final String? Function(T?)? validator;
   final String? hint;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +33,7 @@ class AppDropdownField<T> extends StatelessWidget {
       items: items,
       onChanged: onChanged,
       validator: validator,
+      forceErrorText: errorText,
     );
   }
 }

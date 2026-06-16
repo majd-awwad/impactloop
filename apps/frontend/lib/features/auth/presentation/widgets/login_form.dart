@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_link_button.dart';
+import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../application/auth_controller.dart';
@@ -21,6 +23,9 @@ class _LoginFormState extends ConsumerState<LoginForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isSubmitting = false;
+  String? _emailError;
+  String? _passwordError;
+  String? _formError;
 
   @override
   void dispose() {
@@ -29,13 +34,33 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     super.dispose();
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+  void _clearServerErrors({bool clearForm = true}) {
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+      if (clearForm) {
+        _formError = null;
+      }
+    });
+  }
+
+  void _applyLoginError(ApiException error) {
+    setState(() {
+      _emailError = firstFieldError(error, const ['email']);
+      _passwordError = firstFieldError(error, const ['password']);
+      _formError = null;
+
+      if (error.code == 'UNAUTHENTICATED') {
+        _passwordError = 'Invalid email or password.';
+      } else if (_emailError == null && _passwordError == null) {
+        _formError = error.displayMessage;
+      }
+    });
   }
 
   Future<void> _handleSubmit() async {
+    _clearServerErrors();
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -59,14 +84,16 @@ class _LoginFormState extends ConsumerState<LoginForm> {
       }
 
       setState(() => _isSubmitting = false);
-      _showError(error.displayMessage);
+      _applyLoginError(error);
     } catch (_) {
       if (!mounted) {
         return;
       }
 
       setState(() => _isSubmitting = false);
-      _showError('Something went wrong. Please try again.');
+      setState(() {
+        _formError = 'Something went wrong. Please try again.';
+      });
     }
   }
 
@@ -84,6 +111,12 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.email],
+            errorText: _emailError,
+            onChanged: (_) {
+              if (_emailError != null || _formError != null) {
+                _clearServerErrors();
+              }
+            },
             validator: (value) {
               final trimmed = value?.trim() ?? '';
               if (trimmed.isEmpty) {
@@ -103,6 +136,12 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.password],
             onFieldSubmitted: (_) => _handleSubmit(),
+            errorText: _passwordError,
+            onChanged: (_) {
+              if (_passwordError != null || _formError != null) {
+                _clearServerErrors();
+              }
+            },
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Password is required';
@@ -110,14 +149,14 @@ class _LoginFormState extends ConsumerState<LoginForm> {
               return null;
             },
           ),
+          if (_formError != null) AppInlineError(message: _formError!),
           const SizedBox(height: AppSpacing.sm),
           AppLinkButton(
             label: 'Forgot password?',
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Forgot password screen coming soon.'),
-                ),
+              showInfoSnackBar(
+                context,
+                'Forgot password screen coming soon.',
               );
             },
           ),

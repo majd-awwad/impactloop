@@ -12,6 +12,8 @@ class DarkAuthPasswordField extends StatefulWidget {
     this.validator,
     this.autofillHints,
     this.onFieldSubmitted,
+    this.errorText,
+    this.onChanged,
   });
 
   final TextEditingController controller;
@@ -20,6 +22,8 @@ class DarkAuthPasswordField extends StatefulWidget {
   final String? Function(String?)? validator;
   final Iterable<String>? autofillHints;
   final ValueChanged<String>? onFieldSubmitted;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
 
   @override
   State<DarkAuthPasswordField> createState() => _DarkAuthPasswordFieldState();
@@ -38,6 +42,8 @@ class _DarkAuthPasswordFieldState extends State<DarkAuthPasswordField> {
       validator: widget.validator,
       autofillHints: widget.autofillHints,
       onFieldSubmitted: widget.onFieldSubmitted,
+      errorText: widget.errorText,
+      onChanged: widget.onChanged,
       suffixIcon: IconButton(
         icon: Icon(
           _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,

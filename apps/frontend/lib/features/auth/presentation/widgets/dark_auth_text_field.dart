@@ -17,6 +17,8 @@ class DarkAuthTextField extends StatelessWidget {
     this.autofillHints,
     this.onFieldSubmitted,
     this.suffixIcon,
+    this.errorText,
+    this.onChanged,
   });
 
   final TextEditingController controller;
@@ -29,6 +31,8 @@ class DarkAuthTextField extends StatelessWidget {
   final Iterable<String>? autofillHints;
   final ValueChanged<String>? onFieldSubmitted;
   final Widget? suffixIcon;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +45,8 @@ class DarkAuthTextField extends StatelessWidget {
       validator: validator,
       autofillHints: autofillHints,
       onFieldSubmitted: onFieldSubmitted,
+      onChanged: onChanged,
+      forceErrorText: errorText,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,

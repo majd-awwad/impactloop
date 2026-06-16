@@ -6,6 +6,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
+import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
@@ -29,6 +30,11 @@ class _CompleteSupplierProfileFormState
   final _pickupAreaController = TextEditingController();
   String? _supplierType;
   bool _isSubmitting = false;
+  String? _supplierTypeError;
+  String? _publicNameError;
+  String? _descriptionError;
+  String? _pickupAreaError;
+  String? _formError;
 
   static const _supplierTypes = [
     'Student supplier',
@@ -46,13 +52,36 @@ class _CompleteSupplierProfileFormState
     super.dispose();
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+  void _clearErrors() {
+    setState(() {
+      _supplierTypeError = null;
+      _publicNameError = null;
+      _descriptionError = null;
+      _pickupAreaError = null;
+      _formError = null;
+    });
+  }
+
+  void _applyServerError(ApiException error) {
+    setState(() {
+      _supplierTypeError = firstFieldError(error, const ['supplierProfile.supplierType']);
+      _publicNameError = firstFieldError(error, const ['supplierProfile.publicName']);
+      _descriptionError = firstFieldError(error, const ['supplierProfile.description']);
+      _pickupAreaError = firstFieldError(error, const ['supplierProfile.pickupArea']);
+      _formError = null;
+
+      if (_supplierTypeError == null &&
+          _publicNameError == null &&
+          _descriptionError == null &&
+          _pickupAreaError == null) {
+        _formError = error.displayMessage;
+      }
+    });
   }
 
   Future<void> _handleSubmit() async {
+    _clearErrors();
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -80,7 +109,9 @@ class _CompleteSupplierProfileFormState
       }
 
       setState(() => _isSubmitting = false);
-      _showError('Registration details are incomplete. Please start again.');
+      setState(() {
+        _formError = 'Registration details are incomplete. Please start again.';
+      });
       context.go('/register');
       return;
     }
@@ -100,14 +131,16 @@ class _CompleteSupplierProfileFormState
       }
 
       setState(() => _isSubmitting = false);
-      _showError(error.displayMessage);
+      _applyServerError(error);
     } catch (_) {
       if (!mounted) {
         return;
       }
 
       setState(() => _isSubmitting = false);
-      _showError('Something went wrong. Please try again.');
+      setState(() {
+        _formError = 'Something went wrong. Please try again.';
+      });
     }
   }
 
@@ -122,11 +155,17 @@ class _CompleteSupplierProfileFormState
             label: 'Supplier type',
             hint: 'Select your supplier type',
             value: _supplierType,
+            errorText: _supplierTypeError,
             items: [
               for (final type in _supplierTypes)
                 DropdownMenuItem(value: type, child: Text(type)),
             ],
-            onChanged: (value) => setState(() => _supplierType = value),
+            onChanged: (value) {
+              if (_supplierTypeError != null || _formError != null) {
+                _clearErrors();
+              }
+              setState(() => _supplierType = value);
+            },
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Supplier type is required';
@@ -140,6 +179,12 @@ class _CompleteSupplierProfileFormState
             label: 'Public name',
             hint: 'How others will see you',
             textInputAction: TextInputAction.next,
+            errorText: _publicNameError,
+            onChanged: (_) {
+              if (_publicNameError != null || _formError != null) {
+                _clearErrors();
+              }
+            },
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'Public name is required';
@@ -155,6 +200,12 @@ class _CompleteSupplierProfileFormState
             textInputAction: TextInputAction.next,
             minLines: 2,
             maxLines: 4,
+            errorText: _descriptionError,
+            onChanged: (_) {
+              if (_descriptionError != null || _formError != null) {
+                _clearErrors();
+              }
+            },
           ),
           const AppFieldGap(),
           AppTextField(
@@ -163,6 +214,12 @@ class _CompleteSupplierProfileFormState
             hint: 'Nablus, Rafidia',
             textInputAction: TextInputAction.done,
             onFieldSubmitted: (_) => _handleSubmit(),
+            errorText: _pickupAreaError,
+            onChanged: (_) {
+              if (_pickupAreaError != null || _formError != null) {
+                _clearErrors();
+              }
+            },
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'Pickup area is required';
@@ -170,6 +227,10 @@ class _CompleteSupplierProfileFormState
               return null;
             },
           ),
+          if (_formError != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            AppInlineError(message: _formError!),
+          ],
           const SizedBox(height: AppSpacing.md),
           Text(
             'You can start as an individual and update your supplier details later.',

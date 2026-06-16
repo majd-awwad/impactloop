@@ -40,14 +40,38 @@ class AuthState {
 }
 
 class AuthController extends Notifier<AuthState> {
+  Future<void>? _bootstrapOperation;
+
   @override
   AuthState build() => const AuthState();
 
   AuthRepository get _repository => ref.read(authRepositoryProvider);
 
+  Future<void> bootstrapSession() {
+    return _bootstrapOperation ??= _bootstrapSessionInternal();
+  }
+
   void clearError() {
     if (state.error != null) {
       state = state.copyWith(clearError: true);
+    }
+  }
+
+  Future<void> _bootstrapSessionInternal() async {
+    if (state.isAuthenticated) {
+      return;
+    }
+
+    try {
+      final user = await _repository.restoreSession();
+
+      state = AuthState(
+        user: user,
+        accessToken: _repository.accessToken,
+        isLoading: false,
+      );
+    } catch (_) {
+      state = const AuthState(isLoading: false);
     }
   }
 
@@ -68,7 +92,7 @@ class AuthController extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false, error: error);
       rethrow;
     } catch (error) {
-      final apiError = ApiException(message: error.toString());
+      final apiError = normalizeApiException(error);
       state = state.copyWith(isLoading: false, error: apiError);
       throw apiError;
     }
@@ -94,7 +118,7 @@ class AuthController extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false, error: error);
       rethrow;
     } catch (error) {
-      final apiError = ApiException(message: error.toString());
+      final apiError = normalizeApiException(error);
       state = state.copyWith(isLoading: false, error: apiError);
       throw apiError;
     }
@@ -116,7 +140,7 @@ class AuthController extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false, error: error);
       rethrow;
     } catch (error) {
-      final apiError = ApiException(message: error.toString());
+      final apiError = normalizeApiException(error);
       state = state.copyWith(isLoading: false, error: apiError);
       throw apiError;
     }
@@ -132,7 +156,7 @@ class AuthController extends Notifier<AuthState> {
       state = AuthState(isLoading: false, error: error);
       rethrow;
     } catch (error) {
-      final apiError = ApiException(message: error.toString());
+      final apiError = normalizeApiException(error);
       state = AuthState(isLoading: false, error: apiError);
       throw apiError;
     }
@@ -155,7 +179,7 @@ class AuthController extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false, error: error);
       rethrow;
     } catch (error) {
-      final apiError = ApiException(message: error.toString());
+      final apiError = normalizeApiException(error);
       state = state.copyWith(isLoading: false, error: apiError);
       throw apiError;
     }

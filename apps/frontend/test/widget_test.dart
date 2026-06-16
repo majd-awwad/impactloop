@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dio/dio.dart';
 import 'package:frontend/app/app.dart';
+import 'package:frontend/core/auth/access_token_holder.dart';
+import 'package:frontend/core/auth/token_storage.dart';
 import 'package:frontend/features/auth/data/models/register_request.dart';
 import 'package:frontend/features/auth/data/models/registration_draft.dart';
 import 'package:frontend/features/auth/presentation/pages/login_page.dart';
@@ -10,6 +13,12 @@ import 'package:frontend/features/health/data/health_remote_data_source.dart';
 import 'package:frontend/features/auth/presentation/models/registration_intent.dart';
 import 'package:frontend/features/auth/presentation/pages/register_page.dart';
 import 'package:frontend/features/landing/presentation/pages/landing_page.dart';
+import 'package:frontend/features/auth/application/auth_controller.dart';
+import 'package:frontend/features/auth/application/auth_providers.dart';
+import 'package:frontend/features/auth/data/auth_api.dart';
+import 'package:frontend/features/auth/data/auth_repository.dart';
+import 'package:frontend/features/auth/data/models/auth_tokens.dart';
+import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
@@ -92,6 +101,65 @@ void main() {
     });
   });
 
+  test('bootstrapSession restores user from refresh and me', () async {
+    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final accessTokenHolder = AccessTokenHolder();
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshResult: const AuthTokens(
+          accessToken: 'restored-access',
+          refreshToken: 'rotated-refresh',
+        ),
+        meResult: _testUser(),
+      ),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(authControllerProvider.notifier).bootstrapSession();
+
+    final state = container.read(authControllerProvider);
+    expect(state.isAuthenticated, isTrue);
+    expect(state.accessToken, 'restored-access');
+    expect(state.user?.email, 'restored@example.com');
+    expect(await tokenStorage.readRefreshToken(), 'rotated-refresh');
+  });
+
+  test('bootstrapSession clears local session when refresh fails', () async {
+    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stale-refresh');
+    final accessTokenHolder = AccessTokenHolder()..accessToken = 'stale-access';
+    final repository = AuthRepository(
+      api: _FakeAuthApi(refreshError: DioException(
+        requestOptions: RequestOptions(path: '/api/auth/refresh'),
+      )),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(authControllerProvider.notifier).bootstrapSession();
+
+    final state = container.read(authControllerProvider);
+    expect(state.isAuthenticated, isFalse);
+    expect(state.user, isNull);
+    expect(state.accessToken, isNull);
+    expect(accessTokenHolder.accessToken, isNull);
+    expect(await tokenStorage.readRefreshToken(), isNull);
+  });
+
   testWidgets('shows backend health status on /health', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -171,4 +239,63 @@ void main() {
     expect(find.text('Supplier profile'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+}
+
+class _FakeTokenStorage implements TokenStorage {
+  _FakeTokenStorage({this.initialRefreshToken});
+
+  String? initialRefreshToken;
+
+  @override
+  Future<void> clearRefreshToken() async {
+    initialRefreshToken = null;
+  }
+
+  @override
+  Future<String?> readRefreshToken() async => initialRefreshToken;
+
+  @override
+  Future<void> saveRefreshToken(String refreshToken) async {
+    initialRefreshToken = refreshToken;
+  }
+}
+
+class _FakeAuthApi extends AuthApi {
+  _FakeAuthApi({
+    this.refreshResult,
+    this.meResult,
+    this.refreshError,
+  }) : super(Dio());
+
+  final AuthTokens? refreshResult;
+  final User? meResult;
+  final Object? refreshError;
+
+  @override
+  Future<AuthTokens> refresh({String? refreshToken}) async {
+    if (refreshError != null) {
+      throw refreshError!;
+    }
+
+    return refreshResult ??
+        const AuthTokens(
+          accessToken: 'access-token',
+        );
+  }
+
+  @override
+  Future<User> me() async {
+    return meResult ?? _testUser();
+  }
+}
+
+User _testUser() {
+  return User(
+    id: 'user-1',
+    displayName: 'Restored User',
+    email: 'restored@example.com',
+    accountStatus: 'ACTIVE',
+    roles: const ['LEARNER'],
+    createdAt: DateTime(2026),
+  );
 }

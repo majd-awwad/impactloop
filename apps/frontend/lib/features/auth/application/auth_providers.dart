@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/token_storage.dart';
 import '../../../core/network/api_client.dart';
+import 'auth_controller.dart';
 import '../data/auth_api.dart';
 import '../data/auth_repository.dart';
 
@@ -24,4 +27,5 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 /// Ensures the shared Dio client is initialized with auth interceptors.
 final authNetworkBootstrapProvider = Provider<void>((ref) {
   ref.watch(apiClientProvider);
+  unawaited(ref.read(authControllerProvider.notifier).bootstrapSession());
 });

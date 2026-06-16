@@ -28,6 +28,22 @@ class ApiResponse<T> {
 }
 
 ApiException mapDioException(DioException error) {
+  if (error.type == DioExceptionType.connectionTimeout ||
+      error.type == DioExceptionType.sendTimeout ||
+      error.type == DioExceptionType.receiveTimeout) {
+    return const ApiException(
+      message: 'Request timed out',
+      code: 'TIMEOUT',
+    );
+  }
+
+  if (error.type == DioExceptionType.connectionError) {
+    return const ApiException(
+      message: 'Could not reach the server',
+      code: 'NETWORK_ERROR',
+    );
+  }
+
   final responseData = error.response?.data;
 
   if (responseData is Map<String, dynamic>) {
@@ -48,7 +64,7 @@ ApiException mapDioException(DioException error) {
   }
 
   return ApiException(
-    message: error.message ?? 'Network request failed',
+    message: error.message ?? 'Request failed',
     statusCode: error.response?.statusCode,
   );
 }

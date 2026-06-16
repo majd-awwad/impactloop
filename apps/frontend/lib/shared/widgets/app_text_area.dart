@@ -14,6 +14,8 @@ class AppTextArea extends StatelessWidget {
     this.maxLines = 5,
     this.textInputAction = TextInputAction.newline,
     this.onFieldSubmitted,
+    this.errorText,
+    this.onChanged,
   });
 
   final TextEditingController controller;
@@ -24,6 +26,8 @@ class AppTextArea extends StatelessWidget {
   final int maxLines;
   final TextInputAction textInputAction;
   final ValueChanged<String>? onFieldSubmitted;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +39,8 @@ class AppTextArea extends StatelessWidget {
       maxLines: maxLines,
       validator: validator,
       onFieldSubmitted: onFieldSubmitted,
+      onChanged: onChanged,
+      forceErrorText: errorText,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
