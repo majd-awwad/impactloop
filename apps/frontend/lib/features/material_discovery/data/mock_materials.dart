@@ -78,6 +78,7 @@ const mockMaterials = <MockMaterial>[
     heroIconData: Icons.carpenter_outlined,
     cardGradient: [0xFF2E4738, 0xFF17211B],
     ratingLabel: LocalizedText(en: '4.8', ar: '4.8'),
+    imageUrl: 'assets/images/materials/plywood-panels.jpg',
   ),
   MockMaterial(
     id: 'arduino-sensors',
@@ -111,6 +112,7 @@ const mockMaterials = <MockMaterial>[
     heroIconData: Icons.memory_rounded,
     cardGradient: [0xFF1C3F66, 0xFF121E2D],
     ratingLabel: LocalizedText(en: '4.9', ar: '4.9'),
+    imageUrl: 'assets/images/materials/arduino-sensors.jpg',
   ),
   MockMaterial(
     id: 'steel-tubes',
@@ -146,6 +148,7 @@ const mockMaterials = <MockMaterial>[
     ),
     heroIconData: Icons.precision_manufacturing_outlined,
     cardGradient: [0xFF48515A, 0xFF1E252B],
+    imageUrl: 'assets/images/materials/steel-tubes.jpg',
   ),
   MockMaterial(
     id: 'plastic-crates',
@@ -179,6 +182,7 @@ const mockMaterials = <MockMaterial>[
     heroIconData: Icons.inventory_outlined,
     cardGradient: [0xFF20504D, 0xFF152724],
     ratingLabel: LocalizedText(en: '4.6', ar: '4.6'),
+    imageUrl: 'assets/images/materials/plastic-crates.jpg',
   ),
   MockMaterial(
     id: 'denim-rolls',
@@ -214,6 +218,7 @@ const mockMaterials = <MockMaterial>[
     ),
     heroIconData: Icons.checkroom_outlined,
     cardGradient: [0xFF39506B, 0xFF1C2432],
+    imageUrl: 'assets/images/materials/denim-rolls.jpg',
   ),
   MockMaterial(
     id: 'acrylic-panels',

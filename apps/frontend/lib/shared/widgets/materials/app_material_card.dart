@@ -65,102 +65,116 @@ class AppMaterialCard extends StatelessWidget {
     final borderRadius = compact ? AppRadius.lgAll : AppRadius.xlAll;
     final mediaHeight = compact ? 164.0 : 212.0;
     final contentPadding = compact ? AppSpacing.md : AppSpacing.lg;
+    final cardHeight = compact
+        ? materialCompactCardHeight
+        : materialStandardCardHeight;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: borderRadius,
-        child: Container(
-          decoration: BoxDecoration(
-            color: materialCardSurface,
-            borderRadius: borderRadius,
-            border: Border.all(color: materialBorderStrong),
-            boxShadow: const [
-              BoxShadow(
-                color: materialCardShadow,
-                blurRadius: 28,
-                offset: Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _MaterialMedia(
-                category: category,
-                statusLabel: statusLabel,
-                imageUrl: imageUrl,
-                gradientColors: gradientColors,
-                fallbackIcon: fallbackIcon,
-                height: mediaHeight,
-                compact: compact,
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.all(contentPadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _CardHeader(
-                      title: title,
-                      ratingLabel: ratingLabel,
-                      trailing: trailing,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      description,
-                      style: AppTextStyles.body(
-                        context,
-                      ).copyWith(color: materialTextSecondary, height: 1.55),
-                      textAlign: TextAlign.start,
-                      maxLines: compact ? 2 : 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: [
-                        MaterialConditionBadge(
-                          label: conditionLabel,
-                          tone: conditionTone,
-                        ),
-                        MaterialStatusBadge(
-                          label: statusLabel,
-                          tone: statusTone,
-                        ),
-                        MaterialPriceBadge(
-                          label: priceLabel,
-                          isFree: isFree,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Wrap(
-                      spacing: AppSpacing.md,
-                      runSpacing: AppSpacing.sm,
-                      children: [
-                        _MetaLine(
-                          icon: Icons.straighten_rounded,
-                          label: quantityLabel,
-                        ),
-                        _MetaLine(
-                          icon: Icons.location_on_outlined,
-                          label: locationLabel,
-                        ),
-                        _MetaLine(
-                          icon: deliveryAvailable
-                              ? Icons.local_shipping_outlined
-                              : Icons.storefront_outlined,
-                          label: availabilityLabel,
-                        ),
-                      ],
-                    ),
-                  ],
+        child: SizedBox(
+          height: cardHeight,
+          child: Container(
+            decoration: BoxDecoration(
+              color: materialCardSurface,
+              borderRadius: borderRadius,
+              border: Border.all(color: materialBorderStrong),
+              boxShadow: const [
+                BoxShadow(
+                  color: materialCardShadow,
+                  blurRadius: 28,
+                  offset: Offset(0, 12),
                 ),
-              ),
-            ],
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _MaterialMedia(
+                  category: category,
+                  statusLabel: statusLabel,
+                  statusTone: statusTone,
+                  imageUrl: imageUrl,
+                  gradientColors: gradientColors,
+                  fallbackIcon: fallbackIcon,
+                  height: mediaHeight,
+                  compact: compact,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsetsDirectional.all(contentPadding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _CardHeader(
+                          title: title,
+                          ratingLabel: ratingLabel,
+                          trailing: trailing,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          description,
+                          style: AppTextStyles.body(
+                            context,
+                          ).copyWith(color: materialTextSecondary, height: 1.55),
+                          textAlign: TextAlign.start,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const Spacer(),
+                        _CardChipRow(
+                          minHeight: compact ? 42 : 46,
+                          children: [
+                            MaterialConditionBadge(
+                              label: conditionLabel,
+                              tone: conditionTone,
+                            ),
+                            MaterialStatusBadge(
+                              label: statusLabel,
+                              tone: statusTone,
+                            ),
+                            MaterialPriceBadge(
+                              label: priceLabel,
+                              isFree: isFree,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        _CardChipRow(
+                          minHeight: compact ? 42 : 46,
+                          spacing: AppSpacing.sm,
+                          children: [
+                            _MetaLine(
+                              icon: Icons.straighten_rounded,
+                              label: quantityLabel,
+                            ),
+                            _MetaLine(
+                              icon: Icons.location_on_outlined,
+                              label: locationLabel,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        _CardChipRow(
+                          minHeight: compact ? 42 : 46,
+                          spacing: AppSpacing.sm,
+                          children: [
+                            _MetaLine(
+                              icon: deliveryAvailable
+                                  ? Icons.local_shipping_outlined
+                                  : Icons.storefront_outlined,
+                              label: availabilityLabel,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -172,6 +186,7 @@ class _MaterialMedia extends StatelessWidget {
   const _MaterialMedia({
     required this.category,
     required this.statusLabel,
+    required this.statusTone,
     required this.imageUrl,
     required this.gradientColors,
     required this.fallbackIcon,
@@ -181,6 +196,7 @@ class _MaterialMedia extends StatelessWidget {
 
   final String category;
   final String statusLabel;
+  final MaterialStatusBadgeTone statusTone;
   final String? imageUrl;
   final List<Color> gradientColors;
   final IconData fallbackIcon;
@@ -230,48 +246,26 @@ class _MaterialMedia extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsetsDirectional.symmetric(
-                              horizontal: AppSpacing.sm,
-                              vertical: AppSpacing.xs,
-                            ),
-                            decoration: BoxDecoration(
-                              color: materialPanelSurface.withValues(alpha: 0.82),
-                              borderRadius: AppRadius.pillAll,
-                              border: Border.all(color: materialBorderSubtle),
-                            ),
-                            child: Text(
-                              category,
-                              style: AppTextStyles.badgeLabel(
-                                context,
-                              ).copyWith(color: materialTextPrimary),
-                              textAlign: TextAlign.start,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                        Flexible(
+                          child: Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: compact ? 140 : 190,
+                              ),
+                              child: _MediaTagChip(label: category),
                             ),
                           ),
                         ),
+                        const Spacer(),
                         const SizedBox(width: AppSpacing.sm),
-                        Container(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: materialPanelSurface.withValues(alpha: 0.86),
-                            borderRadius: AppRadius.pillAll,
-                            border: Border.all(
-                              color: materialBorderStrong,
+                        Flexible(
+                          child: Align(
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: MaterialStatusBadge(
+                              label: statusLabel,
+                              tone: statusTone,
                             ),
-                          ),
-                          child: Text(
-                            statusLabel,
-                            style: AppTextStyles.label(context).copyWith(
-                              color: materialLimeSoft,
-                              fontSize: 12,
-                            ),
-                            textAlign: TextAlign.start,
                           ),
                         ),
                       ],
@@ -315,6 +309,39 @@ class _MaterialMedia extends StatelessWidget {
   }
 }
 
+class _MediaTagChip extends StatelessWidget {
+  const _MediaTagChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: materialBadgeHorizontalPadding,
+        vertical: materialBadgeVerticalPadding,
+      ),
+      decoration: BoxDecoration(
+        color: materialPanelSurface.withValues(alpha: 0.86),
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: materialBorderSubtle),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.badgeLabel(context).copyWith(
+          color: materialTextPrimary,
+          fontSize: materialBadgeFontSize,
+          fontWeight: FontWeight.w700,
+          height: 1.1,
+        ),
+        textAlign: TextAlign.start,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
 class _CardHeader extends StatelessWidget {
   const _CardHeader({
     required this.title,
@@ -331,14 +358,17 @@ class _CardHeader extends StatelessWidget {
     final titleBlock = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: AppTextStyles.title(
-            context,
-          ).copyWith(color: materialTextPrimary, height: 1.2),
-          textAlign: TextAlign.start,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+        SizedBox(
+          height: 52,
+          child: Text(
+            title,
+            style: AppTextStyles.title(
+              context,
+            ).copyWith(color: materialTextPrimary, height: 1.2),
+            textAlign: TextAlign.start,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
@@ -368,8 +398,12 @@ class _CardHeader extends StatelessWidget {
                 Text(
                   ratingText,
                   style: AppTextStyles.label(
-                    context,
-                  ).copyWith(color: materialTextPrimary, fontSize: 12),
+                  context,
+                  ).copyWith(
+                    color: materialTextPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
                   textAlign: TextAlign.start,
                 ),
               ],
@@ -410,6 +444,33 @@ class _CardHeader extends StatelessWidget {
   }
 }
 
+class _CardChipRow extends StatelessWidget {
+  const _CardChipRow({
+    required this.children,
+    required this.minHeight,
+    this.spacing = AppSpacing.sm,
+  });
+
+  final List<Widget> children;
+  final double minHeight;
+  final double spacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: minHeight),
+      child: Align(
+        alignment: AlignmentDirectional.topStart,
+        child: Wrap(
+          spacing: spacing,
+          runSpacing: AppSpacing.sm,
+          children: children,
+        ),
+      ),
+    );
+  }
+}
+
 class _MetaLine extends StatelessWidget {
   const _MetaLine({required this.icon, required this.label});
 
@@ -420,8 +481,8 @@ class _MetaLine extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
+        horizontal: materialMetaChipHorizontalPadding,
+        vertical: materialMetaChipVerticalPadding,
       ),
       decoration: BoxDecoration(
         color: materialCardSurfaceAlt,
@@ -433,14 +494,20 @@ class _MetaLine extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: materialMint),
           const SizedBox(width: AppSpacing.xs),
-          Text(
-            label,
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: materialTextSecondary),
-            textAlign: TextAlign.start,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 180),
+            child: Text(
+              label,
+              style: AppTextStyles.label(context).copyWith(
+                color: materialTextSecondary,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                height: 1.15,
+              ),
+              textAlign: TextAlign.start,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),

@@ -42,7 +42,7 @@ const materialHintBorder = Color(0xFF28352F);
 const materialMapSurface = Color(0xFF080D0B);
 const materialMapGrid = Color(0xFF1E2622);
 const materialCardShadow = Color(0x24000000);
-const materialOverlayDark = Color(0xB0050807);
+const materialOverlayDark = Color(0x55050807);
 const materialOverlaySoft = Color(0x66050807);
 
 // --- Hero (neutral charcoal / navy; emerald glow only) ---
@@ -90,3 +90,12 @@ const materialPriceFreeForeground = Color(0xFF5EEAD4);
 const materialPricePaidBackground = Color(0xFF171F1B);
 const materialPricePaidBorder = Color(0xFF2A4A42);
 const materialPricePaidForeground = Color(0xFFC5CEC8);
+
+// --- Badge sizing ---
+const materialBadgeFontSize = 12.5;
+const materialBadgeHorizontalPadding = 12.0;
+const materialBadgeVerticalPadding = 7.0;
+const materialMetaChipHorizontalPadding = 12.0;
+const materialMetaChipVerticalPadding = 8.0;
+const materialStandardCardHeight = 530.0;
+const materialCompactCardHeight = 432.0;

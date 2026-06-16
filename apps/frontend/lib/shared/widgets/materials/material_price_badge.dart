@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_radius.dart';
-import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_text_styles.dart';
 import 'materials_ui_palette.dart';
 
@@ -19,8 +18,8 @@ class MaterialPriceBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
+        horizontal: materialBadgeHorizontalPadding,
+        vertical: materialBadgeVerticalPadding,
       ),
       decoration: BoxDecoration(
         color: isFree ? materialPriceFreeBackground : materialPricePaidBackground,
@@ -33,8 +32,13 @@ class MaterialPriceBadge extends StatelessWidget {
         label,
         style: AppTextStyles.label(context).copyWith(
           color: isFree ? materialPriceFreeForeground : materialPricePaidForeground,
+          fontSize: materialBadgeFontSize,
+          fontWeight: FontWeight.w700,
+          height: 1.1,
         ),
         textAlign: TextAlign.start,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
