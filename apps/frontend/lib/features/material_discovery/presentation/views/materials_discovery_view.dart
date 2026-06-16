@@ -43,6 +43,11 @@ class _MaterialsDiscoveryViewState extends State<MaterialsDiscoveryView> {
   int _selectedCategoryIndex = 0;
   int _selectedQuickFilterIndex = 0;
 
+  bool get _hasActiveFilters =>
+      _searchValue.trim().isNotEmpty ||
+      _selectedCategoryIndex != 0 ||
+      _selectedQuickFilterIndex != 0;
+
   @override
   void initState() {
     super.initState();
@@ -98,9 +103,14 @@ class _MaterialsDiscoveryViewState extends State<MaterialsDiscoveryView> {
               _selectedQuickFilterIndex = index;
             });
           },
+          hasActiveFilters: _hasActiveFilters,
+          onClearFilters: _clearFilters,
         ),
         const SizedBox(height: AppSpacing.xl),
-        _ResultsHeader(resultCount: filteredMaterials.length),
+        _ResultsHeader(
+          resultCount: filteredMaterials.length,
+          hasActiveFilters: _hasActiveFilters,
+        ),
         const SizedBox(height: AppSpacing.md),
         if (filteredMaterials.isEmpty)
           const _EmptyStatePanel(
@@ -171,26 +181,6 @@ class _MaterialsDiscoveryViewState extends State<MaterialsDiscoveryView> {
             ),
           ),
         ],
-        if (widget.showEmptyStatePreview) ...[
-          const SizedBox(height: AppSpacing.xl),
-          const _SectionLabel(
-            title: LocalizedText(
-              en: 'Empty state mock',
-              ar: 'نموذج حالة الفراغ',
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const _EmptyStatePanel(
-            title: LocalizedText(
-              en: 'Nothing matched your filters',
-              ar: 'لا توجد نتائج مطابقة للفلاتر',
-            ),
-            subtitle: LocalizedText(
-              en: 'This preview shows the fallback state Supplier or reservation pages can also reuse later.',
-              ar: 'يعرض هذا النموذج حالة الرجوع التي يمكن أن تعيد صفحات المورد أو الحجوزات استخدامها لاحقاً.',
-            ),
-          ),
-        ],
         if (widget.showTipPanel) ...[
           const SizedBox(height: AppSpacing.xl),
           const _TipPanel(),
@@ -229,18 +219,30 @@ class _MaterialsDiscoveryViewState extends State<MaterialsDiscoveryView> {
         material.description.resolve(context),
         material.category.resolve(context),
         material.locationLabel.resolve(context),
-        material.supplierName.resolve(context),
       ].join(' ').toLowerCase();
 
       return searchPool.contains(normalizedSearch);
     }).toList();
   }
+
+  void _clearFilters() {
+    _searchController.clear();
+    setState(() {
+      _searchValue = '';
+      _selectedCategoryIndex = 0;
+      _selectedQuickFilterIndex = 0;
+    });
+  }
 }
 
 class _ResultsHeader extends StatelessWidget {
-  const _ResultsHeader({required this.resultCount});
+  const _ResultsHeader({
+    required this.resultCount,
+    required this.hasActiveFilters,
+  });
 
   final int resultCount;
+  final bool hasActiveFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -263,10 +265,16 @@ class _ResultsHeader extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              LocalizedText(
-                en: '$resultCount public results in this mock',
-                ar: '$resultCount نتيجة عامة في هذا النموذج',
-              ).resolve(context),
+              (hasActiveFilters
+                      ? LocalizedText(
+                          en: '$resultCount matching results',
+                          ar: '$resultCount نتيجة مطابقة',
+                        )
+                      : LocalizedText(
+                          en: '$resultCount public results in this mock',
+                          ar: '$resultCount نتيجة عامة في هذا النموذج',
+                        ))
+                  .resolve(context),
               style: AppTextStyles.subtitle(
                 context,
               ).copyWith(color: materialTextSecondary),
@@ -316,21 +324,6 @@ class _ResultsHeader extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.title});
-
-  final LocalizedText title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title.resolve(context),
-      style: AppTextStyles.title(context).copyWith(color: materialTextPrimary),
-      textAlign: TextAlign.start,
     );
   }
 }

@@ -18,6 +18,8 @@ class MaterialSearchFilters extends StatelessWidget {
     required this.selectedQuickFilterIndex,
     required this.onCategorySelected,
     required this.onQuickFilterSelected,
+    required this.hasActiveFilters,
+    required this.onClearFilters,
   });
 
   final TextEditingController controller;
@@ -29,6 +31,8 @@ class MaterialSearchFilters extends StatelessWidget {
   final int selectedQuickFilterIndex;
   final ValueChanged<int> onCategorySelected;
   final ValueChanged<int> onQuickFilterSelected;
+  final bool hasActiveFilters;
+  final VoidCallback onClearFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -138,6 +142,30 @@ class MaterialSearchFilters extends StatelessWidget {
               );
             }),
           ),
+          if (hasActiveFilters) ...[
+            const SizedBox(height: AppSpacing.md),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                onPressed: onClearFilters,
+                style: TextButton.styleFrom(
+                  foregroundColor: materialMint,
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                ),
+                icon: const Icon(Icons.restart_alt_rounded),
+                label: Text(
+                  LocalizedText(
+                    en: 'Clear filters',
+                    ar: 'مسح الفلاتر',
+                  ).resolve(context),
+                  textAlign: TextAlign.start,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
