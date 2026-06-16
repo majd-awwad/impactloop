@@ -8,6 +8,7 @@ import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../application/auth_controller.dart';
+import '../../application/auth_navigation.dart';
 import '../widgets/dark_auth_buttons.dart';
 import '../widgets/dark_auth_password_field.dart';
 import '../widgets/dark_auth_text_field.dart';
@@ -95,7 +96,7 @@ class _DarkLoginFormState extends ConsumerState<DarkLoginForm> {
     setState(() => _isSubmitting = true);
 
     try {
-      await ref.read(authControllerProvider.notifier).login(
+      final user = await ref.read(authControllerProvider.notifier).login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
@@ -104,7 +105,7 @@ class _DarkLoginFormState extends ConsumerState<DarkLoginForm> {
         return;
       }
 
-      context.go('/home');
+      context.go(postAuthRouteForUser(user));
     } on ApiException catch (error) {
       if (!mounted) {
         return;

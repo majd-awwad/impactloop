@@ -73,9 +73,15 @@ class User {
   final DateTime? emailVerifiedAt;
   final DateTime createdAt;
 
+  bool hasRole(String role) {
+    final normalizedRole = role.trim().toUpperCase();
+    return roles.any((item) => item.trim().toUpperCase() == normalizedRole);
+  }
+
   factory User.fromJson(Map<String, dynamic> json) {
     final learnerProfileJson = json['learnerProfile'];
     final supplierProfileJson = json['supplierProfile'];
+    final parsedRoles = _parseRoles(json);
 
     return User(
       id: json['id'] as String? ?? '',
@@ -84,9 +90,7 @@ class User {
       phone: json['phone'] as String?,
       accountStatus: json['accountStatus'] as String? ?? 'PENDING_VERIFICATION',
       profileImageUrl: json['profileImageUrl'] as String?,
-      roles: (json['roles'] as List<dynamic>? ?? const [])
-          .whereType<String>()
-          .toList(),
+      roles: parsedRoles,
       learnerProfile: learnerProfileJson is Map<String, dynamic>
           ? LearnerProfile.fromJson(learnerProfileJson)
           : null,
@@ -100,5 +104,30 @@ class User {
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
+  }
+
+  static List<String> _parseRoles(Map<String, dynamic> json) {
+    final roles = <String>{};
+    final rawRoles = json['roles'];
+
+    if (rawRoles is List<dynamic>) {
+      for (final item in rawRoles) {
+        if (item is String && item.trim().isNotEmpty) {
+          roles.add(item.trim().toUpperCase());
+        } else if (item is Map<String, dynamic>) {
+          final role = item['role'];
+          if (role is String && role.trim().isNotEmpty) {
+            roles.add(role.trim().toUpperCase());
+          }
+        }
+      }
+    }
+
+    final primaryRole = json['primaryRole'];
+    if (primaryRole is String && primaryRole.trim().isNotEmpty) {
+      roles.add(primaryRole.trim().toUpperCase());
+    }
+
+    return roles.toList();
   }
 }
