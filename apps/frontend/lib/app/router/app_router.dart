@@ -16,6 +16,8 @@ import '../../features/learning_hub/presentation/pages/learning_add_draft_page.d
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
+import '../../features/material_discovery/presentation/pages/material_details_page.dart';
+import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   final path = state.matchedLocation;
@@ -114,6 +116,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final projectId = state.pathParameters['id']!;
 
           return LearningProjectDetailsPage(projectId: projectId);
+        },
+      ),
+      GoRoute(
+        path: '/materials',
+        builder: (context, state) => const MaterialsDiscoveryPage(),
+      ),
+      GoRoute(
+        path: '/materials/:id',
+        builder: (context, state) {
+          final materialId = state.pathParameters['id']!;
+
+          return MaterialDetailsPage(materialId: materialId);
         },
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
