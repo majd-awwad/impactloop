@@ -62,6 +62,23 @@ class AuthApi {
     );
   }
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmNewPassword,
+  }) {
+    return unwrapApiVoidResponse(
+      _client.patch<Map<String, dynamic>>(
+        '$_authBasePath/change-password',
+        data: {
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+          'confirmNewPassword': confirmNewPassword,
+        },
+      ),
+    );
+  }
+
   Future<({AuthTokens tokens, User user})> _postAuthSession(
     String path, {
     required Map<String, dynamic> data,

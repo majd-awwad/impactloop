@@ -68,6 +68,18 @@ class AuthRepository {
     return _api.me();
   }
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmNewPassword,
+  }) {
+    return _api.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+      confirmNewPassword: confirmNewPassword,
+    );
+  }
+
   Future<void> _persistSession(AuthTokens tokens, User user) async {
     await _applyTokens(tokens);
   }
