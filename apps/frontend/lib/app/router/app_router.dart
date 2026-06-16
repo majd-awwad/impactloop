@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/application/auth_controller.dart';
+import '../../features/auth/application/auth_navigation.dart';
 import '../../features/auth/application/registration_draft_notifier.dart';
 import '../../features/auth/presentation/models/registration_intent.dart';
 import '../../features/auth/presentation/pages/choose_role_page.dart';
@@ -13,6 +14,10 @@ import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_coming_soon_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_dashboard_page.dart';
+import '../../features/supplier_portal/presentation/shell/supplier_shell.dart';
 
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   final path = state.matchedLocation;
@@ -65,6 +70,39 @@ String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   return null;
 }
 
+bool _isSupplierPortalPath(String path) {
+  if (path == '/supplier/access-denied') {
+    return false;
+  }
+
+  return path == '/supplier' ||
+      path.startsWith('/supplier/');
+}
+
+bool _userHasSupplierRole(AuthState authState) {
+  return userHasSupplierRole(authState.user);
+}
+
+String? supplierPortalRedirect(Ref ref, GoRouterState state) {
+  final path = state.matchedLocation;
+
+  if (!_isSupplierPortalPath(path)) {
+    return null;
+  }
+
+  final authState = ref.read(authControllerProvider);
+
+  if (!authState.isAuthenticated) {
+    return '/login';
+  }
+
+  if (!_userHasSupplierRole(authState)) {
+    return '/supplier/access-denied';
+  }
+
+  return null;
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = ValueNotifier<int>(0);
   ref.onDispose(refreshListenable.dispose);
@@ -88,7 +126,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       if (authState.isAuthenticated &&
           (path == '/login' || path == '/register')) {
-        return '/home';
+        return postAuthRouteForUser(authState.user!);
+      }
+
+      final supplierRedirect = supplierPortalRedirect(ref, state);
+      if (supplierRedirect != null) {
+        return supplierRedirect;
       }
 
       return legacyOnboardingRedirect(ref, state);
@@ -119,6 +162,76 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/complete-supplier-profile',
         builder: (context, state) => const CompleteSupplierProfilePage(),
+      ),
+      GoRoute(
+        path: '/supplier/access-denied',
+        builder: (context, state) => const SupplierAccessDeniedPage(),
+      ),
+      GoRoute(
+        path: '/materials',
+        builder: (context, state) => const SupplierComingSoonPage(
+          standalone: true,
+          title: 'Browse materials',
+          description:
+              'Public material discovery is coming soon. You will be able to explore reusable parts and surplus components from suppliers across ImpactLoop.',
+        ),
+      ),
+      ShellRoute(
+        builder: (context, state, child) => SupplierShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/supplier',
+            builder: (context, state) => const SupplierDashboardPage(),
+          ),
+          GoRoute(
+            path: '/supplier/materials',
+            builder: (context, state) => const SupplierComingSoonPage(
+              title: 'My Materials',
+              description:
+                  'Manage your listed materials here soon. You will be able to view, edit, and track the status of everything you share.',
+            ),
+          ),
+          GoRoute(
+            path: '/supplier/materials/new',
+            builder: (context, state) => const SupplierComingSoonPage(
+              title: 'Add Material',
+              description:
+                  'Listing new reusable materials is coming soon. Share surplus parts, leftovers, and components with learners who need them.',
+            ),
+          ),
+          GoRoute(
+            path: '/supplier/reservations',
+            builder: (context, state) => const SupplierComingSoonPage(
+              title: 'Incoming Requests',
+              description:
+                  'Reservation requests will appear here soon. You will be able to review and respond to learner requests for your materials.',
+            ),
+          ),
+          GoRoute(
+            path: '/supplier/pickup-schedule',
+            builder: (context, state) => const SupplierComingSoonPage(
+              title: 'Pickup Schedule',
+              description:
+                  'Your pickup schedule is coming soon. Accepted reservations with pickup windows will be organized here.',
+            ),
+          ),
+          GoRoute(
+            path: '/supplier/notifications',
+            builder: (context, state) => const SupplierComingSoonPage(
+              title: 'Notifications',
+              description:
+                  'Supplier notifications are coming soon. Stay updated on reservations, messages, and account activity.',
+            ),
+          ),
+          GoRoute(
+            path: '/supplier/profile',
+            builder: (context, state) => const SupplierComingSoonPage(
+              title: 'Supplier Profile',
+              description:
+                  'Profile editing is coming soon. Update your public supplier name, pickup location, and organization details.',
+            ),
+          ),
+        ],
       ),
     ],
   );
