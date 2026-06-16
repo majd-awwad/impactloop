@@ -11,12 +11,14 @@ class AuthState {
     this.user,
     this.accessToken,
     this.isLoading = false,
+    this.hasBootstrapped = false,
     this.error,
   });
 
   final User? user;
   final String? accessToken;
   final bool isLoading;
+  final bool hasBootstrapped;
   final ApiException? error;
 
   bool get isAuthenticated =>
@@ -26,6 +28,7 @@ class AuthState {
     User? user,
     String? accessToken,
     bool? isLoading,
+    bool? hasBootstrapped,
     ApiException? error,
     bool clearError = false,
     bool clearUser = false,
@@ -34,6 +37,7 @@ class AuthState {
       user: clearUser ? null : user ?? this.user,
       accessToken: accessToken ?? this.accessToken,
       isLoading: isLoading ?? this.isLoading,
+      hasBootstrapped: hasBootstrapped ?? this.hasBootstrapped,
       error: clearError ? null : error ?? this.error,
     );
   }
@@ -59,8 +63,18 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> _bootstrapSessionInternal() async {
     if (state.isAuthenticated) {
+      state = state.copyWith(
+        isLoading: false,
+        hasBootstrapped: true,
+      );
       return;
     }
+
+    state = state.copyWith(
+      isLoading: true,
+      hasBootstrapped: false,
+      clearError: true,
+    );
 
     try {
       final user = await _repository.restoreSession();
@@ -69,9 +83,13 @@ class AuthController extends Notifier<AuthState> {
         user: user,
         accessToken: _repository.accessToken,
         isLoading: false,
+        hasBootstrapped: true,
       );
     } catch (_) {
-      state = const AuthState(isLoading: false);
+      state = const AuthState(
+        isLoading: false,
+        hasBootstrapped: true,
+      );
     }
   }
 
@@ -85,6 +103,7 @@ class AuthController extends Notifier<AuthState> {
         user: user,
         accessToken: _repository.accessToken,
         isLoading: false,
+        hasBootstrapped: true,
       );
 
       return user;
@@ -111,6 +130,7 @@ class AuthController extends Notifier<AuthState> {
         user: user,
         accessToken: _repository.accessToken,
         isLoading: false,
+        hasBootstrapped: true,
       );
 
       return user;
@@ -133,6 +153,7 @@ class AuthController extends Notifier<AuthState> {
       state = state.copyWith(
         accessToken: accessToken,
         isLoading: false,
+        hasBootstrapped: true,
       );
 
       return accessToken;
@@ -151,14 +172,25 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       await _repository.logout();
-      state = const AuthState(isLoading: false);
+      state = const AuthState(
+        isLoading: false,
+        hasBootstrapped: true,
+      );
       return null;
     } on ApiException catch (error) {
-      state = AuthState(isLoading: false, error: error);
+      state = AuthState(
+        isLoading: false,
+        hasBootstrapped: true,
+        error: error,
+      );
       return error;
     } catch (error) {
       final apiError = normalizeApiException(error);
-      state = AuthState(isLoading: false, error: apiError);
+      state = AuthState(
+        isLoading: false,
+        hasBootstrapped: true,
+        error: apiError,
+      );
       return apiError;
     }
   }
@@ -173,6 +205,7 @@ class AuthController extends Notifier<AuthState> {
         user: user,
         accessToken: _repository.accessToken,
         isLoading: false,
+        hasBootstrapped: true,
       );
 
       return user;

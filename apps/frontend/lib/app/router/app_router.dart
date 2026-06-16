@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/registration_draft_notifier.dart';
 import '../../features/auth/presentation/models/registration_intent.dart';
 import '../../features/auth/presentation/pages/choose_role_page.dart';
@@ -64,8 +66,33 @@ String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final refreshListenable = ValueNotifier<int>(0);
+  ref.onDispose(refreshListenable.dispose);
+  ref.listen<AuthState>(authControllerProvider, (previous, next) {
+    refreshListenable.value++;
+  });
+
   return GoRouter(
-    redirect: (context, state) => legacyOnboardingRedirect(ref, state),
+    refreshListenable: refreshListenable,
+    redirect: (context, state) {
+      final authState = ref.read(authControllerProvider);
+      final path = state.matchedLocation;
+
+      if (!authState.hasBootstrapped) {
+        return null;
+      }
+
+      if (!authState.isAuthenticated && path == '/home') {
+        return '/login';
+      }
+
+      if (authState.isAuthenticated &&
+          (path == '/login' || path == '/register')) {
+        return '/home';
+      }
+
+      return legacyOnboardingRedirect(ref, state);
+    },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const LandingPage()),
       GoRoute(path: '/health', builder: (context, state) => const HealthPage()),

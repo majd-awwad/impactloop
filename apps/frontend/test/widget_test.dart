@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dio/dio.dart';
 import 'package:frontend/app/app.dart';
+import 'package:frontend/app/router/app_router.dart';
 import 'package:frontend/core/auth/access_token_holder.dart';
 import 'package:frontend/core/auth/token_storage.dart';
 import 'package:frontend/features/auth/data/models/register_request.dart';
@@ -22,6 +23,15 @@ import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
+  Future<void> pumpApp(WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: ImpactLoopApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
   Future<void> pumpResponsivePage(
     WidgetTester tester,
     Widget page, {
@@ -261,14 +271,125 @@ void main() {
   });
 
   testWidgets('shows landing page on /', (tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: ImpactLoopApp()),
-    );
-
-    await tester.pumpAndSettle();
+    await pumpApp(tester);
 
     expect(find.text('Build a better future'), findsOneWidget);
     expect(find.text('Create account'), findsWidgets);
+  });
+
+  testWidgets('logged out users are redirected from /home to /login', (
+    tester,
+  ) async {
+    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stale-refresh');
+    final accessTokenHolder = AccessTokenHolder();
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshError: DioException(
+          requestOptions: RequestOptions(path: '/api/auth/refresh'),
+        ),
+      ),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const ImpactLoopApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ImpactLoopApp)),
+    );
+    final router = container.read(appRouterProvider);
+
+    GoRouter.of(
+      tester.element(find.text('Build a better future')),
+    ).go('/home');
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/login');
+  });
+
+  testWidgets('authenticated users are redirected from /login to /home', (
+    tester,
+  ) async {
+    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final accessTokenHolder = AccessTokenHolder();
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshResult: const AuthTokens(
+          accessToken: 'restored-access',
+          refreshToken: 'rotated-refresh',
+        ),
+        meResult: _testUser(),
+      ),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const ImpactLoopApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ImpactLoopApp)),
+    );
+    final router = container.read(appRouterProvider);
+
+    GoRouter.of(
+      tester.element(find.text('Build a better future')),
+    ).go('/login');
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/home');
+  });
+
+  testWidgets('authenticated users are redirected from /register to /home', (
+    tester,
+  ) async {
+    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final accessTokenHolder = AccessTokenHolder();
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshResult: const AuthTokens(
+          accessToken: 'restored-access',
+          refreshToken: 'rotated-refresh',
+        ),
+        meResult: _testUser(),
+      ),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const ImpactLoopApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ImpactLoopApp)),
+    );
+    final router = container.read(appRouterProvider);
+
+    GoRouter.of(
+      tester.element(find.text('Build a better future')),
+    ).go('/register');
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/home');
   });
 
   testWidgets('landing page stays stable on mobile width', (tester) async {

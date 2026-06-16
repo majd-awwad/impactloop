@@ -27,5 +27,9 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 /// Ensures the shared Dio client is initialized with auth interceptors.
 final authNetworkBootstrapProvider = Provider<void>((ref) {
   ref.watch(apiClientProvider);
-  unawaited(ref.read(authControllerProvider.notifier).bootstrapSession());
+  unawaited(
+    Future<void>.microtask(
+      () => ref.read(authControllerProvider.notifier).bootstrapSession(),
+    ),
+  );
 });
