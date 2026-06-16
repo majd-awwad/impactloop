@@ -56,7 +56,7 @@ class SupplierTopBar extends ConsumerWidget {
                     ).copyWith(fontSize: 20),
                   ),
                   Text(
-                    'Track materials, requests, and impact.',
+                    supplierPageSubtitle(currentLocation),
                     style: AuthDarkTextStyles.body(context),
                   ),
                 ],

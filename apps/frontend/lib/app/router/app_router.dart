@@ -17,6 +17,7 @@ import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_coming_soon_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_dashboard_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_profile_page.dart';
 import '../../features/supplier_portal/presentation/shell/supplier_shell.dart';
 
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
@@ -225,11 +226,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/supplier/profile',
-            builder: (context, state) => const SupplierComingSoonPage(
-              title: 'Supplier Profile',
-              description:
-                  'Profile editing is coming soon. Update your public supplier name, pickup location, and organization details.',
-            ),
+            builder: (context, state) => const SupplierProfilePage(),
           ),
         ],
       ),

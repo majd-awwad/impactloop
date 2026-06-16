@@ -72,7 +72,11 @@ final supplierMobileNavItems = [
 
 String supplierPageTitle(String location) {
   if (location == '/supplier' || location == '/supplier/') {
-    return 'Supplier Hub';
+    return 'Overview';
+  }
+
+  if (location == '/supplier/profile') {
+    return 'Supplier Profile';
   }
 
   for (final item in supplierNavItems) {
@@ -82,6 +86,24 @@ String supplierPageTitle(String location) {
   }
 
   return 'Supplier Portal';
+}
+
+String supplierPageSubtitle(String location) {
+  if (location == '/supplier' || location == '/supplier/') {
+    return 'Track materials, requests, and impact.';
+  }
+
+  if (location == '/supplier/profile') {
+    return 'Manage public supplier details and pickup location.';
+  }
+
+  for (final item in supplierNavItems) {
+    if (location == item.route || location.startsWith('${item.route}/')) {
+      return 'Coming soon in the Supplier Portal.';
+    }
+  }
+
+  return 'Manage your supplier activity.';
 }
 
 bool isSupplierNavActive(String currentLocation, String route) {
