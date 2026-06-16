@@ -1,9 +1,11 @@
 import type {
   MaterialStatus,
+  Prisma,
   ReservationStatus,
 } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
+import type { UpdateSupplierProfileInput } from './supplier.validation.js';
 
 const decimalToNumber = (value: { toNumber(): number } | number): number => {
   if (typeof value === 'number') {
@@ -20,6 +22,184 @@ export const findSupplierProfileForDashboard = async (userId: string) => {
       defaultPickupLocation: true,
       organizationProfile: true,
     },
+  });
+};
+
+export const findSupplierProfileDetailsByUserId = async (userId: string) => {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      displayName: true,
+      email: true,
+      profileImageUrl: true,
+      supplierProfile: {
+        include: {
+          defaultPickupLocation: true,
+          organizationProfile: {
+            include: {
+              businessLocation: true,
+            },
+          },
+        },
+      },
+    },
+  });
+};
+
+const isOrganizationSupplierType = (supplierType: string): boolean => {
+  return (
+    supplierType === 'WORKSHOP' ||
+    supplierType === 'FACTORY' ||
+    supplierType === 'EDUCATIONAL_INSTITUTION'
+  );
+};
+
+const upsertLocation = async (
+  tx: Prisma.TransactionClient,
+  locationId: string | null | undefined,
+  input: UpdateSupplierProfileInput['defaultPickupLocation'],
+  fallbackLocationType: string,
+): Promise<string> => {
+  const data = {
+    country: input.country,
+    city: input.city,
+    area: input.area ?? null,
+    addressLine: input.addressLine ?? null,
+    latitude: input.latitude ?? null,
+    longitude: input.longitude ?? null,
+    visibility: input.visibility,
+    isApproximate: input.isApproximate,
+    locationType: input.locationType ?? fallbackLocationType,
+  };
+
+  if (locationId) {
+    const location = await tx.location.update({
+      where: { id: locationId },
+      data,
+    });
+
+    return location.id;
+  }
+
+  const location = await tx.location.create({ data });
+  return location.id;
+};
+
+export const upsertSupplierProfileDetails = async (
+  userId: string,
+  input: UpdateSupplierProfileInput,
+) => {
+  return prisma.$transaction(async (tx) => {
+    const existingProfile = await tx.supplierProfile.findUnique({
+      where: { userId },
+      include: {
+        defaultPickupLocation: true,
+        organizationProfile: {
+          include: {
+            businessLocation: true,
+          },
+        },
+      },
+    });
+
+    const defaultPickupLocationId = await upsertLocation(
+      tx,
+      existingProfile?.defaultPickupLocationId,
+      input.defaultPickupLocation,
+      'PICKUP_POINT',
+    );
+
+    const supplierProfile = await tx.supplierProfile.upsert({
+      where: { userId },
+      create: {
+        userId,
+        publicName: input.publicName,
+        supplierType: input.supplierType,
+        description: input.description ?? null,
+        defaultPickupLocationId,
+      },
+      update: {
+        publicName: input.publicName,
+        supplierType: input.supplierType,
+        description: input.description ?? null,
+        defaultPickupLocationId,
+      },
+    });
+
+    if (
+      isOrganizationSupplierType(input.supplierType) &&
+      input.organizationProfile
+    ) {
+      const existingOrganization = await tx.organizationProfile.findUnique({
+        where: { supplierProfileId: supplierProfile.id },
+        include: { businessLocation: true },
+      });
+
+      const businessLocationId = input.organizationProfile.businessLocation
+        ? await upsertLocation(
+            tx,
+            existingOrganization?.businessLocationId,
+            input.organizationProfile.businessLocation,
+            'BUSINESS_LOCATION',
+          )
+        : existingOrganization?.businessLocationId ?? null;
+
+      await tx.organizationProfile.upsert({
+        where: { supplierProfileId: supplierProfile.id },
+        create: {
+          supplierProfileId: supplierProfile.id,
+          organizationName: input.organizationProfile.organizationName,
+          organizationType: input.organizationProfile.organizationType,
+          contactPersonName:
+            input.organizationProfile.contactPersonName ?? null,
+          workingDays:
+            input.organizationProfile.workingDays as
+              | Prisma.InputJsonValue
+              | undefined,
+          workingHours:
+            input.organizationProfile.workingHours as
+              | Prisma.InputJsonValue
+              | undefined,
+          businessLocationId,
+        },
+        update: {
+          organizationName: input.organizationProfile.organizationName,
+          organizationType: input.organizationProfile.organizationType,
+          contactPersonName:
+            input.organizationProfile.contactPersonName ?? null,
+          workingDays:
+            input.organizationProfile.workingDays as
+              | Prisma.InputJsonValue
+              | undefined,
+          workingHours:
+            input.organizationProfile.workingHours as
+              | Prisma.InputJsonValue
+              | undefined,
+          businessLocationId,
+        },
+      });
+    }
+
+    return tx.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        displayName: true,
+        email: true,
+        profileImageUrl: true,
+        supplierProfile: {
+          include: {
+            defaultPickupLocation: true,
+            organizationProfile: {
+              include: {
+                businessLocation: true,
+              },
+            },
+          },
+        },
+      },
+    });
   });
 };
 

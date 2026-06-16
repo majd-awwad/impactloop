@@ -2,13 +2,21 @@ import type {
   RecentActivityDto,
   SupplierDashboardDto,
 } from './dto/supplier-dashboard.dto.js';
+import type {
+  SupplierOrganizationProfileDto,
+  SupplierProfileDetailsDto,
+  SupplierProfileLocationDto,
+  SupplierProfileResponseDto,
+} from './dto/supplier-profile.dto.js';
 
 import {
   emptyDashboardStats,
   normalizeVerificationStatus,
 } from './dto/supplier-dashboard.dto.js';
 
+import { AppError } from '../../utils/app-error.js';
 import * as supplierRepository from './supplier.repository.js';
+import type { UpdateSupplierProfileInput } from './supplier.validation.js';
 
 const MISSING_PROFILE_MESSAGE =
   'Complete your supplier profile to start listing materials.';
@@ -185,3 +193,176 @@ export const getEmptySupplierDashboard = (): SupplierDashboardDto => ({
   upcomingPickups: [],
   recentActivity: [],
 });
+
+const mapLocation = (location: {
+  id: string;
+  country: string;
+  city: string;
+  area: string | null;
+  addressLine: string | null;
+  latitude: { toNumber(): number } | number | null;
+  longitude: { toNumber(): number } | number | null;
+  visibility: string | null;
+  isApproximate: boolean;
+  locationType: string | null;
+} | null): SupplierProfileLocationDto | null => {
+  if (!location) {
+    return null;
+  }
+
+  return {
+    id: location.id,
+    country: location.country,
+    city: location.city,
+    area: location.area,
+    addressLine: location.addressLine,
+    latitude:
+      location.latitude == null
+        ? null
+        : typeof location.latitude === 'number'
+          ? location.latitude
+          : location.latitude.toNumber(),
+    longitude:
+      location.longitude == null
+        ? null
+        : typeof location.longitude === 'number'
+          ? location.longitude
+          : location.longitude.toNumber(),
+    visibility: location.visibility,
+    isApproximate: location.isApproximate,
+    locationType: location.locationType,
+  };
+};
+
+const mapOrganizationProfile = (organization: {
+  id: string;
+  organizationName: string;
+  organizationType: string;
+  contactPersonName: string | null;
+  workingDays: unknown;
+  workingHours: unknown;
+  verificationDocumentStatus: string | null;
+  businessLocation: {
+    id: string;
+    country: string;
+    city: string;
+    area: string | null;
+    addressLine: string | null;
+    latitude: { toNumber(): number } | number | null;
+    longitude: { toNumber(): number } | number | null;
+    visibility: string | null;
+    isApproximate: boolean;
+    locationType: string | null;
+  } | null;
+} | null): SupplierOrganizationProfileDto | null => {
+  if (!organization) {
+    return null;
+  }
+
+  return {
+    id: organization.id,
+    organizationName: organization.organizationName,
+    organizationType: organization.organizationType,
+    contactPersonName: organization.contactPersonName,
+    workingDays: organization.workingDays,
+    workingHours: organization.workingHours,
+    verificationDocumentStatus: organization.verificationDocumentStatus,
+    businessLocation: mapLocation(organization.businessLocation),
+  };
+};
+
+const mapSupplierProfile = (supplierProfile: {
+  id: string;
+  publicName: string | null;
+  supplierType: string | null;
+  description: string | null;
+  verificationStatus: string;
+  defaultPickupLocation: {
+    id: string;
+    country: string;
+    city: string;
+    area: string | null;
+    addressLine: string | null;
+    latitude: { toNumber(): number } | number | null;
+    longitude: { toNumber(): number } | number | null;
+    visibility: string | null;
+    isApproximate: boolean;
+    locationType: string | null;
+  } | null;
+  organizationProfile: {
+    id: string;
+    organizationName: string;
+    organizationType: string;
+    contactPersonName: string | null;
+    workingDays: unknown;
+    workingHours: unknown;
+    verificationDocumentStatus: string | null;
+    businessLocation: {
+      id: string;
+      country: string;
+      city: string;
+      area: string | null;
+      addressLine: string | null;
+      latitude: { toNumber(): number } | number | null;
+      longitude: { toNumber(): number } | number | null;
+      visibility: string | null;
+      isApproximate: boolean;
+      locationType: string | null;
+    } | null;
+  } | null;
+}): SupplierProfileDetailsDto => {
+  return {
+    id: supplierProfile.id,
+    publicName: supplierProfile.publicName ?? '',
+    supplierType: supplierProfile.supplierType ?? '',
+    description: supplierProfile.description,
+    verificationStatus: supplierProfile.verificationStatus,
+    defaultPickupLocation: mapLocation(supplierProfile.defaultPickupLocation),
+    organizationProfile: mapOrganizationProfile(
+      supplierProfile.organizationProfile,
+    ),
+  };
+};
+
+const mapSupplierProfileResponse = (record: Awaited<
+  ReturnType<typeof supplierRepository.findSupplierProfileDetailsByUserId>
+>): SupplierProfileResponseDto => {
+  if (!record) {
+    throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+  }
+
+  return {
+    hasSupplierProfile: record.supplierProfile !== null,
+    user: {
+      id: record.id,
+      displayName: record.displayName,
+      email: record.email,
+      profileImageUrl: record.profileImageUrl,
+    },
+    supplier: record.supplierProfile
+      ? mapSupplierProfile(record.supplierProfile)
+      : null,
+  };
+};
+
+export const getSupplierProfile = async (
+  userId: string,
+): Promise<SupplierProfileResponseDto> => {
+  const record = await supplierRepository.findSupplierProfileDetailsByUserId(
+    userId,
+  );
+
+  return mapSupplierProfileResponse(record);
+};
+
+export const updateSupplierProfile = async (
+  userId: string,
+  input: UpdateSupplierProfileInput,
+): Promise<SupplierProfileResponseDto> => {
+  const record = await supplierRepository.upsertSupplierProfileDetails(
+    userId,
+    input,
+  );
+
+  return mapSupplierProfileResponse(record);
+};
