@@ -16,6 +16,16 @@ class LearningAddDraftPage extends StatefulWidget {
 }
 
 class _LearningAddDraftPageState extends State<LearningAddDraftPage> {
+  static const String _legacyTitleExample = 'Solar classroom weather station';
+  static const String _legacySummaryExample =
+      'A reusable classroom project that teaches sensors, power management, and simple data reporting using reclaimed materials.';
+  static const String _legacyComponentsExample =
+      'Arduino Uno, ultrasonic sensor, jumper wires, reused plastic box';
+  static const String _legacyStepsExample =
+      '1. Connect the sensor to the board.\n2. Mount the components inside the reused case.\n3. Test readings and adjust the placement.';
+  static const String _legacyLinksExample =
+      'https://example.com/reference-guide';
+
   late final TextEditingController _titleController;
   late final TextEditingController _summaryController;
   late final TextEditingController _componentsController;
@@ -25,6 +35,7 @@ class _LearningAddDraftPageState extends State<LearningAddDraftPage> {
   String? _selectedCategory;
   String _selectedDifficulty = 'medium';
   String _selectedDuration = 'medium';
+  bool _normalizedLegacyValues = false;
 
   static const List<_ChoiceOption> _categoryOptions = [
     _ChoiceOption(
@@ -91,6 +102,22 @@ class _LearningAddDraftPageState extends State<LearningAddDraftPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_normalizedLegacyValues) {
+      return;
+    }
+
+    _clearLegacyMockValue(_titleController, _legacyTitleExample);
+    _clearLegacyMockValue(_summaryController, _legacySummaryExample);
+    _clearLegacyMockValue(_componentsController, _legacyComponentsExample);
+    _clearLegacyMockValue(_stepsController, _legacyStepsExample);
+    _clearLegacyMockValue(_linksController, _legacyLinksExample);
+
+    _normalizedLegacyValues = true;
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _summaryController.dispose();
@@ -98,6 +125,15 @@ class _LearningAddDraftPageState extends State<LearningAddDraftPage> {
     _stepsController.dispose();
     _linksController.dispose();
     super.dispose();
+  }
+
+  void _clearLegacyMockValue(
+    TextEditingController controller,
+    String legacyValue,
+  ) {
+    if (controller.text.trim() == legacyValue.trim()) {
+      controller.clear();
+    }
   }
 
   @override
