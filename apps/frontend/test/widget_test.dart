@@ -160,6 +160,78 @@ void main() {
     expect(await tokenStorage.readRefreshToken(), isNull);
   });
 
+  test('logout clears local session when API succeeds', () async {
+    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'refresh-token');
+    final accessTokenHolder = AccessTokenHolder()..accessToken = 'access-token';
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshResult: const AuthTokens(
+          accessToken: 'access-token',
+          refreshToken: 'refresh-token',
+        ),
+        meResult: _testUser(),
+      ),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(authControllerProvider.notifier).bootstrapSession();
+
+    final error = await container.read(authControllerProvider.notifier).logout();
+
+    final state = container.read(authControllerProvider);
+    expect(error, isNull);
+    expect(state.user, isNull);
+    expect(state.accessToken, isNull);
+    expect(accessTokenHolder.accessToken, isNull);
+    expect(await tokenStorage.readRefreshToken(), isNull);
+  });
+
+  test('logout clears local session when API fails', () async {
+    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'refresh-token');
+    final accessTokenHolder = AccessTokenHolder()..accessToken = 'access-token';
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshResult: const AuthTokens(
+          accessToken: 'access-token',
+          refreshToken: 'refresh-token',
+        ),
+        meResult: _testUser(),
+        logoutError: DioException(
+          requestOptions: RequestOptions(path: '/api/auth/logout'),
+          type: DioExceptionType.connectionError,
+        ),
+      ),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(authControllerProvider.notifier).bootstrapSession();
+
+    final error = await container.read(authControllerProvider.notifier).logout();
+
+    final state = container.read(authControllerProvider);
+    expect(error, isNotNull);
+    expect(state.user, isNull);
+    expect(state.accessToken, isNull);
+    expect(accessTokenHolder.accessToken, isNull);
+    expect(await tokenStorage.readRefreshToken(), isNull);
+  });
+
   testWidgets('shows backend health status on /health', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -265,11 +337,13 @@ class _FakeAuthApi extends AuthApi {
     this.refreshResult,
     this.meResult,
     this.refreshError,
+    this.logoutError,
   }) : super(Dio());
 
   final AuthTokens? refreshResult;
   final User? meResult;
   final Object? refreshError;
+  final Object? logoutError;
 
   @override
   Future<AuthTokens> refresh({String? refreshToken}) async {
@@ -286,6 +360,13 @@ class _FakeAuthApi extends AuthApi {
   @override
   Future<User> me() async {
     return meResult ?? _testUser();
+  }
+
+  @override
+  Future<void> logout({String? refreshToken}) async {
+    if (logoutError != null) {
+      throw logoutError!;
+    }
   }
 }
 

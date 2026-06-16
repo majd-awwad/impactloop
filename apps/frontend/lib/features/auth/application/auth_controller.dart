@@ -146,19 +146,20 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<void> logout() async {
+  Future<ApiException?> logout() async {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
       await _repository.logout();
       state = const AuthState(isLoading: false);
+      return null;
     } on ApiException catch (error) {
       state = AuthState(isLoading: false, error: error);
-      rethrow;
+      return error;
     } catch (error) {
       final apiError = normalizeApiException(error);
       state = AuthState(isLoading: false, error: apiError);
-      throw apiError;
+      return apiError;
     }
   }
 
