@@ -294,3 +294,25 @@ export const completePasswordReset = async (input: {
     }),
   ]);
 };
+
+export const findUserPasswordHashById = async (
+  userId: string,
+): Promise<{ id: string; passwordHash: string } | null> => {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      passwordHash: true,
+    },
+  });
+};
+
+export const updateUserPasswordHash = async (input: {
+  userId: string;
+  passwordHash: string;
+}): Promise<void> => {
+  await prisma.user.update({
+    where: { id: input.userId },
+    data: { passwordHash: input.passwordHash },
+  });
+};

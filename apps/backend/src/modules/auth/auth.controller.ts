@@ -19,9 +19,11 @@ import {
   registerUser,
   requestPasswordReset,
   resetPasswordWithToken,
+  changePasswordForUser,
 } from './auth.service.js';
 
 import type {
+  ChangePasswordInput,
   ForgotPasswordInput,
   LoginInput,
   RegisterInput,
@@ -91,4 +93,17 @@ export const resetPassword = async (
   await resetPasswordWithToken(token, newPassword);
 
   res.json(successResponse('Password reset successful', null));
+};
+
+export const changePassword = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  await changePasswordForUser(req.auth!.sub, req.body as ChangePasswordInput);
+
+  res.json(
+    successResponse('Password updated successfully.', {
+      success: true,
+    }),
+  );
 };
