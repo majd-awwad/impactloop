@@ -69,6 +69,11 @@ export type Material = $Result.DefaultSelection<Prisma.$MaterialPayload>
  */
 export type MaterialImage = $Result.DefaultSelection<Prisma.$MaterialImagePayload>
 /**
+ * Model MaterialTag
+ * 
+ */
+export type MaterialTag = $Result.DefaultSelection<Prisma.$MaterialTagPayload>
+/**
  * Model Reservation
  * 
  */
@@ -530,6 +535,16 @@ export class PrismaClient<
     * ```
     */
   get materialImage(): Prisma.MaterialImageDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.materialTag`: Exposes CRUD operations for the **MaterialTag** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more MaterialTags
+    * const materialTags = await prisma.materialTag.findMany()
+    * ```
+    */
+  get materialTag(): Prisma.MaterialTagDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.reservation`: Exposes CRUD operations for the **Reservation** model.
@@ -1005,6 +1020,7 @@ export namespace Prisma {
     Category: 'Category',
     Material: 'Material',
     MaterialImage: 'MaterialImage',
+    MaterialTag: 'MaterialTag',
     Reservation: 'Reservation',
     Review: 'Review',
     Notification: 'Notification'
@@ -1023,7 +1039,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "userRoleAssignment" | "authToken" | "roleInvitation" | "learnerProfile" | "supplierProfile" | "organizationProfile" | "location" | "category" | "material" | "materialImage" | "reservation" | "review" | "notification"
+      modelProps: "user" | "userRoleAssignment" | "authToken" | "roleInvitation" | "learnerProfile" | "supplierProfile" | "organizationProfile" | "location" | "category" | "material" | "materialImage" | "materialTag" | "reservation" | "review" | "notification"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1841,6 +1857,80 @@ export namespace Prisma {
           }
         }
       }
+      MaterialTag: {
+        payload: Prisma.$MaterialTagPayload<ExtArgs>
+        fields: Prisma.MaterialTagFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.MaterialTagFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialTagPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.MaterialTagFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialTagPayload>
+          }
+          findFirst: {
+            args: Prisma.MaterialTagFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialTagPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.MaterialTagFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialTagPayload>
+          }
+          findMany: {
+            args: Prisma.MaterialTagFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialTagPayload>[]
+          }
+          create: {
+            args: Prisma.MaterialTagCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialTagPayload>
+          }
+          createMany: {
+            args: Prisma.MaterialTagCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.MaterialTagCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialTagPayload>[]
+          }
+          delete: {
+            args: Prisma.MaterialTagDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialTagPayload>
+          }
+          update: {
+            args: Prisma.MaterialTagUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialTagPayload>
+          }
+          deleteMany: {
+            args: Prisma.MaterialTagDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.MaterialTagUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.MaterialTagUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialTagPayload>[]
+          }
+          upsert: {
+            args: Prisma.MaterialTagUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialTagPayload>
+          }
+          aggregate: {
+            args: Prisma.MaterialTagAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateMaterialTag>
+          }
+          groupBy: {
+            args: Prisma.MaterialTagGroupByArgs<ExtArgs>
+            result: $Utils.Optional<MaterialTagGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.MaterialTagCountArgs<ExtArgs>
+            result: $Utils.Optional<MaterialTagCountAggregateOutputType> | number
+          }
+        }
+      }
       Reservation: {
         payload: Prisma.$ReservationPayload<ExtArgs>
         fields: Prisma.ReservationFieldRefs
@@ -2182,6 +2272,7 @@ export namespace Prisma {
     category?: CategoryOmit
     material?: MaterialOmit
     materialImage?: MaterialImageOmit
+    materialTag?: MaterialTagOmit
     reservation?: ReservationOmit
     review?: ReviewOmit
     notification?: NotificationOmit
@@ -2516,11 +2607,13 @@ export namespace Prisma {
 
   export type MaterialCountOutputType = {
     images: number
+    tags: number
     reservations: number
   }
 
   export type MaterialCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     images?: boolean | MaterialCountOutputTypeCountImagesArgs
+    tags?: boolean | MaterialCountOutputTypeCountTagsArgs
     reservations?: boolean | MaterialCountOutputTypeCountReservationsArgs
   }
 
@@ -2540,6 +2633,13 @@ export namespace Prisma {
    */
   export type MaterialCountOutputTypeCountImagesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: MaterialImageWhereInput
+  }
+
+  /**
+   * MaterialCountOutputType without action
+   */
+  export type MaterialCountOutputTypeCountTagsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: MaterialTagWhereInput
   }
 
   /**
@@ -12240,6 +12340,7 @@ export namespace Prisma {
     parentId: string | null
     categoryType: $Enums.CategoryType | null
     iconUrl: string | null
+    isActive: boolean | null
     createdAt: Date | null
   }
 
@@ -12250,6 +12351,7 @@ export namespace Prisma {
     parentId: string | null
     categoryType: $Enums.CategoryType | null
     iconUrl: string | null
+    isActive: boolean | null
     createdAt: Date | null
   }
 
@@ -12260,6 +12362,7 @@ export namespace Prisma {
     parentId: number
     categoryType: number
     iconUrl: number
+    isActive: number
     createdAt: number
     _all: number
   }
@@ -12272,6 +12375,7 @@ export namespace Prisma {
     parentId?: true
     categoryType?: true
     iconUrl?: true
+    isActive?: true
     createdAt?: true
   }
 
@@ -12282,6 +12386,7 @@ export namespace Prisma {
     parentId?: true
     categoryType?: true
     iconUrl?: true
+    isActive?: true
     createdAt?: true
   }
 
@@ -12292,6 +12397,7 @@ export namespace Prisma {
     parentId?: true
     categoryType?: true
     iconUrl?: true
+    isActive?: true
     createdAt?: true
     _all?: true
   }
@@ -12375,6 +12481,7 @@ export namespace Prisma {
     parentId: string | null
     categoryType: $Enums.CategoryType
     iconUrl: string | null
+    isActive: boolean
     createdAt: Date
     _count: CategoryCountAggregateOutputType | null
     _min: CategoryMinAggregateOutputType | null
@@ -12402,6 +12509,7 @@ export namespace Prisma {
     parentId?: boolean
     categoryType?: boolean
     iconUrl?: boolean
+    isActive?: boolean
     createdAt?: boolean
     parent?: boolean | Category$parentArgs<ExtArgs>
     children?: boolean | Category$childrenArgs<ExtArgs>
@@ -12416,6 +12524,7 @@ export namespace Prisma {
     parentId?: boolean
     categoryType?: boolean
     iconUrl?: boolean
+    isActive?: boolean
     createdAt?: boolean
     parent?: boolean | Category$parentArgs<ExtArgs>
   }, ExtArgs["result"]["category"]>
@@ -12427,6 +12536,7 @@ export namespace Prisma {
     parentId?: boolean
     categoryType?: boolean
     iconUrl?: boolean
+    isActive?: boolean
     createdAt?: boolean
     parent?: boolean | Category$parentArgs<ExtArgs>
   }, ExtArgs["result"]["category"]>
@@ -12438,10 +12548,11 @@ export namespace Prisma {
     parentId?: boolean
     categoryType?: boolean
     iconUrl?: boolean
+    isActive?: boolean
     createdAt?: boolean
   }
 
-  export type CategoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "nameEn" | "nameAr" | "parentId" | "categoryType" | "iconUrl" | "createdAt", ExtArgs["result"]["category"]>
+  export type CategoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "nameEn" | "nameAr" | "parentId" | "categoryType" | "iconUrl" | "isActive" | "createdAt", ExtArgs["result"]["category"]>
   export type CategoryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     parent?: boolean | Category$parentArgs<ExtArgs>
     children?: boolean | Category$childrenArgs<ExtArgs>
@@ -12469,6 +12580,7 @@ export namespace Prisma {
       parentId: string | null
       categoryType: $Enums.CategoryType
       iconUrl: string | null
+      isActive: boolean
       createdAt: Date
     }, ExtArgs["result"]["category"]>
     composites: {}
@@ -12902,6 +13014,7 @@ export namespace Prisma {
     readonly parentId: FieldRef<"Category", 'String'>
     readonly categoryType: FieldRef<"Category", 'CategoryType'>
     readonly iconUrl: FieldRef<"Category", 'String'>
+    readonly isActive: FieldRef<"Category", 'Boolean'>
     readonly createdAt: FieldRef<"Category", 'DateTime'>
   }
     
@@ -13760,6 +13873,7 @@ export namespace Prisma {
     category?: boolean | CategoryDefaultArgs<ExtArgs>
     location?: boolean | LocationDefaultArgs<ExtArgs>
     images?: boolean | Material$imagesArgs<ExtArgs>
+    tags?: boolean | Material$tagsArgs<ExtArgs>
     reservations?: boolean | Material$reservationsArgs<ExtArgs>
     reusedByReservation?: boolean | Material$reusedByReservationArgs<ExtArgs>
     _count?: boolean | MaterialCountOutputTypeDefaultArgs<ExtArgs>
@@ -13866,6 +13980,7 @@ export namespace Prisma {
     category?: boolean | CategoryDefaultArgs<ExtArgs>
     location?: boolean | LocationDefaultArgs<ExtArgs>
     images?: boolean | Material$imagesArgs<ExtArgs>
+    tags?: boolean | Material$tagsArgs<ExtArgs>
     reservations?: boolean | Material$reservationsArgs<ExtArgs>
     reusedByReservation?: boolean | Material$reusedByReservationArgs<ExtArgs>
     _count?: boolean | MaterialCountOutputTypeDefaultArgs<ExtArgs>
@@ -13893,6 +14008,7 @@ export namespace Prisma {
       category: Prisma.$CategoryPayload<ExtArgs>
       location: Prisma.$LocationPayload<ExtArgs>
       images: Prisma.$MaterialImagePayload<ExtArgs>[]
+      tags: Prisma.$MaterialTagPayload<ExtArgs>[]
       reservations: Prisma.$ReservationPayload<ExtArgs>[]
       reusedByReservation: Prisma.$ReservationPayload<ExtArgs> | null
     }
@@ -14321,6 +14437,7 @@ export namespace Prisma {
     category<T extends CategoryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, CategoryDefaultArgs<ExtArgs>>): Prisma__CategoryClient<$Result.GetResult<Prisma.$CategoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     location<T extends LocationDefaultArgs<ExtArgs> = {}>(args?: Subset<T, LocationDefaultArgs<ExtArgs>>): Prisma__LocationClient<$Result.GetResult<Prisma.$LocationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     images<T extends Material$imagesArgs<ExtArgs> = {}>(args?: Subset<T, Material$imagesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialImagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    tags<T extends Material$tagsArgs<ExtArgs> = {}>(args?: Subset<T, Material$tagsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialTagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     reservations<T extends Material$reservationsArgs<ExtArgs> = {}>(args?: Subset<T, Material$reservationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     reusedByReservation<T extends Material$reusedByReservationArgs<ExtArgs> = {}>(args?: Subset<T, Material$reusedByReservationArgs<ExtArgs>>): Prisma__ReservationClient<$Result.GetResult<Prisma.$ReservationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     /**
@@ -14818,6 +14935,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: MaterialImageScalarFieldEnum | MaterialImageScalarFieldEnum[]
+  }
+
+  /**
+   * Material.tags
+   */
+  export type Material$tagsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagInclude<ExtArgs> | null
+    where?: MaterialTagWhereInput
+    orderBy?: MaterialTagOrderByWithRelationInput | MaterialTagOrderByWithRelationInput[]
+    cursor?: MaterialTagWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: MaterialTagScalarFieldEnum | MaterialTagScalarFieldEnum[]
   }
 
   /**
@@ -15989,6 +16130,1056 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: MaterialImageInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model MaterialTag
+   */
+
+  export type AggregateMaterialTag = {
+    _count: MaterialTagCountAggregateOutputType | null
+    _min: MaterialTagMinAggregateOutputType | null
+    _max: MaterialTagMaxAggregateOutputType | null
+  }
+
+  export type MaterialTagMinAggregateOutputType = {
+    id: string | null
+    materialId: string | null
+    tag: string | null
+    createdAt: Date | null
+  }
+
+  export type MaterialTagMaxAggregateOutputType = {
+    id: string | null
+    materialId: string | null
+    tag: string | null
+    createdAt: Date | null
+  }
+
+  export type MaterialTagCountAggregateOutputType = {
+    id: number
+    materialId: number
+    tag: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type MaterialTagMinAggregateInputType = {
+    id?: true
+    materialId?: true
+    tag?: true
+    createdAt?: true
+  }
+
+  export type MaterialTagMaxAggregateInputType = {
+    id?: true
+    materialId?: true
+    tag?: true
+    createdAt?: true
+  }
+
+  export type MaterialTagCountAggregateInputType = {
+    id?: true
+    materialId?: true
+    tag?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type MaterialTagAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which MaterialTag to aggregate.
+     */
+    where?: MaterialTagWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MaterialTags to fetch.
+     */
+    orderBy?: MaterialTagOrderByWithRelationInput | MaterialTagOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: MaterialTagWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MaterialTags from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MaterialTags.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned MaterialTags
+    **/
+    _count?: true | MaterialTagCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: MaterialTagMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: MaterialTagMaxAggregateInputType
+  }
+
+  export type GetMaterialTagAggregateType<T extends MaterialTagAggregateArgs> = {
+        [P in keyof T & keyof AggregateMaterialTag]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateMaterialTag[P]>
+      : GetScalarType<T[P], AggregateMaterialTag[P]>
+  }
+
+
+
+
+  export type MaterialTagGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: MaterialTagWhereInput
+    orderBy?: MaterialTagOrderByWithAggregationInput | MaterialTagOrderByWithAggregationInput[]
+    by: MaterialTagScalarFieldEnum[] | MaterialTagScalarFieldEnum
+    having?: MaterialTagScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: MaterialTagCountAggregateInputType | true
+    _min?: MaterialTagMinAggregateInputType
+    _max?: MaterialTagMaxAggregateInputType
+  }
+
+  export type MaterialTagGroupByOutputType = {
+    id: string
+    materialId: string
+    tag: string
+    createdAt: Date
+    _count: MaterialTagCountAggregateOutputType | null
+    _min: MaterialTagMinAggregateOutputType | null
+    _max: MaterialTagMaxAggregateOutputType | null
+  }
+
+  type GetMaterialTagGroupByPayload<T extends MaterialTagGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<MaterialTagGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof MaterialTagGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], MaterialTagGroupByOutputType[P]>
+            : GetScalarType<T[P], MaterialTagGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type MaterialTagSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    materialId?: boolean
+    tag?: boolean
+    createdAt?: boolean
+    material?: boolean | MaterialDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["materialTag"]>
+
+  export type MaterialTagSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    materialId?: boolean
+    tag?: boolean
+    createdAt?: boolean
+    material?: boolean | MaterialDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["materialTag"]>
+
+  export type MaterialTagSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    materialId?: boolean
+    tag?: boolean
+    createdAt?: boolean
+    material?: boolean | MaterialDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["materialTag"]>
+
+  export type MaterialTagSelectScalar = {
+    id?: boolean
+    materialId?: boolean
+    tag?: boolean
+    createdAt?: boolean
+  }
+
+  export type MaterialTagOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "materialId" | "tag" | "createdAt", ExtArgs["result"]["materialTag"]>
+  export type MaterialTagInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    material?: boolean | MaterialDefaultArgs<ExtArgs>
+  }
+  export type MaterialTagIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    material?: boolean | MaterialDefaultArgs<ExtArgs>
+  }
+  export type MaterialTagIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    material?: boolean | MaterialDefaultArgs<ExtArgs>
+  }
+
+  export type $MaterialTagPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "MaterialTag"
+    objects: {
+      material: Prisma.$MaterialPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      materialId: string
+      tag: string
+      createdAt: Date
+    }, ExtArgs["result"]["materialTag"]>
+    composites: {}
+  }
+
+  type MaterialTagGetPayload<S extends boolean | null | undefined | MaterialTagDefaultArgs> = $Result.GetResult<Prisma.$MaterialTagPayload, S>
+
+  type MaterialTagCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<MaterialTagFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: MaterialTagCountAggregateInputType | true
+    }
+
+  export interface MaterialTagDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['MaterialTag'], meta: { name: 'MaterialTag' } }
+    /**
+     * Find zero or one MaterialTag that matches the filter.
+     * @param {MaterialTagFindUniqueArgs} args - Arguments to find a MaterialTag
+     * @example
+     * // Get one MaterialTag
+     * const materialTag = await prisma.materialTag.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends MaterialTagFindUniqueArgs>(args: SelectSubset<T, MaterialTagFindUniqueArgs<ExtArgs>>): Prisma__MaterialTagClient<$Result.GetResult<Prisma.$MaterialTagPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one MaterialTag that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {MaterialTagFindUniqueOrThrowArgs} args - Arguments to find a MaterialTag
+     * @example
+     * // Get one MaterialTag
+     * const materialTag = await prisma.materialTag.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends MaterialTagFindUniqueOrThrowArgs>(args: SelectSubset<T, MaterialTagFindUniqueOrThrowArgs<ExtArgs>>): Prisma__MaterialTagClient<$Result.GetResult<Prisma.$MaterialTagPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first MaterialTag that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialTagFindFirstArgs} args - Arguments to find a MaterialTag
+     * @example
+     * // Get one MaterialTag
+     * const materialTag = await prisma.materialTag.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends MaterialTagFindFirstArgs>(args?: SelectSubset<T, MaterialTagFindFirstArgs<ExtArgs>>): Prisma__MaterialTagClient<$Result.GetResult<Prisma.$MaterialTagPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first MaterialTag that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialTagFindFirstOrThrowArgs} args - Arguments to find a MaterialTag
+     * @example
+     * // Get one MaterialTag
+     * const materialTag = await prisma.materialTag.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends MaterialTagFindFirstOrThrowArgs>(args?: SelectSubset<T, MaterialTagFindFirstOrThrowArgs<ExtArgs>>): Prisma__MaterialTagClient<$Result.GetResult<Prisma.$MaterialTagPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more MaterialTags that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialTagFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all MaterialTags
+     * const materialTags = await prisma.materialTag.findMany()
+     * 
+     * // Get first 10 MaterialTags
+     * const materialTags = await prisma.materialTag.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const materialTagWithIdOnly = await prisma.materialTag.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends MaterialTagFindManyArgs>(args?: SelectSubset<T, MaterialTagFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialTagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a MaterialTag.
+     * @param {MaterialTagCreateArgs} args - Arguments to create a MaterialTag.
+     * @example
+     * // Create one MaterialTag
+     * const MaterialTag = await prisma.materialTag.create({
+     *   data: {
+     *     // ... data to create a MaterialTag
+     *   }
+     * })
+     * 
+     */
+    create<T extends MaterialTagCreateArgs>(args: SelectSubset<T, MaterialTagCreateArgs<ExtArgs>>): Prisma__MaterialTagClient<$Result.GetResult<Prisma.$MaterialTagPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many MaterialTags.
+     * @param {MaterialTagCreateManyArgs} args - Arguments to create many MaterialTags.
+     * @example
+     * // Create many MaterialTags
+     * const materialTag = await prisma.materialTag.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends MaterialTagCreateManyArgs>(args?: SelectSubset<T, MaterialTagCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many MaterialTags and returns the data saved in the database.
+     * @param {MaterialTagCreateManyAndReturnArgs} args - Arguments to create many MaterialTags.
+     * @example
+     * // Create many MaterialTags
+     * const materialTag = await prisma.materialTag.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many MaterialTags and only return the `id`
+     * const materialTagWithIdOnly = await prisma.materialTag.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends MaterialTagCreateManyAndReturnArgs>(args?: SelectSubset<T, MaterialTagCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialTagPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a MaterialTag.
+     * @param {MaterialTagDeleteArgs} args - Arguments to delete one MaterialTag.
+     * @example
+     * // Delete one MaterialTag
+     * const MaterialTag = await prisma.materialTag.delete({
+     *   where: {
+     *     // ... filter to delete one MaterialTag
+     *   }
+     * })
+     * 
+     */
+    delete<T extends MaterialTagDeleteArgs>(args: SelectSubset<T, MaterialTagDeleteArgs<ExtArgs>>): Prisma__MaterialTagClient<$Result.GetResult<Prisma.$MaterialTagPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one MaterialTag.
+     * @param {MaterialTagUpdateArgs} args - Arguments to update one MaterialTag.
+     * @example
+     * // Update one MaterialTag
+     * const materialTag = await prisma.materialTag.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends MaterialTagUpdateArgs>(args: SelectSubset<T, MaterialTagUpdateArgs<ExtArgs>>): Prisma__MaterialTagClient<$Result.GetResult<Prisma.$MaterialTagPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more MaterialTags.
+     * @param {MaterialTagDeleteManyArgs} args - Arguments to filter MaterialTags to delete.
+     * @example
+     * // Delete a few MaterialTags
+     * const { count } = await prisma.materialTag.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends MaterialTagDeleteManyArgs>(args?: SelectSubset<T, MaterialTagDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more MaterialTags.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialTagUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many MaterialTags
+     * const materialTag = await prisma.materialTag.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends MaterialTagUpdateManyArgs>(args: SelectSubset<T, MaterialTagUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more MaterialTags and returns the data updated in the database.
+     * @param {MaterialTagUpdateManyAndReturnArgs} args - Arguments to update many MaterialTags.
+     * @example
+     * // Update many MaterialTags
+     * const materialTag = await prisma.materialTag.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more MaterialTags and only return the `id`
+     * const materialTagWithIdOnly = await prisma.materialTag.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends MaterialTagUpdateManyAndReturnArgs>(args: SelectSubset<T, MaterialTagUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialTagPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one MaterialTag.
+     * @param {MaterialTagUpsertArgs} args - Arguments to update or create a MaterialTag.
+     * @example
+     * // Update or create a MaterialTag
+     * const materialTag = await prisma.materialTag.upsert({
+     *   create: {
+     *     // ... data to create a MaterialTag
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the MaterialTag we want to update
+     *   }
+     * })
+     */
+    upsert<T extends MaterialTagUpsertArgs>(args: SelectSubset<T, MaterialTagUpsertArgs<ExtArgs>>): Prisma__MaterialTagClient<$Result.GetResult<Prisma.$MaterialTagPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of MaterialTags.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialTagCountArgs} args - Arguments to filter MaterialTags to count.
+     * @example
+     * // Count the number of MaterialTags
+     * const count = await prisma.materialTag.count({
+     *   where: {
+     *     // ... the filter for the MaterialTags we want to count
+     *   }
+     * })
+    **/
+    count<T extends MaterialTagCountArgs>(
+      args?: Subset<T, MaterialTagCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], MaterialTagCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a MaterialTag.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialTagAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends MaterialTagAggregateArgs>(args: Subset<T, MaterialTagAggregateArgs>): Prisma.PrismaPromise<GetMaterialTagAggregateType<T>>
+
+    /**
+     * Group by MaterialTag.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialTagGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends MaterialTagGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: MaterialTagGroupByArgs['orderBy'] }
+        : { orderBy?: MaterialTagGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, MaterialTagGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetMaterialTagGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the MaterialTag model
+   */
+  readonly fields: MaterialTagFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for MaterialTag.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__MaterialTagClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    material<T extends MaterialDefaultArgs<ExtArgs> = {}>(args?: Subset<T, MaterialDefaultArgs<ExtArgs>>): Prisma__MaterialClient<$Result.GetResult<Prisma.$MaterialPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the MaterialTag model
+   */
+  interface MaterialTagFieldRefs {
+    readonly id: FieldRef<"MaterialTag", 'String'>
+    readonly materialId: FieldRef<"MaterialTag", 'String'>
+    readonly tag: FieldRef<"MaterialTag", 'String'>
+    readonly createdAt: FieldRef<"MaterialTag", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * MaterialTag findUnique
+   */
+  export type MaterialTagFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagInclude<ExtArgs> | null
+    /**
+     * Filter, which MaterialTag to fetch.
+     */
+    where: MaterialTagWhereUniqueInput
+  }
+
+  /**
+   * MaterialTag findUniqueOrThrow
+   */
+  export type MaterialTagFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagInclude<ExtArgs> | null
+    /**
+     * Filter, which MaterialTag to fetch.
+     */
+    where: MaterialTagWhereUniqueInput
+  }
+
+  /**
+   * MaterialTag findFirst
+   */
+  export type MaterialTagFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagInclude<ExtArgs> | null
+    /**
+     * Filter, which MaterialTag to fetch.
+     */
+    where?: MaterialTagWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MaterialTags to fetch.
+     */
+    orderBy?: MaterialTagOrderByWithRelationInput | MaterialTagOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for MaterialTags.
+     */
+    cursor?: MaterialTagWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MaterialTags from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MaterialTags.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MaterialTags.
+     */
+    distinct?: MaterialTagScalarFieldEnum | MaterialTagScalarFieldEnum[]
+  }
+
+  /**
+   * MaterialTag findFirstOrThrow
+   */
+  export type MaterialTagFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagInclude<ExtArgs> | null
+    /**
+     * Filter, which MaterialTag to fetch.
+     */
+    where?: MaterialTagWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MaterialTags to fetch.
+     */
+    orderBy?: MaterialTagOrderByWithRelationInput | MaterialTagOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for MaterialTags.
+     */
+    cursor?: MaterialTagWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MaterialTags from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MaterialTags.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MaterialTags.
+     */
+    distinct?: MaterialTagScalarFieldEnum | MaterialTagScalarFieldEnum[]
+  }
+
+  /**
+   * MaterialTag findMany
+   */
+  export type MaterialTagFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagInclude<ExtArgs> | null
+    /**
+     * Filter, which MaterialTags to fetch.
+     */
+    where?: MaterialTagWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MaterialTags to fetch.
+     */
+    orderBy?: MaterialTagOrderByWithRelationInput | MaterialTagOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing MaterialTags.
+     */
+    cursor?: MaterialTagWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MaterialTags from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MaterialTags.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MaterialTags.
+     */
+    distinct?: MaterialTagScalarFieldEnum | MaterialTagScalarFieldEnum[]
+  }
+
+  /**
+   * MaterialTag create
+   */
+  export type MaterialTagCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagInclude<ExtArgs> | null
+    /**
+     * The data needed to create a MaterialTag.
+     */
+    data: XOR<MaterialTagCreateInput, MaterialTagUncheckedCreateInput>
+  }
+
+  /**
+   * MaterialTag createMany
+   */
+  export type MaterialTagCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many MaterialTags.
+     */
+    data: MaterialTagCreateManyInput | MaterialTagCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * MaterialTag createManyAndReturn
+   */
+  export type MaterialTagCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * The data used to create many MaterialTags.
+     */
+    data: MaterialTagCreateManyInput | MaterialTagCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * MaterialTag update
+   */
+  export type MaterialTagUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagInclude<ExtArgs> | null
+    /**
+     * The data needed to update a MaterialTag.
+     */
+    data: XOR<MaterialTagUpdateInput, MaterialTagUncheckedUpdateInput>
+    /**
+     * Choose, which MaterialTag to update.
+     */
+    where: MaterialTagWhereUniqueInput
+  }
+
+  /**
+   * MaterialTag updateMany
+   */
+  export type MaterialTagUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update MaterialTags.
+     */
+    data: XOR<MaterialTagUpdateManyMutationInput, MaterialTagUncheckedUpdateManyInput>
+    /**
+     * Filter which MaterialTags to update
+     */
+    where?: MaterialTagWhereInput
+    /**
+     * Limit how many MaterialTags to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * MaterialTag updateManyAndReturn
+   */
+  export type MaterialTagUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * The data used to update MaterialTags.
+     */
+    data: XOR<MaterialTagUpdateManyMutationInput, MaterialTagUncheckedUpdateManyInput>
+    /**
+     * Filter which MaterialTags to update
+     */
+    where?: MaterialTagWhereInput
+    /**
+     * Limit how many MaterialTags to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * MaterialTag upsert
+   */
+  export type MaterialTagUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagInclude<ExtArgs> | null
+    /**
+     * The filter to search for the MaterialTag to update in case it exists.
+     */
+    where: MaterialTagWhereUniqueInput
+    /**
+     * In case the MaterialTag found by the `where` argument doesn't exist, create a new MaterialTag with this data.
+     */
+    create: XOR<MaterialTagCreateInput, MaterialTagUncheckedCreateInput>
+    /**
+     * In case the MaterialTag was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<MaterialTagUpdateInput, MaterialTagUncheckedUpdateInput>
+  }
+
+  /**
+   * MaterialTag delete
+   */
+  export type MaterialTagDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagInclude<ExtArgs> | null
+    /**
+     * Filter which MaterialTag to delete.
+     */
+    where: MaterialTagWhereUniqueInput
+  }
+
+  /**
+   * MaterialTag deleteMany
+   */
+  export type MaterialTagDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which MaterialTags to delete
+     */
+    where?: MaterialTagWhereInput
+    /**
+     * Limit how many MaterialTags to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * MaterialTag without action
+   */
+  export type MaterialTagDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialTag
+     */
+    select?: MaterialTagSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialTag
+     */
+    omit?: MaterialTagOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialTagInclude<ExtArgs> | null
   }
 
 
@@ -19804,6 +20995,7 @@ export namespace Prisma {
     parentId: 'parentId',
     categoryType: 'categoryType',
     iconUrl: 'iconUrl',
+    isActive: 'isActive',
     createdAt: 'createdAt'
   };
 
@@ -19851,6 +21043,16 @@ export namespace Prisma {
   };
 
   export type MaterialImageScalarFieldEnum = (typeof MaterialImageScalarFieldEnum)[keyof typeof MaterialImageScalarFieldEnum]
+
+
+  export const MaterialTagScalarFieldEnum: {
+    id: 'id',
+    materialId: 'materialId',
+    tag: 'tag',
+    createdAt: 'createdAt'
+  };
+
+  export type MaterialTagScalarFieldEnum = (typeof MaterialTagScalarFieldEnum)[keyof typeof MaterialTagScalarFieldEnum]
 
 
   export const ReservationScalarFieldEnum: {
@@ -20963,6 +22165,7 @@ export namespace Prisma {
     parentId?: StringNullableFilter<"Category"> | string | null
     categoryType?: EnumCategoryTypeFilter<"Category"> | $Enums.CategoryType
     iconUrl?: StringNullableFilter<"Category"> | string | null
+    isActive?: BoolFilter<"Category"> | boolean
     createdAt?: DateTimeFilter<"Category"> | Date | string
     parent?: XOR<CategoryNullableScalarRelationFilter, CategoryWhereInput> | null
     children?: CategoryListRelationFilter
@@ -20976,6 +22179,7 @@ export namespace Prisma {
     parentId?: SortOrderInput | SortOrder
     categoryType?: SortOrder
     iconUrl?: SortOrderInput | SortOrder
+    isActive?: SortOrder
     createdAt?: SortOrder
     parent?: CategoryOrderByWithRelationInput
     children?: CategoryOrderByRelationAggregateInput
@@ -20992,6 +22196,7 @@ export namespace Prisma {
     parentId?: StringNullableFilter<"Category"> | string | null
     categoryType?: EnumCategoryTypeFilter<"Category"> | $Enums.CategoryType
     iconUrl?: StringNullableFilter<"Category"> | string | null
+    isActive?: BoolFilter<"Category"> | boolean
     createdAt?: DateTimeFilter<"Category"> | Date | string
     parent?: XOR<CategoryNullableScalarRelationFilter, CategoryWhereInput> | null
     children?: CategoryListRelationFilter
@@ -21005,6 +22210,7 @@ export namespace Prisma {
     parentId?: SortOrderInput | SortOrder
     categoryType?: SortOrder
     iconUrl?: SortOrderInput | SortOrder
+    isActive?: SortOrder
     createdAt?: SortOrder
     _count?: CategoryCountOrderByAggregateInput
     _max?: CategoryMaxOrderByAggregateInput
@@ -21021,6 +22227,7 @@ export namespace Prisma {
     parentId?: StringNullableWithAggregatesFilter<"Category"> | string | null
     categoryType?: EnumCategoryTypeWithAggregatesFilter<"Category"> | $Enums.CategoryType
     iconUrl?: StringNullableWithAggregatesFilter<"Category"> | string | null
+    isActive?: BoolWithAggregatesFilter<"Category"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"Category"> | Date | string
   }
 
@@ -21058,6 +22265,7 @@ export namespace Prisma {
     category?: XOR<CategoryScalarRelationFilter, CategoryWhereInput>
     location?: XOR<LocationScalarRelationFilter, LocationWhereInput>
     images?: MaterialImageListRelationFilter
+    tags?: MaterialTagListRelationFilter
     reservations?: ReservationListRelationFilter
     reusedByReservation?: XOR<ReservationNullableScalarRelationFilter, ReservationWhereInput> | null
   }
@@ -21093,6 +22301,7 @@ export namespace Prisma {
     category?: CategoryOrderByWithRelationInput
     location?: LocationOrderByWithRelationInput
     images?: MaterialImageOrderByRelationAggregateInput
+    tags?: MaterialTagOrderByRelationAggregateInput
     reservations?: ReservationOrderByRelationAggregateInput
     reusedByReservation?: ReservationOrderByWithRelationInput
   }
@@ -21131,6 +22340,7 @@ export namespace Prisma {
     category?: XOR<CategoryScalarRelationFilter, CategoryWhereInput>
     location?: XOR<LocationScalarRelationFilter, LocationWhereInput>
     images?: MaterialImageListRelationFilter
+    tags?: MaterialTagListRelationFilter
     reservations?: ReservationListRelationFilter
     reusedByReservation?: XOR<ReservationNullableScalarRelationFilter, ReservationWhereInput> | null
   }, "id" | "reusedByReservationId">
@@ -21259,6 +22469,57 @@ export namespace Prisma {
     sortOrder?: IntWithAggregatesFilter<"MaterialImage"> | number
     isCover?: BoolWithAggregatesFilter<"MaterialImage"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"MaterialImage"> | Date | string
+  }
+
+  export type MaterialTagWhereInput = {
+    AND?: MaterialTagWhereInput | MaterialTagWhereInput[]
+    OR?: MaterialTagWhereInput[]
+    NOT?: MaterialTagWhereInput | MaterialTagWhereInput[]
+    id?: StringFilter<"MaterialTag"> | string
+    materialId?: StringFilter<"MaterialTag"> | string
+    tag?: StringFilter<"MaterialTag"> | string
+    createdAt?: DateTimeFilter<"MaterialTag"> | Date | string
+    material?: XOR<MaterialScalarRelationFilter, MaterialWhereInput>
+  }
+
+  export type MaterialTagOrderByWithRelationInput = {
+    id?: SortOrder
+    materialId?: SortOrder
+    tag?: SortOrder
+    createdAt?: SortOrder
+    material?: MaterialOrderByWithRelationInput
+  }
+
+  export type MaterialTagWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    materialId_tag?: MaterialTagMaterialIdTagCompoundUniqueInput
+    AND?: MaterialTagWhereInput | MaterialTagWhereInput[]
+    OR?: MaterialTagWhereInput[]
+    NOT?: MaterialTagWhereInput | MaterialTagWhereInput[]
+    materialId?: StringFilter<"MaterialTag"> | string
+    tag?: StringFilter<"MaterialTag"> | string
+    createdAt?: DateTimeFilter<"MaterialTag"> | Date | string
+    material?: XOR<MaterialScalarRelationFilter, MaterialWhereInput>
+  }, "id" | "materialId_tag">
+
+  export type MaterialTagOrderByWithAggregationInput = {
+    id?: SortOrder
+    materialId?: SortOrder
+    tag?: SortOrder
+    createdAt?: SortOrder
+    _count?: MaterialTagCountOrderByAggregateInput
+    _max?: MaterialTagMaxOrderByAggregateInput
+    _min?: MaterialTagMinOrderByAggregateInput
+  }
+
+  export type MaterialTagScalarWhereWithAggregatesInput = {
+    AND?: MaterialTagScalarWhereWithAggregatesInput | MaterialTagScalarWhereWithAggregatesInput[]
+    OR?: MaterialTagScalarWhereWithAggregatesInput[]
+    NOT?: MaterialTagScalarWhereWithAggregatesInput | MaterialTagScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"MaterialTag"> | string
+    materialId?: StringWithAggregatesFilter<"MaterialTag"> | string
+    tag?: StringWithAggregatesFilter<"MaterialTag"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"MaterialTag"> | Date | string
   }
 
   export type ReservationWhereInput = {
@@ -22342,6 +23603,7 @@ export namespace Prisma {
     nameAr: string
     categoryType: $Enums.CategoryType
     iconUrl?: string | null
+    isActive?: boolean
     createdAt?: Date | string
     parent?: CategoryCreateNestedOneWithoutChildrenInput
     children?: CategoryCreateNestedManyWithoutParentInput
@@ -22355,6 +23617,7 @@ export namespace Prisma {
     parentId?: string | null
     categoryType: $Enums.CategoryType
     iconUrl?: string | null
+    isActive?: boolean
     createdAt?: Date | string
     children?: CategoryUncheckedCreateNestedManyWithoutParentInput
     materials?: MaterialUncheckedCreateNestedManyWithoutCategoryInput
@@ -22366,6 +23629,7 @@ export namespace Prisma {
     nameAr?: StringFieldUpdateOperationsInput | string
     categoryType?: EnumCategoryTypeFieldUpdateOperationsInput | $Enums.CategoryType
     iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     parent?: CategoryUpdateOneWithoutChildrenNestedInput
     children?: CategoryUpdateManyWithoutParentNestedInput
@@ -22379,6 +23643,7 @@ export namespace Prisma {
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
     categoryType?: EnumCategoryTypeFieldUpdateOperationsInput | $Enums.CategoryType
     iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: CategoryUncheckedUpdateManyWithoutParentNestedInput
     materials?: MaterialUncheckedUpdateManyWithoutCategoryNestedInput
@@ -22391,6 +23656,7 @@ export namespace Prisma {
     parentId?: string | null
     categoryType: $Enums.CategoryType
     iconUrl?: string | null
+    isActive?: boolean
     createdAt?: Date | string
   }
 
@@ -22400,6 +23666,7 @@ export namespace Prisma {
     nameAr?: StringFieldUpdateOperationsInput | string
     categoryType?: EnumCategoryTypeFieldUpdateOperationsInput | $Enums.CategoryType
     iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -22410,6 +23677,7 @@ export namespace Prisma {
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
     categoryType?: EnumCategoryTypeFieldUpdateOperationsInput | $Enums.CategoryType
     iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -22439,6 +23707,7 @@ export namespace Prisma {
     category: CategoryCreateNestedOneWithoutMaterialsInput
     location: LocationCreateNestedOneWithoutMaterialsInput
     images?: MaterialImageCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagCreateNestedManyWithoutMaterialInput
     reservations?: ReservationCreateNestedManyWithoutMaterialInput
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
   }
@@ -22470,6 +23739,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
   }
 
@@ -22499,6 +23769,7 @@ export namespace Prisma {
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     location?: LocationUpdateOneRequiredWithoutMaterialsNestedInput
     images?: MaterialImageUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUpdateManyWithoutMaterialNestedInput
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
   }
@@ -22530,6 +23801,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
@@ -22671,6 +23943,54 @@ export namespace Prisma {
     imageUrl?: StringFieldUpdateOperationsInput | string
     sortOrder?: IntFieldUpdateOperationsInput | number
     isCover?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialTagCreateInput = {
+    id?: string
+    tag: string
+    createdAt?: Date | string
+    material: MaterialCreateNestedOneWithoutTagsInput
+  }
+
+  export type MaterialTagUncheckedCreateInput = {
+    id?: string
+    materialId: string
+    tag: string
+    createdAt?: Date | string
+  }
+
+  export type MaterialTagUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tag?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    material?: MaterialUpdateOneRequiredWithoutTagsNestedInput
+  }
+
+  export type MaterialTagUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    materialId?: StringFieldUpdateOperationsInput | string
+    tag?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialTagCreateManyInput = {
+    id?: string
+    materialId: string
+    tag: string
+    createdAt?: Date | string
+  }
+
+  export type MaterialTagUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tag?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialTagUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    materialId?: StringFieldUpdateOperationsInput | string
+    tag?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -23795,6 +25115,7 @@ export namespace Prisma {
     parentId?: SortOrder
     categoryType?: SortOrder
     iconUrl?: SortOrder
+    isActive?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -23805,6 +25126,7 @@ export namespace Prisma {
     parentId?: SortOrder
     categoryType?: SortOrder
     iconUrl?: SortOrder
+    isActive?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -23815,6 +25137,7 @@ export namespace Prisma {
     parentId?: SortOrder
     categoryType?: SortOrder
     iconUrl?: SortOrder
+    isActive?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -23887,12 +25210,22 @@ export namespace Prisma {
     none?: MaterialImageWhereInput
   }
 
+  export type MaterialTagListRelationFilter = {
+    every?: MaterialTagWhereInput
+    some?: MaterialTagWhereInput
+    none?: MaterialTagWhereInput
+  }
+
   export type ReservationNullableScalarRelationFilter = {
     is?: ReservationWhereInput | null
     isNot?: ReservationWhereInput | null
   }
 
   export type MaterialImageOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type MaterialTagOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -24092,6 +25425,32 @@ export namespace Prisma {
 
   export type MaterialImageSumOrderByAggregateInput = {
     sortOrder?: SortOrder
+  }
+
+  export type MaterialTagMaterialIdTagCompoundUniqueInput = {
+    materialId: string
+    tag: string
+  }
+
+  export type MaterialTagCountOrderByAggregateInput = {
+    id?: SortOrder
+    materialId?: SortOrder
+    tag?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type MaterialTagMaxOrderByAggregateInput = {
+    id?: SortOrder
+    materialId?: SortOrder
+    tag?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type MaterialTagMinOrderByAggregateInput = {
+    id?: SortOrder
+    materialId?: SortOrder
+    tag?: SortOrder
+    createdAt?: SortOrder
   }
 
   export type EnumReservationStatusFilter<$PrismaModel = never> = {
@@ -25443,6 +26802,13 @@ export namespace Prisma {
     connect?: MaterialImageWhereUniqueInput | MaterialImageWhereUniqueInput[]
   }
 
+  export type MaterialTagCreateNestedManyWithoutMaterialInput = {
+    create?: XOR<MaterialTagCreateWithoutMaterialInput, MaterialTagUncheckedCreateWithoutMaterialInput> | MaterialTagCreateWithoutMaterialInput[] | MaterialTagUncheckedCreateWithoutMaterialInput[]
+    connectOrCreate?: MaterialTagCreateOrConnectWithoutMaterialInput | MaterialTagCreateOrConnectWithoutMaterialInput[]
+    createMany?: MaterialTagCreateManyMaterialInputEnvelope
+    connect?: MaterialTagWhereUniqueInput | MaterialTagWhereUniqueInput[]
+  }
+
   export type ReservationCreateNestedManyWithoutMaterialInput = {
     create?: XOR<ReservationCreateWithoutMaterialInput, ReservationUncheckedCreateWithoutMaterialInput> | ReservationCreateWithoutMaterialInput[] | ReservationUncheckedCreateWithoutMaterialInput[]
     connectOrCreate?: ReservationCreateOrConnectWithoutMaterialInput | ReservationCreateOrConnectWithoutMaterialInput[]
@@ -25461,6 +26827,13 @@ export namespace Prisma {
     connectOrCreate?: MaterialImageCreateOrConnectWithoutMaterialInput | MaterialImageCreateOrConnectWithoutMaterialInput[]
     createMany?: MaterialImageCreateManyMaterialInputEnvelope
     connect?: MaterialImageWhereUniqueInput | MaterialImageWhereUniqueInput[]
+  }
+
+  export type MaterialTagUncheckedCreateNestedManyWithoutMaterialInput = {
+    create?: XOR<MaterialTagCreateWithoutMaterialInput, MaterialTagUncheckedCreateWithoutMaterialInput> | MaterialTagCreateWithoutMaterialInput[] | MaterialTagUncheckedCreateWithoutMaterialInput[]
+    connectOrCreate?: MaterialTagCreateOrConnectWithoutMaterialInput | MaterialTagCreateOrConnectWithoutMaterialInput[]
+    createMany?: MaterialTagCreateManyMaterialInputEnvelope
+    connect?: MaterialTagWhereUniqueInput | MaterialTagWhereUniqueInput[]
   }
 
   export type ReservationUncheckedCreateNestedManyWithoutMaterialInput = {
@@ -25546,6 +26919,20 @@ export namespace Prisma {
     deleteMany?: MaterialImageScalarWhereInput | MaterialImageScalarWhereInput[]
   }
 
+  export type MaterialTagUpdateManyWithoutMaterialNestedInput = {
+    create?: XOR<MaterialTagCreateWithoutMaterialInput, MaterialTagUncheckedCreateWithoutMaterialInput> | MaterialTagCreateWithoutMaterialInput[] | MaterialTagUncheckedCreateWithoutMaterialInput[]
+    connectOrCreate?: MaterialTagCreateOrConnectWithoutMaterialInput | MaterialTagCreateOrConnectWithoutMaterialInput[]
+    upsert?: MaterialTagUpsertWithWhereUniqueWithoutMaterialInput | MaterialTagUpsertWithWhereUniqueWithoutMaterialInput[]
+    createMany?: MaterialTagCreateManyMaterialInputEnvelope
+    set?: MaterialTagWhereUniqueInput | MaterialTagWhereUniqueInput[]
+    disconnect?: MaterialTagWhereUniqueInput | MaterialTagWhereUniqueInput[]
+    delete?: MaterialTagWhereUniqueInput | MaterialTagWhereUniqueInput[]
+    connect?: MaterialTagWhereUniqueInput | MaterialTagWhereUniqueInput[]
+    update?: MaterialTagUpdateWithWhereUniqueWithoutMaterialInput | MaterialTagUpdateWithWhereUniqueWithoutMaterialInput[]
+    updateMany?: MaterialTagUpdateManyWithWhereWithoutMaterialInput | MaterialTagUpdateManyWithWhereWithoutMaterialInput[]
+    deleteMany?: MaterialTagScalarWhereInput | MaterialTagScalarWhereInput[]
+  }
+
   export type ReservationUpdateManyWithoutMaterialNestedInput = {
     create?: XOR<ReservationCreateWithoutMaterialInput, ReservationUncheckedCreateWithoutMaterialInput> | ReservationCreateWithoutMaterialInput[] | ReservationUncheckedCreateWithoutMaterialInput[]
     connectOrCreate?: ReservationCreateOrConnectWithoutMaterialInput | ReservationCreateOrConnectWithoutMaterialInput[]
@@ -25584,6 +26971,20 @@ export namespace Prisma {
     deleteMany?: MaterialImageScalarWhereInput | MaterialImageScalarWhereInput[]
   }
 
+  export type MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput = {
+    create?: XOR<MaterialTagCreateWithoutMaterialInput, MaterialTagUncheckedCreateWithoutMaterialInput> | MaterialTagCreateWithoutMaterialInput[] | MaterialTagUncheckedCreateWithoutMaterialInput[]
+    connectOrCreate?: MaterialTagCreateOrConnectWithoutMaterialInput | MaterialTagCreateOrConnectWithoutMaterialInput[]
+    upsert?: MaterialTagUpsertWithWhereUniqueWithoutMaterialInput | MaterialTagUpsertWithWhereUniqueWithoutMaterialInput[]
+    createMany?: MaterialTagCreateManyMaterialInputEnvelope
+    set?: MaterialTagWhereUniqueInput | MaterialTagWhereUniqueInput[]
+    disconnect?: MaterialTagWhereUniqueInput | MaterialTagWhereUniqueInput[]
+    delete?: MaterialTagWhereUniqueInput | MaterialTagWhereUniqueInput[]
+    connect?: MaterialTagWhereUniqueInput | MaterialTagWhereUniqueInput[]
+    update?: MaterialTagUpdateWithWhereUniqueWithoutMaterialInput | MaterialTagUpdateWithWhereUniqueWithoutMaterialInput[]
+    updateMany?: MaterialTagUpdateManyWithWhereWithoutMaterialInput | MaterialTagUpdateManyWithWhereWithoutMaterialInput[]
+    deleteMany?: MaterialTagScalarWhereInput | MaterialTagScalarWhereInput[]
+  }
+
   export type ReservationUncheckedUpdateManyWithoutMaterialNestedInput = {
     create?: XOR<ReservationCreateWithoutMaterialInput, ReservationUncheckedCreateWithoutMaterialInput> | ReservationCreateWithoutMaterialInput[] | ReservationUncheckedCreateWithoutMaterialInput[]
     connectOrCreate?: ReservationCreateOrConnectWithoutMaterialInput | ReservationCreateOrConnectWithoutMaterialInput[]
@@ -25610,6 +27011,20 @@ export namespace Prisma {
     upsert?: MaterialUpsertWithoutImagesInput
     connect?: MaterialWhereUniqueInput
     update?: XOR<XOR<MaterialUpdateToOneWithWhereWithoutImagesInput, MaterialUpdateWithoutImagesInput>, MaterialUncheckedUpdateWithoutImagesInput>
+  }
+
+  export type MaterialCreateNestedOneWithoutTagsInput = {
+    create?: XOR<MaterialCreateWithoutTagsInput, MaterialUncheckedCreateWithoutTagsInput>
+    connectOrCreate?: MaterialCreateOrConnectWithoutTagsInput
+    connect?: MaterialWhereUniqueInput
+  }
+
+  export type MaterialUpdateOneRequiredWithoutTagsNestedInput = {
+    create?: XOR<MaterialCreateWithoutTagsInput, MaterialUncheckedCreateWithoutTagsInput>
+    connectOrCreate?: MaterialCreateOrConnectWithoutTagsInput
+    upsert?: MaterialUpsertWithoutTagsInput
+    connect?: MaterialWhereUniqueInput
+    update?: XOR<XOR<MaterialUpdateToOneWithWhereWithoutTagsInput, MaterialUpdateWithoutTagsInput>, MaterialUncheckedUpdateWithoutTagsInput>
   }
 
   export type MaterialCreateNestedOneWithoutReservationsInput = {
@@ -26563,6 +27978,7 @@ export namespace Prisma {
     category: CategoryCreateNestedOneWithoutMaterialsInput
     location: LocationCreateNestedOneWithoutMaterialsInput
     images?: MaterialImageCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagCreateNestedManyWithoutMaterialInput
     reservations?: ReservationCreateNestedManyWithoutMaterialInput
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
   }
@@ -26593,6 +28009,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
   }
 
@@ -28083,6 +29500,7 @@ export namespace Prisma {
     category: CategoryCreateNestedOneWithoutMaterialsInput
     location: LocationCreateNestedOneWithoutMaterialsInput
     images?: MaterialImageCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagCreateNestedManyWithoutMaterialInput
     reservations?: ReservationCreateNestedManyWithoutMaterialInput
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
   }
@@ -28113,6 +29531,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
   }
 
@@ -28544,6 +29963,7 @@ export namespace Prisma {
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     images?: MaterialImageCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagCreateNestedManyWithoutMaterialInput
     reservations?: ReservationCreateNestedManyWithoutMaterialInput
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
   }
@@ -28574,6 +29994,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
   }
 
@@ -28745,6 +30166,7 @@ export namespace Prisma {
     nameAr: string
     categoryType: $Enums.CategoryType
     iconUrl?: string | null
+    isActive?: boolean
     createdAt?: Date | string
     parent?: CategoryCreateNestedOneWithoutChildrenInput
     materials?: MaterialCreateNestedManyWithoutCategoryInput
@@ -28757,6 +30179,7 @@ export namespace Prisma {
     parentId?: string | null
     categoryType: $Enums.CategoryType
     iconUrl?: string | null
+    isActive?: boolean
     createdAt?: Date | string
     materials?: MaterialUncheckedCreateNestedManyWithoutCategoryInput
   }
@@ -28772,6 +30195,7 @@ export namespace Prisma {
     nameAr: string
     categoryType: $Enums.CategoryType
     iconUrl?: string | null
+    isActive?: boolean
     createdAt?: Date | string
     children?: CategoryCreateNestedManyWithoutParentInput
     materials?: MaterialCreateNestedManyWithoutCategoryInput
@@ -28783,6 +30207,7 @@ export namespace Prisma {
     nameAr: string
     categoryType: $Enums.CategoryType
     iconUrl?: string | null
+    isActive?: boolean
     createdAt?: Date | string
     children?: CategoryUncheckedCreateNestedManyWithoutParentInput
     materials?: MaterialUncheckedCreateNestedManyWithoutCategoryInput
@@ -28823,6 +30248,7 @@ export namespace Prisma {
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     location: LocationCreateNestedOneWithoutMaterialsInput
     images?: MaterialImageCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagCreateNestedManyWithoutMaterialInput
     reservations?: ReservationCreateNestedManyWithoutMaterialInput
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
   }
@@ -28853,6 +30279,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
   }
 
@@ -28883,6 +30310,7 @@ export namespace Prisma {
     nameAr?: StringFieldUpdateOperationsInput | string
     categoryType?: EnumCategoryTypeFieldUpdateOperationsInput | $Enums.CategoryType
     iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     parent?: CategoryUpdateOneWithoutChildrenNestedInput
     materials?: MaterialUpdateManyWithoutCategoryNestedInput
@@ -28895,6 +30323,7 @@ export namespace Prisma {
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
     categoryType?: EnumCategoryTypeFieldUpdateOperationsInput | $Enums.CategoryType
     iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     materials?: MaterialUncheckedUpdateManyWithoutCategoryNestedInput
   }
@@ -28925,6 +30354,7 @@ export namespace Prisma {
     parentId?: StringNullableFilter<"Category"> | string | null
     categoryType?: EnumCategoryTypeFilter<"Category"> | $Enums.CategoryType
     iconUrl?: StringNullableFilter<"Category"> | string | null
+    isActive?: BoolFilter<"Category"> | boolean
     createdAt?: DateTimeFilter<"Category"> | Date | string
   }
 
@@ -29040,6 +30470,7 @@ export namespace Prisma {
     nameAr: string
     categoryType: $Enums.CategoryType
     iconUrl?: string | null
+    isActive?: boolean
     createdAt?: Date | string
     parent?: CategoryCreateNestedOneWithoutChildrenInput
     children?: CategoryCreateNestedManyWithoutParentInput
@@ -29052,6 +30483,7 @@ export namespace Prisma {
     parentId?: string | null
     categoryType: $Enums.CategoryType
     iconUrl?: string | null
+    isActive?: boolean
     createdAt?: Date | string
     children?: CategoryUncheckedCreateNestedManyWithoutParentInput
   }
@@ -29125,6 +30557,28 @@ export namespace Prisma {
 
   export type MaterialImageCreateManyMaterialInputEnvelope = {
     data: MaterialImageCreateManyMaterialInput | MaterialImageCreateManyMaterialInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type MaterialTagCreateWithoutMaterialInput = {
+    id?: string
+    tag: string
+    createdAt?: Date | string
+  }
+
+  export type MaterialTagUncheckedCreateWithoutMaterialInput = {
+    id?: string
+    tag: string
+    createdAt?: Date | string
+  }
+
+  export type MaterialTagCreateOrConnectWithoutMaterialInput = {
+    where: MaterialTagWhereUniqueInput
+    create: XOR<MaterialTagCreateWithoutMaterialInput, MaterialTagUncheckedCreateWithoutMaterialInput>
+  }
+
+  export type MaterialTagCreateManyMaterialInputEnvelope = {
+    data: MaterialTagCreateManyMaterialInput | MaterialTagCreateManyMaterialInput[]
     skipDuplicates?: boolean
   }
 
@@ -29354,6 +30808,7 @@ export namespace Prisma {
     nameAr?: StringFieldUpdateOperationsInput | string
     categoryType?: EnumCategoryTypeFieldUpdateOperationsInput | $Enums.CategoryType
     iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     parent?: CategoryUpdateOneWithoutChildrenNestedInput
     children?: CategoryUpdateManyWithoutParentNestedInput
@@ -29366,6 +30821,7 @@ export namespace Prisma {
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
     categoryType?: EnumCategoryTypeFieldUpdateOperationsInput | $Enums.CategoryType
     iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: CategoryUncheckedUpdateManyWithoutParentNestedInput
   }
@@ -29443,6 +30899,32 @@ export namespace Prisma {
     sortOrder?: IntFilter<"MaterialImage"> | number
     isCover?: BoolFilter<"MaterialImage"> | boolean
     createdAt?: DateTimeFilter<"MaterialImage"> | Date | string
+  }
+
+  export type MaterialTagUpsertWithWhereUniqueWithoutMaterialInput = {
+    where: MaterialTagWhereUniqueInput
+    update: XOR<MaterialTagUpdateWithoutMaterialInput, MaterialTagUncheckedUpdateWithoutMaterialInput>
+    create: XOR<MaterialTagCreateWithoutMaterialInput, MaterialTagUncheckedCreateWithoutMaterialInput>
+  }
+
+  export type MaterialTagUpdateWithWhereUniqueWithoutMaterialInput = {
+    where: MaterialTagWhereUniqueInput
+    data: XOR<MaterialTagUpdateWithoutMaterialInput, MaterialTagUncheckedUpdateWithoutMaterialInput>
+  }
+
+  export type MaterialTagUpdateManyWithWhereWithoutMaterialInput = {
+    where: MaterialTagScalarWhereInput
+    data: XOR<MaterialTagUpdateManyMutationInput, MaterialTagUncheckedUpdateManyWithoutMaterialInput>
+  }
+
+  export type MaterialTagScalarWhereInput = {
+    AND?: MaterialTagScalarWhereInput | MaterialTagScalarWhereInput[]
+    OR?: MaterialTagScalarWhereInput[]
+    NOT?: MaterialTagScalarWhereInput | MaterialTagScalarWhereInput[]
+    id?: StringFilter<"MaterialTag"> | string
+    materialId?: StringFilter<"MaterialTag"> | string
+    tag?: StringFilter<"MaterialTag"> | string
+    createdAt?: DateTimeFilter<"MaterialTag"> | Date | string
   }
 
   export type ReservationUpsertWithWhereUniqueWithoutMaterialInput = {
@@ -29543,6 +31025,7 @@ export namespace Prisma {
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     location: LocationCreateNestedOneWithoutMaterialsInput
+    tags?: MaterialTagCreateNestedManyWithoutMaterialInput
     reservations?: ReservationCreateNestedManyWithoutMaterialInput
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
   }
@@ -29573,6 +31056,7 @@ export namespace Prisma {
     reusedByReservationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
   }
 
@@ -29617,6 +31101,7 @@ export namespace Prisma {
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     location?: LocationUpdateOneRequiredWithoutMaterialsNestedInput
+    tags?: MaterialTagUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUpdateManyWithoutMaterialNestedInput
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
   }
@@ -29647,6 +31132,143 @@ export namespace Prisma {
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
+    reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
+  }
+
+  export type MaterialCreateWithoutTagsInput = {
+    id?: string
+    title: string
+    description: string
+    materialType: string
+    quantity: Decimal | DecimalJsLike | number | string
+    unit: string
+    condition: $Enums.MaterialCondition
+    sourceType: $Enums.MaterialSourceType
+    status?: $Enums.MaterialStatus
+    isFree?: boolean
+    price?: Decimal | DecimalJsLike | number | string | null
+    currency?: string
+    pickupAllowed?: boolean
+    deliveryAllowed?: boolean
+    pickupNotes?: string | null
+    suggestedUses?: string | null
+    viewsCount?: number
+    reusedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
+    category: CategoryCreateNestedOneWithoutMaterialsInput
+    location: LocationCreateNestedOneWithoutMaterialsInput
+    images?: MaterialImageCreateNestedManyWithoutMaterialInput
+    reservations?: ReservationCreateNestedManyWithoutMaterialInput
+    reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
+  }
+
+  export type MaterialUncheckedCreateWithoutTagsInput = {
+    id?: string
+    ownerId: string
+    supplierProfileId?: string | null
+    categoryId: string
+    title: string
+    description: string
+    materialType: string
+    quantity: Decimal | DecimalJsLike | number | string
+    unit: string
+    condition: $Enums.MaterialCondition
+    sourceType: $Enums.MaterialSourceType
+    status?: $Enums.MaterialStatus
+    isFree?: boolean
+    price?: Decimal | DecimalJsLike | number | string | null
+    currency?: string
+    locationId: string
+    pickupAllowed?: boolean
+    deliveryAllowed?: boolean
+    pickupNotes?: string | null
+    suggestedUses?: string | null
+    viewsCount?: number
+    reusedAt?: Date | string | null
+    reusedByReservationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
+    reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
+  }
+
+  export type MaterialCreateOrConnectWithoutTagsInput = {
+    where: MaterialWhereUniqueInput
+    create: XOR<MaterialCreateWithoutTagsInput, MaterialUncheckedCreateWithoutTagsInput>
+  }
+
+  export type MaterialUpsertWithoutTagsInput = {
+    update: XOR<MaterialUpdateWithoutTagsInput, MaterialUncheckedUpdateWithoutTagsInput>
+    create: XOR<MaterialCreateWithoutTagsInput, MaterialUncheckedCreateWithoutTagsInput>
+    where?: MaterialWhereInput
+  }
+
+  export type MaterialUpdateToOneWithWhereWithoutTagsInput = {
+    where?: MaterialWhereInput
+    data: XOR<MaterialUpdateWithoutTagsInput, MaterialUncheckedUpdateWithoutTagsInput>
+  }
+
+  export type MaterialUpdateWithoutTagsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    quantity?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    unit?: StringFieldUpdateOperationsInput | string
+    condition?: EnumMaterialConditionFieldUpdateOperationsInput | $Enums.MaterialCondition
+    sourceType?: EnumMaterialSourceTypeFieldUpdateOperationsInput | $Enums.MaterialSourceType
+    status?: EnumMaterialStatusFieldUpdateOperationsInput | $Enums.MaterialStatus
+    isFree?: BoolFieldUpdateOperationsInput | boolean
+    price?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currency?: StringFieldUpdateOperationsInput | string
+    pickupAllowed?: BoolFieldUpdateOperationsInput | boolean
+    deliveryAllowed?: BoolFieldUpdateOperationsInput | boolean
+    pickupNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
+    viewsCount?: IntFieldUpdateOperationsInput | number
+    reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
+    category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
+    location?: LocationUpdateOneRequiredWithoutMaterialsNestedInput
+    images?: MaterialImageUpdateManyWithoutMaterialNestedInput
+    reservations?: ReservationUpdateManyWithoutMaterialNestedInput
+    reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
+  }
+
+  export type MaterialUncheckedUpdateWithoutTagsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ownerId?: StringFieldUpdateOperationsInput | string
+    supplierProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    categoryId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    quantity?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    unit?: StringFieldUpdateOperationsInput | string
+    condition?: EnumMaterialConditionFieldUpdateOperationsInput | $Enums.MaterialCondition
+    sourceType?: EnumMaterialSourceTypeFieldUpdateOperationsInput | $Enums.MaterialSourceType
+    status?: EnumMaterialStatusFieldUpdateOperationsInput | $Enums.MaterialStatus
+    isFree?: BoolFieldUpdateOperationsInput | boolean
+    price?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currency?: StringFieldUpdateOperationsInput | string
+    locationId?: StringFieldUpdateOperationsInput | string
+    pickupAllowed?: BoolFieldUpdateOperationsInput | boolean
+    deliveryAllowed?: BoolFieldUpdateOperationsInput | boolean
+    pickupNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
+    viewsCount?: IntFieldUpdateOperationsInput | number
+    reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
@@ -29676,6 +31298,7 @@ export namespace Prisma {
     category: CategoryCreateNestedOneWithoutMaterialsInput
     location: LocationCreateNestedOneWithoutMaterialsInput
     images?: MaterialImageCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagCreateNestedManyWithoutMaterialInput
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
   }
 
@@ -29706,6 +31329,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutReservationsInput = {
@@ -29898,6 +31522,7 @@ export namespace Prisma {
     category: CategoryCreateNestedOneWithoutMaterialsInput
     location: LocationCreateNestedOneWithoutMaterialsInput
     images?: MaterialImageCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagCreateNestedManyWithoutMaterialInput
     reservations?: ReservationCreateNestedManyWithoutMaterialInput
   }
 
@@ -29927,6 +31552,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
   }
 
@@ -30002,6 +31628,7 @@ export namespace Prisma {
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     location?: LocationUpdateOneRequiredWithoutMaterialsNestedInput
     images?: MaterialImageUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUpdateManyWithoutMaterialNestedInput
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
   }
 
@@ -30032,6 +31659,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type UserUpsertWithoutOwnedReservationsAsRequesterInput = {
@@ -30248,6 +31876,7 @@ export namespace Prisma {
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     location?: LocationUpdateOneRequiredWithoutMaterialsNestedInput
     images?: MaterialImageUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUpdateManyWithoutMaterialNestedInput
   }
 
@@ -30277,6 +31906,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
@@ -31117,6 +32747,7 @@ export namespace Prisma {
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     location?: LocationUpdateOneRequiredWithoutMaterialsNestedInput
     images?: MaterialImageUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUpdateManyWithoutMaterialNestedInput
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
   }
@@ -31147,6 +32778,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
@@ -31456,6 +33088,7 @@ export namespace Prisma {
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     location?: LocationUpdateOneRequiredWithoutMaterialsNestedInput
     images?: MaterialImageUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUpdateManyWithoutMaterialNestedInput
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
   }
@@ -31486,6 +33119,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
@@ -31689,6 +33323,7 @@ export namespace Prisma {
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     images?: MaterialImageUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUpdateManyWithoutMaterialNestedInput
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
   }
@@ -31719,6 +33354,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
@@ -31822,6 +33458,7 @@ export namespace Prisma {
     nameAr: string
     categoryType: $Enums.CategoryType
     iconUrl?: string | null
+    isActive?: boolean
     createdAt?: Date | string
   }
 
@@ -31858,6 +33495,7 @@ export namespace Prisma {
     nameAr?: StringFieldUpdateOperationsInput | string
     categoryType?: EnumCategoryTypeFieldUpdateOperationsInput | $Enums.CategoryType
     iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: CategoryUpdateManyWithoutParentNestedInput
     materials?: MaterialUpdateManyWithoutCategoryNestedInput
@@ -31869,6 +33507,7 @@ export namespace Prisma {
     nameAr?: StringFieldUpdateOperationsInput | string
     categoryType?: EnumCategoryTypeFieldUpdateOperationsInput | $Enums.CategoryType
     iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: CategoryUncheckedUpdateManyWithoutParentNestedInput
     materials?: MaterialUncheckedUpdateManyWithoutCategoryNestedInput
@@ -31880,6 +33519,7 @@ export namespace Prisma {
     nameAr?: StringFieldUpdateOperationsInput | string
     categoryType?: EnumCategoryTypeFieldUpdateOperationsInput | $Enums.CategoryType
     iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -31908,6 +33548,7 @@ export namespace Prisma {
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     location?: LocationUpdateOneRequiredWithoutMaterialsNestedInput
     images?: MaterialImageUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUpdateManyWithoutMaterialNestedInput
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
   }
@@ -31938,6 +33579,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
@@ -31973,6 +33615,12 @@ export namespace Prisma {
     imageUrl: string
     sortOrder?: number
     isCover?: boolean
+    createdAt?: Date | string
+  }
+
+  export type MaterialTagCreateManyMaterialInput = {
+    id?: string
+    tag: string
     createdAt?: Date | string
   }
 
@@ -32018,6 +33666,24 @@ export namespace Prisma {
     imageUrl?: StringFieldUpdateOperationsInput | string
     sortOrder?: IntFieldUpdateOperationsInput | number
     isCover?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialTagUpdateWithoutMaterialInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tag?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialTagUncheckedUpdateWithoutMaterialInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tag?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialTagUncheckedUpdateManyWithoutMaterialInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tag?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 

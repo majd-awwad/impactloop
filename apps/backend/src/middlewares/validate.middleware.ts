@@ -25,6 +25,11 @@ export const validate =
       return;
     }
 
-    (req as Request & Record<RequestSource, unknown>)[source] = result.data;
+    Object.defineProperty(req, source, {
+      value: result.data,
+      configurable: true,
+      enumerable: true,
+      writable: true,
+    });
     next();
   };

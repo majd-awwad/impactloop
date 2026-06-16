@@ -229,6 +229,7 @@ exports.Prisma.CategoryScalarFieldEnum = {
   parentId: 'parentId',
   categoryType: 'categoryType',
   iconUrl: 'iconUrl',
+  isActive: 'isActive',
   createdAt: 'createdAt'
 };
 
@@ -266,6 +267,13 @@ exports.Prisma.MaterialImageScalarFieldEnum = {
   imageUrl: 'imageUrl',
   sortOrder: 'sortOrder',
   isCover: 'isCover',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MaterialTagScalarFieldEnum = {
+  id: 'id',
+  materialId: 'materialId',
+  tag: 'tag',
   createdAt: 'createdAt'
 };
 
@@ -457,6 +465,7 @@ exports.Prisma.ModelName = {
   Category: 'Category',
   Material: 'Material',
   MaterialImage: 'MaterialImage',
+  MaterialTag: 'MaterialTag',
   Reservation: 'Reservation',
   Review: 'Review',
   Notification: 'Notification'
