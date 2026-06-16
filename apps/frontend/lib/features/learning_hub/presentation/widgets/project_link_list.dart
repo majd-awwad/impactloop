@@ -5,7 +5,6 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../data/learning_hub_mock_data.dart';
 import '../../domain/models/learning_project.dart';
-import 'learning_hub_text.dart';
 
 class ProjectLinkList extends StatelessWidget {
   const ProjectLinkList({super.key, required this.links});

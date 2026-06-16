@@ -1,11 +1,8 @@
 import 'package:flutter/widgets.dart';
 
-class LocalizedText {
-  const LocalizedText({required this.en, required this.ar});
+export '../../../../shared/models/localized_text.dart';
 
-  final String en;
-  final String ar;
-}
+import '../../../../shared/models/localized_text.dart';
 
 class RatingBreakdown {
   const RatingBreakdown({required this.stars, required this.count});

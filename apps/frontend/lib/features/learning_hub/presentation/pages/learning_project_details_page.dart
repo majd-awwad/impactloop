@@ -7,7 +7,6 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../data/learning_hub_mock_data.dart';
 import '../../domain/models/learning_project.dart';
 import '../widgets/disabled_ai_panel.dart';
-import '../widgets/learning_hub_text.dart';
 import '../widgets/mock_rating_summary_card.dart';
 import '../widgets/project_components_section.dart';
 import '../widgets/project_link_list.dart';
