@@ -193,6 +193,20 @@ exports.Prisma.SupplierProfileScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.OrganizationProfileScalarFieldEnum = {
+  id: 'id',
+  supplierProfileId: 'supplierProfileId',
+  organizationName: 'organizationName',
+  organizationType: 'organizationType',
+  contactPersonName: 'contactPersonName',
+  workingDays: 'workingDays',
+  workingHours: 'workingHours',
+  businessLocationId: 'businessLocationId',
+  verificationDocumentStatus: 'verificationDocumentStatus',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.LocationScalarFieldEnum = {
   id: 'id',
   country: 'country',
@@ -208,9 +222,106 @@ exports.Prisma.LocationScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.CategoryScalarFieldEnum = {
+  id: 'id',
+  nameEn: 'nameEn',
+  nameAr: 'nameAr',
+  parentId: 'parentId',
+  categoryType: 'categoryType',
+  iconUrl: 'iconUrl',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MaterialScalarFieldEnum = {
+  id: 'id',
+  ownerId: 'ownerId',
+  supplierProfileId: 'supplierProfileId',
+  categoryId: 'categoryId',
+  title: 'title',
+  description: 'description',
+  materialType: 'materialType',
+  quantity: 'quantity',
+  unit: 'unit',
+  condition: 'condition',
+  sourceType: 'sourceType',
+  status: 'status',
+  isFree: 'isFree',
+  price: 'price',
+  currency: 'currency',
+  locationId: 'locationId',
+  pickupAllowed: 'pickupAllowed',
+  deliveryAllowed: 'deliveryAllowed',
+  pickupNotes: 'pickupNotes',
+  suggestedUses: 'suggestedUses',
+  viewsCount: 'viewsCount',
+  reusedAt: 'reusedAt',
+  reusedByReservationId: 'reusedByReservationId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.MaterialImageScalarFieldEnum = {
+  id: 'id',
+  materialId: 'materialId',
+  imageUrl: 'imageUrl',
+  sortOrder: 'sortOrder',
+  isCover: 'isCover',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ReservationScalarFieldEnum = {
+  id: 'id',
+  materialId: 'materialId',
+  requesterId: 'requesterId',
+  ownerId: 'ownerId',
+  quantityRequested: 'quantityRequested',
+  message: 'message',
+  status: 'status',
+  pickupWindowStart: 'pickupWindowStart',
+  pickupWindowEnd: 'pickupWindowEnd',
+  pickupType: 'pickupType',
+  supplierNote: 'supplierNote',
+  deliveryRequested: 'deliveryRequested',
+  deliveryStatus: 'deliveryStatus',
+  deliveryCost: 'deliveryCost',
+  dropoffLocationId: 'dropoffLocationId',
+  driverProfileId: 'driverProfileId',
+  completedAt: 'completedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ReviewScalarFieldEnum = {
+  id: 'id',
+  reservationId: 'reservationId',
+  reviewerId: 'reviewerId',
+  reviewedUserId: 'reviewedUserId',
+  targetType: 'targetType',
+  rating: 'rating',
+  comment: 'comment',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.NotificationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  notificationType: 'notificationType',
+  title: 'title',
+  body: 'body',
+  relatedEntityType: 'relatedEntityType',
+  relatedEntityId: 'relatedEntityId',
+  isRead: 'isRead',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.NullableJsonNullValueInput = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
 };
 
 exports.Prisma.QueryMode = {
@@ -221,6 +332,12 @@ exports.Prisma.QueryMode = {
 exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
+};
+
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
 };
 exports.AccountStatus = exports.$Enums.AccountStatus = {
   PENDING_VERIFICATION: 'PENDING_VERIFICATION',
@@ -257,6 +374,77 @@ exports.RoleInvitationStatus = exports.$Enums.RoleInvitationStatus = {
   REVOKED: 'REVOKED'
 };
 
+exports.OrganizationType = exports.$Enums.OrganizationType = {
+  WORKSHOP: 'WORKSHOP',
+  FACTORY: 'FACTORY',
+  EDUCATIONAL_INSTITUTION: 'EDUCATIONAL_INSTITUTION'
+};
+
+exports.VerificationDocumentStatus = exports.$Enums.VerificationDocumentStatus = {
+  PENDING: 'PENDING',
+  VERIFIED: 'VERIFIED',
+  REJECTED: 'REJECTED'
+};
+
+exports.CategoryType = exports.$Enums.CategoryType = {
+  MATERIAL: 'MATERIAL',
+  PROJECT: 'PROJECT',
+  BOTH: 'BOTH'
+};
+
+exports.MaterialCondition = exports.$Enums.MaterialCondition = {
+  NEW: 'NEW',
+  LIKE_NEW: 'LIKE_NEW',
+  GOOD: 'GOOD',
+  USED: 'USED',
+  NEEDS_REPAIR: 'NEEDS_REPAIR'
+};
+
+exports.MaterialSourceType = exports.$Enums.MaterialSourceType = {
+  STUDENT_LEFTOVER: 'STUDENT_LEFTOVER',
+  WORKSHOP_SURPLUS: 'WORKSHOP_SURPLUS',
+  FACTORY_SURPLUS: 'FACTORY_SURPLUS',
+  EDUCATIONAL_INSTITUTION: 'EDUCATIONAL_INSTITUTION'
+};
+
+exports.MaterialStatus = exports.$Enums.MaterialStatus = {
+  AVAILABLE: 'AVAILABLE',
+  PENDING_RESERVATION: 'PENDING_RESERVATION',
+  RESERVED: 'RESERVED',
+  REUSED: 'REUSED',
+  UNAVAILABLE: 'UNAVAILABLE'
+};
+
+exports.ReservationStatus = exports.$Enums.ReservationStatus = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  REJECTED: 'REJECTED',
+  CANCELLED: 'CANCELLED',
+  COMPLETED: 'COMPLETED',
+  EXPIRED: 'EXPIRED'
+};
+
+exports.PickupType = exports.$Enums.PickupType = {
+  SELF_PICKUP: 'SELF_PICKUP',
+  DELIVERY_ALLOWED: 'DELIVERY_ALLOWED'
+};
+
+exports.DeliveryStatus = exports.$Enums.DeliveryStatus = {
+  WAITING_FOR_DRIVER: 'WAITING_FOR_DRIVER',
+  DRIVER_ASSIGNED: 'DRIVER_ASSIGNED',
+  PICKED_UP: 'PICKED_UP',
+  ON_THE_WAY: 'ON_THE_WAY',
+  DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED',
+  FAILED_PICKUP: 'FAILED_PICKUP'
+};
+
+exports.ReviewTargetType = exports.$Enums.ReviewTargetType = {
+  SUPPLIER: 'SUPPLIER',
+  DRIVER: 'DRIVER',
+  MATERIAL: 'MATERIAL'
+};
+
 exports.Prisma.ModelName = {
   User: 'User',
   UserRoleAssignment: 'UserRoleAssignment',
@@ -264,7 +452,14 @@ exports.Prisma.ModelName = {
   RoleInvitation: 'RoleInvitation',
   LearnerProfile: 'LearnerProfile',
   SupplierProfile: 'SupplierProfile',
-  Location: 'Location'
+  OrganizationProfile: 'OrganizationProfile',
+  Location: 'Location',
+  Category: 'Category',
+  Material: 'Material',
+  MaterialImage: 'MaterialImage',
+  Reservation: 'Reservation',
+  Review: 'Review',
+  Notification: 'Notification'
 };
 
 /**
