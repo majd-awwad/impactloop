@@ -171,6 +171,82 @@ abstract final class SupplierDecorations {
     border: Border.all(color: AuthDarkColors.border.withValues(alpha: 0.3)),
   );
 
+  static BoxDecoration profileGlassCard = BoxDecoration(
+    color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.58),
+    borderRadius: AppRadius.xlAll,
+    border: Border.all(color: AuthDarkColors.border.withValues(alpha: 0.38)),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.24),
+        blurRadius: 28,
+        offset: const Offset(0, 12),
+      ),
+    ],
+  );
+
+  static BoxDecoration profileSectionPanel = BoxDecoration(
+    color: AuthDarkColors.landingBackground.withValues(alpha: 0.72),
+    borderRadius: AppRadius.lgAll,
+    border: Border.all(color: AuthDarkColors.border.withValues(alpha: 0.28)),
+  );
+
+  static BoxDecoration sideInsightCard = BoxDecoration(
+    color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.7),
+    borderRadius: AppRadius.lgAll,
+    border: Border.all(color: AuthDarkColors.border.withValues(alpha: 0.32)),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.16),
+        blurRadius: 16,
+        offset: const Offset(0, 6),
+      ),
+    ],
+  );
+
+  static BoxDecoration mapPreviewPanel = BoxDecoration(
+    color: AuthDarkColors.landingBackground,
+    borderRadius: AppRadius.lgAll,
+    border: Border.all(color: AuthDarkColors.border.withValues(alpha: 0.34)),
+  );
+
+  static InputDecoration darkFormFieldDecoration({
+    String? hint,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: AuthDarkColors.textMuted),
+      filled: true,
+      fillColor: AuthDarkColors.surfaceSolid.withValues(alpha: 0.92),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: 16,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: AppRadius.mdAll,
+        borderSide: BorderSide(
+          color: AuthDarkColors.border.withValues(alpha: 0.55),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: AppRadius.mdAll,
+        borderSide: const BorderSide(
+          color: AuthDarkColors.borderFocused,
+          width: 1.5,
+        ),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: AppRadius.mdAll,
+        borderSide: const BorderSide(color: AuthDarkColors.error),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: AppRadius.mdAll,
+        borderSide: const BorderSide(color: AuthDarkColors.error, width: 1.5),
+      ),
+      suffixIcon: suffixIcon,
+    );
+  }
+
   static EdgeInsets pagePadding({required bool compact}) {
     return EdgeInsets.all(compact ? AppSpacing.md : AppSpacing.lg);
   }
