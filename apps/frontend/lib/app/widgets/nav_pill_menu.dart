@@ -27,9 +27,7 @@ class NavPillMenu<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return MenuAnchor(
       style: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll(
-          AuthDarkColors.surfaceSolid,
-        ),
+        backgroundColor: WidgetStatePropertyAll(AuthDarkColors.surfaceSolid),
         elevation: const WidgetStatePropertyAll(8),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
@@ -37,9 +35,9 @@ class NavPillMenu<T> extends StatelessWidget {
             side: const BorderSide(color: AuthDarkColors.border),
           ),
         ),
-        padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(
-          vertical: AppSpacing.xs,
-        )),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        ),
       ),
       builder: (context, controller, child) {
         return _NavPillButton(

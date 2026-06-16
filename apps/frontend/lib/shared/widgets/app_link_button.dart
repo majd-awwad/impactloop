@@ -20,9 +20,7 @@ class AppLinkButton extends StatelessWidget {
       alignment: alignment,
       child: TextButton(
         onPressed: onPressed,
-        style: TextButton.styleFrom(
-          textStyle: AppTextStyles.link(context),
-        ),
+        style: TextButton.styleFrom(textStyle: AppTextStyles.link(context)),
         child: Text(label),
       ),
     );

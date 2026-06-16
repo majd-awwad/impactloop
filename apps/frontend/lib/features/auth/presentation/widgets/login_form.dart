@@ -68,10 +68,12 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     setState(() => _isSubmitting = true);
 
     try {
-      await ref.read(authControllerProvider.notifier).login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      await ref
+          .read(authControllerProvider.notifier)
+          .login(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
 
       if (!mounted) {
         return;
@@ -154,10 +156,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           AppLinkButton(
             label: 'Forgot password?',
             onPressed: () {
-              showInfoSnackBar(
-                context,
-                'Forgot password screen coming soon.',
-              );
+              showInfoSnackBar(context, 'Forgot password screen coming soon.');
             },
           ),
           const SizedBox(height: AppSpacing.lg),

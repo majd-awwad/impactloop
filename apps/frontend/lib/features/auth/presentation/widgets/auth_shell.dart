@@ -7,11 +7,7 @@ import 'auth_branding_panel.dart';
 enum AuthShellLayout { mobile, webSplit }
 
 class AuthShell extends StatelessWidget {
-  const AuthShell({
-    super.key,
-    required this.layout,
-    required this.formContent,
-  });
+  const AuthShell({super.key, required this.layout, required this.formContent});
 
   final AuthShellLayout layout;
   final Widget formContent;

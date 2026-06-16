@@ -4,11 +4,7 @@ import '../../../../app/theme/app_decorations.dart';
 import '../../../../app/theme/app_spacing.dart';
 
 class AuthFormCard extends StatelessWidget {
-  const AuthFormCard({
-    super.key,
-    this.footer,
-    required this.child,
-  });
+  const AuthFormCard({super.key, this.footer, required this.child});
 
   final Widget child;
   final Widget? footer;

@@ -22,10 +22,7 @@ class LoginWebView extends StatelessWidget {
             subtitle: 'Sign in to continue your learning journey.',
           ),
           const SizedBox(height: AppSpacing.lg),
-          AuthFormCard(
-            footer: const LoginFooter(),
-            child: const LoginForm(),
-          ),
+          AuthFormCard(footer: const LoginFooter(), child: const LoginForm()),
         ],
       ),
     );

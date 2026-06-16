@@ -23,10 +23,7 @@ class LandingHeroSection extends StatelessWidget {
             child: _HeroContent(onSignIn: () => context.go('/login')),
           ),
           const SizedBox(width: AppSpacing.xxl),
-          const Expanded(
-            flex: 10,
-            child: HeroWorkshopVisual(),
-          ),
+          const Expanded(flex: 10, child: HeroWorkshopVisual()),
         ],
       );
     }
@@ -76,13 +73,17 @@ class _HeroContent extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.eco_outlined, size: 16, color: AuthDarkColors.accent),
+              const Icon(
+                Icons.eco_outlined,
+                size: 16,
+                color: AuthDarkColors.accent,
+              ),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 'Build a better future',
-                style: AuthDarkTextStyles.chip(context).copyWith(
-                  color: AuthDarkColors.accent,
-                ),
+                style: AuthDarkTextStyles.chip(
+                  context,
+                ).copyWith(color: AuthDarkColors.accent),
               ),
             ],
           ),
@@ -98,14 +99,15 @@ class _HeroContent extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: isCompactPhone ? double.infinity : 560),
+          constraints: BoxConstraints(
+            maxWidth: isCompactPhone ? double.infinity : 560,
+          ),
           child: Text(
             'Discover reusable materials, share surplus resources, and turn '
             'surplus into projects with a cleaner, community-driven workflow.',
-            style: AuthDarkTextStyles.brandingSubtitle(context).copyWith(
-              fontSize: 18,
-              color: AuthDarkColors.textSecondary,
-            ),
+            style: AuthDarkTextStyles.brandingSubtitle(
+              context,
+            ).copyWith(fontSize: 18, color: AuthDarkColors.textSecondary),
           ),
         ),
         const SizedBox(height: AppSpacing.xl),
@@ -116,7 +118,9 @@ class _HeroContent extends StatelessWidget {
             border: Border.all(color: AuthDarkColors.border),
           ),
           child: Padding(
-            padding: EdgeInsets.all(isCompactPhone ? AppSpacing.md : AppSpacing.lg),
+            padding: EdgeInsets.all(
+              isCompactPhone ? AppSpacing.md : AppSpacing.lg,
+            ),
             child: isNarrow
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -153,9 +157,9 @@ class _HeroContent extends StatelessWidget {
                       ),
                       Text(
                         'No credit card. No noise. Just building.',
-                        style: AuthDarkTextStyles.body(context).copyWith(
-                          color: AuthDarkColors.textMuted,
-                        ),
+                        style: AuthDarkTextStyles.body(
+                          context,
+                        ).copyWith(color: AuthDarkColors.textMuted),
                       ),
                     ],
                   ),
@@ -248,9 +252,9 @@ class _HeroContent extends StatelessWidget {
                   child: Text(
                     'Join a growing community of students, makers, and suppliers '
                     'who are building with less waste.',
-                    style: AuthDarkTextStyles.body(context).copyWith(
-                      color: AuthDarkColors.textPrimary,
-                    ),
+                    style: AuthDarkTextStyles.body(
+                      context,
+                    ).copyWith(color: AuthDarkColors.textPrimary),
                   ),
                 ),
               ],
@@ -303,9 +307,9 @@ class _HeroMetricCard extends StatelessWidget {
                     value,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AuthDarkTextStyles.title(context).copyWith(
-                      fontSize: 18,
-                    ),
+                    style: AuthDarkTextStyles.title(
+                      context,
+                    ).copyWith(fontSize: 18),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(

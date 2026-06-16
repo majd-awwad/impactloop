@@ -150,9 +150,17 @@ class _ScrollBody extends StatelessWidget {
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        mobile ? AppSpacing.md : compactSpacing ? AppSpacing.lg : AppSpacing.xl,
+        mobile
+            ? AppSpacing.md
+            : compactSpacing
+            ? AppSpacing.lg
+            : AppSpacing.xl,
         AppSpacing.lg,
-        mobile ? AppSpacing.lg : compactSpacing ? AppSpacing.lg : AppSpacing.xl,
+        mobile
+            ? AppSpacing.lg
+            : compactSpacing
+            ? AppSpacing.lg
+            : AppSpacing.xl,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -165,7 +173,13 @@ class _ScrollBody extends StatelessWidget {
                 compact: true,
                 minimal: mobile,
               ),
-              SizedBox(height: mobile ? AppSpacing.md : compactSpacing ? AppSpacing.lg : AppSpacing.xl),
+              SizedBox(
+                height: mobile
+                    ? AppSpacing.md
+                    : compactSpacing
+                    ? AppSpacing.lg
+                    : AppSpacing.xl,
+              ),
               child,
             ],
           ),

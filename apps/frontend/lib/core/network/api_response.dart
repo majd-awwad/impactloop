@@ -3,11 +3,7 @@ import 'package:dio/dio.dart';
 import '../errors/api_exception.dart';
 
 class ApiResponse<T> {
-  const ApiResponse({
-    required this.success,
-    required this.message,
-    this.data,
-  });
+  const ApiResponse({required this.success, required this.message, this.data});
 
   final bool success;
   final String message;
@@ -31,10 +27,7 @@ ApiException mapDioException(DioException error) {
   if (error.type == DioExceptionType.connectionTimeout ||
       error.type == DioExceptionType.sendTimeout ||
       error.type == DioExceptionType.receiveTimeout) {
-    return const ApiException(
-      message: 'Request timed out',
-      code: 'TIMEOUT',
-    );
+    return const ApiException(message: 'Request timed out', code: 'TIMEOUT');
   }
 
   if (error.type == DioExceptionType.connectionError) {
@@ -57,8 +50,8 @@ ApiException mapDioException(DioException error) {
       statusCode: error.response?.statusCode,
       details: errorBody is Map<String, dynamic>
           ? errorBody['details'] is Map<String, dynamic>
-              ? Map<String, dynamic>.from(errorBody['details'] as Map)
-              : null
+                ? Map<String, dynamic>.from(errorBody['details'] as Map)
+                : null
           : null,
     );
   }
@@ -90,7 +83,8 @@ Future<T> unwrapApiResponse<T>(
             ? errorBody['code'] as String?
             : null,
         statusCode: response.statusCode,
-        details: errorBody is Map<String, dynamic> &&
+        details:
+            errorBody is Map<String, dynamic> &&
                 errorBody['details'] is Map<String, dynamic>
             ? Map<String, dynamic>.from(errorBody['details'] as Map)
             : null,

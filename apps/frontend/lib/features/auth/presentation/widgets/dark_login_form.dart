@@ -95,10 +95,12 @@ class _DarkLoginFormState extends ConsumerState<DarkLoginForm> {
     setState(() => _isSubmitting = true);
 
     try {
-      await ref.read(authControllerProvider.notifier).login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      await ref
+          .read(authControllerProvider.notifier)
+          .login(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
 
       if (!mounted) {
         return;

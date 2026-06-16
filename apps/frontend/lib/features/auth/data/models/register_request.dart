@@ -91,9 +91,7 @@ class RegisterRequest {
       displayName: draft.displayName!.trim(),
       email: draft.email!.trim(),
       password: draft.password!,
-      phone: draft.phone?.trim().isEmpty ?? true
-          ? null
-          : draft.phone!.trim(),
+      phone: draft.phone?.trim().isEmpty ?? true ? null : draft.phone!.trim(),
       roles: roles,
       learnerProfile: needsLearnerProfile ? draft.learnerProfile : null,
       supplierProfile: needsSupplierProfile ? draft.supplierProfile : null,

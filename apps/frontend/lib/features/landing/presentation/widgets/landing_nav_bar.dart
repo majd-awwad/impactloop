@@ -14,9 +14,6 @@ class LandingNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return EntryNavBar(
-      onSignIn: onSignIn,
-      onCreateAccount: onCreateAccount,
-    );
+    return EntryNavBar(onSignIn: onSignIn, onCreateAccount: onCreateAccount);
   }
 }

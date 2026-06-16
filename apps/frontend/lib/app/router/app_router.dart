@@ -12,6 +12,9 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/learning_hub/presentation/pages/learning_add_draft_page.dart';
+import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
+import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
 
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
@@ -97,6 +100,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (context, state) => const LandingPage()),
       GoRoute(path: '/health', builder: (context, state) => const HealthPage()),
       GoRoute(path: '/home', builder: (context, state) => const HomePage()),
+      GoRoute(
+        path: '/learning',
+        builder: (context, state) => const LearningHubPage(),
+      ),
+      GoRoute(
+        path: '/learning/add-draft',
+        builder: (context, state) => const LearningAddDraftPage(),
+      ),
+      GoRoute(
+        path: '/learning/:id',
+        builder: (context, state) {
+          final projectId = state.pathParameters['id']!;
+
+          return LearningProjectDetailsPage(projectId: projectId);
+        },
+      ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(
         path: '/register',
@@ -111,9 +130,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final isBothIntent = state.uri.queryParameters['intent'] == 'both';
 
-          return CompleteLearnerProfilePage(
-            showSupplierNextHint: isBothIntent,
-          );
+          return CompleteLearnerProfilePage(showSupplierNextHint: isBothIntent);
         },
       ),
       GoRoute(

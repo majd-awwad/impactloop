@@ -21,10 +21,7 @@ class ImpactLoopApp extends ConsumerWidget {
       darkTheme: AppTheme.dark,
       themeMode: settings.themeMode,
       locale: Locale(settings.languageCode),
-      supportedLocales: const [
-        Locale('en'),
-        Locale('ar'),
-      ],
+      supportedLocales: const [Locale('en'), Locale('ar')],
       routerConfig: router,
     );
   }

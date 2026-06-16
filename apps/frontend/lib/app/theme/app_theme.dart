@@ -8,19 +8,20 @@ class AppTheme {
   const AppTheme._();
 
   static ThemeData get light {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      primary: AppColors.primary,
-      secondary: AppColors.secondary,
-      surface: AppColors.surface,
-      error: AppColors.error,
-      brightness: Brightness.light,
-    ).copyWith(
-      primaryContainer: AppColors.primaryContainer,
-      secondaryContainer: AppColors.secondaryContainer,
-      onPrimary: AppColors.textOnBrand,
-      onSecondary: AppColors.textOnBrand,
-    );
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          primary: AppColors.primary,
+          secondary: AppColors.secondary,
+          surface: AppColors.surface,
+          error: AppColors.error,
+          brightness: Brightness.light,
+        ).copyWith(
+          primaryContainer: AppColors.primaryContainer,
+          secondaryContainer: AppColors.secondaryContainer,
+          onPrimary: AppColors.textOnBrand,
+          onSecondary: AppColors.textOnBrand,
+        );
 
     return ThemeData(
       colorScheme: colorScheme,
@@ -44,7 +45,10 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.mdAll,
-          borderSide: const BorderSide(color: AppColors.borderFocused, width: 2),
+          borderSide: const BorderSide(
+            color: AppColors.borderFocused,
+            width: 2,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadius.mdAll,
@@ -79,10 +83,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.link,
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
       cardTheme: CardThemeData(
@@ -95,13 +96,14 @@ class AppTheme {
   }
 
   static ThemeData get dark {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF2DD4BF),
-      brightness: Brightness.dark,
-    ).copyWith(
-      surface: const Color(0xFF132821),
-      onSurface: const Color(0xFFF0FDFA),
-    );
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2DD4BF),
+          brightness: Brightness.dark,
+        ).copyWith(
+          surface: const Color(0xFF132821),
+          onSurface: const Color(0xFFF0FDFA),
+        );
 
     return ThemeData(
       colorScheme: colorScheme,

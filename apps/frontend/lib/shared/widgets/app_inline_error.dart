@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppInlineError extends StatelessWidget {
-  const AppInlineError({
-    super.key,
-    required this.message,
-  });
+  const AppInlineError({super.key, required this.message});
 
   final String message;
 

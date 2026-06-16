@@ -26,10 +26,7 @@ class AuthRepository {
     return result.user;
   }
 
-  Future<User> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<User> login({required String email, required String password}) async {
     final result = await _api.login(email: email, password: password);
     await _persistSession(result.tokens, result.user);
     return result.user;

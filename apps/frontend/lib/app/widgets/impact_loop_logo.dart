@@ -29,11 +29,7 @@ class ImpactLoopLogo extends StatelessWidget {
             borderRadius: AppRadius.smAll,
             border: Border.all(color: AuthDarkColors.border),
           ),
-          child: Icon(
-            Icons.eco,
-            color: AuthDarkColors.accent,
-            size: iconSize,
-          ),
+          child: Icon(Icons.eco, color: AuthDarkColors.accent, size: iconSize),
         ),
         if (showWordmark) ...[
           SizedBox(width: compact ? AppSpacing.sm : AppSpacing.md),
@@ -41,9 +37,9 @@ class ImpactLoopLogo extends StatelessWidget {
             'ImpactLoop',
             style: compact
                 ? AuthDarkTextStyles.navBrand(context)
-                : AuthDarkTextStyles.brandingHeadline(context).copyWith(
-                    fontSize: compact ? 18 : 22,
-                  ),
+                : AuthDarkTextStyles.brandingHeadline(
+                    context,
+                  ).copyWith(fontSize: compact ? 18 : 22),
           ),
         ],
       ],

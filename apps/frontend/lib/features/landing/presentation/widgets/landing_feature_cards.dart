@@ -91,7 +91,10 @@ class _FeatureCard extends StatelessWidget {
             child: Icon(icon, color: AuthDarkColors.accent, size: 24),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(title, style: AuthDarkTextStyles.title(context).copyWith(fontSize: 18)),
+          Text(
+            title,
+            style: AuthDarkTextStyles.title(context).copyWith(fontSize: 18),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(description, style: AuthDarkTextStyles.body(context)),
           const SizedBox(height: AppSpacing.md),

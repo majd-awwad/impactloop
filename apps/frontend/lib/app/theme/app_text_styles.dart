@@ -88,8 +88,8 @@ abstract final class AppTextStyles {
   }
 
   static TextStyle mobileHeroSubtitle(BuildContext context) {
-    return Theme.of(context).textTheme.bodyMedium!.copyWith(
-      color: AppColors.textOnBrandMuted,
-    );
+    return Theme.of(
+      context,
+    ).textTheme.bodyMedium!.copyWith(color: AppColors.textOnBrandMuted);
   }
 }

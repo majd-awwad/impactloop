@@ -188,10 +188,7 @@ class _MobileNavLayout extends StatelessWidget {
         InkWell(
           onTap: () => context.go(homeRoute),
           borderRadius: AppRadius.mdAll,
-          child: const ImpactLoopLogo(
-            compact: true,
-            showWordmark: false,
-          ),
+          child: const ImpactLoopLogo(compact: true, showWordmark: false),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
@@ -309,10 +306,7 @@ class _ActionCluster extends StatelessWidget {
 }
 
 class _CompactNavLink extends StatelessWidget {
-  const _CompactNavLink({
-    required this.label,
-    required this.onPressed,
-  });
+  const _CompactNavLink({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;

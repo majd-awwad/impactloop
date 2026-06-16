@@ -45,9 +45,9 @@ class AuthPageIntro extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
               Text(
                 badge,
-                style: AuthDarkTextStyles.chip(context).copyWith(
-                  color: AuthDarkColors.accent,
-                ),
+                style: AuthDarkTextStyles.chip(
+                  context,
+                ).copyWith(color: AuthDarkColors.accent),
               ),
             ],
           ),
@@ -59,9 +59,9 @@ class AuthPageIntro extends StatelessWidget {
                 ? TextAlign.center
                 : TextAlign.start,
             text: TextSpan(
-              style: AuthDarkTextStyles.brandingHeadline(context).copyWith(
-                fontSize: isWide ? 40 : 32,
-              ),
+              style: AuthDarkTextStyles.brandingHeadline(
+                context,
+              ).copyWith(fontSize: isWide ? 40 : 32),
               children: [
                 TextSpan(text: title),
                 TextSpan(
@@ -77,9 +77,9 @@ class AuthPageIntro extends StatelessWidget {
             textAlign: align == CrossAxisAlignment.center
                 ? TextAlign.center
                 : TextAlign.start,
-            style: AuthDarkTextStyles.brandingHeadline(context).copyWith(
-              fontSize: isWide ? 40 : 32,
-            ),
+            style: AuthDarkTextStyles.brandingHeadline(
+              context,
+            ).copyWith(fontSize: isWide ? 40 : 32),
           ),
         if (subtitle != null) ...[
           const SizedBox(height: AppSpacing.md),

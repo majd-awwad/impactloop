@@ -2,18 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AppSettings {
-  const AppSettings({
-    required this.themeMode,
-    required this.languageCode,
-  });
+  const AppSettings({required this.themeMode, required this.languageCode});
 
   final ThemeMode themeMode;
   final String languageCode;
 
-  AppSettings copyWith({
-    ThemeMode? themeMode,
-    String? languageCode,
-  }) {
+  AppSettings copyWith({ThemeMode? themeMode, String? languageCode}) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
       languageCode: languageCode ?? this.languageCode,
@@ -24,10 +18,7 @@ class AppSettings {
 class AppSettingsNotifier extends Notifier<AppSettings> {
   @override
   AppSettings build() {
-    return const AppSettings(
-      themeMode: ThemeMode.system,
-      languageCode: 'en',
-    );
+    return const AppSettings(themeMode: ThemeMode.system, languageCode: 'en');
   }
 
   void setThemeMode(ThemeMode themeMode) {
@@ -39,8 +30,7 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
   }
 }
 
-final appSettingsProvider =
-    NotifierProvider<AppSettingsNotifier, AppSettings>(
+final appSettingsProvider = NotifierProvider<AppSettingsNotifier, AppSettings>(
   AppSettingsNotifier.new,
 );
 

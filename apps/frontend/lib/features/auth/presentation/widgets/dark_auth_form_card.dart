@@ -57,11 +57,7 @@ class AuthIntentChip extends StatelessWidget {
 }
 
 class DarkAuthFormCard extends StatelessWidget {
-  const DarkAuthFormCard({
-    super.key,
-    required this.child,
-    this.footer,
-  });
+  const DarkAuthFormCard({super.key, required this.child, this.footer});
 
   final Widget child;
   final Widget? footer;
