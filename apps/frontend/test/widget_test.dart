@@ -20,6 +20,9 @@ import 'package:frontend/features/auth/data/auth_api.dart';
 import 'package:frontend/features/auth/data/auth_repository.dart';
 import 'package:frontend/features/auth/data/models/auth_tokens.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
+import 'package:frontend/features/auth/application/auth_navigation.dart';
+import 'package:frontend/features/supplier_portal/data/models/supplier_dashboard.dart';
+import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_dashboard_providers.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
@@ -295,6 +298,9 @@ void main() {
       ProviderScope(
         overrides: [
           authRepositoryProvider.overrideWithValue(repository),
+          supplierDashboardProvider.overrideWith(
+            (ref) async => _testSupplierDashboard(),
+          ),
         ],
         child: const ImpactLoopApp(),
       ),
@@ -335,6 +341,9 @@ void main() {
       ProviderScope(
         overrides: [
           authRepositoryProvider.overrideWithValue(repository),
+          supplierDashboardProvider.overrideWith(
+            (ref) async => _testSupplierDashboard(),
+          ),
         ],
         child: const ImpactLoopApp(),
       ),
@@ -390,6 +399,200 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/home');
+  });
+
+  testWidgets('supplier users are redirected from /login to /supplier', (
+    tester,
+  ) async {
+    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final accessTokenHolder = AccessTokenHolder();
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshResult: const AuthTokens(
+          accessToken: 'restored-access',
+          refreshToken: 'rotated-refresh',
+        ),
+        meResult: _testUser(roles: const ['SUPPLIER']),
+      ),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const ImpactLoopApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ImpactLoopApp)),
+    );
+    final router = container.read(appRouterProvider);
+
+    GoRouter.of(
+      tester.element(find.text('Build a better future')),
+    ).go('/login');
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/supplier');
+  });
+
+  testWidgets('supplier users are redirected from /register to /supplier', (
+    tester,
+  ) async {
+    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final accessTokenHolder = AccessTokenHolder();
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshResult: const AuthTokens(
+          accessToken: 'restored-access',
+          refreshToken: 'rotated-refresh',
+        ),
+        meResult: _testUser(roles: const ['LEARNER', 'SUPPLIER']),
+      ),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const ImpactLoopApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ImpactLoopApp)),
+    );
+    final router = container.read(appRouterProvider);
+
+    GoRouter.of(
+      tester.element(find.text('Build a better future')),
+    ).go('/register');
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/supplier');
+  });
+
+  testWidgets('logged out users are redirected from /supplier to /login', (
+    tester,
+  ) async {
+    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stale-refresh');
+    final accessTokenHolder = AccessTokenHolder();
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshError: DioException(
+          requestOptions: RequestOptions(path: '/api/auth/refresh'),
+        ),
+      ),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const ImpactLoopApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ImpactLoopApp)),
+    );
+    final router = container.read(appRouterProvider);
+
+    GoRouter.of(
+      tester.element(find.text('Build a better future')),
+    ).go('/supplier');
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/login');
+  });
+
+  testWidgets('non-supplier users see supplier access denied', (tester) async {
+    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final accessTokenHolder = AccessTokenHolder();
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshResult: const AuthTokens(
+          accessToken: 'restored-access',
+          refreshToken: 'rotated-refresh',
+        ),
+        meResult: _testUser(),
+      ),
+      tokenStorage: tokenStorage,
+      accessTokenHolder: accessTokenHolder,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const ImpactLoopApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ImpactLoopApp)),
+    );
+    final router = container.read(appRouterProvider);
+
+    GoRouter.of(
+      tester.element(find.text('Build a better future')),
+    ).go('/supplier');
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/supplier/access-denied',
+    );
+    expect(
+      find.text('You need a Supplier role to access the Supplier Portal.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('materials route renders coming soon placeholder', (tester) async {
+    await pumpApp(tester);
+
+    GoRouter.of(
+      tester.element(find.text('Build a better future')),
+    ).go('/materials');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Coming soon'), findsOneWidget);
+    expect(find.text('Browse materials'), findsOneWidget);
+  });
+
+  test('User.fromJson parses string, object, and primaryRole role shapes', () {
+    final user = User.fromJson({
+      'id': 'user-1',
+      'displayName': 'Supplier User',
+      'email': 'supplier@example.com',
+      'accountStatus': 'ACTIVE',
+      'roles': [
+        'LEARNER',
+        {'role': 'SUPPLIER'},
+      ],
+      'primaryRole': 'ADMIN',
+      'createdAt': '2026-01-01T00:00:00.000Z',
+    });
+
+    expect(user.roles, containsAll(['LEARNER', 'SUPPLIER', 'ADMIN']));
+    expect(user.hasRole('supplier'), isTrue);
+    expect(postAuthRouteForUser(user), '/supplier');
   });
 
   testWidgets('landing page stays stable on mobile width', (tester) async {
@@ -491,13 +694,52 @@ class _FakeAuthApi extends AuthApi {
   }
 }
 
-User _testUser() {
+User _testUser({List<String> roles = const ['LEARNER']}) {
   return User(
     id: 'user-1',
     displayName: 'Restored User',
     email: 'restored@example.com',
     accountStatus: 'ACTIVE',
-    roles: const ['LEARNER'],
+    roles: roles,
     createdAt: DateTime(2026),
   );
+}
+
+SupplierDashboard _testSupplierDashboard() {
+  return SupplierDashboard.fromJson({
+    'hasSupplierProfile': false,
+    'message': 'Complete your supplier profile to start listing materials.',
+    'stats': {
+      'materials': {
+        'total': 0,
+        'available': 0,
+        'pendingReservation': 0,
+        'reserved': 0,
+        'reused': 0,
+        'unavailable': 0,
+      },
+      'reservations': {
+        'pending': 0,
+        'accepted': 0,
+        'completed': 0,
+        'rejected': 0,
+        'cancelled': 0,
+        'expired': 0,
+      },
+      'impact': {
+        'reusedMaterials': 0,
+        'reusedQuantity': 0,
+      },
+      'reviews': {
+        'averageRating': 0,
+        'totalReviews': 0,
+      },
+      'notifications': {
+        'unread': 0,
+      },
+    },
+    'recentMaterials': [],
+    'upcomingPickups': [],
+    'recentActivity': [],
+  });
 }
