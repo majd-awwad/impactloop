@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../application/auth_controller.dart';
+import '../../application/auth_navigation.dart';
 import '../../application/registration_draft_notifier.dart';
 import '../../data/models/registration_draft.dart';
 import '../models/registration_intent.dart';
@@ -145,14 +146,16 @@ class _CompleteLearnerProfileFormState
     }
 
     try {
-      await ref.read(authControllerProvider.notifier).register(request);
+      final user = await ref.read(authControllerProvider.notifier).register(
+        request,
+      );
       ref.read(registrationDraftProvider.notifier).clear();
 
       if (!mounted) {
         return;
       }
 
-      context.go('/home');
+      context.go(postAuthRouteForUser(user));
     } on ApiException catch (error) {
       if (!mounted) {
         return;

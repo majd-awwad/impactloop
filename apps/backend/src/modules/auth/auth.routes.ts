@@ -14,9 +14,11 @@ import {
   refresh,
   register,
   resetPassword,
+  changePassword,
 } from './auth.controller.js';
 
 import {
+  changePasswordSchema,
   forgotPasswordSchema,
   loginSchema,
   refreshTokenSchema,
@@ -59,3 +61,10 @@ authRouter.post(
 );
 
 authRouter.get('/me', authMiddleware, asyncHandler(getMe));
+
+authRouter.patch(
+  '/change-password',
+  authMiddleware,
+  validate(changePasswordSchema),
+  asyncHandler(changePassword),
+);

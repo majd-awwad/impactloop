@@ -7,6 +7,7 @@ import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../application/auth_controller.dart';
+import '../../application/auth_navigation.dart';
 import '../../data/models/register_request.dart';
 import '../../data/models/registration_draft.dart';
 import '../models/registration_intent.dart';
@@ -218,13 +219,15 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
             : null,
       );
 
-      await ref.read(authControllerProvider.notifier).register(request);
+      final user = await ref.read(authControllerProvider.notifier).register(
+        request,
+      );
 
       if (!mounted) {
         return;
       }
 
-      context.go('/home');
+      context.go(postAuthRouteForUser(user));
     } on ApiException catch (error) {
       if (!mounted) {
         return;

@@ -10,6 +10,7 @@ import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../application/auth_controller.dart';
+import '../../application/auth_navigation.dart';
 
 class LoginForm extends ConsumerStatefulWidget {
   const LoginForm({super.key});
@@ -68,18 +69,16 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     setState(() => _isSubmitting = true);
 
     try {
-      await ref
-          .read(authControllerProvider.notifier)
-          .login(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-          );
+      final user = await ref.read(authControllerProvider.notifier).login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
       if (!mounted) {
         return;
       }
 
-      context.go('/home');
+      context.go(postAuthRouteForUser(user));
     } on ApiException catch (error) {
       if (!mounted) {
         return;

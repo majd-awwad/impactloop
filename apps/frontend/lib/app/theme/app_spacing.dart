@@ -16,4 +16,8 @@ abstract final class AppSpacing {
 
   static const int authBrandingPanelFlex = 55;
   static const int authFormPanelFlex = 45;
+
+  static const double supplierLayoutBreakpoint = 768;
+  static const double supplierSidebarWidth = 248;
+  static const double supplierMobileNavHeight = 72;
 }

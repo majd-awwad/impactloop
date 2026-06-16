@@ -42,6 +42,77 @@ enum RoleInvitationStatus {
   REVOKED
 }
 
+enum MaterialCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  USED
+  NEEDS_REPAIR
+}
+
+enum MaterialSourceType {
+  STUDENT_LEFTOVER
+  WORKSHOP_SURPLUS
+  FACTORY_SURPLUS
+  EDUCATIONAL_INSTITUTION
+}
+
+enum MaterialStatus {
+  AVAILABLE
+  PENDING_RESERVATION
+  RESERVED
+  REUSED
+  UNAVAILABLE
+}
+
+enum CategoryType {
+  MATERIAL
+  PROJECT
+  BOTH
+}
+
+enum OrganizationType {
+  WORKSHOP
+  FACTORY
+  EDUCATIONAL_INSTITUTION
+}
+
+enum VerificationDocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ReservationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  COMPLETED
+  EXPIRED
+}
+
+enum PickupType {
+  SELF_PICKUP
+  DELIVERY_ALLOWED
+}
+
+enum DeliveryStatus {
+  WAITING_FOR_DRIVER
+  DRIVER_ASSIGNED
+  PICKED_UP
+  ON_THE_WAY
+  DELIVERED
+  CANCELLED
+  FAILED_PICKUP
+}
+
+enum ReviewTargetType {
+  SUPPLIER
+  DRIVER
+  MATERIAL
+}
+
 model User {
   id              String               @id @default(cuid())
   displayName     String               @map("display_name")
@@ -61,7 +132,13 @@ model User {
   supplierProfile SupplierProfile?
   invitedRoles    RoleInvitation[]     @relation("RoleInvitationInvitedBy")
   usedInvitations RoleInvitation[]     @relation("RoleInvitationUsedByUser")
-  assignedRoles   UserRoleAssignment[] @relation("UserRoleAssignedBy")
+  assignedRoles                UserRoleAssignment[] @relation("UserRoleAssignedBy")
+  ownedMaterials               Material[]           @relation("MaterialOwner")
+  ownedReservationsAsOwner     Reservation[]        @relation("ReservationOwner")
+  ownedReservationsAsRequester Reservation[]        @relation("ReservationRequester")
+  notifications                Notification[]
+  reviewsGiven                 Review[]             @relation("ReviewReviewer")
+  reviewsReceived              Review[]             @relation("ReviewReviewedUser")
 
   @@map("users")
 }
@@ -136,38 +213,201 @@ model LearnerProfile {
 }
 
 model SupplierProfile {
-  id                      String    @id @default(cuid())
-  userId                  String    @unique @map("user_id")
-  supplierType            String?   @map("supplier_type")
-  publicName              String?   @map("public_name")
+  id                      String               @id @default(cuid())
+  userId                  String               @unique @map("user_id")
+  supplierType            String?              @map("supplier_type")
+  publicName              String?              @map("public_name")
   description             String?
-  verificationStatus      String    @default("UNVERIFIED") @map("verification_status")
-  defaultPickupLocationId String?   @map("default_pickup_location_id")
-  createdAt               DateTime  @default(now()) @map("created_at")
-  updatedAt               DateTime  @updatedAt @map("updated_at")
-  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  defaultPickupLocation   Location? @relation("SupplierDefaultPickupLocation", fields: [defaultPickupLocationId], references: [id], onDelete: SetNull)
+  verificationStatus      String               @default("UNVERIFIED") @map("verification_status")
+  defaultPickupLocationId String?              @map("default_pickup_location_id")
+  createdAt               DateTime             @default(now()) @map("created_at")
+  updatedAt               DateTime             @updatedAt @map("updated_at")
+  user                    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultPickupLocation   Location?            @relation("SupplierDefaultPickupLocation", fields: [defaultPickupLocationId], references: [id], onDelete: SetNull)
+  organizationProfile     OrganizationProfile?
+  materials               Material[]
 
   @@index([defaultPickupLocationId])
   @@map("supplier_profiles")
 }
 
+model OrganizationProfile {
+  id                         String                      @id @default(cuid())
+  supplierProfileId          String                      @unique @map("supplier_profile_id")
+  organizationName           String                      @map("organization_name")
+  organizationType           OrganizationType            @map("organization_type")
+  contactPersonName          String?                     @map("contact_person_name")
+  workingDays                Json?                       @map("working_days")
+  workingHours               Json?                       @map("working_hours")
+  businessLocationId         String?                     @map("business_location_id")
+  verificationDocumentStatus VerificationDocumentStatus? @map("verification_document_status")
+  createdAt                  DateTime                    @default(now()) @map("created_at")
+  updatedAt                  DateTime                    @updatedAt @map("updated_at")
+  supplierProfile            SupplierProfile             @relation(fields: [supplierProfileId], references: [id], onDelete: Cascade)
+  businessLocation           Location?                   @relation("OrganizationBusinessLocation", fields: [businessLocationId], references: [id], onDelete: SetNull)
+
+  @@index([businessLocationId])
+  @@map("organization_profiles")
+}
+
 model Location {
-  id                String                                @id @default(cuid())
-  country           String
-  city              String
-  area              String?
-  addressLine       String?                               @map("address_line")
-  latitude          Decimal?                              @db.Decimal(9, 6)
-  longitude         Decimal?                              @db.Decimal(9, 6)
-  location          Unsupported("geography(Point,4326)")?
-  locationType      String?                               @map("location_type")
-  visibility        String?                               @default("PRIVATE")
-  isApproximate     Boolean                               @default(true) @map("is_approximate")
-  createdAt         DateTime                              @default(now()) @map("created_at")
-  updatedAt         DateTime                              @updatedAt @map("updated_at")
-  supplierPickupFor SupplierProfile[]                     @relation("SupplierDefaultPickupLocation")
+  id                      String                                @id @default(cuid())
+  country                 String
+  city                    String
+  area                    String?
+  addressLine             String?                               @map("address_line")
+  latitude                Decimal?                              @db.Decimal(9, 6)
+  longitude               Decimal?                              @db.Decimal(9, 6)
+  location                Unsupported("geography(Point,4326)")?
+  locationType            String?                               @map("location_type")
+  visibility              String?                               @default("PRIVATE")
+  isApproximate           Boolean                               @default(true) @map("is_approximate")
+  createdAt               DateTime                              @default(now()) @map("created_at")
+  updatedAt               DateTime                              @updatedAt @map("updated_at")
+  supplierPickupFor       SupplierProfile[]                     @relation("SupplierDefaultPickupLocation")
+  organizationBusinessFor OrganizationProfile[]                 @relation("OrganizationBusinessLocation")
+  materials               Material[]
+  reservationDropoffs     Reservation[]                         @relation("ReservationDropoffLocation")
 
   @@index([country, city])
   @@map("locations")
+}
+
+model Category {
+  id           String       @id @default(cuid())
+  nameEn       String       @map("name_en")
+  nameAr       String       @map("name_ar")
+  parentId     String?      @map("parent_id")
+  categoryType CategoryType @map("category_type")
+  iconUrl      String?      @map("icon_url")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  parent       Category?    @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Category[]   @relation("CategoryHierarchy")
+  materials    Material[]
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+model Material {
+  id                    String             @id @default(cuid())
+  ownerId               String             @map("owner_id")
+  supplierProfileId     String?            @map("supplier_profile_id")
+  categoryId            String             @map("category_id")
+  title                 String
+  description           String
+  materialType          String             @map("material_type")
+  quantity              Decimal            @db.Decimal(12, 3)
+  unit                  String
+  condition             MaterialCondition
+  sourceType            MaterialSourceType @map("source_type")
+  status                MaterialStatus     @default(AVAILABLE)
+  isFree                Boolean            @default(true) @map("is_free")
+  price                 Decimal?           @db.Decimal(12, 2)
+  currency              String             @default("NIS")
+  locationId            String             @map("location_id")
+  pickupAllowed         Boolean            @default(true) @map("pickup_allowed")
+  deliveryAllowed       Boolean            @default(false) @map("delivery_allowed")
+  pickupNotes           String?            @map("pickup_notes")
+  suggestedUses         String?            @map("suggested_uses")
+  viewsCount            Int                @default(0) @map("views_count")
+  reusedAt              DateTime?          @map("reused_at")
+  reusedByReservationId String?            @unique @map("reused_by_reservation_id")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+  owner                 User               @relation("MaterialOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  supplierProfile       SupplierProfile?   @relation(fields: [supplierProfileId], references: [id], onDelete: SetNull)
+  category              Category           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  location              Location           @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  images                MaterialImage[]
+  reservations          Reservation[]
+  reusedByReservation   Reservation?       @relation("MaterialReusedByReservation", fields: [reusedByReservationId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId])
+  @@index([supplierProfileId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([locationId])
+  @@map("materials")
+}
+
+model MaterialImage {
+  id         String   @id @default(cuid())
+  materialId String   @map("material_id")
+  imageUrl   String   @map("image_url")
+  sortOrder  Int      @default(0) @map("sort_order")
+  isCover    Boolean  @default(false) @map("is_cover")
+  createdAt  DateTime @default(now()) @map("created_at")
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@index([materialId])
+  @@map("material_images")
+}
+
+model Reservation {
+  id                String            @id @default(cuid())
+  materialId        String            @map("material_id")
+  requesterId       String            @map("requester_id")
+  ownerId           String            @map("owner_id")
+  quantityRequested Decimal           @map("quantity_requested") @db.Decimal(12, 3)
+  message           String?
+  status            ReservationStatus @default(PENDING)
+  pickupWindowStart DateTime?         @map("pickup_window_start")
+  pickupWindowEnd   DateTime?         @map("pickup_window_end")
+  pickupType        PickupType        @default(SELF_PICKUP) @map("pickup_type")
+  supplierNote      String?           @map("supplier_note")
+  deliveryRequested Boolean           @default(false) @map("delivery_requested")
+  deliveryStatus    DeliveryStatus?   @map("delivery_status")
+  deliveryCost      Decimal?          @map("delivery_cost") @db.Decimal(12, 2)
+  dropoffLocationId String?           @map("dropoff_location_id")
+  driverProfileId   String?           @map("driver_profile_id")
+  completedAt       DateTime?         @map("completed_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  material          Material          @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  requester         User              @relation("ReservationRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  owner             User              @relation("ReservationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  dropoffLocation   Location?         @relation("ReservationDropoffLocation", fields: [dropoffLocationId], references: [id], onDelete: SetNull)
+  reusedMaterial    Material?         @relation("MaterialReusedByReservation")
+  reviews           Review[]
+
+  @@index([ownerId])
+  @@index([requesterId])
+  @@index([materialId])
+  @@index([status])
+  @@map("reservations")
+}
+
+model Review {
+  id             String           @id @default(cuid())
+  reservationId  String           @map("reservation_id")
+  reviewerId     String           @map("reviewer_id")
+  reviewedUserId String?          @map("reviewed_user_id")
+  targetType     ReviewTargetType @map("target_type")
+  rating         Int
+  comment        String?
+  createdAt      DateTime         @default(now()) @map("created_at")
+  reservation    Reservation      @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  reviewer       User             @relation("ReviewReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewedUser   User?            @relation("ReviewReviewedUser", fields: [reviewedUserId], references: [id], onDelete: SetNull)
+
+  @@index([reviewedUserId, targetType])
+  @@index([reservationId])
+  @@map("reviews")
+}
+
+model Notification {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  notificationType  String   @map("notification_type")
+  title             String
+  body              String
+  relatedEntityType String?  @map("related_entity_type")
+  relatedEntityId   String?  @map("related_entity_id")
+  isRead            Boolean  @default(false) @map("is_read")
+  createdAt         DateTime @default(now()) @map("created_at")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
 }

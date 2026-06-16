@@ -22,7 +22,7 @@ import * as authRepository from './auth.repository.js';
 
 import { formatPickupAreaLabel } from './pickup-area.js';
 
-import type { LoginInput, RegisterInput } from './auth.validation.js';
+import type { ChangePasswordInput, LoginInput, RegisterInput } from './auth.validation.js';
 
 export type LearnerProfileSummary = {
   learnerType: string;
@@ -343,6 +343,37 @@ export const resetPasswordWithToken = async (
   await authRepository.completePasswordReset({
     tokenId: storedToken.id,
     userId: storedToken.userId,
+    passwordHash,
+  });
+};
+
+export const changePasswordForUser = async (
+  userId: string,
+  input: ChangePasswordInput,
+): Promise<void> => {
+  const user = await authRepository.findUserPasswordHashById(userId);
+
+  if (!user) {
+    throw new AppError('User not found', 404, 'NOT_FOUND');
+  }
+
+  const passwordMatches = await comparePassword(
+    input.currentPassword,
+    user.passwordHash,
+  );
+
+  if (!passwordMatches) {
+    throw new AppError(
+      'Current password is incorrect.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const passwordHash = await hashPassword(input.newPassword);
+
+  await authRepository.updateUserPasswordHash({
+    userId: user.id,
     passwordHash,
   });
 };
