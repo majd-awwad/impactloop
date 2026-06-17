@@ -6,9 +6,10 @@ This document defines the future backend response shape for Material Discovery.
 
 Current frontend status:
 
-- Material Discovery currently uses a local mock repository.
+- Material Discovery uses an API-backed repository by default.
 - The UI loads data through a repository boundary, not directly from API DTOs.
 - `AppMaterialCard` must remain independent from backend response models.
+- `MockMaterialDiscoveryRepository` still exists for fallback and testing.
 
 Future backend integration should:
 
@@ -23,13 +24,18 @@ Frontend repository contract:
 - `getMaterials()`
 - `getMaterialById(String id)`
 
-Current implementation:
+Current implementations:
 
-- `MockMaterialDiscoveryRepository`
+- `ApiMaterialDiscoveryRepository` for the default page flow
+- `MockMaterialDiscoveryRepository` for fallback and testing
 
-Future implementation:
+API integration notes:
 
-- a real API-backed repository that maps backend DTOs into the frontend domain model used by Material Discovery pages and reusable widgets
+- the frontend uses the shared Dio client from `apiClientProvider`
+- API responses are unwrapped with `unwrapApiResponse(...)`
+- `GET /api/materials` maps `data.items` into `DiscoveryMaterial`
+- `GET /api/materials/:id` maps `data` into `DiscoveryMaterial`
+- backend DTOs are mapped before data reaches `AppMaterialCard`
 
 ## GET /api/materials
 
@@ -125,7 +131,7 @@ Example response:
     "deliveryAvailable": true,
     "imageUrl": "https://example.com/materials/plywood-panels.jpg",
     "supplierName": "Green Workshop Co.",
-    "ratingSummary": 4.8,
+    "ratingSummary": null,
     "createdAt": "2026-06-01T10:00:00.000Z"
   }
 }
@@ -148,7 +154,7 @@ Example response:
 - `deliveryAvailable`: public fulfillment flag
 - `imageUrl`: nullable public preview image
 - `supplierName`: public supplier display name
-- `ratingSummary`: optional backend rating summary; current mock UI may still use mock-only rating values
+- `ratingSummary`: currently `null`; ratings and reviews are future work
 - `createdAt`: creation timestamp for future sorting/filtering
 
 ## Frontend mapping guidance

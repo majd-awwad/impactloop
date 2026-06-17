@@ -36,6 +36,15 @@ class MaterialsDiscoveryView extends StatefulWidget {
 }
 
 class _MaterialsDiscoveryViewState extends State<MaterialsDiscoveryView> {
+  static const _apiBackedCategories = <LocalizedText>[
+    LocalizedText(en: 'All', ar: 'الكل'),
+    LocalizedText(en: 'Electronics', ar: 'إلكترونيات'),
+    LocalizedText(en: 'Wood & Panels', ar: 'خشب وألواح'),
+    LocalizedText(en: 'Plastics', ar: 'بلاستيك'),
+    LocalizedText(en: 'Fabric & Textiles', ar: 'أقمشة ومنسوجات'),
+    LocalizedText(en: 'Tools & Hardware', ar: 'أدوات وقطع'),
+  ];
+
   late final TextEditingController _searchController;
   String _searchValue = '';
   int _selectedCategoryIndex = 0;
@@ -87,7 +96,7 @@ class _MaterialsDiscoveryViewState extends State<MaterialsDiscoveryView> {
               _searchValue = value;
             });
           },
-          categories: materialDiscoveryCategories,
+          categories: _apiBackedCategories,
           quickFilters: materialQuickFilters,
           selectedCategoryIndex: _selectedCategoryIndex,
           selectedQuickFilterIndex: _selectedQuickFilterIndex,
@@ -191,7 +200,7 @@ class _MaterialsDiscoveryViewState extends State<MaterialsDiscoveryView> {
     final normalizedSearch = _searchValue.trim().toLowerCase();
     final selectedCategory = _selectedCategoryIndex == 0
         ? null
-        : materialDiscoveryCategories[_selectedCategoryIndex].resolve(context);
+        : _apiBackedCategories[_selectedCategoryIndex].resolve(context);
 
     return widget.materials.where((material) {
       final matchesCategory = selectedCategory == null ||
