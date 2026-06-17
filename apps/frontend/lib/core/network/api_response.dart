@@ -106,5 +106,31 @@ Future<T> unwrapApiResponse<T>(
 Future<void> unwrapApiVoidResponse(
   Future<Response<Map<String, dynamic>>> request,
 ) async {
-  await unwrapApiResponse(request, (_) => null);
+  try {
+    final response = await request;
+    final body = response.data;
+
+    if (body == null) {
+      throw const ApiException(message: 'Empty response from server');
+    }
+
+    if (body['success'] != true) {
+      final errorBody = body['error'];
+
+      throw ApiException(
+        message: body['message'] as String? ?? 'Request failed',
+        code: errorBody is Map<String, dynamic>
+            ? errorBody['code'] as String?
+            : null,
+        statusCode: response.statusCode,
+        details:
+            errorBody is Map<String, dynamic> &&
+                errorBody['details'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(errorBody['details'] as Map)
+            : null,
+      );
+    }
+  } on DioException catch (error) {
+    throw mapDioException(error);
+  }
 }
