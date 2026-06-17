@@ -1,51 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
-import '../../data/mock_material_discovery_repository.dart';
+import '../../data/api_material_discovery_repository.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_repository.dart';
 import '../material_discovery_content.dart';
 import '../widgets/nearby_map_placeholder.dart';
 
-class MaterialDetailsPage extends StatefulWidget {
+class MaterialDetailsPage extends ConsumerStatefulWidget {
   const MaterialDetailsPage({
     super.key,
     required this.materialId,
-    MaterialDiscoveryRepository? repository,
-  }) : repository = repository ?? const MockMaterialDiscoveryRepository();
+    this.repository,
+  });
 
   final String materialId;
-  final MaterialDiscoveryRepository repository;
+  final MaterialDiscoveryRepository? repository;
 
   @override
-  State<MaterialDetailsPage> createState() => _MaterialDetailsPageState();
+  ConsumerState<MaterialDetailsPage> createState() =>
+      _MaterialDetailsPageState();
 }
 
-class _MaterialDetailsPageState extends State<MaterialDetailsPage> {
+class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
+  late final MaterialDiscoveryRepository _defaultRepository;
+  late MaterialDiscoveryRepository _activeRepository;
   late Future<DiscoveryMaterial?> _materialFuture;
 
   @override
   void initState() {
     super.initState();
-    _materialFuture = widget.repository.getMaterialById(widget.materialId);
+    _defaultRepository = ApiMaterialDiscoveryRepository(
+      ref.read(apiClientProvider),
+    );
+    _activeRepository = widget.repository ?? _defaultRepository;
+    _materialFuture = _activeRepository.getMaterialById(widget.materialId);
   }
 
   @override
   void didUpdateWidget(covariant MaterialDetailsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final nextRepository = widget.repository ?? _defaultRepository;
     if (oldWidget.materialId != widget.materialId ||
-        oldWidget.repository != widget.repository) {
-      _materialFuture = widget.repository.getMaterialById(widget.materialId);
+        oldWidget.repository != widget.repository ||
+        _activeRepository != nextRepository) {
+      _activeRepository = nextRepository;
+      _materialFuture = _activeRepository.getMaterialById(widget.materialId);
     }
   }
 

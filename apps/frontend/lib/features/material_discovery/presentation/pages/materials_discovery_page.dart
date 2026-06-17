@@ -1,41 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
-import '../../data/mock_material_discovery_repository.dart';
+import '../../data/api_material_discovery_repository.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_repository.dart';
 import '../views/materials_discovery_view.dart';
 
-class MaterialsDiscoveryPage extends StatefulWidget {
+class MaterialsDiscoveryPage extends ConsumerStatefulWidget {
   const MaterialsDiscoveryPage({
     super.key,
-    MaterialDiscoveryRepository? repository,
-  }) : repository = repository ?? const MockMaterialDiscoveryRepository();
+    this.repository,
+  });
 
-  final MaterialDiscoveryRepository repository;
+  final MaterialDiscoveryRepository? repository;
 
   @override
-  State<MaterialsDiscoveryPage> createState() => _MaterialsDiscoveryPageState();
+  ConsumerState<MaterialsDiscoveryPage> createState() =>
+      _MaterialsDiscoveryPageState();
 }
 
-class _MaterialsDiscoveryPageState extends State<MaterialsDiscoveryPage> {
+class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage> {
+  late final MaterialDiscoveryRepository _defaultRepository;
+  late MaterialDiscoveryRepository _activeRepository;
   late Future<List<DiscoveryMaterial>> _materialsFuture;
 
   @override
   void initState() {
     super.initState();
-    _materialsFuture = widget.repository.getMaterials();
+    _defaultRepository = ApiMaterialDiscoveryRepository(
+      ref.read(apiClientProvider),
+    );
+    _activeRepository = widget.repository ?? _defaultRepository;
+    _materialsFuture = _activeRepository.getMaterials();
   }
 
   @override
   void didUpdateWidget(covariant MaterialsDiscoveryPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.repository != widget.repository) {
-      _materialsFuture = widget.repository.getMaterials();
+    final nextRepository = widget.repository ?? _defaultRepository;
+    if (oldWidget.repository != widget.repository ||
+        _activeRepository != nextRepository) {
+      _activeRepository = nextRepository;
+      _materialsFuture = _activeRepository.getMaterials();
     }
   }
 
