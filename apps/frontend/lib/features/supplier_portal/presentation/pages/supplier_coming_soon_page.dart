@@ -6,6 +6,7 @@ import '../../../../app/theme/auth_dark_colors.dart';
 import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../app/theme/auth_dark_decorations.dart';
 import '../../../../app/theme/supplier_decorations.dart';
+import '../widgets/material_listing_foundation_preview.dart';
 
 class SupplierComingSoonPage extends StatelessWidget {
   const SupplierComingSoonPage({
@@ -13,11 +14,13 @@ class SupplierComingSoonPage extends StatelessWidget {
     required this.title,
     required this.description,
     this.standalone = false,
+    this.showMaterialFoundationPreview = false,
   });
 
   final String title;
   final String description;
   final bool standalone;
+  final bool showMaterialFoundationPreview;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +52,10 @@ class SupplierComingSoonPage extends StatelessWidget {
             Text(title, style: AuthDarkTextStyles.title(context)),
             const SizedBox(height: AppSpacing.sm),
             Text(description, style: AuthDarkTextStyles.body(context)),
+            if (showMaterialFoundationPreview) ...[
+              const SizedBox(height: AppSpacing.lg),
+              const MaterialListingFoundationPreview(),
+            ],
             const SizedBox(height: AppSpacing.lg),
             OutlinedButton(
               onPressed: () => context.go(standalone ? '/home' : '/supplier'),
