@@ -13,6 +13,13 @@ import { materialTypesRouter } from './modules/material-types/material-types.rou
 import { materialsRouter } from './modules/materials/materials.routes.js';
 import { priceRuleRequestsRouter } from './modules/price-rule-requests/price-rule-requests.routes.js';
 import { supplierRouter } from './modules/supplier/supplier.routes.js';
+import { uploadsRouter } from './modules/uploads/uploads.routes.js';
+import {
+  ensureMaterialUploadsDir,
+  MATERIAL_UPLOADS_DIR,
+} from './modules/uploads/uploads.storage.js';
+
+ensureMaterialUploadsDir();
 
 export const app = express();
 
@@ -34,6 +41,7 @@ app.use(
   }),
 );
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
+app.use('/uploads/materials', express.static(MATERIAL_UPLOADS_DIR));
 app.use(express.json());
 
 app.use('/health', healthRouter);
@@ -43,6 +51,7 @@ app.use('/api/material-types', materialTypesRouter);
 app.use('/api/price-rule-requests', priceRuleRequestsRouter);
 app.use('/api/materials', materialsRouter);
 app.use('/api/invitations', invitationsRouter);
+app.use('/api/uploads', uploadsRouter);
 app.use('/api/supplier', supplierRouter);
 
 app.use(notFoundMiddleware);

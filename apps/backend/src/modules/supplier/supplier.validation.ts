@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { materialImageUrlSchema } from '../../utils/material-image-url.js';
+
 const supplierTypes = [
   'STUDENT_SUPPLIER',
   'INDIVIDUAL_SUPPLIER',
@@ -111,7 +113,7 @@ export const createSupplierMaterialSchema = z.object({
   deliveryAllowed: z.literal(false).default(false),
   pickupNotes: z.string().trim().max(500).optional().nullable(),
   suggestedUses: z.string().trim().max(1000).optional().nullable(),
-  imageUrls: z.array(z.string().trim().url()).max(6).optional().default([]),
+  imageUrls: z.array(materialImageUrlSchema).max(5).optional().default([]),
 });
 
 export type CreateSupplierMaterialInput = z.infer<
