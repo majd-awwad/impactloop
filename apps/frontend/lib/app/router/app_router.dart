@@ -17,6 +17,7 @@ import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
 import '../../features/supplier_portal/presentation/pages/add_material_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_coming_soon_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_incoming_requests_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_dashboard_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_profile_page.dart';
 import '../../features/supplier_portal/presentation/shell/supplier_shell.dart';
@@ -199,11 +200,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/supplier/reservations',
-            builder: (context, state) => const SupplierComingSoonPage(
-              title: 'Incoming Requests',
-              description:
-                  'Reservation requests will appear here soon. You will be able to review and respond to learner requests for your materials.',
-            ),
+            builder: (context, state) => const SupplierIncomingRequestsPage(),
           ),
           GoRoute(
             path: '/supplier/pickup-schedule',

@@ -105,6 +105,11 @@ String supplierPageSubtitle(String location) {
     return 'Manage public supplier details and pickup location.';
   }
 
+  if (location == '/supplier/reservations' ||
+      location.startsWith('/supplier/reservations/')) {
+    return 'Review learner requests and schedule pickups.';
+  }
+
   for (final item in supplierNavItems) {
     if (location == item.route || location.startsWith('${item.route}/')) {
       return 'Coming soon in the Supplier Portal.';
