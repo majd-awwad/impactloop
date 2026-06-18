@@ -24,4 +24,16 @@ class ApiConfig {
 
     return 'http://localhost:4000';
   }
+
+  static String resolveMediaUrl(String url) {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+
+    if (url.startsWith('/')) {
+      return '$baseUrl$url';
+    }
+
+    return '$baseUrl/$url';
+  }
 }

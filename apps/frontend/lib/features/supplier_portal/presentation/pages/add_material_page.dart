@@ -15,6 +15,7 @@ import '../../../materials/data/models/created_material.dart';
 import '../../../materials/data/models/material_listing_policy.dart';
 import '../../../materials/data/models/material_price_check_request.dart';
 import '../../../materials/data/models/category_request.dart';
+import '../../../materials/data/models/material_draft_image.dart';
 import '../../../materials/data/models/material_price_check_result.dart';
 import '../../../materials/data/models/price_rule_request.dart';
 import '../../data/supplier_materials_repository.dart';
@@ -23,6 +24,7 @@ import '../controllers/supplier_profile_providers.dart';
 import '../widgets/add_material_preview_card.dart';
 import '../widgets/add_material_price_verification_card.dart';
 import '../widgets/category_requests_panel.dart';
+import '../widgets/material_image_picker_section.dart';
 import '../widgets/supplier_dark_form_field.dart';
 import '../widgets/supplier_feedback.dart';
 import '../widgets/supplier_pickup_map_preview.dart';
@@ -59,7 +61,6 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   final _quantityController = TextEditingController(text: '1');
   final _unitController = TextEditingController(text: 'piece');
   final _priceController = TextEditingController();
-  final _imageUrlController = TextEditingController();
   final _requestedCategoryController = TextEditingController();
 
   String? _categoryId;
@@ -76,8 +77,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   bool _isCheckingPrice = false;
   bool _isSubmitting = false;
   bool _isRequestingPriceReview = false;
+  bool _isUploadingImages = false;
   String? _priceReviewMessage;
-  final List<String> _imageUrls = [];
+  final List<MaterialDraftImage> _images = [];
 
   @override
   void dispose() {
@@ -89,7 +91,6 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     _quantityController.dispose();
     _unitController.dispose();
     _priceController.dispose();
-    _imageUrlController.dispose();
     _requestedCategoryController.dispose();
     super.dispose();
   }
@@ -508,14 +509,23 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          MaterialImagePickerSection(
+            images: _images,
+            isUploading: _isUploadingImages,
+            onPickImages: _pickImages,
+            onRemoveImage: (index) {
+              setState(() => _images.removeAt(index));
+            },
+          ),
+          const SizedBox(height: AppSpacing.lg),
           _Card(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SupplierFormSectionHeader(
                   icon: Icons.place_outlined,
-                  title: 'Pickup and images',
-                  subtitle: 'Pickup comes from your Supplier Profile. Images use URLs for this MVP.',
+                  title: 'Pickup',
+                  subtitle: 'Pickup location comes from your Supplier Profile.',
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 SupplierPickupMapPreview(
@@ -554,92 +564,6 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   icon: const Icon(Icons.edit_location_alt_outlined),
                   label: const Text('Edit pickup location'),
                 ),
-                const SupplierSectionGap(),
-                _ResponsiveRow(
-                  children: [
-                    SupplierDarkTextField(
-                      controller: _imageUrlController,
-                      label: 'Image URL',
-                      hint: 'https://example.com/material.jpg',
-                    ),
-                    Align(
-                      alignment: Alignment.bottomLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 28),
-                        child: OutlinedButton.icon(
-                          onPressed:
-                              _imageUrls.length >= 6 ? null : _addImageUrl,
-                          icon: const Icon(Icons.add_photo_alternate_outlined),
-                          label: const Text('Add URL'),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (_imageUrls.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: AppSpacing.sm,
-                      mainAxisSpacing: AppSpacing.sm,
-                    ),
-                    itemCount: _imageUrls.length,
-                    itemBuilder: (context, index) {
-                      final imageUrl = _imageUrls[index];
-                      return Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              imageUrl,
-                              width: double.infinity,
-                              height: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
-                                color: AuthDarkColors.surfaceSolid,
-                                child: const Icon(Icons.broken_image_outlined),
-                              ),
-                            ),
-                          ),
-                          if (index == 0)
-                            Positioned(
-                              left: 6,
-                              top: 6,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: SupplierDecorations.badge(
-                                  background: AuthDarkColors.accentSoft
-                                      .withValues(alpha: 0.16),
-                                ),
-                                child: Text(
-                                  'Cover',
-                                  style: AuthDarkTextStyles.chip(context),
-                                ),
-                              ),
-                            ),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: IconButton(
-                              onPressed: () =>
-                                  setState(() => _imageUrls.removeAt(index)),
-                              icon: const Icon(
-                                Icons.close,
-                                color: AuthDarkColors.textMuted,
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
               ],
             ),
           ),
@@ -692,7 +616,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             isFree: _isFree,
             price: _priceController.text.trim(),
             pickupCity: pickupLocation.city,
-            coverImageUrl: _imageUrls.isEmpty ? null : _imageUrls.first,
+            coverImageUrl: _images.isEmpty ? null : _images.first.url,
             priceCheck: _priceCheck,
           ),
         ),
@@ -700,7 +624,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     );
   }
 
-  Map<String, dynamic> _buildListingDraftJson(String requestedCategoryName) {
+  Map<String, dynamic> _buildListingDraftJson(
+    String requestedCategoryName, {
+    List<String>? imageUrls,
+  }) {
     final quantity = double.tryParse(_quantityController.text.trim()) ?? 1;
     final price = double.tryParse(_priceController.text.trim());
 
@@ -727,8 +654,86 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       'suggestedUses': _suggestedUsesController.text.trim().isEmpty
           ? null
           : _suggestedUsesController.text.trim(),
-      'imageUrls': List<String>.from(_imageUrls),
+      'imageUrls': imageUrls ?? _imageUrlValues(),
     };
+  }
+
+  List<String> _imageUrlValues() {
+    return _images
+        .map((image) => image.url)
+        .whereType<String>()
+        .toList(growable: false);
+  }
+
+  Future<List<String>> _resolveImageUrls() async {
+    final pending = _images.where((image) => image.isPending).toList();
+    if (pending.isEmpty) {
+      return _imageUrlValues();
+    }
+
+    setState(() => _isUploadingImages = true);
+    try {
+      final uploaded = await uploadMaterialImages(ref, pending);
+      if (uploaded.length != pending.length) {
+        throw const ApiException(message: 'Image upload failed');
+      }
+
+      var uploadIndex = 0;
+      final resolvedImages = <MaterialDraftImage>[];
+
+      for (final image in _images) {
+        if (image.isPending) {
+          final uploadedImage = uploaded[uploadIndex++];
+          resolvedImages.add(
+            MaterialDraftImage.uploaded(
+              url: uploadedImage.url,
+              fileName: uploadedImage.filename,
+              mimeType: uploadedImage.mimeType,
+              sizeBytes: uploadedImage.sizeBytes,
+            ),
+          );
+        } else {
+          resolvedImages.add(image);
+        }
+      }
+
+      if (!mounted) {
+        return resolvedImages
+            .map((image) => image.url)
+            .whereType<String>()
+            .toList(growable: false);
+      }
+
+      setState(() {
+        _images
+          ..clear()
+          ..addAll(resolvedImages);
+        _isUploadingImages = false;
+      });
+
+      return resolvedImages
+          .map((image) => image.url)
+          .whereType<String>()
+          .toList(growable: false);
+    } catch (error) {
+      if (mounted) {
+        setState(() => _isUploadingImages = false);
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _pickImages() async {
+    final picked = await MaterialImagePickerSection.pickImages(
+      currentCount: _images.length,
+      onError: (message) => showSupplierErrorSnackBar(context, message),
+    );
+
+    if (picked == null || picked.isEmpty || !mounted) {
+      return;
+    }
+
+    setState(() => _images.addAll(picked));
   }
 
   Future<void> _submitCategoryRequest() async {
@@ -744,9 +749,13 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
 
     setState(() => _isSubmittingCategoryRequest = true);
     try {
+      final imageUrls = await _resolveImageUrls();
       final payload = CreateCategoryRequestPayload(
         requestedName: requestedName,
-        listingDraftJson: _buildListingDraftJson(requestedName),
+        listingDraftJson: _buildListingDraftJson(
+          requestedName,
+          imageUrls: imageUrls,
+        ),
       );
       if (kDebugMode) {
         debugPrint(
@@ -782,7 +791,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       }
       showSupplierErrorSnackBar(
         context,
-        'Category request failed: $error',
+        'We could not upload the images. Please try again.',
       );
     }
   }
@@ -819,11 +828,12 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         _pickupAllowed = json['pickupAllowed'] as bool? ?? true;
         _pickupNotesController.text = json['pickupNotes'] as String? ?? '';
         _suggestedUsesController.text = json['suggestedUses'] as String? ?? '';
-        _imageUrls
+        _images
           ..clear()
           ..addAll(
             (json['imageUrls'] as List?)
                     ?.whereType<String>()
+                    .map(MaterialDraftImage.fromUrl)
                     .toList() ??
                 const [],
           );
@@ -1009,23 +1019,6 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     return '${statusPrefix}Request failed.';
   }
 
-  void _addImageUrl() {
-    final value = _imageUrlController.text.trim();
-    final uri = Uri.tryParse(value);
-    if (uri == null || !(uri.scheme == 'https' || uri.scheme == 'http')) {
-      showSupplierErrorSnackBar(context, 'Enter a valid http or https image URL.');
-      return;
-    }
-    if (_imageUrls.contains(value)) {
-      showSupplierErrorSnackBar(context, 'Image URL is already added.');
-      return;
-    }
-    setState(() {
-      _imageUrls.add(value);
-      _imageUrlController.clear();
-    });
-  }
-
   Future<void> _publish() async {
     if (!(_formKey.currentState?.validate() ?? false) || _categoryId == null) {
       return;
@@ -1042,6 +1035,24 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     }
 
     setState(() => _isSubmitting = true);
+    List<String> imageUrls;
+    try {
+      imageUrls = await _resolveImageUrls();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      showSupplierErrorSnackBar(context, _apiErrorMessage(error));
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      showSupplierErrorSnackBar(
+        context,
+        'We could not upload the images. Please try again.',
+      );
+      return;
+    }
+
     try {
       final material = await ref
           .read(supplierMaterialsRepositoryProvider)
@@ -1065,7 +1076,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               suggestedUses: _suggestedUsesController.text.trim().isEmpty
                   ? null
                   : _suggestedUsesController.text.trim(),
-              imageUrls: _imageUrls,
+              imageUrls: imageUrls,
             ),
           );
 
@@ -1076,6 +1087,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         _isSubmitting = false;
       });
       showSupplierInfoSnackBar(context, 'Material listed successfully.');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      showSupplierErrorSnackBar(context, _apiErrorMessage(error));
     } catch (_) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
@@ -1094,7 +1109,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       _quantityController.text = '1';
       _unitController.text = 'piece';
       _priceController.clear();
-      _imageUrls.clear();
+      _images.clear();
       _priceCheck = null;
       _priceReviewMessage = null;
       _isFree = true;

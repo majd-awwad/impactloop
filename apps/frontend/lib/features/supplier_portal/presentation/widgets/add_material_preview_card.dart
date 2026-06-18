@@ -4,6 +4,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/auth_dark_colors.dart';
 import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../app/theme/supplier_decorations.dart';
+import '../../../../core/config/api_config.dart';
 import '../../../materials/data/models/category.dart';
 import '../../../materials/data/models/material_price_check_result.dart';
 
@@ -50,7 +51,7 @@ class AddMaterialPreviewCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
-                coverImageUrl!,
+                ApiConfig.resolveMediaUrl(coverImageUrl!),
                 height: 160,
                 width: double.infinity,
                 fit: BoxFit.cover,
