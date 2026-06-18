@@ -16,6 +16,7 @@ import {
   updateSupplierProfileSchema,
 } from './supplier.validation.js';
 import { categoryRequestsRouter } from '../category-requests/category-requests.routes.js';
+import { supplierReservationsRouter } from '../supplier-reservations/supplier-reservations.routes.js';
 
 export const supplierRouter = Router();
 
@@ -50,3 +51,4 @@ supplierRouter.post(
 );
 
 supplierRouter.use('/category-requests', categoryRequestsRouter);
+supplierRouter.use('/reservations', supplierReservationsRouter);
