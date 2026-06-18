@@ -23,7 +23,7 @@ final incomingRequestTabProvider =
 final incomingRequestsProvider =
     FutureProvider.autoDispose<List<SupplierIncomingRequest>>((ref) async {
   final tab = ref.watch(incomingRequestTabProvider);
-  return ref.watch(supplierRequestsRepositoryProvider).fetchIncomingRequests(tab);
+  return ref.read(supplierRequestsRepositoryProvider).fetchIncomingRequests(tab);
 });
 
 Future<void> acceptIncomingRequest(
