@@ -18,6 +18,7 @@ import '../../features/supplier_portal/presentation/pages/supplier_access_denied
 import '../../features/supplier_portal/presentation/pages/add_material_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_coming_soon_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_incoming_requests_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_pickup_schedule_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_dashboard_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_profile_page.dart';
 import '../../features/supplier_portal/presentation/shell/supplier_shell.dart';
@@ -204,11 +205,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/supplier/pickup-schedule',
-            builder: (context, state) => const SupplierComingSoonPage(
-              title: 'Pickup Schedule',
-              description:
-                  'Your pickup schedule is coming soon. Accepted reservations with pickup windows will be organized here.',
-            ),
+            builder: (context, state) => const SupplierPickupSchedulePage(),
           ),
           GoRoute(
             path: '/supplier/notifications',

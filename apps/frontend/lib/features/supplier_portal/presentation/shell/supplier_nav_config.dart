@@ -110,6 +110,11 @@ String supplierPageSubtitle(String location) {
     return 'Review learner requests and schedule pickups.';
   }
 
+  if (location == '/supplier/pickup-schedule' ||
+      location.startsWith('/supplier/pickup-schedule/')) {
+    return 'Track accepted pickups and upcoming handovers.';
+  }
+
   for (final item in supplierNavItems) {
     if (location == item.route || location.startsWith('${item.route}/')) {
       return 'Coming soon in the Supplier Portal.';
