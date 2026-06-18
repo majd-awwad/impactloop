@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 
 import { successResponse } from '../../utils/api-response.js';
+import { readValidatedQuery } from '../../middlewares/validate.middleware.js';
 
 import {
   getActivePriceRuleForMaterialType,
@@ -12,7 +13,7 @@ export const searchMaterialTypesHandler = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const query = req.query as SearchMaterialTypesQuery;
+  const query = readValidatedQuery<SearchMaterialTypesQuery>(req);
   const result = await searchMaterialTypes({
     categoryId: query.categoryId,
     q: query.q,

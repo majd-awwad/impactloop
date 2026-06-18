@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 
 import { successResponse } from '../../utils/api-response.js';
+import { readValidatedParams, readValidatedQuery } from '../../middlewares/validate.middleware.js';
 
 import {
   acceptSupplierReservation,
@@ -20,7 +21,7 @@ export const listSupplierReservationsHandler = async (
 ): Promise<void> => {
   const reservations = await listSupplierReservations(
     req.auth!.sub,
-    req.query as ListSupplierReservationsQuery,
+    readValidatedQuery<ListSupplierReservationsQuery>(req),
   );
 
   res.json(successResponse('Supplier reservations loaded.', { reservations }));
@@ -30,7 +31,7 @@ export const acceptSupplierReservationHandler = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const { id } = req.params as ReservationIdParams;
+  const { id } = readValidatedParams<ReservationIdParams>(req);
   const reservation = await acceptSupplierReservation(
     req.auth!.sub,
     id,
@@ -44,7 +45,7 @@ export const declineSupplierReservationHandler = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const { id } = req.params as ReservationIdParams;
+  const { id } = readValidatedParams<ReservationIdParams>(req);
   const reservation = await declineSupplierReservation(
     req.auth!.sub,
     id,
