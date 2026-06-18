@@ -25,6 +25,15 @@ export const findSupplierProfileForDashboard = async (userId: string) => {
   });
 };
 
+export const findSupplierProfileForMaterialCreate = async (userId: string) => {
+  return prisma.supplierProfile.findUnique({
+    where: { userId },
+    include: {
+      defaultPickupLocation: true,
+    },
+  });
+};
+
 export const findSupplierProfileDetailsByUserId = async (userId: string) => {
   return prisma.user.findUnique({
     where: { id: userId },
@@ -390,4 +399,86 @@ export const sumReusedQuantity = (
   }
 
   return decimalToNumber(aggregate._sum.quantity);
+};
+
+export const createSupplierMaterial = async (input: {
+  ownerId: string;
+  supplierProfileId: string;
+  categoryId: string;
+  locationId: string;
+  title: string;
+  description: string;
+  materialType: string;
+  materialTypeId?: string | null;
+  customMaterialType?: string | null;
+  quantity: number;
+  unit: string;
+  condition: Prisma.MaterialCreateInput['condition'];
+  sourceType: Prisma.MaterialCreateInput['sourceType'];
+  isFree: boolean;
+  price?: number | null;
+  currency: string;
+  pickupAllowed: boolean;
+  deliveryAllowed: boolean;
+  pickupNotes?: string | null;
+  suggestedUses?: string | null;
+  priceRuleId?: string | null;
+  priceCheckedAt?: Date | null;
+  maxAllowedPriceAtCheck?: number | null;
+  imageUrls: string[];
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const material = await tx.material.create({
+      data: {
+        ownerId: input.ownerId,
+        supplierProfileId: input.supplierProfileId,
+        categoryId: input.categoryId,
+        locationId: input.locationId,
+        title: input.title,
+        description: input.description,
+        materialType: input.materialType,
+        materialTypeId: input.materialTypeId ?? null,
+        customMaterialType: input.customMaterialType ?? null,
+        quantity: input.quantity,
+        unit: input.unit,
+        condition: input.condition,
+        sourceType: input.sourceType,
+        status: 'AVAILABLE',
+        isFree: input.isFree,
+        price: input.price ?? null,
+        currency: input.currency,
+        pickupAllowed: input.pickupAllowed,
+        deliveryAllowed: input.deliveryAllowed,
+        pickupNotes: input.pickupNotes ?? null,
+        suggestedUses: input.suggestedUses ?? null,
+        priceRuleId: input.priceRuleId ?? null,
+        priceCheckedAt: input.priceCheckedAt ?? null,
+        maxAllowedPriceAtCheck: input.maxAllowedPriceAtCheck ?? null,
+        images:
+          input.imageUrls.length > 0
+            ? {
+                create: input.imageUrls.map((imageUrl, index) => ({
+                  imageUrl,
+                  sortOrder: index,
+                  isCover: index === 0,
+                })),
+              }
+            : undefined,
+      },
+      include: {
+        category: {
+          select: {
+            id: true,
+            nameEn: true,
+            nameAr: true,
+          },
+        },
+        images: {
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    });
+
+    return material;
+  });
 };

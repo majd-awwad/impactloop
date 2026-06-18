@@ -15,6 +15,19 @@ const organizationTypes = [
 ] as const;
 
 const visibilityValues = ['PUBLIC', 'ORDER_ONLY', 'PRIVATE'] as const;
+const materialConditions = [
+  'NEW',
+  'LIKE_NEW',
+  'GOOD',
+  'USED',
+  'NEEDS_REPAIR',
+] as const;
+const materialSourceTypes = [
+  'STUDENT_LEFTOVER',
+  'WORKSHOP_SURPLUS',
+  'FACTORY_SURPLUS',
+  'EDUCATIONAL_INSTITUTION',
+] as const;
 
 const locationSchema = z.object({
   country: z.string().trim().min(1).max(100),
@@ -80,4 +93,27 @@ export const updateSupplierProfileSchema = z
 
 export type UpdateSupplierProfileInput = z.infer<
   typeof updateSupplierProfileSchema
+>;
+
+export const createSupplierMaterialSchema = z.object({
+  materialName: z.string().trim().min(1).max(120),
+  title: z.string().trim().min(3).max(120),
+  description: z.string().trim().min(10).max(2000),
+  categoryId: z.string().trim().min(1),
+  quantity: z.number().positive(),
+  unit: z.string().trim().min(1).max(40),
+  condition: z.enum(materialConditions),
+  sourceType: z.enum(materialSourceTypes),
+  isFree: z.boolean(),
+  price: z.number().nonnegative().optional().nullable(),
+  currency: z.literal('NIS').default('NIS'),
+  pickupAllowed: z.boolean().default(true),
+  deliveryAllowed: z.literal(false).default(false),
+  pickupNotes: z.string().trim().max(500).optional().nullable(),
+  suggestedUses: z.string().trim().max(1000).optional().nullable(),
+  imageUrls: z.array(z.string().trim().url()).max(6).optional().default([]),
+});
+
+export type CreateSupplierMaterialInput = z.infer<
+  typeof createSupplierMaterialSchema
 >;
