@@ -113,32 +113,59 @@ enum ReviewTargetType {
   MATERIAL
 }
 
+enum MaterialPriceRuleStatus {
+  ACTIVE
+  PENDING_REVIEW
+  REJECTED
+}
+
+enum MaterialPriceRuleSourceType {
+  MANUAL
+  IMPORTED
+  AI_PROPOSED
+}
+
+enum MaterialRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AiLookupStatus {
+  SUCCESS
+  FAILED
+  SKIPPED
+  PENDING_REVIEW
+}
+
 model User {
-  id              String               @id @default(cuid())
-  displayName     String               @map("display_name")
-  email           String               @unique
-  phone           String?              @unique
-  passwordHash    String               @map("password_hash")
-  accountStatus   AccountStatus        @default(PENDING_VERIFICATION) @map("account_status")
-  profileImageUrl String?              @map("profile_image_url")
-  emailVerifiedAt DateTime?            @map("email_verified_at")
-  phoneVerifiedAt DateTime?            @map("phone_verified_at")
-  lastLoginAt     DateTime?            @map("last_login_at")
-  createdAt       DateTime             @default(now()) @map("created_at")
-  updatedAt       DateTime             @updatedAt @map("updated_at")
-  roles           UserRoleAssignment[]
-  authTokens      AuthToken[]
-  learnerProfile  LearnerProfile?
-  supplierProfile SupplierProfile?
-  invitedRoles    RoleInvitation[]     @relation("RoleInvitationInvitedBy")
-  usedInvitations RoleInvitation[]     @relation("RoleInvitationUsedByUser")
-  assignedRoles                UserRoleAssignment[] @relation("UserRoleAssignedBy")
-  ownedMaterials               Material[]           @relation("MaterialOwner")
-  ownedReservationsAsOwner     Reservation[]        @relation("ReservationOwner")
-  ownedReservationsAsRequester Reservation[]        @relation("ReservationRequester")
+  id                           String                @id @default(cuid())
+  displayName                  String                @map("display_name")
+  email                        String                @unique
+  phone                        String?               @unique
+  passwordHash                 String                @map("password_hash")
+  accountStatus                AccountStatus         @default(PENDING_VERIFICATION) @map("account_status")
+  profileImageUrl              String?               @map("profile_image_url")
+  emailVerifiedAt              DateTime?             @map("email_verified_at")
+  phoneVerifiedAt              DateTime?             @map("phone_verified_at")
+  lastLoginAt                  DateTime?             @map("last_login_at")
+  createdAt                    DateTime              @default(now()) @map("created_at")
+  updatedAt                    DateTime              @updatedAt @map("updated_at")
+  roles                        UserRoleAssignment[]
+  authTokens                   AuthToken[]
+  learnerProfile               LearnerProfile?
+  supplierProfile              SupplierProfile?
+  invitedRoles                 RoleInvitation[]      @relation("RoleInvitationInvitedBy")
+  usedInvitations              RoleInvitation[]      @relation("RoleInvitationUsedByUser")
+  assignedRoles                UserRoleAssignment[]  @relation("UserRoleAssignedBy")
+  ownedMaterials               Material[]            @relation("MaterialOwner")
+  ownedReservationsAsOwner     Reservation[]         @relation("ReservationOwner")
+  ownedReservationsAsRequester Reservation[]         @relation("ReservationRequester")
   notifications                Notification[]
-  reviewsGiven                 Review[]             @relation("ReviewReviewer")
-  reviewsReceived              Review[]             @relation("ReviewReviewedUser")
+  reviewsGiven                 Review[]              @relation("ReviewReviewer")
+  reviewsReceived              Review[]              @relation("ReviewReviewedUser")
+  priceRuleRequests            PriceRuleRequest[]
+  categoryRequests             CategoryRequest[]
 
   @@map("users")
 }
@@ -274,58 +301,70 @@ model Location {
 }
 
 model Category {
-  id           String       @id @default(cuid())
-  nameEn       String       @map("name_en")
-  nameAr       String       @map("name_ar")
-  parentId     String?      @map("parent_id")
-  categoryType CategoryType @map("category_type")
-  iconUrl      String?      @map("icon_url")
-  createdAt    DateTime     @default(now()) @map("created_at")
-  parent       Category?    @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children     Category[]   @relation("CategoryHierarchy")
-  materials    Material[]
+  id                   String                @id @default(cuid())
+  nameEn               String                @map("name_en")
+  nameAr               String                @map("name_ar")
+  parentId             String?               @map("parent_id")
+  categoryType         CategoryType          @map("category_type")
+  iconUrl              String?               @map("icon_url")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  parent               Category?             @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children             Category[]            @relation("CategoryHierarchy")
+  materials            Material[]
+  materialTypes            MaterialType[]
+  approvedCategoryRequests CategoryRequest[] @relation("ApprovedCategoryRequests")
+  priceRuleRequests        PriceRuleRequest[]
 
   @@index([parentId])
   @@map("categories")
 }
 
 model Material {
-  id                    String             @id @default(cuid())
-  ownerId               String             @map("owner_id")
-  supplierProfileId     String?            @map("supplier_profile_id")
-  categoryId            String             @map("category_id")
-  title                 String
-  description           String
-  materialType          String             @map("material_type")
-  quantity              Decimal            @db.Decimal(12, 3)
-  unit                  String
-  condition             MaterialCondition
-  sourceType            MaterialSourceType @map("source_type")
-  status                MaterialStatus     @default(AVAILABLE)
-  isFree                Boolean            @default(true) @map("is_free")
-  price                 Decimal?           @db.Decimal(12, 2)
-  currency              String             @default("NIS")
-  locationId            String             @map("location_id")
-  pickupAllowed         Boolean            @default(true) @map("pickup_allowed")
-  deliveryAllowed       Boolean            @default(false) @map("delivery_allowed")
-  pickupNotes           String?            @map("pickup_notes")
-  suggestedUses         String?            @map("suggested_uses")
-  viewsCount            Int                @default(0) @map("views_count")
-  reusedAt              DateTime?          @map("reused_at")
-  reusedByReservationId String?            @unique @map("reused_by_reservation_id")
-  createdAt             DateTime           @default(now()) @map("created_at")
-  updatedAt             DateTime           @updatedAt @map("updated_at")
-  owner                 User               @relation("MaterialOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  supplierProfile       SupplierProfile?   @relation(fields: [supplierProfileId], references: [id], onDelete: SetNull)
-  category              Category           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  location              Location           @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  images                MaterialImage[]
-  reservations          Reservation[]
-  reusedByReservation   Reservation?       @relation("MaterialReusedByReservation", fields: [reusedByReservationId], references: [id], onDelete: SetNull)
+  id                     String             @id @default(cuid())
+  ownerId                String             @map("owner_id")
+  supplierProfileId      String?            @map("supplier_profile_id")
+  categoryId             String             @map("category_id")
+  title                  String
+  description            String
+  materialType           String             @map("material_type")
+  materialTypeId         String?            @map("material_type_id")
+  customMaterialType     String?            @map("custom_material_type")
+  priceRuleId            String?            @map("price_rule_id")
+  priceCheckedAt         DateTime?          @map("price_checked_at")
+  maxAllowedPriceAtCheck Decimal?           @map("max_allowed_price_at_check") @db.Decimal(12, 2)
+  quantity               Decimal            @db.Decimal(12, 3)
+  unit                   String
+  condition              MaterialCondition
+  sourceType             MaterialSourceType @map("source_type")
+  status                 MaterialStatus     @default(AVAILABLE)
+  isFree                 Boolean            @default(true) @map("is_free")
+  price                  Decimal?           @db.Decimal(12, 2)
+  currency               String             @default("NIS")
+  locationId             String             @map("location_id")
+  pickupAllowed          Boolean            @default(true) @map("pickup_allowed")
+  deliveryAllowed        Boolean            @default(false) @map("delivery_allowed")
+  pickupNotes            String?            @map("pickup_notes")
+  suggestedUses          String?            @map("suggested_uses")
+  viewsCount             Int                @default(0) @map("views_count")
+  reusedAt               DateTime?          @map("reused_at")
+  reusedByReservationId  String?            @unique @map("reused_by_reservation_id")
+  createdAt              DateTime           @default(now()) @map("created_at")
+  updatedAt              DateTime           @updatedAt @map("updated_at")
+  owner                  User               @relation("MaterialOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  supplierProfile        SupplierProfile?   @relation(fields: [supplierProfileId], references: [id], onDelete: SetNull)
+  category               Category           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  approvedMaterialType   MaterialType?      @relation(fields: [materialTypeId], references: [id], onDelete: SetNull)
+  priceRule              MaterialPriceRule? @relation(fields: [priceRuleId], references: [id], onDelete: SetNull)
+  location               Location           @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  images                 MaterialImage[]
+  reservations           Reservation[]
+  reusedByReservation    Reservation?       @relation("MaterialReusedByReservation", fields: [reusedByReservationId], references: [id], onDelete: SetNull)
 
   @@index([ownerId])
   @@index([supplierProfileId])
   @@index([categoryId])
+  @@index([materialTypeId])
+  @@index([priceRuleId])
   @@index([status])
   @@index([locationId])
   @@map("materials")
@@ -410,4 +449,134 @@ model Notification {
 
   @@index([userId, isRead])
   @@map("notifications")
+}
+
+model MaterialType {
+  id                String              @id @default(cuid())
+  categoryId        String              @map("category_id")
+  nameEn            String              @map("name_en")
+  nameAr            String?             @map("name_ar")
+  normalizedName    String              @map("normalized_name")
+  defaultUnit       String              @default("piece") @map("default_unit")
+  isActive          Boolean             @default(true) @map("is_active")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  category          Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  aliases           MaterialTypeAlias[]
+  priceRules        MaterialPriceRule[]
+  materials         Material[]
+  priceRuleRequests PriceRuleRequest[]
+
+  @@unique([categoryId, normalizedName])
+  @@index([categoryId])
+  @@index([nameEn])
+  @@index([isActive])
+  @@map("material_types")
+}
+
+model MaterialTypeAlias {
+  id              String       @id @default(cuid())
+  materialTypeId  String       @map("material_type_id")
+  alias           String
+  normalizedAlias String       @map("normalized_alias")
+  language        String?
+  createdAt       DateTime     @default(now()) @map("created_at")
+  materialType    MaterialType @relation(fields: [materialTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([materialTypeId, normalizedAlias])
+  @@index([materialTypeId])
+  @@index([normalizedAlias])
+  @@map("material_type_aliases")
+}
+
+model MaterialPriceRule {
+  id                      String                      @id @default(cuid())
+  materialTypeId          String                      @map("material_type_id")
+  currency                String                      @default("NIS")
+  unit                    String
+  maxAllowedUnitPriceNis  Decimal?                    @map("max_allowed_unit_price_nis") @db.Decimal(10, 2)
+  maxAllowedTotalPriceNis Decimal?                    @map("max_allowed_total_price_nis") @db.Decimal(10, 2)
+  conditionFactorsJson    Json?                       @map("condition_factors_json")
+  sourceType              MaterialPriceRuleSourceType @default(MANUAL) @map("source_type")
+  status                  MaterialPriceRuleStatus     @default(PENDING_REVIEW)
+  sourceNote              String?                     @map("source_note")
+  confidence              Decimal?                    @db.Decimal(5, 2)
+  isActive                Boolean                     @default(true) @map("is_active")
+  createdAt               DateTime                    @default(now()) @map("created_at")
+  updatedAt               DateTime                    @updatedAt @map("updated_at")
+  materialType            MaterialType                @relation(fields: [materialTypeId], references: [id], onDelete: Cascade)
+  materials               Material[]
+
+  @@index([materialTypeId])
+  @@index([status])
+  @@index([isActive])
+  @@index([currency])
+  @@index([unit])
+  @@map("material_price_rules")
+}
+
+model PriceRuleRequest {
+  id                          String                @id @default(cuid())
+  materialTypeId              String?               @map("material_type_id")
+  materialName                String?               @map("material_name")
+  normalizedMaterialName      String?               @map("normalized_material_name")
+  categoryId                  String?               @map("category_id")
+  unit                        String?
+  condition                   MaterialCondition?
+  quantity                    Decimal?              @db.Decimal(10, 2)
+  supplierPriceNis            Decimal?              @map("supplier_price_nis") @db.Decimal(10, 2)
+  requestedByUserId           String?               @map("requested_by_user_id")
+  status                      MaterialRequestStatus @default(PENDING)
+  aiSuggestedUnit             String?               @map("ai_suggested_unit")
+  aiSuggestedMaxUnitPriceNis  Decimal?              @map("ai_suggested_max_unit_price_nis") @db.Decimal(10, 2)
+  aiSuggestedMaxTotalPriceNis Decimal?              @map("ai_suggested_max_total_price_nis") @db.Decimal(10, 2)
+  aiSuggestedAliasesJson      Json?                 @map("ai_suggested_aliases_json")
+  aiResultJson                Json?                 @map("ai_result_json")
+  moderatorNote               String?               @map("moderator_note")
+  createdAt                   DateTime              @default(now()) @map("created_at")
+  updatedAt                   DateTime              @updatedAt @map("updated_at")
+  materialType                MaterialType?         @relation(fields: [materialTypeId], references: [id], onDelete: SetNull)
+  category                    Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  requestedBy                 User?                 @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([materialTypeId])
+  @@index([categoryId])
+  @@index([normalizedMaterialName])
+  @@index([requestedByUserId])
+  @@index([status])
+  @@map("price_rule_requests")
+}
+
+model CategoryRequest {
+  id                      String                @id @default(cuid())
+  requestedName           String                @map("requested_name")
+  normalizedRequestedName String                @map("normalized_requested_name")
+  requestedByUserId       String                @map("requested_by_user_id")
+  status                  MaterialRequestStatus @default(PENDING)
+  approvedCategoryId      String?               @map("approved_category_id")
+  moderatorNote           String?               @map("moderator_note")
+  listingDraftJson        Json?                 @map("listing_draft_json")
+  createdAt               DateTime              @default(now()) @map("created_at")
+  updatedAt               DateTime              @updatedAt @map("updated_at")
+  requestedBy             User                  @relation(fields: [requestedByUserId], references: [id], onDelete: Cascade)
+  approvedCategory        Category?             @relation("ApprovedCategoryRequests", fields: [approvedCategoryId], references: [id], onDelete: SetNull)
+
+  @@index([requestedByUserId])
+  @@index([status])
+  @@index([normalizedRequestedName])
+  @@map("category_requests")
+}
+
+model AiPriceLookupLog {
+  id              String         @id @default(cuid())
+  query           String
+  normalizedQuery String         @map("normalized_query")
+  resultJson      Json?          @map("result_json")
+  status          AiLookupStatus
+  costEstimate    Decimal?       @map("cost_estimate") @db.Decimal(10, 4)
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  @@index([normalizedQuery])
+  @@index([status])
+  @@map("ai_price_lookup_logs")
 }
