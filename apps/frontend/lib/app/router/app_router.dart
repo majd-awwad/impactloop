@@ -15,6 +15,7 @@ import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
+import '../../features/supplier_portal/presentation/pages/add_material_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_coming_soon_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_dashboard_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_profile_page.dart';
@@ -194,11 +195,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/supplier/materials/new',
-            builder: (context, state) => const SupplierComingSoonPage(
-              title: 'Add Material',
-              description:
-                  'Listing new reusable materials is coming soon. Share surplus parts, leftovers, and components with learners who need them.',
-            ),
+            builder: (context, state) => const AddMaterialPage(),
           ),
           GoRoute(
             path: '/supplier/reservations',

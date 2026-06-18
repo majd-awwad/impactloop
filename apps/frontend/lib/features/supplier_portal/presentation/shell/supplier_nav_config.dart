@@ -71,6 +71,10 @@ final supplierMobileNavItems = [
 ];
 
 String supplierPageTitle(String location) {
+  if (location == '/supplier/materials/new') {
+    return 'Add Material';
+  }
+
   if (location == '/supplier' || location == '/supplier/') {
     return 'Overview';
   }
@@ -79,7 +83,7 @@ String supplierPageTitle(String location) {
     return 'Supplier Profile';
   }
 
-  for (final item in supplierNavItems) {
+  for (final item in supplierNavItems.reversed) {
     if (location == item.route || location.startsWith('${item.route}/')) {
       return item.label;
     }
@@ -89,6 +93,10 @@ String supplierPageTitle(String location) {
 }
 
 String supplierPageSubtitle(String location) {
+  if (location == '/supplier/materials/new') {
+    return 'List surplus materials for reuse by learners and makers.';
+  }
+
   if (location == '/supplier' || location == '/supplier/') {
     return 'Track materials, requests, and impact.';
   }
@@ -107,6 +115,16 @@ String supplierPageSubtitle(String location) {
 }
 
 bool isSupplierNavActive(String currentLocation, String route) {
+  if (route == '/supplier/materials/new') {
+    return currentLocation == '/supplier/materials/new';
+  }
+
+  if (route == '/supplier/materials') {
+    return currentLocation == '/supplier/materials' ||
+        (currentLocation.startsWith('/supplier/materials/') &&
+            !currentLocation.startsWith('/supplier/materials/new'));
+  }
+
   if (route == '/supplier') {
     return currentLocation == '/supplier' || currentLocation == '/supplier/';
   }
