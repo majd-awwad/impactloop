@@ -74,6 +74,11 @@ export type MaterialImage = $Result.DefaultSelection<Prisma.$MaterialImagePayloa
  */
 export type Reservation = $Result.DefaultSelection<Prisma.$ReservationPayload>
 /**
+ * Model ReservationStatusHistory
+ * 
+ */
+export type ReservationStatusHistory = $Result.DefaultSelection<Prisma.$ReservationStatusHistoryPayload>
+/**
  * Model Review
  * 
  */
@@ -239,6 +244,14 @@ export const ReservationStatus: {
 export type ReservationStatus = (typeof ReservationStatus)[keyof typeof ReservationStatus]
 
 
+export const ReservationStatusGroup: {
+  RESERVATION: 'RESERVATION',
+  DELIVERY: 'DELIVERY'
+};
+
+export type ReservationStatusGroup = (typeof ReservationStatusGroup)[keyof typeof ReservationStatusGroup]
+
+
 export const PickupType: {
   SELF_PICKUP: 'SELF_PICKUP',
   DELIVERY_ALLOWED: 'DELIVERY_ALLOWED'
@@ -354,6 +367,10 @@ export const VerificationDocumentStatus: typeof $Enums.VerificationDocumentStatu
 export type ReservationStatus = $Enums.ReservationStatus
 
 export const ReservationStatus: typeof $Enums.ReservationStatus
+
+export type ReservationStatusGroup = $Enums.ReservationStatusGroup
+
+export const ReservationStatusGroup: typeof $Enums.ReservationStatusGroup
 
 export type PickupType = $Enums.PickupType
 
@@ -623,6 +640,16 @@ export class PrismaClient<
     * ```
     */
   get reservation(): Prisma.ReservationDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.reservationStatusHistory`: Exposes CRUD operations for the **ReservationStatusHistory** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ReservationStatusHistories
+    * const reservationStatusHistories = await prisma.reservationStatusHistory.findMany()
+    * ```
+    */
+  get reservationStatusHistory(): Prisma.ReservationStatusHistoryDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.review`: Exposes CRUD operations for the **Review** model.
@@ -1149,6 +1176,7 @@ export namespace Prisma {
     Material: 'Material',
     MaterialImage: 'MaterialImage',
     Reservation: 'Reservation',
+    ReservationStatusHistory: 'ReservationStatusHistory',
     Review: 'Review',
     Notification: 'Notification',
     MaterialType: 'MaterialType',
@@ -1172,7 +1200,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "userRoleAssignment" | "authToken" | "roleInvitation" | "learnerProfile" | "supplierProfile" | "organizationProfile" | "location" | "category" | "material" | "materialImage" | "reservation" | "review" | "notification" | "materialType" | "materialTypeAlias" | "materialPriceRule" | "priceRuleRequest" | "categoryRequest" | "aiPriceLookupLog"
+      modelProps: "user" | "userRoleAssignment" | "authToken" | "roleInvitation" | "learnerProfile" | "supplierProfile" | "organizationProfile" | "location" | "category" | "material" | "materialImage" | "reservation" | "reservationStatusHistory" | "review" | "notification" | "materialType" | "materialTypeAlias" | "materialPriceRule" | "priceRuleRequest" | "categoryRequest" | "aiPriceLookupLog"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -2064,6 +2092,80 @@ export namespace Prisma {
           }
         }
       }
+      ReservationStatusHistory: {
+        payload: Prisma.$ReservationStatusHistoryPayload<ExtArgs>
+        fields: Prisma.ReservationStatusHistoryFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ReservationStatusHistoryFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReservationStatusHistoryPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ReservationStatusHistoryFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReservationStatusHistoryPayload>
+          }
+          findFirst: {
+            args: Prisma.ReservationStatusHistoryFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReservationStatusHistoryPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ReservationStatusHistoryFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReservationStatusHistoryPayload>
+          }
+          findMany: {
+            args: Prisma.ReservationStatusHistoryFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReservationStatusHistoryPayload>[]
+          }
+          create: {
+            args: Prisma.ReservationStatusHistoryCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReservationStatusHistoryPayload>
+          }
+          createMany: {
+            args: Prisma.ReservationStatusHistoryCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ReservationStatusHistoryCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReservationStatusHistoryPayload>[]
+          }
+          delete: {
+            args: Prisma.ReservationStatusHistoryDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReservationStatusHistoryPayload>
+          }
+          update: {
+            args: Prisma.ReservationStatusHistoryUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReservationStatusHistoryPayload>
+          }
+          deleteMany: {
+            args: Prisma.ReservationStatusHistoryDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ReservationStatusHistoryUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.ReservationStatusHistoryUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReservationStatusHistoryPayload>[]
+          }
+          upsert: {
+            args: Prisma.ReservationStatusHistoryUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReservationStatusHistoryPayload>
+          }
+          aggregate: {
+            args: Prisma.ReservationStatusHistoryAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateReservationStatusHistory>
+          }
+          groupBy: {
+            args: Prisma.ReservationStatusHistoryGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ReservationStatusHistoryGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ReservationStatusHistoryCountArgs<ExtArgs>
+            result: $Utils.Optional<ReservationStatusHistoryCountAggregateOutputType> | number
+          }
+        }
+      }
       Review: {
         payload: Prisma.$ReviewPayload<ExtArgs>
         fields: Prisma.ReviewFieldRefs
@@ -2776,6 +2878,7 @@ export namespace Prisma {
     material?: MaterialOmit
     materialImage?: MaterialImageOmit
     reservation?: ReservationOmit
+    reservationStatusHistory?: ReservationStatusHistoryOmit
     review?: ReviewOmit
     notification?: NotificationOmit
     materialType?: MaterialTypeOmit
@@ -2872,6 +2975,7 @@ export namespace Prisma {
     ownedMaterials: number
     ownedReservationsAsOwner: number
     ownedReservationsAsRequester: number
+    reservationStatusChanges: number
     notifications: number
     reviewsGiven: number
     reviewsReceived: number
@@ -2888,6 +2992,7 @@ export namespace Prisma {
     ownedMaterials?: boolean | UserCountOutputTypeCountOwnedMaterialsArgs
     ownedReservationsAsOwner?: boolean | UserCountOutputTypeCountOwnedReservationsAsOwnerArgs
     ownedReservationsAsRequester?: boolean | UserCountOutputTypeCountOwnedReservationsAsRequesterArgs
+    reservationStatusChanges?: boolean | UserCountOutputTypeCountReservationStatusChangesArgs
     notifications?: boolean | UserCountOutputTypeCountNotificationsArgs
     reviewsGiven?: boolean | UserCountOutputTypeCountReviewsGivenArgs
     reviewsReceived?: boolean | UserCountOutputTypeCountReviewsReceivedArgs
@@ -2960,6 +3065,13 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountOwnedReservationsAsRequesterArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ReservationWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountReservationStatusChangesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ReservationStatusHistoryWhereInput
   }
 
   /**
@@ -3200,10 +3312,12 @@ export namespace Prisma {
 
   export type ReservationCountOutputType = {
     reviews: number
+    statusHistory: number
   }
 
   export type ReservationCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     reviews?: boolean | ReservationCountOutputTypeCountReviewsArgs
+    statusHistory?: boolean | ReservationCountOutputTypeCountStatusHistoryArgs
   }
 
   // Custom InputTypes
@@ -3222,6 +3336,13 @@ export namespace Prisma {
    */
   export type ReservationCountOutputTypeCountReviewsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ReviewWhereInput
+  }
+
+  /**
+   * ReservationCountOutputType without action
+   */
+  export type ReservationCountOutputTypeCountStatusHistoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ReservationStatusHistoryWhereInput
   }
 
 
@@ -3548,6 +3669,7 @@ export namespace Prisma {
     ownedMaterials?: boolean | User$ownedMaterialsArgs<ExtArgs>
     ownedReservationsAsOwner?: boolean | User$ownedReservationsAsOwnerArgs<ExtArgs>
     ownedReservationsAsRequester?: boolean | User$ownedReservationsAsRequesterArgs<ExtArgs>
+    reservationStatusChanges?: boolean | User$reservationStatusChangesArgs<ExtArgs>
     notifications?: boolean | User$notificationsArgs<ExtArgs>
     reviewsGiven?: boolean | User$reviewsGivenArgs<ExtArgs>
     reviewsReceived?: boolean | User$reviewsReceivedArgs<ExtArgs>
@@ -3613,6 +3735,7 @@ export namespace Prisma {
     ownedMaterials?: boolean | User$ownedMaterialsArgs<ExtArgs>
     ownedReservationsAsOwner?: boolean | User$ownedReservationsAsOwnerArgs<ExtArgs>
     ownedReservationsAsRequester?: boolean | User$ownedReservationsAsRequesterArgs<ExtArgs>
+    reservationStatusChanges?: boolean | User$reservationStatusChangesArgs<ExtArgs>
     notifications?: boolean | User$notificationsArgs<ExtArgs>
     reviewsGiven?: boolean | User$reviewsGivenArgs<ExtArgs>
     reviewsReceived?: boolean | User$reviewsReceivedArgs<ExtArgs>
@@ -3636,6 +3759,7 @@ export namespace Prisma {
       ownedMaterials: Prisma.$MaterialPayload<ExtArgs>[]
       ownedReservationsAsOwner: Prisma.$ReservationPayload<ExtArgs>[]
       ownedReservationsAsRequester: Prisma.$ReservationPayload<ExtArgs>[]
+      reservationStatusChanges: Prisma.$ReservationStatusHistoryPayload<ExtArgs>[]
       notifications: Prisma.$NotificationPayload<ExtArgs>[]
       reviewsGiven: Prisma.$ReviewPayload<ExtArgs>[]
       reviewsReceived: Prisma.$ReviewPayload<ExtArgs>[]
@@ -4059,6 +4183,7 @@ export namespace Prisma {
     ownedMaterials<T extends User$ownedMaterialsArgs<ExtArgs> = {}>(args?: Subset<T, User$ownedMaterialsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     ownedReservationsAsOwner<T extends User$ownedReservationsAsOwnerArgs<ExtArgs> = {}>(args?: Subset<T, User$ownedReservationsAsOwnerArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     ownedReservationsAsRequester<T extends User$ownedReservationsAsRequesterArgs<ExtArgs> = {}>(args?: Subset<T, User$ownedReservationsAsRequesterArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    reservationStatusChanges<T extends User$reservationStatusChangesArgs<ExtArgs> = {}>(args?: Subset<T, User$reservationStatusChangesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     notifications<T extends User$notificationsArgs<ExtArgs> = {}>(args?: Subset<T, User$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     reviewsGiven<T extends User$reviewsGivenArgs<ExtArgs> = {}>(args?: Subset<T, User$reviewsGivenArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     reviewsReceived<T extends User$reviewsReceivedArgs<ExtArgs> = {}>(args?: Subset<T, User$reviewsReceivedArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -4725,6 +4850,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: ReservationScalarFieldEnum | ReservationScalarFieldEnum[]
+  }
+
+  /**
+   * User.reservationStatusChanges
+   */
+  export type User$reservationStatusChangesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryInclude<ExtArgs> | null
+    where?: ReservationStatusHistoryWhereInput
+    orderBy?: ReservationStatusHistoryOrderByWithRelationInput | ReservationStatusHistoryOrderByWithRelationInput[]
+    cursor?: ReservationStatusHistoryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ReservationStatusHistoryScalarFieldEnum | ReservationStatusHistoryScalarFieldEnum[]
   }
 
   /**
@@ -17022,6 +17171,10 @@ export namespace Prisma {
     pickupWindowEnd: Date | null
     pickupType: $Enums.PickupType | null
     supplierNote: string | null
+    rejectionReason: string | null
+    acceptedAt: Date | null
+    rejectedAt: Date | null
+    cancelledAt: Date | null
     deliveryRequested: boolean | null
     deliveryStatus: $Enums.DeliveryStatus | null
     deliveryCost: Decimal | null
@@ -17044,6 +17197,10 @@ export namespace Prisma {
     pickupWindowEnd: Date | null
     pickupType: $Enums.PickupType | null
     supplierNote: string | null
+    rejectionReason: string | null
+    acceptedAt: Date | null
+    rejectedAt: Date | null
+    cancelledAt: Date | null
     deliveryRequested: boolean | null
     deliveryStatus: $Enums.DeliveryStatus | null
     deliveryCost: Decimal | null
@@ -17066,6 +17223,10 @@ export namespace Prisma {
     pickupWindowEnd: number
     pickupType: number
     supplierNote: number
+    rejectionReason: number
+    acceptedAt: number
+    rejectedAt: number
+    cancelledAt: number
     deliveryRequested: number
     deliveryStatus: number
     deliveryCost: number
@@ -17100,6 +17261,10 @@ export namespace Prisma {
     pickupWindowEnd?: true
     pickupType?: true
     supplierNote?: true
+    rejectionReason?: true
+    acceptedAt?: true
+    rejectedAt?: true
+    cancelledAt?: true
     deliveryRequested?: true
     deliveryStatus?: true
     deliveryCost?: true
@@ -17122,6 +17287,10 @@ export namespace Prisma {
     pickupWindowEnd?: true
     pickupType?: true
     supplierNote?: true
+    rejectionReason?: true
+    acceptedAt?: true
+    rejectedAt?: true
+    cancelledAt?: true
     deliveryRequested?: true
     deliveryStatus?: true
     deliveryCost?: true
@@ -17144,6 +17313,10 @@ export namespace Prisma {
     pickupWindowEnd?: true
     pickupType?: true
     supplierNote?: true
+    rejectionReason?: true
+    acceptedAt?: true
+    rejectedAt?: true
+    cancelledAt?: true
     deliveryRequested?: true
     deliveryStatus?: true
     deliveryCost?: true
@@ -17253,6 +17426,10 @@ export namespace Prisma {
     pickupWindowEnd: Date | null
     pickupType: $Enums.PickupType
     supplierNote: string | null
+    rejectionReason: string | null
+    acceptedAt: Date | null
+    rejectedAt: Date | null
+    cancelledAt: Date | null
     deliveryRequested: boolean
     deliveryStatus: $Enums.DeliveryStatus | null
     deliveryCost: Decimal | null
@@ -17294,6 +17471,10 @@ export namespace Prisma {
     pickupWindowEnd?: boolean
     pickupType?: boolean
     supplierNote?: boolean
+    rejectionReason?: boolean
+    acceptedAt?: boolean
+    rejectedAt?: boolean
+    cancelledAt?: boolean
     deliveryRequested?: boolean
     deliveryStatus?: boolean
     deliveryCost?: boolean
@@ -17308,6 +17489,7 @@ export namespace Prisma {
     dropoffLocation?: boolean | Reservation$dropoffLocationArgs<ExtArgs>
     reusedMaterial?: boolean | Reservation$reusedMaterialArgs<ExtArgs>
     reviews?: boolean | Reservation$reviewsArgs<ExtArgs>
+    statusHistory?: boolean | Reservation$statusHistoryArgs<ExtArgs>
     _count?: boolean | ReservationCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["reservation"]>
 
@@ -17323,6 +17505,10 @@ export namespace Prisma {
     pickupWindowEnd?: boolean
     pickupType?: boolean
     supplierNote?: boolean
+    rejectionReason?: boolean
+    acceptedAt?: boolean
+    rejectedAt?: boolean
+    cancelledAt?: boolean
     deliveryRequested?: boolean
     deliveryStatus?: boolean
     deliveryCost?: boolean
@@ -17349,6 +17535,10 @@ export namespace Prisma {
     pickupWindowEnd?: boolean
     pickupType?: boolean
     supplierNote?: boolean
+    rejectionReason?: boolean
+    acceptedAt?: boolean
+    rejectedAt?: boolean
+    cancelledAt?: boolean
     deliveryRequested?: boolean
     deliveryStatus?: boolean
     deliveryCost?: boolean
@@ -17375,6 +17565,10 @@ export namespace Prisma {
     pickupWindowEnd?: boolean
     pickupType?: boolean
     supplierNote?: boolean
+    rejectionReason?: boolean
+    acceptedAt?: boolean
+    rejectedAt?: boolean
+    cancelledAt?: boolean
     deliveryRequested?: boolean
     deliveryStatus?: boolean
     deliveryCost?: boolean
@@ -17385,7 +17579,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type ReservationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "materialId" | "requesterId" | "ownerId" | "quantityRequested" | "message" | "status" | "pickupWindowStart" | "pickupWindowEnd" | "pickupType" | "supplierNote" | "deliveryRequested" | "deliveryStatus" | "deliveryCost" | "dropoffLocationId" | "driverProfileId" | "completedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["reservation"]>
+  export type ReservationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "materialId" | "requesterId" | "ownerId" | "quantityRequested" | "message" | "status" | "pickupWindowStart" | "pickupWindowEnd" | "pickupType" | "supplierNote" | "rejectionReason" | "acceptedAt" | "rejectedAt" | "cancelledAt" | "deliveryRequested" | "deliveryStatus" | "deliveryCost" | "dropoffLocationId" | "driverProfileId" | "completedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["reservation"]>
   export type ReservationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     material?: boolean | MaterialDefaultArgs<ExtArgs>
     requester?: boolean | UserDefaultArgs<ExtArgs>
@@ -17393,6 +17587,7 @@ export namespace Prisma {
     dropoffLocation?: boolean | Reservation$dropoffLocationArgs<ExtArgs>
     reusedMaterial?: boolean | Reservation$reusedMaterialArgs<ExtArgs>
     reviews?: boolean | Reservation$reviewsArgs<ExtArgs>
+    statusHistory?: boolean | Reservation$statusHistoryArgs<ExtArgs>
     _count?: boolean | ReservationCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type ReservationIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -17417,6 +17612,7 @@ export namespace Prisma {
       dropoffLocation: Prisma.$LocationPayload<ExtArgs> | null
       reusedMaterial: Prisma.$MaterialPayload<ExtArgs> | null
       reviews: Prisma.$ReviewPayload<ExtArgs>[]
+      statusHistory: Prisma.$ReservationStatusHistoryPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -17430,6 +17626,10 @@ export namespace Prisma {
       pickupWindowEnd: Date | null
       pickupType: $Enums.PickupType
       supplierNote: string | null
+      rejectionReason: string | null
+      acceptedAt: Date | null
+      rejectedAt: Date | null
+      cancelledAt: Date | null
       deliveryRequested: boolean
       deliveryStatus: $Enums.DeliveryStatus | null
       deliveryCost: Prisma.Decimal | null
@@ -17838,6 +18038,7 @@ export namespace Prisma {
     dropoffLocation<T extends Reservation$dropoffLocationArgs<ExtArgs> = {}>(args?: Subset<T, Reservation$dropoffLocationArgs<ExtArgs>>): Prisma__LocationClient<$Result.GetResult<Prisma.$LocationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     reusedMaterial<T extends Reservation$reusedMaterialArgs<ExtArgs> = {}>(args?: Subset<T, Reservation$reusedMaterialArgs<ExtArgs>>): Prisma__MaterialClient<$Result.GetResult<Prisma.$MaterialPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     reviews<T extends Reservation$reviewsArgs<ExtArgs> = {}>(args?: Subset<T, Reservation$reviewsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    statusHistory<T extends Reservation$statusHistoryArgs<ExtArgs> = {}>(args?: Subset<T, Reservation$statusHistoryArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -17878,6 +18079,10 @@ export namespace Prisma {
     readonly pickupWindowEnd: FieldRef<"Reservation", 'DateTime'>
     readonly pickupType: FieldRef<"Reservation", 'PickupType'>
     readonly supplierNote: FieldRef<"Reservation", 'String'>
+    readonly rejectionReason: FieldRef<"Reservation", 'String'>
+    readonly acceptedAt: FieldRef<"Reservation", 'DateTime'>
+    readonly rejectedAt: FieldRef<"Reservation", 'DateTime'>
+    readonly cancelledAt: FieldRef<"Reservation", 'DateTime'>
     readonly deliveryRequested: FieldRef<"Reservation", 'Boolean'>
     readonly deliveryStatus: FieldRef<"Reservation", 'DeliveryStatus'>
     readonly deliveryCost: FieldRef<"Reservation", 'Decimal'>
@@ -18349,6 +18554,30 @@ export namespace Prisma {
   }
 
   /**
+   * Reservation.statusHistory
+   */
+  export type Reservation$statusHistoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryInclude<ExtArgs> | null
+    where?: ReservationStatusHistoryWhereInput
+    orderBy?: ReservationStatusHistoryOrderByWithRelationInput | ReservationStatusHistoryOrderByWithRelationInput[]
+    cursor?: ReservationStatusHistoryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ReservationStatusHistoryScalarFieldEnum | ReservationStatusHistoryScalarFieldEnum[]
+  }
+
+  /**
    * Reservation without action
    */
   export type ReservationDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -18364,6 +18593,1135 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: ReservationInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model ReservationStatusHistory
+   */
+
+  export type AggregateReservationStatusHistory = {
+    _count: ReservationStatusHistoryCountAggregateOutputType | null
+    _min: ReservationStatusHistoryMinAggregateOutputType | null
+    _max: ReservationStatusHistoryMaxAggregateOutputType | null
+  }
+
+  export type ReservationStatusHistoryMinAggregateOutputType = {
+    id: string | null
+    reservationId: string | null
+    statusGroup: $Enums.ReservationStatusGroup | null
+    oldStatus: string | null
+    newStatus: string | null
+    changedBy: string | null
+    note: string | null
+    createdAt: Date | null
+  }
+
+  export type ReservationStatusHistoryMaxAggregateOutputType = {
+    id: string | null
+    reservationId: string | null
+    statusGroup: $Enums.ReservationStatusGroup | null
+    oldStatus: string | null
+    newStatus: string | null
+    changedBy: string | null
+    note: string | null
+    createdAt: Date | null
+  }
+
+  export type ReservationStatusHistoryCountAggregateOutputType = {
+    id: number
+    reservationId: number
+    statusGroup: number
+    oldStatus: number
+    newStatus: number
+    changedBy: number
+    note: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type ReservationStatusHistoryMinAggregateInputType = {
+    id?: true
+    reservationId?: true
+    statusGroup?: true
+    oldStatus?: true
+    newStatus?: true
+    changedBy?: true
+    note?: true
+    createdAt?: true
+  }
+
+  export type ReservationStatusHistoryMaxAggregateInputType = {
+    id?: true
+    reservationId?: true
+    statusGroup?: true
+    oldStatus?: true
+    newStatus?: true
+    changedBy?: true
+    note?: true
+    createdAt?: true
+  }
+
+  export type ReservationStatusHistoryCountAggregateInputType = {
+    id?: true
+    reservationId?: true
+    statusGroup?: true
+    oldStatus?: true
+    newStatus?: true
+    changedBy?: true
+    note?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type ReservationStatusHistoryAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ReservationStatusHistory to aggregate.
+     */
+    where?: ReservationStatusHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ReservationStatusHistories to fetch.
+     */
+    orderBy?: ReservationStatusHistoryOrderByWithRelationInput | ReservationStatusHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ReservationStatusHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ReservationStatusHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ReservationStatusHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ReservationStatusHistories
+    **/
+    _count?: true | ReservationStatusHistoryCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ReservationStatusHistoryMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ReservationStatusHistoryMaxAggregateInputType
+  }
+
+  export type GetReservationStatusHistoryAggregateType<T extends ReservationStatusHistoryAggregateArgs> = {
+        [P in keyof T & keyof AggregateReservationStatusHistory]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateReservationStatusHistory[P]>
+      : GetScalarType<T[P], AggregateReservationStatusHistory[P]>
+  }
+
+
+
+
+  export type ReservationStatusHistoryGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ReservationStatusHistoryWhereInput
+    orderBy?: ReservationStatusHistoryOrderByWithAggregationInput | ReservationStatusHistoryOrderByWithAggregationInput[]
+    by: ReservationStatusHistoryScalarFieldEnum[] | ReservationStatusHistoryScalarFieldEnum
+    having?: ReservationStatusHistoryScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ReservationStatusHistoryCountAggregateInputType | true
+    _min?: ReservationStatusHistoryMinAggregateInputType
+    _max?: ReservationStatusHistoryMaxAggregateInputType
+  }
+
+  export type ReservationStatusHistoryGroupByOutputType = {
+    id: string
+    reservationId: string
+    statusGroup: $Enums.ReservationStatusGroup
+    oldStatus: string | null
+    newStatus: string
+    changedBy: string | null
+    note: string | null
+    createdAt: Date
+    _count: ReservationStatusHistoryCountAggregateOutputType | null
+    _min: ReservationStatusHistoryMinAggregateOutputType | null
+    _max: ReservationStatusHistoryMaxAggregateOutputType | null
+  }
+
+  type GetReservationStatusHistoryGroupByPayload<T extends ReservationStatusHistoryGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ReservationStatusHistoryGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ReservationStatusHistoryGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ReservationStatusHistoryGroupByOutputType[P]>
+            : GetScalarType<T[P], ReservationStatusHistoryGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ReservationStatusHistorySelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    reservationId?: boolean
+    statusGroup?: boolean
+    oldStatus?: boolean
+    newStatus?: boolean
+    changedBy?: boolean
+    note?: boolean
+    createdAt?: boolean
+    reservation?: boolean | ReservationDefaultArgs<ExtArgs>
+    changedByUser?: boolean | ReservationStatusHistory$changedByUserArgs<ExtArgs>
+  }, ExtArgs["result"]["reservationStatusHistory"]>
+
+  export type ReservationStatusHistorySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    reservationId?: boolean
+    statusGroup?: boolean
+    oldStatus?: boolean
+    newStatus?: boolean
+    changedBy?: boolean
+    note?: boolean
+    createdAt?: boolean
+    reservation?: boolean | ReservationDefaultArgs<ExtArgs>
+    changedByUser?: boolean | ReservationStatusHistory$changedByUserArgs<ExtArgs>
+  }, ExtArgs["result"]["reservationStatusHistory"]>
+
+  export type ReservationStatusHistorySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    reservationId?: boolean
+    statusGroup?: boolean
+    oldStatus?: boolean
+    newStatus?: boolean
+    changedBy?: boolean
+    note?: boolean
+    createdAt?: boolean
+    reservation?: boolean | ReservationDefaultArgs<ExtArgs>
+    changedByUser?: boolean | ReservationStatusHistory$changedByUserArgs<ExtArgs>
+  }, ExtArgs["result"]["reservationStatusHistory"]>
+
+  export type ReservationStatusHistorySelectScalar = {
+    id?: boolean
+    reservationId?: boolean
+    statusGroup?: boolean
+    oldStatus?: boolean
+    newStatus?: boolean
+    changedBy?: boolean
+    note?: boolean
+    createdAt?: boolean
+  }
+
+  export type ReservationStatusHistoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "reservationId" | "statusGroup" | "oldStatus" | "newStatus" | "changedBy" | "note" | "createdAt", ExtArgs["result"]["reservationStatusHistory"]>
+  export type ReservationStatusHistoryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    reservation?: boolean | ReservationDefaultArgs<ExtArgs>
+    changedByUser?: boolean | ReservationStatusHistory$changedByUserArgs<ExtArgs>
+  }
+  export type ReservationStatusHistoryIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    reservation?: boolean | ReservationDefaultArgs<ExtArgs>
+    changedByUser?: boolean | ReservationStatusHistory$changedByUserArgs<ExtArgs>
+  }
+  export type ReservationStatusHistoryIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    reservation?: boolean | ReservationDefaultArgs<ExtArgs>
+    changedByUser?: boolean | ReservationStatusHistory$changedByUserArgs<ExtArgs>
+  }
+
+  export type $ReservationStatusHistoryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ReservationStatusHistory"
+    objects: {
+      reservation: Prisma.$ReservationPayload<ExtArgs>
+      changedByUser: Prisma.$UserPayload<ExtArgs> | null
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      reservationId: string
+      statusGroup: $Enums.ReservationStatusGroup
+      oldStatus: string | null
+      newStatus: string
+      changedBy: string | null
+      note: string | null
+      createdAt: Date
+    }, ExtArgs["result"]["reservationStatusHistory"]>
+    composites: {}
+  }
+
+  type ReservationStatusHistoryGetPayload<S extends boolean | null | undefined | ReservationStatusHistoryDefaultArgs> = $Result.GetResult<Prisma.$ReservationStatusHistoryPayload, S>
+
+  type ReservationStatusHistoryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<ReservationStatusHistoryFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: ReservationStatusHistoryCountAggregateInputType | true
+    }
+
+  export interface ReservationStatusHistoryDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ReservationStatusHistory'], meta: { name: 'ReservationStatusHistory' } }
+    /**
+     * Find zero or one ReservationStatusHistory that matches the filter.
+     * @param {ReservationStatusHistoryFindUniqueArgs} args - Arguments to find a ReservationStatusHistory
+     * @example
+     * // Get one ReservationStatusHistory
+     * const reservationStatusHistory = await prisma.reservationStatusHistory.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ReservationStatusHistoryFindUniqueArgs>(args: SelectSubset<T, ReservationStatusHistoryFindUniqueArgs<ExtArgs>>): Prisma__ReservationStatusHistoryClient<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one ReservationStatusHistory that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {ReservationStatusHistoryFindUniqueOrThrowArgs} args - Arguments to find a ReservationStatusHistory
+     * @example
+     * // Get one ReservationStatusHistory
+     * const reservationStatusHistory = await prisma.reservationStatusHistory.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ReservationStatusHistoryFindUniqueOrThrowArgs>(args: SelectSubset<T, ReservationStatusHistoryFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ReservationStatusHistoryClient<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ReservationStatusHistory that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReservationStatusHistoryFindFirstArgs} args - Arguments to find a ReservationStatusHistory
+     * @example
+     * // Get one ReservationStatusHistory
+     * const reservationStatusHistory = await prisma.reservationStatusHistory.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ReservationStatusHistoryFindFirstArgs>(args?: SelectSubset<T, ReservationStatusHistoryFindFirstArgs<ExtArgs>>): Prisma__ReservationStatusHistoryClient<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ReservationStatusHistory that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReservationStatusHistoryFindFirstOrThrowArgs} args - Arguments to find a ReservationStatusHistory
+     * @example
+     * // Get one ReservationStatusHistory
+     * const reservationStatusHistory = await prisma.reservationStatusHistory.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ReservationStatusHistoryFindFirstOrThrowArgs>(args?: SelectSubset<T, ReservationStatusHistoryFindFirstOrThrowArgs<ExtArgs>>): Prisma__ReservationStatusHistoryClient<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more ReservationStatusHistories that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReservationStatusHistoryFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ReservationStatusHistories
+     * const reservationStatusHistories = await prisma.reservationStatusHistory.findMany()
+     * 
+     * // Get first 10 ReservationStatusHistories
+     * const reservationStatusHistories = await prisma.reservationStatusHistory.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const reservationStatusHistoryWithIdOnly = await prisma.reservationStatusHistory.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ReservationStatusHistoryFindManyArgs>(args?: SelectSubset<T, ReservationStatusHistoryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a ReservationStatusHistory.
+     * @param {ReservationStatusHistoryCreateArgs} args - Arguments to create a ReservationStatusHistory.
+     * @example
+     * // Create one ReservationStatusHistory
+     * const ReservationStatusHistory = await prisma.reservationStatusHistory.create({
+     *   data: {
+     *     // ... data to create a ReservationStatusHistory
+     *   }
+     * })
+     * 
+     */
+    create<T extends ReservationStatusHistoryCreateArgs>(args: SelectSubset<T, ReservationStatusHistoryCreateArgs<ExtArgs>>): Prisma__ReservationStatusHistoryClient<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many ReservationStatusHistories.
+     * @param {ReservationStatusHistoryCreateManyArgs} args - Arguments to create many ReservationStatusHistories.
+     * @example
+     * // Create many ReservationStatusHistories
+     * const reservationStatusHistory = await prisma.reservationStatusHistory.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ReservationStatusHistoryCreateManyArgs>(args?: SelectSubset<T, ReservationStatusHistoryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many ReservationStatusHistories and returns the data saved in the database.
+     * @param {ReservationStatusHistoryCreateManyAndReturnArgs} args - Arguments to create many ReservationStatusHistories.
+     * @example
+     * // Create many ReservationStatusHistories
+     * const reservationStatusHistory = await prisma.reservationStatusHistory.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many ReservationStatusHistories and only return the `id`
+     * const reservationStatusHistoryWithIdOnly = await prisma.reservationStatusHistory.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ReservationStatusHistoryCreateManyAndReturnArgs>(args?: SelectSubset<T, ReservationStatusHistoryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a ReservationStatusHistory.
+     * @param {ReservationStatusHistoryDeleteArgs} args - Arguments to delete one ReservationStatusHistory.
+     * @example
+     * // Delete one ReservationStatusHistory
+     * const ReservationStatusHistory = await prisma.reservationStatusHistory.delete({
+     *   where: {
+     *     // ... filter to delete one ReservationStatusHistory
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ReservationStatusHistoryDeleteArgs>(args: SelectSubset<T, ReservationStatusHistoryDeleteArgs<ExtArgs>>): Prisma__ReservationStatusHistoryClient<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one ReservationStatusHistory.
+     * @param {ReservationStatusHistoryUpdateArgs} args - Arguments to update one ReservationStatusHistory.
+     * @example
+     * // Update one ReservationStatusHistory
+     * const reservationStatusHistory = await prisma.reservationStatusHistory.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ReservationStatusHistoryUpdateArgs>(args: SelectSubset<T, ReservationStatusHistoryUpdateArgs<ExtArgs>>): Prisma__ReservationStatusHistoryClient<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more ReservationStatusHistories.
+     * @param {ReservationStatusHistoryDeleteManyArgs} args - Arguments to filter ReservationStatusHistories to delete.
+     * @example
+     * // Delete a few ReservationStatusHistories
+     * const { count } = await prisma.reservationStatusHistory.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ReservationStatusHistoryDeleteManyArgs>(args?: SelectSubset<T, ReservationStatusHistoryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ReservationStatusHistories.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReservationStatusHistoryUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ReservationStatusHistories
+     * const reservationStatusHistory = await prisma.reservationStatusHistory.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ReservationStatusHistoryUpdateManyArgs>(args: SelectSubset<T, ReservationStatusHistoryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ReservationStatusHistories and returns the data updated in the database.
+     * @param {ReservationStatusHistoryUpdateManyAndReturnArgs} args - Arguments to update many ReservationStatusHistories.
+     * @example
+     * // Update many ReservationStatusHistories
+     * const reservationStatusHistory = await prisma.reservationStatusHistory.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more ReservationStatusHistories and only return the `id`
+     * const reservationStatusHistoryWithIdOnly = await prisma.reservationStatusHistory.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends ReservationStatusHistoryUpdateManyAndReturnArgs>(args: SelectSubset<T, ReservationStatusHistoryUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one ReservationStatusHistory.
+     * @param {ReservationStatusHistoryUpsertArgs} args - Arguments to update or create a ReservationStatusHistory.
+     * @example
+     * // Update or create a ReservationStatusHistory
+     * const reservationStatusHistory = await prisma.reservationStatusHistory.upsert({
+     *   create: {
+     *     // ... data to create a ReservationStatusHistory
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ReservationStatusHistory we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ReservationStatusHistoryUpsertArgs>(args: SelectSubset<T, ReservationStatusHistoryUpsertArgs<ExtArgs>>): Prisma__ReservationStatusHistoryClient<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of ReservationStatusHistories.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReservationStatusHistoryCountArgs} args - Arguments to filter ReservationStatusHistories to count.
+     * @example
+     * // Count the number of ReservationStatusHistories
+     * const count = await prisma.reservationStatusHistory.count({
+     *   where: {
+     *     // ... the filter for the ReservationStatusHistories we want to count
+     *   }
+     * })
+    **/
+    count<T extends ReservationStatusHistoryCountArgs>(
+      args?: Subset<T, ReservationStatusHistoryCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ReservationStatusHistoryCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ReservationStatusHistory.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReservationStatusHistoryAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ReservationStatusHistoryAggregateArgs>(args: Subset<T, ReservationStatusHistoryAggregateArgs>): Prisma.PrismaPromise<GetReservationStatusHistoryAggregateType<T>>
+
+    /**
+     * Group by ReservationStatusHistory.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReservationStatusHistoryGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ReservationStatusHistoryGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ReservationStatusHistoryGroupByArgs['orderBy'] }
+        : { orderBy?: ReservationStatusHistoryGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ReservationStatusHistoryGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetReservationStatusHistoryGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ReservationStatusHistory model
+   */
+  readonly fields: ReservationStatusHistoryFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ReservationStatusHistory.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ReservationStatusHistoryClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    reservation<T extends ReservationDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ReservationDefaultArgs<ExtArgs>>): Prisma__ReservationClient<$Result.GetResult<Prisma.$ReservationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    changedByUser<T extends ReservationStatusHistory$changedByUserArgs<ExtArgs> = {}>(args?: Subset<T, ReservationStatusHistory$changedByUserArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ReservationStatusHistory model
+   */
+  interface ReservationStatusHistoryFieldRefs {
+    readonly id: FieldRef<"ReservationStatusHistory", 'String'>
+    readonly reservationId: FieldRef<"ReservationStatusHistory", 'String'>
+    readonly statusGroup: FieldRef<"ReservationStatusHistory", 'ReservationStatusGroup'>
+    readonly oldStatus: FieldRef<"ReservationStatusHistory", 'String'>
+    readonly newStatus: FieldRef<"ReservationStatusHistory", 'String'>
+    readonly changedBy: FieldRef<"ReservationStatusHistory", 'String'>
+    readonly note: FieldRef<"ReservationStatusHistory", 'String'>
+    readonly createdAt: FieldRef<"ReservationStatusHistory", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ReservationStatusHistory findUnique
+   */
+  export type ReservationStatusHistoryFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which ReservationStatusHistory to fetch.
+     */
+    where: ReservationStatusHistoryWhereUniqueInput
+  }
+
+  /**
+   * ReservationStatusHistory findUniqueOrThrow
+   */
+  export type ReservationStatusHistoryFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which ReservationStatusHistory to fetch.
+     */
+    where: ReservationStatusHistoryWhereUniqueInput
+  }
+
+  /**
+   * ReservationStatusHistory findFirst
+   */
+  export type ReservationStatusHistoryFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which ReservationStatusHistory to fetch.
+     */
+    where?: ReservationStatusHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ReservationStatusHistories to fetch.
+     */
+    orderBy?: ReservationStatusHistoryOrderByWithRelationInput | ReservationStatusHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ReservationStatusHistories.
+     */
+    cursor?: ReservationStatusHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ReservationStatusHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ReservationStatusHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ReservationStatusHistories.
+     */
+    distinct?: ReservationStatusHistoryScalarFieldEnum | ReservationStatusHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * ReservationStatusHistory findFirstOrThrow
+   */
+  export type ReservationStatusHistoryFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which ReservationStatusHistory to fetch.
+     */
+    where?: ReservationStatusHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ReservationStatusHistories to fetch.
+     */
+    orderBy?: ReservationStatusHistoryOrderByWithRelationInput | ReservationStatusHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ReservationStatusHistories.
+     */
+    cursor?: ReservationStatusHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ReservationStatusHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ReservationStatusHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ReservationStatusHistories.
+     */
+    distinct?: ReservationStatusHistoryScalarFieldEnum | ReservationStatusHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * ReservationStatusHistory findMany
+   */
+  export type ReservationStatusHistoryFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which ReservationStatusHistories to fetch.
+     */
+    where?: ReservationStatusHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ReservationStatusHistories to fetch.
+     */
+    orderBy?: ReservationStatusHistoryOrderByWithRelationInput | ReservationStatusHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ReservationStatusHistories.
+     */
+    cursor?: ReservationStatusHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ReservationStatusHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ReservationStatusHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ReservationStatusHistories.
+     */
+    distinct?: ReservationStatusHistoryScalarFieldEnum | ReservationStatusHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * ReservationStatusHistory create
+   */
+  export type ReservationStatusHistoryCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryInclude<ExtArgs> | null
+    /**
+     * The data needed to create a ReservationStatusHistory.
+     */
+    data: XOR<ReservationStatusHistoryCreateInput, ReservationStatusHistoryUncheckedCreateInput>
+  }
+
+  /**
+   * ReservationStatusHistory createMany
+   */
+  export type ReservationStatusHistoryCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ReservationStatusHistories.
+     */
+    data: ReservationStatusHistoryCreateManyInput | ReservationStatusHistoryCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ReservationStatusHistory createManyAndReturn
+   */
+  export type ReservationStatusHistoryCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * The data used to create many ReservationStatusHistories.
+     */
+    data: ReservationStatusHistoryCreateManyInput | ReservationStatusHistoryCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * ReservationStatusHistory update
+   */
+  export type ReservationStatusHistoryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryInclude<ExtArgs> | null
+    /**
+     * The data needed to update a ReservationStatusHistory.
+     */
+    data: XOR<ReservationStatusHistoryUpdateInput, ReservationStatusHistoryUncheckedUpdateInput>
+    /**
+     * Choose, which ReservationStatusHistory to update.
+     */
+    where: ReservationStatusHistoryWhereUniqueInput
+  }
+
+  /**
+   * ReservationStatusHistory updateMany
+   */
+  export type ReservationStatusHistoryUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ReservationStatusHistories.
+     */
+    data: XOR<ReservationStatusHistoryUpdateManyMutationInput, ReservationStatusHistoryUncheckedUpdateManyInput>
+    /**
+     * Filter which ReservationStatusHistories to update
+     */
+    where?: ReservationStatusHistoryWhereInput
+    /**
+     * Limit how many ReservationStatusHistories to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * ReservationStatusHistory updateManyAndReturn
+   */
+  export type ReservationStatusHistoryUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * The data used to update ReservationStatusHistories.
+     */
+    data: XOR<ReservationStatusHistoryUpdateManyMutationInput, ReservationStatusHistoryUncheckedUpdateManyInput>
+    /**
+     * Filter which ReservationStatusHistories to update
+     */
+    where?: ReservationStatusHistoryWhereInput
+    /**
+     * Limit how many ReservationStatusHistories to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * ReservationStatusHistory upsert
+   */
+  export type ReservationStatusHistoryUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryInclude<ExtArgs> | null
+    /**
+     * The filter to search for the ReservationStatusHistory to update in case it exists.
+     */
+    where: ReservationStatusHistoryWhereUniqueInput
+    /**
+     * In case the ReservationStatusHistory found by the `where` argument doesn't exist, create a new ReservationStatusHistory with this data.
+     */
+    create: XOR<ReservationStatusHistoryCreateInput, ReservationStatusHistoryUncheckedCreateInput>
+    /**
+     * In case the ReservationStatusHistory was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ReservationStatusHistoryUpdateInput, ReservationStatusHistoryUncheckedUpdateInput>
+  }
+
+  /**
+   * ReservationStatusHistory delete
+   */
+  export type ReservationStatusHistoryDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryInclude<ExtArgs> | null
+    /**
+     * Filter which ReservationStatusHistory to delete.
+     */
+    where: ReservationStatusHistoryWhereUniqueInput
+  }
+
+  /**
+   * ReservationStatusHistory deleteMany
+   */
+  export type ReservationStatusHistoryDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ReservationStatusHistories to delete
+     */
+    where?: ReservationStatusHistoryWhereInput
+    /**
+     * Limit how many ReservationStatusHistories to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * ReservationStatusHistory.changedByUser
+   */
+  export type ReservationStatusHistory$changedByUserArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the User
+     */
+    select?: UserSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the User
+     */
+    omit?: UserOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserInclude<ExtArgs> | null
+    where?: UserWhereInput
+  }
+
+  /**
+   * ReservationStatusHistory without action
+   */
+  export type ReservationStatusHistoryDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReservationStatusHistory
+     */
+    select?: ReservationStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReservationStatusHistory
+     */
+    omit?: ReservationStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ReservationStatusHistoryInclude<ExtArgs> | null
   }
 
 
@@ -27982,6 +29340,10 @@ export namespace Prisma {
     pickupWindowEnd: 'pickupWindowEnd',
     pickupType: 'pickupType',
     supplierNote: 'supplierNote',
+    rejectionReason: 'rejectionReason',
+    acceptedAt: 'acceptedAt',
+    rejectedAt: 'rejectedAt',
+    cancelledAt: 'cancelledAt',
     deliveryRequested: 'deliveryRequested',
     deliveryStatus: 'deliveryStatus',
     deliveryCost: 'deliveryCost',
@@ -27993,6 +29355,20 @@ export namespace Prisma {
   };
 
   export type ReservationScalarFieldEnum = (typeof ReservationScalarFieldEnum)[keyof typeof ReservationScalarFieldEnum]
+
+
+  export const ReservationStatusHistoryScalarFieldEnum: {
+    id: 'id',
+    reservationId: 'reservationId',
+    statusGroup: 'statusGroup',
+    oldStatus: 'oldStatus',
+    newStatus: 'newStatus',
+    changedBy: 'changedBy',
+    note: 'note',
+    createdAt: 'createdAt'
+  };
+
+  export type ReservationStatusHistoryScalarFieldEnum = (typeof ReservationStatusHistoryScalarFieldEnum)[keyof typeof ReservationStatusHistoryScalarFieldEnum]
 
 
   export const ReviewScalarFieldEnum: {
@@ -28445,6 +29821,20 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'ReservationStatusGroup'
+   */
+  export type EnumReservationStatusGroupFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReservationStatusGroup'>
+    
+
+
+  /**
+   * Reference to a field of type 'ReservationStatusGroup[]'
+   */
+  export type ListEnumReservationStatusGroupFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReservationStatusGroup[]'>
+    
+
+
+  /**
    * Reference to a field of type 'ReviewTargetType'
    */
   export type EnumReviewTargetTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReviewTargetType'>
@@ -28557,6 +29947,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialListRelationFilter
     ownedReservationsAsOwner?: ReservationListRelationFilter
     ownedReservationsAsRequester?: ReservationListRelationFilter
+    reservationStatusChanges?: ReservationStatusHistoryListRelationFilter
     notifications?: NotificationListRelationFilter
     reviewsGiven?: ReviewListRelationFilter
     reviewsReceived?: ReviewListRelationFilter
@@ -28587,6 +29978,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialOrderByRelationAggregateInput
     ownedReservationsAsOwner?: ReservationOrderByRelationAggregateInput
     ownedReservationsAsRequester?: ReservationOrderByRelationAggregateInput
+    reservationStatusChanges?: ReservationStatusHistoryOrderByRelationAggregateInput
     notifications?: NotificationOrderByRelationAggregateInput
     reviewsGiven?: ReviewOrderByRelationAggregateInput
     reviewsReceived?: ReviewOrderByRelationAggregateInput
@@ -28620,6 +30012,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialListRelationFilter
     ownedReservationsAsOwner?: ReservationListRelationFilter
     ownedReservationsAsRequester?: ReservationListRelationFilter
+    reservationStatusChanges?: ReservationStatusHistoryListRelationFilter
     notifications?: NotificationListRelationFilter
     reviewsGiven?: ReviewListRelationFilter
     reviewsReceived?: ReviewListRelationFilter
@@ -29596,6 +30989,10 @@ export namespace Prisma {
     pickupWindowEnd?: DateTimeNullableFilter<"Reservation"> | Date | string | null
     pickupType?: EnumPickupTypeFilter<"Reservation"> | $Enums.PickupType
     supplierNote?: StringNullableFilter<"Reservation"> | string | null
+    rejectionReason?: StringNullableFilter<"Reservation"> | string | null
+    acceptedAt?: DateTimeNullableFilter<"Reservation"> | Date | string | null
+    rejectedAt?: DateTimeNullableFilter<"Reservation"> | Date | string | null
+    cancelledAt?: DateTimeNullableFilter<"Reservation"> | Date | string | null
     deliveryRequested?: BoolFilter<"Reservation"> | boolean
     deliveryStatus?: EnumDeliveryStatusNullableFilter<"Reservation"> | $Enums.DeliveryStatus | null
     deliveryCost?: DecimalNullableFilter<"Reservation"> | Decimal | DecimalJsLike | number | string | null
@@ -29610,6 +31007,7 @@ export namespace Prisma {
     dropoffLocation?: XOR<LocationNullableScalarRelationFilter, LocationWhereInput> | null
     reusedMaterial?: XOR<MaterialNullableScalarRelationFilter, MaterialWhereInput> | null
     reviews?: ReviewListRelationFilter
+    statusHistory?: ReservationStatusHistoryListRelationFilter
   }
 
   export type ReservationOrderByWithRelationInput = {
@@ -29624,6 +31022,10 @@ export namespace Prisma {
     pickupWindowEnd?: SortOrderInput | SortOrder
     pickupType?: SortOrder
     supplierNote?: SortOrderInput | SortOrder
+    rejectionReason?: SortOrderInput | SortOrder
+    acceptedAt?: SortOrderInput | SortOrder
+    rejectedAt?: SortOrderInput | SortOrder
+    cancelledAt?: SortOrderInput | SortOrder
     deliveryRequested?: SortOrder
     deliveryStatus?: SortOrderInput | SortOrder
     deliveryCost?: SortOrderInput | SortOrder
@@ -29638,6 +31040,7 @@ export namespace Prisma {
     dropoffLocation?: LocationOrderByWithRelationInput
     reusedMaterial?: MaterialOrderByWithRelationInput
     reviews?: ReviewOrderByRelationAggregateInput
+    statusHistory?: ReservationStatusHistoryOrderByRelationAggregateInput
   }
 
   export type ReservationWhereUniqueInput = Prisma.AtLeast<{
@@ -29655,6 +31058,10 @@ export namespace Prisma {
     pickupWindowEnd?: DateTimeNullableFilter<"Reservation"> | Date | string | null
     pickupType?: EnumPickupTypeFilter<"Reservation"> | $Enums.PickupType
     supplierNote?: StringNullableFilter<"Reservation"> | string | null
+    rejectionReason?: StringNullableFilter<"Reservation"> | string | null
+    acceptedAt?: DateTimeNullableFilter<"Reservation"> | Date | string | null
+    rejectedAt?: DateTimeNullableFilter<"Reservation"> | Date | string | null
+    cancelledAt?: DateTimeNullableFilter<"Reservation"> | Date | string | null
     deliveryRequested?: BoolFilter<"Reservation"> | boolean
     deliveryStatus?: EnumDeliveryStatusNullableFilter<"Reservation"> | $Enums.DeliveryStatus | null
     deliveryCost?: DecimalNullableFilter<"Reservation"> | Decimal | DecimalJsLike | number | string | null
@@ -29669,6 +31076,7 @@ export namespace Prisma {
     dropoffLocation?: XOR<LocationNullableScalarRelationFilter, LocationWhereInput> | null
     reusedMaterial?: XOR<MaterialNullableScalarRelationFilter, MaterialWhereInput> | null
     reviews?: ReviewListRelationFilter
+    statusHistory?: ReservationStatusHistoryListRelationFilter
   }, "id">
 
   export type ReservationOrderByWithAggregationInput = {
@@ -29683,6 +31091,10 @@ export namespace Prisma {
     pickupWindowEnd?: SortOrderInput | SortOrder
     pickupType?: SortOrder
     supplierNote?: SortOrderInput | SortOrder
+    rejectionReason?: SortOrderInput | SortOrder
+    acceptedAt?: SortOrderInput | SortOrder
+    rejectedAt?: SortOrderInput | SortOrder
+    cancelledAt?: SortOrderInput | SortOrder
     deliveryRequested?: SortOrder
     deliveryStatus?: SortOrderInput | SortOrder
     deliveryCost?: SortOrderInput | SortOrder
@@ -29713,6 +31125,10 @@ export namespace Prisma {
     pickupWindowEnd?: DateTimeNullableWithAggregatesFilter<"Reservation"> | Date | string | null
     pickupType?: EnumPickupTypeWithAggregatesFilter<"Reservation"> | $Enums.PickupType
     supplierNote?: StringNullableWithAggregatesFilter<"Reservation"> | string | null
+    rejectionReason?: StringNullableWithAggregatesFilter<"Reservation"> | string | null
+    acceptedAt?: DateTimeNullableWithAggregatesFilter<"Reservation"> | Date | string | null
+    rejectedAt?: DateTimeNullableWithAggregatesFilter<"Reservation"> | Date | string | null
+    cancelledAt?: DateTimeNullableWithAggregatesFilter<"Reservation"> | Date | string | null
     deliveryRequested?: BoolWithAggregatesFilter<"Reservation"> | boolean
     deliveryStatus?: EnumDeliveryStatusNullableWithAggregatesFilter<"Reservation"> | $Enums.DeliveryStatus | null
     deliveryCost?: DecimalNullableWithAggregatesFilter<"Reservation"> | Decimal | DecimalJsLike | number | string | null
@@ -29721,6 +31137,79 @@ export namespace Prisma {
     completedAt?: DateTimeNullableWithAggregatesFilter<"Reservation"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Reservation"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Reservation"> | Date | string
+  }
+
+  export type ReservationStatusHistoryWhereInput = {
+    AND?: ReservationStatusHistoryWhereInput | ReservationStatusHistoryWhereInput[]
+    OR?: ReservationStatusHistoryWhereInput[]
+    NOT?: ReservationStatusHistoryWhereInput | ReservationStatusHistoryWhereInput[]
+    id?: StringFilter<"ReservationStatusHistory"> | string
+    reservationId?: StringFilter<"ReservationStatusHistory"> | string
+    statusGroup?: EnumReservationStatusGroupFilter<"ReservationStatusHistory"> | $Enums.ReservationStatusGroup
+    oldStatus?: StringNullableFilter<"ReservationStatusHistory"> | string | null
+    newStatus?: StringFilter<"ReservationStatusHistory"> | string
+    changedBy?: StringNullableFilter<"ReservationStatusHistory"> | string | null
+    note?: StringNullableFilter<"ReservationStatusHistory"> | string | null
+    createdAt?: DateTimeFilter<"ReservationStatusHistory"> | Date | string
+    reservation?: XOR<ReservationScalarRelationFilter, ReservationWhereInput>
+    changedByUser?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
+  }
+
+  export type ReservationStatusHistoryOrderByWithRelationInput = {
+    id?: SortOrder
+    reservationId?: SortOrder
+    statusGroup?: SortOrder
+    oldStatus?: SortOrderInput | SortOrder
+    newStatus?: SortOrder
+    changedBy?: SortOrderInput | SortOrder
+    note?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    reservation?: ReservationOrderByWithRelationInput
+    changedByUser?: UserOrderByWithRelationInput
+  }
+
+  export type ReservationStatusHistoryWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: ReservationStatusHistoryWhereInput | ReservationStatusHistoryWhereInput[]
+    OR?: ReservationStatusHistoryWhereInput[]
+    NOT?: ReservationStatusHistoryWhereInput | ReservationStatusHistoryWhereInput[]
+    reservationId?: StringFilter<"ReservationStatusHistory"> | string
+    statusGroup?: EnumReservationStatusGroupFilter<"ReservationStatusHistory"> | $Enums.ReservationStatusGroup
+    oldStatus?: StringNullableFilter<"ReservationStatusHistory"> | string | null
+    newStatus?: StringFilter<"ReservationStatusHistory"> | string
+    changedBy?: StringNullableFilter<"ReservationStatusHistory"> | string | null
+    note?: StringNullableFilter<"ReservationStatusHistory"> | string | null
+    createdAt?: DateTimeFilter<"ReservationStatusHistory"> | Date | string
+    reservation?: XOR<ReservationScalarRelationFilter, ReservationWhereInput>
+    changedByUser?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
+  }, "id">
+
+  export type ReservationStatusHistoryOrderByWithAggregationInput = {
+    id?: SortOrder
+    reservationId?: SortOrder
+    statusGroup?: SortOrder
+    oldStatus?: SortOrderInput | SortOrder
+    newStatus?: SortOrder
+    changedBy?: SortOrderInput | SortOrder
+    note?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: ReservationStatusHistoryCountOrderByAggregateInput
+    _max?: ReservationStatusHistoryMaxOrderByAggregateInput
+    _min?: ReservationStatusHistoryMinOrderByAggregateInput
+  }
+
+  export type ReservationStatusHistoryScalarWhereWithAggregatesInput = {
+    AND?: ReservationStatusHistoryScalarWhereWithAggregatesInput | ReservationStatusHistoryScalarWhereWithAggregatesInput[]
+    OR?: ReservationStatusHistoryScalarWhereWithAggregatesInput[]
+    NOT?: ReservationStatusHistoryScalarWhereWithAggregatesInput | ReservationStatusHistoryScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"ReservationStatusHistory"> | string
+    reservationId?: StringWithAggregatesFilter<"ReservationStatusHistory"> | string
+    statusGroup?: EnumReservationStatusGroupWithAggregatesFilter<"ReservationStatusHistory"> | $Enums.ReservationStatusGroup
+    oldStatus?: StringNullableWithAggregatesFilter<"ReservationStatusHistory"> | string | null
+    newStatus?: StringWithAggregatesFilter<"ReservationStatusHistory"> | string
+    changedBy?: StringNullableWithAggregatesFilter<"ReservationStatusHistory"> | string | null
+    note?: StringNullableWithAggregatesFilter<"ReservationStatusHistory"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"ReservationStatusHistory"> | Date | string
   }
 
   export type ReviewWhereInput = {
@@ -30433,6 +31922,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -30463,6 +31953,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -30493,6 +31984,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -30523,6 +32015,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -31590,6 +33083,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -31603,6 +33100,7 @@ export namespace Prisma {
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationUncheckedCreateInput = {
@@ -31617,6 +33115,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -31627,6 +33129,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationUpdateInput = {
@@ -31638,6 +33141,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -31651,6 +33158,7 @@ export namespace Prisma {
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
 
   export type ReservationUncheckedUpdateInput = {
@@ -31665,6 +33173,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -31675,6 +33187,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
 
   export type ReservationCreateManyInput = {
@@ -31689,6 +33202,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -31708,6 +33225,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -31729,6 +33250,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -31737,6 +33262,81 @@ export namespace Prisma {
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ReservationStatusHistoryCreateInput = {
+    id?: string
+    statusGroup?: $Enums.ReservationStatusGroup
+    oldStatus?: string | null
+    newStatus: string
+    note?: string | null
+    createdAt?: Date | string
+    reservation: ReservationCreateNestedOneWithoutStatusHistoryInput
+    changedByUser?: UserCreateNestedOneWithoutReservationStatusChangesInput
+  }
+
+  export type ReservationStatusHistoryUncheckedCreateInput = {
+    id?: string
+    reservationId: string
+    statusGroup?: $Enums.ReservationStatusGroup
+    oldStatus?: string | null
+    newStatus: string
+    changedBy?: string | null
+    note?: string | null
+    createdAt?: Date | string
+  }
+
+  export type ReservationStatusHistoryUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    statusGroup?: EnumReservationStatusGroupFieldUpdateOperationsInput | $Enums.ReservationStatusGroup
+    oldStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    newStatus?: StringFieldUpdateOperationsInput | string
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reservation?: ReservationUpdateOneRequiredWithoutStatusHistoryNestedInput
+    changedByUser?: UserUpdateOneWithoutReservationStatusChangesNestedInput
+  }
+
+  export type ReservationStatusHistoryUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    statusGroup?: EnumReservationStatusGroupFieldUpdateOperationsInput | $Enums.ReservationStatusGroup
+    oldStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    newStatus?: StringFieldUpdateOperationsInput | string
+    changedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ReservationStatusHistoryCreateManyInput = {
+    id?: string
+    reservationId: string
+    statusGroup?: $Enums.ReservationStatusGroup
+    oldStatus?: string | null
+    newStatus: string
+    changedBy?: string | null
+    note?: string | null
+    createdAt?: Date | string
+  }
+
+  export type ReservationStatusHistoryUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    statusGroup?: EnumReservationStatusGroupFieldUpdateOperationsInput | $Enums.ReservationStatusGroup
+    oldStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    newStatus?: StringFieldUpdateOperationsInput | string
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ReservationStatusHistoryUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    statusGroup?: EnumReservationStatusGroupFieldUpdateOperationsInput | $Enums.ReservationStatusGroup
+    oldStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    newStatus?: StringFieldUpdateOperationsInput | string
+    changedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ReviewCreateInput = {
@@ -32588,6 +34188,12 @@ export namespace Prisma {
     none?: ReservationWhereInput
   }
 
+  export type ReservationStatusHistoryListRelationFilter = {
+    every?: ReservationStatusHistoryWhereInput
+    some?: ReservationStatusHistoryWhereInput
+    none?: ReservationStatusHistoryWhereInput
+  }
+
   export type NotificationListRelationFilter = {
     every?: NotificationWhereInput
     some?: NotificationWhereInput
@@ -32634,6 +34240,10 @@ export namespace Prisma {
   }
 
   export type ReservationOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ReservationStatusHistoryOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -33689,6 +35299,10 @@ export namespace Prisma {
     pickupWindowEnd?: SortOrder
     pickupType?: SortOrder
     supplierNote?: SortOrder
+    rejectionReason?: SortOrder
+    acceptedAt?: SortOrder
+    rejectedAt?: SortOrder
+    cancelledAt?: SortOrder
     deliveryRequested?: SortOrder
     deliveryStatus?: SortOrder
     deliveryCost?: SortOrder
@@ -33716,6 +35330,10 @@ export namespace Prisma {
     pickupWindowEnd?: SortOrder
     pickupType?: SortOrder
     supplierNote?: SortOrder
+    rejectionReason?: SortOrder
+    acceptedAt?: SortOrder
+    rejectedAt?: SortOrder
+    cancelledAt?: SortOrder
     deliveryRequested?: SortOrder
     deliveryStatus?: SortOrder
     deliveryCost?: SortOrder
@@ -33738,6 +35356,10 @@ export namespace Prisma {
     pickupWindowEnd?: SortOrder
     pickupType?: SortOrder
     supplierNote?: SortOrder
+    rejectionReason?: SortOrder
+    acceptedAt?: SortOrder
+    rejectedAt?: SortOrder
+    cancelledAt?: SortOrder
     deliveryRequested?: SortOrder
     deliveryStatus?: SortOrder
     deliveryCost?: SortOrder
@@ -33783,16 +35405,66 @@ export namespace Prisma {
     _max?: NestedEnumDeliveryStatusNullableFilter<$PrismaModel>
   }
 
-  export type EnumReviewTargetTypeFilter<$PrismaModel = never> = {
-    equals?: $Enums.ReviewTargetType | EnumReviewTargetTypeFieldRefInput<$PrismaModel>
-    in?: $Enums.ReviewTargetType[] | ListEnumReviewTargetTypeFieldRefInput<$PrismaModel>
-    notIn?: $Enums.ReviewTargetType[] | ListEnumReviewTargetTypeFieldRefInput<$PrismaModel>
-    not?: NestedEnumReviewTargetTypeFilter<$PrismaModel> | $Enums.ReviewTargetType
+  export type EnumReservationStatusGroupFilter<$PrismaModel = never> = {
+    equals?: $Enums.ReservationStatusGroup | EnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    in?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    not?: NestedEnumReservationStatusGroupFilter<$PrismaModel> | $Enums.ReservationStatusGroup
   }
 
   export type ReservationScalarRelationFilter = {
     is?: ReservationWhereInput
     isNot?: ReservationWhereInput
+  }
+
+  export type ReservationStatusHistoryCountOrderByAggregateInput = {
+    id?: SortOrder
+    reservationId?: SortOrder
+    statusGroup?: SortOrder
+    oldStatus?: SortOrder
+    newStatus?: SortOrder
+    changedBy?: SortOrder
+    note?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ReservationStatusHistoryMaxOrderByAggregateInput = {
+    id?: SortOrder
+    reservationId?: SortOrder
+    statusGroup?: SortOrder
+    oldStatus?: SortOrder
+    newStatus?: SortOrder
+    changedBy?: SortOrder
+    note?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ReservationStatusHistoryMinOrderByAggregateInput = {
+    id?: SortOrder
+    reservationId?: SortOrder
+    statusGroup?: SortOrder
+    oldStatus?: SortOrder
+    newStatus?: SortOrder
+    changedBy?: SortOrder
+    note?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type EnumReservationStatusGroupWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.ReservationStatusGroup | EnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    in?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    not?: NestedEnumReservationStatusGroupWithAggregatesFilter<$PrismaModel> | $Enums.ReservationStatusGroup
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumReservationStatusGroupFilter<$PrismaModel>
+    _max?: NestedEnumReservationStatusGroupFilter<$PrismaModel>
+  }
+
+  export type EnumReviewTargetTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.ReviewTargetType | EnumReviewTargetTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.ReviewTargetType[] | ListEnumReviewTargetTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ReviewTargetType[] | ListEnumReviewTargetTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumReviewTargetTypeFilter<$PrismaModel> | $Enums.ReviewTargetType
   }
 
   export type ReviewCountOrderByAggregateInput = {
@@ -34343,6 +36015,13 @@ export namespace Prisma {
     connect?: ReservationWhereUniqueInput | ReservationWhereUniqueInput[]
   }
 
+  export type ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput = {
+    create?: XOR<ReservationStatusHistoryCreateWithoutChangedByUserInput, ReservationStatusHistoryUncheckedCreateWithoutChangedByUserInput> | ReservationStatusHistoryCreateWithoutChangedByUserInput[] | ReservationStatusHistoryUncheckedCreateWithoutChangedByUserInput[]
+    connectOrCreate?: ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput | ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput[]
+    createMany?: ReservationStatusHistoryCreateManyChangedByUserInputEnvelope
+    connect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+  }
+
   export type NotificationCreateNestedManyWithoutUserInput = {
     create?: XOR<NotificationCreateWithoutUserInput, NotificationUncheckedCreateWithoutUserInput> | NotificationCreateWithoutUserInput[] | NotificationUncheckedCreateWithoutUserInput[]
     connectOrCreate?: NotificationCreateOrConnectWithoutUserInput | NotificationCreateOrConnectWithoutUserInput[]
@@ -34444,6 +36123,13 @@ export namespace Prisma {
     connectOrCreate?: ReservationCreateOrConnectWithoutRequesterInput | ReservationCreateOrConnectWithoutRequesterInput[]
     createMany?: ReservationCreateManyRequesterInputEnvelope
     connect?: ReservationWhereUniqueInput | ReservationWhereUniqueInput[]
+  }
+
+  export type ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput = {
+    create?: XOR<ReservationStatusHistoryCreateWithoutChangedByUserInput, ReservationStatusHistoryUncheckedCreateWithoutChangedByUserInput> | ReservationStatusHistoryCreateWithoutChangedByUserInput[] | ReservationStatusHistoryUncheckedCreateWithoutChangedByUserInput[]
+    connectOrCreate?: ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput | ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput[]
+    createMany?: ReservationStatusHistoryCreateManyChangedByUserInputEnvelope
+    connect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
   }
 
   export type NotificationUncheckedCreateNestedManyWithoutUserInput = {
@@ -34631,6 +36317,20 @@ export namespace Prisma {
     update?: ReservationUpdateWithWhereUniqueWithoutRequesterInput | ReservationUpdateWithWhereUniqueWithoutRequesterInput[]
     updateMany?: ReservationUpdateManyWithWhereWithoutRequesterInput | ReservationUpdateManyWithWhereWithoutRequesterInput[]
     deleteMany?: ReservationScalarWhereInput | ReservationScalarWhereInput[]
+  }
+
+  export type ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput = {
+    create?: XOR<ReservationStatusHistoryCreateWithoutChangedByUserInput, ReservationStatusHistoryUncheckedCreateWithoutChangedByUserInput> | ReservationStatusHistoryCreateWithoutChangedByUserInput[] | ReservationStatusHistoryUncheckedCreateWithoutChangedByUserInput[]
+    connectOrCreate?: ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput | ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput[]
+    upsert?: ReservationStatusHistoryUpsertWithWhereUniqueWithoutChangedByUserInput | ReservationStatusHistoryUpsertWithWhereUniqueWithoutChangedByUserInput[]
+    createMany?: ReservationStatusHistoryCreateManyChangedByUserInputEnvelope
+    set?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    disconnect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    delete?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    connect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    update?: ReservationStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput | ReservationStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput[]
+    updateMany?: ReservationStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput | ReservationStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput[]
+    deleteMany?: ReservationStatusHistoryScalarWhereInput | ReservationStatusHistoryScalarWhereInput[]
   }
 
   export type NotificationUpdateManyWithoutUserNestedInput = {
@@ -34833,6 +36533,20 @@ export namespace Prisma {
     update?: ReservationUpdateWithWhereUniqueWithoutRequesterInput | ReservationUpdateWithWhereUniqueWithoutRequesterInput[]
     updateMany?: ReservationUpdateManyWithWhereWithoutRequesterInput | ReservationUpdateManyWithWhereWithoutRequesterInput[]
     deleteMany?: ReservationScalarWhereInput | ReservationScalarWhereInput[]
+  }
+
+  export type ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput = {
+    create?: XOR<ReservationStatusHistoryCreateWithoutChangedByUserInput, ReservationStatusHistoryUncheckedCreateWithoutChangedByUserInput> | ReservationStatusHistoryCreateWithoutChangedByUserInput[] | ReservationStatusHistoryUncheckedCreateWithoutChangedByUserInput[]
+    connectOrCreate?: ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput | ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput[]
+    upsert?: ReservationStatusHistoryUpsertWithWhereUniqueWithoutChangedByUserInput | ReservationStatusHistoryUpsertWithWhereUniqueWithoutChangedByUserInput[]
+    createMany?: ReservationStatusHistoryCreateManyChangedByUserInputEnvelope
+    set?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    disconnect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    delete?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    connect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    update?: ReservationStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput | ReservationStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput[]
+    updateMany?: ReservationStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput | ReservationStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput[]
+    deleteMany?: ReservationStatusHistoryScalarWhereInput | ReservationStatusHistoryScalarWhereInput[]
   }
 
   export type NotificationUncheckedUpdateManyWithoutUserNestedInput = {
@@ -35841,6 +37555,13 @@ export namespace Prisma {
     connect?: ReviewWhereUniqueInput | ReviewWhereUniqueInput[]
   }
 
+  export type ReservationStatusHistoryCreateNestedManyWithoutReservationInput = {
+    create?: XOR<ReservationStatusHistoryCreateWithoutReservationInput, ReservationStatusHistoryUncheckedCreateWithoutReservationInput> | ReservationStatusHistoryCreateWithoutReservationInput[] | ReservationStatusHistoryUncheckedCreateWithoutReservationInput[]
+    connectOrCreate?: ReservationStatusHistoryCreateOrConnectWithoutReservationInput | ReservationStatusHistoryCreateOrConnectWithoutReservationInput[]
+    createMany?: ReservationStatusHistoryCreateManyReservationInputEnvelope
+    connect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+  }
+
   export type MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput = {
     create?: XOR<MaterialCreateWithoutReusedByReservationInput, MaterialUncheckedCreateWithoutReusedByReservationInput>
     connectOrCreate?: MaterialCreateOrConnectWithoutReusedByReservationInput
@@ -35852,6 +37573,13 @@ export namespace Prisma {
     connectOrCreate?: ReviewCreateOrConnectWithoutReservationInput | ReviewCreateOrConnectWithoutReservationInput[]
     createMany?: ReviewCreateManyReservationInputEnvelope
     connect?: ReviewWhereUniqueInput | ReviewWhereUniqueInput[]
+  }
+
+  export type ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput = {
+    create?: XOR<ReservationStatusHistoryCreateWithoutReservationInput, ReservationStatusHistoryUncheckedCreateWithoutReservationInput> | ReservationStatusHistoryCreateWithoutReservationInput[] | ReservationStatusHistoryUncheckedCreateWithoutReservationInput[]
+    connectOrCreate?: ReservationStatusHistoryCreateOrConnectWithoutReservationInput | ReservationStatusHistoryCreateOrConnectWithoutReservationInput[]
+    createMany?: ReservationStatusHistoryCreateManyReservationInputEnvelope
+    connect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
   }
 
   export type EnumReservationStatusFieldUpdateOperationsInput = {
@@ -35924,6 +37652,20 @@ export namespace Prisma {
     deleteMany?: ReviewScalarWhereInput | ReviewScalarWhereInput[]
   }
 
+  export type ReservationStatusHistoryUpdateManyWithoutReservationNestedInput = {
+    create?: XOR<ReservationStatusHistoryCreateWithoutReservationInput, ReservationStatusHistoryUncheckedCreateWithoutReservationInput> | ReservationStatusHistoryCreateWithoutReservationInput[] | ReservationStatusHistoryUncheckedCreateWithoutReservationInput[]
+    connectOrCreate?: ReservationStatusHistoryCreateOrConnectWithoutReservationInput | ReservationStatusHistoryCreateOrConnectWithoutReservationInput[]
+    upsert?: ReservationStatusHistoryUpsertWithWhereUniqueWithoutReservationInput | ReservationStatusHistoryUpsertWithWhereUniqueWithoutReservationInput[]
+    createMany?: ReservationStatusHistoryCreateManyReservationInputEnvelope
+    set?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    disconnect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    delete?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    connect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    update?: ReservationStatusHistoryUpdateWithWhereUniqueWithoutReservationInput | ReservationStatusHistoryUpdateWithWhereUniqueWithoutReservationInput[]
+    updateMany?: ReservationStatusHistoryUpdateManyWithWhereWithoutReservationInput | ReservationStatusHistoryUpdateManyWithWhereWithoutReservationInput[]
+    deleteMany?: ReservationStatusHistoryScalarWhereInput | ReservationStatusHistoryScalarWhereInput[]
+  }
+
   export type MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput = {
     create?: XOR<MaterialCreateWithoutReusedByReservationInput, MaterialUncheckedCreateWithoutReusedByReservationInput>
     connectOrCreate?: MaterialCreateOrConnectWithoutReusedByReservationInput
@@ -35946,6 +37688,54 @@ export namespace Prisma {
     update?: ReviewUpdateWithWhereUniqueWithoutReservationInput | ReviewUpdateWithWhereUniqueWithoutReservationInput[]
     updateMany?: ReviewUpdateManyWithWhereWithoutReservationInput | ReviewUpdateManyWithWhereWithoutReservationInput[]
     deleteMany?: ReviewScalarWhereInput | ReviewScalarWhereInput[]
+  }
+
+  export type ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput = {
+    create?: XOR<ReservationStatusHistoryCreateWithoutReservationInput, ReservationStatusHistoryUncheckedCreateWithoutReservationInput> | ReservationStatusHistoryCreateWithoutReservationInput[] | ReservationStatusHistoryUncheckedCreateWithoutReservationInput[]
+    connectOrCreate?: ReservationStatusHistoryCreateOrConnectWithoutReservationInput | ReservationStatusHistoryCreateOrConnectWithoutReservationInput[]
+    upsert?: ReservationStatusHistoryUpsertWithWhereUniqueWithoutReservationInput | ReservationStatusHistoryUpsertWithWhereUniqueWithoutReservationInput[]
+    createMany?: ReservationStatusHistoryCreateManyReservationInputEnvelope
+    set?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    disconnect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    delete?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    connect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+    update?: ReservationStatusHistoryUpdateWithWhereUniqueWithoutReservationInput | ReservationStatusHistoryUpdateWithWhereUniqueWithoutReservationInput[]
+    updateMany?: ReservationStatusHistoryUpdateManyWithWhereWithoutReservationInput | ReservationStatusHistoryUpdateManyWithWhereWithoutReservationInput[]
+    deleteMany?: ReservationStatusHistoryScalarWhereInput | ReservationStatusHistoryScalarWhereInput[]
+  }
+
+  export type ReservationCreateNestedOneWithoutStatusHistoryInput = {
+    create?: XOR<ReservationCreateWithoutStatusHistoryInput, ReservationUncheckedCreateWithoutStatusHistoryInput>
+    connectOrCreate?: ReservationCreateOrConnectWithoutStatusHistoryInput
+    connect?: ReservationWhereUniqueInput
+  }
+
+  export type UserCreateNestedOneWithoutReservationStatusChangesInput = {
+    create?: XOR<UserCreateWithoutReservationStatusChangesInput, UserUncheckedCreateWithoutReservationStatusChangesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutReservationStatusChangesInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type EnumReservationStatusGroupFieldUpdateOperationsInput = {
+    set?: $Enums.ReservationStatusGroup
+  }
+
+  export type ReservationUpdateOneRequiredWithoutStatusHistoryNestedInput = {
+    create?: XOR<ReservationCreateWithoutStatusHistoryInput, ReservationUncheckedCreateWithoutStatusHistoryInput>
+    connectOrCreate?: ReservationCreateOrConnectWithoutStatusHistoryInput
+    upsert?: ReservationUpsertWithoutStatusHistoryInput
+    connect?: ReservationWhereUniqueInput
+    update?: XOR<XOR<ReservationUpdateToOneWithWhereWithoutStatusHistoryInput, ReservationUpdateWithoutStatusHistoryInput>, ReservationUncheckedUpdateWithoutStatusHistoryInput>
+  }
+
+  export type UserUpdateOneWithoutReservationStatusChangesNestedInput = {
+    create?: XOR<UserCreateWithoutReservationStatusChangesInput, UserUncheckedCreateWithoutReservationStatusChangesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutReservationStatusChangesInput
+    upsert?: UserUpsertWithoutReservationStatusChangesInput
+    disconnect?: UserWhereInput | boolean
+    delete?: UserWhereInput | boolean
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutReservationStatusChangesInput, UserUpdateWithoutReservationStatusChangesInput>, UserUncheckedUpdateWithoutReservationStatusChangesInput>
   }
 
   export type ReservationCreateNestedOneWithoutReviewsInput = {
@@ -36849,6 +38639,23 @@ export namespace Prisma {
     _max?: NestedEnumDeliveryStatusNullableFilter<$PrismaModel>
   }
 
+  export type NestedEnumReservationStatusGroupFilter<$PrismaModel = never> = {
+    equals?: $Enums.ReservationStatusGroup | EnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    in?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    not?: NestedEnumReservationStatusGroupFilter<$PrismaModel> | $Enums.ReservationStatusGroup
+  }
+
+  export type NestedEnumReservationStatusGroupWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.ReservationStatusGroup | EnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    in?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    not?: NestedEnumReservationStatusGroupWithAggregatesFilter<$PrismaModel> | $Enums.ReservationStatusGroup
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumReservationStatusGroupFilter<$PrismaModel>
+    _max?: NestedEnumReservationStatusGroupFilter<$PrismaModel>
+  }
+
   export type NestedEnumReviewTargetTypeFilter<$PrismaModel = never> = {
     equals?: $Enums.ReviewTargetType | EnumReviewTargetTypeFieldRefInput<$PrismaModel>
     in?: $Enums.ReviewTargetType[] | ListEnumReviewTargetTypeFieldRefInput<$PrismaModel>
@@ -37252,6 +39059,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -37264,6 +39075,7 @@ export namespace Prisma {
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationUncheckedCreateWithoutOwnerInput = {
@@ -37277,6 +39089,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -37287,6 +39103,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationCreateOrConnectWithoutOwnerInput = {
@@ -37308,6 +39125,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -37320,6 +39141,7 @@ export namespace Prisma {
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationUncheckedCreateWithoutRequesterInput = {
@@ -37333,6 +39155,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -37343,6 +39169,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationCreateOrConnectWithoutRequesterInput = {
@@ -37352,6 +39179,36 @@ export namespace Prisma {
 
   export type ReservationCreateManyRequesterInputEnvelope = {
     data: ReservationCreateManyRequesterInput | ReservationCreateManyRequesterInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type ReservationStatusHistoryCreateWithoutChangedByUserInput = {
+    id?: string
+    statusGroup?: $Enums.ReservationStatusGroup
+    oldStatus?: string | null
+    newStatus: string
+    note?: string | null
+    createdAt?: Date | string
+    reservation: ReservationCreateNestedOneWithoutStatusHistoryInput
+  }
+
+  export type ReservationStatusHistoryUncheckedCreateWithoutChangedByUserInput = {
+    id?: string
+    reservationId: string
+    statusGroup?: $Enums.ReservationStatusGroup
+    oldStatus?: string | null
+    newStatus: string
+    note?: string | null
+    createdAt?: Date | string
+  }
+
+  export type ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput = {
+    where: ReservationStatusHistoryWhereUniqueInput
+    create: XOR<ReservationStatusHistoryCreateWithoutChangedByUserInput, ReservationStatusHistoryUncheckedCreateWithoutChangedByUserInput>
+  }
+
+  export type ReservationStatusHistoryCreateManyChangedByUserInputEnvelope = {
+    data: ReservationStatusHistoryCreateManyChangedByUserInput | ReservationStatusHistoryCreateManyChangedByUserInput[]
     skipDuplicates?: boolean
   }
 
@@ -37808,6 +39665,10 @@ export namespace Prisma {
     pickupWindowEnd?: DateTimeNullableFilter<"Reservation"> | Date | string | null
     pickupType?: EnumPickupTypeFilter<"Reservation"> | $Enums.PickupType
     supplierNote?: StringNullableFilter<"Reservation"> | string | null
+    rejectionReason?: StringNullableFilter<"Reservation"> | string | null
+    acceptedAt?: DateTimeNullableFilter<"Reservation"> | Date | string | null
+    rejectedAt?: DateTimeNullableFilter<"Reservation"> | Date | string | null
+    cancelledAt?: DateTimeNullableFilter<"Reservation"> | Date | string | null
     deliveryRequested?: BoolFilter<"Reservation"> | boolean
     deliveryStatus?: EnumDeliveryStatusNullableFilter<"Reservation"> | $Enums.DeliveryStatus | null
     deliveryCost?: DecimalNullableFilter<"Reservation"> | Decimal | DecimalJsLike | number | string | null
@@ -37832,6 +39693,36 @@ export namespace Prisma {
   export type ReservationUpdateManyWithWhereWithoutRequesterInput = {
     where: ReservationScalarWhereInput
     data: XOR<ReservationUpdateManyMutationInput, ReservationUncheckedUpdateManyWithoutRequesterInput>
+  }
+
+  export type ReservationStatusHistoryUpsertWithWhereUniqueWithoutChangedByUserInput = {
+    where: ReservationStatusHistoryWhereUniqueInput
+    update: XOR<ReservationStatusHistoryUpdateWithoutChangedByUserInput, ReservationStatusHistoryUncheckedUpdateWithoutChangedByUserInput>
+    create: XOR<ReservationStatusHistoryCreateWithoutChangedByUserInput, ReservationStatusHistoryUncheckedCreateWithoutChangedByUserInput>
+  }
+
+  export type ReservationStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput = {
+    where: ReservationStatusHistoryWhereUniqueInput
+    data: XOR<ReservationStatusHistoryUpdateWithoutChangedByUserInput, ReservationStatusHistoryUncheckedUpdateWithoutChangedByUserInput>
+  }
+
+  export type ReservationStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput = {
+    where: ReservationStatusHistoryScalarWhereInput
+    data: XOR<ReservationStatusHistoryUpdateManyMutationInput, ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserInput>
+  }
+
+  export type ReservationStatusHistoryScalarWhereInput = {
+    AND?: ReservationStatusHistoryScalarWhereInput | ReservationStatusHistoryScalarWhereInput[]
+    OR?: ReservationStatusHistoryScalarWhereInput[]
+    NOT?: ReservationStatusHistoryScalarWhereInput | ReservationStatusHistoryScalarWhereInput[]
+    id?: StringFilter<"ReservationStatusHistory"> | string
+    reservationId?: StringFilter<"ReservationStatusHistory"> | string
+    statusGroup?: EnumReservationStatusGroupFilter<"ReservationStatusHistory"> | $Enums.ReservationStatusGroup
+    oldStatus?: StringNullableFilter<"ReservationStatusHistory"> | string | null
+    newStatus?: StringFilter<"ReservationStatusHistory"> | string
+    changedBy?: StringNullableFilter<"ReservationStatusHistory"> | string | null
+    note?: StringNullableFilter<"ReservationStatusHistory"> | string | null
+    createdAt?: DateTimeFilter<"ReservationStatusHistory"> | Date | string
   }
 
   export type NotificationUpsertWithWhereUniqueWithoutUserInput = {
@@ -38006,6 +39897,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -38035,6 +39927,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -38069,6 +39962,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -38098,6 +39992,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -38143,6 +40038,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -38172,6 +40068,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -38212,6 +40109,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -38241,6 +40139,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -38270,6 +40169,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -38299,6 +40199,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -38344,6 +40245,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -38373,6 +40275,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -38402,6 +40305,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -38431,6 +40335,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -38465,6 +40370,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -38494,6 +40400,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -38539,6 +40446,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -38568,6 +40476,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -38608,6 +40517,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -38637,6 +40547,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -38666,6 +40577,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -38695,6 +40607,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -38740,6 +40653,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -38769,6 +40683,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -38798,6 +40713,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -38827,6 +40743,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -39022,6 +40939,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -39051,6 +40969,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -39473,6 +41392,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -39485,6 +41408,7 @@ export namespace Prisma {
     owner: UserCreateNestedOneWithoutOwnedReservationsAsOwnerInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationUncheckedCreateWithoutDropoffLocationInput = {
@@ -39499,6 +41423,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -39508,6 +41436,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationCreateOrConnectWithoutDropoffLocationInput = {
@@ -40060,6 +41989,7 @@ export namespace Prisma {
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -40089,6 +42019,7 @@ export namespace Prisma {
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -40315,6 +42246,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -40327,6 +42262,7 @@ export namespace Prisma {
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationUncheckedCreateWithoutMaterialInput = {
@@ -40340,6 +42276,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -40350,6 +42290,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationCreateOrConnectWithoutMaterialInput = {
@@ -40371,6 +42312,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -40383,6 +42328,7 @@ export namespace Prisma {
     owner: UserCreateNestedOneWithoutOwnedReservationsAsOwnerInput
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationUncheckedCreateWithoutReusedMaterialInput = {
@@ -40397,6 +42343,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -40406,6 +42356,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationCreateOrConnectWithoutReusedMaterialInput = {
@@ -40446,6 +42397,7 @@ export namespace Prisma {
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -40475,6 +42427,7 @@ export namespace Prisma {
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -40755,6 +42708,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -40767,6 +42724,7 @@ export namespace Prisma {
     owner?: UserUpdateOneRequiredWithoutOwnedReservationsAsOwnerNestedInput
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
 
   export type ReservationUncheckedUpdateWithoutReusedMaterialInput = {
@@ -40781,6 +42739,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -40790,6 +42752,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
 
   export type MaterialCreateWithoutImagesInput = {
@@ -41039,6 +43002,7 @@ export namespace Prisma {
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -41068,6 +43032,7 @@ export namespace Prisma {
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -41102,6 +43067,7 @@ export namespace Prisma {
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -41131,6 +43097,7 @@ export namespace Prisma {
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -41287,6 +43254,36 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type ReservationStatusHistoryCreateWithoutReservationInput = {
+    id?: string
+    statusGroup?: $Enums.ReservationStatusGroup
+    oldStatus?: string | null
+    newStatus: string
+    note?: string | null
+    createdAt?: Date | string
+    changedByUser?: UserCreateNestedOneWithoutReservationStatusChangesInput
+  }
+
+  export type ReservationStatusHistoryUncheckedCreateWithoutReservationInput = {
+    id?: string
+    statusGroup?: $Enums.ReservationStatusGroup
+    oldStatus?: string | null
+    newStatus: string
+    changedBy?: string | null
+    note?: string | null
+    createdAt?: Date | string
+  }
+
+  export type ReservationStatusHistoryCreateOrConnectWithoutReservationInput = {
+    where: ReservationStatusHistoryWhereUniqueInput
+    create: XOR<ReservationStatusHistoryCreateWithoutReservationInput, ReservationStatusHistoryUncheckedCreateWithoutReservationInput>
+  }
+
+  export type ReservationStatusHistoryCreateManyReservationInputEnvelope = {
+    data: ReservationStatusHistoryCreateManyReservationInput | ReservationStatusHistoryCreateManyReservationInput[]
+    skipDuplicates?: boolean
+  }
+
   export type MaterialUpsertWithoutReservationsInput = {
     update: XOR<MaterialUpdateWithoutReservationsInput, MaterialUncheckedUpdateWithoutReservationsInput>
     create: XOR<MaterialCreateWithoutReservationsInput, MaterialUncheckedCreateWithoutReservationsInput>
@@ -41399,6 +43396,7 @@ export namespace Prisma {
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -41428,6 +43426,7 @@ export namespace Prisma {
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -41468,6 +43467,7 @@ export namespace Prisma {
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -41497,6 +43497,7 @@ export namespace Prisma {
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -41646,7 +43647,23 @@ export namespace Prisma {
     data: XOR<ReviewUpdateManyMutationInput, ReviewUncheckedUpdateManyWithoutReservationInput>
   }
 
-  export type ReservationCreateWithoutReviewsInput = {
+  export type ReservationStatusHistoryUpsertWithWhereUniqueWithoutReservationInput = {
+    where: ReservationStatusHistoryWhereUniqueInput
+    update: XOR<ReservationStatusHistoryUpdateWithoutReservationInput, ReservationStatusHistoryUncheckedUpdateWithoutReservationInput>
+    create: XOR<ReservationStatusHistoryCreateWithoutReservationInput, ReservationStatusHistoryUncheckedCreateWithoutReservationInput>
+  }
+
+  export type ReservationStatusHistoryUpdateWithWhereUniqueWithoutReservationInput = {
+    where: ReservationStatusHistoryWhereUniqueInput
+    data: XOR<ReservationStatusHistoryUpdateWithoutReservationInput, ReservationStatusHistoryUncheckedUpdateWithoutReservationInput>
+  }
+
+  export type ReservationStatusHistoryUpdateManyWithWhereWithoutReservationInput = {
+    where: ReservationStatusHistoryScalarWhereInput
+    data: XOR<ReservationStatusHistoryUpdateManyMutationInput, ReservationStatusHistoryUncheckedUpdateManyWithoutReservationInput>
+  }
+
+  export type ReservationCreateWithoutStatusHistoryInput = {
     id?: string
     quantityRequested: Decimal | DecimalJsLike | number | string
     message?: string | null
@@ -41655,6 +43672,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -41667,6 +43688,271 @@ export namespace Prisma {
     owner: UserCreateNestedOneWithoutOwnedReservationsAsOwnerInput
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
+    reviews?: ReviewCreateNestedManyWithoutReservationInput
+  }
+
+  export type ReservationUncheckedCreateWithoutStatusHistoryInput = {
+    id?: string
+    materialId: string
+    requesterId: string
+    ownerId: string
+    quantityRequested: Decimal | DecimalJsLike | number | string
+    message?: string | null
+    status?: $Enums.ReservationStatus
+    pickupWindowStart?: Date | string | null
+    pickupWindowEnd?: Date | string | null
+    pickupType?: $Enums.PickupType
+    supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    deliveryRequested?: boolean
+    deliveryStatus?: $Enums.DeliveryStatus | null
+    deliveryCost?: Decimal | DecimalJsLike | number | string | null
+    dropoffLocationId?: string | null
+    driverProfileId?: string | null
+    completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
+    reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
+  }
+
+  export type ReservationCreateOrConnectWithoutStatusHistoryInput = {
+    where: ReservationWhereUniqueInput
+    create: XOR<ReservationCreateWithoutStatusHistoryInput, ReservationUncheckedCreateWithoutStatusHistoryInput>
+  }
+
+  export type UserCreateWithoutReservationStatusChangesInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
+    priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserUncheckedCreateWithoutReservationStatusChangesInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
+    priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserCreateOrConnectWithoutReservationStatusChangesInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutReservationStatusChangesInput, UserUncheckedCreateWithoutReservationStatusChangesInput>
+  }
+
+  export type ReservationUpsertWithoutStatusHistoryInput = {
+    update: XOR<ReservationUpdateWithoutStatusHistoryInput, ReservationUncheckedUpdateWithoutStatusHistoryInput>
+    create: XOR<ReservationCreateWithoutStatusHistoryInput, ReservationUncheckedCreateWithoutStatusHistoryInput>
+    where?: ReservationWhereInput
+  }
+
+  export type ReservationUpdateToOneWithWhereWithoutStatusHistoryInput = {
+    where?: ReservationWhereInput
+    data: XOR<ReservationUpdateWithoutStatusHistoryInput, ReservationUncheckedUpdateWithoutStatusHistoryInput>
+  }
+
+  export type ReservationUpdateWithoutStatusHistoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    quantityRequested?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    message?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumReservationStatusFieldUpdateOperationsInput | $Enums.ReservationStatus
+    pickupWindowStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
+    supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
+    deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    driverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    material?: MaterialUpdateOneRequiredWithoutReservationsNestedInput
+    requester?: UserUpdateOneRequiredWithoutOwnedReservationsAsRequesterNestedInput
+    owner?: UserUpdateOneRequiredWithoutOwnedReservationsAsOwnerNestedInput
+    dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
+    reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
+    reviews?: ReviewUpdateManyWithoutReservationNestedInput
+  }
+
+  export type ReservationUncheckedUpdateWithoutStatusHistoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    materialId?: StringFieldUpdateOperationsInput | string
+    requesterId?: StringFieldUpdateOperationsInput | string
+    ownerId?: StringFieldUpdateOperationsInput | string
+    quantityRequested?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    message?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumReservationStatusFieldUpdateOperationsInput | $Enums.ReservationStatus
+    pickupWindowStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
+    supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
+    deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dropoffLocationId?: NullableStringFieldUpdateOperationsInput | string | null
+    driverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
+    reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
+  }
+
+  export type UserUpsertWithoutReservationStatusChangesInput = {
+    update: XOR<UserUpdateWithoutReservationStatusChangesInput, UserUncheckedUpdateWithoutReservationStatusChangesInput>
+    create: XOR<UserCreateWithoutReservationStatusChangesInput, UserUncheckedCreateWithoutReservationStatusChangesInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutReservationStatusChangesInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutReservationStatusChangesInput, UserUncheckedUpdateWithoutReservationStatusChangesInput>
+  }
+
+  export type UserUpdateWithoutReservationStatusChangesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutReservationStatusChangesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type ReservationCreateWithoutReviewsInput = {
+    id?: string
+    quantityRequested: Decimal | DecimalJsLike | number | string
+    message?: string | null
+    status?: $Enums.ReservationStatus
+    pickupWindowStart?: Date | string | null
+    pickupWindowEnd?: Date | string | null
+    pickupType?: $Enums.PickupType
+    supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    deliveryRequested?: boolean
+    deliveryStatus?: $Enums.DeliveryStatus | null
+    deliveryCost?: Decimal | DecimalJsLike | number | string | null
+    driverProfileId?: string | null
+    completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    material: MaterialCreateNestedOneWithoutReservationsInput
+    requester: UserCreateNestedOneWithoutOwnedReservationsAsRequesterInput
+    owner: UserCreateNestedOneWithoutOwnedReservationsAsOwnerInput
+    dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
+    reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
+    statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationUncheckedCreateWithoutReviewsInput = {
@@ -41681,6 +43967,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -41690,6 +43980,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
+    statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
 
   export type ReservationCreateOrConnectWithoutReviewsInput = {
@@ -41720,6 +44011,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
@@ -41749,6 +44041,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -41783,6 +44076,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
@@ -41812,6 +44106,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -41843,6 +44138,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -41855,6 +44154,7 @@ export namespace Prisma {
     owner?: UserUpdateOneRequiredWithoutOwnedReservationsAsOwnerNestedInput
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
 
   export type ReservationUncheckedUpdateWithoutReviewsInput = {
@@ -41869,6 +44169,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -41878,6 +44182,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
 
   export type UserUpsertWithoutReviewsGivenInput = {
@@ -41914,6 +44219,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
@@ -41943,6 +44249,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -41983,6 +44290,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
@@ -42012,6 +44320,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -42041,6 +44350,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
@@ -42070,6 +44380,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -42115,6 +44426,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
@@ -42144,6 +44456,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -42855,6 +45168,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -42884,6 +45198,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -43009,6 +45324,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -43038,6 +45354,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -43067,6 +45384,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -43096,6 +45414,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -43174,6 +45493,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -43203,6 +45523,7 @@ export namespace Prisma {
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -43345,6 +45666,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -43366,6 +45691,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -43374,6 +45703,16 @@ export namespace Prisma {
     completedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+  }
+
+  export type ReservationStatusHistoryCreateManyChangedByUserInput = {
+    id?: string
+    reservationId: string
+    statusGroup?: $Enums.ReservationStatusGroup
+    oldStatus?: string | null
+    newStatus: string
+    note?: string | null
+    createdAt?: Date | string
   }
 
   export type NotificationCreateManyUserInput = {
@@ -43711,6 +46050,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -43723,6 +46066,7 @@ export namespace Prisma {
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
 
   export type ReservationUncheckedUpdateWithoutOwnerInput = {
@@ -43736,6 +46080,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -43746,6 +46094,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
 
   export type ReservationUncheckedUpdateManyWithoutOwnerInput = {
@@ -43759,6 +46108,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -43778,6 +46131,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -43790,6 +46147,7 @@ export namespace Prisma {
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
 
   export type ReservationUncheckedUpdateWithoutRequesterInput = {
@@ -43803,6 +46161,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -43813,6 +46175,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
 
   export type ReservationUncheckedUpdateManyWithoutRequesterInput = {
@@ -43826,6 +46189,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -43834,6 +46201,36 @@ export namespace Prisma {
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ReservationStatusHistoryUpdateWithoutChangedByUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    statusGroup?: EnumReservationStatusGroupFieldUpdateOperationsInput | $Enums.ReservationStatusGroup
+    oldStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    newStatus?: StringFieldUpdateOperationsInput | string
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reservation?: ReservationUpdateOneRequiredWithoutStatusHistoryNestedInput
+  }
+
+  export type ReservationStatusHistoryUncheckedUpdateWithoutChangedByUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    statusGroup?: EnumReservationStatusGroupFieldUpdateOperationsInput | $Enums.ReservationStatusGroup
+    oldStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    newStatus?: StringFieldUpdateOperationsInput | string
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    statusGroup?: EnumReservationStatusGroupFieldUpdateOperationsInput | $Enums.ReservationStatusGroup
+    oldStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    newStatus?: StringFieldUpdateOperationsInput | string
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type NotificationUpdateWithoutUserInput = {
@@ -44228,6 +46625,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -44422,6 +46823,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -44434,6 +46839,7 @@ export namespace Prisma {
     owner?: UserUpdateOneRequiredWithoutOwnedReservationsAsOwnerNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
 
   export type ReservationUncheckedUpdateWithoutDropoffLocationInput = {
@@ -44448,6 +46854,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -44457,6 +46867,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
 
   export type ReservationUncheckedUpdateManyWithoutDropoffLocationInput = {
@@ -44471,6 +46882,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -44861,6 +47276,10 @@ export namespace Prisma {
     pickupWindowEnd?: Date | string | null
     pickupType?: $Enums.PickupType
     supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
     deliveryRequested?: boolean
     deliveryStatus?: $Enums.DeliveryStatus | null
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
@@ -44904,6 +47323,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -44916,6 +47339,7 @@ export namespace Prisma {
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
 
   export type ReservationUncheckedUpdateWithoutMaterialInput = {
@@ -44929,6 +47353,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -44939,6 +47367,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
 
   export type ReservationUncheckedUpdateManyWithoutMaterialInput = {
@@ -44952,6 +47381,10 @@ export namespace Prisma {
     pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
     supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
     deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -44969,6 +47402,16 @@ export namespace Prisma {
     targetType: $Enums.ReviewTargetType
     rating: number
     comment?: string | null
+    createdAt?: Date | string
+  }
+
+  export type ReservationStatusHistoryCreateManyReservationInput = {
+    id?: string
+    statusGroup?: $Enums.ReservationStatusGroup
+    oldStatus?: string | null
+    newStatus: string
+    changedBy?: string | null
+    note?: string | null
     createdAt?: Date | string
   }
 
@@ -44999,6 +47442,36 @@ export namespace Prisma {
     targetType?: EnumReviewTargetTypeFieldUpdateOperationsInput | $Enums.ReviewTargetType
     rating?: IntFieldUpdateOperationsInput | number
     comment?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ReservationStatusHistoryUpdateWithoutReservationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    statusGroup?: EnumReservationStatusGroupFieldUpdateOperationsInput | $Enums.ReservationStatusGroup
+    oldStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    newStatus?: StringFieldUpdateOperationsInput | string
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    changedByUser?: UserUpdateOneWithoutReservationStatusChangesNestedInput
+  }
+
+  export type ReservationStatusHistoryUncheckedUpdateWithoutReservationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    statusGroup?: EnumReservationStatusGroupFieldUpdateOperationsInput | $Enums.ReservationStatusGroup
+    oldStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    newStatus?: StringFieldUpdateOperationsInput | string
+    changedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ReservationStatusHistoryUncheckedUpdateManyWithoutReservationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    statusGroup?: EnumReservationStatusGroupFieldUpdateOperationsInput | $Enums.ReservationStatusGroup
+    oldStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    newStatus?: StringFieldUpdateOperationsInput | string
+    changedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    note?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 

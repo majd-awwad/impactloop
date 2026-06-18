@@ -92,6 +92,11 @@ enum ReservationStatus {
   EXPIRED
 }
 
+enum ReservationStatusGroup {
+  RESERVATION
+  DELIVERY
+}
+
 enum PickupType {
   SELF_PICKUP
   DELIVERY_ALLOWED
@@ -159,8 +164,9 @@ model User {
   usedInvitations              RoleInvitation[]      @relation("RoleInvitationUsedByUser")
   assignedRoles                UserRoleAssignment[]  @relation("UserRoleAssignedBy")
   ownedMaterials               Material[]            @relation("MaterialOwner")
-  ownedReservationsAsOwner     Reservation[]         @relation("ReservationOwner")
-  ownedReservationsAsRequester Reservation[]         @relation("ReservationRequester")
+  ownedReservationsAsOwner     Reservation[]              @relation("ReservationOwner")
+  ownedReservationsAsRequester Reservation[]              @relation("ReservationRequester")
+  reservationStatusChanges     ReservationStatusHistory[] @relation("ReservationStatusChangedBy")
   notifications                Notification[]
   reviewsGiven                 Review[]              @relation("ReviewReviewer")
   reviewsReceived              Review[]              @relation("ReviewReviewedUser")
@@ -395,6 +401,10 @@ model Reservation {
   pickupWindowEnd   DateTime?         @map("pickup_window_end")
   pickupType        PickupType        @default(SELF_PICKUP) @map("pickup_type")
   supplierNote      String?           @map("supplier_note")
+  rejectionReason   String?           @map("rejection_reason")
+  acceptedAt        DateTime?         @map("accepted_at")
+  rejectedAt        DateTime?         @map("rejected_at")
+  cancelledAt       DateTime?         @map("cancelled_at")
   deliveryRequested Boolean           @default(false) @map("delivery_requested")
   deliveryStatus    DeliveryStatus?   @map("delivery_status")
   deliveryCost      Decimal?          @map("delivery_cost") @db.Decimal(12, 2)
@@ -407,14 +417,33 @@ model Reservation {
   requester         User              @relation("ReservationRequester", fields: [requesterId], references: [id], onDelete: Cascade)
   owner             User              @relation("ReservationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   dropoffLocation   Location?         @relation("ReservationDropoffLocation", fields: [dropoffLocationId], references: [id], onDelete: SetNull)
-  reusedMaterial    Material?         @relation("MaterialReusedByReservation")
+  reusedMaterial    Material?                  @relation("MaterialReusedByReservation")
   reviews           Review[]
+  statusHistory     ReservationStatusHistory[]
 
   @@index([ownerId])
   @@index([requesterId])
   @@index([materialId])
   @@index([status])
   @@map("reservations")
+}
+
+model ReservationStatusHistory {
+  id            String                 @id @default(cuid())
+  reservationId String                 @map("reservation_id")
+  statusGroup   ReservationStatusGroup @default(RESERVATION) @map("status_group")
+  oldStatus     String?                @map("old_status")
+  newStatus     String                 @map("new_status")
+  changedBy     String?                @map("changed_by")
+  note          String?
+  createdAt     DateTime               @default(now()) @map("created_at")
+  reservation   Reservation            @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  changedByUser User?                  @relation("ReservationStatusChangedBy", fields: [changedBy], references: [id], onDelete: SetNull)
+
+  @@index([reservationId])
+  @@index([statusGroup])
+  @@index([changedBy])
+  @@map("reservation_status_history")
 }
 
 model Review {

@@ -286,6 +286,10 @@ exports.Prisma.ReservationScalarFieldEnum = {
   pickupWindowEnd: 'pickupWindowEnd',
   pickupType: 'pickupType',
   supplierNote: 'supplierNote',
+  rejectionReason: 'rejectionReason',
+  acceptedAt: 'acceptedAt',
+  rejectedAt: 'rejectedAt',
+  cancelledAt: 'cancelledAt',
   deliveryRequested: 'deliveryRequested',
   deliveryStatus: 'deliveryStatus',
   deliveryCost: 'deliveryCost',
@@ -294,6 +298,17 @@ exports.Prisma.ReservationScalarFieldEnum = {
   completedAt: 'completedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ReservationStatusHistoryScalarFieldEnum = {
+  id: 'id',
+  reservationId: 'reservationId',
+  statusGroup: 'statusGroup',
+  oldStatus: 'oldStatus',
+  newStatus: 'newStatus',
+  changedBy: 'changedBy',
+  note: 'note',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.ReviewScalarFieldEnum = {
@@ -527,6 +542,11 @@ exports.DeliveryStatus = exports.$Enums.DeliveryStatus = {
   FAILED_PICKUP: 'FAILED_PICKUP'
 };
 
+exports.ReservationStatusGroup = exports.$Enums.ReservationStatusGroup = {
+  RESERVATION: 'RESERVATION',
+  DELIVERY: 'DELIVERY'
+};
+
 exports.ReviewTargetType = exports.$Enums.ReviewTargetType = {
   SUPPLIER: 'SUPPLIER',
   DRIVER: 'DRIVER',
@@ -571,6 +591,7 @@ exports.Prisma.ModelName = {
   Material: 'Material',
   MaterialImage: 'MaterialImage',
   Reservation: 'Reservation',
+  ReservationStatusHistory: 'ReservationStatusHistory',
   Review: 'Review',
   Notification: 'Notification',
   MaterialType: 'MaterialType',
