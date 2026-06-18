@@ -99,11 +99,11 @@ Future<T> unwrapApiResponse<T>(
 
     final rawData = body['data'];
 
-    if (rawData is! Map<String, dynamic>) {
+    if (rawData is! Map) {
       throw const ApiException(message: 'Unexpected response data format');
     }
 
-    return parseData(rawData);
+    return parseData(Map<String, dynamic>.from(rawData));
   } on DioException catch (error) {
     throw mapDioException(error);
   }
