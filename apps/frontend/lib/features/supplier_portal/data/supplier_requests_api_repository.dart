@@ -41,4 +41,9 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
   }) {
     return _api.declineRequest(requestId, reason: reason);
   }
+
+  @override
+  Future<SupplierIncomingRequest> completeRequest(String requestId) {
+    return _api.completeRequest(requestId);
+  }
 }
