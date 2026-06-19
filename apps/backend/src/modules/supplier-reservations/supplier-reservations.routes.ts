@@ -7,6 +7,7 @@ import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
   acceptSupplierReservationHandler,
+  completeSupplierReservationHandler,
   declineSupplierReservationHandler,
   listSupplierReservationsHandler,
 } from './supplier-reservations.controller.js';
@@ -43,4 +44,12 @@ supplierReservationsRouter.patch(
   validate(reservationIdParamsSchema, 'params'),
   validate(declineSupplierReservationSchema),
   asyncHandler(declineSupplierReservationHandler),
+);
+
+supplierReservationsRouter.patch(
+  '/:id/complete',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(completeSupplierReservationHandler),
 );

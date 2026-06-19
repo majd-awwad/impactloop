@@ -152,3 +152,58 @@ export const declineSupplierReservation = async (input: {
     return { conflict: false as const, reservation };
   });
 };
+
+export const completeSupplierReservation = async (input: {
+  reservationId: string;
+  ownerId: string;
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.reservation.findFirst({
+      where: {
+        id: input.reservationId,
+        ownerId: input.ownerId,
+      },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    if (existing.status !== 'ACCEPTED') {
+      return { conflict: true as const, reservation: existing };
+    }
+
+    const now = new Date();
+
+    const reservation = await tx.reservation.update({
+      where: { id: existing.id },
+      data: {
+        status: 'COMPLETED',
+        completedAt: now,
+      },
+      include: reservationInclude,
+    });
+
+    await tx.reservationStatusHistory.create({
+      data: {
+        reservationId: reservation.id,
+        statusGroup: 'RESERVATION',
+        oldStatus: 'ACCEPTED',
+        newStatus: 'COMPLETED',
+        changedBy: input.ownerId,
+        note: 'Pickup completed by supplier',
+      },
+    });
+
+    await tx.material.update({
+      where: { id: existing.materialId },
+      data: {
+        status: 'REUSED',
+        reusedAt: now,
+        reusedByReservationId: reservation.id,
+      },
+    });
+
+    return { conflict: false as const, reservation };
+  });
+};
