@@ -210,43 +210,29 @@ export const calculateMaxAllowedPrice = (input: {
 
   const conditionFactor = MATERIAL_CONDITION_FACTORS[input.condition];
 
-  let maxAllowedByUnit: number | null = null;
-
-  let maxAllowedTotal: number | null = input.maxAllowedTotalPriceNis;
-
 
 
   if (input.maxAllowedUnitPriceNis != null) {
 
-    maxAllowedByUnit =
-
-      input.maxAllowedUnitPriceNis * input.quantity * conditionFactor;
-
-    maxAllowedByUnit = roundCurrency(maxAllowedByUnit);
+    return roundCurrency(input.maxAllowedUnitPriceNis * conditionFactor);
 
   }
 
 
 
-  if (maxAllowedByUnit != null && maxAllowedTotal != null) {
+  if (
 
-    return roundCurrency(Math.min(maxAllowedByUnit, maxAllowedTotal));
+    input.maxAllowedTotalPriceNis != null &&
 
-  }
+    input.quantity > 0
 
+  ) {
 
+    return roundCurrency(
 
-  if (maxAllowedByUnit != null) {
+      (input.maxAllowedTotalPriceNis / input.quantity) * conditionFactor,
 
-    return maxAllowedByUnit;
-
-  }
-
-
-
-  if (maxAllowedTotal != null) {
-
-    return roundCurrency(maxAllowedTotal);
+    );
 
   }
 
@@ -586,11 +572,13 @@ const runPriceRuleCheck = async (
 
   if (input.price > maxAllowedPrice) {
 
+    const unitLabel = activeRule.unit;
+
     return buildBlockedResult(
 
       'PRICE_TOO_HIGH',
 
-      'Price is above the allowed limit for this material.',
+      `Maximum allowed price per ${unitLabel} is ${maxAllowedPrice} NIS.`,
 
       {
 
@@ -599,6 +587,8 @@ const runPriceRuleCheck = async (
         materialTypeId: materialType.id,
 
         matchedReference,
+
+        approvedUnit: unitLabel,
 
       },
 

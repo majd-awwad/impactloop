@@ -11,8 +11,10 @@ import {
 } from '../../services/ai-price-suggestion.service.js';
 import * as categoriesRepository from '../categories/categories.repository.js';
 import * as materialTypesRepository from '../material-types/material-types.repository.js';
+import { resolveApprovedMaxUnitPriceNis } from './price-rule-request-pricing.js';
 import * as priceRuleRequestsRepository from './price-rule-requests.repository.js';
 import type { CreatePriceRuleRequestInput } from './price-rule-requests.validation.js';
+import { decimalToNumber } from '../../utils/decimal.js';
 
 const confidenceToDecimal = (confidence: string | null): number | null => {
   switch (confidence) {
@@ -177,6 +179,13 @@ const submitKnownMaterialPriceRuleRequest = async (
     );
 
   if (pendingRequest) {
+    if (input.listingDraftJson) {
+      await priceRuleRequestsRepository.updatePriceRuleRequestDraftJson({
+        id: pendingRequest.id,
+        listingDraftJson: input.listingDraftJson,
+      });
+    }
+
     return handlePendingPriceRuleRequest(
       pendingRequest,
       runAi,
@@ -188,6 +197,7 @@ const submitKnownMaterialPriceRuleRequest = async (
   const created = await priceRuleRequestsRepository.createKnownPriceRuleRequest({
     materialTypeId,
     requestedByUserId: userId,
+    listingDraftJson: input.listingDraftJson ?? null,
   });
 
   await applyAiSuggestionToPriceRuleRequest(created.id, aiSuggestion);
@@ -255,6 +265,13 @@ const submitUnknownMaterialPriceRuleRequest = async (
     );
 
   if (pendingRequest) {
+    if (input.listingDraftJson) {
+      await priceRuleRequestsRepository.updatePriceRuleRequestDraftJson({
+        id: pendingRequest.id,
+        listingDraftJson: input.listingDraftJson,
+      });
+    }
+
     return handlePendingPriceRuleRequest(pendingRequest, runAi);
   }
 
@@ -268,6 +285,7 @@ const submitUnknownMaterialPriceRuleRequest = async (
     quantity: input.quantity ?? null,
     supplierPriceNis: input.supplierPriceNis ?? null,
     requestedByUserId: userId,
+    listingDraftJson: input.listingDraftJson ?? null,
   });
 
   await applyAiSuggestionToPriceRuleRequest(created.id, aiSuggestion);
@@ -293,4 +311,81 @@ export const submitPriceRuleRequest = async (
   }
 
   return submitUnknownMaterialPriceRuleRequest(userId, input);
+};
+
+const extractDraftTitle = (listingDraftJson: unknown): string => {
+  if (
+    !listingDraftJson ||
+    typeof listingDraftJson !== 'object' ||
+    Array.isArray(listingDraftJson)
+  ) {
+    return '';
+  }
+
+  const title = (listingDraftJson as Record<string, unknown>).title;
+  return typeof title === 'string' ? title.trim() : '';
+};
+
+const resolveMaxAllowedUnitPrice = resolveApprovedMaxUnitPriceNis;
+
+export const listSupplierPriceRuleRequests = async (userId: string) => {
+  const requests =
+    await priceRuleRequestsRepository.listPriceRuleRequestsForSupplier(userId);
+
+  return requests.map((request) => ({
+    id: request.id,
+    status: request.status,
+    materialName:
+      request.materialName ??
+      request.materialType?.nameEn ??
+      extractDraftTitle(request.listingDraftJson),
+    unit: request.unit ?? request.materialType?.defaultUnit ?? null,
+    quantity: request.quantity != null ? Number(request.quantity) : null,
+    supplierPriceNis:
+      request.supplierPriceNis != null
+        ? Number(request.supplierPriceNis)
+        : null,
+    maxAllowedUnitPriceNis: resolveApprovedMaxUnitPriceNis(request),
+    moderatorNote: request.moderatorNote,
+    categoryName: request.category?.nameEn ?? null,
+    title: extractDraftTitle(request.listingDraftJson),
+    hasDraft: request.listingDraftJson != null,
+    createdAt: request.createdAt.toISOString(),
+  }));
+};
+
+export const getPriceRuleRequestDraft = async (userId: string, id: string) => {
+  const request = await priceRuleRequestsRepository.findPriceRuleRequestByIdForOwner(
+    id,
+    userId,
+  );
+
+  if (!request) {
+    throw new AppError('Price rule request not found', 404, 'NOT_FOUND');
+  }
+
+  if (request.publishedMaterialId) {
+    throw new AppError(
+      'This listing was already completed.',
+      409,
+      'CONFLICT',
+    );
+  }
+
+  const maxAllowedUnitPriceNis = resolveMaxAllowedUnitPrice(request);
+
+  return {
+    id: request.id,
+    status: request.status,
+    maxAllowedUnitPriceNis,
+    unit: request.unit ?? request.materialType?.defaultUnit ?? null,
+    category: request.category
+      ? {
+          id: request.category.id,
+          nameEn: request.category.nameEn,
+          nameAr: request.category.nameAr,
+        }
+      : null,
+    listingDraftJson: request.listingDraftJson,
+  };
 };

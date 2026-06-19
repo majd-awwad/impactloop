@@ -69,3 +69,16 @@ export const findCategoryRequestByIdForOwner = async (
     },
   });
 };
+
+export const markCategoryRequestPublished = async (input: {
+  id: string;
+  materialId: string;
+}) => {
+  return prisma.categoryRequest.update({
+    where: { id: input.id },
+    data: {
+      publishedMaterialId: input.materialId,
+      publishedAt: new Date(),
+    },
+  });
+};

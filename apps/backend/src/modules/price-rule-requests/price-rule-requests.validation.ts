@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { listingDraftJsonSchema } from '../category-requests/category-requests.validation.js';
+
 const materialConditionSchema = z.enum([
   'NEW',
   'LIKE_NEW',
@@ -17,6 +19,7 @@ export const createPriceRuleRequestSchema = z
     quantity: z.number().positive().optional().nullable(),
     unit: z.string().trim().min(1).max(40).optional().nullable(),
     supplierPriceNis: z.number().nonnegative().optional().nullable(),
+    listingDraftJson: listingDraftJsonSchema.optional().nullable(),
   })
   .superRefine((data, ctx) => {
     const hasKnownMaterial = Boolean(data.materialTypeId?.trim());
@@ -45,4 +48,12 @@ export const createPriceRuleRequestSchema = z
 
 export type CreatePriceRuleRequestInput = z.infer<
   typeof createPriceRuleRequestSchema
+>;
+
+export const priceRuleRequestIdParamsSchema = z.object({
+  id: z.string().trim().min(1),
+});
+
+export type PriceRuleRequestIdParams = z.infer<
+  typeof priceRuleRequestIdParamsSchema
 >;
