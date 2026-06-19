@@ -17,11 +17,63 @@ import '../widgets/supplier_feedback.dart';
 
 const _contentMaxWidth = 960.0;
 
-class SupplierIncomingRequestsPage extends ConsumerWidget {
-  const SupplierIncomingRequestsPage({super.key});
+class SupplierIncomingRequestsPage extends ConsumerStatefulWidget {
+  const SupplierIncomingRequestsPage({
+    super.key,
+    this.initialTab,
+    this.focusReservationId,
+  });
+
+  final String? initialTab;
+  final String? focusReservationId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SupplierIncomingRequestsPage> createState() =>
+      _SupplierIncomingRequestsPageState();
+}
+
+class _SupplierIncomingRequestsPageState
+    extends ConsumerState<SupplierIncomingRequestsPage> {
+  bool _initialTabApplied = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialTab());
+  }
+
+  @override
+  void didUpdateWidget(covariant SupplierIncomingRequestsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTab != widget.initialTab) {
+      _initialTabApplied = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialTab());
+    }
+  }
+
+  void _applyInitialTab() {
+    if (_initialTabApplied) {
+      return;
+    }
+
+    final tabName = widget.initialTab?.trim().toLowerCase();
+    if (tabName == null || tabName.isEmpty) {
+      return;
+    }
+
+    final tab = switch (tabName) {
+      'accepted' => SupplierIncomingRequestTab.accepted,
+      'declined' => SupplierIncomingRequestTab.declined,
+      'completed' => SupplierIncomingRequestTab.completed,
+      _ => SupplierIncomingRequestTab.pending,
+    };
+
+    ref.read(incomingRequestTabProvider.notifier).selectTab(tab);
+    _initialTabApplied = true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final tab = ref.watch(incomingRequestTabProvider);
     final requestsAsync = ref.watch(incomingRequestsProvider);
     final completingId = ref.watch(completingReservationIdProvider);

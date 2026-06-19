@@ -20,10 +20,10 @@ import '../../../materials/data/models/material_price_check_result.dart';
 import '../../../materials/data/models/price_rule_request.dart';
 import '../../data/supplier_materials_repository.dart';
 import '../controllers/supplier_dashboard_providers.dart';
+import '../controllers/supplier_notifications_providers.dart';
 import '../controllers/supplier_profile_providers.dart';
 import '../widgets/add_material_preview_card.dart';
 import '../widgets/add_material_price_verification_card.dart';
-import '../widgets/category_requests_panel.dart';
 import '../widgets/material_image_picker_section.dart';
 import '../widgets/supplier_dark_form_field.dart';
 import '../widgets/supplier_feedback.dart';
@@ -45,7 +45,14 @@ const _sourceTypes = [
 ];
 
 class AddMaterialPage extends ConsumerStatefulWidget {
-  const AddMaterialPage({super.key});
+  const AddMaterialPage({
+    super.key,
+    this.categoryRequestId,
+    this.priceRuleRequestId,
+  });
+
+  final String? categoryRequestId;
+  final String? priceRuleRequestId;
 
   @override
   ConsumerState<AddMaterialPage> createState() => _AddMaterialPageState();
@@ -79,7 +86,35 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   bool _isRequestingPriceReview = false;
   bool _isUploadingImages = false;
   String? _priceReviewMessage;
+  double? _maxAllowedUnitPrice;
+  String? _maxAllowedUnitLabel;
   final List<MaterialDraftImage> _images = [];
+  bool _resumeHandled = false;
+  bool _isResumingDraft = false;
+  String? _resumeError;
+  String? _sourceCategoryRequestId;
+  String? _sourcePriceRuleRequestId;
+
+  @override
+  void initState() {
+    super.initState();
+    _sourceCategoryRequestId = widget.categoryRequestId?.trim();
+    _sourcePriceRuleRequestId = widget.priceRuleRequestId?.trim();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeResumeFromRoute());
+  }
+
+  @override
+  void didUpdateWidget(covariant AddMaterialPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.categoryRequestId != widget.categoryRequestId ||
+        oldWidget.priceRuleRequestId != widget.priceRuleRequestId) {
+      _resumeHandled = false;
+      _resumeError = null;
+      _sourceCategoryRequestId = widget.categoryRequestId?.trim();
+      _sourcePriceRuleRequestId = widget.priceRuleRequestId?.trim();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeResumeFromRoute());
+    }
+  }
 
   @override
   void dispose() {
@@ -107,7 +142,6 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     final profile = ref.watch(supplierProfileProvider);
     final categories = ref.watch(materialCategoriesProvider);
     final policy = ref.watch(materialListingPolicyProvider);
-    final categoryRequests = ref.watch(categoryRequestsProvider);
     final compact = MediaQuery.sizeOf(context).width <
         AppSpacing.supplierLayoutBreakpoint;
 
@@ -117,16 +151,28 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _Header(policy: policy),
-          const SizedBox(height: AppSpacing.lg),
-          categoryRequests.when(
-            data: (requests) => CategoryRequestsPanel(
-              requests: requests,
-              onContinue: _continueCategoryRequest,
+          if (_isResumingDraft) ...[
+            const SizedBox(height: AppSpacing.md),
+            const Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AuthDarkColors.accent,
+                ),
+              ),
             ),
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
-          ),
-          const SizedBox(height: AppSpacing.xl),
+          ],
+          if (_resumeError != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            _ResumeErrorBanner(
+              message: _resumeError!,
+              onRetry: _retryResume,
+              onBack: () => context.go('/supplier/notifications'),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.lg),
           profile.when(
             data: (profile) {
               if (!profile.hasSupplierProfile || profile.supplier == null) {
@@ -192,8 +238,14 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     final paidOtherBlocked = !_isFree && isOther;
     final paidCanPublish = _isFree || (_priceCheck?.allowed == true);
     final wide = MediaQuery.sizeOf(context).width >= 1100;
+    final isResumingFromNotification =
+        (widget.categoryRequestId?.trim().isNotEmpty ?? false) ||
+        (widget.priceRuleRequestId?.trim().isNotEmpty ?? false) ||
+        _isResumingDraft;
 
-    if (_categoryId == null && categories.isNotEmpty) {
+    if (_categoryId == null &&
+        categories.isNotEmpty &&
+        !isResumingFromNotification) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _categoryId == null) {
           setState(() => _categoryId = categories.first.id);
@@ -429,8 +481,16 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                 const SupplierFormSectionHeader(
                   icon: Icons.straighten_outlined,
                   title: 'Quantity and pricing',
-                  subtitle: 'Paid materials are verified against internal price references.',
+                  subtitle:
+                      'Enter the price for one unit. Quantity is handled separately.',
                 ),
+                if (_maxAllowedUnitPrice != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _InlineInfo(
+                    message:
+                        'Maximum allowed price per ${_maxAllowedUnitLabel ?? _unitController.text.trim()} is ${_maxAllowedUnitPrice!.toStringAsFixed(0)} NIS.',
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.lg),
                 _ResponsiveRow(
                   children: [
@@ -473,12 +533,20 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   const SupplierFieldGap(),
                   SupplierDarkTextField(
                     controller: _priceController,
-                    label: 'Price (₪)',
+                    label: 'Price per unit (₪)',
                     hint: '25',
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    validator: _positiveNumber,
+                    validator: _unitPriceValidator,
                     onChanged: (_) => _invalidatePriceCheck(),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Enter the price for one unit. Quantity is handled separately.',
+                    style: AuthDarkTextStyles.body(context).copyWith(
+                      fontSize: 12,
+                      color: AuthDarkColors.textMuted,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   OutlinedButton.icon(
@@ -796,60 +864,205 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     }
   }
 
+  Future<void> _maybeResumeFromRoute() async {
+    if (_resumeHandled || !mounted) {
+      return;
+    }
+
+    final categoryRequestId = widget.categoryRequestId?.trim();
+    final priceRuleRequestId = widget.priceRuleRequestId?.trim();
+    if ((categoryRequestId == null || categoryRequestId.isEmpty) &&
+        (priceRuleRequestId == null || priceRuleRequestId.isEmpty)) {
+      return;
+    }
+
+    _resumeHandled = true;
+    setState(() {
+      _isResumingDraft = true;
+      _resumeError = null;
+    });
+
+    if (categoryRequestId != null && categoryRequestId.isNotEmpty) {
+      await _continueCategoryRequest(categoryRequestId);
+      return;
+    }
+
+    if (priceRuleRequestId != null && priceRuleRequestId.isNotEmpty) {
+      await _continuePriceRuleRequest(priceRuleRequestId);
+    }
+  }
+
+  void _retryResume() {
+    _resumeHandled = false;
+    _maybeResumeFromRoute();
+  }
+
+  void _applyListingDraftJson(
+    Map<String, dynamic> json, {
+    String? categoryId,
+    String? resumeMessage,
+    double? maxAllowedUnitPrice,
+    String? maxAllowedUnitLabel,
+  }) {
+    final price = json['price'];
+    final isFree = json['isFree'] as bool? ?? true;
+
+    _materialNameController.text = json['materialName'] as String? ?? '';
+    _titleController.text = json['title'] as String? ?? '';
+    _descriptionController.text = json['description'] as String? ?? '';
+    _condition = json['condition'] as String? ?? _condition;
+    _sourceType = json['sourceType'] as String? ?? _sourceType;
+    _quantityController.text = (json['quantity'] as num?)?.toString() ?? '1';
+    _unitController.text = json['unit'] as String? ?? 'piece';
+    _isFree = isFree;
+    if (price is num && !isFree) {
+      _priceController.text =
+          price % 1 == 0 ? price.toInt().toString() : price.toString();
+    } else if (isFree) {
+      _priceController.clear();
+    }
+    _pickupAllowed = json['pickupAllowed'] as bool? ?? true;
+    _pickupNotesController.text = json['pickupNotes'] as String? ?? '';
+    _suggestedUsesController.text = json['suggestedUses'] as String? ?? '';
+    _images
+      ..clear()
+      ..addAll(
+        (json['imageUrls'] as List?)
+                ?.whereType<String>()
+                .map(MaterialDraftImage.fromUrl)
+                .toList() ??
+            const [],
+      );
+    _requestedCategoryController.clear();
+    _showCategoryRequestField = false;
+    _categoryRequestMessage = null;
+    _categoryId = categoryId ?? json['categoryId'] as String? ?? _categoryId;
+    _priceCheck = null;
+    _priceReviewMessage = null;
+    _maxAllowedUnitPrice = maxAllowedUnitPrice;
+    _maxAllowedUnitLabel = maxAllowedUnitLabel ?? _unitController.text.trim();
+    _categoryResumeMessage = resumeMessage;
+  }
+
   Future<void> _continueCategoryRequest(String requestId) async {
     try {
+      ref.invalidate(materialCategoriesProvider);
       final draft = await loadCategoryRequestDraft(ref, requestId);
       if (!mounted) return;
 
       final json = draft.listingDraftJson;
       if (json == null) {
-        showSupplierErrorSnackBar(context, 'Saved listing draft was not found.');
+        setState(() {
+          _isResumingDraft = false;
+          _resumeError = 'Saved listing draft was not found.';
+        });
         return;
       }
 
-      setState(() {
-        _materialNameController.text = json['materialName'] as String? ?? '';
-        _titleController.text = json['title'] as String? ?? '';
-        _descriptionController.text = json['description'] as String? ?? '';
-        _condition = json['condition'] as String? ?? _condition;
-        _sourceType = json['sourceType'] as String? ?? _sourceType;
-        _quantityController.text =
-            (json['quantity'] as num?)?.toString() ?? '1';
-        _unitController.text = json['unit'] as String? ?? 'piece';
-        _isFree = json['isFree'] as bool? ?? true;
-        final price = json['price'];
-        if (price is num && !_isFree) {
-          _priceController.text = price % 1 == 0
-              ? price.toInt().toString()
-              : price.toString();
-        } else if (_isFree) {
-          _priceController.clear();
+      final approvedCategoryId =
+          draft.approvedCategoryId ?? draft.approvedCategory?.id;
+      if (approvedCategoryId != null) {
+        final categories =
+            await ref.read(materialCategoriesProvider.future);
+        final categoryExists =
+            categories.any((category) => category.id == approvedCategoryId);
+        if (!categoryExists) {
+          setState(() {
+            _isResumingDraft = false;
+            _resumeError = 'Approved category could not be loaded.';
+          });
+          return;
         }
-        _pickupAllowed = json['pickupAllowed'] as bool? ?? true;
-        _pickupNotesController.text = json['pickupNotes'] as String? ?? '';
-        _suggestedUsesController.text = json['suggestedUses'] as String? ?? '';
-        _images
-          ..clear()
-          ..addAll(
-            (json['imageUrls'] as List?)
-                    ?.whereType<String>()
-                    .map(MaterialDraftImage.fromUrl)
-                    .toList() ??
-                const [],
-          );
-        _requestedCategoryController.clear();
-        _showCategoryRequestField = false;
-        _categoryRequestMessage = null;
-        _categoryId = draft.approvedCategory?.id ?? _categoryId;
-        _priceCheck = null;
-        _priceReviewMessage = null;
-        _categoryResumeMessage = draft.canContinue
-            ? 'Category approved. Continue your listing from where you stopped.'
-            : null;
+      }
+
+      final resumeMessage = _categoryResumeMessageForDraft(draft);
+
+      setState(() {
+        _applyListingDraftJson(
+          json,
+          categoryId: approvedCategoryId,
+          resumeMessage: resumeMessage,
+        );
+        _isResumingDraft = false;
+        _resumeError = null;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isResumingDraft = false;
+        _resumeError = _apiErrorMessage(error);
       });
     } catch (_) {
       if (!mounted) return;
-      showSupplierErrorSnackBar(context, 'Could not load saved listing draft.');
+      setState(() {
+        _isResumingDraft = false;
+        _resumeError = 'Could not load saved listing draft. Please try again.';
+      });
+    }
+  }
+
+  String _categoryResumeMessageForDraft(CategoryRequestDraftResponse draft) {
+    final approvedName = draft.approvedCategory?.nameEn;
+    if (draft.isSuggestion && approvedName != null) {
+      return 'Use $approvedName for this listing.';
+    }
+    if (draft.canContinue) {
+      if (draft.requestedName.isNotEmpty) {
+        return '${draft.requestedName} was approved. Continue your listing.';
+      }
+      return 'Category approved. Continue your listing.';
+    }
+    return 'Continue editing your saved listing draft.';
+  }
+
+  Future<void> _continuePriceRuleRequest(String requestId) async {
+    try {
+      final draft = await loadPriceRuleRequestDraft(ref, requestId);
+      if (!mounted) return;
+
+      final json = draft.listingDraftJson;
+      if (json == null) {
+        setState(() {
+          _isResumingDraft = false;
+          _resumeError = 'Saved listing draft was not found.';
+        });
+        return;
+      }
+
+      final unitLabel = draft.unit ?? json['unit'] as String? ?? 'unit';
+      final maxPrice = draft.maxAllowedUnitPriceNis;
+      final resumeMessage = maxPrice != null
+          ? 'Maximum allowed price per $unitLabel is ${maxPrice.toStringAsFixed(0)} NIS.'
+          : 'Continue your listing from where you stopped.';
+
+      setState(() {
+        _applyListingDraftJson(
+          json,
+          categoryId: draft.category?.id,
+          resumeMessage: resumeMessage,
+          maxAllowedUnitPrice: maxPrice,
+          maxAllowedUnitLabel: unitLabel,
+        );
+        _isFree = false;
+        _isResumingDraft = false;
+        _resumeError = null;
+      });
+
+      if (mounted) {
+        await _verifyPrice();
+      }
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isResumingDraft = false;
+        _resumeError = _apiErrorMessage(error);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isResumingDraft = false;
+        _resumeError = 'Could not load saved listing draft. Please try again.';
+      });
     }
   }
 
@@ -894,6 +1107,16 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
 
     setState(() => _isRequestingPriceReview = true);
     try {
+      final categories = ref.read(materialCategoriesProvider).value ?? const [];
+      MaterialCategory? selectedCategory;
+      for (final category in categories) {
+        if (category.id == _categoryId) {
+          selectedCategory = category;
+          break;
+        }
+      }
+      final categoryName = selectedCategory?.nameEn ?? 'Other';
+
       final result = await submitPriceReview(
         ref,
         CreatePriceRuleRequest(
@@ -904,6 +1127,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
           quantity: quantity,
           unit: unit,
           supplierPriceNis: price,
+          listingDraftJson: _buildListingDraftJson(categoryName),
         ),
       );
       if (!mounted) return;
@@ -1026,12 +1250,20 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     final quantity = double.tryParse(_quantityController.text.trim());
     if (quantity == null || quantity <= 0) return;
     final price = _isFree ? null : double.tryParse(_priceController.text.trim());
-    if (!_isFree && _priceCheck?.allowed != true) {
-      showSupplierErrorSnackBar(
-        context,
-        'Verify price before publishing paid listings.',
-      );
-      return;
+    if (!_isFree) {
+      final hasApprovedSourceMax =
+          _sourcePriceRuleRequestId != null && _maxAllowedUnitPrice != null;
+      final withinSourceMax = hasApprovedSourceMax &&
+          price != null &&
+          price <= _maxAllowedUnitPrice!;
+
+      if (_priceCheck?.allowed != true && !withinSourceMax) {
+        showSupplierErrorSnackBar(
+          context,
+          'Verify price before publishing paid listings.',
+        );
+        return;
+      }
     }
 
     setState(() => _isSubmitting = true);
@@ -1077,10 +1309,13 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   ? null
                   : _suggestedUsesController.text.trim(),
               imageUrls: imageUrls,
+              sourceCategoryRequestId: _sourceCategoryRequestId,
+              sourcePriceRuleRequestId: _sourcePriceRuleRequestId,
             ),
           );
 
       ref.invalidate(supplierDashboardProvider);
+      ref.invalidate(supplierNotificationsProvider);
       if (!mounted) return;
       setState(() {
         _createdMaterial = material;
@@ -1128,6 +1363,24 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     if (parsed == null || parsed <= 0) {
       return 'Enter a number greater than zero';
     }
+    return null;
+  }
+
+  String? _unitPriceValidator(String? value) {
+    final baseValidation = _positiveNumber(value);
+    if (baseValidation != null) {
+      return baseValidation;
+    }
+
+    if (_maxAllowedUnitPrice == null) {
+      return null;
+    }
+
+    final parsed = double.tryParse(value?.trim() ?? '');
+    if (parsed != null && parsed > _maxAllowedUnitPrice!) {
+      return 'Unit price must be ${_maxAllowedUnitPrice!.toStringAsFixed(0)} NIS or less.';
+    }
+
     return null;
   }
 
@@ -1273,6 +1526,54 @@ class _BlockerCard extends StatelessWidget {
           Text(message, style: AuthDarkTextStyles.body(context)),
           const SizedBox(height: AppSpacing.lg),
           OutlinedButton(onPressed: onPressed, child: Text(buttonLabel)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResumeErrorBanner extends StatelessWidget {
+  const _ResumeErrorBanner({
+    required this.message,
+    required this.onRetry,
+    required this.onBack,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AuthDarkColors.error.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AuthDarkColors.error.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Could not restore listing draft',
+            style: AuthDarkTextStyles.title(context).copyWith(
+              fontSize: 15,
+              color: AuthDarkColors.error,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(message, style: AuthDarkTextStyles.body(context)),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
+              TextButton(onPressed: onBack, child: const Text('Back to Notifications')),
+            ],
+          ),
         ],
       ),
     );

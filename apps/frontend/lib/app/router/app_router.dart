@@ -18,6 +18,7 @@ import '../../features/supplier_portal/presentation/pages/supplier_access_denied
 import '../../features/supplier_portal/presentation/pages/add_material_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_coming_soon_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_incoming_requests_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_notifications_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_pickup_schedule_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_dashboard_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_profile_page.dart';
@@ -197,11 +198,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/supplier/materials/new',
-            builder: (context, state) => const AddMaterialPage(),
+            builder: (context, state) => AddMaterialPage(
+              categoryRequestId: state.uri.queryParameters['categoryRequestId'],
+              priceRuleRequestId:
+                  state.uri.queryParameters['priceRuleRequestId'],
+            ),
           ),
           GoRoute(
             path: '/supplier/reservations',
-            builder: (context, state) => const SupplierIncomingRequestsPage(),
+            builder: (context, state) => SupplierIncomingRequestsPage(
+              initialTab: state.uri.queryParameters['tab'],
+              focusReservationId: state.uri.queryParameters['focus'],
+            ),
           ),
           GoRoute(
             path: '/supplier/pickup-schedule',
@@ -209,11 +217,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/supplier/notifications',
-            builder: (context, state) => const SupplierComingSoonPage(
-              title: 'Notifications',
-              description:
-                  'Supplier notifications are coming soon. Stay updated on reservations, messages, and account activity.',
-            ),
+            builder: (context, state) => const SupplierNotificationsPage(),
           ),
           GoRoute(
             path: '/supplier/profile',
