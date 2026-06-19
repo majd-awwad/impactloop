@@ -9,6 +9,7 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { categoriesRouter } from './modules/categories/categories.routes.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { invitationsRouter } from './modules/invitations/invitations.routes.js';
+import { learningProjectsRouter } from './modules/learning-projects/learning-projects.routes.js';
 import { materialsRouter } from './modules/materials/materials.routes.js';
 import { supplierRouter } from './modules/supplier/supplier.routes.js';
 
@@ -38,6 +39,7 @@ app.use('/health', healthRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/invitations', invitationsRouter);
+app.use('/api/learning-projects', learningProjectsRouter);
 app.use('/api/materials', materialsRouter);
 app.use('/api/supplier', supplierRouter);
 
