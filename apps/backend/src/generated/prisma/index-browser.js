@@ -390,6 +390,9 @@ exports.Prisma.PriceRuleRequestScalarFieldEnum = {
   aiSuggestedAliasesJson: 'aiSuggestedAliasesJson',
   aiResultJson: 'aiResultJson',
   moderatorNote: 'moderatorNote',
+  listingDraftJson: 'listingDraftJson',
+  publishedMaterialId: 'publishedMaterialId',
+  publishedAt: 'publishedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -403,6 +406,8 @@ exports.Prisma.CategoryRequestScalarFieldEnum = {
   approvedCategoryId: 'approvedCategoryId',
   moderatorNote: 'moderatorNote',
   listingDraftJson: 'listingDraftJson',
+  publishedMaterialId: 'publishedMaterialId',
+  publishedAt: 'publishedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };

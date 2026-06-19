@@ -8,6 +8,7 @@ import {
   MATERIAL_TYPE_SEEDS,
 } from './seeds/material-taxonomy.data.js';
 import { seedSupplierReservations } from './seeds/seed-supplier-reservations.js';
+import { seedSupplierNotifications } from './seeds/seed-supplier-notifications.js';
 
 const databaseUrl = env.databaseUrl;
 
@@ -269,6 +270,7 @@ async function main() {
   const categoryIds = await seedCategories();
   await seedMaterialTypes(categoryIds);
   await seedSupplierReservations(prisma);
+  await seedSupplierNotifications(prisma);
 }
 
 main()

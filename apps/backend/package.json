@@ -11,7 +11,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
-    "test": "node --import tsx --test src/modules/supplier-reservations/*.test.ts"
+    "test": "node --import tsx --test src/modules/**/*.test.ts"
   },
   "keywords": [],
   "author": "",
