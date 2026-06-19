@@ -1,3 +1,4 @@
+import { Prisma } from '../src/generated/prisma/client.js';
 import { prisma } from '../src/database/prisma.js';
 import { normalizeSearchText } from '../src/utils/normalize-search-text.js';
 import { hashPassword } from '../src/utils/password.js';
@@ -1264,6 +1265,14 @@ const syncProjectComponents = async (
     const categoryId = component.categoryKey
       ? categoryMap.get(component.categoryKey) ?? null
       : null;
+    const searchKeywords =
+      component.searchKeywords == null
+        ? Prisma.JsonNull
+        : (component.searchKeywords as Prisma.InputJsonValue);
+    const alternativeKeywords =
+      component.alternativeKeywords == null
+        ? Prisma.JsonNull
+        : (component.alternativeKeywords as Prisma.InputJsonValue);
     const data = {
       categoryId,
       componentName: component.componentName,
@@ -1273,8 +1282,8 @@ const syncProjectComponents = async (
       componentRole: component.componentRole,
       isRequired: component.isRequired,
       canBeSubstituted: component.canBeSubstituted,
-      searchKeywords: component.searchKeywords ?? null,
-      alternativeKeywords: component.alternativeKeywords ?? null,
+      searchKeywords,
+      alternativeKeywords,
       providedByUser: false,
       confirmedByUser: true,
       generatedOrSuggestedByAi: false,
