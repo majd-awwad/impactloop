@@ -2,13 +2,13 @@ import { z } from 'zod';
 
 import { paginationQuerySchema } from '../../utils/zod-helpers.js';
 
-const MATERIAL_CONDITIONS = [
+const materialConditionSchema = z.enum([
   'NEW',
   'LIKE_NEW',
   'GOOD',
   'USED',
   'NEEDS_REPAIR',
-] as const;
+]);
 
 const MATERIAL_STATUSES = [
   'AVAILABLE',
@@ -45,9 +45,7 @@ const parseOptionalBoolean = (value: unknown): boolean | undefined => {
 export const materialsQuerySchema = paginationQuerySchema.extend({
   q: z.string().trim().min(1).max(120).optional(),
   categoryId: z.string().trim().min(1).optional(),
-  condition: z.enum(MATERIAL_CONDITIONS, {
-    error: 'Condition must be one of NEW, LIKE_NEW, GOOD, USED, NEEDS_REPAIR',
-  }).optional(),
+  condition: materialConditionSchema.optional(),
   status: z.enum(MATERIAL_STATUSES, {
     error:
       'Status must be one of AVAILABLE, PENDING_RESERVATION, or RESERVED for public discovery',
@@ -55,17 +53,16 @@ export const materialsQuerySchema = paginationQuerySchema.extend({
   priceType: z.enum(PRICE_TYPES, {
     error: 'priceType must be FREE, PAID, or ANY',
   }).default('ANY'),
-  deliveryAvailable: z
-    .preprocess(
-      (value) => {
-        const parsed = parseOptionalBoolean(value);
+  deliveryAvailable: z.preprocess(
+    (value) => {
+      const parsed = parseOptionalBoolean(value);
 
-        return parsed === undefined ? value : parsed;
-      },
-      z.boolean({
-        error: 'deliveryAvailable must be true or false',
-      }).optional(),
-    ),
+      return parsed === undefined ? value : parsed;
+    },
+    z.boolean({
+      error: 'deliveryAvailable must be true or false',
+    }).optional(),
+  ),
   city: z.string().trim().min(1).max(120).optional(),
 });
 
@@ -73,4 +70,18 @@ export const materialIdParamSchema = z.object({
   id: z.string().trim().min(1),
 });
 
+export const priceCheckSchema = z.object({
+  isFree: z.boolean(),
+  categoryId: z.string().trim().min(1),
+  materialName: z.string().trim().min(1).optional().nullable(),
+  materialTypeId: z.string().trim().min(1).optional().nullable(),
+  customMaterialType: z.string().trim().min(1).optional().nullable(),
+  condition: materialConditionSchema,
+  quantity: z.number().positive(),
+  unit: z.string().trim().min(1),
+  price: z.number().nonnegative().optional().nullable(),
+  currency: z.string().trim().min(1).default('NIS'),
+});
+
 export type MaterialsQuery = z.infer<typeof materialsQuerySchema>;
+export type PriceCheckInput = z.infer<typeof priceCheckSchema>;

@@ -1,5 +1,9 @@
 import type { Request, Response } from 'express';
 
+import {
+  readValidatedParams,
+  readValidatedQuery,
+} from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
 
 import {
@@ -13,7 +17,7 @@ export const listLearningProjects = async (
   res: Response,
 ): Promise<void> => {
   const projects = await getLearningProjects(
-    req.query as unknown as LearningProjectsQuery,
+    readValidatedQuery<LearningProjectsQuery>(req),
   );
 
   res.json(successResponse('Learning projects fetched successfully', projects));
@@ -23,7 +27,7 @@ export const getLearningProject = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const { id } = req.params as unknown as { id: string };
+  const { id } = readValidatedParams<{ id: string }>(req);
   const project = await getLearningProjectById(id);
 
   res.json(successResponse('Learning project fetched successfully', project));

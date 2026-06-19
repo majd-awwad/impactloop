@@ -320,6 +320,11 @@ exports.Prisma.MaterialScalarFieldEnum = {
   title: 'title',
   description: 'description',
   materialType: 'materialType',
+  materialTypeId: 'materialTypeId',
+  customMaterialType: 'customMaterialType',
+  priceRuleId: 'priceRuleId',
+  priceCheckedAt: 'priceCheckedAt',
+  maxAllowedPriceAtCheck: 'maxAllowedPriceAtCheck',
   quantity: 'quantity',
   unit: 'unit',
   condition: 'condition',
@@ -368,6 +373,10 @@ exports.Prisma.ReservationScalarFieldEnum = {
   pickupWindowEnd: 'pickupWindowEnd',
   pickupType: 'pickupType',
   supplierNote: 'supplierNote',
+  rejectionReason: 'rejectionReason',
+  acceptedAt: 'acceptedAt',
+  rejectedAt: 'rejectedAt',
+  cancelledAt: 'cancelledAt',
   deliveryRequested: 'deliveryRequested',
   deliveryStatus: 'deliveryStatus',
   deliveryCost: 'deliveryCost',
@@ -376,6 +385,17 @@ exports.Prisma.ReservationScalarFieldEnum = {
   completedAt: 'completedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ReservationStatusHistoryScalarFieldEnum = {
+  id: 'id',
+  reservationId: 'reservationId',
+  statusGroup: 'statusGroup',
+  oldStatus: 'oldStatus',
+  newStatus: 'newStatus',
+  changedBy: 'changedBy',
+  note: 'note',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.ReviewScalarFieldEnum = {
@@ -398,6 +418,89 @@ exports.Prisma.NotificationScalarFieldEnum = {
   relatedEntityType: 'relatedEntityType',
   relatedEntityId: 'relatedEntityId',
   isRead: 'isRead',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MaterialTypeScalarFieldEnum = {
+  id: 'id',
+  categoryId: 'categoryId',
+  nameEn: 'nameEn',
+  nameAr: 'nameAr',
+  normalizedName: 'normalizedName',
+  defaultUnit: 'defaultUnit',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.MaterialTypeAliasScalarFieldEnum = {
+  id: 'id',
+  materialTypeId: 'materialTypeId',
+  alias: 'alias',
+  normalizedAlias: 'normalizedAlias',
+  language: 'language',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MaterialPriceRuleScalarFieldEnum = {
+  id: 'id',
+  materialTypeId: 'materialTypeId',
+  currency: 'currency',
+  unit: 'unit',
+  maxAllowedUnitPriceNis: 'maxAllowedUnitPriceNis',
+  maxAllowedTotalPriceNis: 'maxAllowedTotalPriceNis',
+  conditionFactorsJson: 'conditionFactorsJson',
+  sourceType: 'sourceType',
+  status: 'status',
+  sourceNote: 'sourceNote',
+  confidence: 'confidence',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.PriceRuleRequestScalarFieldEnum = {
+  id: 'id',
+  materialTypeId: 'materialTypeId',
+  materialName: 'materialName',
+  normalizedMaterialName: 'normalizedMaterialName',
+  categoryId: 'categoryId',
+  unit: 'unit',
+  condition: 'condition',
+  quantity: 'quantity',
+  supplierPriceNis: 'supplierPriceNis',
+  requestedByUserId: 'requestedByUserId',
+  status: 'status',
+  aiSuggestedUnit: 'aiSuggestedUnit',
+  aiSuggestedMaxUnitPriceNis: 'aiSuggestedMaxUnitPriceNis',
+  aiSuggestedMaxTotalPriceNis: 'aiSuggestedMaxTotalPriceNis',
+  aiSuggestedAliasesJson: 'aiSuggestedAliasesJson',
+  aiResultJson: 'aiResultJson',
+  moderatorNote: 'moderatorNote',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.CategoryRequestScalarFieldEnum = {
+  id: 'id',
+  requestedName: 'requestedName',
+  normalizedRequestedName: 'normalizedRequestedName',
+  requestedByUserId: 'requestedByUserId',
+  status: 'status',
+  approvedCategoryId: 'approvedCategoryId',
+  moderatorNote: 'moderatorNote',
+  listingDraftJson: 'listingDraftJson',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AiPriceLookupLogScalarFieldEnum = {
+  id: 'id',
+  query: 'query',
+  normalizedQuery: 'normalizedQuery',
+  resultJson: 'resultJson',
+  status: 'status',
+  costEstimate: 'costEstimate',
   createdAt: 'createdAt'
 };
 
@@ -562,10 +665,40 @@ exports.DeliveryStatus = exports.$Enums.DeliveryStatus = {
   FAILED_PICKUP: 'FAILED_PICKUP'
 };
 
+exports.ReservationStatusGroup = exports.$Enums.ReservationStatusGroup = {
+  RESERVATION: 'RESERVATION',
+  DELIVERY: 'DELIVERY'
+};
+
 exports.ReviewTargetType = exports.$Enums.ReviewTargetType = {
   SUPPLIER: 'SUPPLIER',
   DRIVER: 'DRIVER',
   MATERIAL: 'MATERIAL'
+};
+
+exports.MaterialPriceRuleSourceType = exports.$Enums.MaterialPriceRuleSourceType = {
+  MANUAL: 'MANUAL',
+  IMPORTED: 'IMPORTED',
+  AI_PROPOSED: 'AI_PROPOSED'
+};
+
+exports.MaterialPriceRuleStatus = exports.$Enums.MaterialPriceRuleStatus = {
+  ACTIVE: 'ACTIVE',
+  PENDING_REVIEW: 'PENDING_REVIEW',
+  REJECTED: 'REJECTED'
+};
+
+exports.MaterialRequestStatus = exports.$Enums.MaterialRequestStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED'
+};
+
+exports.AiLookupStatus = exports.$Enums.AiLookupStatus = {
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED',
+  SKIPPED: 'SKIPPED',
+  PENDING_REVIEW: 'PENDING_REVIEW'
 };
 
 exports.Prisma.ModelName = {
@@ -588,8 +721,15 @@ exports.Prisma.ModelName = {
   MaterialImage: 'MaterialImage',
   MaterialTag: 'MaterialTag',
   Reservation: 'Reservation',
+  ReservationStatusHistory: 'ReservationStatusHistory',
   Review: 'Review',
-  Notification: 'Notification'
+  Notification: 'Notification',
+  MaterialType: 'MaterialType',
+  MaterialTypeAlias: 'MaterialTypeAlias',
+  MaterialPriceRule: 'MaterialPriceRule',
+  PriceRuleRequest: 'PriceRuleRequest',
+  CategoryRequest: 'CategoryRequest',
+  AiPriceLookupLog: 'AiPriceLookupLog'
 };
 
 /**

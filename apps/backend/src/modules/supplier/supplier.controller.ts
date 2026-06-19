@@ -3,11 +3,15 @@ import type { Request, Response } from 'express';
 import { successResponse } from '../../utils/api-response.js';
 
 import {
+  createSupplierMaterial,
   getSupplierDashboard,
   getSupplierProfile,
   updateSupplierProfile,
 } from './supplier.service.js';
-import type { UpdateSupplierProfileInput } from './supplier.validation.js';
+import type {
+  CreateSupplierMaterialInput,
+  UpdateSupplierProfileInput,
+} from './supplier.validation.js';
 
 export const getDashboard = async (req: Request, res: Response): Promise<void> => {
   const dashboard = await getSupplierDashboard(req.auth!.sub);
@@ -31,4 +35,16 @@ export const patchProfile = async (
   );
 
   res.json(successResponse('Supplier profile updated', profile));
+};
+
+export const postMaterial = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const material = await createSupplierMaterial(
+    req.auth!.sub,
+    req.body as CreateSupplierMaterialInput,
+  );
+
+  res.status(201).json(successResponse('Material listed successfully.', material));
 };

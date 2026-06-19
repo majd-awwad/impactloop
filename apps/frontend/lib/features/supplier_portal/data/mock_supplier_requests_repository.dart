@@ -1,0 +1,124 @@
+import 'models/supplier_incoming_request.dart';
+import 'supplier_requests_repository.dart';
+
+class MockSupplierRequestsRepository implements SupplierRequestsRepository {
+  MockSupplierRequestsRepository() : _requests = List.of(_seedRequests);
+
+  final List<SupplierIncomingRequest> _requests;
+
+  @override
+  Future<List<SupplierIncomingRequest>> fetchIncomingRequests(
+    SupplierIncomingRequestTab status,
+  ) async {
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    return _requests
+        .where((request) => request.status == status.status)
+        .toList()
+      ..sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+  }
+
+  @override
+  Future<SupplierIncomingRequest> acceptRequest(
+    String requestId,
+    SupplierPickupWindow pickupWindow,
+  ) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    final index = _requests.indexWhere((request) => request.id == requestId);
+    if (index == -1) {
+      throw StateError('Request not found');
+    }
+
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.accepted,
+      pickupWindow: pickupWindow,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<SupplierIncomingRequest> declineRequest(
+    String requestId, {
+    String? reason,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    final index = _requests.indexWhere((request) => request.id == requestId);
+    if (index == -1) {
+      throw StateError('Request not found');
+    }
+
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.declined,
+      declineReason: reason,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+}
+
+final List<SupplierIncomingRequest> _seedRequests = [
+  SupplierIncomingRequest(
+    id: 'req-arduino-1',
+    materialTitle: 'Arduino Uno',
+    learnerName: 'Ahmad',
+    quantityRequested: 1,
+    unit: 'piece',
+    status: SupplierIncomingRequestStatus.pending,
+    requestedAt: DateTime.now().subtract(const Duration(hours: 2)),
+    learnerNote: 'I need it for a robotics project.',
+    pickupPreference: 'Self pickup',
+  ),
+  SupplierIncomingRequest(
+    id: 'req-fabric-1',
+    materialTitle: 'Cotton fabric scraps',
+    materialImageUrl:
+        'https://images.unsplash.com/photo-1558171813-4c088753af8f?auto=format&fit=crop&w=240&q=80',
+    learnerName: 'Sara',
+    quantityRequested: 3,
+    unit: 'kg',
+    status: SupplierIncomingRequestStatus.pending,
+    requestedAt: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
+    pickupPreference: 'Self pickup',
+  ),
+  SupplierIncomingRequest(
+    id: 'req-wax-accepted',
+    materialTitle: 'Used wax molds',
+    learnerName: 'Omar',
+    quantityRequested: 4,
+    unit: 'piece',
+    status: SupplierIncomingRequestStatus.accepted,
+    requestedAt: DateTime.now().subtract(const Duration(days: 2)),
+    pickupPreference: 'Self pickup',
+    pickupWindow: SupplierPickupWindow(
+      start: DateTime.now().add(const Duration(days: 1, hours: 10)),
+      end: DateTime.now().add(const Duration(days: 1, hours: 12)),
+      note: 'Ring the workshop bell when you arrive.',
+    ),
+  ),
+  SupplierIncomingRequest(
+    id: 'req-plywood-declined',
+    materialTitle: 'Plywood offcuts',
+    learnerName: 'Lina',
+    quantityRequested: 2,
+    unit: 'sheet',
+    status: SupplierIncomingRequestStatus.declined,
+    requestedAt: DateTime.now().subtract(const Duration(days: 4)),
+    pickupPreference: 'Self pickup',
+    declineReason: 'Already reserved for another learner.',
+  ),
+  SupplierIncomingRequest(
+    id: 'req-resin-completed',
+    materialTitle: 'Epoxy resin bottles',
+    learnerName: 'Yousef',
+    quantityRequested: 1,
+    unit: 'bottle',
+    status: SupplierIncomingRequestStatus.completed,
+    requestedAt: DateTime.now().subtract(const Duration(days: 8)),
+    pickupPreference: 'Self pickup',
+    pickupWindow: SupplierPickupWindow(
+      start: DateTime.now().subtract(const Duration(days: 6, hours: 2)),
+      end: DateTime.now().subtract(const Duration(days: 6)),
+      note: 'Pickup completed at the main gate.',
+    ),
+  ),
+];

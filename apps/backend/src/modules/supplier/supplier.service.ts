@@ -15,11 +15,49 @@ import {
 } from './dto/supplier-dashboard.dto.js';
 
 import { AppError } from '../../utils/app-error.js';
+import { decimalToNumber } from '../../utils/decimal.js';
+import * as categoriesRepository from '../categories/categories.repository.js';
+import { checkMaterialPrice, resolveMaterialReferenceForCreate } from '../materials/materials.service.js';
 import * as supplierRepository from './supplier.repository.js';
-import type { UpdateSupplierProfileInput } from './supplier.validation.js';
+import type {
+  CreateSupplierMaterialInput,
+  UpdateSupplierProfileInput,
+} from './supplier.validation.js';
 
 const MISSING_PROFILE_MESSAGE =
   'Complete your supplier profile to start listing materials.';
+
+const MISSING_PICKUP_LOCATION_MESSAGE =
+  'Set your pickup location before listing materials.';
+
+const mapCreatedMaterial = (material: Awaited<
+  ReturnType<typeof supplierRepository.createSupplierMaterial>
+>) => ({
+  id: material.id,
+  title: material.title,
+  status: material.status,
+  isFree: material.isFree,
+  price: decimalToNumber(material.price),
+  currency: material.currency,
+  materialType: material.materialType,
+  materialTypeId: material.materialTypeId,
+  customMaterialType: material.customMaterialType,
+  priceRuleId: material.priceRuleId,
+  priceCheckedAt: material.priceCheckedAt?.toISOString() ?? null,
+  maxAllowedPriceAtCheck: decimalToNumber(material.maxAllowedPriceAtCheck),
+  category: {
+    id: material.category.id,
+    nameEn: material.category.nameEn,
+    nameAr: material.category.nameAr,
+  },
+  images: material.images.map((image) => ({
+    id: image.id,
+    imageUrl: image.imageUrl,
+    sortOrder: image.sortOrder,
+    isCover: image.isCover,
+  })),
+  createdAt: material.createdAt.toISOString(),
+});
 
 const buildRecentActivity = (
   notifications: Awaited<
@@ -183,6 +221,160 @@ export const getSupplierDashboard = async (
     upcomingPickups: upcomingPickupsDto,
     recentActivity,
   };
+};
+
+export const createSupplierMaterial = async (
+  userId: string,
+  input: CreateSupplierMaterialInput,
+) => {
+  const supplierProfile =
+    await supplierRepository.findSupplierProfileForMaterialCreate(userId);
+
+  if (!supplierProfile) {
+    throw new AppError(MISSING_PROFILE_MESSAGE, 400, 'VALIDATION_ERROR');
+  }
+
+  if (!supplierProfile.defaultPickupLocationId) {
+    throw new AppError(
+      MISSING_PICKUP_LOCATION_MESSAGE,
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const requestedCategory = await categoriesRepository.findCategoryById(
+    input.categoryId,
+  );
+
+  if (!requestedCategory) {
+    throw new AppError('Category not found', 404, 'NOT_FOUND');
+  }
+
+  const requestedOtherCategory = categoriesRepository.isOtherCategory(
+    requestedCategory.nameEn,
+  );
+  const materialName = input.materialName.trim();
+
+  if (input.isFree) {
+    if (input.price != null && input.price > 0) {
+      throw new AppError(
+        'Free listings cannot include a price.',
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+
+    const resolved = await resolveMaterialReferenceForCreate({
+      materialName,
+      categoryId: input.categoryId,
+      isFree: true,
+    });
+
+    const matchedType = resolved.materialType;
+    const displayMaterialType = matchedType?.nameEn ?? materialName;
+
+    const material = await supplierRepository.createSupplierMaterial({
+      ownerId: userId,
+      supplierProfileId: supplierProfile.id,
+      categoryId: matchedType?.categoryId ?? input.categoryId,
+      locationId: supplierProfile.defaultPickupLocationId,
+      title: input.title,
+      description: input.description,
+      materialType: displayMaterialType,
+      materialTypeId: matchedType?.id ?? null,
+      customMaterialType: matchedType ? null : materialName,
+      quantity: input.quantity,
+      unit: input.unit,
+      condition: input.condition,
+      sourceType: input.sourceType,
+      isFree: true,
+      price: null,
+      currency: 'NIS',
+      pickupAllowed: input.pickupAllowed,
+      deliveryAllowed: false,
+      pickupNotes: input.pickupNotes ?? null,
+      suggestedUses: input.suggestedUses ?? null,
+      imageUrls: input.imageUrls,
+    });
+
+    return mapCreatedMaterial(material);
+  }
+
+  if (requestedOtherCategory) {
+    throw new AppError(
+      'Paid listings need a reviewed category/material. Submit this material for review before publishing.',
+      400,
+      'VALIDATION_ERROR',
+      { reason: 'PAID_OTHER_NOT_ALLOWED' },
+    );
+  }
+
+  const resolved = await resolveMaterialReferenceForCreate({
+    materialName,
+    categoryId: input.categoryId,
+    isFree: false,
+  });
+
+  const materialType = resolved.materialType;
+
+  if (!materialType) {
+    throw new AppError(
+      'We could not verify this paid material yet. Submit it for review.',
+      400,
+      'VALIDATION_ERROR',
+      { reason: 'MATERIAL_REVIEW_REQUIRED' },
+    );
+  }
+
+  const priceCheck = await checkMaterialPrice({
+    isFree: false,
+    categoryId: materialType.categoryId,
+    materialName,
+    condition: input.condition,
+    quantity: input.quantity,
+    unit: input.unit,
+    price: input.price,
+    currency: input.currency,
+  });
+
+  if (!priceCheck.allowed) {
+    throw new AppError(priceCheck.message, 400, 'VALIDATION_ERROR', {
+      reason: priceCheck.reason,
+      maxAllowedPrice: priceCheck.maxAllowedPrice,
+      matchedReference: priceCheck.matchedReference,
+      candidates: priceCheck.candidates,
+      approvedUnit: priceCheck.approvedUnit,
+    });
+  }
+
+  const material = await supplierRepository.createSupplierMaterial({
+    ownerId: userId,
+    supplierProfileId: supplierProfile.id,
+    categoryId: materialType.categoryId,
+    locationId: supplierProfile.defaultPickupLocationId,
+    title: input.title,
+    description: input.description,
+    materialType: materialType.nameEn,
+    materialTypeId: materialType.id,
+    customMaterialType: null,
+    quantity: input.quantity,
+    unit: input.unit,
+    condition: input.condition,
+    sourceType: input.sourceType,
+    isFree: false,
+    price: input.price,
+    currency: 'NIS',
+    pickupAllowed: input.pickupAllowed,
+    deliveryAllowed: false,
+    pickupNotes: input.pickupNotes ?? null,
+    suggestedUses: input.suggestedUses ?? null,
+    priceRuleId: priceCheck.priceRuleId ?? null,
+    priceCheckedAt: new Date(),
+    maxAllowedPriceAtCheck: priceCheck.maxAllowedPrice ?? null,
+    imageUrls: input.imageUrls,
+  });
+
+  return mapCreatedMaterial(material);
 };
 
 export const getEmptySupplierDashboard = (): SupplierDashboardDto => ({
