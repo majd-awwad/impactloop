@@ -78,7 +78,10 @@ class _LoginFormState extends ConsumerState<LoginForm> {
         return;
       }
 
-      context.go(postAuthRouteForUser(user));
+      final from = GoRouterState.of(context).uri.queryParameters['from'];
+      context.go(
+        sanitizeRedirectTarget(from, fallback: postAuthRouteForUser(user)),
+      );
     } on ApiException catch (error) {
       if (!mounted) {
         return;

@@ -6,6 +6,8 @@ import '../data/models/register_request.dart';
 import '../data/models/user.dart';
 import 'auth_providers.dart';
 
+enum AuthStatus { unknown, authenticated, unauthenticated }
+
 class AuthState {
   const AuthState({
     this.user,
@@ -23,6 +25,16 @@ class AuthState {
 
   bool get isAuthenticated =>
       accessToken != null && accessToken!.isNotEmpty && user != null;
+
+  AuthStatus get status {
+    if (!hasBootstrapped) {
+      return AuthStatus.unknown;
+    }
+
+    return isAuthenticated
+        ? AuthStatus.authenticated
+        : AuthStatus.unauthenticated;
+  }
 
   AuthState copyWith({
     User? user,
