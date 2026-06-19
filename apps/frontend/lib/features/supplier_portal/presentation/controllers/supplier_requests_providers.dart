@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/supplier_incoming_request.dart';
 import '../../data/supplier_requests_api_repository.dart';
+import 'supplier_pickup_schedule_providers.dart';
 
 export '../../data/supplier_requests_api_repository.dart'
     show supplierRequestsRepositoryProvider;
@@ -47,4 +48,31 @@ Future<void> declineIncomingRequest(
         reason: reason,
       );
   ref.invalidate(incomingRequestsProvider);
+}
+
+class CompletingReservationNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void setCompleting(String? reservationId) {
+    state = reservationId;
+  }
+}
+
+final completingReservationIdProvider =
+    NotifierProvider<CompletingReservationNotifier, String?>(
+  CompletingReservationNotifier.new,
+);
+
+Future<SupplierIncomingRequest> completeIncomingRequest(
+  WidgetRef ref, {
+  required String requestId,
+}) async {
+  final result = await ref
+      .read(supplierRequestsRepositoryProvider)
+      .completeRequest(requestId);
+  ref.invalidate(incomingRequestsProvider);
+  ref.invalidate(pickupScheduleProvider);
+  ref.invalidate(pickupScheduleSummaryProvider);
+  return result;
 }
