@@ -7,12 +7,41 @@ import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../../data/pickup_schedule_grouping.dart';
 import '../controllers/supplier_pickup_schedule_providers.dart';
+import '../controllers/supplier_requests_providers.dart';
+import '../widgets/complete_pickup_dialog.dart';
 import '../widgets/pickup_schedule_card.dart';
 import '../widgets/pickup_schedule_date_section.dart';
 import '../widgets/pickup_schedule_details_dialog.dart';
 import '../widgets/pickup_schedule_filter_chips.dart';
+import '../widgets/supplier_feedback.dart';
 
 const _contentMaxWidth = 960.0;
+
+Future<void> _handleCompletePickup(
+  BuildContext context,
+  WidgetRef ref,
+  SupplierPickupScheduleItem item,
+) async {
+  final confirmed = await CompletePickupDialog.show(context);
+  if (confirmed != true || !context.mounted) {
+    return;
+  }
+
+  ref.read(completingReservationIdProvider.notifier).setCompleting(item.id);
+  try {
+    await completeIncomingRequest(ref, requestId: item.id);
+    if (!context.mounted) return;
+    showSupplierInfoSnackBar(context, 'Pickup marked as completed.');
+  } catch (_) {
+    if (!context.mounted) return;
+    showSupplierErrorSnackBar(
+      context,
+      'Could not mark pickup as completed.',
+    );
+  } finally {
+    ref.read(completingReservationIdProvider.notifier).setCompleting(null);
+  }
+}
 
 class SupplierPickupSchedulePage extends ConsumerWidget {
   const SupplierPickupSchedulePage({super.key});
@@ -22,6 +51,7 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
     final filter = ref.watch(pickupScheduleFilterProvider);
     final scheduleAsync = ref.watch(pickupScheduleProvider);
     final summaryAsync = ref.watch(pickupScheduleSummaryProvider);
+    final completingId = ref.watch(completingReservationIdProvider);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
 
@@ -64,11 +94,20 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                           itemBuilder: (item) => PickupScheduleCard(
                             item: item,
                             groupKind: groups[i].kind,
+                            isCompleting: completingId == item.id,
                             onViewDetails: () => PickupScheduleDetailsDialog.show(
                               context,
                               item: item,
                               groupKind: groups[i].kind,
                             ),
+                            onMarkCompleted:
+                                item.status == SupplierPickupScheduleStatus.accepted
+                                    ? () => _handleCompletePickup(
+                                          context,
+                                          ref,
+                                          item,
+                                        )
+                                    : null,
                           ),
                         ),
                       ],
