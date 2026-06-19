@@ -56,11 +56,15 @@ class IncomingRequestCard extends StatelessWidget {
     required this.request,
     this.onAccept,
     this.onDecline,
+    this.onMarkCompleted,
+    this.isCompleting = false,
   });
 
   final SupplierIncomingRequest request;
   final VoidCallback? onAccept;
   final VoidCallback? onDecline;
+  final VoidCallback? onMarkCompleted;
+  final bool isCompleting;
 
   @override
   Widget build(BuildContext context) {
@@ -165,6 +169,42 @@ class IncomingRequestCard extends StatelessWidget {
                 onAccept: onAccept,
                 onDecline: onDecline,
                 stacked: compact,
+              ),
+            ],
+            if (isAccepted && onMarkCompleted != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.tonal(
+                  onPressed: isCompleting ? null : onMarkCompleted,
+                  style: FilledButton.styleFrom(
+                    backgroundColor:
+                        AuthDarkColors.accentSoft.withValues(alpha: 0.22),
+                    foregroundColor: AuthDarkColors.textPrimary,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 12 : 14,
+                      vertical: compact ? 8 : 10,
+                    ),
+                    minimumSize: Size(compact ? 0 : 120, compact ? 36 : 40),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.mdAll,
+                    ),
+                  ),
+                  child: isCompleting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          'Mark completed',
+                          style: AuthDarkTextStyles.label(context).copyWith(
+                            fontSize: compact ? 12 : 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
               ),
             ],
           ],
