@@ -8,6 +8,7 @@ import '../data/models/material_price_check_request.dart';
 import '../data/models/material_price_check_result.dart';
 import '../data/models/material_type.dart';
 import '../data/models/price_rule_request.dart';
+import '../data/models/price_rule_request_draft.dart';
 
 final materialCategoriesProvider = FutureProvider((ref) {
   return ref.watch(materialListingRepositoryProvider).fetchMaterialCategories();
@@ -73,6 +74,13 @@ Future<CategoryRequestDraftResponse> loadCategoryRequestDraft(
   String id,
 ) {
   return ref.read(materialListingRepositoryProvider).fetchCategoryRequestDraft(id);
+}
+
+Future<PriceRuleRequestDraftResponse> loadPriceRuleRequestDraft(
+  WidgetRef ref,
+  String id,
+) {
+  return ref.read(materialListingRepositoryProvider).fetchPriceRuleRequestDraft(id);
 }
 
 Future<List<UploadedMaterialImage>> uploadMaterialImages(

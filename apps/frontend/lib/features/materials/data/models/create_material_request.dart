@@ -16,6 +16,8 @@ class CreateMaterialRequest {
     this.pickupNotes,
     this.suggestedUses,
     this.imageUrls = const [],
+    this.sourceCategoryRequestId,
+    this.sourcePriceRuleRequestId,
   });
 
   final String materialName;
@@ -34,6 +36,8 @@ class CreateMaterialRequest {
   final String? pickupNotes;
   final String? suggestedUses;
   final List<String> imageUrls;
+  final String? sourceCategoryRequestId;
+  final String? sourcePriceRuleRequestId;
 
   Map<String, dynamic> toJson() {
     return {
@@ -53,6 +57,10 @@ class CreateMaterialRequest {
       'pickupNotes': pickupNotes,
       'suggestedUses': suggestedUses,
       'imageUrls': imageUrls,
+      if (sourceCategoryRequestId != null)
+        'sourceCategoryRequestId': sourceCategoryRequestId,
+      if (sourcePriceRuleRequestId != null)
+        'sourcePriceRuleRequestId': sourcePriceRuleRequestId,
     };
   }
 }

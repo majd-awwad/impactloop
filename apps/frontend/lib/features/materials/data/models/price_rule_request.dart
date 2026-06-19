@@ -38,6 +38,7 @@ class CreatePriceRuleRequest {
     this.quantity,
     this.unit,
     this.supplierPriceNis,
+    this.listingDraftJson,
   });
 
   final String? materialTypeId;
@@ -47,6 +48,7 @@ class CreatePriceRuleRequest {
   final double? quantity;
   final String? unit;
   final double? supplierPriceNis;
+  final Map<String, dynamic>? listingDraftJson;
 
   Map<String, dynamic> toJson() {
     return {
@@ -57,6 +59,7 @@ class CreatePriceRuleRequest {
       if (quantity != null) 'quantity': quantity,
       if (unit != null) 'unit': unit,
       if (supplierPriceNis != null) 'supplierPriceNis': supplierPriceNis,
+      if (listingDraftJson != null) 'listingDraftJson': listingDraftJson,
     };
   }
 }

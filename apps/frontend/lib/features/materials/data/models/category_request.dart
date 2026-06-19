@@ -40,14 +40,20 @@ class CategoryRequestDraftResponse {
   const CategoryRequestDraftResponse({
     required this.id,
     required this.status,
+    required this.requestedName,
     required this.canContinue,
+    required this.isSuggestion,
+    this.approvedCategoryId,
     this.approvedCategory,
     this.listingDraftJson,
   });
 
   final String id;
   final String status;
+  final String requestedName;
   final bool canContinue;
+  final bool isSuggestion;
+  final String? approvedCategoryId;
   final CategoryRequestApprovedCategory? approvedCategory;
   final Map<String, dynamic>? listingDraftJson;
 
@@ -55,7 +61,10 @@ class CategoryRequestDraftResponse {
     return CategoryRequestDraftResponse(
       id: json['id'] as String? ?? '',
       status: json['status'] as String? ?? 'PENDING',
+      requestedName: json['requestedName'] as String? ?? '',
       canContinue: json['canContinue'] as bool? ?? false,
+      isSuggestion: json['isSuggestion'] as bool? ?? false,
+      approvedCategoryId: json['approvedCategoryId'] as String?,
       approvedCategory: json['approvedCategory'] is Map<String, dynamic>
           ? CategoryRequestApprovedCategory.fromJson(
               Map<String, dynamic>.from(json['approvedCategory'] as Map),
