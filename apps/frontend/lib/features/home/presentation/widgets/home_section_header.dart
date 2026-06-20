@@ -67,7 +67,13 @@ class HomeSectionHeader extends StatelessWidget {
           children: [
             Expanded(child: titleBlock),
             const SizedBox(width: AppSpacing.md),
-            action!,
+            Flexible(
+              fit: FlexFit.loose,
+              child: Align(
+                alignment: AlignmentDirectional.topEnd,
+                child: action!,
+              ),
+            ),
           ],
         );
       },

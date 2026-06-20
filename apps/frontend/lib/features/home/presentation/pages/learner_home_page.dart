@@ -128,6 +128,39 @@ class _WelcomeHero extends StatelessWidget {
 
   final String greeting;
 
+  List<Widget> _heroActionButtons(BuildContext context) {
+    return [
+      FilledButton.icon(
+        onPressed: () => context.go('/materials'),
+        style: FilledButton.styleFrom(
+          backgroundColor: materialMint,
+          foregroundColor: materialCtaForeground,
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+        ),
+        icon: const Icon(Icons.search_rounded),
+        label: const Text('Browse Materials'),
+      ),
+      OutlinedButton.icon(
+        onPressed: () => context.go('/learning'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: materialTextPrimary,
+          side: const BorderSide(color: materialBorderStrong),
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+        ),
+        icon: const Icon(Icons.school_outlined),
+        label: const Text('Explore Learning Hub'),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -183,62 +216,39 @@ class _WelcomeHero extends StatelessWidget {
             ],
           );
 
-          final actions = Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              FilledButton.icon(
-                onPressed: () => context.go('/materials'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: materialMint,
-                  foregroundColor: materialCtaForeground,
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.md,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.pillAll,
-                  ),
-                ),
-                icon: const Icon(Icons.search_rounded),
-                label: const Text('Browse Materials'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => context.go('/learning'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: materialTextPrimary,
-                  side: const BorderSide(color: materialBorderStrong),
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.md,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.pillAll,
-                  ),
-                ),
-                icon: const Icon(Icons.school_outlined),
-                label: const Text('Explore Learning Hub'),
-              ),
-            ],
-          );
-
           if (!wide) {
+            final mobileButtons = _heroActionButtons(context);
+
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 copy,
                 const SizedBox(height: AppSpacing.lg),
-                actions,
+                SizedBox(width: double.infinity, child: mobileButtons[0]),
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(width: double.infinity, child: mobileButtons[1]),
               ],
             );
           }
+
+          final desktopActions = Wrap(
+            alignment: WrapAlignment.end,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: _heroActionButtons(context),
+          );
 
           return Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(child: copy),
               const SizedBox(width: AppSpacing.xl),
-              actions,
+              Flexible(
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: desktopActions,
+                ),
+              ),
             ],
           );
         },
