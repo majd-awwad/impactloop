@@ -25,8 +25,9 @@ class HomeActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = enabled ? materialTextPrimary : materialTextMuted;
-    final accent = enabled ? materialMint : materialTextMuted;
+    final palette = MaterialsUiPalette.of(context);
+    final foreground = enabled ? palette.textPrimary : palette.textMuted;
+    final accent = enabled ? palette.mint : palette.textMuted;
 
     return Material(
       color: Colors.transparent,
@@ -37,14 +38,14 @@ class HomeActionCard extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 172),
           padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: enabled ? materialCardSurface : materialMutedSurface,
+            color: enabled ? palette.cardSurface : palette.mutedSurface,
             borderRadius: AppRadius.lgAll,
             border: Border.all(
-              color: enabled ? materialBorderStrong : materialBorderSubtle,
+              color: enabled ? palette.borderStrong : palette.borderSubtle,
             ),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: materialCardShadow,
+                color: palette.cardShadow,
                 blurRadius: 20,
                 offset: Offset(0, 8),
               ),
@@ -68,27 +69,38 @@ class HomeActionCard extends StatelessWidget {
                     ),
                     child: Icon(icon, color: accent, size: 22),
                   ),
-                  const Spacer(),
                   if (badge != null)
-                    Container(
-                      padding: const EdgeInsetsDirectional.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: AppSpacing.xs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: materialCardSurfaceAlt,
-                        borderRadius: AppRadius.pillAll,
-                        border: Border.all(color: materialBorderSubtle),
-                      ),
-                      child: Text(
-                        badge!,
-                        style: AppTextStyles.label(context).copyWith(
-                          color: accent,
-                          fontSize: 12,
-                          letterSpacing: 0,
+                    Expanded(
+                      child: Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: Container(
+                          margin: const EdgeInsetsDirectional.only(
+                            start: AppSpacing.sm,
+                          ),
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: palette.cardSurfaceAlt,
+                            borderRadius: AppRadius.pillAll,
+                            border: Border.all(color: palette.borderSubtle),
+                          ),
+                          child: Text(
+                            badge!,
+                            style: AppTextStyles.label(context).copyWith(
+                              color: accent,
+                              fontSize: 12,
+                              letterSpacing: 0,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
-                    ),
+                    )
+                  else
+                    const Spacer(),
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -103,7 +115,7 @@ class HomeActionCard extends StatelessWidget {
               Text(
                 description,
                 style: AppTextStyles.body(context).copyWith(
-                  color: enabled ? materialTextSecondary : materialTextMuted,
+                  color: enabled ? palette.textSecondary : palette.textMuted,
                   height: 1.45,
                   letterSpacing: 0,
                 ),

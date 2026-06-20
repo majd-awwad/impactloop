@@ -63,15 +63,17 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Scaffold(
-      backgroundColor: materialPageBackground,
+      backgroundColor: palette.pageBackground,
       body: SafeArea(
         child: FutureBuilder<DiscoveryMaterial?>(
           future: _materialFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(
-                child: CircularProgressIndicator(color: materialMint),
+              return Center(
+                child: CircularProgressIndicator(color: palette.mint),
               );
             }
 
@@ -84,7 +86,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
                   ).resolve(context),
                   style: AppTextStyles.title(
                     context,
-                  ).copyWith(color: materialTextPrimary),
+                  ).copyWith(color: palette.textPrimary),
                   textAlign: TextAlign.center,
                 ),
               );
@@ -100,7 +102,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
                   ).resolve(context),
                   style: AppTextStyles.title(
                     context,
-                  ).copyWith(color: materialTextPrimary),
+                  ).copyWith(color: palette.textPrimary),
                   textAlign: TextAlign.center,
                 ),
               );
@@ -213,6 +215,7 @@ class _MaterialDetailsHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     final screenWidth = MediaQuery.sizeOf(context).width;
     final heroHeight = screenWidth >= 1100
         ? 380.0
@@ -249,7 +252,7 @@ class _MaterialDetailsHero extends StatelessWidget {
               child: IconButton.filled(
                 onPressed: () => context.go('/materials'),
                 style: IconButton.styleFrom(
-                  backgroundColor: materialPanelSurface.withValues(alpha: 0.9),
+                  backgroundColor: palette.panelSurface.withValues(alpha: 0.9),
                 ),
                 icon: const Icon(Icons.arrow_back_rounded),
               ),
@@ -263,15 +266,15 @@ class _MaterialDetailsHero extends StatelessWidget {
                   vertical: AppSpacing.sm,
                 ),
                 decoration: BoxDecoration(
-                  color: materialPanelSurface.withValues(alpha: 0.88),
+                  color: palette.panelSurface.withValues(alpha: 0.88),
                   borderRadius: AppRadius.pillAll,
-                  border: Border.all(color: materialBorderSubtle),
+                  border: Border.all(color: palette.borderSubtle),
                 ),
                 child: Text(
                   material.category.resolve(context),
                   style: AppTextStyles.label(
                     context,
-                  ).copyWith(color: materialTextPrimary),
+                  ).copyWith(color: palette.textPrimary),
                   textAlign: TextAlign.start,
                 ),
               ),
@@ -292,12 +295,12 @@ class _MaterialDetailsHero extends StatelessWidget {
                     ],
                   ),
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: materialBorderStrong),
+                  border: Border.all(color: palette.borderStrong),
                 ),
                 child: Icon(
                   material.heroIconData,
                   size: 52,
-                  color: materialMint,
+                  color: palette.mint,
                 ),
               ),
             ),
@@ -315,6 +318,7 @@ class _DetailsMainColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -326,7 +330,7 @@ class _DetailsMainColumn extends StatelessWidget {
                 material.title.resolve(context),
                 style: AppTextStyles.display(
                   context,
-                ).copyWith(color: materialTextPrimary),
+                ).copyWith(color: palette.textPrimary),
                 textAlign: TextAlign.start,
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -334,7 +338,7 @@ class _DetailsMainColumn extends StatelessWidget {
                 material.description.resolve(context),
                 style: AppTextStyles.subtitle(
                   context,
-                ).copyWith(color: materialTextSecondary),
+                ).copyWith(color: palette.textSecondary),
                 textAlign: TextAlign.start,
               ),
               const SizedBox(height: AppSpacing.md),
@@ -425,6 +429,7 @@ class _DetailsSideColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -445,12 +450,12 @@ class _DetailsSideColumn extends StatelessWidget {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: materialMint.withValues(alpha: 0.14),
+                      color: palette.mint.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.apartment_rounded,
-                      color: materialMint,
+                      color: palette.mint,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
@@ -462,7 +467,7 @@ class _DetailsSideColumn extends StatelessWidget {
                           material.supplierName.resolve(context),
                           style: AppTextStyles.title(
                             context,
-                          ).copyWith(color: materialTextPrimary),
+                          ).copyWith(color: palette.textPrimary),
                           textAlign: TextAlign.start,
                         ),
                         const SizedBox(height: AppSpacing.xs),
@@ -470,7 +475,7 @@ class _DetailsSideColumn extends StatelessWidget {
                           material.supplierSubtitle.resolve(context),
                           style: AppTextStyles.body(
                             context,
-                          ).copyWith(color: materialTextSecondary),
+                          ).copyWith(color: palette.textSecondary),
                           textAlign: TextAlign.start,
                         ),
                       ],
@@ -486,9 +491,9 @@ class _DetailsSideColumn extends StatelessWidget {
                     vertical: AppSpacing.sm,
                   ),
                   decoration: BoxDecoration(
-                    color: materialCardSurfaceAlt,
+                    color: palette.cardSurfaceAlt,
                     borderRadius: AppRadius.pillAll,
-                    border: Border.all(color: materialBorderStrong),
+                    border: Border.all(color: palette.borderStrong),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -502,7 +507,7 @@ class _DetailsSideColumn extends StatelessWidget {
                         ).resolve(context),
                         style: AppTextStyles.label(
                           context,
-                        ).copyWith(color: materialTextPrimary),
+                        ).copyWith(color: palette.textPrimary),
                         textAlign: TextAlign.start,
                       ),
                     ],
@@ -531,7 +536,7 @@ class _DetailsSideColumn extends StatelessWidget {
                 ).resolve(context),
                 style: AppTextStyles.body(
                   context,
-                ).copyWith(color: materialTextSecondary),
+                ).copyWith(color: palette.textSecondary),
                 textAlign: TextAlign.start,
               ),
               const SizedBox(height: AppSpacing.md),
@@ -544,7 +549,7 @@ class _DetailsSideColumn extends StatelessWidget {
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: materialMint,
-                  foregroundColor: materialCtaForeground,
+                  foregroundColor: palette.ctaForeground,
                   minimumSize: const Size.fromHeight(54),
                   shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
                 ),
@@ -571,15 +576,16 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: materialPanelSurface,
+        color: palette.panelSurface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: materialBorderStrong),
-        boxShadow: const [
+        border: Border.all(color: palette.borderStrong),
+        boxShadow: [
           BoxShadow(
-            color: materialCardShadow,
+            color: palette.cardShadow,
             blurRadius: 28,
             offset: Offset(0, 10),
           ),
@@ -599,7 +605,9 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title.resolve(context),
-      style: AppTextStyles.title(context).copyWith(color: materialTextPrimary),
+      style: AppTextStyles.title(
+        context,
+      ).copyWith(color: MaterialsUiPalette.of(context).textPrimary),
       textAlign: TextAlign.start,
     );
   }
@@ -618,18 +626,19 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           width: 42,
           height: 42,
-          decoration: BoxDecoration(
-            color: materialCardSurfaceAlt,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: materialBorderSubtle),
-          ),
-          child: Icon(icon, color: materialMint, size: 20),
+        decoration: BoxDecoration(
+          color: palette.cardSurfaceAlt,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: palette.borderSubtle),
+        ),
+        child: Icon(icon, color: palette.mint, size: 20),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
@@ -640,7 +649,7 @@ class _InfoRow extends StatelessWidget {
                 label,
                 style: AppTextStyles.label(
                   context,
-                ).copyWith(color: materialTextSecondary),
+                ).copyWith(color: palette.textSecondary),
                 textAlign: TextAlign.start,
               ),
               const SizedBox(height: AppSpacing.xs),
@@ -648,7 +657,7 @@ class _InfoRow extends StatelessWidget {
                 value,
                 style: AppTextStyles.body(
                   context,
-                ).copyWith(color: materialTextPrimary),
+                ).copyWith(color: palette.textPrimary),
                 textAlign: TextAlign.start,
               ),
             ],

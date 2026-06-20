@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../application/app_settings_notifier.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/auth_dark_colors.dart';
@@ -19,6 +20,7 @@ class EntryNavBar extends ConsumerWidget {
     this.onSignIn,
     this.onCreateAccount,
     this.homeRoute = '/',
+    this.trailingActions = const [],
   });
 
   final bool showSignIn;
@@ -26,14 +28,16 @@ class EntryNavBar extends ConsumerWidget {
   final VoidCallback? onSignIn;
   final VoidCallback? onCreateAccount;
   final String homeRoute;
+  final List<Widget> trailingActions;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final viewportWidth = MediaQuery.sizeOf(context).width;
     final isCompact = viewportWidth < 900;
     final isPhone = viewportWidth < 640;
-    final useCondensedDesktop = viewportWidth < 1320;
+    final useCondensedDesktop = viewportWidth < 1700;
     final settings = ref.watch(appSettingsProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -46,11 +50,19 @@ class EntryNavBar extends ConsumerWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1180),
           child: DecoratedBox(
-            decoration: AuthDarkDecorations.navBarDecoration.copyWith(
+            decoration: (isDark
+                    ? AuthDarkDecorations.navBarDecoration
+                    : BoxDecoration(
+                        color: AppColors.surfaceElevated.withValues(alpha: 0.96),
+                        border: const Border(
+                          bottom: BorderSide(color: AppColors.border),
+                        ),
+                      ))
+                .copyWith(
               borderRadius: isPhone ? AppRadius.lgAll : AppRadius.xlAll,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
+                  color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.08),
                   blurRadius: 18,
                   offset: const Offset(0, 6),
                 ),
@@ -73,6 +85,7 @@ class EntryNavBar extends ConsumerWidget {
                       homeRoute: homeRoute,
                       settings: settings,
                       ref: ref,
+                      trailingActions: trailingActions,
                     )
                   : _DesktopNavLayout(
                       showSignIn: showSignIn,
@@ -83,6 +96,7 @@ class EntryNavBar extends ConsumerWidget {
                       settings: settings,
                       ref: ref,
                       condensed: useCondensedDesktop,
+                      trailingActions: trailingActions,
                     ),
             ),
           ),
@@ -102,6 +116,7 @@ class _DesktopNavLayout extends StatelessWidget {
     required this.settings,
     required this.ref,
     required this.condensed,
+    required this.trailingActions,
   });
 
   final bool showSignIn;
@@ -112,9 +127,12 @@ class _DesktopNavLayout extends StatelessWidget {
   final AppSettings settings;
   final WidgetRef ref;
   final bool condensed;
+  final List<Widget> trailingActions;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Row(
       children: [
         InkWell(
@@ -130,21 +148,33 @@ class _DesktopNavLayout extends StatelessWidget {
               vertical: AppSpacing.sm,
             ),
             decoration: BoxDecoration(
-              color: AuthDarkColors.chipUnselected,
+              color: isDark
+                  ? AuthDarkColors.chipUnselected
+                  : AppColors.surfaceContainer,
               borderRadius: AppRadius.pillAll,
-              border: Border.all(color: AuthDarkColors.border),
+              border: Border.all(
+                color: isDark ? AuthDarkColors.border : AppColors.border,
+              ),
             ),
             child: Text(
               'Learn. Reuse. Build.',
               style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.textPrimary,
+                color: isDark
+                    ? AuthDarkColors.textPrimary
+                    : AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
         ],
+        SizedBox(width: condensed ? AppSpacing.sm : AppSpacing.md),
+        Flexible(child: _NavLinks(compact: condensed)),
         const Spacer(),
         _UtilityPills(settings: settings, ref: ref),
+        if (trailingActions.isNotEmpty) ...[
+          const SizedBox(width: AppSpacing.sm),
+          ...trailingActions,
+        ],
         if (showSignIn || showCreateAccount) ...[
           const SizedBox(width: AppSpacing.md),
           _ActionCluster(
@@ -159,6 +189,116 @@ class _DesktopNavLayout extends StatelessWidget {
   }
 }
 
+class _NavLinks extends StatelessWidget {
+  const _NavLinks({required this.compact});
+
+  final bool compact;
+
+  static const _items = [
+    ('Home', '/home', Icons.home_outlined),
+    ('Materials', '/materials', Icons.inventory_2_outlined),
+    ('Learning', '/learning', Icons.school_outlined),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    var currentPath = '';
+
+    try {
+      currentPath = GoRouterState.of(context).uri.path;
+    } catch (_) {
+      currentPath = '';
+    }
+
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      children: [
+        for (final item in _items)
+          _NavLinkPill(
+            label: item.$1,
+            route: item.$2,
+            icon: item.$3,
+            compact: compact,
+            selected:
+                currentPath == item.$2 || currentPath.startsWith('${item.$2}/'),
+            isDark: isDark,
+          ),
+      ],
+    );
+  }
+}
+
+class _NavLinkPill extends StatelessWidget {
+  const _NavLinkPill({
+    required this.label,
+    required this.route,
+    required this.icon,
+    required this.compact,
+    required this.selected,
+    required this.isDark,
+  });
+
+  final String label;
+  final String route;
+  final IconData icon;
+  final bool compact;
+  final bool selected;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = isDark ? AuthDarkColors.accent : AppColors.primary;
+    final foreground = selected
+        ? accent
+        : isDark
+        ? AuthDarkColors.textSecondary
+        : AppColors.textSecondary;
+    final background = selected
+        ? accent.withValues(alpha: isDark ? 0.14 : 0.1)
+        : Colors.transparent;
+
+    final buttonStyle = TextButton.styleFrom(
+      foregroundColor: foreground,
+      backgroundColor: background,
+      padding: EdgeInsetsDirectional.symmetric(
+        horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      minimumSize: Size(compact ? 34 : 0, 36),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+    );
+
+    if (compact) {
+      return Tooltip(
+        message: label,
+        child: IconButton(
+          onPressed: () => context.go(route),
+          style: buttonStyle,
+          icon: Icon(icon, size: 18),
+          color: foreground,
+          visualDensity: VisualDensity.compact,
+        ),
+      );
+    }
+
+    return TextButton.icon(
+      onPressed: () => context.go(route),
+      style: buttonStyle,
+      icon: Icon(icon, size: 17),
+      label: Text(
+        label,
+        style: AuthDarkTextStyles.label(context).copyWith(
+          color: foreground,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
 class _MobileNavLayout extends StatelessWidget {
   const _MobileNavLayout({
     required this.showSignIn,
@@ -168,6 +308,7 @@ class _MobileNavLayout extends StatelessWidget {
     required this.homeRoute,
     required this.settings,
     required this.ref,
+    required this.trailingActions,
   });
 
   final bool showSignIn;
@@ -177,6 +318,7 @@ class _MobileNavLayout extends StatelessWidget {
   final String homeRoute;
   final AppSettings settings;
   final WidgetRef ref;
+  final List<Widget> trailingActions;
 
   @override
   Widget build(BuildContext context) {
@@ -211,6 +353,7 @@ class _MobileNavLayout extends StatelessWidget {
                     onPressed: onSignIn ?? () => context.go('/login'),
                   ),
                 _UtilityPills(settings: settings, ref: ref, compact: true),
+                ...trailingActions,
               ],
             ),
           ),
@@ -313,10 +456,14 @@ class _CompactNavLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        foregroundColor: AuthDarkColors.textPrimary,
+        foregroundColor: isDark
+            ? AuthDarkColors.textPrimary
+            : AppColors.textPrimary,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.xs,
@@ -327,7 +474,7 @@ class _CompactNavLink extends StatelessWidget {
       child: Text(
         label,
         style: AuthDarkTextStyles.label(context).copyWith(
-          color: AuthDarkColors.textPrimary,
+          color: isDark ? AuthDarkColors.textPrimary : AppColors.textPrimary,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -350,12 +497,21 @@ class _NavActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = isDark ? AuthDarkColors.accent : AppColors.primary;
+    final textOnAccent = isDark
+        ? AuthDarkColors.textOnAccent
+        : AppColors.textOnBrand;
+    final primaryText = isDark
+        ? AuthDarkColors.textPrimary
+        : AppColors.textPrimary;
+    final border = isDark ? AuthDarkColors.border : AppColors.border;
     final button = filled
         ? FilledButton.icon(
             onPressed: onPressed,
             style: FilledButton.styleFrom(
-              backgroundColor: AuthDarkColors.accent,
-              foregroundColor: AuthDarkColors.textOnAccent,
+              backgroundColor: accent,
+              foregroundColor: textOnAccent,
               padding: EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg,
                 vertical: AppSpacing.md,
@@ -367,7 +523,7 @@ class _NavActionButton extends StatelessWidget {
             label: Text(
               label,
               style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.textOnAccent,
+                color: textOnAccent,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -375,8 +531,8 @@ class _NavActionButton extends StatelessWidget {
         : OutlinedButton.icon(
             onPressed: onPressed,
             style: OutlinedButton.styleFrom(
-              foregroundColor: AuthDarkColors.textPrimary,
-              side: const BorderSide(color: AuthDarkColors.border),
+              foregroundColor: primaryText,
+              side: BorderSide(color: border),
               padding: EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg,
                 vertical: AppSpacing.md,
@@ -388,7 +544,7 @@ class _NavActionButton extends StatelessWidget {
             label: Text(
               label,
               style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.textPrimary,
+                color: primaryText,
                 fontWeight: FontWeight.w700,
               ),
             ),

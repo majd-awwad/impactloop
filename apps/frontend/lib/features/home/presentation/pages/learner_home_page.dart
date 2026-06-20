@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -20,6 +21,7 @@ class LearnerHomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = MaterialsUiPalette.of(context);
     final authState = ref.watch(authControllerProvider);
     final user = authState.user;
     final displayName = user?.displayName.trim();
@@ -28,7 +30,7 @@ class LearnerHomePage extends ConsumerWidget {
         : 'Welcome back, $displayName';
 
     return Scaffold(
-      backgroundColor: materialPageBackground,
+      backgroundColor: palette.pageBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsetsDirectional.fromSTEB(
@@ -73,26 +75,13 @@ class _HomeTopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Row(
-      children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: materialMint.withValues(alpha: 0.16),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: materialMint.withValues(alpha: 0.34)),
-          ),
-          child: const Icon(Icons.loop_rounded, color: materialMint),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Text(
-          'ImpactLoop',
-          style: AppTextStyles.title(
-            context,
-          ).copyWith(color: materialTextPrimary, letterSpacing: 0),
-        ),
-        const Spacer(),
+    final palette = MaterialsUiPalette.of(context);
+
+    return EntryNavBar(
+      showSignIn: false,
+      showCreateAccount: false,
+      homeRoute: '/home',
+      trailingActions: [
         TextButton.icon(
           onPressed: isLoggingOut
               ? null
@@ -114,8 +103,8 @@ class _HomeTopBar extends ConsumerWidget {
                     );
                   }
                 },
-          style: TextButton.styleFrom(foregroundColor: materialTextSecondary),
-          icon: const Icon(Icons.logout_rounded),
+          style: TextButton.styleFrom(foregroundColor: palette.textSecondary),
+          icon: const Icon(Icons.logout_rounded, size: 18),
           label: const Text('Logout'),
         ),
       ],
@@ -129,12 +118,14 @@ class _WelcomeHero extends StatelessWidget {
   final String greeting;
 
   List<Widget> _heroActionButtons(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return [
       FilledButton.icon(
         onPressed: () => context.go('/materials'),
         style: FilledButton.styleFrom(
-          backgroundColor: materialMint,
-          foregroundColor: materialCtaForeground,
+          backgroundColor: palette.mint,
+          foregroundColor: palette.ctaForeground,
           padding: const EdgeInsetsDirectional.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.md,
@@ -147,8 +138,8 @@ class _WelcomeHero extends StatelessWidget {
       OutlinedButton.icon(
         onPressed: () => context.go('/learning'),
         style: OutlinedButton.styleFrom(
-          foregroundColor: materialTextPrimary,
-          side: const BorderSide(color: materialBorderStrong),
+          foregroundColor: palette.textPrimary,
+          side: BorderSide(color: palette.borderStrong),
           padding: const EdgeInsetsDirectional.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.md,
@@ -163,19 +154,21 @@ class _WelcomeHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: AlignmentDirectional.topStart,
           end: AlignmentDirectional.bottomEnd,
-          colors: [materialHeroStart, materialHeroMid, materialHeroEnd],
+          colors: [palette.heroStart, palette.heroMid, palette.heroEnd],
         ),
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: materialBorderStrong),
-        boxShadow: const [
+        border: Border.all(color: palette.borderStrong),
+        boxShadow: [
           BoxShadow(
-            color: materialCardShadow,
+            color: palette.cardShadow,
             blurRadius: 28,
             offset: Offset(0, 10),
           ),
@@ -191,14 +184,14 @@ class _WelcomeHero extends StatelessWidget {
                 greeting,
                 style: AppTextStyles.label(
                   context,
-                ).copyWith(color: materialMint, letterSpacing: 0),
+                ).copyWith(color: palette.mint, letterSpacing: 0),
                 textAlign: TextAlign.start,
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 'Ready to build something today?',
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  color: materialTextPrimary,
+                  color: palette.textPrimary,
                   fontWeight: FontWeight.w800,
                   height: 1.08,
                   letterSpacing: 0,
@@ -210,7 +203,7 @@ class _WelcomeHero extends StatelessWidget {
                 'Find reusable materials, explore project ideas, and keep future reservations, impact, and helper tools in one place.',
                 style: AppTextStyles.subtitle(
                   context,
-                ).copyWith(color: materialTextSecondary, letterSpacing: 0),
+                ).copyWith(color: palette.textSecondary, letterSpacing: 0),
                 textAlign: TextAlign.start,
               ),
             ],

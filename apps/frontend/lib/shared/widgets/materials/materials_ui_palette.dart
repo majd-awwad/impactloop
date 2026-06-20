@@ -99,3 +99,115 @@ const materialMetaChipHorizontalPadding = 12.0;
 const materialMetaChipVerticalPadding = 8.0;
 const materialStandardCardHeight = 530.0;
 const materialCompactCardHeight = 432.0;
+
+class MaterialsUiPalette {
+  const MaterialsUiPalette({
+    required this.pageBackground,
+    required this.cardSurface,
+    required this.cardSurfaceAlt,
+    required this.panelSurface,
+    required this.mutedSurface,
+    required this.inputSurface,
+    required this.borderSubtle,
+    required this.borderStrong,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textMuted,
+    required this.mint,
+    required this.ctaForeground,
+    required this.hintSurface,
+    required this.hintBorder,
+    required this.cardShadow,
+    required this.overlayDark,
+    required this.heroStart,
+    required this.heroMid,
+    required this.heroEnd,
+    required this.fallbackStart,
+    required this.fallbackMid,
+    required this.fallbackEnd,
+  });
+
+  final Color pageBackground;
+  final Color cardSurface;
+  final Color cardSurfaceAlt;
+  final Color panelSurface;
+  final Color mutedSurface;
+  final Color inputSurface;
+  final Color borderSubtle;
+  final Color borderStrong;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textMuted;
+  final Color mint;
+  final Color ctaForeground;
+  final Color hintSurface;
+  final Color hintBorder;
+  final Color cardShadow;
+  final Color overlayDark;
+  final Color heroStart;
+  final Color heroMid;
+  final Color heroEnd;
+  final Color fallbackStart;
+  final Color fallbackMid;
+  final Color fallbackEnd;
+
+  static MaterialsUiPalette of(BuildContext context) {
+    if (Theme.of(context).brightness == Brightness.dark) {
+      return dark;
+    }
+
+    return light;
+  }
+
+  static const dark = MaterialsUiPalette(
+    pageBackground: materialPageBackground,
+    cardSurface: materialCardSurface,
+    cardSurfaceAlt: materialCardSurfaceAlt,
+    panelSurface: materialPanelSurface,
+    mutedSurface: materialMutedSurface,
+    inputSurface: materialInputSurface,
+    borderSubtle: materialBorderSubtle,
+    borderStrong: materialBorderStrong,
+    textPrimary: materialTextPrimary,
+    textSecondary: materialTextSecondary,
+    textMuted: materialTextMuted,
+    mint: materialMint,
+    ctaForeground: materialCtaForeground,
+    hintSurface: materialHintSurface,
+    hintBorder: materialHintBorder,
+    cardShadow: materialCardShadow,
+    overlayDark: materialOverlayDark,
+    heroStart: materialHeroStart,
+    heroMid: materialHeroMid,
+    heroEnd: materialHeroEnd,
+    fallbackStart: materialFallbackStart,
+    fallbackMid: materialFallbackMid,
+    fallbackEnd: materialFallbackEnd,
+  );
+
+  static const light = MaterialsUiPalette(
+    pageBackground: Color(0xFFFAFBF7),
+    cardSurface: Color(0xFFFFFFFF),
+    cardSurfaceAlt: Color(0xFFF1F5EF),
+    panelSurface: Color(0xFFFFFFFF),
+    mutedSurface: Color(0xFFEAF3EC),
+    inputSurface: Color(0xFFFFFFFF),
+    borderSubtle: Color(0xFFD9E2D7),
+    borderStrong: Color(0xFFC7D4C5),
+    textPrimary: Color(0xFF102019),
+    textSecondary: Color(0xFF526158),
+    textMuted: Color(0xFF738075),
+    mint: Color(0xFF047857),
+    ctaForeground: Color(0xFFFFFFFF),
+    hintSurface: Color(0xFFFFFFFF),
+    hintBorder: Color(0xFFD9E2D7),
+    cardShadow: Color(0x140F172A),
+    overlayDark: Color(0x33050807),
+    heroStart: Color(0xFFE8F7EF),
+    heroMid: Color(0xFFF6FAF4),
+    heroEnd: Color(0xFFE6F2EF),
+    fallbackStart: Color(0xFFEAF3EC),
+    fallbackMid: Color(0xFFDDF0E8),
+    fallbackEnd: Color(0xFFD8E6E0),
+  );
+}

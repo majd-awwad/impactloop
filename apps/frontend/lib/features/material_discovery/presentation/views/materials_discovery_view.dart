@@ -253,6 +253,8 @@ class _ResultsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 600;
@@ -267,7 +269,7 @@ class _ResultsHeader extends StatelessWidget {
               ).resolve(context),
               style: AppTextStyles.display(
                 context,
-              ).copyWith(color: materialTextPrimary),
+              ).copyWith(color: palette.textPrimary),
               textAlign: TextAlign.start,
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -284,7 +286,7 @@ class _ResultsHeader extends StatelessWidget {
                   .resolve(context),
               style: AppTextStyles.subtitle(
                 context,
-              ).copyWith(color: materialTextSecondary),
+              ).copyWith(color: palette.textSecondary),
               textAlign: TextAlign.start,
             ),
           ],
@@ -296,9 +298,9 @@ class _ResultsHeader extends StatelessWidget {
             vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: materialHintSurface,
+            color: palette.hintSurface,
             borderRadius: AppRadius.pillAll,
-            border: Border.all(color: materialBorderStrong),
+            border: Border.all(color: palette.borderStrong),
           ),
           child: Text(
             LocalizedText(
@@ -307,7 +309,7 @@ class _ResultsHeader extends StatelessWidget {
             ).resolve(context),
             style: AppTextStyles.label(
               context,
-            ).copyWith(color: materialMint),
+            ).copyWith(color: palette.mint),
             textAlign: TextAlign.start,
           ),
         );
@@ -343,12 +345,13 @@ class _EmptyStatePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: materialHintSurface,
+        color: palette.hintSurface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: materialHintBorder),
+        border: Border.all(color: palette.hintBorder),
       ),
       child: Column(
         children: [
@@ -356,21 +359,21 @@ class _EmptyStatePanel extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: materialMint.withValues(alpha: 0.14),
+              color: palette.mint.withValues(alpha: 0.14),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.search_off_rounded,
-              color: materialMint,
+              color: palette.mint,
               size: 32,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             title.resolve(context),
-            style: AppTextStyles.title(
-              context,
-            ).copyWith(color: materialTextPrimary),
+          style: AppTextStyles.title(
+            context,
+          ).copyWith(color: palette.textPrimary),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -380,7 +383,7 @@ class _EmptyStatePanel extends StatelessWidget {
               subtitle.resolve(context),
               style: AppTextStyles.subtitle(
                 context,
-              ).copyWith(color: materialTextSecondary),
+              ).copyWith(color: palette.textSecondary),
               textAlign: TextAlign.center,
             ),
           ),
@@ -395,12 +398,13 @@ class _TipPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: materialHintSurface,
+        color: palette.hintSurface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: materialHintBorder),
+        border: Border.all(color: palette.hintBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,10 +413,10 @@ class _TipPanel extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: materialMint.withValues(alpha: 0.14),
+              color: palette.mint.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.tips_and_updates_outlined, color: materialMint),
+            child: Icon(Icons.tips_and_updates_outlined, color: palette.mint),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -426,7 +430,7 @@ class _TipPanel extends StatelessWidget {
                   ).resolve(context),
                   style: AppTextStyles.title(
                     context,
-                  ).copyWith(color: materialTextPrimary),
+                  ).copyWith(color: palette.textPrimary),
                   textAlign: TextAlign.start,
                 ),
                 const SizedBox(height: AppSpacing.xs),
@@ -434,7 +438,7 @@ class _TipPanel extends StatelessWidget {
                   materialDiscoveryTip.resolve(context),
                   style: AppTextStyles.subtitle(
                     context,
-                  ).copyWith(color: materialTextSecondary),
+                  ).copyWith(color: palette.textSecondary),
                   textAlign: TextAlign.start,
                 ),
               ],

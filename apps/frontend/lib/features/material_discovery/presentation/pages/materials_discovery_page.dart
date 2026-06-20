@@ -53,8 +53,10 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Scaffold(
-      backgroundColor: materialPageBackground,
+      backgroundColor: palette.pageBackground,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -69,8 +71,8 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
                 future: _materialsFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState != ConnectionState.done) {
-                    return const _CenteredState(
-                      child: CircularProgressIndicator(color: materialMint),
+                    return _CenteredState(
+                      child: CircularProgressIndicator(color: palette.mint),
                     );
                   }
 
@@ -142,7 +144,9 @@ class _StateMessage extends StatelessWidget {
       text.resolve(context),
       style: Theme.of(
         context,
-      ).textTheme.titleMedium?.copyWith(color: materialTextPrimary),
+      ).textTheme.titleMedium?.copyWith(
+        color: MaterialsUiPalette.of(context).textPrimary,
+      ),
       textAlign: TextAlign.center,
     );
   }

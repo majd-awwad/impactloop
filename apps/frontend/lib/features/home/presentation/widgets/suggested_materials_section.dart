@@ -113,15 +113,17 @@ class _SuggestedMaterialsLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Container(
       height: 178,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: materialPanelSurface,
+        color: palette.panelSurface,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: materialBorderSubtle),
+        border: Border.all(color: palette.borderSubtle),
       ),
-      child: const CircularProgressIndicator(color: materialMint),
+      child: CircularProgressIndicator(color: palette.mint),
     );
   }
 }
@@ -133,12 +135,14 @@ class _SuggestedMaterialsError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: materialPanelSurface,
+        color: palette.panelSurface,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: materialBorderSubtle),
+        border: Border.all(color: palette.borderSubtle),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,13 +157,13 @@ class _SuggestedMaterialsError extends StatelessWidget {
                   'Unable to load suggested materials',
                   style: AppTextStyles.title(
                     context,
-                  ).copyWith(color: materialTextPrimary, letterSpacing: 0),
+                  ).copyWith(color: palette.textPrimary, letterSpacing: 0),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'The home page is still available. Try again when the materials API is running.',
                   style: AppTextStyles.body(context).copyWith(
-                    color: materialTextSecondary,
+                    color: palette.textSecondary,
                     height: 1.45,
                     letterSpacing: 0,
                   ),
@@ -168,8 +172,8 @@ class _SuggestedMaterialsError extends StatelessWidget {
                 OutlinedButton(
                   onPressed: onRetry,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: materialMint,
-                    side: const BorderSide(color: materialBorderStrong),
+                    foregroundColor: palette.mint,
+                    side: BorderSide(color: palette.borderStrong),
                     shape: RoundedRectangleBorder(
                       borderRadius: AppRadius.pillAll,
                     ),

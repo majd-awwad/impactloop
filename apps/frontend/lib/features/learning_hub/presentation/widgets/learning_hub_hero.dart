@@ -21,18 +21,19 @@ class LearningHubHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
     return Container(
       constraints: const BoxConstraints(minHeight: 332),
       decoration: BoxDecoration(
         borderRadius: AppRadius.xlAll,
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: AlignmentDirectional.topStart,
           end: AlignmentDirectional.bottomEnd,
-          colors: [learningHeroStart, learningHeroAccent, learningHeroEnd],
+          colors: [palette.heroStart, palette.heroAccent, palette.heroEnd],
         ),
-        border: Border.all(color: learningBorderSubtle),
+        border: Border.all(color: palette.borderSubtle),
       ),
       child: Stack(
         children: [
@@ -49,7 +50,7 @@ class LearningHubHero extends StatelessWidget {
             end: -16,
             child: _HeroOrb(
               size: 200,
-              color: learningLime.withValues(alpha: 0.08),
+              color: palette.lime.withValues(alpha: 0.08),
             ),
           ),
           PositionedDirectional(
@@ -113,7 +114,7 @@ class LearningHubHero extends StatelessWidget {
                     Text(
                       title.resolve(context),
                       style: AppTextStyles.brandingHeadline(context).copyWith(
-                        color: learningTextPrimary,
+                        color: palette.textPrimary,
                         fontWeight: FontWeight.w800,
                         fontSize: 40,
                       ),
@@ -125,7 +126,7 @@ class LearningHubHero extends StatelessWidget {
                       child: Text(
                         subtitle.resolve(context),
                         style: AppTextStyles.brandingSubtitle(context).copyWith(
-                          color: learningTextSecondary,
+                          color: palette.textSecondary,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -161,6 +162,8 @@ class _HeroStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -168,13 +171,13 @@ class _HeroStat extends StatelessWidget {
           value,
           style: AppTextStyles.brandingHeadline(
             context,
-          ).copyWith(color: learningLime, fontWeight: FontWeight.w800),
+          ).copyWith(color: palette.lime, fontWeight: FontWeight.w800),
         ),
         Text(
           label,
           style: AppTextStyles.mobileHeroSubtitle(
             context,
-          ).copyWith(color: learningTextSecondary),
+          ).copyWith(color: palette.textSecondary),
         ),
       ],
     );
@@ -192,6 +195,8 @@ class _HeroActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.08),
@@ -200,7 +205,7 @@ class _HeroActionButton extends StatelessWidget {
       ),
       child: IconButton(
         onPressed: onPressed,
-        icon: Icon(icon, color: learningTextPrimary),
+        icon: Icon(icon, color: palette.textPrimary),
       ),
     );
   }

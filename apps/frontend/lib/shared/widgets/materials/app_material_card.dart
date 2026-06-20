@@ -61,6 +61,7 @@ class AppMaterialCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     final compact = variant == AppMaterialCardVariant.compact;
     final borderRadius = compact ? AppRadius.lgAll : AppRadius.xlAll;
     final mediaHeight = compact ? 164.0 : 212.0;
@@ -78,12 +79,12 @@ class AppMaterialCard extends StatelessWidget {
           height: cardHeight,
           child: Container(
             decoration: BoxDecoration(
-              color: materialCardSurface,
+              color: palette.cardSurface,
               borderRadius: borderRadius,
-              border: Border.all(color: materialBorderStrong),
-              boxShadow: const [
+              border: Border.all(color: palette.borderStrong),
+              boxShadow: [
                 BoxShadow(
-                  color: materialCardShadow,
+                  color: palette.cardShadow,
                   blurRadius: 28,
                   offset: Offset(0, 12),
                 ),
@@ -118,7 +119,7 @@ class AppMaterialCard extends StatelessWidget {
                           description,
                           style: AppTextStyles.body(
                             context,
-                          ).copyWith(color: materialTextSecondary, height: 1.55),
+                          ).copyWith(color: palette.textSecondary, height: 1.55),
                           textAlign: TextAlign.start,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -205,6 +206,7 @@ class _MaterialMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     final topRadius = compact ? AppRadius.lg : AppRadius.xl;
 
     return SizedBox(
@@ -237,7 +239,7 @@ class _MaterialMedia extends StatelessWidget {
                       const SizedBox.shrink(),
                 ),
               DecoratedBox(
-                decoration: const BoxDecoration(color: materialOverlayDark),
+                decoration: BoxDecoration(color: palette.overlayDark),
               ),
               Padding(
                 padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -277,23 +279,23 @@ class _MaterialMedia extends StatelessWidget {
                         width: compact ? 60 : 72,
                         height: compact ? 60 : 72,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
+                          gradient: LinearGradient(
                             begin: AlignmentDirectional.topStart,
                             end: AlignmentDirectional.bottomEnd,
                             colors: [
-                              materialFallbackStart,
-                              materialFallbackMid,
-                              materialFallbackEnd,
+                              palette.fallbackStart,
+                              palette.fallbackMid,
+                              palette.fallbackEnd,
                             ],
                           ),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: materialBorderStrong,
+                            color: palette.borderStrong,
                           ),
                         ),
                         child: Icon(
                           fallbackIcon,
-                          color: materialMint,
+                          color: palette.mint,
                           size: compact ? 30 : 36,
                         ),
                       ),
@@ -316,20 +318,21 @@ class _MediaTagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: materialBadgeHorizontalPadding,
         vertical: materialBadgeVerticalPadding,
       ),
       decoration: BoxDecoration(
-        color: materialPanelSurface.withValues(alpha: 0.86),
+        color: palette.panelSurface.withValues(alpha: 0.86),
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: materialBorderSubtle),
+        border: Border.all(color: palette.borderSubtle),
       ),
       child: Text(
         label,
         style: AppTextStyles.badgeLabel(context).copyWith(
-          color: materialTextPrimary,
+          color: palette.textPrimary,
           fontSize: materialBadgeFontSize,
           fontWeight: FontWeight.w700,
           height: 1.1,
@@ -355,6 +358,7 @@ class _CardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     final titleBlock = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -364,7 +368,7 @@ class _CardHeader extends StatelessWidget {
             title,
             style: AppTextStyles.title(
               context,
-            ).copyWith(color: materialTextPrimary, height: 1.2),
+            ).copyWith(color: palette.textPrimary, height: 1.2),
             textAlign: TextAlign.start,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -386,9 +390,9 @@ class _CardHeader extends StatelessWidget {
               vertical: AppSpacing.xs,
             ),
             decoration: BoxDecoration(
-              color: materialMutedSurface,
+              color: palette.mutedSurface,
               borderRadius: AppRadius.pillAll,
-              border: Border.all(color: materialBorderStrong),
+              border: Border.all(color: palette.borderStrong),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -400,7 +404,7 @@ class _CardHeader extends StatelessWidget {
                   style: AppTextStyles.label(
                   context,
                   ).copyWith(
-                    color: materialTextPrimary,
+                    color: palette.textPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -479,27 +483,28 @@ class _MetaLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: materialMetaChipHorizontalPadding,
         vertical: materialMetaChipVerticalPadding,
       ),
       decoration: BoxDecoration(
-        color: materialCardSurfaceAlt,
+        color: palette.cardSurfaceAlt,
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: materialBorderStrong),
+        border: Border.all(color: palette.borderStrong),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: materialMint),
+          Icon(icon, size: 16, color: palette.mint),
           const SizedBox(width: AppSpacing.xs),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 180),
             child: Text(
               label,
               style: AppTextStyles.label(context).copyWith(
-                color: materialTextSecondary,
+                color: palette.textSecondary,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
                 height: 1.15,

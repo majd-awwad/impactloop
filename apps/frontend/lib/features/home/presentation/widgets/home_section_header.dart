@@ -18,6 +18,8 @@ class HomeSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 620;
@@ -28,7 +30,7 @@ class HomeSectionHeader extends StatelessWidget {
               title,
               style: AppTextStyles.title(
                 context,
-              ).copyWith(color: materialTextPrimary, letterSpacing: 0),
+              ).copyWith(color: palette.textPrimary, letterSpacing: 0),
               textAlign: TextAlign.start,
             ),
             if (subtitle != null) ...[
@@ -36,7 +38,7 @@ class HomeSectionHeader extends StatelessWidget {
               Text(
                 subtitle!,
                 style: AppTextStyles.body(context).copyWith(
-                  color: materialTextSecondary,
+                  color: palette.textSecondary,
                   height: 1.45,
                   letterSpacing: 0,
                 ),

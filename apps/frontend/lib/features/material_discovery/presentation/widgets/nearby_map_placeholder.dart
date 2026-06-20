@@ -18,12 +18,14 @@ class NearbyMapPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: materialMapSurface,
+        color: palette.panelSurface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: materialBorderStrong),
+        border: Border.all(color: palette.borderStrong),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,7 +34,7 @@ class NearbyMapPlaceholder extends StatelessWidget {
             title.resolve(context),
             style: AppTextStyles.title(
               context,
-            ).copyWith(color: materialTextPrimary),
+            ).copyWith(color: palette.textPrimary),
             textAlign: TextAlign.start,
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -40,7 +42,7 @@ class NearbyMapPlaceholder extends StatelessWidget {
             subtitle.resolve(context),
             style: AppTextStyles.subtitle(
               context,
-            ).copyWith(color: materialTextSecondary),
+            ).copyWith(color: palette.textSecondary),
             textAlign: TextAlign.start,
           ),
           const SizedBox(height: AppSpacing.md),
@@ -48,17 +50,21 @@ class NearbyMapPlaceholder extends StatelessWidget {
             height: 240,
             decoration: BoxDecoration(
               borderRadius: AppRadius.lgAll,
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: AlignmentDirectional.topStart,
                 end: AlignmentDirectional.bottomEnd,
-                colors: [materialSectionBackground, materialCardSurfaceAlt],
+                colors: [palette.cardSurfaceAlt, palette.mutedSurface],
               ),
-              border: Border.all(color: materialBorderStrong),
+              border: Border.all(color: palette.borderStrong),
             ),
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: CustomPaint(painter: _MapGridPainter()),
+                  child: CustomPaint(
+                    painter: _MapGridPainter(
+                      color: palette.borderSubtle.withValues(alpha: 0.72),
+                    ),
+                  ),
                 ),
                 Align(
                   alignment: AlignmentDirectional.center,
@@ -69,15 +75,15 @@ class NearbyMapPlaceholder extends StatelessWidget {
                         width: 72,
                         height: 72,
                         decoration: BoxDecoration(
-                          color: materialMint.withValues(alpha: 0.12),
+                          color: palette.mint.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: materialMint.withValues(alpha: 0.24),
+                            color: palette.mint.withValues(alpha: 0.24),
                           ),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.location_searching_rounded,
-                          color: materialMint,
+                          color: palette.mint,
                           size: 32,
                         ),
                       ),
@@ -89,7 +95,7 @@ class NearbyMapPlaceholder extends StatelessWidget {
                         ).resolve(context),
                         style: AppTextStyles.title(
                           context,
-                        ).copyWith(color: materialTextPrimary),
+                        ).copyWith(color: palette.textPrimary),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -131,21 +137,23 @@ class _MapChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.22),
+        color: palette.cardSurface.withValues(alpha: 0.86),
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: materialBorderStrong),
+        border: Border.all(color: palette.borderStrong),
       ),
       child: Text(
         label,
         style: AppTextStyles.label(
           context,
-        ).copyWith(color: materialTextPrimary, fontSize: 12),
+        ).copyWith(color: palette.textPrimary, fontSize: 12),
         textAlign: TextAlign.start,
       ),
     );
@@ -153,10 +161,14 @@ class _MapChip extends StatelessWidget {
 }
 
 class _MapGridPainter extends CustomPainter {
+  const _MapGridPainter({required this.color});
+
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = materialMapGrid
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 

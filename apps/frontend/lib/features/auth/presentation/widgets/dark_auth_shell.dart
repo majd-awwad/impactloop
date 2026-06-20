@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/auth_dark_colors.dart';
 import '../../../../app/theme/auth_dark_decorations.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
@@ -32,18 +33,23 @@ class DarkAuthShell extends StatelessWidget {
     final useSplitLayout =
         viewportSize.width >= _splitBreakpoint && viewportSize.height >= 760;
     final useCompactSpacing = viewportSize.height < 820;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AuthDarkColors.landingBackground,
+      backgroundColor: isDark
+          ? AuthDarkColors.landingBackground
+          : AppColors.background,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AuthDarkDecorations.pageGradient,
+        decoration: BoxDecoration(
+          gradient: isDark ? AuthDarkDecorations.pageGradient : null,
+          color: isDark ? null : AppColors.background,
         ),
         child: Stack(
           children: [
-            ...AuthDarkDecorations.backgroundBlobs(
-              compact: viewportSize.width < 900,
-            ),
+            if (isDark)
+              ...AuthDarkDecorations.backgroundBlobs(
+                compact: viewportSize.width < 900,
+              ),
             SafeArea(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

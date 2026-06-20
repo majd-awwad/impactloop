@@ -21,6 +21,8 @@ class ComingSoonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -30,9 +32,9 @@ class ComingSoonCard extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 172),
           padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: materialPanelSurface,
+            color: palette.panelSurface,
             borderRadius: AppRadius.lgAll,
-            border: Border.all(color: materialBorderSubtle),
+            border: Border.all(color: palette.borderSubtle),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,11 +45,11 @@ class ComingSoonCard extends StatelessWidget {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: materialMutedSurface,
+                      color: palette.mutedSurface,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: materialBorderSubtle),
+                      border: Border.all(color: palette.borderSubtle),
                     ),
-                    child: Icon(icon, color: materialTextSecondary, size: 21),
+                    child: Icon(icon, color: palette.textSecondary, size: 21),
                   ),
                   const Spacer(),
                   Container(
@@ -56,14 +58,14 @@ class ComingSoonCard extends StatelessWidget {
                       vertical: AppSpacing.xs,
                     ),
                     decoration: BoxDecoration(
-                      color: materialMutedSurface,
+                      color: palette.mutedSurface,
                       borderRadius: AppRadius.pillAll,
-                      border: Border.all(color: materialBorderSubtle),
+                      border: Border.all(color: palette.borderSubtle),
                     ),
                     child: Text(
                       'Coming soon',
                       style: AppTextStyles.label(context).copyWith(
-                        color: materialTextSecondary,
+                        color: palette.textSecondary,
                         fontSize: 12,
                         letterSpacing: 0,
                       ),
@@ -76,14 +78,14 @@ class ComingSoonCard extends StatelessWidget {
                 title,
                 style: AppTextStyles.title(
                   context,
-                ).copyWith(color: materialTextPrimary, letterSpacing: 0),
+                ).copyWith(color: palette.textPrimary, letterSpacing: 0),
                 textAlign: TextAlign.start,
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 description,
                 style: AppTextStyles.body(context).copyWith(
-                  color: materialTextSecondary,
+                  color: palette.textSecondary,
                   height: 1.45,
                   letterSpacing: 0,
                 ),

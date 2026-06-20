@@ -20,15 +20,17 @@ class MaterialsHeroSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: AppRadius.xlAll,
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: AlignmentDirectional.topStart,
           end: AlignmentDirectional.bottomEnd,
-          colors: [materialHeroStart, materialHeroMid, materialHeroEnd],
+          colors: [palette.heroStart, palette.heroMid, palette.heroEnd],
         ),
-        border: Border.all(color: materialBorderStrong),
+        border: Border.all(color: palette.borderStrong),
       ),
       child: Stack(
         children: [
@@ -37,7 +39,7 @@ class MaterialsHeroSection extends StatelessWidget {
             start: -18,
             child: _HeroOrb(
               size: 132,
-              color: materialHeroGlow,
+              color: palette.mint.withValues(alpha: 0.08),
             ),
           ),
           PositionedDirectional(
@@ -45,7 +47,7 @@ class MaterialsHeroSection extends StatelessWidget {
             end: 18,
             child: _HeroOrb(
               size: 180,
-              color: materialMint.withValues(alpha: 0.06),
+              color: palette.mint.withValues(alpha: 0.08),
             ),
           ),
           PositionedDirectional(
@@ -53,7 +55,7 @@ class MaterialsHeroSection extends StatelessWidget {
             end: 120,
             child: _HeroOrb(
               size: 156,
-              color: materialInfo.withValues(alpha: 0.05),
+              color: palette.textSecondary.withValues(alpha: 0.06),
             ),
           ),
           Padding(
@@ -85,7 +87,7 @@ class MaterialsHeroSection extends StatelessWidget {
                       Text(
                         title.resolve(context),
                         style: AppTextStyles.brandingHeadline(context).copyWith(
-                          color: materialTextPrimary,
+                          color: palette.textPrimary,
                           fontWeight: FontWeight.w800,
                           fontSize: 40,
                         ),
@@ -95,7 +97,7 @@ class MaterialsHeroSection extends StatelessWidget {
                       Text(
                         subtitle.resolve(context),
                         style: AppTextStyles.brandingSubtitle(context).copyWith(
-                          color: materialTextSecondary,
+                          color: palette.textSecondary,
                         ),
                         textAlign: TextAlign.start,
                       ),
@@ -130,6 +132,8 @@ class _HeroStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.fromSTEB(
         AppSpacing.md,
@@ -138,9 +142,9 @@ class _HeroStat extends StatelessWidget {
         AppSpacing.md,
       ),
       decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
+            color: palette.cardSurface.withValues(alpha: 0.72),
             borderRadius: AppRadius.lgAll,
-            border: Border.all(color: materialBorderStrong),
+            border: Border.all(color: palette.borderStrong),
           ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,7 +153,7 @@ class _HeroStat extends StatelessWidget {
             value,
             style: AppTextStyles.brandingHeadline(
               context,
-            ).copyWith(color: materialMint, fontWeight: FontWeight.w800),
+            ).copyWith(color: palette.mint, fontWeight: FontWeight.w800),
             textAlign: TextAlign.start,
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -157,7 +161,7 @@ class _HeroStat extends StatelessWidget {
             label,
             style: AppTextStyles.body(
               context,
-            ).copyWith(color: materialTextSecondary),
+            ).copyWith(color: palette.textSecondary),
             textAlign: TextAlign.start,
           ),
         ],
@@ -174,23 +178,25 @@ class _HeroActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Container(
       decoration: BoxDecoration(
         color: accent
-            ? materialMint.withValues(alpha: 0.16)
-            : materialPanelSurface.withValues(alpha: 0.82),
+            ? palette.mint.withValues(alpha: 0.16)
+            : palette.panelSurface.withValues(alpha: 0.82),
         shape: BoxShape.circle,
         border: Border.all(
           color: accent
-              ? materialMint.withValues(alpha: 0.4)
-              : materialBorderSubtle,
+              ? palette.mint.withValues(alpha: 0.4)
+              : palette.borderSubtle,
         ),
       ),
       child: IconButton(
         onPressed: () {},
         icon: Icon(
           icon,
-          color: accent ? materialCtaForeground : materialTextPrimary,
+          color: accent ? palette.ctaForeground : palette.textPrimary,
         ),
       ),
     );

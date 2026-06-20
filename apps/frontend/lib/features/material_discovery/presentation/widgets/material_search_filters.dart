@@ -36,12 +36,14 @@ class MaterialSearchFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: materialSectionBackground,
+        color: palette.panelSurface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: materialBorderStrong),
+        border: Border.all(color: palette.borderStrong),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,9 +51,7 @@ class MaterialSearchFilters extends StatelessWidget {
           TextField(
             controller: controller,
             onChanged: onSearchChanged,
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: materialTextPrimary),
+            style: AppTextStyles.body(context).copyWith(color: palette.textPrimary),
             textAlign: TextAlign.start,
             decoration: InputDecoration(
               hintText: LocalizedText(
@@ -60,39 +60,39 @@ class MaterialSearchFilters extends StatelessWidget {
               ).resolve(context),
               hintStyle: AppTextStyles.body(
                 context,
-              ).copyWith(color: materialTextSecondary),
-              prefixIcon: const Icon(
+              ).copyWith(color: palette.textSecondary),
+              prefixIcon: Icon(
                 Icons.search_rounded,
-                color: materialTextSecondary,
+                color: palette.textSecondary,
               ),
               suffixIcon: searchValue.isEmpty
-                  ? const Icon(
+                  ? Icon(
                       Icons.grid_view_rounded,
-                      color: materialMint,
+                      color: palette.mint,
                     )
                   : IconButton(
                       onPressed: () {
                         controller.clear();
                         onSearchChanged('');
                       },
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.close_rounded,
-                        color: materialTextSecondary,
+                        color: palette.textSecondary,
                       ),
                     ),
               filled: true,
-              fillColor: materialCardSurfaceAlt,
+              fillColor: palette.cardSurfaceAlt,
               border: OutlineInputBorder(
                 borderRadius: AppRadius.lgAll,
-                borderSide: const BorderSide(color: materialBorderStrong),
+                borderSide: BorderSide(color: palette.borderStrong),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: AppRadius.lgAll,
-                borderSide: const BorderSide(color: materialBorderStrong),
+                borderSide: BorderSide(color: palette.borderStrong),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: AppRadius.lgAll,
-                borderSide: const BorderSide(color: materialMint, width: 1.5),
+                borderSide: BorderSide(color: palette.mint, width: 1.5),
               ),
             ),
           ),
@@ -104,7 +104,7 @@ class MaterialSearchFilters extends StatelessWidget {
             ).resolve(context),
             style: AppTextStyles.label(
               context,
-            ).copyWith(color: materialTextPrimary),
+            ).copyWith(color: palette.textPrimary),
             textAlign: TextAlign.start,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -127,7 +127,7 @@ class MaterialSearchFilters extends StatelessWidget {
             ).resolve(context),
             style: AppTextStyles.label(
               context,
-            ).copyWith(color: materialTextPrimary),
+            ).copyWith(color: palette.textPrimary),
             textAlign: TextAlign.start,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -149,7 +149,7 @@ class MaterialSearchFilters extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: onClearFilters,
                 style: TextButton.styleFrom(
-                  foregroundColor: materialMint,
+                  foregroundColor: palette.mint,
                   padding: const EdgeInsetsDirectional.symmetric(
                     horizontal: AppSpacing.sm,
                     vertical: AppSpacing.xs,
@@ -185,6 +185,8 @@ class _FilterChipButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return InkWell(
       onTap: onPressed,
       borderRadius: AppRadius.pillAll,
@@ -194,16 +196,18 @@ class _FilterChipButton extends StatelessWidget {
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: selected ? materialMint.withValues(alpha: 0.14) : materialCardSurfaceAlt,
+          color: selected
+              ? palette.mint.withValues(alpha: 0.14)
+              : palette.cardSurfaceAlt,
           borderRadius: AppRadius.pillAll,
           border: Border.all(
-            color: selected ? materialMint : materialBorderSubtle,
+            color: selected ? palette.mint : palette.borderSubtle,
           ),
         ),
         child: Text(
           label,
           style: AppTextStyles.label(context).copyWith(
-            color: selected ? materialTextPrimary : materialTextSecondary,
+            color: selected ? palette.textPrimary : palette.textSecondary,
           ),
           textAlign: TextAlign.start,
         ),

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/auth_dark_colors.dart';
 import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../app/widgets/hero_workshop_visual.dart';
@@ -56,6 +57,19 @@ class _HeroContent extends StatelessWidget {
     final isNarrow = MediaQuery.sizeOf(context).width < 520;
     final isCompactPhone = MediaQuery.sizeOf(context).width < 640;
     final isMobileHero = MediaQuery.sizeOf(context).width < 700;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryText = isDark ? AuthDarkColors.textPrimary : AppColors.textPrimary;
+    final secondaryText = isDark
+        ? AuthDarkColors.textSecondary
+        : AppColors.textSecondary;
+    final mutedText = isDark ? AuthDarkColors.textMuted : AppColors.textSecondary;
+    final panelSurface = isDark
+        ? AuthDarkColors.surface.withValues(alpha: 0.76)
+        : AppColors.surfaceElevated.withValues(alpha: 0.96);
+    final chipSurface = isDark
+        ? AuthDarkColors.chipUnselected
+        : AppColors.surfaceContainer;
+    final border = isDark ? AuthDarkColors.border : AppColors.border;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,9 +80,9 @@ class _HeroContent extends StatelessWidget {
             vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: AuthDarkColors.chipUnselected,
+            color: chipSurface,
             borderRadius: AppRadius.pillAll,
-            border: Border.all(color: AuthDarkColors.border),
+            border: Border.all(color: border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -92,9 +106,10 @@ class _HeroContent extends StatelessWidget {
         Text(
           'Learn. Reuse. Build.',
           style: AuthDarkTextStyles.brandingHeadline(context).copyWith(
+            color: primaryText,
             fontSize: isNarrow ? 42 : 60,
             height: 1.0,
-            letterSpacing: -1.6,
+            letterSpacing: 0,
           ),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -107,15 +122,15 @@ class _HeroContent extends StatelessWidget {
             'surplus into projects with a cleaner, community-driven workflow.',
             style: AuthDarkTextStyles.brandingSubtitle(
               context,
-            ).copyWith(fontSize: 18, color: AuthDarkColors.textSecondary),
+            ).copyWith(fontSize: 18, color: secondaryText),
           ),
         ),
         const SizedBox(height: AppSpacing.xl),
         DecoratedBox(
           decoration: BoxDecoration(
-            color: AuthDarkColors.surface.withValues(alpha: 0.76),
+            color: panelSurface,
             borderRadius: AppRadius.xlAll,
-            border: Border.all(color: AuthDarkColors.border),
+            border: Border.all(color: border),
           ),
           child: Padding(
             padding: EdgeInsets.all(
@@ -159,7 +174,7 @@ class _HeroContent extends StatelessWidget {
                         'No credit card. No noise. Just building.',
                         style: AuthDarkTextStyles.body(
                           context,
-                        ).copyWith(color: AuthDarkColors.textMuted),
+                        ).copyWith(color: mutedText),
                       ),
                     ],
                   ),

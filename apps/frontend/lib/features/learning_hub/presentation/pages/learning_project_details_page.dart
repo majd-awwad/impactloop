@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../data/learning_hub_mock_data.dart';
 import '../../domain/models/learning_project.dart';
 import '../widgets/disabled_ai_panel.dart';
@@ -41,48 +42,58 @@ class LearningProjectDetailsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: learningPageBackground,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _DetailsHero(project: project),
-              Transform.translate(
-                offset: const Offset(0, -34),
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: AppSpacing.md,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1400),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _DetailsSummaryCard(project: project),
-                          const SizedBox(height: AppSpacing.lg),
-                          ProjectComponentsSection(
-                            components: project.components,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const EntryNavBar(homeRoute: '/home'),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsetsDirectional.only(
+                  bottom: AppSpacing.xl,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _DetailsHero(project: project),
+                    Transform.translate(
+                      offset: const Offset(0, -34),
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.symmetric(
+                          horizontal: AppSpacing.md,
+                        ),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 1400),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _DetailsSummaryCard(project: project),
+                                const SizedBox(height: AppSpacing.lg),
+                                ProjectComponentsSection(
+                                  components: project.components,
+                                ),
+                                const SizedBox(height: AppSpacing.lg),
+                                const DisabledAiPanel(),
+                                const SizedBox(height: AppSpacing.lg),
+                                ProjectStepsTimeline(steps: project.steps),
+                                const SizedBox(height: AppSpacing.lg),
+                                ProjectLinkList(links: project.links),
+                                const SizedBox(height: AppSpacing.lg),
+                                MockRatingSummaryCard(
+                                  project: project,
+                                  breakdown: mockBreakdownFor(project),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: AppSpacing.lg),
-                          const DisabledAiPanel(),
-                          const SizedBox(height: AppSpacing.lg),
-                          ProjectStepsTimeline(steps: project.steps),
-                          const SizedBox(height: AppSpacing.lg),
-                          ProjectLinkList(links: project.links),
-                          const SizedBox(height: AppSpacing.lg),
-                          MockRatingSummaryCard(
-                            project: project,
-                            breakdown: mockBreakdownFor(project),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -454,3 +454,107 @@ const learningTextSecondary = Color(0xFFAAB8B2);
 const learningBorderSubtle = Color(0xFF20332E);
 const learningOverlayDark = Color(0x9908110F);
 const learningCardShadow = AppColors.shadow;
+
+class LearningUiPalette {
+  const LearningUiPalette({
+    required this.pageBackground,
+    required this.hintSurface,
+    required this.hintBorder,
+    required this.cardSurface,
+    required this.cardSurfaceAlt,
+    required this.darkSurface,
+    required this.darkSurfaceSoft,
+    required this.heroStart,
+    required this.heroAccent,
+    required this.heroEnd,
+    required this.lime,
+    required this.limeSoft,
+    required this.mutedChip,
+    required this.timelineLine,
+    required this.disabledPanel,
+    required this.disabledPanelBorder,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.borderSubtle,
+    required this.overlayDark,
+    required this.cardShadow,
+  });
+
+  final Color pageBackground;
+  final Color hintSurface;
+  final Color hintBorder;
+  final Color cardSurface;
+  final Color cardSurfaceAlt;
+  final Color darkSurface;
+  final Color darkSurfaceSoft;
+  final Color heroStart;
+  final Color heroAccent;
+  final Color heroEnd;
+  final Color lime;
+  final Color limeSoft;
+  final Color mutedChip;
+  final Color timelineLine;
+  final Color disabledPanel;
+  final Color disabledPanelBorder;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color borderSubtle;
+  final Color overlayDark;
+  final Color cardShadow;
+
+  static LearningUiPalette of(BuildContext context) {
+    if (Theme.of(context).brightness == Brightness.dark) {
+      return dark;
+    }
+
+    return light;
+  }
+
+  static const dark = LearningUiPalette(
+    pageBackground: learningPageBackground,
+    hintSurface: learningHintSurface,
+    hintBorder: learningHintBorder,
+    cardSurface: learningCardSurface,
+    cardSurfaceAlt: learningCardSurfaceAlt,
+    darkSurface: learningDarkSurface,
+    darkSurfaceSoft: learningDarkSurfaceSoft,
+    heroStart: learningHeroStart,
+    heroAccent: learningHeroAccent,
+    heroEnd: learningHeroEnd,
+    lime: learningLime,
+    limeSoft: learningLimeSoft,
+    mutedChip: learningMutedChip,
+    timelineLine: learningTimelineLine,
+    disabledPanel: learningDisabledPanel,
+    disabledPanelBorder: learningDisabledPanelBorder,
+    textPrimary: learningTextPrimary,
+    textSecondary: learningTextSecondary,
+    borderSubtle: learningBorderSubtle,
+    overlayDark: learningOverlayDark,
+    cardShadow: learningCardShadow,
+  );
+
+  static const light = LearningUiPalette(
+    pageBackground: Color(0xFFFAFBF7),
+    hintSurface: Color(0xFFFFFFFF),
+    hintBorder: Color(0xFFD9E2D7),
+    cardSurface: Color(0xFFFFFFFF),
+    cardSurfaceAlt: Color(0xFFF1F5EF),
+    darkSurface: Color(0xFFEAF3EC),
+    darkSurfaceSoft: Color(0xFFEAF3EC),
+    heroStart: Color(0xFFE5F5EC),
+    heroAccent: Color(0xFFF6FAF4),
+    heroEnd: Color(0xFFDCEFE7),
+    lime: Color(0xFF047857),
+    limeSoft: Color(0xFF065F46),
+    mutedChip: Color(0xFFF1F5EF),
+    timelineLine: Color(0xFFC7D4C5),
+    disabledPanel: Color(0xFFFFFFFF),
+    disabledPanelBorder: Color(0xFFD9E2D7),
+    textPrimary: Color(0xFF102019),
+    textSecondary: Color(0xFF526158),
+    borderSubtle: Color(0xFFD9E2D7),
+    overlayDark: Color(0x26050807),
+    cardShadow: Color(0x140F172A),
+  );
+}

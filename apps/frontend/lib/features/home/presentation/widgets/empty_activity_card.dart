@@ -23,12 +23,14 @@ class EmptyActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: materialCardSurface,
+        color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: materialBorderStrong),
+        border: Border.all(color: palette.borderStrong),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,25 +39,25 @@ class EmptyActivityCard extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: materialCardSurfaceAlt,
+              color: palette.cardSurfaceAlt,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: materialBorderSubtle),
+              border: Border.all(color: palette.borderSubtle),
             ),
-            child: Icon(icon, color: materialMint, size: 22),
+            child: Icon(icon, color: palette.mint, size: 22),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             title,
             style: AppTextStyles.title(
               context,
-            ).copyWith(color: materialTextPrimary, letterSpacing: 0),
+            ).copyWith(color: palette.textPrimary, letterSpacing: 0),
             textAlign: TextAlign.start,
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             description,
             style: AppTextStyles.body(context).copyWith(
-              color: materialTextSecondary,
+              color: palette.textSecondary,
               height: 1.45,
               letterSpacing: 0,
             ),
@@ -66,8 +68,8 @@ class EmptyActivityCard extends StatelessWidget {
             OutlinedButton(
               onPressed: onAction,
               style: OutlinedButton.styleFrom(
-                foregroundColor: materialMint,
-                side: const BorderSide(color: materialBorderStrong),
+                foregroundColor: palette.mint,
+                side: BorderSide(color: palette.borderStrong),
                 shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
               ),
               child: Text(actionLabel!),

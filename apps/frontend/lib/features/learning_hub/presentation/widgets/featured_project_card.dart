@@ -14,14 +14,16 @@ class FeaturedProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return Container(
       decoration: BoxDecoration(
-        color: learningCardSurface,
+        color: palette.cardSurface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: learningBorderSubtle),
-        boxShadow: const [
+        border: Border.all(color: palette.borderSubtle),
+        boxShadow: [
           BoxShadow(
-            color: learningCardShadow,
+            color: palette.cardShadow,
             blurRadius: 28,
             offset: Offset(0, 12),
           ),
@@ -70,11 +72,14 @@ class _FeaturedContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
     final buttonChild = FilledButton.icon(
       onPressed: () => context.go('/learning/${project.id}'),
       style: FilledButton.styleFrom(
-        backgroundColor: learningLime,
-        foregroundColor: Colors.black,
+        backgroundColor: palette.lime,
+        foregroundColor: Theme.of(context).brightness == Brightness.dark
+            ? Colors.black
+            : Colors.white,
         padding: const EdgeInsetsDirectional.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
@@ -97,9 +102,9 @@ class _FeaturedContent extends StatelessWidget {
               vertical: AppSpacing.xs,
             ),
             decoration: BoxDecoration(
-              color: learningDarkSurfaceSoft,
+              color: palette.darkSurfaceSoft,
               borderRadius: AppRadius.pillAll,
-              border: Border.all(color: learningBorderSubtle),
+              border: Border.all(color: palette.borderSubtle),
             ),
             child: Text(
               const LocalizedText(
@@ -108,7 +113,7 @@ class _FeaturedContent extends StatelessWidget {
               ).resolve(context),
               style: AppTextStyles.badgeLabel(
                 context,
-              ).copyWith(fontSize: 12, color: learningTextPrimary),
+              ).copyWith(fontSize: 12, color: palette.textPrimary),
             ),
           ),
         ),
@@ -117,7 +122,7 @@ class _FeaturedContent extends StatelessWidget {
           project.title.resolve(context),
           style: AppTextStyles.display(
             context,
-          ).copyWith(color: learningTextPrimary),
+          ).copyWith(color: palette.textPrimary),
           textAlign: TextAlign.start,
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -125,7 +130,7 @@ class _FeaturedContent extends StatelessWidget {
           project.summary.resolve(context),
           style: AppTextStyles.subtitle(
             context,
-          ).copyWith(color: learningTextSecondary),
+          ).copyWith(color: palette.textSecondary),
           textAlign: TextAlign.start,
         ),
         const SizedBox(height: AppSpacing.md),
@@ -163,6 +168,8 @@ class _FeaturedMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return SizedBox(
       width: compact ? double.infinity : 228,
       height: compact ? 180 : 228,
@@ -191,7 +198,7 @@ class _FeaturedMedia extends StatelessWidget {
             DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: AppRadius.lgAll,
-                color: learningOverlayDark,
+                color: palette.overlayDark,
               ),
             ),
             Align(
@@ -199,7 +206,7 @@ class _FeaturedMedia extends StatelessWidget {
               child: Icon(
                 project.heroIconData,
                 size: compact ? 48 : 58,
-                color: learningTextPrimary,
+                color: palette.textPrimary,
               ),
             ),
           ],
@@ -217,6 +224,8 @@ class _MetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: AppSpacing.sm,
@@ -224,15 +233,15 @@ class _MetaChip extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: accent
-            ? learningLime.withValues(alpha: 0.24)
-            : learningDarkSurfaceSoft,
+            ? palette.lime.withValues(alpha: 0.16)
+            : palette.darkSurfaceSoft,
         borderRadius: AppRadius.pillAll,
       ),
       child: Text(
         label,
         style: AppTextStyles.body(
           context,
-        ).copyWith(color: accent ? learningLimeSoft : learningTextSecondary),
+        ).copyWith(color: accent ? palette.limeSoft : palette.textSecondary),
       ),
     );
   }

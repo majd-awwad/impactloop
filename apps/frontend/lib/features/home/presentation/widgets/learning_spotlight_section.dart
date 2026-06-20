@@ -14,6 +14,7 @@ class LearningSpotlightSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
     final previewProjects = learningProjects.take(2).toList(growable: false);
 
     return Column(
@@ -26,8 +27,8 @@ class LearningSpotlightSection extends StatelessWidget {
           action: FilledButton.icon(
             onPressed: () => context.go('/learning'),
             style: FilledButton.styleFrom(
-              backgroundColor: materialMint,
-              foregroundColor: materialCtaForeground,
+              backgroundColor: palette.mint,
+              foregroundColor: palette.ctaForeground,
               shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
             ),
             icon: const Icon(Icons.school_outlined),
@@ -66,6 +67,8 @@ class _LearningPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -75,12 +78,12 @@ class _LearningPreviewCard extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 194),
           padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: materialCardSurface,
+            color: palette.cardSurface,
             borderRadius: AppRadius.lgAll,
-            border: Border.all(color: materialBorderStrong),
-            boxShadow: const [
+            border: Border.all(color: palette.borderStrong),
+            boxShadow: [
               BoxShadow(
-                color: materialCardShadow,
+                color: palette.cardShadow,
                 blurRadius: 20,
                 offset: Offset(0, 8),
               ),
@@ -99,11 +102,11 @@ class _LearningPreviewCard extends StatelessWidget {
                     colors: projectGradient(project),
                   ),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: materialBorderStrong),
+                  border: Border.all(color: palette.borderStrong),
                 ),
                 child: Icon(
                   project.heroIconData,
-                  color: materialTextPrimary,
+                  color: Colors.white,
                   size: 30,
                 ),
               ),
@@ -115,7 +118,7 @@ class _LearningPreviewCard extends StatelessWidget {
                     Text(
                       'Learning Hub preview',
                       style: AppTextStyles.label(context).copyWith(
-                        color: materialMint,
+                        color: palette.mint,
                         fontSize: 12,
                         letterSpacing: 0,
                       ),
@@ -126,14 +129,14 @@ class _LearningPreviewCard extends StatelessWidget {
                       project.title.resolve(context),
                       style: AppTextStyles.title(
                         context,
-                      ).copyWith(color: materialTextPrimary, letterSpacing: 0),
+                      ).copyWith(color: palette.textPrimary, letterSpacing: 0),
                       textAlign: TextAlign.start,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       project.summary.resolve(context),
                       style: AppTextStyles.body(context).copyWith(
-                        color: materialTextSecondary,
+                        color: palette.textSecondary,
                         height: 1.45,
                         letterSpacing: 0,
                       ),

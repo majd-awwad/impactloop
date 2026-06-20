@@ -14,17 +14,19 @@ class LearningProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return InkWell(
       borderRadius: AppRadius.xlAll,
       onTap: () => context.go('/learning/${project.id}'),
       child: Container(
         decoration: BoxDecoration(
-          color: learningCardSurface,
+          color: palette.cardSurface,
           borderRadius: AppRadius.xlAll,
-          border: Border.all(color: learningBorderSubtle),
-          boxShadow: const [
+          border: Border.all(color: palette.borderSubtle),
+          boxShadow: [
             BoxShadow(
-              color: learningCardShadow,
+              color: palette.cardShadow,
               blurRadius: 18,
               offset: Offset(0, 6),
             ),
@@ -47,7 +49,7 @@ class LearningProjectCard extends StatelessWidget {
                     project.summary.resolve(context),
                     style: AppTextStyles.subtitle(
                       context,
-                    ).copyWith(color: learningTextSecondary),
+                    ).copyWith(color: palette.textSecondary),
                     textAlign: TextAlign.start,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
@@ -81,6 +83,8 @@ class _ProjectCardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return SizedBox(
       height: 190,
       child: DecoratedBox(
@@ -117,7 +121,7 @@ class _ProjectCardHeader extends StatelessWidget {
                   topStart: Radius.circular(AppRadius.xl),
                   topEnd: Radius.circular(AppRadius.xl),
                 ),
-                color: learningOverlayDark.withValues(alpha: 0.42),
+                color: palette.overlayDark.withValues(alpha: 0.42),
               ),
             ),
             Padding(
@@ -133,14 +137,14 @@ class _ProjectCardHeader extends StatelessWidget {
                         vertical: AppSpacing.xs,
                       ),
                       decoration: BoxDecoration(
-                        color: learningLime,
+                        color: palette.lime,
                         borderRadius: AppRadius.pillAll,
                       ),
                       child: Text(
                         project.difficulty.resolve(context),
                         style: AppTextStyles.label(
                           context,
-                        ).copyWith(color: Colors.black87),
+                        ).copyWith(color: Theme.of(context).brightness == Brightness.dark ? Colors.black87 : Colors.white),
                       ),
                     ),
                   ),
@@ -148,7 +152,7 @@ class _ProjectCardHeader extends StatelessWidget {
                   Icon(
                     project.heroIconData,
                     size: 54,
-                    color: learningTextPrimary,
+                    color: palette.textPrimary,
                   ),
                 ],
               ),
@@ -167,15 +171,16 @@ class _ProjectTitleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
     final ratingPill = Container(
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: learningDarkSurfaceSoft,
+        color: palette.darkSurfaceSoft,
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: learningBorderSubtle),
+        border: Border.all(color: palette.borderSubtle),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -184,7 +189,7 @@ class _ProjectTitleRow extends StatelessWidget {
             project.ratingValue.toStringAsFixed(1),
             style: AppTextStyles.label(
               context,
-            ).copyWith(color: learningTextPrimary),
+            ).copyWith(color: palette.textPrimary),
           ),
           const SizedBox(width: AppSpacing.xs),
           const Icon(Icons.star_rounded, color: learningLime, size: 18),
@@ -204,7 +209,7 @@ class _ProjectTitleRow extends StatelessWidget {
                 project.title.resolve(context),
                 style: AppTextStyles.title(
                   context,
-                ).copyWith(color: learningTextPrimary),
+                ).copyWith(color: palette.textPrimary),
                 textAlign: TextAlign.start,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -223,7 +228,7 @@ class _ProjectTitleRow extends StatelessWidget {
                 project.title.resolve(context),
                 style: AppTextStyles.title(
                   context,
-                ).copyWith(color: learningTextPrimary),
+                ).copyWith(color: palette.textPrimary),
                 textAlign: TextAlign.start,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -245,21 +250,23 @@ class _ProjectMetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: learningMutedChip,
+        color: palette.mutedChip,
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: learningBorderSubtle),
+        border: Border.all(color: palette.borderSubtle),
       ),
       child: Text(
         label,
         style: AppTextStyles.body(
           context,
-        ).copyWith(color: learningTextSecondary),
+        ).copyWith(color: palette.textSecondary),
       ),
     );
   }
