@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
@@ -55,8 +56,8 @@ class HomeSectionHeader extends StatelessWidget {
               titleBlock,
               if (action != null) ...[
                 const SizedBox(height: AppSpacing.md),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
+                SizedBox(
+                  width: double.infinity,
                   child: action,
                 ),
               ],
@@ -73,12 +74,49 @@ class HomeSectionHeader extends StatelessWidget {
               fit: FlexFit.loose,
               child: Align(
                 alignment: AlignmentDirectional.topEnd,
-                child: action!,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  child: action!,
+                ),
               ),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+class HomeSectionActionButton extends StatelessWidget {
+  const HomeSectionActionButton({
+    super.key,
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
+
+  final VoidCallback onPressed;
+  final Widget icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return FilledButton.icon(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: palette.mint,
+        foregroundColor: palette.ctaForeground,
+        minimumSize: const Size(0, 48),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.sm,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+      ),
+      icon: icon,
+      label: Text(label),
     );
   }
 }

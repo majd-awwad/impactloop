@@ -13,17 +13,19 @@ class ProjectLinkList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: learningCardSurface,
+        color: palette.cardSurface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: learningBorderSubtle),
-        boxShadow: const [
+        border: Border.all(color: palette.borderSubtle),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x12000000),
+            color: palette.cardShadow,
             blurRadius: 18,
-            offset: Offset(0, 8),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -36,10 +38,10 @@ class ProjectLinkList extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: learningDarkSurfaceSoft,
+                  color: palette.darkSurfaceSoft,
                   borderRadius: AppRadius.pillAll,
                 ),
-                child: const Icon(Icons.open_in_new, color: learningLime),
+                child: Icon(Icons.open_in_new, color: palette.lime),
               ),
               const Spacer(),
               Text(
@@ -49,7 +51,7 @@ class ProjectLinkList extends StatelessWidget {
                 ).resolve(context),
                 style: AppTextStyles.display(
                   context,
-                ).copyWith(color: learningTextPrimary),
+                ).copyWith(color: palette.textPrimary),
                 textAlign: TextAlign.start,
               ),
             ],
@@ -73,16 +75,18 @@ class _LinkTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: learningDarkSurfaceSoft,
+        color: palette.darkSurfaceSoft,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: learningBorderSubtle),
+        border: Border.all(color: palette.borderSubtle),
       ),
       child: Row(
         children: [
-          const Icon(Icons.link_rounded, color: learningLime),
+          Icon(Icons.link_rounded, color: palette.lime),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -92,7 +96,7 @@ class _LinkTile extends StatelessWidget {
                   item.label.resolve(context),
                   style: AppTextStyles.title(
                     context,
-                  ).copyWith(fontSize: 18, color: learningTextPrimary),
+                  ).copyWith(fontSize: 18, color: palette.textPrimary),
                   textAlign: TextAlign.start,
                 ),
                 const SizedBox(height: AppSpacing.xs),
@@ -100,7 +104,7 @@ class _LinkTile extends StatelessWidget {
                   item.urlLabel.resolve(context),
                   style: AppTextStyles.subtitle(
                     context,
-                  ).copyWith(color: learningTextSecondary),
+                  ).copyWith(color: palette.textSecondary),
                   textAlign: TextAlign.start,
                 ),
               ],

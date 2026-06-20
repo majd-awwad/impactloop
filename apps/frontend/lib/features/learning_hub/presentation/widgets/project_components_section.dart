@@ -23,6 +23,7 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
     final hasMore = widget.components.length > _collapsedVisibleCount;
     final visibleComponents = _expanded
         ? widget.components
@@ -31,14 +32,14 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: learningCardSurface,
+        color: palette.cardSurface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: learningBorderSubtle),
-        boxShadow: const [
+        border: Border.all(color: palette.borderSubtle),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x12000000),
+            color: palette.cardShadow,
             blurRadius: 18,
-            offset: Offset(0, 8),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -51,10 +52,10 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: learningDarkSurfaceSoft,
+                  color: palette.darkSurfaceSoft,
                   borderRadius: AppRadius.pillAll,
                 ),
-                child: const Icon(Icons.inventory_2_outlined, color: learningLime),
+                child: Icon(Icons.inventory_2_outlined, color: palette.lime),
               ),
               const Spacer(),
               Text(
@@ -64,7 +65,7 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
                 ).resolve(context),
                 style: AppTextStyles.display(
                   context,
-                ).copyWith(color: learningTextPrimary),
+                ).copyWith(color: palette.textPrimary),
                 textAlign: TextAlign.start,
               ),
             ],
@@ -81,15 +82,15 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
                   vertical: AppSpacing.sm,
                 ),
                 decoration: BoxDecoration(
-                  color: learningDarkSurface,
+                  color: palette.darkSurface,
                   borderRadius: AppRadius.pillAll,
-                  border: Border.all(color: learningBorderSubtle),
+                  border: Border.all(color: palette.borderSubtle),
                 ),
                 child: Text(
                   component.resolve(context),
                   style: AppTextStyles.label(
                     context,
-                  ).copyWith(color: learningTextPrimary),
+                  ).copyWith(color: palette.textPrimary),
                   textAlign: TextAlign.start,
                 ),
               );
@@ -127,8 +128,9 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
               vertical: AppSpacing.md,
             ),
             decoration: BoxDecoration(
-              color: learningDarkSurfaceSoft,
+              color: palette.darkSurfaceSoft,
               borderRadius: AppRadius.lgAll,
+              border: Border.all(color: palette.borderSubtle),
             ),
             child: Text(
               const LocalizedText(
@@ -137,7 +139,7 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
               ).resolve(context),
               style: AppTextStyles.body(
                 context,
-              ).copyWith(color: learningTextSecondary),
+              ).copyWith(color: palette.textSecondary),
               textAlign: TextAlign.start,
             ),
           ),

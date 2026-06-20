@@ -68,7 +68,7 @@ class MaterialDiscoveryApiMapper {
       ),
       heroIconData: _heroIconForCategory(categoryNameEn),
       cardGradient: _gradientForCategory(categoryNameEn),
-      imageUrl: _nullableString(json['imageUrl']),
+      imageUrl: _imageUrl(json, categoryNameEn),
       ratingLabel: ratingSummary == null
           ? null
           : LocalizedText(
@@ -102,6 +102,62 @@ class MaterialDiscoveryApiMapper {
 
     final normalized = value.toString().trim();
     return normalized.isEmpty ? null : normalized;
+  }
+
+  static String _imageUrl(Map<String, dynamic> json, String categoryNameEn) {
+    final directImage = _nullableString(json['imageUrl']);
+    if (directImage != null) {
+      return directImage;
+    }
+
+    final imageUrls = json['imageUrls'];
+    if (imageUrls is List) {
+      for (final image in imageUrls) {
+        if (image is Map) {
+          final url = _nullableString(image['url'] ?? image['imageUrl']);
+          if (url != null) {
+            return url;
+          }
+        } else {
+          final url = _nullableString(image);
+          if (url != null) {
+            return url;
+          }
+        }
+      }
+    }
+
+    return _fallbackImageForCategory(categoryNameEn);
+  }
+
+  static String _fallbackImageForCategory(String categoryNameEn) {
+    final normalized = categoryNameEn.toLowerCase();
+
+    if (normalized.contains('wood')) {
+      return 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80';
+    }
+
+    if (normalized.contains('electronic') ||
+        normalized.contains('sensor') ||
+        normalized.contains('circuit')) {
+      return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
+    }
+
+    if (normalized.contains('metal') || normalized.contains('steel')) {
+      return 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80';
+    }
+
+    if (normalized.contains('plastic') || normalized.contains('acrylic')) {
+      return 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=1200&q=80';
+    }
+
+    if (normalized.contains('fabric') ||
+        normalized.contains('textile') ||
+        normalized.contains('denim')) {
+      return 'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=1200&q=80';
+    }
+
+    return 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80';
   }
 
   static double? _numberFromDynamic(Object? value) {

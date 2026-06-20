@@ -41,7 +41,8 @@ const mockMaterials = <DiscoveryMaterial>[
     heroIconData: Icons.carpenter_outlined,
     cardGradient: [0xFF2E4738, 0xFF17211B],
     ratingLabel: LocalizedText(en: '4.8', ar: '4.8'),
-    imageUrl: 'assets/images/materials/plywood-panels.jpg',
+    imageUrl:
+        'https://unsplash.com/photos/uqh5Pbv0d4s/download?force=true&w=1200',
   ),
   DiscoveryMaterial(
     id: 'arduino-sensors',
@@ -75,7 +76,8 @@ const mockMaterials = <DiscoveryMaterial>[
     heroIconData: Icons.memory_rounded,
     cardGradient: [0xFF1C3F66, 0xFF121E2D],
     ratingLabel: LocalizedText(en: '4.9', ar: '4.9'),
-    imageUrl: 'assets/images/materials/arduino-sensors.jpg',
+    imageUrl:
+        'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
   ),
   DiscoveryMaterial(
     id: 'steel-tubes',
@@ -111,7 +113,8 @@ const mockMaterials = <DiscoveryMaterial>[
     ),
     heroIconData: Icons.precision_manufacturing_outlined,
     cardGradient: [0xFF48515A, 0xFF1E252B],
-    imageUrl: 'assets/images/materials/steel-tubes.jpg',
+    imageUrl:
+        'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80',
   ),
   DiscoveryMaterial(
     id: 'plastic-crates',
@@ -145,7 +148,8 @@ const mockMaterials = <DiscoveryMaterial>[
     heroIconData: Icons.inventory_outlined,
     cardGradient: [0xFF20504D, 0xFF152724],
     ratingLabel: LocalizedText(en: '4.6', ar: '4.6'),
-    imageUrl: 'assets/images/materials/plastic-crates.jpg',
+    imageUrl:
+        'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=1200&q=80',
   ),
   DiscoveryMaterial(
     id: 'denim-rolls',
@@ -181,7 +185,8 @@ const mockMaterials = <DiscoveryMaterial>[
     ),
     heroIconData: Icons.checkroom_outlined,
     cardGradient: [0xFF39506B, 0xFF1C2432],
-    imageUrl: 'assets/images/materials/denim-rolls.jpg',
+    imageUrl:
+        'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=1200&q=80',
   ),
   DiscoveryMaterial(
     id: 'acrylic-panels',
@@ -214,6 +219,8 @@ const mockMaterials = <DiscoveryMaterial>[
     ),
     heroIconData: Icons.layers_outlined,
     cardGradient: [0xFF1E5C63, 0xFF132730],
+    imageUrl:
+        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80',
   ),
 ];
 DiscoveryMaterial? mockMaterialById(String id) {

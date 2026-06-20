@@ -28,6 +28,15 @@ class HomeActionCard extends StatelessWidget {
     final palette = MaterialsUiPalette.of(context);
     final foreground = enabled ? palette.textPrimary : palette.textMuted;
     final accent = enabled ? palette.mint : palette.textMuted;
+    final shadow = enabled
+        ? [
+            BoxShadow(
+              color: palette.cardShadow,
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ]
+        : <BoxShadow>[];
 
     return Material(
       color: Colors.transparent,
@@ -35,21 +44,20 @@ class HomeActionCard extends StatelessWidget {
         onTap: onPressed,
         borderRadius: AppRadius.lgAll,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 172),
+          width: double.infinity,
+          constraints: BoxConstraints(minHeight: enabled ? 168 : 156),
           padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: enabled ? palette.cardSurface : palette.mutedSurface,
+            color: enabled
+                ? palette.cardSurface
+                : palette.mutedSurface.withValues(alpha: 0.66),
             borderRadius: AppRadius.lgAll,
             border: Border.all(
-              color: enabled ? palette.borderStrong : palette.borderSubtle,
+              color: enabled
+                  ? palette.borderStrong
+                  : palette.borderSubtle.withValues(alpha: 0.78),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: palette.cardShadow,
-                blurRadius: 20,
-                offset: Offset(0, 8),
-              ),
-            ],
+            boxShadow: shadow,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,13 +69,17 @@ class HomeActionCard extends StatelessWidget {
                     width: 46,
                     height: 46,
                     decoration: BoxDecoration(
-                      color: accent.withValues(alpha: enabled ? 0.16 : 0.1),
+                      color: accent.withValues(alpha: enabled ? 0.16 : 0.07),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: accent.withValues(alpha: enabled ? 0.42 : 0.22),
+                        color: accent.withValues(alpha: enabled ? 0.42 : 0.16),
                       ),
                     ),
-                    child: Icon(icon, color: accent, size: 22),
+                    child: Icon(
+                      icon,
+                      color: accent.withValues(alpha: enabled ? 1 : 0.72),
+                      size: 22,
+                    ),
                   ),
                   if (badge != null)
                     Expanded(
@@ -82,15 +94,21 @@ class HomeActionCard extends StatelessWidget {
                             vertical: AppSpacing.xs,
                           ),
                           decoration: BoxDecoration(
-                            color: palette.cardSurfaceAlt,
+                            color: palette.cardSurfaceAlt.withValues(
+                              alpha: enabled ? 1 : 0.68,
+                            ),
                             borderRadius: AppRadius.pillAll,
-                            border: Border.all(color: palette.borderSubtle),
+                            border: Border.all(
+                              color: palette.borderSubtle.withValues(
+                                alpha: 0.78,
+                              ),
+                            ),
                           ),
                           child: Text(
                             badge!,
                             style: AppTextStyles.label(context).copyWith(
-                              color: accent,
-                              fontSize: 12,
+                              color: palette.textMuted,
+                              fontSize: 11.5,
                               letterSpacing: 0,
                             ),
                             maxLines: 1,
@@ -120,6 +138,8 @@ class HomeActionCard extends StatelessWidget {
                   letterSpacing: 0,
                 ),
                 textAlign: TextAlign.start,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

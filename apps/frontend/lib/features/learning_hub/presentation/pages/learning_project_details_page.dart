@@ -21,10 +21,11 @@ class LearningProjectDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final project = learningProjectById(projectId);
+    final palette = LearningUiPalette.of(context);
 
     if (project == null) {
       return Scaffold(
-        backgroundColor: learningPageBackground,
+        backgroundColor: palette.pageBackground,
         body: Center(
           child: Text(
             const LocalizedText(
@@ -33,14 +34,14 @@ class LearningProjectDetailsPage extends StatelessWidget {
             ).resolve(context),
             style: AppTextStyles.title(
               context,
-            ).copyWith(color: learningTextPrimary),
+            ).copyWith(color: palette.textPrimary),
           ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: learningPageBackground,
+      backgroundColor: palette.pageBackground,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -107,6 +108,13 @@ class _DetailsHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasImage =
+        project.imageUrl != null && project.imageUrl!.trim().isNotEmpty;
+    final fallbackGradient = isDark
+        ? projectGradient(project)
+        : [palette.heroStart, palette.heroAccent, palette.heroEnd];
     final screenWidth = MediaQuery.sizeOf(context).width;
     final heroHeight = screenWidth >= 1100
         ? 380.0
@@ -122,23 +130,36 @@ class _DetailsHero extends StatelessWidget {
             begin: AlignmentDirectional.topStart,
             end: AlignmentDirectional.bottomEnd,
             colors: project.id == 'wireless-charger'
-                ? const [learningPurpleStart, learningPurpleEnd]
-                : projectGradient(project),
+                ? isDark
+                    ? const [learningPurpleStart, learningPurpleEnd]
+                    : const [Color(0xFFEFE7FF), Color(0xFFE8EEF8)]
+                : fallbackGradient,
           ),
         ),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (project.imageUrl != null)
+            if (hasImage)
               Image.network(
-                project.imageUrl!,
+                project.imageUrl!.trim(),
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) =>
                     const SizedBox.shrink(),
               ),
             DecoratedBox(
               decoration: BoxDecoration(
-                color: learningOverlayDark.withValues(alpha: 0.38),
+                gradient: LinearGradient(
+                  begin: AlignmentDirectional.topCenter,
+                  end: AlignmentDirectional.bottomCenter,
+                  colors: [
+                    palette.overlayDark.withValues(
+                      alpha: hasImage ? (isDark ? 0.34 : 0.08) : 0.0,
+                    ),
+                    palette.pageBackground.withValues(
+                      alpha: hasImage ? (isDark ? 0.56 : 0.18) : 0.0,
+                    ),
+                  ],
+                ),
               ),
             ),
             PositionedDirectional(
@@ -150,12 +171,17 @@ class _DetailsHero extends StatelessWidget {
                   vertical: AppSpacing.xs,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: palette.cardSurface.withValues(
+                    alpha: isDark ? 0.74 : 0.86,
+                  ),
                   borderRadius: AppRadius.pillAll,
+                  border: Border.all(color: palette.borderSubtle),
                 ),
                 child: Text(
                   project.category.resolve(context),
-                  style: AppTextStyles.badgeLabel(context),
+                  style: AppTextStyles.badgeLabel(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
                 ),
               ),
             ),
@@ -165,30 +191,34 @@ class _DetailsHero extends StatelessWidget {
               child: IconButton.filled(
                 onPressed: () => context.go('/learning'),
                 style: IconButton.styleFrom(
-                  backgroundColor: Colors.black.withValues(alpha: 0.18),
+                  backgroundColor: palette.cardSurface.withValues(
+                    alpha: isDark ? 0.74 : 0.9,
+                  ),
+                  foregroundColor: palette.textPrimary,
                 ),
                 icon: const Icon(Icons.arrow_forward_rounded),
               ),
             ),
-            PositionedDirectional(
-              bottom: 34,
-              start: 0,
-              end: 0,
-              child: Icon(
-                project.heroIconData,
-                size: 112,
-                color: learningTextPrimary,
+            if (!hasImage)
+              PositionedDirectional(
+                bottom: 34,
+                start: 0,
+                end: 0,
+                child: Icon(
+                  project.heroIconData,
+                  size: 86,
+                  color: palette.textPrimary,
+                ),
               ),
-            ),
             PositionedDirectional(
               top: 40,
               end: 120,
-              child: _BlurOrb(size: 160),
+              child: _BlurOrb(size: 160, color: palette.textPrimary),
             ),
             PositionedDirectional(
               bottom: 18,
               start: 36,
-              child: _BlurOrb(size: 120),
+              child: _BlurOrb(size: 120, color: palette.textPrimary),
             ),
           ],
         ),
@@ -204,17 +234,19 @@ class _DetailsSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: learningCardSurface,
+        color: palette.cardSurface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: learningBorderSubtle),
-        boxShadow: const [
+        border: Border.all(color: palette.borderSubtle),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x17000000),
+            color: palette.cardShadow,
             blurRadius: 22,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -228,7 +260,7 @@ class _DetailsSummaryCard extends StatelessWidget {
                 project.title.resolve(context),
                 style: AppTextStyles.display(
                   context,
-                ).copyWith(color: learningTextPrimary),
+                ).copyWith(color: palette.textPrimary),
                 textAlign: TextAlign.start,
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -236,7 +268,7 @@ class _DetailsSummaryCard extends StatelessWidget {
                 project.summary.resolve(context),
                 style: AppTextStyles.subtitle(
                   context,
-                ).copyWith(color: learningTextSecondary),
+                ).copyWith(color: palette.textSecondary),
                 textAlign: TextAlign.start,
               ),
             ],
@@ -296,15 +328,16 @@ class _DetailsChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color background = learningMutedChip;
-    Color foreground = learningTextSecondary;
+    final palette = LearningUiPalette.of(context);
+    Color background = palette.mutedChip;
+    Color foreground = palette.textSecondary;
 
     if (dark) {
-      background = learningDarkSurface;
-      foreground = learningTextPrimary;
+      background = palette.darkSurface;
+      foreground = palette.textPrimary;
     } else if (accent) {
-      background = learningLime.withValues(alpha: 0.18);
-      foreground = learningLimeSoft;
+      background = palette.lime.withValues(alpha: 0.16);
+      foreground = palette.limeSoft;
     }
 
     return Container(
@@ -315,6 +348,7 @@ class _DetailsChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: background,
         borderRadius: AppRadius.pillAll,
+        border: Border.all(color: palette.borderSubtle),
       ),
       child: Text(
         label,
@@ -325,9 +359,10 @@ class _DetailsChip extends StatelessWidget {
 }
 
 class _BlurOrb extends StatelessWidget {
-  const _BlurOrb({required this.size});
+  const _BlurOrb({required this.size, required this.color});
 
   final double size;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +370,7 @@ class _BlurOrb extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: color.withValues(alpha: 0.06),
         shape: BoxShape.circle,
       ),
     );

@@ -16,22 +16,31 @@ class MaterialPriceBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = isFree
+        ? (isDark ? materialPriceFreeBackground : const Color(0xFFE4F4EC))
+        : (isDark ? materialPricePaidBackground : const Color(0xFFF3F8F4));
+    final border = isFree
+        ? (isDark ? materialPriceFreeBorder : const Color(0xFFB8D2C3))
+        : (isDark ? materialPricePaidBorder : const Color(0xFFD4E5D9));
+    final foreground = isFree
+        ? (isDark ? materialPriceFreeForeground : const Color(0xFF0F7A5A))
+        : (isDark ? materialPricePaidForeground : const Color(0xFF506258));
+
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: materialBadgeHorizontalPadding,
         vertical: materialBadgeVerticalPadding,
       ),
       decoration: BoxDecoration(
-        color: isFree ? materialPriceFreeBackground : materialPricePaidBackground,
+        color: background,
         borderRadius: AppRadius.pillAll,
-        border: Border.all(
-          color: isFree ? materialPriceFreeBorder : materialPricePaidBorder,
-        ),
+        border: Border.all(color: border),
       ),
       child: Text(
         label,
         style: AppTextStyles.label(context).copyWith(
-          color: isFree ? materialPriceFreeForeground : materialPricePaidForeground,
+          color: foreground,
           fontSize: materialBadgeFontSize,
           fontWeight: FontWeight.w700,
           height: 1.1,

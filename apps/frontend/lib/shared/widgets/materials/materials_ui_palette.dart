@@ -6,15 +6,15 @@ import 'package:flutter/material.dart';
 const materialAppBackground = Color(0xFF050807);
 const materialPageBackground = Color(0xFF050807);
 const materialSectionBackground = Color(0xFF080D0B);
-const materialCardSurface = Color(0xFF101614);
-const materialCardSurfaceAlt = Color(0xFF171F1B);
+const materialCardSurface = Color(0xFF0B1512);
+const materialCardSurfaceAlt = Color(0xFF101F1A);
 const materialPanelSurface = Color(0xFF101614);
 const materialMutedSurface = Color(0xFF202A25);
 const materialInputSurface = Color(0xFF202A25);
 
 // --- Borders ---
 const materialBorderSubtle = Color(0xFF28352F);
-const materialBorderStrong = Color(0xFF3A4F45);
+const materialBorderStrong = Color(0xFF284C40);
 
 // --- Text ---
 const materialTextPrimary = Color(0xFFF4F7F2);
@@ -41,8 +41,8 @@ const materialHintSurface = Color(0xFF171F1B);
 const materialHintBorder = Color(0xFF28352F);
 const materialMapSurface = Color(0xFF080D0B);
 const materialMapGrid = Color(0xFF1E2622);
-const materialCardShadow = Color(0x24000000);
-const materialOverlayDark = Color(0x55050807);
+const materialCardShadow = Color(0x1F000000);
+const materialOverlayDark = Color(0x66050807);
 const materialOverlaySoft = Color(0x66050807);
 
 // --- Hero (neutral charcoal / navy; emerald glow only) ---
@@ -52,9 +52,9 @@ const materialHeroEnd = Color(0xFF0E1520);
 const materialHeroGlow = Color(0x1434D399);
 
 // --- Card media fallback (cool charcoal; distinct from card body) ---
-const materialFallbackStart = Color(0xFF0A0E14);
-const materialFallbackMid = Color(0xFF121A22);
-const materialFallbackEnd = Color(0xFF182028);
+const materialFallbackStart = Color(0xFF122A22);
+const materialFallbackMid = Color(0xFF17382E);
+const materialFallbackEnd = Color(0xFF0E1E19);
 
 // --- Status badges ---
 const materialAvailableBackground = Color(0x1A34D399);
@@ -188,12 +188,12 @@ class MaterialsUiPalette {
   static const light = MaterialsUiPalette(
     pageBackground: Color(0xFFFAFBF7),
     cardSurface: Color(0xFFFFFFFF),
-    cardSurfaceAlt: Color(0xFFF1F5EF),
+    cardSurfaceAlt: Color(0xFFF3F8F4),
     panelSurface: Color(0xFFFFFFFF),
     mutedSurface: Color(0xFFEAF3EC),
     inputSurface: Color(0xFFFFFFFF),
     borderSubtle: Color(0xFFD9E2D7),
-    borderStrong: Color(0xFFC7D4C5),
+    borderStrong: Color(0xFFC8DCCF),
     textPrimary: Color(0xFF102019),
     textSecondary: Color(0xFF526158),
     textMuted: Color(0xFF738075),
@@ -201,13 +201,13 @@ class MaterialsUiPalette {
     ctaForeground: Color(0xFFFFFFFF),
     hintSurface: Color(0xFFFFFFFF),
     hintBorder: Color(0xFFD9E2D7),
-    cardShadow: Color(0x140F172A),
-    overlayDark: Color(0x33050807),
+    cardShadow: Color(0x120F1F17),
+    overlayDark: Color(0x24050807),
     heroStart: Color(0xFFE8F7EF),
     heroMid: Color(0xFFF6FAF4),
     heroEnd: Color(0xFFE6F2EF),
-    fallbackStart: Color(0xFFEAF3EC),
-    fallbackMid: Color(0xFFDDF0E8),
-    fallbackEnd: Color(0xFFD8E6E0),
+    fallbackStart: Color(0xFFEAF7F0),
+    fallbackMid: Color(0xFFDDF0E6),
+    fallbackEnd: Color(0xFFF8FBF7),
   );
 }

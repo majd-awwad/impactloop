@@ -7,8 +7,10 @@ import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/auth_dark_colors.dart';
-import '../theme/auth_dark_decorations.dart';
 import '../theme/auth_dark_text_styles.dart';
+import '../../features/auth/application/auth_controller.dart';
+import '../../features/auth/data/models/user.dart';
+import '../../shared/widgets/app_feedback.dart';
 import 'impact_loop_logo.dart';
 import 'nav_pill_menu.dart';
 
@@ -35,8 +37,15 @@ class EntryNavBar extends ConsumerWidget {
     final viewportWidth = MediaQuery.sizeOf(context).width;
     final isCompact = viewportWidth < 900;
     final isPhone = viewportWidth < 640;
-    final useCondensedDesktop = viewportWidth < 1700;
+    final useCondensedDesktop = viewportWidth < 1500;
     final settings = ref.watch(appSettingsProvider);
+    final authState = ref.watch(authControllerProvider);
+    final user = authState.user;
+    final isAuthenticated = authState.status == AuthStatus.authenticated &&
+        authState.isAuthenticated &&
+        user != null;
+    final effectiveShowSignIn = !isAuthenticated && showSignIn;
+    final effectiveShowCreateAccount = !isAuthenticated && showCreateAccount;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
@@ -48,52 +57,55 @@ class EntryNavBar extends ConsumerWidget {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1180),
+          constraints: const BoxConstraints(maxWidth: 1530),
           child: DecoratedBox(
-            decoration: (isDark
-                    ? AuthDarkDecorations.navBarDecoration
-                    : BoxDecoration(
-                        color: AppColors.surfaceElevated.withValues(alpha: 0.96),
-                        border: const Border(
-                          bottom: BorderSide(color: AppColors.border),
-                        ),
-                      ))
-                .copyWith(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppColors.darkSurfaceElevated.withValues(alpha: 0.96)
+                  : AppColors.surfaceElevated.withValues(alpha: 0.97),
               borderRadius: isPhone ? AppRadius.lgAll : AppRadius.xlAll,
+              border: Border.all(
+                color: isDark
+                    ? AppColors.darkBorder.withValues(alpha: 0.72)
+                    : AppColors.border,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.08),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
+                  color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.06),
+                  blurRadius: isDark ? 18 : 20,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
             child: Padding(
-              padding: EdgeInsets.all(
-                isPhone
-                    ? AppSpacing.sm
-                    : isCompact
-                    ? AppSpacing.md
-                    : AppSpacing.lg,
+              padding: EdgeInsets.symmetric(
+                horizontal: isPhone ? AppSpacing.sm : AppSpacing.lg,
+                vertical: isPhone ? AppSpacing.sm : AppSpacing.md,
               ),
               child: isCompact
                   ? _MobileNavLayout(
-                      showSignIn: showSignIn,
-                      showCreateAccount: showCreateAccount,
+                      showSignIn: effectiveShowSignIn,
+                      showCreateAccount: effectiveShowCreateAccount,
                       onSignIn: onSignIn,
                       onCreateAccount: onCreateAccount,
                       homeRoute: homeRoute,
                       settings: settings,
+                      user: user,
+                      isAuthenticated: isAuthenticated,
+                      isAuthLoading: authState.isLoading,
                       ref: ref,
                       trailingActions: trailingActions,
                     )
                   : _DesktopNavLayout(
-                      showSignIn: showSignIn,
-                      showCreateAccount: showCreateAccount,
+                      showSignIn: effectiveShowSignIn,
+                      showCreateAccount: effectiveShowCreateAccount,
                       onSignIn: onSignIn,
                       onCreateAccount: onCreateAccount,
                       homeRoute: homeRoute,
                       settings: settings,
+                      user: user,
+                      isAuthenticated: isAuthenticated,
+                      isAuthLoading: authState.isLoading,
                       ref: ref,
                       condensed: useCondensedDesktop,
                       trailingActions: trailingActions,
@@ -114,6 +126,9 @@ class _DesktopNavLayout extends StatelessWidget {
     required this.onCreateAccount,
     required this.homeRoute,
     required this.settings,
+    required this.user,
+    required this.isAuthenticated,
+    required this.isAuthLoading,
     required this.ref,
     required this.condensed,
     required this.trailingActions,
@@ -125,6 +140,9 @@ class _DesktopNavLayout extends StatelessWidget {
   final VoidCallback? onCreateAccount;
   final String homeRoute;
   final AppSettings settings;
+  final User? user;
+  final bool isAuthenticated;
+  final bool isAuthLoading;
   final WidgetRef ref;
   final bool condensed;
   final List<Widget> trailingActions;
@@ -134,6 +152,7 @@ class _DesktopNavLayout extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         InkWell(
           onTap: () => context.go(homeRoute),
@@ -141,7 +160,7 @@ class _DesktopNavLayout extends StatelessWidget {
           child: const ImpactLoopLogo(compact: true),
         ),
         if (!condensed) ...[
-          const SizedBox(width: AppSpacing.lg),
+          const SizedBox(width: AppSpacing.md),
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
@@ -167,15 +186,29 @@ class _DesktopNavLayout extends StatelessWidget {
             ),
           ),
         ],
-        SizedBox(width: condensed ? AppSpacing.sm : AppSpacing.md),
-        Flexible(child: _NavLinks(compact: condensed)),
-        const Spacer(),
+        SizedBox(width: condensed ? AppSpacing.md : AppSpacing.lg),
+        Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: _NavLinks(compact: condensed),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
         _UtilityPills(settings: settings, ref: ref),
         if (trailingActions.isNotEmpty) ...[
           const SizedBox(width: AppSpacing.sm),
           ...trailingActions,
         ],
-        if (showSignIn || showCreateAccount) ...[
+        if (isAuthenticated && user != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          _AccountMenu(
+            user: user!,
+            settings: settings,
+            ref: ref,
+            compact: condensed,
+            isLoggingOut: isAuthLoading,
+          ),
+        ] else if (showSignIn || showCreateAccount) ...[
           const SizedBox(width: AppSpacing.md),
           _ActionCluster(
             showSignIn: showSignIn,
@@ -211,21 +244,26 @@ class _NavLinks extends StatelessWidget {
       currentPath = '';
     }
 
-    return Wrap(
-      spacing: AppSpacing.xs,
-      runSpacing: AppSpacing.xs,
-      children: [
-        for (final item in _items)
-          _NavLinkPill(
-            label: item.$1,
-            route: item.$2,
-            icon: item.$3,
-            compact: compact,
-            selected:
-                currentPath == item.$2 || currentPath.startsWith('${item.$2}/'),
-            isDark: isDark,
-          ),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final item in _items) ...[
+            _NavLinkPill(
+              label: item.$1,
+              route: item.$2,
+              icon: item.$3,
+              compact: compact,
+              selected:
+                  currentPath == item.$2 ||
+                  currentPath.startsWith('${item.$2}/'),
+              isDark: isDark,
+            ),
+            if (item != _items.last) const SizedBox(width: AppSpacing.xs),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -250,25 +288,27 @@ class _NavLinkPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = isDark ? AuthDarkColors.accent : AppColors.primary;
+    final border = isDark ? AppColors.darkBorder : AppColors.border;
     final foreground = selected
         ? accent
         : isDark
         ? AuthDarkColors.textSecondary
         : AppColors.textSecondary;
     final background = selected
-        ? accent.withValues(alpha: isDark ? 0.14 : 0.1)
+        ? accent.withValues(alpha: isDark ? 0.16 : 0.1)
         : Colors.transparent;
 
     final buttonStyle = TextButton.styleFrom(
       foregroundColor: foreground,
       backgroundColor: background,
       padding: EdgeInsetsDirectional.symmetric(
-        horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
+        horizontal: compact ? AppSpacing.sm : AppSpacing.md,
         vertical: AppSpacing.xs,
       ),
-      minimumSize: Size(compact ? 34 : 0, 36),
+      minimumSize: Size(compact ? 38 : 0, 38),
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+      side: selected ? BorderSide(color: border.withValues(alpha: 0.7)) : null,
     );
 
     if (compact) {
@@ -292,6 +332,7 @@ class _NavLinkPill extends StatelessWidget {
         label,
         style: AuthDarkTextStyles.label(context).copyWith(
           color: foreground,
+          fontSize: 13,
           fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
         ),
       ),
@@ -307,6 +348,9 @@ class _MobileNavLayout extends StatelessWidget {
     required this.onCreateAccount,
     required this.homeRoute,
     required this.settings,
+    required this.user,
+    required this.isAuthenticated,
+    required this.isAuthLoading,
     required this.ref,
     required this.trailingActions,
   });
@@ -317,6 +361,9 @@ class _MobileNavLayout extends StatelessWidget {
   final VoidCallback? onCreateAccount;
   final String homeRoute;
   final AppSettings settings;
+  final User? user;
+  final bool isAuthenticated;
+  final bool isAuthLoading;
   final WidgetRef ref;
   final List<Widget> trailingActions;
 
@@ -342,7 +389,15 @@ class _MobileNavLayout extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               alignment: WrapAlignment.end,
               children: [
-                if (showCompactAction && showCreateAccount)
+                if (isAuthenticated && user != null)
+                  _AccountMenu(
+                    user: user!,
+                    settings: settings,
+                    ref: ref,
+                    compact: true,
+                    isLoggingOut: isAuthLoading,
+                  )
+                else if (showCompactAction && showCreateAccount)
                   _CompactNavLink(
                     label: 'Create account',
                     onPressed: onCreateAccount ?? () => context.go('/register'),
@@ -404,6 +459,287 @@ class _UtilityPills extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+class _AccountMenu extends StatelessWidget {
+  const _AccountMenu({
+    required this.user,
+    required this.settings,
+    required this.ref,
+    required this.compact,
+    required this.isLoggingOut,
+  });
+
+  final User user;
+  final AppSettings settings;
+  final WidgetRef ref;
+  final bool compact;
+  final bool isLoggingOut;
+
+  String get _displayName {
+    final name = user.displayName.trim();
+    return name.isEmpty ? 'Account' : name;
+  }
+
+  String get _initial {
+    final name = _displayName.trim();
+    return name.isEmpty ? 'A' : name.characters.first.toUpperCase();
+  }
+
+  bool get _isSupplier => user.hasRole('SUPPLIER');
+
+  Future<void> _logout(BuildContext context) async {
+    final logoutError = await ref.read(authControllerProvider.notifier).logout();
+
+    if (!context.mounted) {
+      return;
+    }
+
+    context.go('/login');
+
+    if (logoutError != null) {
+      showInfoSnackBar(
+        context,
+        'You were signed out locally, but the server could not be reached.',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = isDark
+        ? AuthDarkColors.chipUnselected
+        : AppColors.surfaceElevated;
+    final primaryText = isDark
+        ? AuthDarkColors.textPrimary
+        : AppColors.textPrimary;
+    final secondaryText = isDark
+        ? AuthDarkColors.textSecondary
+        : AppColors.textSecondary;
+    final border = isDark ? AuthDarkColors.border : AppColors.border;
+    final accent = isDark ? AuthDarkColors.accent : AppColors.primary;
+
+    return MenuAnchor(
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(
+          isDark ? AppColors.darkSurfaceElevated : AppColors.surfaceElevated,
+        ),
+        elevation: const WidgetStatePropertyAll(10),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: AppRadius.lgAll,
+            side: BorderSide(color: border),
+          ),
+        ),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        ),
+      ),
+      builder: (context, controller, child) {
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              if (controller.isOpen) {
+                controller.close();
+              } else {
+                controller.open();
+              }
+            },
+            borderRadius: AppRadius.pillAll,
+            child: Ink(
+              height: 42,
+              padding: EdgeInsetsDirectional.symmetric(
+                horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: surface,
+                borderRadius: AppRadius.pillAll,
+                border: Border.all(
+                  color: controller.isOpen ? accent : border,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: isDark ? 0.16 : 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      _initial,
+                      style: AuthDarkTextStyles.label(context).copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  if (!compact) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 112),
+                      child: Text(
+                        _displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AuthDarkTextStyles.label(context).copyWith(
+                          color: primaryText,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(width: AppSpacing.xs),
+                  Icon(
+                    controller.isOpen
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                    color: secondaryText,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      menuChildren: [
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.md,
+          ),
+          child: SizedBox(
+            width: 280,
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: accent.withValues(alpha: 0.14),
+                  child: Text(
+                    _initial,
+                    style: AuthDarkTextStyles.title(context).copyWith(
+                      color: accent,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AuthDarkTextStyles.label(context).copyWith(
+                          color: primaryText,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        user.email,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AuthDarkTextStyles.body(context).copyWith(
+                          color: secondaryText,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        _AccountMenuItem(
+          icon: Icons.person_outline_rounded,
+          label: _isSupplier ? 'View supplier profile' : 'Profile',
+          onPressed: () => context.go(_isSupplier ? '/supplier/profile' : '/home'),
+        ),
+        if (_isSupplier)
+          _AccountMenuItem(
+            icon: Icons.dashboard_outlined,
+            label: 'Supplier dashboard',
+            onPressed: () => context.go('/supplier'),
+          ),
+        _AccountMenuItem(
+          icon: Icons.home_outlined,
+          label: 'Learner home',
+          onPressed: () => context.go('/home'),
+        ),
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Settings',
+                style: AuthDarkTextStyles.label(context).copyWith(
+                  color: secondaryText,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _UtilityPills(settings: settings, ref: ref, compact: true),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        _AccountMenuItem(
+          icon: Icons.logout_rounded,
+          label: isLoggingOut ? 'Logging out...' : 'Logout',
+          destructive: true,
+          onPressed: isLoggingOut ? null : () => _logout(context),
+        ),
+      ],
+    );
+  }
+}
+
+class _AccountMenuItem extends StatelessWidget {
+  const _AccountMenuItem({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = destructive
+        ? (isDark ? AuthDarkColors.error : AppColors.error)
+        : isDark
+        ? AuthDarkColors.textPrimary
+        : AppColors.textPrimary;
+
+    return MenuItemButton(
+      onPressed: onPressed,
+      leadingIcon: Icon(icon, color: color, size: 20),
+      child: Text(
+        label,
+        style: AuthDarkTextStyles.label(context).copyWith(color: color),
+      ),
     );
   }
 }
@@ -513,10 +849,10 @@ class _NavActionButton extends StatelessWidget {
               backgroundColor: accent,
               foregroundColor: textOnAccent,
               padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.md,
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
               ),
-              minimumSize: const Size(0, 46),
+              minimumSize: const Size(0, 42),
               shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
             ),
             icon: Icon(icon, size: 18),
@@ -534,10 +870,10 @@ class _NavActionButton extends StatelessWidget {
               foregroundColor: primaryText,
               side: BorderSide(color: border),
               padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.md,
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
               ),
-              minimumSize: const Size(0, 46),
+              minimumSize: const Size(0, 42),
               shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
             ),
             icon: Icon(icon, size: 18),

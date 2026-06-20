@@ -32,36 +32,42 @@ class LearnerHomePage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: palette.pageBackground,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsetsDirectional.fromSTEB(
-            AppSpacing.md,
-            AppSpacing.md,
-            AppSpacing.md,
-            AppSpacing.xl,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1360),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _HomeTopBar(isLoggingOut: authState.isLoading),
-                  const SizedBox(height: AppSpacing.lg),
-                  _WelcomeHero(greeting: greeting),
-                  const SizedBox(height: AppSpacing.xl),
-                  _QuickActionsSection(),
-                  const SizedBox(height: AppSpacing.xl),
-                  const SuggestedMaterialsSection(),
-                  const SizedBox(height: AppSpacing.xl),
-                  const LearningSpotlightSection(),
-                  const SizedBox(height: AppSpacing.xl),
-                  _FutureActivitySection(),
-                  const SizedBox(height: AppSpacing.xl),
-                  _FutureToolsSection(),
-                ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _HomeTopBar(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.xl,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1280),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _WelcomeHero(greeting: greeting),
+                        const SizedBox(height: AppSpacing.xl),
+                        _QuickActionsSection(),
+                        const SizedBox(height: AppSpacing.xl),
+                        const SuggestedMaterialsSection(),
+                        const SizedBox(height: AppSpacing.xl),
+                        const LearningSpotlightSection(),
+                        const SizedBox(height: AppSpacing.xl),
+                        _FutureActivitySection(),
+                        const SizedBox(height: AppSpacing.xl),
+                        _FutureToolsSection(),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -69,45 +75,14 @@ class LearnerHomePage extends ConsumerWidget {
 }
 
 class _HomeTopBar extends ConsumerWidget {
-  const _HomeTopBar({required this.isLoggingOut});
-
-  final bool isLoggingOut;
+  const _HomeTopBar();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final palette = MaterialsUiPalette.of(context);
-
-    return EntryNavBar(
+    return const EntryNavBar(
       showSignIn: false,
       showCreateAccount: false,
       homeRoute: '/home',
-      trailingActions: [
-        TextButton.icon(
-          onPressed: isLoggingOut
-              ? null
-              : () async {
-                  final logoutError = await ref
-                      .read(authControllerProvider.notifier)
-                      .logout();
-
-                  if (!context.mounted) {
-                    return;
-                  }
-
-                  context.go('/login');
-
-                  if (logoutError != null) {
-                    showInfoSnackBar(
-                      context,
-                      'You were signed out locally, but the server could not be reached.',
-                    );
-                  }
-                },
-          style: TextButton.styleFrom(foregroundColor: palette.textSecondary),
-          icon: const Icon(Icons.logout_rounded, size: 18),
-          label: const Text('Logout'),
-        ),
-      ],
     );
   }
 }
@@ -117,37 +92,48 @@ class _WelcomeHero extends StatelessWidget {
 
   final String greeting;
 
-  List<Widget> _heroActionButtons(BuildContext context) {
+  List<Widget> _heroActionButtons(BuildContext context, {required bool compact}) {
     final palette = MaterialsUiPalette.of(context);
 
     return [
-      FilledButton.icon(
-        onPressed: () => context.go('/materials'),
-        style: FilledButton.styleFrom(
-          backgroundColor: palette.mint,
-          foregroundColor: palette.ctaForeground,
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
+      _HeroActionButton(
+        compact: compact,
+        maxWidth: 352,
+        child: FilledButton.icon(
+          onPressed: () => context.go('/materials'),
+          style: FilledButton.styleFrom(
+            backgroundColor: palette.mint,
+            foregroundColor: palette.ctaForeground,
+            minimumSize: const Size(0, 52),
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
           ),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+          icon: const Icon(Icons.search_rounded),
+          label: const Text('Browse Materials'),
         ),
-        icon: const Icon(Icons.search_rounded),
-        label: const Text('Browse Materials'),
       ),
-      OutlinedButton.icon(
-        onPressed: () => context.go('/learning'),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: palette.textPrimary,
-          side: BorderSide(color: palette.borderStrong),
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
+      _HeroActionButton(
+        compact: compact,
+        maxWidth: 300,
+        child: OutlinedButton.icon(
+          onPressed: () => context.go('/learning'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: palette.textPrimary,
+            backgroundColor: palette.cardSurface.withValues(alpha: 0.7),
+            side: BorderSide(color: palette.borderStrong),
+            minimumSize: const Size(0, 52),
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
           ),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+          icon: const Icon(Icons.school_outlined),
+          label: const Text('Explore Learning Hub'),
         ),
-        icon: const Icon(Icons.school_outlined),
-        label: const Text('Explore Learning Hub'),
       ),
     ];
   }
@@ -155,98 +141,145 @@ class _WelcomeHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: AlignmentDirectional.topStart,
-          end: AlignmentDirectional.bottomEnd,
-          colors: [palette.heroStart, palette.heroMid, palette.heroEnd],
-        ),
-        borderRadius: AppRadius.xlAll,
-        border: Border.all(color: palette.borderStrong),
-        boxShadow: [
-          BoxShadow(
-            color: palette.cardShadow,
-            blurRadius: 28,
-            offset: Offset(0, 10),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 700;
+        final heroPadding = compact ? AppSpacing.lg : AppSpacing.xl;
+
+        return Container(
+          padding: EdgeInsetsDirectional.all(heroPadding),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: AlignmentDirectional.topStart,
+              end: AlignmentDirectional.bottomEnd,
+              colors: isDark
+                  ? [
+                      palette.heroStart,
+                      Color.lerp(palette.heroMid, palette.mint, 0.08)!,
+                      Color.lerp(palette.heroEnd, palette.borderStrong, 0.2)!,
+                    ]
+                  : [
+                      palette.cardSurface,
+                      palette.heroMid,
+                      Color.lerp(palette.heroEnd, palette.mint, 0.08)!,
+                    ],
+            ),
+            borderRadius: AppRadius.xlAll,
+            border: Border.all(
+              color: isDark
+                  ? palette.borderStrong.withValues(alpha: 0.72)
+                  : palette.borderStrong,
+              width: isDark ? 1 : 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: palette.cardShadow.withValues(alpha: isDark ? 0.95 : 0.7),
+                blurRadius: 28,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 760;
-          final copy = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                greeting,
-                style: AppTextStyles.label(
+          child: Builder(
+            builder: (context) {
+              final wide = constraints.maxWidth >= 760;
+              final copy = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    greeting,
+                    style: AppTextStyles.label(
+                      context,
+                    ).copyWith(color: palette.mint, letterSpacing: 0),
+                    textAlign: TextAlign.start,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Ready to build something today?',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: palette.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      height: 1.08,
+                      letterSpacing: 0,
+                    ),
+                    textAlign: TextAlign.start,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Find reusable materials, explore project ideas, and keep future reservations, impact, and helper tools in one place.',
+                    style: AppTextStyles.subtitle(
+                      context,
+                    ).copyWith(color: palette.textSecondary, letterSpacing: 0),
+                    textAlign: TextAlign.start,
+                  ),
+                ],
+              );
+
+              if (!wide) {
+                final mobileButtons = _heroActionButtons(
                   context,
-                ).copyWith(color: palette.mint, letterSpacing: 0),
-                textAlign: TextAlign.start,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Ready to build something today?',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  color: palette.textPrimary,
-                  fontWeight: FontWeight.w800,
-                  height: 1.08,
-                  letterSpacing: 0,
-                ),
-                textAlign: TextAlign.start,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Find reusable materials, explore project ideas, and keep future reservations, impact, and helper tools in one place.',
-                style: AppTextStyles.subtitle(
-                  context,
-                ).copyWith(color: palette.textSecondary, letterSpacing: 0),
-                textAlign: TextAlign.start,
-              ),
-            ],
-          );
+                  compact: true,
+                );
 
-          if (!wide) {
-            final mobileButtons = _heroActionButtons(context);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    copy,
+                    const SizedBox(height: AppSpacing.lg),
+                    mobileButtons[0],
+                    const SizedBox(height: AppSpacing.sm),
+                    mobileButtons[1],
+                  ],
+                );
+              }
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                copy,
-                const SizedBox(height: AppSpacing.lg),
-                SizedBox(width: double.infinity, child: mobileButtons[0]),
-                const SizedBox(height: AppSpacing.sm),
-                SizedBox(width: double.infinity, child: mobileButtons[1]),
-              ],
-            );
-          }
+              final desktopActions = Wrap(
+                alignment: WrapAlignment.end,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: _heroActionButtons(context, compact: false),
+              );
 
-          final desktopActions = Wrap(
-            alignment: WrapAlignment.end,
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: _heroActionButtons(context),
-          );
-
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(child: copy),
-              const SizedBox(width: AppSpacing.xl),
-              Flexible(
-                child: Align(
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: desktopActions,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(child: copy),
+                  const SizedBox(width: AppSpacing.xl),
+                  Flexible(
+                    child: Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: desktopActions,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
+  }
+}
+
+class _HeroActionButton extends StatelessWidget {
+  const _HeroActionButton({
+    required this.child,
+    required this.compact,
+    required this.maxWidth,
+  });
+
+  final Widget child;
+  final bool compact;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    if (compact) {
+      return SizedBox(width: double.infinity, height: 52, child: child);
+    }
+
+    return SizedBox(width: maxWidth, height: 52, child: child);
   }
 }
 
@@ -262,7 +295,8 @@ class _QuickActionsSection extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         _ResponsiveGrid(
-          minItemWidth: 250,
+          minItemWidth: 280,
+          itemHeight: 224,
           children: [
             HomeActionCard(
               icon: Icons.inventory_2_outlined,
@@ -322,6 +356,7 @@ class _FutureActivitySection extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         _ResponsiveGrid(
           minItemWidth: 280,
+          itemHeight: 216,
           children: [
             ComingSoonCard(
               icon: Icons.assignment_turned_in_outlined,
@@ -409,10 +444,15 @@ class _FutureToolsSection extends StatelessWidget {
 }
 
 class _ResponsiveGrid extends StatelessWidget {
-  const _ResponsiveGrid({required this.children, this.minItemWidth = 280});
+  const _ResponsiveGrid({
+    required this.children,
+    this.minItemWidth = 280,
+    this.itemHeight,
+  });
 
   final List<Widget> children;
   final double minItemWidth;
+  final double? itemHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -427,7 +467,11 @@ class _ResponsiveGrid extends StatelessWidget {
           spacing: AppSpacing.md,
           runSpacing: AppSpacing.md,
           children: children.map((child) {
-            return SizedBox(width: itemWidth, child: child);
+            return SizedBox(
+              width: itemWidth,
+              height: itemHeight,
+              child: child,
+            );
           }).toList(),
         );
       },
