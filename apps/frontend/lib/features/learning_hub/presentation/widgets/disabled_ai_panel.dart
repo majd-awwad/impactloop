@@ -13,16 +13,18 @@ class DisabledAiPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: learningDisabledPanel,
+        color: palette.disabledPanel,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: learningDisabledPanelBorder),
+        border: Border.all(color: palette.disabledPanelBorder),
       ),
       child: Row(
         children: [
-          const Icon(Icons.auto_awesome_outlined, color: learningLime),
+          Icon(Icons.auto_awesome_outlined, color: palette.lime),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -32,7 +34,7 @@ class DisabledAiPanel extends StatelessWidget {
                   learningDisabledAiTitle.resolve(context),
                   style: AppTextStyles.title(
                     context,
-                  ).copyWith(color: learningTextPrimary),
+                  ).copyWith(color: palette.textPrimary),
                   textAlign: TextAlign.start,
                 ),
                 const SizedBox(height: AppSpacing.xs),
@@ -40,7 +42,7 @@ class DisabledAiPanel extends StatelessWidget {
                   learningDisabledAiSubtitle.resolve(context),
                   style: AppTextStyles.subtitle(
                     context,
-                  ).copyWith(color: learningTextSecondary),
+                  ).copyWith(color: palette.textSecondary),
                   textAlign: TextAlign.start,
                 ),
               ],
@@ -48,7 +50,7 @@ class DisabledAiPanel extends StatelessWidget {
           ),
           if (!compact) ...[
             const SizedBox(width: AppSpacing.md),
-            const Icon(Icons.lock_outline, color: learningTextSecondary),
+            Icon(Icons.lock_outline, color: palette.textSecondary),
           ],
         ],
       ),

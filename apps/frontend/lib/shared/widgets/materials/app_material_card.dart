@@ -36,6 +36,7 @@ class AppMaterialCard extends StatelessWidget {
     this.trailing,
     this.variant = AppMaterialCardVariant.standard,
     this.fallbackIcon = Icons.inventory_2_outlined,
+    this.mediaHeightOverride,
   });
 
   final String title;
@@ -58,13 +59,16 @@ class AppMaterialCard extends StatelessWidget {
   final Widget? trailing;
   final AppMaterialCardVariant variant;
   final IconData fallbackIcon;
+  final double? mediaHeightOverride;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final compact = variant == AppMaterialCardVariant.compact;
+    final hasImage = imageUrl != null && imageUrl!.trim().isNotEmpty;
     final borderRadius = compact ? AppRadius.lgAll : AppRadius.xlAll;
-    final mediaHeight = compact ? 164.0 : 212.0;
+    final mediaHeight =
+        mediaHeightOverride ?? _defaultMediaHeight(compact, hasImage);
     final contentPadding = compact ? AppSpacing.md : AppSpacing.lg;
     final cardHeight = compact
         ? materialCompactCardHeight
@@ -98,6 +102,7 @@ class AppMaterialCard extends StatelessWidget {
                   statusLabel: statusLabel,
                   statusTone: statusTone,
                   imageUrl: imageUrl,
+                  hasImage: hasImage,
                   gradientColors: gradientColors,
                   fallbackIcon: fallbackIcon,
                   height: mediaHeight,
@@ -181,6 +186,14 @@ class AppMaterialCard extends StatelessWidget {
       ),
     );
   }
+
+  static double _defaultMediaHeight(bool compact, bool hasImage) {
+    if (compact) {
+      return hasImage ? 154 : 128;
+    }
+
+    return hasImage ? 212 : 160;
+  }
 }
 
 class _MaterialMedia extends StatelessWidget {
@@ -189,6 +202,7 @@ class _MaterialMedia extends StatelessWidget {
     required this.statusLabel,
     required this.statusTone,
     required this.imageUrl,
+    required this.hasImage,
     required this.gradientColors,
     required this.fallbackIcon,
     required this.height,
@@ -199,6 +213,7 @@ class _MaterialMedia extends StatelessWidget {
   final String statusLabel;
   final MaterialStatusBadgeTone statusTone;
   final String? imageUrl;
+  final bool hasImage;
   final List<Color> gradientColors;
   final IconData fallbackIcon;
   final double height;
@@ -207,7 +222,18 @@ class _MaterialMedia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final topRadius = compact ? AppRadius.lg : AppRadius.xl;
+    final mediaGradientColors = hasImage
+        ? gradientColors
+        : [
+            palette.fallbackStart,
+            palette.fallbackMid,
+            palette.fallbackEnd,
+          ];
+    final overlayColor = hasImage
+        ? palette.overlayDark.withValues(alpha: isDark ? 0.72 : 0.34)
+        : palette.overlayDark.withValues(alpha: isDark ? 0.08 : 0.02);
 
     return SizedBox(
       height: height,
@@ -220,7 +246,7 @@ class _MaterialMedia extends StatelessWidget {
           gradient: LinearGradient(
             begin: AlignmentDirectional.topStart,
             end: AlignmentDirectional.bottomEnd,
-            colors: gradientColors,
+            colors: mediaGradientColors,
           ),
         ),
         child: ClipRRect(
@@ -231,15 +257,15 @@ class _MaterialMedia extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (imageUrl != null)
+              if (hasImage)
                 Image.network(
-                  imageUrl!,
+                  imageUrl!.trim(),
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) =>
                       const SizedBox.shrink(),
                 ),
               DecoratedBox(
-                decoration: BoxDecoration(color: palette.overlayDark),
+                decoration: BoxDecoration(color: overlayColor),
               ),
               Padding(
                 padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -273,33 +299,30 @@ class _MaterialMedia extends StatelessWidget {
                       ],
                     ),
                     const Spacer(),
-                    Align(
-                      alignment: AlignmentDirectional.bottomStart,
-                      child: Container(
-                        width: compact ? 60 : 72,
-                        height: compact ? 60 : 72,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: AlignmentDirectional.topStart,
-                            end: AlignmentDirectional.bottomEnd,
-                            colors: [
-                              palette.fallbackStart,
-                              palette.fallbackMid,
-                              palette.fallbackEnd,
-                            ],
+                    if (!hasImage)
+                      Align(
+                        alignment: AlignmentDirectional.bottomStart,
+                        child: Container(
+                          width: compact ? 60 : 72,
+                          height: compact ? 60 : 72,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? palette.cardSurfaceAlt.withValues(alpha: 0.78)
+                                : palette.cardSurfaceAlt,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isDark
+                                  ? palette.borderStrong.withValues(alpha: 0.82)
+                                  : const Color(0xFFD4E5D9),
+                            ),
                           ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: palette.borderStrong,
+                          child: Icon(
+                            fallbackIcon,
+                            color: palette.mint,
+                            size: compact ? 30 : 36,
                           ),
-                        ),
-                        child: Icon(
-                          fallbackIcon,
-                          color: palette.mint,
-                          size: compact ? 30 : 36,
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -319,15 +342,23 @@ class _MediaTagChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: materialBadgeHorizontalPadding,
         vertical: materialBadgeVerticalPadding,
       ),
       decoration: BoxDecoration(
-        color: palette.panelSurface.withValues(alpha: 0.86),
+        color: isDark
+            ? palette.panelSurface.withValues(alpha: 0.82)
+            : palette.cardSurface.withValues(alpha: 0.86),
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: palette.borderSubtle),
+        border: Border.all(
+          color: isDark
+              ? palette.borderStrong.withValues(alpha: 0.7)
+              : const Color(0xFFD4E5D9),
+        ),
       ),
       child: Text(
         label,
@@ -483,28 +514,37 @@ class _MetaLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: materialMetaChipHorizontalPadding,
         vertical: materialMetaChipVerticalPadding,
       ),
       decoration: BoxDecoration(
-        color: palette.cardSurfaceAlt,
+        color: isDark ? const Color(0xFF101F1A) : const Color(0xFFF3F8F4),
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: palette.borderStrong),
+        border: Border.all(
+          color: isDark ? const Color(0xFF284C40) : const Color(0xFFD4E5D9),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: palette.mint),
+          Icon(
+            icon,
+            size: 16,
+            color: isDark ? const Color(0xFF64F4D2) : const Color(0xFF0F7A5A),
+          ),
           const SizedBox(width: AppSpacing.xs),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 180),
             child: Text(
               label,
               style: AppTextStyles.label(context).copyWith(
-                color: palette.textSecondary,
+                color: isDark
+                    ? const Color(0xFFB8C8C1)
+                    : const Color(0xFF506258),
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
                 height: 1.15,

@@ -29,12 +29,15 @@ class ComingSoonCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: AppRadius.lgAll,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 172),
-          padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+          width: double.infinity,
+          constraints: const BoxConstraints(minHeight: 156),
+          padding: const EdgeInsetsDirectional.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: palette.panelSurface,
+            color: palette.panelSurface.withValues(alpha: 0.74),
             borderRadius: AppRadius.lgAll,
-            border: Border.all(color: palette.borderSubtle),
+            border: Border.all(
+              color: palette.borderSubtle.withValues(alpha: 0.82),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,14 +45,16 @@ class ComingSoonCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 42,
-                    height: 42,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
-                      color: palette.mutedSurface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: palette.borderSubtle),
+                      color: palette.mutedSurface.withValues(alpha: 0.66),
+                      borderRadius: BorderRadius.circular(13),
+                      border: Border.all(
+                        color: palette.borderSubtle.withValues(alpha: 0.76),
+                      ),
                     ),
-                    child: Icon(icon, color: palette.textSecondary, size: 21),
+                    child: Icon(icon, color: palette.textMuted, size: 20),
                   ),
                   const Spacer(),
                   Container(
@@ -58,38 +63,42 @@ class ComingSoonCard extends StatelessWidget {
                       vertical: AppSpacing.xs,
                     ),
                     decoration: BoxDecoration(
-                      color: palette.mutedSurface,
+                      color: palette.mutedSurface.withValues(alpha: 0.58),
                       borderRadius: AppRadius.pillAll,
-                      border: Border.all(color: palette.borderSubtle),
+                      border: Border.all(
+                        color: palette.borderSubtle.withValues(alpha: 0.72),
+                      ),
                     ),
                     child: Text(
                       'Coming soon',
                       style: AppTextStyles.label(context).copyWith(
-                        color: palette.textSecondary,
-                        fontSize: 12,
+                        color: palette.textMuted,
+                        fontSize: 11.5,
                         letterSpacing: 0,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 title,
                 style: AppTextStyles.title(
                   context,
-                ).copyWith(color: palette.textPrimary, letterSpacing: 0),
+                ).copyWith(color: palette.textSecondary, letterSpacing: 0),
                 textAlign: TextAlign.start,
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 description,
                 style: AppTextStyles.body(context).copyWith(
-                  color: palette.textSecondary,
+                  color: palette.textMuted,
                   height: 1.45,
                   letterSpacing: 0,
                 ),
                 textAlign: TextAlign.start,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

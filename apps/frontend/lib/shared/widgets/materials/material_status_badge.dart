@@ -23,26 +23,33 @@ class MaterialStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = switch (tone) {
-      MaterialStatusBadgeTone.available => (
-        background: materialAvailableBackground,
-        foreground: materialAvailableForeground,
-        border: materialAvailableBorder,
-      ),
+      MaterialStatusBadgeTone.available => isDark
+          ? (
+              background: materialAvailableBackground,
+              foreground: materialAvailableForeground,
+              border: materialAvailableBorder,
+            )
+          : (
+              background: const Color(0xFFE4F4EC),
+              foreground: const Color(0xFF0F7A5A),
+              border: const Color(0xFFB8D2C3),
+            ),
       MaterialStatusBadgeTone.reserved => (
-        background: materialReservedBackground,
-        foreground: materialReservedForeground,
-        border: materialReservedBorder,
+        background: isDark ? materialReservedBackground : const Color(0xFFFFF4DB),
+        foreground: isDark ? materialReservedForeground : const Color(0xFF8A5A00),
+        border: isDark ? materialReservedBorder : const Color(0xFFE5C574),
       ),
       MaterialStatusBadgeTone.reused => (
-        background: materialReusedBackground,
-        foreground: materialReusedForeground,
-        border: materialReusedBorder,
+        background: isDark ? materialReusedBackground : const Color(0xFFF3F8F4),
+        foreground: isDark ? materialReusedForeground : const Color(0xFF647268),
+        border: isDark ? materialReusedBorder : const Color(0xFFD4E5D9),
       ),
       MaterialStatusBadgeTone.draft => (
-        background: materialDraftBackground,
-        foreground: materialDraftForeground,
-        border: materialDraftBorder,
+        background: isDark ? materialDraftBackground : const Color(0xFFF3F8F4),
+        foreground: isDark ? materialDraftForeground : const Color(0xFF647268),
+        border: isDark ? materialDraftBorder : const Color(0xFFD4E5D9),
       ),
     };
 

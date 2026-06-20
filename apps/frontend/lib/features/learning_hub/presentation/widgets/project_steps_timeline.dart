@@ -21,6 +21,7 @@ class _ProjectStepsTimelineState extends State<ProjectStepsTimeline> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
     final hasMore = widget.steps.length > _collapsedVisibleCount;
     final visibleSteps = _expanded
         ? widget.steps
@@ -29,14 +30,14 @@ class _ProjectStepsTimelineState extends State<ProjectStepsTimeline> {
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: learningCardSurface,
+        color: palette.cardSurface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: learningBorderSubtle),
-        boxShadow: const [
+        border: Border.all(color: palette.borderSubtle),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x12000000),
+            color: palette.cardShadow,
             blurRadius: 18,
-            offset: Offset(0, 8),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -49,10 +50,10 @@ class _ProjectStepsTimelineState extends State<ProjectStepsTimeline> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: learningDarkSurfaceSoft,
+                  color: palette.darkSurfaceSoft,
                   borderRadius: AppRadius.pillAll,
                 ),
-                child: const Icon(Icons.check_circle_outline, color: learningLime),
+                child: Icon(Icons.check_circle_outline, color: palette.lime),
               ),
               const Spacer(),
               Text(
@@ -62,7 +63,7 @@ class _ProjectStepsTimelineState extends State<ProjectStepsTimeline> {
                 ).resolve(context),
                 style: AppTextStyles.display(
                   context,
-                ).copyWith(color: learningTextPrimary),
+                ).copyWith(color: palette.textPrimary),
                 textAlign: TextAlign.start,
               ),
             ],
@@ -115,6 +116,8 @@ class _TimelineItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,7 +132,7 @@ class _TimelineItem extends StatelessWidget {
                 title,
                 style: AppTextStyles.title(context).copyWith(
                   fontWeight: FontWeight.w500,
-                  color: learningTextPrimary,
+                  color: palette.textPrimary,
                 ),
                 textAlign: TextAlign.start,
               ),
@@ -143,18 +146,19 @@ class _TimelineItem extends StatelessWidget {
                 height: 38,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: learningDarkSurfaceSoft,
+                  color: palette.darkSurfaceSoft,
                   borderRadius: AppRadius.pillAll,
+                  border: Border.all(color: palette.borderSubtle),
                 ),
                 child: Text(
                   '$index',
                   style: AppTextStyles.label(
                     context,
-                  ).copyWith(color: learningTextSecondary),
+                  ).copyWith(color: palette.textSecondary),
                 ),
               ),
               if (!isLast)
-                Container(width: 2, height: 48, color: learningTimelineLine),
+                Container(width: 2, height: 48, color: palette.timelineLine),
             ],
           ),
         ],

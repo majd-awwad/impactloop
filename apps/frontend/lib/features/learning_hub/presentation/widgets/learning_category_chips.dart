@@ -48,24 +48,48 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = selected
+        ? palette.lime.withValues(alpha: isDark ? 0.2 : 0.12)
+        : palette.cardSurface;
+    final border = selected ? palette.lime : palette.borderSubtle;
+    final foreground = selected
+        ? palette.limeSoft
+        : isDark
+        ? palette.textSecondary
+        : palette.textPrimary;
+
     return Container(
+      constraints: const BoxConstraints(minHeight: 42),
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
+        vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: selected ? learningLime : learningDarkSurfaceSoft,
+        color: background,
         borderRadius: AppRadius.pillAll,
-        border: Border.all(
-          color: selected ? learningLime : learningBorderSubtle,
-        ),
+        border: Border.all(color: border),
+        boxShadow: [
+          if (!isDark && !selected)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+        ],
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.label(
-          context,
-        ).copyWith(
-          color: selected ? Colors.black87 : learningTextSecondary,
+      child: Center(
+        child: Text(
+          label,
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(
+            color: foreground,
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+            letterSpacing: 0,
+          ),
         ),
       ),
     );

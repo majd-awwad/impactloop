@@ -160,6 +160,7 @@ class _NavPillButton extends StatelessWidget {
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,
           ),
+          height: 42,
           decoration: BoxDecoration(
             color: surface,
             borderRadius: AppRadius.pillAll,

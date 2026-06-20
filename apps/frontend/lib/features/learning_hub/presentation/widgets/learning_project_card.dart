@@ -16,60 +16,84 @@ class LearningProjectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
 
-    return InkWell(
-      borderRadius: AppRadius.xlAll,
-      onTap: () => context.go('/learning/${project.id}'),
-      child: Container(
-        decoration: BoxDecoration(
-          color: palette.cardSurface,
-          borderRadius: AppRadius.xlAll,
-          border: Border.all(color: palette.borderSubtle),
-          boxShadow: [
-            BoxShadow(
-              color: palette.cardShadow,
-              blurRadius: 18,
-              offset: Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _ProjectCardHeader(project: project),
-            Padding(
-              padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _ProjectTitleRow(project: project),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    project.summary.resolve(context),
-                    style: AppTextStyles.subtitle(
-                      context,
-                    ).copyWith(color: palette.textSecondary),
-                    textAlign: TextAlign.start,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
+    return SizedBox(
+      height: 392,
+      child: InkWell(
+        borderRadius: AppRadius.xlAll,
+        onTap: () => context.go('/learning/${project.id}'),
+        child: Container(
+          decoration: BoxDecoration(
+            color: palette.cardSurface,
+            borderRadius: AppRadius.xlAll,
+            border: Border.all(color: palette.borderSubtle),
+            boxShadow: [
+              BoxShadow(
+                color: palette.cardShadow,
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ProjectCardHeader(project: project),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _ProjectMetaChip(label: project.category.resolve(context)),
-                      _ProjectMetaChip(
-                        label: project.componentCountLabel.resolve(context),
+                      SizedBox(
+                        height: 58,
+                        child: _ProjectTitleRow(project: project),
                       ),
-                      _ProjectMetaChip(label: project.duration.resolve(context)),
+                      const SizedBox(height: AppSpacing.sm),
+                      SizedBox(
+                        height: 56,
+                        child: Text(
+                          project.summary.resolve(context),
+                          style: AppTextStyles.subtitle(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
+                          textAlign: TextAlign.start,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Spacer(),
+                      SizedBox(
+                        height: 40,
+                        child: Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _ProjectMetaChip(
+                                  label: project.category.resolve(context),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                _ProjectMetaChip(
+                                  label: project.componentCountLabel.resolve(
+                                    context,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                _ProjectMetaChip(
+                                  label: project.duration.resolve(context),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

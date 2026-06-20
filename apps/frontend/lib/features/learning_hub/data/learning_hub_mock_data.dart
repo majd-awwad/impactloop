@@ -79,7 +79,8 @@ const learningProjects = <LearningProject>[
         urlLabel: LocalizedText(en: 'Workshop sheet', ar: 'ورقة ورشة'),
       ),
     ],
-    imageUrl: null,
+    imageUrl:
+        'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=1200&q=80',
     heroIconData: Icons.smart_toy_outlined,
     cardGradient: [0xFF1F2937, 0xFF243B53],
     isFeatured: true,
@@ -136,7 +137,8 @@ const learningProjects = <LearningProject>[
         urlLabel: LocalizedText(en: 'Sizing sheet', ar: 'ورقة القياس'),
       ),
     ],
-    imageUrl: null,
+    imageUrl:
+        'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80',
     heroIconData: Icons.handyman_outlined,
     cardGradient: [0xFF8A6B17, 0xFF667C4F],
     isFeatured: false,
@@ -188,7 +190,8 @@ const learningProjects = <LearningProject>[
         urlLabel: LocalizedText(en: 'Pinout sheet', ar: 'مخطط الأرجل'),
       ),
     ],
-    imageUrl: null,
+    imageUrl:
+        'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
     heroIconData: Icons.sensors_outlined,
     cardGradient: [0xFF1F456B, 0xFF162538],
     isFeatured: false,
@@ -243,7 +246,8 @@ const learningProjects = <LearningProject>[
         urlLabel: LocalizedText(en: 'Safety note', ar: 'ملاحظة أمان'),
       ),
     ],
-    imageUrl: null,
+    imageUrl:
+        'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=1200&q=80',
     heroIconData: Icons.lightbulb_outline,
     cardGradient: [0xFF6B8C5B, 0xFF6E9362],
     isFeatured: false,
@@ -317,7 +321,8 @@ const learningProjects = <LearningProject>[
         urlLabel: LocalizedText(en: 'Routing guide', ar: 'دليل التوصيل'),
       ),
     ],
-    imageUrl: null,
+    imageUrl:
+        'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
     heroIconData: Icons.bolt_rounded,
     cardGradient: [0xFF4C1D95, 0xFF24243E],
     isFeatured: false,
@@ -375,7 +380,8 @@ const learningProjects = <LearningProject>[
         urlLabel: LocalizedText(en: 'Sizing note', ar: 'مذكرة الاختيار'),
       ),
     ],
-    imageUrl: null,
+    imageUrl:
+        'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1200&q=80',
     heroIconData: Icons.agriculture_outlined,
     cardGradient: [0xFF3D7C4B, 0xFF527B53],
     isFeatured: false,
