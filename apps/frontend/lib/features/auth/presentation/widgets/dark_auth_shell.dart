@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/auth_dark_colors.dart';
 import '../../../../app/theme/auth_dark_decorations.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
@@ -32,18 +33,23 @@ class DarkAuthShell extends StatelessWidget {
     final useSplitLayout =
         viewportSize.width >= _splitBreakpoint && viewportSize.height >= 760;
     final useCompactSpacing = viewportSize.height < 820;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AuthDarkColors.landingBackground,
+      backgroundColor: isDark
+          ? AuthDarkColors.landingBackground
+          : AppColors.background,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AuthDarkDecorations.pageGradient,
+        decoration: BoxDecoration(
+          gradient: isDark ? AuthDarkDecorations.pageGradient : null,
+          color: isDark ? null : AppColors.background,
         ),
         child: Stack(
           children: [
-            ...AuthDarkDecorations.backgroundBlobs(
-              compact: viewportSize.width < 900,
-            ),
+            if (isDark)
+              ...AuthDarkDecorations.backgroundBlobs(
+                compact: viewportSize.width < 900,
+              ),
             SafeArea(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -150,9 +156,17 @@ class _ScrollBody extends StatelessWidget {
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        mobile ? AppSpacing.md : compactSpacing ? AppSpacing.lg : AppSpacing.xl,
+        mobile
+            ? AppSpacing.md
+            : compactSpacing
+            ? AppSpacing.lg
+            : AppSpacing.xl,
         AppSpacing.lg,
-        mobile ? AppSpacing.lg : compactSpacing ? AppSpacing.lg : AppSpacing.xl,
+        mobile
+            ? AppSpacing.lg
+            : compactSpacing
+            ? AppSpacing.lg
+            : AppSpacing.xl,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -165,7 +179,13 @@ class _ScrollBody extends StatelessWidget {
                 compact: true,
                 minimal: mobile,
               ),
-              SizedBox(height: mobile ? AppSpacing.md : compactSpacing ? AppSpacing.lg : AppSpacing.xl),
+              SizedBox(
+                height: mobile
+                    ? AppSpacing.md
+                    : compactSpacing
+                    ? AppSpacing.lg
+                    : AppSpacing.xl,
+              ),
               child,
             ],
           ),

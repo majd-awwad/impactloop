@@ -57,25 +57,23 @@ class SupplierStatCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             value,
-            style: AuthDarkTextStyles.title(context).copyWith(fontSize: 22),
+            style: AuthDarkTextStyles.title(context).copyWith(fontSize: 20),
           ),
-          const SizedBox(height: AppSpacing.xs),
           Text(label, style: AuthDarkTextStyles.body(context)),
           if (subtitle != null) ...[
-            const SizedBox(height: AppSpacing.xs),
             Text(
               subtitle!,
-              maxLines: 2,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AuthDarkTextStyles.body(context).copyWith(fontSize: 12),
             ),
           ],
           if (progress != null) ...[
             const Spacer(),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.xs),
             ClipRRect(
               borderRadius: BorderRadius.circular(AppSpacing.xs),
               child: LinearProgressIndicator(

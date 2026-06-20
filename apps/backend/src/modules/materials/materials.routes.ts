@@ -6,9 +6,15 @@ import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
   getListingPolicyHandler,
+  getMaterial,
+  listMaterials,
   priceCheckHandler,
 } from './materials.controller.js';
-import { priceCheckSchema } from './materials.validation.js';
+import {
+  materialIdParamSchema,
+  materialsQuerySchema,
+  priceCheckSchema,
+} from './materials.validation.js';
 
 export const materialsRouter = Router();
 
@@ -19,4 +25,16 @@ materialsRouter.post(
   authMiddleware,
   validate(priceCheckSchema),
   asyncHandler(priceCheckHandler),
+);
+
+materialsRouter.get(
+  '/',
+  validate(materialsQuerySchema, 'query'),
+  asyncHandler(listMaterials),
+);
+
+materialsRouter.get(
+  '/:id',
+  validate(materialIdParamSchema, 'params'),
+  asyncHandler(getMaterial),
 );

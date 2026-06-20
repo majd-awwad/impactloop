@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/auth_dark_colors.dart';
 import '../widgets/landing_feature_cards.dart';
 import '../widgets/landing_footer.dart';
@@ -13,8 +14,10 @@ class LandingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AuthDarkColors.landingBackground,
+      backgroundColor: isDark ? AuthDarkColors.landingBackground : AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

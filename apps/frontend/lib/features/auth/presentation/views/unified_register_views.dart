@@ -46,7 +46,10 @@ class _RegisterFooter extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: AppSpacing.xs,
       children: [
-        Text('Already have an account?', style: AuthDarkTextStyles.body(context)),
+        Text(
+          'Already have an account?',
+          style: AuthDarkTextStyles.body(context),
+        ),
         TextButton(
           onPressed: () => context.go('/login'),
           child: Text('Sign in', style: AuthDarkTextStyles.link(context)),

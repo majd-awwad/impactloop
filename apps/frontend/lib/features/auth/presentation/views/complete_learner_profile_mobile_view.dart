@@ -23,7 +23,8 @@ class CompleteLearnerProfileMobileView extends StatelessWidget {
         children: [
           const AuthHeader(
             title: 'Complete your learner profile',
-            subtitle: 'Help us personalize projects and material recommendations.',
+            subtitle:
+                'Help us personalize projects and material recommendations.',
           ),
           const SizedBox(height: AppSpacing.lg),
           AuthFormCard(

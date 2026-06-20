@@ -78,7 +78,10 @@ class _LoginFormState extends ConsumerState<LoginForm> {
         return;
       }
 
-      context.go(postAuthRouteForUser(user));
+      final from = GoRouterState.of(context).uri.queryParameters['from'];
+      context.go(
+        sanitizeRedirectTarget(from, fallback: postAuthRouteForUser(user)),
+      );
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -155,10 +158,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           AppLinkButton(
             label: 'Forgot password?',
             onPressed: () {
-              showInfoSnackBar(
-                context,
-                'Forgot password screen coming soon.',
-              );
+              showInfoSnackBar(context, 'Forgot password screen coming soon.');
             },
           ),
           const SizedBox(height: AppSpacing.lg),

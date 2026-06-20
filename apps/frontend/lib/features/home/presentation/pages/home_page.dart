@@ -1,112 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../auth/application/auth_controller.dart';
-import '../../../auth/application/auth_navigation.dart';
-import '../../../../shared/widgets/app_feedback.dart';
+import 'learner_home_page.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authControllerProvider);
-    final user = authState.user;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('ImpactLoop'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: TextButton(
-              onPressed: authState.isLoading
-                  ? null
-                  : () async {
-                      final logoutError = await ref
-                          .read(authControllerProvider.notifier)
-                          .logout();
-
-                      if (!context.mounted) {
-                        return;
-                      }
-
-                      context.go('/login');
-
-                      if (logoutError != null) {
-                        showInfoSnackBar(
-                          context,
-                          'You were signed out locally, but the server could not be reached.',
-                        );
-                      }
-                    },
-              child: const Text('Logout'),
-            ),
-          ),
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Welcome to ImpactLoop',
-                style: Theme.of(context).textTheme.headlineSmall,
-                textAlign: TextAlign.center,
-              ),
-              if (user != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  user.displayName,
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  user.email,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-                if (userHasSupplierRole(user)) ...[
-                  const SizedBox(height: 24),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Supplier Portal',
-                              style: Theme.of(context).textTheme.titleLarge,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Manage your listed materials, requests, and reuse impact.',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            FilledButton(
-                              onPressed: () => context.go('/supplier'),
-                              child: const Text('Open Supplier Portal'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
+  Widget build(BuildContext context) {
+    return const LearnerHomePage();
   }
 }

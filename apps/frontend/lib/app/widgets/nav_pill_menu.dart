@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/auth_dark_colors.dart';
@@ -25,21 +26,37 @@ class NavPillMenu<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = isDark
+        ? AuthDarkColors.surfaceSolid
+        : AppColors.surfaceElevated;
+    final selectedSurface = isDark
+        ? AuthDarkColors.chipSelected
+        : AppColors.primaryContainer;
+    final hoverSurface = isDark
+        ? AuthDarkColors.chipUnselected
+        : AppColors.surfaceContainer;
+    final primaryText = isDark
+        ? AuthDarkColors.textPrimary
+        : AppColors.textPrimary;
+    final secondaryText = isDark
+        ? AuthDarkColors.textSecondary
+        : AppColors.textSecondary;
+    final border = isDark ? AuthDarkColors.border : AppColors.border;
+
     return MenuAnchor(
       style: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll(
-          AuthDarkColors.surfaceSolid,
-        ),
+        backgroundColor: WidgetStatePropertyAll(surface),
         elevation: const WidgetStatePropertyAll(8),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
             borderRadius: AppRadius.mdAll,
-            side: const BorderSide(color: AuthDarkColors.border),
+            side: BorderSide(color: border),
           ),
         ),
-        padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(
-          vertical: AppSpacing.xs,
-        )),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        ),
       ),
       builder: (context, controller, child) {
         return _NavPillButton(
@@ -61,16 +78,16 @@ class NavPillMenu<T> extends StatelessWidget {
             style: ButtonStyle(
               foregroundColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.hovered)) {
-                  return AuthDarkColors.textPrimary;
+                  return primaryText;
                 }
-                return AuthDarkColors.textSecondary;
+                return secondaryText;
               }),
               backgroundColor: WidgetStateProperty.resolveWith((states) {
                 if (item == selectedValue) {
-                  return AuthDarkColors.chipSelected;
+                  return selectedSurface;
                 }
                 if (states.contains(WidgetState.hovered)) {
-                  return AuthDarkColors.chipUnselected;
+                  return hoverSurface;
                 }
                 return Colors.transparent;
               }),
@@ -88,8 +105,8 @@ class NavPillMenu<T> extends StatelessWidget {
                 itemLabel(item),
                 style: AuthDarkTextStyles.body(context).copyWith(
                   color: item == selectedValue
-                      ? AuthDarkColors.textPrimary
-                      : AuthDarkColors.textSecondary,
+                      ? primaryText
+                      : secondaryText,
                   fontWeight: item == selectedValue
                       ? FontWeight.w600
                       : FontWeight.w400,
@@ -117,6 +134,22 @@ class _NavPillButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = isDark ? AuthDarkColors.accent : AppColors.primary;
+    final surface = isDark
+        ? AuthDarkColors.chipUnselected
+        : AppColors.surfaceElevated;
+    final primaryText = isDark
+        ? AuthDarkColors.textPrimary
+        : AppColors.textPrimary;
+    final secondaryText = isDark
+        ? AuthDarkColors.textSecondary
+        : AppColors.textSecondary;
+    final border = isDark ? AuthDarkColors.border : AppColors.border;
+    final focusedBorder = isDark
+        ? AuthDarkColors.borderFocused
+        : AppColors.borderFocused;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -128,23 +161,19 @@ class _NavPillButton extends StatelessWidget {
             vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: AuthDarkColors.chipUnselected,
+            color: surface,
             borderRadius: AppRadius.pillAll,
-            border: Border.all(
-              color: isOpen
-                  ? AuthDarkColors.borderFocused
-                  : AuthDarkColors.border,
-            ),
+            border: Border.all(color: isOpen ? focusedBorder : border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: AuthDarkColors.accent),
+              Icon(icon, size: 18, color: accent),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 label,
                 style: AuthDarkTextStyles.body(context).copyWith(
-                  color: AuthDarkColors.textPrimary,
+                  color: primaryText,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -152,7 +181,7 @@ class _NavPillButton extends StatelessWidget {
               Icon(
                 isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                 size: 18,
-                color: AuthDarkColors.textSecondary,
+                color: secondaryText,
               ),
             ],
           ),

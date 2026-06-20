@@ -2,20 +2,33 @@ import type { CategoryType } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 
-export const findMaterialCategories = async (categoryType: CategoryType) => {
+const resolveAllowedCategoryTypes = (
+  type?: 'MATERIAL' | 'PROJECT',
+): CategoryType[] => {
+  if (type === 'MATERIAL') {
+    return ['MATERIAL', 'BOTH'];
+  }
+
+  if (type === 'PROJECT') {
+    return ['PROJECT', 'BOTH'];
+  }
+
+  return ['MATERIAL', 'PROJECT', 'BOTH'];
+};
+
+export const findPublicCategories = async (input: {
+  type?: 'MATERIAL' | 'PROJECT';
+  rootOnly: boolean;
+}) => {
   return prisma.category.findMany({
     where: {
-      categoryType,
-      parentId: null,
+      isActive: true,
+      categoryType: {
+        in: resolveAllowedCategoryTypes(input.type),
+      },
+      ...(input.rootOnly ? { parentId: null } : {}),
     },
     orderBy: { nameEn: 'asc' },
-    select: {
-      id: true,
-      nameEn: true,
-      nameAr: true,
-      categoryType: true,
-      iconUrl: true,
-    },
   });
 };
 

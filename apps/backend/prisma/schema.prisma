@@ -143,6 +143,42 @@ enum AiLookupStatus {
   PENDING_REVIEW
 }
 
+enum ProjectDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum LearningProjectStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+enum ProjectComponentRole {
+  REQUIRED_MATERIAL
+  OPTIONAL_MATERIAL
+  TOOL
+  CONSUMABLE
+  ALTERNATIVE
+}
+
+enum ProjectReviewStatus {
+  PENDING_REVIEW
+  ACCEPTED
+  REJECTED
+}
+
+enum ProjectLinkType {
+  YOUTUBE
+  GITHUB
+  ARTICLE
+  PDF
+  OTHER
+}
+
 model User {
   id                           String                @id @default(cuid())
   displayName                  String                @map("display_name")
@@ -170,6 +206,9 @@ model User {
   notifications                Notification[]
   reviewsGiven                 Review[]              @relation("ReviewReviewer")
   reviewsReceived              Review[]              @relation("ReviewReviewedUser")
+  createdLearningProjects      LearningProject[]    @relation("LearningProjectCreatedBy")
+  reviewedLearningProjects     LearningProject[]    @relation("LearningProjectReviewedBy")
+  approvedProjectSteps         ProjectStep[]        @relation("ProjectStepApprovedBy")
   priceRuleRequests            PriceRuleRequest[]
   categoryRequests             CategoryRequest[]
 
@@ -307,22 +346,148 @@ model Location {
 }
 
 model Category {
-  id                   String                @id @default(cuid())
-  nameEn               String                @map("name_en")
-  nameAr               String                @map("name_ar")
-  parentId             String?               @map("parent_id")
-  categoryType         CategoryType          @map("category_type")
-  iconUrl              String?               @map("icon_url")
-  createdAt            DateTime              @default(now()) @map("created_at")
-  parent               Category?             @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children             Category[]            @relation("CategoryHierarchy")
-  materials            Material[]
-  materialTypes            MaterialType[]
-  approvedCategoryRequests CategoryRequest[] @relation("ApprovedCategoryRequests")
-  priceRuleRequests        PriceRuleRequest[]
+  id                        String                     @id @default(cuid())
+  nameEn                    String                     @map("name_en")
+  nameAr                    String                     @map("name_ar")
+  parentId                  String?                    @map("parent_id")
+  categoryType              CategoryType               @map("category_type")
+  iconUrl                   String?                    @map("icon_url")
+  isActive                  Boolean                    @default(true) @map("is_active")
+  createdAt                 DateTime                   @default(now()) @map("created_at")
+  parent                    Category?                  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children                  Category[]                @relation("CategoryHierarchy")
+  materials                 Material[]
+  learningProjects          LearningProject[]
+  projectRequiredComponents ProjectRequiredComponent[]
+  materialTypes             MaterialType[]
+  approvedCategoryRequests  CategoryRequest[]         @relation("ApprovedCategoryRequests")
+  priceRuleRequests         PriceRuleRequest[]
 
   @@index([parentId])
+  @@index([categoryType, isActive])
   @@map("categories")
+}
+
+model LearningProject {
+  id                       String                @id @default(uuid())
+  categoryId               String                @map("category_id")
+  createdBy                String                @map("created_by")
+  title                    String
+  shortDescription         String                @map("short_description")
+  description              String
+  difficulty               ProjectDifficulty
+  estimatedDurationMinutes Int?                  @map("estimated_duration_minutes")
+  coverImageUrl            String?               @map("cover_image_url")
+  status                   LearningProjectStatus @default(DRAFT)
+  reviewedBy               String?               @map("reviewed_by")
+  reviewNote               String?               @map("review_note")
+  stepsGeneratedByAi       Boolean               @default(false) @map("steps_generated_by_ai")
+  aiStepsGeneratedAt       DateTime?             @map("ai_steps_generated_at")
+  createdAt                DateTime              @default(now()) @map("created_at")
+  updatedAt                DateTime              @updatedAt @map("updated_at")
+  category                 Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdByUser            User                  @relation("LearningProjectCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  reviewedByUser           User?                 @relation("LearningProjectReviewedBy", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  images                   ProjectImage[]
+  requiredComponents       ProjectRequiredComponent[]
+  steps                    ProjectStep[]
+  links                    ProjectLink[]
+  tags                     ProjectTag[]
+
+  @@index([categoryId])
+  @@index([createdBy])
+  @@index([reviewedBy])
+  @@index([status, createdAt])
+  @@map("learning_projects")
+}
+
+model ProjectImage {
+  id        String          @id @default(uuid())
+  projectId String          @map("project_id")
+  imageUrl  String          @map("image_url")
+  sortOrder Int             @default(0) @map("sort_order")
+  createdAt DateTime        @default(now()) @map("created_at")
+  project   LearningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("project_images")
+}
+
+model ProjectRequiredComponent {
+  id                       String               @id @default(uuid())
+  projectId                String               @map("project_id")
+  categoryId               String?              @map("category_id")
+  componentName            String               @map("component_name")
+  materialType             String               @map("material_type")
+  quantity                 Decimal              @db.Decimal(12, 3)
+  unit                     String
+  componentRole            ProjectComponentRole @map("component_role")
+  isRequired               Boolean              @default(true) @map("is_required")
+  canBeSubstituted         Boolean              @default(false) @map("can_be_substituted")
+  searchKeywords           Json?                @map("search_keywords")
+  alternativeKeywords      Json?                @map("alternative_keywords")
+  providedByUser           Boolean              @default(false) @map("provided_by_user")
+  confirmedByUser          Boolean              @default(false) @map("confirmed_by_user")
+  generatedOrSuggestedByAi Boolean              @default(false) @map("generated_or_suggested_by_ai")
+  reviewStatus             ProjectReviewStatus  @default(PENDING_REVIEW) @map("review_status")
+  notes                    String?
+  createdAt                DateTime             @default(now()) @map("created_at")
+  project                  LearningProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category                 Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([categoryId])
+  @@index([reviewStatus])
+  @@map("project_required_components")
+}
+
+model ProjectStep {
+  id           String              @id @default(uuid())
+  projectId    String              @map("project_id")
+  stepNumber   Int                 @map("step_number")
+  title        String
+  description  String
+  imageUrl     String?             @map("image_url")
+  generatedByAi Boolean            @default(false) @map("generated_by_ai")
+  approvedBy   String?             @map("approved_by")
+  reviewStatus ProjectReviewStatus @default(PENDING_REVIEW) @map("review_status")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+  project      LearningProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  approvedByUser User?             @relation("ProjectStepApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, stepNumber])
+  @@index([projectId])
+  @@index([approvedBy])
+  @@index([reviewStatus])
+  @@map("project_steps")
+}
+
+model ProjectLink {
+  id         String          @id @default(uuid())
+  projectId  String          @map("project_id")
+  linkType   ProjectLinkType @map("link_type")
+  url        String
+  title      String?
+  sourceName String?         @map("source_name")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  project    LearningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("project_links")
+}
+
+model ProjectTag {
+  id        String          @id @default(uuid())
+  projectId String          @map("project_id")
+  tag       String
+  createdAt DateTime        @default(now()) @map("created_at")
+  project   LearningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([tag])
+  @@unique([projectId, tag])
+  @@map("project_tags")
 }
 
 model Material {
@@ -363,6 +528,7 @@ model Material {
   priceRule              MaterialPriceRule? @relation(fields: [priceRuleId], references: [id], onDelete: SetNull)
   location               Location           @relation(fields: [locationId], references: [id], onDelete: Restrict)
   images                 MaterialImage[]
+  tags                   MaterialTag[]
   reservations           Reservation[]
   reusedByReservation           Reservation?       @relation("MaterialReusedByReservation", fields: [reusedByReservationId], references: [id], onDelete: SetNull)
   publishedFromCategoryRequest  CategoryRequest?   @relation("CategoryRequestPublishedMaterial")
@@ -389,6 +555,19 @@ model MaterialImage {
 
   @@index([materialId])
   @@map("material_images")
+}
+
+model MaterialTag {
+  id         String   @id @default(cuid())
+  materialId String   @map("material_id")
+  tag        String
+  createdAt  DateTime @default(now()) @map("created_at")
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@index([materialId])
+  @@index([tag])
+  @@unique([materialId, tag])
+  @@map("material_tags")
 }
 
 model Reservation {

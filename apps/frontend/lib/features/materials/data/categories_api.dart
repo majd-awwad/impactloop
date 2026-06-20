@@ -13,7 +13,7 @@ class CategoriesApi {
     try {
       final response = await _client.get<Map<String, dynamic>>(
         '/api/categories',
-        queryParameters: const {'type': 'MATERIAL'},
+        queryParameters: const {'type': 'MATERIAL', 'rootOnly': true},
       );
       final body = response.data;
 

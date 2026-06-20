@@ -25,4 +25,15 @@ describe('calculateMaxAllowedPrice', () => {
 
     assert.equal(max, 20);
   });
+
+  test('uses the lower unit cap when both unit and total caps exist', () => {
+    const max = calculateMaxAllowedPrice({
+      maxAllowedUnitPriceNis: 30,
+      maxAllowedTotalPriceNis: 80,
+      quantity: 4,
+      condition: 'NEW',
+    });
+
+    assert.equal(max, 20);
+  });
 });

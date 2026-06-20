@@ -9,62 +9,38 @@ abstract final class AppDecorations {
   static const LinearGradient brandingGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      AppColors.brandingGradientStart,
-      AppColors.brandingGradientEnd,
-    ],
+    colors: [AppColors.brandingGradientStart, AppColors.brandingGradientEnd],
   );
 
   static const LinearGradient mobileHeroGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      AppColors.brandingGradientStart,
-      AppColors.brandingGradientMid,
-    ],
+    colors: [AppColors.brandingGradientStart, AppColors.brandingGradientMid],
   );
 
   static BoxDecoration get authFormCard => BoxDecoration(
     color: AppColors.surfaceElevated,
     borderRadius: AppRadius.lgAll,
     boxShadow: const [
-      BoxShadow(
-        color: AppColors.shadow,
-        blurRadius: 28,
-        offset: Offset(0, 10),
-      ),
-      BoxShadow(
-        color: AppColors.shadow,
-        blurRadius: 8,
-        offset: Offset(0, 2),
-      ),
+      BoxShadow(color: AppColors.shadow, blurRadius: 28, offset: Offset(0, 10)),
+      BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 2)),
     ],
   );
 
   static BoxDecoration get featureBadge => BoxDecoration(
     color: AppColors.textOnBrand.withValues(alpha: 0.12),
     borderRadius: AppRadius.mdAll,
-    border: Border.all(
-      color: AppColors.textOnBrand.withValues(alpha: 0.18),
-    ),
+    border: Border.all(color: AppColors.textOnBrand.withValues(alpha: 0.18)),
   );
 
   static BoxDecoration get mobileFeatureChip => BoxDecoration(
     color: AppColors.textOnBrand.withValues(alpha: 0.14),
     borderRadius: AppRadius.pillAll,
-    border: Border.all(
-      color: AppColors.textOnBrand.withValues(alpha: 0.2),
-    ),
+    border: Border.all(color: AppColors.textOnBrand.withValues(alpha: 0.2)),
   );
 
-  static BoxDecoration blob({
-    required Color color,
-    required double size,
-  }) {
-    return BoxDecoration(
-      color: color,
-      shape: BoxShape.circle,
-    );
+  static BoxDecoration blob({required Color color, required double size}) {
+    return BoxDecoration(color: color, shape: BoxShape.circle);
   }
 
   static List<Widget> brandingBlobLayer({bool compact = false}) {
@@ -111,10 +87,7 @@ abstract final class AppDecorations {
 }
 
 class _BlobCircle extends StatelessWidget {
-  const _BlobCircle({
-    required this.color,
-    required this.size,
-  });
+  const _BlobCircle({required this.color, required this.size});
 
   final Color color;
   final double size;

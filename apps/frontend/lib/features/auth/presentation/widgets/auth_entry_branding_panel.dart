@@ -28,21 +28,21 @@ class AuthEntryBrandingPanel extends StatelessWidget {
   ];
 
   String get _headlineMiddle => switch (variant) {
-        AuthEntryBrandingVariant.login => 'Reuse',
-        AuthEntryBrandingVariant.register => 'Share',
-      };
+    AuthEntryBrandingVariant.login => 'Reuse',
+    AuthEntryBrandingVariant.register => 'Share',
+  };
 
   String get _description => switch (variant) {
-        AuthEntryBrandingVariant.login =>
-          'Sign in to pick up where your materials, projects, and community activity left off.',
-        AuthEntryBrandingVariant.register =>
-          'Create one account to source components, list surplus materials, or do both in one streamlined flow.',
-      };
+    AuthEntryBrandingVariant.login =>
+      'Sign in to pick up where your materials, projects, and community activity left off.',
+    AuthEntryBrandingVariant.register =>
+      'Create one account to source components, list surplus materials, or do both in one streamlined flow.',
+  };
 
   String get _spotlightLabel => switch (variant) {
-        AuthEntryBrandingVariant.login => 'Return to your workspace',
-        AuthEntryBrandingVariant.register => 'Start your ImpactLoop profile',
-      };
+    AuthEntryBrandingVariant.login => 'Return to your workspace',
+    AuthEntryBrandingVariant.register => 'Start your ImpactLoop profile',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -95,13 +95,19 @@ class AuthEntryBrandingPanel extends StatelessWidget {
                 child: Text(
                   _description,
                   maxLines: minimal ? 2 : null,
-                  overflow: minimal ? TextOverflow.ellipsis : TextOverflow.visible,
+                  overflow: minimal
+                      ? TextOverflow.ellipsis
+                      : TextOverflow.visible,
                   style: compact
                       ? AuthDarkTextStyles.body(context).copyWith(
-                          color: AuthDarkColors.textPrimary.withValues(alpha: 0.82),
+                          color: AuthDarkColors.textPrimary.withValues(
+                            alpha: 0.82,
+                          ),
                         )
                       : AuthDarkTextStyles.brandingSubtitle(context).copyWith(
-                          color: AuthDarkColors.textPrimary.withValues(alpha: 0.82),
+                          color: AuthDarkColors.textPrimary.withValues(
+                            alpha: 0.82,
+                          ),
                         ),
                 ),
               ),
@@ -171,9 +177,9 @@ class _Eyebrow extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AuthDarkTextStyles.label(context).copyWith(
-          color: AuthDarkColors.accent,
-        ),
+        style: AuthDarkTextStyles.label(
+          context,
+        ).copyWith(color: AuthDarkColors.accent),
       ),
     );
   }
@@ -195,9 +201,17 @@ class _Headline extends StatelessWidget {
     return RichText(
       text: TextSpan(
         style: AuthDarkTextStyles.brandingHeadline(context).copyWith(
-          fontSize: minimal ? 24 : compact ? 28 : 42,
+          fontSize: minimal
+              ? 24
+              : compact
+              ? 28
+              : 42,
           height: 1.08,
-          letterSpacing: minimal ? -0.8 : compact ? -1.0 : -1.2,
+          letterSpacing: minimal
+              ? -0.8
+              : compact
+              ? -1.0
+              : -1.2,
         ),
         children: [
           const TextSpan(text: 'Learn. '),
@@ -243,9 +257,9 @@ class _FeatureChip extends StatelessWidget {
           Text(
             label,
             overflow: TextOverflow.ellipsis,
-            style: AuthDarkTextStyles.chip(context).copyWith(
-              color: AuthDarkColors.textPrimary,
-            ),
+            style: AuthDarkTextStyles.chip(
+              context,
+            ).copyWith(color: AuthDarkColors.textPrimary),
           ),
         ],
       ),
@@ -283,10 +297,7 @@ class _SignalStage extends StatelessWidget {
                       highlight: true,
                     ),
                     SizedBox(height: AppSpacing.md),
-                    _SignalMetric(
-                      label: 'Projects launched',
-                      value: '840+',
-                    ),
+                    _SignalMetric(label: 'Projects launched', value: '840+'),
                   ],
                 )
               else
@@ -346,9 +357,9 @@ class _SignalStage extends StatelessWidget {
                           ),
                           child: Text(
                             '+18% this month',
-                            style: AuthDarkTextStyles.label(context).copyWith(
-                              color: AuthDarkColors.accent,
-                            ),
+                            style: AuthDarkTextStyles.label(
+                              context,
+                            ).copyWith(color: AuthDarkColors.accent),
                           ),
                         ),
                       ],
@@ -368,10 +379,10 @@ class _SignalStage extends StatelessWidget {
                           ),
                           Positioned.fill(
                             child: Padding(
-                              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                              child: CustomPaint(
-                                painter: _SignalLinePainter(),
+                              padding: const EdgeInsets.only(
+                                bottom: AppSpacing.sm,
                               ),
+                              child: CustomPaint(painter: _SignalLinePainter()),
                             ),
                           ),
                         ],
@@ -457,9 +468,9 @@ class _TrendPill extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AuthDarkTextStyles.label(context).copyWith(
-          color: AuthDarkColors.accent,
-        ),
+        style: AuthDarkTextStyles.label(
+          context,
+        ).copyWith(color: AuthDarkColors.accent),
       ),
     );
   }
@@ -482,10 +493,7 @@ class _SignalMetric extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: AuthDarkTextStyles.label(context),
-        ),
+        Text(label, style: AuthDarkTextStyles.label(context)),
         const SizedBox(height: AppSpacing.xs),
         Text(
           value,

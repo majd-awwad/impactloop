@@ -1,15 +1,15 @@
-import type { CategoryType } from '../../generated/prisma/client.js';
-
 import * as categoriesRepository from './categories.repository.js';
+import type { CategoriesQuery } from './categories.validation.js';
 
-export type MaterialCategoryDto = {
-  id: string;
-  nameEn: string;
-  nameAr: string;
-  categoryType: CategoryType;
-  iconUrl: string | null;
-};
+export const getCategories = async (query: CategoriesQuery) => {
+  const categories = await categoriesRepository.findPublicCategories(query);
 
-export const listMaterialCategories = async (): Promise<MaterialCategoryDto[]> => {
-  return categoriesRepository.findMaterialCategories('MATERIAL');
+  return categories.map((category) => ({
+    id: category.id,
+    nameEn: category.nameEn,
+    nameAr: category.nameAr,
+    categoryType: category.categoryType,
+    iconUrl: category.iconUrl,
+    createdAt: category.createdAt.toISOString(),
+  }));
 };

@@ -42,12 +42,14 @@ class _RegisterFormState extends ConsumerState<RegisterForm> {
 
     final phone = _phoneController.text.trim();
 
-    ref.read(registrationDraftProvider.notifier).setBasicInfo(
-      displayName: _displayNameController.text.trim(),
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      phone: phone.isEmpty ? null : phone,
-    );
+    ref
+        .read(registrationDraftProvider.notifier)
+        .setBasicInfo(
+          displayName: _displayNameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          phone: phone.isEmpty ? null : phone,
+        );
 
     if (!mounted) {
       return;

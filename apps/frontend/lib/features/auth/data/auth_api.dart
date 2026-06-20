@@ -13,10 +13,7 @@ class AuthApi {
   static const _authBasePath = '/api/auth';
 
   Future<({AuthTokens tokens, User user})> register(RegisterRequest request) {
-    return _postAuthSession(
-      '$_authBasePath/register',
-      data: request.toJson(),
-    );
+    return _postAuthSession('$_authBasePath/register', data: request.toJson());
   }
 
   Future<({AuthTokens tokens, User user})> login({
@@ -25,10 +22,7 @@ class AuthApi {
   }) {
     return _postAuthSession(
       '$_authBasePath/login',
-      data: {
-        'email': email.trim(),
-        'password': password,
-      },
+      data: {'email': email.trim(), 'password': password},
     );
   }
 
@@ -36,9 +30,9 @@ class AuthApi {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '$_authBasePath/refresh',
-        data: refreshToken == null ? const <String, dynamic>{} : {
-          'refreshToken': refreshToken,
-        },
+        data: refreshToken == null
+            ? const <String, dynamic>{}
+            : {'refreshToken': refreshToken},
       ),
       AuthTokens.fromJson,
     );
@@ -48,9 +42,9 @@ class AuthApi {
     return unwrapApiVoidResponse(
       _client.post<Map<String, dynamic>>(
         '$_authBasePath/logout',
-        data: refreshToken == null ? const <String, dynamic>{} : {
-          'refreshToken': refreshToken,
-        },
+        data: refreshToken == null
+            ? const <String, dynamic>{}
+            : {'refreshToken': refreshToken},
       ),
     );
   }

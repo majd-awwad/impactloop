@@ -6,6 +6,8 @@ import '../data/models/register_request.dart';
 import '../data/models/user.dart';
 import 'auth_providers.dart';
 
+enum AuthStatus { unknown, authenticated, unauthenticated }
+
 class AuthState {
   const AuthState({
     this.user,
@@ -23,6 +25,16 @@ class AuthState {
 
   bool get isAuthenticated =>
       accessToken != null && accessToken!.isNotEmpty && user != null;
+
+  AuthStatus get status {
+    if (!hasBootstrapped) {
+      return AuthStatus.unknown;
+    }
+
+    return isAuthenticated
+        ? AuthStatus.authenticated
+        : AuthStatus.unauthenticated;
+  }
 
   AuthState copyWith({
     User? user,
@@ -63,10 +75,7 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> _bootstrapSessionInternal() async {
     if (state.isAuthenticated) {
-      state = state.copyWith(
-        isLoading: false,
-        hasBootstrapped: true,
-      );
+      state = state.copyWith(isLoading: false, hasBootstrapped: true);
       return;
     }
 
@@ -86,10 +95,7 @@ class AuthController extends Notifier<AuthState> {
         hasBootstrapped: true,
       );
     } catch (_) {
-      state = const AuthState(
-        isLoading: false,
-        hasBootstrapped: true,
-      );
+      state = const AuthState(isLoading: false, hasBootstrapped: true);
     }
   }
 
@@ -117,10 +123,7 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<User> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<User> login({required String email, required String password}) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
@@ -172,17 +175,10 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       await _repository.logout();
-      state = const AuthState(
-        isLoading: false,
-        hasBootstrapped: true,
-      );
+      state = const AuthState(isLoading: false, hasBootstrapped: true);
       return null;
     } on ApiException catch (error) {
-      state = AuthState(
-        isLoading: false,
-        hasBootstrapped: true,
-        error: error,
-      );
+      state = AuthState(isLoading: false, hasBootstrapped: true, error: error);
       return error;
     } catch (error) {
       final apiError = normalizeApiException(error);

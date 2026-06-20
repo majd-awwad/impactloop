@@ -55,7 +55,9 @@ class _FullContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppSpacing.authContentMaxWidth),
+        constraints: const BoxConstraints(
+          maxWidth: AppSpacing.authContentMaxWidth,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,9 +115,7 @@ class _FeatureRow extends StatelessWidget {
       children: [
         Icon(icon, color: AuthDarkColors.accent, size: 20),
         const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(label, style: AuthDarkTextStyles.body(context)),
-        ),
+        Expanded(child: Text(label, style: AuthDarkTextStyles.body(context))),
       ],
     );
   }

@@ -1,8 +1,5 @@
 class ApiFieldIssue {
-  const ApiFieldIssue({
-    required this.path,
-    required this.message,
-  });
+  const ApiFieldIssue({required this.path, required this.message});
 
   final String path;
   final String message;
@@ -83,10 +80,7 @@ ApiException normalizeApiException(Object error) {
   return ApiException(message: userFriendlyErrorMessage(error));
 }
 
-String? firstFieldError(
-  ApiException error,
-  List<String> fieldPaths,
-) {
+String? firstFieldError(ApiException error, List<String> fieldPaths) {
   for (final issue in error.fieldIssues) {
     if (fieldPaths.contains(issue.path)) {
       return issue.message;

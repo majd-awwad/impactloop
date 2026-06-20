@@ -229,6 +229,86 @@ exports.Prisma.CategoryScalarFieldEnum = {
   parentId: 'parentId',
   categoryType: 'categoryType',
   iconUrl: 'iconUrl',
+  isActive: 'isActive',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.LearningProjectScalarFieldEnum = {
+  id: 'id',
+  categoryId: 'categoryId',
+  createdBy: 'createdBy',
+  title: 'title',
+  shortDescription: 'shortDescription',
+  description: 'description',
+  difficulty: 'difficulty',
+  estimatedDurationMinutes: 'estimatedDurationMinutes',
+  coverImageUrl: 'coverImageUrl',
+  status: 'status',
+  reviewedBy: 'reviewedBy',
+  reviewNote: 'reviewNote',
+  stepsGeneratedByAi: 'stepsGeneratedByAi',
+  aiStepsGeneratedAt: 'aiStepsGeneratedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ProjectImageScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  imageUrl: 'imageUrl',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ProjectRequiredComponentScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  categoryId: 'categoryId',
+  componentName: 'componentName',
+  materialType: 'materialType',
+  quantity: 'quantity',
+  unit: 'unit',
+  componentRole: 'componentRole',
+  isRequired: 'isRequired',
+  canBeSubstituted: 'canBeSubstituted',
+  searchKeywords: 'searchKeywords',
+  alternativeKeywords: 'alternativeKeywords',
+  providedByUser: 'providedByUser',
+  confirmedByUser: 'confirmedByUser',
+  generatedOrSuggestedByAi: 'generatedOrSuggestedByAi',
+  reviewStatus: 'reviewStatus',
+  notes: 'notes',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ProjectStepScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  stepNumber: 'stepNumber',
+  title: 'title',
+  description: 'description',
+  imageUrl: 'imageUrl',
+  generatedByAi: 'generatedByAi',
+  approvedBy: 'approvedBy',
+  reviewStatus: 'reviewStatus',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ProjectLinkScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  linkType: 'linkType',
+  url: 'url',
+  title: 'title',
+  sourceName: 'sourceName',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ProjectTagScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  tag: 'tag',
   createdAt: 'createdAt'
 };
 
@@ -271,6 +351,13 @@ exports.Prisma.MaterialImageScalarFieldEnum = {
   imageUrl: 'imageUrl',
   sortOrder: 'sortOrder',
   isCover: 'isCover',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MaterialTagScalarFieldEnum = {
+  id: 'id',
+  materialId: 'materialId',
+  tag: 'tag',
   createdAt: 'createdAt'
 };
 
@@ -500,6 +587,42 @@ exports.CategoryType = exports.$Enums.CategoryType = {
   BOTH: 'BOTH'
 };
 
+exports.ProjectDifficulty = exports.$Enums.ProjectDifficulty = {
+  BEGINNER: 'BEGINNER',
+  INTERMEDIATE: 'INTERMEDIATE',
+  ADVANCED: 'ADVANCED'
+};
+
+exports.LearningProjectStatus = exports.$Enums.LearningProjectStatus = {
+  DRAFT: 'DRAFT',
+  PENDING_REVIEW: 'PENDING_REVIEW',
+  PUBLISHED: 'PUBLISHED',
+  REJECTED: 'REJECTED',
+  ARCHIVED: 'ARCHIVED'
+};
+
+exports.ProjectComponentRole = exports.$Enums.ProjectComponentRole = {
+  REQUIRED_MATERIAL: 'REQUIRED_MATERIAL',
+  OPTIONAL_MATERIAL: 'OPTIONAL_MATERIAL',
+  TOOL: 'TOOL',
+  CONSUMABLE: 'CONSUMABLE',
+  ALTERNATIVE: 'ALTERNATIVE'
+};
+
+exports.ProjectReviewStatus = exports.$Enums.ProjectReviewStatus = {
+  PENDING_REVIEW: 'PENDING_REVIEW',
+  ACCEPTED: 'ACCEPTED',
+  REJECTED: 'REJECTED'
+};
+
+exports.ProjectLinkType = exports.$Enums.ProjectLinkType = {
+  YOUTUBE: 'YOUTUBE',
+  GITHUB: 'GITHUB',
+  ARTICLE: 'ARTICLE',
+  PDF: 'PDF',
+  OTHER: 'OTHER'
+};
+
 exports.MaterialCondition = exports.$Enums.MaterialCondition = {
   NEW: 'NEW',
   LIKE_NEW: 'LIKE_NEW',
@@ -593,8 +716,15 @@ exports.Prisma.ModelName = {
   OrganizationProfile: 'OrganizationProfile',
   Location: 'Location',
   Category: 'Category',
+  LearningProject: 'LearningProject',
+  ProjectImage: 'ProjectImage',
+  ProjectRequiredComponent: 'ProjectRequiredComponent',
+  ProjectStep: 'ProjectStep',
+  ProjectLink: 'ProjectLink',
+  ProjectTag: 'ProjectTag',
   Material: 'Material',
   MaterialImage: 'MaterialImage',
+  MaterialTag: 'MaterialTag',
   Reservation: 'Reservation',
   ReservationStatusHistory: 'ReservationStatusHistory',
   Review: 'Review',

@@ -10,10 +10,7 @@ import 'auth_feature_badge.dart';
 enum AuthBrandingVariant { full, compact }
 
 class AuthBrandingPanel extends StatelessWidget {
-  const AuthBrandingPanel({
-    super.key,
-    this.variant = AuthBrandingVariant.full,
-  });
+  const AuthBrandingPanel({super.key, this.variant = AuthBrandingVariant.full});
 
   final AuthBrandingVariant variant;
 
@@ -41,9 +38,7 @@ class AuthBrandingPanel extends StatelessWidget {
           Padding(
             padding: AppDecorations.authScreenPadding(compact: compact),
             child: compact
-                ? SingleChildScrollView(
-                    child: _CompactContent(),
-                  )
+                ? SingleChildScrollView(child: _CompactContent())
                 : _FullContent(),
           ),
         ],
@@ -57,7 +52,9 @@ class _FullContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppSpacing.authContentMaxWidth),
+        constraints: const BoxConstraints(
+          maxWidth: AppSpacing.authContentMaxWidth,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,7 +114,11 @@ class _CompactContent extends StatelessWidget {
                 color: AppColors.textOnBrand.withValues(alpha: 0.14),
                 borderRadius: AppRadius.smAll,
               ),
-              child: const Icon(Icons.eco, color: AppColors.textOnBrand, size: 22),
+              child: const Icon(
+                Icons.eco,
+                color: AppColors.textOnBrand,
+                size: 22,
+              ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(

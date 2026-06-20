@@ -48,7 +48,10 @@ class _LoginFooter extends StatelessWidget {
         Text('New to ImpactLoop?', style: AuthDarkTextStyles.body(context)),
         TextButton(
           onPressed: () => context.go('/register'),
-          child: Text('Create account', style: AuthDarkTextStyles.link(context)),
+          child: Text(
+            'Create account',
+            style: AuthDarkTextStyles.link(context),
+          ),
         ),
       ],
     );

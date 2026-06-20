@@ -76,9 +76,15 @@ class _CompleteLearnerProfileFormState
 
   void _applyServerError(ApiException error) {
     setState(() {
-      _learnerTypeError = firstFieldError(error, const ['learnerProfile.learnerType']);
-      _skillLevelError = firstFieldError(error, const ['learnerProfile.skillLevel']);
-      _interestsError = firstFieldError(error, const ['learnerProfile.interests']);
+      _learnerTypeError = firstFieldError(error, const [
+        'learnerProfile.learnerType',
+      ]);
+      _skillLevelError = firstFieldError(error, const [
+        'learnerProfile.skillLevel',
+      ]);
+      _interestsError = firstFieldError(error, const [
+        'learnerProfile.interests',
+      ]);
       _bioError = firstFieldError(error, const ['learnerProfile.bio']);
       _formError = null;
 

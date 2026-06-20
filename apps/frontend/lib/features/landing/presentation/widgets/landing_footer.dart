@@ -20,9 +20,9 @@ class LandingFooter extends StatelessWidget {
             child: Text(
               'Sustainable choices. Stronger communities. Smarter projects.',
               textAlign: TextAlign.center,
-              style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.textMuted,
-              ),
+              style: AuthDarkTextStyles.body(
+                context,
+              ).copyWith(color: AuthDarkColors.textMuted),
             ),
           ),
         ],

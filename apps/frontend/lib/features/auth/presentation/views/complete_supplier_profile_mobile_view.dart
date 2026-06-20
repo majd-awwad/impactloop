@@ -18,12 +18,11 @@ class CompleteSupplierProfileMobileView extends StatelessWidget {
         children: [
           const AuthHeader(
             title: 'Complete your supplier profile',
-            subtitle: 'Tell others what materials you share and where pickup works.',
+            subtitle:
+                'Tell others what materials you share and where pickup works.',
           ),
           const SizedBox(height: AppSpacing.lg),
-          const AuthFormCard(
-            child: CompleteSupplierProfileForm(),
-          ),
+          const AuthFormCard(child: CompleteSupplierProfileForm()),
         ],
       ),
     );

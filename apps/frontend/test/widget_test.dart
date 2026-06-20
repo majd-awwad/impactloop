@@ -27,11 +27,7 @@ import 'package:go_router/go_router.dart';
 
 void main() {
   Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: ImpactLoopApp(),
-      ),
-    );
+    await tester.pumpWidget(const ProviderScope(child: ImpactLoopApp()));
     await tester.pumpAndSettle();
   }
 
@@ -47,11 +43,7 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp(home: page),
-      ),
-    );
+    await tester.pumpWidget(ProviderScope(child: MaterialApp(home: page)));
     await tester.pumpAndSettle();
   }
 
@@ -115,7 +107,9 @@ void main() {
   });
 
   test('bootstrapSession restores user from refresh and me', () async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stored-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -130,9 +124,7 @@ void main() {
     );
 
     final container = ProviderContainer(
-      overrides: [
-        authRepositoryProvider.overrideWithValue(repository),
-      ],
+      overrides: [authRepositoryProvider.overrideWithValue(repository)],
     );
     addTearDown(container.dispose);
 
@@ -146,20 +138,22 @@ void main() {
   });
 
   test('bootstrapSession clears local session when refresh fails', () async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stale-refresh');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stale-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder()..accessToken = 'stale-access';
     final repository = AuthRepository(
-      api: _FakeAuthApi(refreshError: DioException(
-        requestOptions: RequestOptions(path: '/api/auth/refresh'),
-      )),
+      api: _FakeAuthApi(
+        refreshError: DioException(
+          requestOptions: RequestOptions(path: '/api/auth/refresh'),
+        ),
+      ),
       tokenStorage: tokenStorage,
       accessTokenHolder: accessTokenHolder,
     );
 
     final container = ProviderContainer(
-      overrides: [
-        authRepositoryProvider.overrideWithValue(repository),
-      ],
+      overrides: [authRepositoryProvider.overrideWithValue(repository)],
     );
     addTearDown(container.dispose);
 
@@ -174,7 +168,9 @@ void main() {
   });
 
   test('logout clears local session when API succeeds', () async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'refresh-token');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'refresh-token',
+    );
     final accessTokenHolder = AccessTokenHolder()..accessToken = 'access-token';
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -189,15 +185,15 @@ void main() {
     );
 
     final container = ProviderContainer(
-      overrides: [
-        authRepositoryProvider.overrideWithValue(repository),
-      ],
+      overrides: [authRepositoryProvider.overrideWithValue(repository)],
     );
     addTearDown(container.dispose);
 
     await container.read(authControllerProvider.notifier).bootstrapSession();
 
-    final error = await container.read(authControllerProvider.notifier).logout();
+    final error = await container
+        .read(authControllerProvider.notifier)
+        .logout();
 
     final state = container.read(authControllerProvider);
     expect(error, isNull);
@@ -208,7 +204,9 @@ void main() {
   });
 
   test('logout clears local session when API fails', () async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'refresh-token');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'refresh-token',
+    );
     final accessTokenHolder = AccessTokenHolder()..accessToken = 'access-token';
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -227,15 +225,15 @@ void main() {
     );
 
     final container = ProviderContainer(
-      overrides: [
-        authRepositoryProvider.overrideWithValue(repository),
-      ],
+      overrides: [authRepositoryProvider.overrideWithValue(repository)],
     );
     addTearDown(container.dispose);
 
     await container.read(authControllerProvider.notifier).bootstrapSession();
 
-    final error = await container.read(authControllerProvider.notifier).logout();
+    final error = await container
+        .read(authControllerProvider.notifier)
+        .logout();
 
     final state = container.read(authControllerProvider);
     expect(error, isNotNull);
@@ -283,7 +281,9 @@ void main() {
   testWidgets('logged out users are redirected from /home to /login', (
     tester,
   ) async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stale-refresh');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stale-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -296,12 +296,7 @@ void main() {
     );
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          authRepositoryProvider.overrideWithValue(repository),
-          supplierDashboardProvider.overrideWith(
-            (ref) async => _testSupplierDashboard(),
-          ),
-        ],
+        overrides: [authRepositoryProvider.overrideWithValue(repository)],
         child: const ImpactLoopApp(),
       ),
     );
@@ -312,9 +307,7 @@ void main() {
     );
     final router = container.read(appRouterProvider);
 
-    GoRouter.of(
-      tester.element(find.text('Build a better future')),
-    ).go('/home');
+    GoRouter.of(tester.element(find.text('Build a better future'))).go('/home');
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/login');
@@ -323,7 +316,9 @@ void main() {
   testWidgets('authenticated users are redirected from /login to /home', (
     tester,
   ) async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stored-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -339,12 +334,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          authRepositoryProvider.overrideWithValue(repository),
-          supplierDashboardProvider.overrideWith(
-            (ref) async => _testSupplierDashboard(),
-          ),
-        ],
+        overrides: [authRepositoryProvider.overrideWithValue(repository)],
         child: const ImpactLoopApp(),
       ),
     );
@@ -365,7 +355,9 @@ void main() {
   testWidgets('authenticated users are redirected from /register to /home', (
     tester,
   ) async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stored-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -381,9 +373,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          authRepositoryProvider.overrideWithValue(repository),
-        ],
+        overrides: [authRepositoryProvider.overrideWithValue(repository)],
         child: const ImpactLoopApp(),
       ),
     );
@@ -422,6 +412,9 @@ void main() {
       ProviderScope(
         overrides: [
           authRepositoryProvider.overrideWithValue(repository),
+          supplierDashboardProvider.overrideWith(
+            (ref) async => _testSupplierDashboard(),
+          ),
         ],
         child: const ImpactLoopApp(),
       ),
@@ -462,6 +455,9 @@ void main() {
       ProviderScope(
         overrides: [
           authRepositoryProvider.overrideWithValue(repository),
+          supplierDashboardProvider.overrideWith(
+            (ref) async => _testSupplierDashboard(),
+          ),
         ],
         child: const ImpactLoopApp(),
       ),
@@ -564,7 +560,7 @@ void main() {
     );
   });
 
-  testWidgets('materials route renders coming soon placeholder', (tester) async {
+  testWidgets('materials route renders material discovery page', (tester) async {
     await pumpApp(tester);
 
     GoRouter.of(
@@ -572,8 +568,8 @@ void main() {
     ).go('/materials');
     await tester.pumpAndSettle();
 
-    expect(find.text('Coming soon'), findsOneWidget);
-    expect(find.text('Browse materials'), findsOneWidget);
+    expect(find.text('Material Discovery'), findsOneWidget);
+    expect(find.text('Reusable Materials'), findsOneWidget);
   });
 
   test('User.fromJson parses string, object, and primaryRole role shapes', () {
@@ -675,10 +671,7 @@ class _FakeAuthApi extends AuthApi {
       throw refreshError!;
     }
 
-    return refreshResult ??
-        const AuthTokens(
-          accessToken: 'access-token',
-        );
+    return refreshResult ?? const AuthTokens(accessToken: 'access-token');
   }
 
   @override

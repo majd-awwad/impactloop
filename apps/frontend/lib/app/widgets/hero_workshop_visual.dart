@@ -68,9 +68,7 @@ class _BackgroundImage extends StatelessWidget {
           child: Stack(
             children: [
               ...AuthDarkDecorations.backgroundBlobs(),
-              const Positioned.fill(
-                child: _AbstractWorkshopPattern(),
-              ),
+              const Positioned.fill(child: _AbstractWorkshopPattern()),
             ],
           ),
         );
@@ -97,7 +95,11 @@ class _ImpactBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.auto_awesome, size: 16, color: AuthDarkColors.accent),
+          const Icon(
+            Icons.auto_awesome,
+            size: 16,
+            color: AuthDarkColors.accent,
+          ),
           const SizedBox(width: AppSpacing.xs),
           Text(
             'Impact first',
@@ -152,16 +154,18 @@ class _ImpactCard extends StatelessWidget {
                   children: [
                     Text(
                       'Make an impact',
-                      style: AuthDarkTextStyles.title(context).copyWith(
-                        fontSize: 22,
-                      ),
+                      style: AuthDarkTextStyles.title(
+                        context,
+                      ).copyWith(fontSize: 22),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       'Every successful reuse turns overlooked materials into '
                       'projects, prototypes, and practical learning.',
                       style: AuthDarkTextStyles.body(context).copyWith(
-                        color: AuthDarkColors.textPrimary.withValues(alpha: 0.88),
+                        color: AuthDarkColors.textPrimary.withValues(
+                          alpha: 0.88,
+                        ),
                       ),
                     ),
                   ],
@@ -193,10 +197,7 @@ class _ImpactCard extends StatelessWidget {
                     child: _PrimaryMetric(maxWidth: constraints.maxWidth),
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  const Expanded(
-                    flex: 4,
-                    child: _ImpactTrendCard(),
-                  ),
+                  const Expanded(flex: 4, child: _ImpactTrendCard()),
                 ],
               );
             },
@@ -231,10 +232,9 @@ class _PrimaryMetric extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs),
         Text(
           '12,584+',
-          style: AuthDarkTextStyles.display(context).copyWith(
-            fontSize: maxWidth < 360 ? 34 : 42,
-            height: 1.0,
-          ),
+          style: AuthDarkTextStyles.display(
+            context,
+          ).copyWith(fontSize: maxWidth < 360 ? 34 : 42, height: 1.0),
         ),
         const SizedBox(height: AppSpacing.md),
         const _ImpactBar(),
@@ -262,10 +262,9 @@ class _ImpactTrendCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             '+18%',
-            style: AuthDarkTextStyles.title(context).copyWith(
-              fontSize: 28,
-              color: AuthDarkColors.accent,
-            ),
+            style: AuthDarkTextStyles.title(
+              context,
+            ).copyWith(fontSize: 28, color: AuthDarkColors.accent),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -301,9 +300,9 @@ class _ImpactBar extends StatelessWidget {
             constraints.maxWidth < 220
                 ? Text(
                     'Reuse trend',
-                    style: AuthDarkTextStyles.label(context).copyWith(
-                      color: AuthDarkColors.accent,
-                    ),
+                    style: AuthDarkTextStyles.label(
+                      context,
+                    ).copyWith(color: AuthDarkColors.accent),
                   )
                 : Row(
                     children: [
@@ -318,17 +317,15 @@ class _ImpactBar extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.end,
-                          style: AuthDarkTextStyles.label(context).copyWith(
-                            color: AuthDarkColors.accent,
-                          ),
+                          style: AuthDarkTextStyles.label(
+                            context,
+                          ).copyWith(color: AuthDarkColors.accent),
                         ),
                       ),
                     ],
                   ),
             const SizedBox(height: AppSpacing.sm),
-            const Expanded(
-              child: _ImpactTrendLine(),
-            ),
+            const Expanded(child: _ImpactTrendLine()),
           ],
         ),
       ),
@@ -410,10 +407,7 @@ class _TrendDot extends StatelessWidget {
 }
 
 class _MiniStatPill extends StatelessWidget {
-  const _MiniStatPill({
-    required this.label,
-    required this.value,
-  });
+  const _MiniStatPill({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -484,10 +478,7 @@ class _AbstractWorkshopPattern extends StatelessWidget {
           left: 36,
           right: 36,
           bottom: 120,
-          child: Container(
-            height: 1,
-            color: AuthDarkColors.border,
-          ),
+          child: Container(height: 1, color: AuthDarkColors.border),
         ),
       ],
     );

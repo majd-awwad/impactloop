@@ -65,10 +65,18 @@ class _CompleteSupplierProfileFormState
 
   void _applyServerError(ApiException error) {
     setState(() {
-      _supplierTypeError = firstFieldError(error, const ['supplierProfile.supplierType']);
-      _publicNameError = firstFieldError(error, const ['supplierProfile.publicName']);
-      _descriptionError = firstFieldError(error, const ['supplierProfile.description']);
-      _pickupAreaError = firstFieldError(error, const ['supplierProfile.pickupArea']);
+      _supplierTypeError = firstFieldError(error, const [
+        'supplierProfile.supplierType',
+      ]);
+      _publicNameError = firstFieldError(error, const [
+        'supplierProfile.publicName',
+      ]);
+      _descriptionError = firstFieldError(error, const [
+        'supplierProfile.description',
+      ]);
+      _pickupAreaError = firstFieldError(error, const [
+        'supplierProfile.pickupArea',
+      ]);
       _formError = null;
 
       if (_supplierTypeError == null &&
