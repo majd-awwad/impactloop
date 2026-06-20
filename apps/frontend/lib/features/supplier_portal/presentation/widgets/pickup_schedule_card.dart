@@ -14,11 +14,15 @@ class PickupScheduleCard extends StatelessWidget {
     required this.item,
     required this.groupKind,
     this.onViewDetails,
+    this.onMarkCompleted,
+    this.isCompleting = false,
   });
 
   final SupplierPickupScheduleItem item;
   final PickupScheduleGroupKind groupKind;
   final VoidCallback? onViewDetails;
+  final VoidCallback? onMarkCompleted;
+  final bool isCompleting;
 
   @override
   Widget build(BuildContext context) {
@@ -27,115 +31,165 @@ class PickupScheduleCard extends StatelessWidget {
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
     final times = _timeParts(item);
     final note = _displayNote(item);
+    final showMarkCompleted =
+        item.status == SupplierPickupScheduleStatus.accepted &&
+            onMarkCompleted != null;
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: onViewDetails,
-        borderRadius: AppRadius.mdAll,
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? AppSpacing.sm : AppSpacing.md,
-            vertical: compact ? AppSpacing.sm : AppSpacing.md,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? AppSpacing.sm : AppSpacing.md,
+          vertical: compact ? AppSpacing.sm : AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.55),
+          borderRadius: AppRadius.mdAll,
+          border: Border.all(
+            color: AuthDarkColors.border.withValues(alpha: 0.22),
           ),
-          decoration: BoxDecoration(
-            color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.55),
-            borderRadius: AppRadius.mdAll,
-            border: Border.all(
-              color: AuthDarkColors.border.withValues(alpha: 0.22),
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: compact ? 52 : 60,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      times.$1,
-                      style: AuthDarkTextStyles.title(context).copyWith(
-                        fontSize: compact ? 15 : 16,
-                        fontWeight: FontWeight.w700,
-                        color: style.foreground,
-                        height: 1.1,
-                      ),
-                    ),
-                    Text(
-                      times.$2,
-                      style: AuthDarkTextStyles.label(context).copyWith(
-                        fontSize: compact ? 13 : 14,
-                        color: AuthDarkColors.textMuted,
-                        height: 1.1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                width: 1,
-                height: compact ? 48 : 52,
-                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                color: AuthDarkColors.border.withValues(alpha: 0.28),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              onTap: onViewDetails,
+              borderRadius: AppRadius.mdAll,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: compact ? 52 : 60,
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            item.materialTitle,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AuthDarkTextStyles.title(context).copyWith(
-                              fontSize: compact ? 15 : 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        Text(
+                          times.$1,
+                          style: AuthDarkTextStyles.title(context).copyWith(
+                            fontSize: compact ? 15 : 16,
+                            fontWeight: FontWeight.w700,
+                            color: style.foreground,
+                            height: 1.1,
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.xs),
-                        _StatusBadge(status: item.status, style: style),
+                        Text(
+                          times.$2,
+                          style: AuthDarkTextStyles.label(context).copyWith(
+                            fontSize: compact ? 13 : 14,
+                            color: AuthDarkColors.textMuted,
+                            height: 1.1,
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${item.learnerName} · ${item.quantityLabel} · ${item.pickupType}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AuthDarkTextStyles.body(context).copyWith(
-                        fontSize: 13,
-                        color: AuthDarkColors.textMuted,
-                        height: 1.3,
-                      ),
-                    ),
-                    if (note != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        note,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AuthDarkTextStyles.body(context).copyWith(
-                          fontSize: 12,
-                          color: AuthDarkColors.textPrimary
-                              .withValues(alpha: 0.78),
-                          height: 1.3,
+                  ),
+                  Container(
+                    width: 1,
+                    height: compact ? 48 : 52,
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                    color: AuthDarkColors.border.withValues(alpha: 0.28),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.materialTitle,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style:
+                                    AuthDarkTextStyles.title(context).copyWith(
+                                  fontSize: compact ? 15 : 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            _StatusBadge(status: item.status, style: style),
+                          ],
                         ),
-                      ),
-                    ],
-                  ],
+                        const SizedBox(height: 3),
+                        Text(
+                          '${item.learnerName} · ${item.quantityLabel} · ${item.pickupType}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AuthDarkTextStyles.body(context).copyWith(
+                            fontSize: 13,
+                            color: AuthDarkColors.textMuted,
+                            height: 1.3,
+                          ),
+                        ),
+                        if (note != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            note,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AuthDarkTextStyles.body(context).copyWith(
+                              fontSize: 12,
+                              color: AuthDarkColors.textPrimary
+                                  .withValues(alpha: 0.78),
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _MaterialThumbnail(
+                    imageUrl: item.materialImageUrl,
+                    size: compact ? 40 : 48,
+                  ),
+                ],
+              ),
+            ),
+            if (showMarkCompleted) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.tonal(
+                  onPressed: isCompleting ? null : onMarkCompleted,
+                  style: FilledButton.styleFrom(
+                    backgroundColor:
+                        AuthDarkColors.accentSoft.withValues(alpha: 0.22),
+                    foregroundColor: AuthDarkColors.textPrimary,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 12 : 14,
+                      vertical: compact ? 8 : 10,
+                    ),
+                    minimumSize: Size(compact ? 0 : 120, compact ? 36 : 40),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.mdAll,
+                    ),
+                  ),
+                  child: isCompleting
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AuthDarkColors.textPrimary
+                                .withValues(alpha: 0.8),
+                          ),
+                        )
+                      : Text(
+                          'Mark completed',
+                          style: AuthDarkTextStyles.label(context).copyWith(
+                            fontSize: compact ? 12 : 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              _MaterialThumbnail(
-                imageUrl: item.materialImageUrl,
-                size: compact ? 40 : 48,
-              ),
             ],
-          ),
+          ],
         ),
       ),
     );

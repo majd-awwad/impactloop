@@ -16,6 +16,8 @@ import {
   updateSupplierProfileSchema,
 } from './supplier.validation.js';
 import { categoryRequestsRouter } from '../category-requests/category-requests.routes.js';
+import { supplierPriceRuleRequestsRouter } from '../price-rule-requests/price-rule-requests.supplier.routes.js';
+import { supplierNotificationsRouter } from '../supplier-notifications/supplier-notifications.routes.js';
 import { supplierReservationsRouter } from '../supplier-reservations/supplier-reservations.routes.js';
 
 export const supplierRouter = Router();
@@ -51,4 +53,6 @@ supplierRouter.post(
 );
 
 supplierRouter.use('/category-requests', categoryRequestsRouter);
+supplierRouter.use('/price-rule-requests', supplierPriceRuleRequestsRouter);
+supplierRouter.use('/notifications', supplierNotificationsRouter);
 supplierRouter.use('/reservations', supplierReservationsRouter);

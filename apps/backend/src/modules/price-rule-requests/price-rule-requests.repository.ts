@@ -47,12 +47,14 @@ export const findPendingUnknownPriceRuleRequest = async (input: {
 export const createKnownPriceRuleRequest = async (input: {
   materialTypeId: string;
   requestedByUserId: string;
+  listingDraftJson?: object | null;
 }) => {
   return prisma.priceRuleRequest.create({
     data: {
       materialTypeId: input.materialTypeId,
       requestedByUserId: input.requestedByUserId,
       status: 'PENDING',
+      listingDraftJson: input.listingDraftJson ?? undefined,
     },
     select: {
       id: true,
@@ -70,6 +72,7 @@ export const createUnknownPriceRuleRequest = async (input: {
   quantity?: number | null;
   supplierPriceNis?: number | null;
   requestedByUserId: string;
+  listingDraftJson?: object | null;
 }) => {
   return prisma.priceRuleRequest.create({
     data: {
@@ -82,6 +85,7 @@ export const createUnknownPriceRuleRequest = async (input: {
       supplierPriceNis: input.supplierPriceNis ?? null,
       requestedByUserId: input.requestedByUserId,
       status: 'PENDING',
+      listingDraftJson: input.listingDraftJson ?? undefined,
     },
     select: {
       id: true,
@@ -164,6 +168,56 @@ export const createAiProposedPriceRule = async (input: {
       status: true,
       isActive: true,
       sourceType: true,
+    },
+  });
+};
+
+export const listPriceRuleRequestsForSupplier = async (userId: string) => {
+  return prisma.priceRuleRequest.findMany({
+    where: { requestedByUserId: userId },
+    include: {
+      category: { select: { id: true, nameEn: true } },
+      materialType: { select: { id: true, nameEn: true, defaultUnit: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
+export const findPriceRuleRequestByIdForOwner = async (
+  id: string,
+  userId: string,
+) => {
+  return prisma.priceRuleRequest.findFirst({
+    where: {
+      id,
+      requestedByUserId: userId,
+    },
+    include: {
+      category: { select: { id: true, nameEn: true, nameAr: true } },
+      materialType: { select: { id: true, nameEn: true, defaultUnit: true } },
+    },
+  });
+};
+
+export const updatePriceRuleRequestDraftJson = async (input: {
+  id: string;
+  listingDraftJson: object;
+}) => {
+  return prisma.priceRuleRequest.update({
+    where: { id: input.id },
+    data: { listingDraftJson: input.listingDraftJson },
+  });
+};
+
+export const markPriceRuleRequestPublished = async (input: {
+  id: string;
+  materialId: string;
+}) => {
+  return prisma.priceRuleRequest.update({
+    where: { id: input.id },
+    data: {
+      publishedMaterialId: input.materialId,
+      publishedAt: new Date(),
     },
   });
 };

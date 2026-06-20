@@ -54,6 +54,26 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
     _requests[index] = updated;
     return updated;
   }
+
+  @override
+  Future<SupplierIncomingRequest> completeRequest(String requestId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    final index = _requests.indexWhere((request) => request.id == requestId);
+    if (index == -1) {
+      throw StateError('Request not found');
+    }
+
+    final current = _requests[index];
+    if (current.status != SupplierIncomingRequestStatus.accepted) {
+      throw StateError('Only accepted reservations can be completed');
+    }
+
+    final updated = current.copyWith(
+      status: SupplierIncomingRequestStatus.completed,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
 }
 
 final List<SupplierIncomingRequest> _seedRequests = [

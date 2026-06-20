@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_response.dart';
 import 'models/price_rule_request.dart';
+import 'models/price_rule_request_draft.dart';
 
 class PriceRuleRequestsApi {
   const PriceRuleRequestsApi(this._client);
@@ -22,5 +23,14 @@ class PriceRuleRequestsApi {
     } on DioException catch (error) {
       throw mapDioException(error);
     }
+  }
+
+  Future<PriceRuleRequestDraftResponse> fetchDraft(String id) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/supplier/price-rule-requests/$id/draft',
+      ),
+      PriceRuleRequestDraftResponse.fromJson,
+    );
   }
 }

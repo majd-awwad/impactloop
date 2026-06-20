@@ -5,6 +5,7 @@ import { readValidatedParams, readValidatedQuery } from '../../middlewares/valid
 
 import {
   acceptSupplierReservation,
+  completeSupplierReservation,
   declineSupplierReservation,
   listSupplierReservations,
 } from './supplier-reservations.service.js';
@@ -53,4 +54,14 @@ export const declineSupplierReservationHandler = async (
   );
 
   res.json(successResponse('Reservation declined.', reservation));
+};
+
+export const completeSupplierReservationHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<ReservationIdParams>(req);
+  const reservation = await completeSupplierReservation(req.auth!.sub, id);
+
+  res.json(successResponse('Reservation completed.', reservation));
 };

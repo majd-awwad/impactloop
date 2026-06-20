@@ -17,6 +17,9 @@ import {
 import { AppError } from '../../utils/app-error.js';
 import { decimalToNumber } from '../../utils/decimal.js';
 import * as categoriesRepository from '../categories/categories.repository.js';
+import * as categoryRequestsRepository from '../category-requests/category-requests.repository.js';
+import * as priceRuleRequestsRepository from '../price-rule-requests/price-rule-requests.repository.js';
+import { resolveApprovedMaxUnitPriceNis } from '../price-rule-requests/price-rule-request-pricing.js';
 import { checkMaterialPrice, resolveMaterialReferenceForCreate } from '../materials/materials.service.js';
 import * as supplierRepository from './supplier.repository.js';
 import type {
@@ -28,7 +31,83 @@ const MISSING_PROFILE_MESSAGE =
   'Complete your supplier profile to start listing materials.';
 
 const MISSING_PICKUP_LOCATION_MESSAGE =
-  'Set your pickup location before listing materials.';
+  'Add a default pickup location before listing materials.';
+
+const assertSourceRequestPublishable = async (
+  userId: string,
+  input: CreateSupplierMaterialInput,
+) => {
+  if (input.sourceCategoryRequestId) {
+    const request = await categoryRequestsRepository.findCategoryRequestByIdForOwner(
+      input.sourceCategoryRequestId,
+      userId,
+    );
+
+    if (!request) {
+      throw new AppError('Category request not found', 404, 'NOT_FOUND');
+    }
+
+    if (request.publishedMaterialId) {
+      throw new AppError(
+        'This listing was already completed.',
+        409,
+        'CONFLICT',
+      );
+    }
+  }
+
+  if (input.sourcePriceRuleRequestId) {
+    const request =
+      await priceRuleRequestsRepository.findPriceRuleRequestByIdForOwner(
+        input.sourcePriceRuleRequestId,
+        userId,
+      );
+
+    if (!request) {
+      throw new AppError('Price rule request not found', 404, 'NOT_FOUND');
+    }
+
+    if (request.publishedMaterialId) {
+      throw new AppError(
+        'This listing was already completed.',
+        409,
+        'CONFLICT',
+      );
+    }
+
+    if (!input.isFree && input.price != null) {
+      const maxAllowed = resolveApprovedMaxUnitPriceNis(request);
+      if (maxAllowed != null && input.price > maxAllowed) {
+        const unit = request.unit ?? request.materialType?.defaultUnit ?? 'unit';
+        throw new AppError(
+          `Unit price must be ${maxAllowed} NIS or less.`,
+          400,
+          'VALIDATION_ERROR',
+          { maxAllowedPrice: maxAllowed, approvedUnit: unit },
+        );
+      }
+    }
+  }
+};
+
+const markSourceRequestPublished = async (
+  materialId: string,
+  input: CreateSupplierMaterialInput,
+) => {
+  if (input.sourceCategoryRequestId) {
+    await categoryRequestsRepository.markCategoryRequestPublished({
+      id: input.sourceCategoryRequestId,
+      materialId,
+    });
+  }
+
+  if (input.sourcePriceRuleRequestId) {
+    await priceRuleRequestsRepository.markPriceRuleRequestPublished({
+      id: input.sourcePriceRuleRequestId,
+      materialId,
+    });
+  }
+};
 
 const mapCreatedMaterial = (material: Awaited<
   ReturnType<typeof supplierRepository.createSupplierMaterial>
@@ -242,6 +321,8 @@ export const createSupplierMaterial = async (
     );
   }
 
+  await assertSourceRequestPublishable(userId, input);
+
   const requestedCategory = await categoriesRepository.findCategoryById(
     input.categoryId,
   );
@@ -296,6 +377,8 @@ export const createSupplierMaterial = async (
       suggestedUses: input.suggestedUses ?? null,
       imageUrls: input.imageUrls,
     });
+
+    await markSourceRequestPublished(material.id, input);
 
     return mapCreatedMaterial(material);
   }
@@ -373,6 +456,8 @@ export const createSupplierMaterial = async (
     maxAllowedPriceAtCheck: priceCheck.maxAllowedPrice ?? null,
     imageUrls: input.imageUrls,
   });
+
+  await markSourceRequestPublished(material.id, input);
 
   return mapCreatedMaterial(material);
 };

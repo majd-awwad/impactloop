@@ -84,6 +84,7 @@ export const mapSupplierReservation = (
   pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
   supplierNote: reservation.supplierNote,
   rejectionReason: reservation.rejectionReason,
+  completedAt: reservation.completedAt?.toISOString() ?? null,
   createdAt: reservation.createdAt.toISOString(),
 });
 
@@ -152,6 +153,32 @@ export const declineSupplierReservation = async (
   if (result.conflict) {
     throw new AppError(
       'Only pending reservations can be declined.',
+      409,
+      'CONFLICT',
+    );
+  }
+
+  return mapSupplierReservation(result.reservation);
+};
+
+export const completeSupplierReservation = async (
+  ownerId: string,
+  reservationId: string,
+) => {
+  const result = await supplierReservationsRepository.completeSupplierReservation(
+    {
+      reservationId,
+      ownerId,
+    },
+  );
+
+  if (!result) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if (result.conflict) {
+    throw new AppError(
+      'Only accepted reservations can be completed.',
       409,
       'CONFLICT',
     );

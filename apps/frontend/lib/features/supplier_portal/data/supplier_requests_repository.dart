@@ -15,4 +15,6 @@ abstract class SupplierRequestsRepository {
     String requestId, {
     String? reason,
   });
+
+  Future<SupplierIncomingRequest> completeRequest(String requestId);
 }

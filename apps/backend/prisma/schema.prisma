@@ -530,7 +530,9 @@ model Material {
   images                 MaterialImage[]
   tags                   MaterialTag[]
   reservations           Reservation[]
-  reusedByReservation    Reservation?       @relation("MaterialReusedByReservation", fields: [reusedByReservationId], references: [id], onDelete: SetNull)
+  reusedByReservation           Reservation?       @relation("MaterialReusedByReservation", fields: [reusedByReservationId], references: [id], onDelete: SetNull)
+  publishedFromCategoryRequest  CategoryRequest?   @relation("CategoryRequestPublishedMaterial")
+  publishedFromPriceRuleRequest PriceRuleRequest?  @relation("PriceRuleRequestPublishedMaterial")
 
   @@index([ownerId])
   @@index([supplierProfileId])
@@ -741,11 +743,15 @@ model PriceRuleRequest {
   aiSuggestedAliasesJson      Json?                 @map("ai_suggested_aliases_json")
   aiResultJson                Json?                 @map("ai_result_json")
   moderatorNote               String?               @map("moderator_note")
+  listingDraftJson            Json?                 @map("listing_draft_json")
+  publishedMaterialId         String?               @unique @map("published_material_id")
+  publishedAt                 DateTime?             @map("published_at")
   createdAt                   DateTime              @default(now()) @map("created_at")
   updatedAt                   DateTime              @updatedAt @map("updated_at")
   materialType                MaterialType?         @relation(fields: [materialTypeId], references: [id], onDelete: SetNull)
   category                    Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   requestedBy                 User?                 @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  publishedMaterial           Material?             @relation("PriceRuleRequestPublishedMaterial", fields: [publishedMaterialId], references: [id], onDelete: SetNull)
 
   @@index([materialTypeId])
   @@index([categoryId])
@@ -764,10 +770,13 @@ model CategoryRequest {
   approvedCategoryId      String?               @map("approved_category_id")
   moderatorNote           String?               @map("moderator_note")
   listingDraftJson        Json?                 @map("listing_draft_json")
+  publishedMaterialId     String?               @unique @map("published_material_id")
+  publishedAt             DateTime?             @map("published_at")
   createdAt               DateTime              @default(now()) @map("created_at")
   updatedAt               DateTime              @updatedAt @map("updated_at")
   requestedBy             User                  @relation(fields: [requestedByUserId], references: [id], onDelete: Cascade)
   approvedCategory        Category?             @relation("ApprovedCategoryRequests", fields: [approvedCategoryId], references: [id], onDelete: SetNull)
+  publishedMaterial       Material?             @relation("CategoryRequestPublishedMaterial", fields: [publishedMaterialId], references: [id], onDelete: SetNull)
 
   @@index([requestedByUserId])
   @@index([status])

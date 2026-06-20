@@ -89,6 +89,20 @@ class SupplierRequestsApi {
     }
   }
 
+  Future<SupplierIncomingRequest> completeRequest(String requestId) async {
+    try {
+      final response = await _client.patch<Map<String, dynamic>>(
+        '/api/supplier/reservations/$requestId/complete',
+      );
+
+      return _parseReservationResponse(response);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
   SupplierIncomingRequest _parseReservationResponse(
     Response<Map<String, dynamic>> response,
   ) {

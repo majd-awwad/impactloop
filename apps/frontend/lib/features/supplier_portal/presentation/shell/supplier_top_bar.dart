@@ -9,6 +9,7 @@ import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../app/theme/supplier_decorations.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../controllers/supplier_dashboard_providers.dart';
+import '../controllers/supplier_notifications_providers.dart';
 import 'supplier_nav_config.dart';
 import 'supplier_profile_popover.dart';
 import 'supplier_settings_controls.dart';
@@ -21,13 +22,11 @@ class SupplierTopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
+    final actionNeededCount = ref.watch(supplierActionNeededCountProvider);
     final dashboardAsync = ref.watch(supplierDashboardProvider);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
-    final unreadCount = dashboardAsync.maybeWhen(
-      data: (dashboard) => dashboard.stats.notifications.unread,
-      orElse: () => 0,
-    );
+    final unreadCount = actionNeededCount;
 
     final user = authState.user;
     final supplier = dashboardAsync.maybeWhen(

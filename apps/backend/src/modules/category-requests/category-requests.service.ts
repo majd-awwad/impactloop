@@ -111,13 +111,30 @@ export const getCategoryRequestDraft = async (userId: string, id: string) => {
     throw new AppError('Category request not found', 404, 'NOT_FOUND');
   }
 
+  if (request.publishedMaterialId) {
+    throw new AppError(
+      'This listing was already completed.',
+      409,
+      'CONFLICT',
+    );
+  }
+
   const canContinue =
     request.status === 'APPROVED' && request.approvedCategoryId != null;
+
+  const isSuggestion =
+    request.status === 'APPROVED' &&
+    request.approvedCategory != null &&
+    normalizeSearchText(request.approvedCategory.nameEn) !==
+      request.normalizedRequestedName;
 
   return {
     id: request.id,
     status: request.status,
+    requestedName: request.requestedName,
     canContinue,
+    isSuggestion,
+    approvedCategoryId: request.approvedCategoryId,
     approvedCategory: request.approvedCategory
       ? {
           id: request.approvedCategory.id,

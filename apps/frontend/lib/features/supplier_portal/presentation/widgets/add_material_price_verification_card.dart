@@ -55,7 +55,7 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
           ],
           if (result.maxAllowedPrice != null)
             Text(
-              'Maximum allowed: ${result.currencySymbol}${result.maxAllowedPrice!.toStringAsFixed(2)}',
+              'Maximum allowed unit price: ${result.currencySymbol}${result.maxAllowedPrice!.toStringAsFixed(2)}${result.approvedUnit != null ? ' per ${result.approvedUnit}' : ''}',
               style: AuthDarkTextStyles.body(context),
             ),
           if (result.approvedUnit != null)

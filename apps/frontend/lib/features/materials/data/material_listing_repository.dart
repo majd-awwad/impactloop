@@ -15,6 +15,7 @@ import 'models/material_price_check_result.dart';
 import 'models/material_price_rule.dart';
 import 'models/material_type.dart';
 import 'models/price_rule_request.dart';
+import 'models/price_rule_request_draft.dart';
 import 'price_rule_requests_api.dart';
 import 'material_upload_api.dart';
 
@@ -129,6 +130,10 @@ class MaterialListingRepository {
 
   Future<CategoryRequestDraftResponse> fetchCategoryRequestDraft(String id) {
     return _categoryRequestsApi.fetchDraft(id);
+  }
+
+  Future<PriceRuleRequestDraftResponse> fetchPriceRuleRequestDraft(String id) {
+    return _priceRuleRequestsApi.fetchDraft(id);
   }
 
   Future<List<UploadedMaterialImage>> uploadMaterialImages(

@@ -114,6 +114,8 @@ export const createSupplierMaterialSchema = z.object({
   pickupNotes: z.string().trim().max(500).optional().nullable(),
   suggestedUses: z.string().trim().max(1000).optional().nullable(),
   imageUrls: z.array(materialImageUrlSchema).max(5).optional().default([]),
+  sourceCategoryRequestId: z.string().trim().min(1).optional(),
+  sourcePriceRuleRequestId: z.string().trim().min(1).optional(),
 });
 
 export type CreateSupplierMaterialInput = z.infer<

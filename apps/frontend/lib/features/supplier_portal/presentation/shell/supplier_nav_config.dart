@@ -115,6 +115,11 @@ String supplierPageSubtitle(String location) {
     return 'Track accepted pickups and upcoming handovers.';
   }
 
+  if (location == '/supplier/notifications' ||
+      location.startsWith('/supplier/notifications/')) {
+    return 'Review updates and new actions that need your attention.';
+  }
+
   for (final item in supplierNavItems) {
     if (location == item.route || location.startsWith('${item.route}/')) {
       return 'Coming soon in the Supplier Portal.';

@@ -7,6 +7,7 @@ import {
   MATERIAL_TYPE_SEEDS,
 } from './seeds/material-taxonomy.data.js';
 import { seedSupplierReservations } from './seeds/seed-supplier-reservations.js';
+import { seedSupplierNotifications } from './seeds/seed-supplier-notifications.js';
 
 type SeedCategoryInput = {
   key: string;
@@ -1784,6 +1785,7 @@ const main = async () => {
 
   const taxonomyCategoriesSeeded = await seedMaterialTaxonomy();
   const supplierReservationSeedResult = await seedSupplierReservations(prisma);
+  await seedSupplierNotifications(prisma);
 
   console.log(
     JSON.stringify(

@@ -9,6 +9,7 @@ import '../../../../app/theme/supplier_decorations.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
 import '../widgets/accept_incoming_request_dialog.dart';
+import '../widgets/complete_pickup_dialog.dart';
 import '../widgets/decline_incoming_request_dialog.dart';
 import '../widgets/incoming_request_card.dart';
 import '../widgets/incoming_request_filter_chips.dart';
@@ -16,13 +17,66 @@ import '../widgets/supplier_feedback.dart';
 
 const _contentMaxWidth = 960.0;
 
-class SupplierIncomingRequestsPage extends ConsumerWidget {
-  const SupplierIncomingRequestsPage({super.key});
+class SupplierIncomingRequestsPage extends ConsumerStatefulWidget {
+  const SupplierIncomingRequestsPage({
+    super.key,
+    this.initialTab,
+    this.focusReservationId,
+  });
+
+  final String? initialTab;
+  final String? focusReservationId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SupplierIncomingRequestsPage> createState() =>
+      _SupplierIncomingRequestsPageState();
+}
+
+class _SupplierIncomingRequestsPageState
+    extends ConsumerState<SupplierIncomingRequestsPage> {
+  bool _initialTabApplied = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialTab());
+  }
+
+  @override
+  void didUpdateWidget(covariant SupplierIncomingRequestsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTab != widget.initialTab) {
+      _initialTabApplied = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialTab());
+    }
+  }
+
+  void _applyInitialTab() {
+    if (_initialTabApplied) {
+      return;
+    }
+
+    final tabName = widget.initialTab?.trim().toLowerCase();
+    if (tabName == null || tabName.isEmpty) {
+      return;
+    }
+
+    final tab = switch (tabName) {
+      'accepted' => SupplierIncomingRequestTab.accepted,
+      'declined' => SupplierIncomingRequestTab.declined,
+      'completed' => SupplierIncomingRequestTab.completed,
+      _ => SupplierIncomingRequestTab.pending,
+    };
+
+    ref.read(incomingRequestTabProvider.notifier).selectTab(tab);
+    _initialTabApplied = true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final tab = ref.watch(incomingRequestTabProvider);
     final requestsAsync = ref.watch(incomingRequestsProvider);
+    final completingId = ref.watch(completingReservationIdProvider);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
 
@@ -49,7 +103,12 @@ class SupplierIncomingRequestsPage extends ConsumerWidget {
                   }
 
                   return Column(
-                    children: _requestCards(context, ref, requests),
+                    children: _requestCards(
+                      context,
+                      ref,
+                      requests,
+                      completingId: completingId,
+                    ),
                   );
                 },
                 loading: () => const _LoadingState(),
@@ -67,14 +126,16 @@ class SupplierIncomingRequestsPage extends ConsumerWidget {
   List<Widget> _requestCards(
     BuildContext context,
     WidgetRef ref,
-    List<SupplierIncomingRequest> requests,
-  ) {
+    List<SupplierIncomingRequest> requests, {
+    required String? completingId,
+  }) {
     return requests
         .map(
           (request) => Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.md),
             child: IncomingRequestCard(
               request: request,
+              isCompleting: completingId == request.id,
               onAccept:
                   request.status == SupplierIncomingRequestStatus.pending
                       ? () => _handleAccept(context, ref, request)
@@ -82,6 +143,10 @@ class SupplierIncomingRequestsPage extends ConsumerWidget {
               onDecline:
                   request.status == SupplierIncomingRequestStatus.pending
                       ? () => _handleDecline(context, ref, request)
+                      : null,
+              onMarkCompleted:
+                  request.status == SupplierIncomingRequestStatus.accepted
+                      ? () => _handleComplete(context, ref, request)
                       : null,
             ),
           ),
@@ -150,6 +215,35 @@ class SupplierIncomingRequestsPage extends ConsumerWidget {
     } catch (_) {
       if (!context.mounted) return;
       showSupplierErrorSnackBar(context, 'Could not decline the request.');
+    }
+  }
+
+  Future<void> _handleComplete(
+    BuildContext context,
+    WidgetRef ref,
+    SupplierIncomingRequest request,
+  ) async {
+    final confirmed = await CompletePickupDialog.show(context);
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+
+    ref.read(completingReservationIdProvider.notifier).setCompleting(request.id);
+    try {
+      await completeIncomingRequest(ref, requestId: request.id);
+      if (!context.mounted) return;
+      showSupplierInfoSnackBar(context, 'Pickup marked as completed.');
+      ref.read(incomingRequestTabProvider.notifier).selectTab(
+            SupplierIncomingRequestTab.completed,
+          );
+    } catch (_) {
+      if (!context.mounted) return;
+      showSupplierErrorSnackBar(
+        context,
+        'Could not mark pickup as completed.',
+      );
+    } finally {
+      ref.read(completingReservationIdProvider.notifier).setCompleting(null);
     }
   }
 }
