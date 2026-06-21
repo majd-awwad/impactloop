@@ -1,0 +1,352 @@
+class SupplierMyMaterialsCategory {
+  const SupplierMyMaterialsCategory({
+    required this.id,
+    required this.nameEn,
+    required this.nameAr,
+  });
+
+  final String id;
+  final String nameEn;
+  final String nameAr;
+
+  factory SupplierMyMaterialsCategory.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const SupplierMyMaterialsCategory(
+        id: '',
+        nameEn: 'Materials',
+        nameAr: 'مواد',
+      );
+    }
+
+    return SupplierMyMaterialsCategory(
+      id: json['id'] as String? ?? '',
+      nameEn: json['nameEn'] as String? ?? 'Materials',
+      nameAr: json['nameAr'] as String? ?? 'مواد',
+    );
+  }
+}
+
+class SupplierMyMaterialsCategoryOption {
+  const SupplierMyMaterialsCategoryOption({
+    required this.id,
+    required this.nameEn,
+    required this.nameAr,
+    required this.count,
+  });
+
+  final String id;
+  final String nameEn;
+  final String nameAr;
+  final int count;
+
+  factory SupplierMyMaterialsCategoryOption.fromJson(Map<String, dynamic> json) {
+    return SupplierMyMaterialsCategoryOption(
+      id: json['id'] as String? ?? '',
+      nameEn: json['nameEn'] as String? ?? '',
+      nameAr: json['nameAr'] as String? ?? '',
+      count: json['count'] as int? ?? 0,
+    );
+  }
+}
+
+class SupplierMyMaterialsLocation {
+  const SupplierMyMaterialsLocation({
+    required this.city,
+    this.area,
+  });
+
+  final String city;
+  final String? area;
+
+  factory SupplierMyMaterialsLocation.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const SupplierMyMaterialsLocation(city: '');
+    }
+
+    return SupplierMyMaterialsLocation(
+      city: json['city'] as String? ?? '',
+      area: json['area'] as String?,
+    );
+  }
+}
+
+class SupplierMyMaterialsImage {
+  const SupplierMyMaterialsImage({
+    required this.imageUrl,
+    required this.isCover,
+  });
+
+  final String imageUrl;
+  final bool isCover;
+
+  factory SupplierMyMaterialsImage.fromJson(Map<String, dynamic> json) {
+    return SupplierMyMaterialsImage(
+      imageUrl: json['imageUrl'] as String? ?? '',
+      isCover: json['isCover'] == true,
+    );
+  }
+}
+
+class SupplierMyMaterial {
+  const SupplierMyMaterial({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.category,
+    required this.status,
+    required this.condition,
+    required this.quantity,
+    required this.unit,
+    required this.isFree,
+    this.price,
+    required this.currency,
+    required this.location,
+    required this.pickupAllowed,
+    required this.deliveryAllowed,
+    required this.images,
+    required this.viewsCount,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String title;
+  final String description;
+  final SupplierMyMaterialsCategory category;
+  final String status;
+  final String condition;
+  final double quantity;
+  final String unit;
+  final bool isFree;
+  final double? price;
+  final String currency;
+  final SupplierMyMaterialsLocation location;
+  final bool pickupAllowed;
+  final bool deliveryAllowed;
+  final List<SupplierMyMaterialsImage> images;
+  final int viewsCount;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  String? get coverImageUrl {
+    for (final image in images) {
+      if (image.isCover && image.imageUrl.isNotEmpty) {
+        return image.imageUrl;
+      }
+    }
+
+    return images.isNotEmpty ? images.first.imageUrl : null;
+  }
+
+  factory SupplierMyMaterial.fromJson(Map<String, dynamic> json) {
+    final imagesJson = json['images'];
+
+    return SupplierMyMaterial(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      category: SupplierMyMaterialsCategory.fromJson(
+        json['category'] as Map<String, dynamic>?,
+      ),
+      status: json['status'] as String? ?? 'AVAILABLE',
+      condition: json['condition'] as String? ?? 'GOOD',
+      quantity: (json['quantity'] as num?)?.toDouble() ?? 0,
+      unit: json['unit'] as String? ?? '',
+      isFree: json['isFree'] == true,
+      price: (json['price'] as num?)?.toDouble(),
+      currency: json['currency'] as String? ?? 'NIS',
+      location: SupplierMyMaterialsLocation.fromJson(
+        json['location'] as Map<String, dynamic>?,
+      ),
+      pickupAllowed: json['pickupAllowed'] != false,
+      deliveryAllowed: json['deliveryAllowed'] == true,
+      images: imagesJson is List
+          ? imagesJson
+              .whereType<Map>()
+              .map(
+                (item) => SupplierMyMaterialsImage.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList(growable: false)
+          : const [],
+      viewsCount: (json['viewsCount'] as num?)?.toInt() ?? 0,
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt:
+          DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+}
+
+class SupplierMyMaterialsSummary {
+  const SupplierMyMaterialsSummary({
+    required this.total,
+    required this.available,
+    required this.pendingReservation,
+    required this.reserved,
+    required this.reused,
+    required this.unavailable,
+    required this.free,
+    required this.paid,
+  });
+
+  final int total;
+  final int available;
+  final int pendingReservation;
+  final int reserved;
+  final int reused;
+  final int unavailable;
+  final int free;
+  final int paid;
+
+  int get pendingOrReserved => pendingReservation + reserved;
+
+  factory SupplierMyMaterialsSummary.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const SupplierMyMaterialsSummary(
+        total: 0,
+        available: 0,
+        pendingReservation: 0,
+        reserved: 0,
+        reused: 0,
+        unavailable: 0,
+        free: 0,
+        paid: 0,
+      );
+    }
+
+    return SupplierMyMaterialsSummary(
+      total: json['total'] as int? ?? 0,
+      available: json['available'] as int? ?? 0,
+      pendingReservation: json['pendingReservation'] as int? ?? 0,
+      reserved: json['reserved'] as int? ?? 0,
+      reused: json['reused'] as int? ?? 0,
+      unavailable: json['unavailable'] as int? ?? 0,
+      free: json['free'] as int? ?? 0,
+      paid: json['paid'] as int? ?? 0,
+    );
+  }
+}
+
+class SupplierMyMaterialsPagination {
+  const SupplierMyMaterialsPagination({
+    required this.page,
+    required this.limit,
+    required this.totalItems,
+    required this.totalPages,
+  });
+
+  final int page;
+  final int limit;
+  final int totalItems;
+  final int totalPages;
+
+  factory SupplierMyMaterialsPagination.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const SupplierMyMaterialsPagination(
+        page: 1,
+        limit: 9,
+        totalItems: 0,
+        totalPages: 0,
+      );
+    }
+
+    return SupplierMyMaterialsPagination(
+      page: json['page'] as int? ?? 1,
+      limit: json['limit'] as int? ?? 9,
+      totalItems: json['totalItems'] as int? ?? 0,
+      totalPages: json['totalPages'] as int? ?? 0,
+    );
+  }
+}
+
+class SupplierMyMaterialsListResult {
+  const SupplierMyMaterialsListResult({
+    required this.items,
+    required this.pagination,
+    required this.summary,
+    required this.categories,
+  });
+
+  final List<SupplierMyMaterial> items;
+  final SupplierMyMaterialsPagination pagination;
+  final SupplierMyMaterialsSummary summary;
+  final List<SupplierMyMaterialsCategoryOption> categories;
+
+  factory SupplierMyMaterialsListResult.fromJson(Map<String, dynamic> json) {
+    final itemsJson = json['items'];
+    final facetsJson = json['categoryFacets'] ?? json['categories'];
+
+    return SupplierMyMaterialsListResult(
+      items: itemsJson is List
+          ? itemsJson
+              .whereType<Map>()
+              .map(
+                (item) => SupplierMyMaterial.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList(growable: false)
+          : const [],
+      pagination: SupplierMyMaterialsPagination.fromJson(
+        json['pagination'] as Map<String, dynamic>?,
+      ),
+      summary: SupplierMyMaterialsSummary.fromJson(
+        json['summary'] as Map<String, dynamic>?,
+      ),
+      categories: facetsJson is List
+          ? facetsJson
+              .whereType<Map>()
+              .map(
+                (item) => SupplierMyMaterialsCategoryOption.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList(growable: false)
+          : const [],
+    );
+  }
+}
+
+class SupplierMyMaterialsQuery {
+  const SupplierMyMaterialsQuery({
+    this.page = 1,
+    this.limit = 9,
+    this.search = '',
+    this.status,
+    this.isFree,
+    this.categoryId,
+  });
+
+  final int page;
+  final int limit;
+  final String search;
+  final String? status;
+  final bool? isFree;
+  final String? categoryId;
+
+  SupplierMyMaterialsQuery copyWith({
+    int? page,
+    int? limit,
+    String? search,
+    String? status,
+    bool? isFree,
+    String? categoryId,
+    bool clearStatus = false,
+    bool clearIsFree = false,
+    bool clearCategoryId = false,
+  }) {
+    return SupplierMyMaterialsQuery(
+      page: page ?? this.page,
+      limit: limit ?? this.limit,
+      search: search ?? this.search,
+      status: clearStatus ? null : status ?? this.status,
+      isFree: clearIsFree ? null : isFree ?? this.isFree,
+      categoryId: clearCategoryId ? null : categoryId ?? this.categoryId,
+    );
+  }
+}
