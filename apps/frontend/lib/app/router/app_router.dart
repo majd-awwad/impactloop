@@ -7,7 +7,6 @@ import '../../features/auth/application/auth_navigation.dart';
 import '../../features/auth/application/registration_draft_notifier.dart';
 import '../../features/auth/presentation/models/registration_intent.dart';
 import '../../features/auth/presentation/pages/auth_checking_page.dart';
-import '../../features/auth/presentation/pages/choose_role_page.dart';
 import '../../features/auth/presentation/pages/complete_learner_profile_page.dart';
 import '../../features/auth/presentation/pages/complete_supplier_profile_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -37,17 +36,12 @@ enum _RouteAccessLevel { public, authenticated, supplier }
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   final path = state.matchedLocation;
 
-  if (path != '/choose-role' &&
-      path != '/complete-learner-profile' &&
+  if (path != '/complete-learner-profile' &&
       path != '/complete-supplier-profile') {
     return null;
   }
 
   final draft = ref.read(registrationDraftProvider);
-
-  if (path == '/choose-role' && !draft.hasBasicInfo) {
-    return '/register';
-  }
 
   if (path == '/complete-learner-profile') {
     if (!draft.hasBasicInfo) {
@@ -55,7 +49,7 @@ String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
     }
 
     if (draft.intent == null) {
-      return '/choose-role';
+      return '/register';
     }
 
     if (draft.intent == RegistrationIntent.supplier) {
@@ -69,7 +63,7 @@ String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
     }
 
     if (draft.intent == null) {
-      return '/choose-role';
+      return '/register';
     }
 
     if (draft.intent == RegistrationIntent.learner) {
@@ -90,8 +84,7 @@ bool _isSupplierPortalPath(String path) {
     return false;
   }
 
-  return path == '/supplier' ||
-      path.startsWith('/supplier/');
+  return path == '/supplier' || path.startsWith('/supplier/');
 }
 
 bool _isCheckingPath(String path) => path == authCheckingRoute;
@@ -140,7 +133,8 @@ String? _resolveProtectedRoute(
     return _withFrom(loginRoute, destination);
   }
 
-  if (accessLevel == _RouteAccessLevel.supplier && !_userHasSupplierRole(authState)) {
+  if (accessLevel == _RouteAccessLevel.supplier &&
+      !_userHasSupplierRole(authState)) {
     return _supplierAccessDeniedRoute;
   }
 
@@ -152,13 +146,12 @@ String? _resolveAuthCheckingRedirect(AuthState authState, GoRouterState state) {
     return null;
   }
 
-  final target =
-      sanitizeRedirectTarget(
-        state.uri.queryParameters['from'],
-        fallback: authState.user != null
-            ? postAuthRouteForUser(authState.user!)
-            : loginRoute,
-      );
+  final target = sanitizeRedirectTarget(
+    state.uri.queryParameters['from'],
+    fallback: authState.user != null
+        ? postAuthRouteForUser(authState.user!)
+        : loginRoute,
+  );
   final accessLevel = _routeAccessForPath(Uri.parse(target).path);
   return _resolveProtectedRoute(authState, accessLevel, target) ?? target;
 }
@@ -259,10 +252,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: registerRoute,
         builder: (context, state) =>
             const _AuthPageGuard(child: RegisterPage()),
-      ),
-      GoRoute(
-        path: '/choose-role',
-        builder: (context, state) => const ChooseRolePage(),
       ),
       GoRoute(
         path: '/complete-learner-profile',
