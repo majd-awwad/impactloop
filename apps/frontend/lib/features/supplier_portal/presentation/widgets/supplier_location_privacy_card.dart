@@ -77,9 +77,9 @@ class SupplierLocationPrivacyCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'Current: ${visibilityLabel(visibility!)}',
-                      style: AuthDarkTextStyles.body(context).copyWith(
-                        color: AuthDarkColors.textPrimary,
-                      ),
+                      style: AuthDarkTextStyles.body(
+                        context,
+                      ).copyWith(color: AuthDarkColors.textPrimary),
                     ),
                   ),
                 ],

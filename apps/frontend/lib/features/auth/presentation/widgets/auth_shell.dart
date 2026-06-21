@@ -55,7 +55,7 @@ class AuthShell extends StatelessWidget {
                 ? [colors.background, colors.panelDark, colors.background]
                 : [
                     colors.background,
-                    const Color(0xFFF1F6EE),
+                    colors.surfaceElevated,
                     colors.background,
                   ],
             stops: const [0, 0.5, 1],

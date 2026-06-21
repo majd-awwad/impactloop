@@ -9,10 +9,13 @@ final supplierRequestsApiProvider = Provider<SupplierRequestsApi>((ref) {
   return SupplierRequestsApi(ref.watch(apiClientProvider));
 });
 
-final supplierRequestsRepositoryProvider =
-    Provider<SupplierRequestsRepository>((ref) {
-  return ApiSupplierRequestsRepository(ref.watch(supplierRequestsApiProvider));
-});
+final supplierRequestsRepositoryProvider = Provider<SupplierRequestsRepository>(
+  (ref) {
+    return ApiSupplierRequestsRepository(
+      ref.watch(supplierRequestsApiProvider),
+    );
+  },
+);
 
 class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
   const ApiSupplierRequestsRepository(this._api);

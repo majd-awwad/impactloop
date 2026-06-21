@@ -116,10 +116,7 @@ class SupplierProfileIdentityCard extends StatelessWidget {
 }
 
 class _AvatarBlock extends StatelessWidget {
-  const _AvatarBlock({
-    required this.displayName,
-    this.profileImageUrl,
-  });
+  const _AvatarBlock({required this.displayName, this.profileImageUrl});
 
   final String displayName;
   final String? profileImageUrl;
@@ -177,10 +174,9 @@ class _InitialsAvatar extends StatelessWidget {
     return Center(
       child: Text(
         name.characters.first.toUpperCase(),
-        style: AuthDarkTextStyles.title(context).copyWith(
-          color: AuthDarkColors.accent,
-          fontSize: 28,
-        ),
+        style: AuthDarkTextStyles.title(
+          context,
+        ).copyWith(color: AuthDarkColors.accent, fontSize: 28),
       ),
     );
   }

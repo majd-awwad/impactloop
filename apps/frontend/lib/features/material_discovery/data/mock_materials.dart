@@ -23,7 +23,10 @@ const mockMaterials = <DiscoveryMaterial>[
     statusTone: MaterialStatusBadgeTone.available,
     quantityLabel: LocalizedText(en: '18 sheets', ar: '18 لوحاً'),
     priceLabel: LocalizedText(en: 'Free', ar: 'مجاناً'),
-    locationLabel: LocalizedText(en: 'Nablus, Industrial Area', ar: 'نابلس، المنطقة الصناعية'),
+    locationLabel: LocalizedText(
+      en: 'Nablus, Industrial Area',
+      ar: 'نابلس، المنطقة الصناعية',
+    ),
     availabilityLabel: LocalizedText(
       en: 'Delivery available',
       ar: 'التوصيل متاح',
@@ -61,14 +64,14 @@ const mockMaterials = <DiscoveryMaterial>[
     statusTone: MaterialStatusBadgeTone.available,
     quantityLabel: LocalizedText(en: '24 pieces', ar: '24 قطعة'),
     priceLabel: LocalizedText(en: '\$18 bundle', ar: '18\$ للحزمة'),
-    locationLabel: LocalizedText(en: 'Ramallah, Al-Tireh', ar: 'رام الله، الطيرة'),
+    locationLabel: LocalizedText(
+      en: 'Ramallah, Al-Tireh',
+      ar: 'رام الله، الطيرة',
+    ),
     availabilityLabel: LocalizedText(en: 'Pickup only', ar: 'استلام فقط'),
     deliveryAvailable: false,
     isFree: false,
-    supplierName: LocalizedText(
-      en: 'Circuit Room',
-      ar: 'غرفة الدوائر',
-    ),
+    supplierName: LocalizedText(en: 'Circuit Room', ar: 'غرفة الدوائر'),
     supplierSubtitle: LocalizedText(
       en: 'Educational electronics lab',
       ar: 'مختبر إلكترونيات تعليمية',
@@ -96,17 +99,17 @@ const mockMaterials = <DiscoveryMaterial>[
     statusTone: MaterialStatusBadgeTone.reserved,
     quantityLabel: LocalizedText(en: '32 cuts', ar: '32 قطعة'),
     priceLabel: LocalizedText(en: '\$12 lot', ar: '12\$ للدفعة'),
-    locationLabel: LocalizedText(en: 'Hebron, Workshop Zone', ar: 'الخليل، منطقة الورش'),
+    locationLabel: LocalizedText(
+      en: 'Hebron, Workshop Zone',
+      ar: 'الخليل، منطقة الورش',
+    ),
     availabilityLabel: LocalizedText(
       en: 'Delivery available',
       ar: 'التوصيل متاح',
     ),
     deliveryAvailable: true,
     isFree: false,
-    supplierName: LocalizedText(
-      en: 'ForgeLine Works',
-      ar: 'فورج لاين',
-    ),
+    supplierName: LocalizedText(en: 'ForgeLine Works', ar: 'فورج لاين'),
     supplierSubtitle: LocalizedText(
       en: 'Metal fabrication supplier',
       ar: 'مورد تصنيع معدني',
@@ -133,14 +136,14 @@ const mockMaterials = <DiscoveryMaterial>[
     statusTone: MaterialStatusBadgeTone.available,
     quantityLabel: LocalizedText(en: '11 crates', ar: '11 صندوقاً'),
     priceLabel: LocalizedText(en: 'Free', ar: 'مجاناً'),
-    locationLabel: LocalizedText(en: 'Bethlehem, City North', ar: 'بيت لحم، شمال المدينة'),
+    locationLabel: LocalizedText(
+      en: 'Bethlehem, City North',
+      ar: 'بيت لحم، شمال المدينة',
+    ),
     availabilityLabel: LocalizedText(en: 'Pickup only', ar: 'استلام فقط'),
     deliveryAvailable: false,
     isFree: true,
-    supplierName: LocalizedText(
-      en: 'Loop Storage Hub',
-      ar: 'مخزن لوب',
-    ),
+    supplierName: LocalizedText(en: 'Loop Storage Hub', ar: 'مخزن لوب'),
     supplierSubtitle: LocalizedText(
       en: 'Reusable storage provider',
       ar: 'مزود تخزين قابل لإعادة الاستخدام',
@@ -153,10 +156,7 @@ const mockMaterials = <DiscoveryMaterial>[
   ),
   DiscoveryMaterial(
     id: 'denim-rolls',
-    title: LocalizedText(
-      en: 'Denim Fabric Rolls',
-      ar: 'لفات قماش دينم',
-    ),
+    title: LocalizedText(en: 'Denim Fabric Rolls', ar: 'لفات قماش دينم'),
     description: LocalizedText(
       en: 'Large offcuts from uniform production suited for bags, covers, and craft prototypes.',
       ar: 'قصاصات كبيرة من إنتاج الزي تصلح للحقائب والأغطية والنماذج الحرفية.',
@@ -168,17 +168,17 @@ const mockMaterials = <DiscoveryMaterial>[
     statusTone: MaterialStatusBadgeTone.available,
     quantityLabel: LocalizedText(en: '46 kg', ar: '46 كغم'),
     priceLabel: LocalizedText(en: '\$9 per roll', ar: '9\$ لكل لفة'),
-    locationLabel: LocalizedText(en: 'Jenin, East Market', ar: 'جنين، السوق الشرقي'),
+    locationLabel: LocalizedText(
+      en: 'Jenin, East Market',
+      ar: 'جنين، السوق الشرقي',
+    ),
     availabilityLabel: LocalizedText(
       en: 'Delivery available',
       ar: 'التوصيل متاح',
     ),
     deliveryAvailable: true,
     isFree: false,
-    supplierName: LocalizedText(
-      en: 'Blue Thread Studio',
-      ar: 'بلو ثريد',
-    ),
+    supplierName: LocalizedText(en: 'Blue Thread Studio', ar: 'بلو ثريد'),
     supplierSubtitle: LocalizedText(
       en: 'Textile reuse supplier',
       ar: 'مورد إعادة استخدام الأقمشة',
@@ -205,14 +205,14 @@ const mockMaterials = <DiscoveryMaterial>[
     statusTone: MaterialStatusBadgeTone.draft,
     quantityLabel: LocalizedText(en: '14 panels', ar: '14 لوحاً'),
     priceLabel: LocalizedText(en: '\$7 set', ar: '7\$ للمجموعة'),
-    locationLabel: LocalizedText(en: 'Tulkarm, Main Street', ar: 'طولكرم، الشارع الرئيسي'),
+    locationLabel: LocalizedText(
+      en: 'Tulkarm, Main Street',
+      ar: 'طولكرم، الشارع الرئيسي',
+    ),
     availabilityLabel: LocalizedText(en: 'Pickup only', ar: 'استلام فقط'),
     deliveryAvailable: false,
     isFree: false,
-    supplierName: LocalizedText(
-      en: 'Display Craft Lab',
-      ar: 'مختبر العرض',
-    ),
+    supplierName: LocalizedText(en: 'Display Craft Lab', ar: 'مختبر العرض'),
     supplierSubtitle: LocalizedText(
       en: 'Acrylic and signage workshop',
       ar: 'ورشة أكريليك ولافتات',

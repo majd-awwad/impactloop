@@ -76,10 +76,7 @@ class _BackgroundImage extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                colors.backgroundAlt,
-                colors.background,
-              ],
+              colors: [colors.backgroundAlt, colors.background],
             ),
           ),
           child: Stack(
@@ -113,18 +110,13 @@ class _ImpactBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.auto_awesome,
-            size: 16,
-            color: colors.accentAmber,
-          ),
+          Icon(Icons.auto_awesome, size: 16, color: colors.accentAmber),
           const SizedBox(width: AppSpacing.xs),
           Text(
             'Impact first',
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
+            style: AuthDarkTextStyles.body(
+              context,
+            ).copyWith(color: colors.textPrimary, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -176,18 +168,15 @@ class _ImpactCard extends StatelessWidget {
                       'Make an impact',
                       style: AuthDarkTextStyles.title(
                         context,
-                      ).copyWith(
-                        color: colors.textPrimary,
-                        fontSize: 22,
-                      ),
+                      ).copyWith(color: colors.textPrimary, fontSize: 22),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       'Every successful reuse turns overlooked materials into '
                       'projects, prototypes, and practical learning.',
-                      style: AuthDarkTextStyles.body(context).copyWith(
-                        color: colors.textSecondary,
-                      ),
+                      style: AuthDarkTextStyles.body(
+                        context,
+                      ).copyWith(color: colors.textSecondary),
                     ),
                   ],
                 ),
@@ -260,9 +249,7 @@ class _PrimaryMetric extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs),
         Text(
           '12,584+',
-          style: AuthDarkTextStyles.display(
-            context,
-          ).copyWith(
+          style: AuthDarkTextStyles.display(context).copyWith(
             color: colors.textPrimary,
             fontSize: maxWidth < 360 ? 34 : 42,
             height: 1.0,
@@ -351,9 +338,9 @@ class _ImpactBar extends StatelessWidget {
                     children: [
                       Text(
                         'Reuse trend',
-                        style: AuthDarkTextStyles.label(context).copyWith(
-                          color: colors.textMuted,
-                        ),
+                        style: AuthDarkTextStyles.label(
+                          context,
+                        ).copyWith(color: colors.textMuted),
                       ),
                       const Spacer(),
                       Flexible(

@@ -7,11 +7,7 @@ import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../app/theme/supplier_decorations.dart';
 
 class SupplierFormLabel extends StatelessWidget {
-  const SupplierFormLabel({
-    super.key,
-    required this.label,
-    this.subtitle,
-  });
+  const SupplierFormLabel({super.key, required this.label, this.subtitle});
 
   final String label;
   final String? subtitle;
@@ -240,7 +236,9 @@ class SupplierDarkSwitchTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.55),
         borderRadius: AppRadius.mdAll,
-        border: Border.all(color: AuthDarkColors.border.withValues(alpha: 0.35)),
+        border: Border.all(
+          color: AuthDarkColors.border.withValues(alpha: 0.35),
+        ),
       ),
       child: SwitchListTile.adaptive(
         contentPadding: EdgeInsets.zero,
@@ -331,7 +329,9 @@ class _SupplierDarkPasswordFieldState extends State<SupplierDarkPasswordField> {
           decoration: SupplierDecorations.darkFormFieldDecoration().copyWith(
             suffixIcon: IconButton(
               icon: Icon(
-                _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                _obscure
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
                 color: AuthDarkColors.textMuted,
               ),
               onPressed: () => setState(() => _obscure = !_obscure),

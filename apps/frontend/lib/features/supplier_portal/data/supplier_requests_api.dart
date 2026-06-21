@@ -77,7 +77,8 @@ class SupplierRequestsApi {
       final response = await _client.patch<Map<String, dynamic>>(
         '/api/supplier/reservations/$requestId/decline',
         data: {
-          if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+          if (reason != null && reason.trim().isNotEmpty)
+            'reason': reason.trim(),
         },
       );
 

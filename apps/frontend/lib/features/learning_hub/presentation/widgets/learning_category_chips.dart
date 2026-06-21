@@ -73,7 +73,7 @@ class _CategoryChip extends StatelessWidget {
         boxShadow: [
           if (!isDark && !selected)
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: palette.cardShadow,
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -82,9 +82,7 @@ class _CategoryChip extends StatelessWidget {
       child: Center(
         child: Text(
           label,
-          style: AppTextStyles.label(
-            context,
-          ).copyWith(
+          style: AppTextStyles.label(context).copyWith(
             color: foreground,
             fontSize: 13,
             fontWeight: selected ? FontWeight.w800 : FontWeight.w700,

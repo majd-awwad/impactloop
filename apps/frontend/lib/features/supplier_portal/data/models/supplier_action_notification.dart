@@ -1,7 +1,4 @@
-enum SupplierActionNotificationGroup {
-  reviewUpdate,
-  reservationAlert,
-}
+enum SupplierActionNotificationGroup { reviewUpdate, reservationAlert }
 
 enum SupplierActionNotificationKind {
   categoryApproved,
@@ -16,11 +13,7 @@ enum SupplierActionNotificationKind {
   reservationPending,
 }
 
-enum SupplierActionNotificationStatus {
-  pending,
-  approved,
-  rejected,
-}
+enum SupplierActionNotificationStatus { pending, approved, rejected }
 
 enum SupplierActionNotificationActionType {
   continueListing,
@@ -29,12 +22,7 @@ enum SupplierActionNotificationActionType {
   reviewRequest,
 }
 
-enum SupplierNotificationFilter {
-  all,
-  actionNeeded,
-  reservations,
-  completed,
-}
+enum SupplierNotificationFilter { all, actionNeeded, reservations, completed }
 
 extension SupplierNotificationFilterLabels on SupplierNotificationFilter {
   String get label {
@@ -140,7 +128,8 @@ class SupplierActionNotification {
       title: json['title'] as String? ?? '',
       body: json['body'] as String? ?? '',
       status: _parseStatus(json['status'] as String?),
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
       actionNeeded: json['actionNeeded'] == true,
       isCompleted: json['isCompleted'] == true,
@@ -152,8 +141,8 @@ class SupplierActionNotification {
       publishedMaterialId: json['publishedMaterialId'] as String?,
       approvedCategoryId: json['approvedCategoryId'] as String?,
       approvedCategoryName: json['approvedCategoryName'] as String?,
-      maxAllowedUnitPriceNis:
-          (json['maxAllowedUnitPriceNis'] as num?)?.toDouble(),
+      maxAllowedUnitPriceNis: (json['maxAllowedUnitPriceNis'] as num?)
+          ?.toDouble(),
       unit: json['unit'] as String?,
       supplierRequestedUnitPriceNis:
           (json['supplierRequestedUnitPriceNis'] as num?)?.toDouble(),
@@ -169,7 +158,8 @@ class SupplierActionNotification {
 
   static SupplierActionNotificationKind _parseKind(String? value) {
     return switch (value) {
-      'CATEGORY_SUGGESTION' => SupplierActionNotificationKind.categorySuggestion,
+      'CATEGORY_SUGGESTION' =>
+        SupplierActionNotificationKind.categorySuggestion,
       'CATEGORY_REJECTED' => SupplierActionNotificationKind.categoryRejected,
       'CATEGORY_PENDING' => SupplierActionNotificationKind.categoryPending,
       'CATEGORY_COMPLETED' => SupplierActionNotificationKind.categoryCompleted,
@@ -177,7 +167,8 @@ class SupplierActionNotification {
       'PRICE_REJECTED' => SupplierActionNotificationKind.priceRejected,
       'PRICE_PENDING' => SupplierActionNotificationKind.pricePending,
       'PRICE_COMPLETED' => SupplierActionNotificationKind.priceCompleted,
-      'RESERVATION_PENDING' => SupplierActionNotificationKind.reservationPending,
+      'RESERVATION_PENDING' =>
+        SupplierActionNotificationKind.reservationPending,
       _ => SupplierActionNotificationKind.categoryApproved,
     };
   }
@@ -192,7 +183,8 @@ class SupplierActionNotification {
 
   static SupplierActionNotificationActionType? _parseActionType(String? value) {
     return switch (value) {
-      'CONTINUE_LISTING' => SupplierActionNotificationActionType.continueListing,
+      'CONTINUE_LISTING' =>
+        SupplierActionNotificationActionType.continueListing,
       'EDIT_LISTING' => SupplierActionNotificationActionType.editListing,
       'EDIT_PRICE' => SupplierActionNotificationActionType.editPrice,
       'REVIEW_REQUEST' => SupplierActionNotificationActionType.reviewRequest,

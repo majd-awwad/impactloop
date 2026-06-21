@@ -18,9 +18,7 @@ class CompletePickupDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 480;
-    final dialogWidth = compact
-        ? MediaQuery.sizeOf(context).width - 32
-        : 420.0;
+    final dialogWidth = compact ? MediaQuery.sizeOf(context).width - 32 : 420.0;
 
     return Dialog(
       backgroundColor: AuthDarkColors.surfaceSolid,
@@ -47,18 +45,16 @@ class CompletePickupDialog extends StatelessWidget {
             children: [
               Text(
                 'Mark pickup as completed?',
-                style: AuthDarkTextStyles.title(context).copyWith(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AuthDarkTextStyles.title(
+                  context,
+                ).copyWith(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 'This will move the reservation to Completed and mark the material as reused.',
-                style: AuthDarkTextStyles.body(context).copyWith(
-                  color: AuthDarkColors.textSecondary,
-                  fontSize: 14,
-                ),
+                style: AuthDarkTextStyles.body(
+                  context,
+                ).copyWith(color: AuthDarkColors.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: AppSpacing.lg),
               Row(
@@ -84,8 +80,9 @@ class CompletePickupDialog extends StatelessWidget {
                     child: FilledButton(
                       onPressed: () => Navigator.of(context).pop(true),
                       style: FilledButton.styleFrom(
-                        backgroundColor:
-                            AuthDarkColors.accentMuted.withValues(alpha: 0.82),
+                        backgroundColor: AuthDarkColors.accentMuted.withValues(
+                          alpha: 0.82,
+                        ),
                         foregroundColor: AuthDarkColors.textOnAccent,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(

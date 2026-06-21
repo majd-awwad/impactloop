@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_color_tokens.dart';
+import '../../../app/theme/app_theme_colors.dart';
 import '../domain/models/learning_project.dart';
 
 const learningCategories = <LocalizedText>[
@@ -435,31 +436,31 @@ List<RatingBreakdown> mockBreakdownFor(LearningProject project) {
   ];
 }
 
-const learningHintSurface = Color(0xFF18251E);
-const learningHintBorder = Color(0xFF2F533C);
-const learningPageBackground = Color(0xFF08110F);
-const learningSectionBackground = Color(0xFF0C1916);
-const learningDarkSurface = Color(0xFF101C21);
-const learningDarkSurfaceSoft = Color(0xFF17262D);
-const learningCardSurface = Color(0xFF13221F);
-const learningCardSurfaceAlt = Color(0xFF0F1A1D);
-const learningHeroStart = Color(0xFF0E171A);
-const learningHeroEnd = Color(0xFF1C4A3B);
-const learningHeroAccent = Color(0xFF14352D);
-const learningLime = Color(0xFFA6D94C);
-const learningLimeSoft = Color(0xFFE3F4BE);
-const learningMutedChip = Color(0xFF1D2C30);
-const learningTimelineLine = Color(0xFF2A3C41);
-const learningDisabledPanel = Color(0xFF1B262B);
-const learningDisabledPanelBorder = Color(0xFF39484E);
-const learningPurpleStart = Color(0xFF4C1D95);
-const learningPurpleEnd = Color(0xFF2A2A4A);
+const learningHintSurface = AppColorTokens.darkSurfaceSoft;
+const learningHintBorder = AppColorTokens.darkBorderStrong;
+const learningPageBackground = AppColorTokens.darkBackgroundAlt;
+const learningSectionBackground = AppColorTokens.darkSurface;
+const learningDarkSurface = AppColorTokens.darkSurfaceElevated;
+const learningDarkSurfaceSoft = AppColorTokens.darkSurfaceSoft;
+const learningCardSurface = AppColorTokens.darkPanel;
+const learningCardSurfaceAlt = AppColorTokens.darkCardAlt;
+const learningHeroStart = AppColorTokens.darkHeroStart;
+const learningHeroEnd = AppColorTokens.darkPanel2;
+const learningHeroAccent = AppColorTokens.darkPanel;
+const learningLime = AppColorTokens.lime;
+const learningLimeSoft = AppColorTokens.limeSoft;
+const learningMutedChip = AppColorTokens.darkSurfaceMuted;
+const learningTimelineLine = AppColorTokens.darkBorder;
+const learningDisabledPanel = AppColorTokens.darkSurfaceMuted;
+const learningDisabledPanelBorder = AppColorTokens.darkBorderAlt;
+const learningPurpleStart = AppColorTokens.darkPurpleStart;
+const learningPurpleEnd = AppColorTokens.darkPurpleEnd;
 const learningBeigeBackground = learningPageBackground;
-const learningTextPrimary = Color(0xFFF5F9F7);
-const learningTextSecondary = Color(0xFFAAB8B2);
-const learningBorderSubtle = Color(0xFF20332E);
-const learningOverlayDark = Color(0x9908110F);
-const learningCardShadow = AppColors.shadow;
+const learningTextPrimary = AppColorTokens.darkTextPrimary;
+const learningTextSecondary = AppColorTokens.darkTextSecondary;
+const learningBorderSubtle = AppColorTokens.darkBorder;
+const learningOverlayDark = AppColorTokens.learningOverlayDark;
+const learningCardShadow = AppColorTokens.shadow;
 
 class LearningUiPalette {
   const LearningUiPalette({
@@ -540,27 +541,27 @@ class LearningUiPalette {
     cardShadow: learningCardShadow,
   );
 
-  static const light = LearningUiPalette(
-    pageBackground: Color(0xFFFAFBF7),
-    hintSurface: Color(0xFFFFFFFF),
-    hintBorder: Color(0xFFD9E2D7),
-    cardSurface: Color(0xFFFFFFFF),
-    cardSurfaceAlt: Color(0xFFF1F5EF),
-    darkSurface: Color(0xFFEAF3EC),
-    darkSurfaceSoft: Color(0xFFEAF3EC),
-    heroStart: Color(0xFFE5F5EC),
-    heroAccent: Color(0xFFF6FAF4),
-    heroEnd: Color(0xFFDCEFE7),
-    lime: Color(0xFF047857),
-    limeSoft: Color(0xFF065F46),
-    mutedChip: Color(0xFFF1F5EF),
-    timelineLine: Color(0xFFC7D4C5),
-    disabledPanel: Color(0xFFFFFFFF),
-    disabledPanelBorder: Color(0xFFD9E2D7),
-    textPrimary: Color(0xFF102019),
-    textSecondary: Color(0xFF526158),
-    borderSubtle: Color(0xFFD9E2D7),
-    overlayDark: Color(0x26050807),
-    cardShadow: Color(0x140F172A),
+  static final light = LearningUiPalette(
+    pageBackground: AppThemeColors.light.pageBackground,
+    hintSurface: AppThemeColors.light.surface,
+    hintBorder: AppThemeColors.light.borderSubtle,
+    cardSurface: AppThemeColors.light.cardSurface,
+    cardSurfaceAlt: AppThemeColors.light.surfaceElevated,
+    darkSurface: AppThemeColors.light.surfaceMuted,
+    darkSurfaceSoft: AppThemeColors.light.surfaceMuted,
+    heroStart: AppThemeColors.light.heroStart,
+    heroAccent: AppThemeColors.light.heroMid,
+    heroEnd: AppThemeColors.light.heroEnd,
+    lime: AppColorTokens.forest,
+    limeSoft: AppColorTokens.emeraldDeep,
+    mutedChip: AppThemeColors.light.surfaceElevated,
+    timelineLine: AppThemeColors.light.borderStrong,
+    disabledPanel: AppThemeColors.light.surface,
+    disabledPanelBorder: AppThemeColors.light.borderSubtle,
+    textPrimary: AppColorTokens.textPrimaryForest,
+    textSecondary: AppColorTokens.textSecondaryForest,
+    borderSubtle: AppThemeColors.light.borderSubtle,
+    overlayDark: AppThemeColors.light.overlay,
+    cardShadow: AppThemeColors.light.shadow,
   );
 }

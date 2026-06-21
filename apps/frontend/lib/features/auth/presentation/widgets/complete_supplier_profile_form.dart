@@ -126,9 +126,9 @@ class _CompleteSupplierProfileFormState
     }
 
     try {
-      final user = await ref.read(authControllerProvider.notifier).register(
-        request,
-      );
+      final user = await ref
+          .read(authControllerProvider.notifier)
+          .register(request);
       ref.read(registrationDraftProvider.notifier).clear();
 
       if (!mounted) {

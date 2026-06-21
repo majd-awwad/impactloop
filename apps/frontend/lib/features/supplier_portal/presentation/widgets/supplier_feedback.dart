@@ -40,7 +40,9 @@ void _showSupplierSnackBar(
         margin: const EdgeInsets.all(AppSpacing.lg),
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.mdAll,
-          side: BorderSide(color: AuthDarkColors.border.withValues(alpha: 0.55)),
+          side: BorderSide(
+            color: AuthDarkColors.border.withValues(alpha: 0.55),
+          ),
         ),
         content: Row(
           children: [

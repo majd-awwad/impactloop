@@ -50,9 +50,7 @@ class _DeclineIncomingRequestDialogState
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 480;
-    final dialogWidth = compact
-        ? MediaQuery.sizeOf(context).width - 32
-        : 420.0;
+    final dialogWidth = compact ? MediaQuery.sizeOf(context).width - 32 : 420.0;
 
     return Dialog(
       backgroundColor: AuthDarkColors.surfaceSolid,
@@ -80,16 +78,16 @@ class _DeclineIncomingRequestDialogState
               children: [
                 Text(
                   'Decline request',
-                  style: AuthDarkTextStyles.title(context).copyWith(
-                    fontSize: 20,
-                  ),
+                  style: AuthDarkTextStyles.title(
+                    context,
+                  ).copyWith(fontSize: 20),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'You can add an optional reason for the learner.',
-                  style: AuthDarkTextStyles.body(context).copyWith(
-                    color: AuthDarkColors.textPrimary,
-                  ),
+                  style: AuthDarkTextStyles.body(
+                    context,
+                  ).copyWith(color: AuthDarkColors.textPrimary),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Container(
@@ -101,9 +99,9 @@ class _DeclineIncomingRequestDialogState
                   ),
                   child: Text(
                     '${widget.materialTitle} · ${widget.learnerName}',
-                    style: AuthDarkTextStyles.label(context).copyWith(
-                      color: AuthDarkColors.textPrimary,
-                    ),
+                    style: AuthDarkTextStyles.label(
+                      context,
+                    ).copyWith(color: AuthDarkColors.textPrimary),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -122,7 +120,9 @@ class _DeclineIncomingRequestDialogState
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AuthDarkColors.textSecondary,
                           side: BorderSide(
-                            color: AuthDarkColors.border.withValues(alpha: 0.45),
+                            color: AuthDarkColors.border.withValues(
+                              alpha: 0.45,
+                            ),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
@@ -140,8 +140,9 @@ class _DeclineIncomingRequestDialogState
                           ));
                         },
                         style: FilledButton.styleFrom(
-                          backgroundColor:
-                              AuthDarkColors.error.withValues(alpha: 0.88),
+                          backgroundColor: AuthDarkColors.error.withValues(
+                            alpha: 0.88,
+                          ),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),

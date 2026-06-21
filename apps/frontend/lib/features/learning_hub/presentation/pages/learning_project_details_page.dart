@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../data/learning_hub_mock_data.dart';
 import '../../domain/models/learning_project.dart';
@@ -109,6 +110,7 @@ class _DetailsHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final colors = AppThemeColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasImage =
         project.imageUrl != null && project.imageUrl!.trim().isNotEmpty;
@@ -131,8 +133,8 @@ class _DetailsHero extends StatelessWidget {
             end: AlignmentDirectional.bottomEnd,
             colors: project.id == 'wireless-charger'
                 ? isDark
-                    ? const [learningPurpleStart, learningPurpleEnd]
-                    : const [Color(0xFFEFE7FF), Color(0xFFE8EEF8)]
+                      ? const [learningPurpleStart, learningPurpleEnd]
+                      : [colors.purpleStart, colors.purpleEnd]
                 : fallbackGradient,
           ),
         ),

@@ -14,7 +14,9 @@ final materialCategoriesProvider = FutureProvider((ref) {
   return ref.watch(materialListingRepositoryProvider).fetchMaterialCategories();
 });
 
-final materialListingPolicyProvider = FutureProvider<MaterialListingPolicy>((ref) {
+final materialListingPolicyProvider = FutureProvider<MaterialListingPolicy>((
+  ref,
+) {
   return ref.watch(materialListingRepositoryProvider).fetchListingPolicy();
 });
 
@@ -22,14 +24,18 @@ final categoryRequestsProvider = FutureProvider((ref) {
   return ref.watch(materialListingRepositoryProvider).fetchCategoryRequests();
 });
 
-final materialTypesSearchProvider = FutureProvider.family<
-    MaterialTypeSearchResult,
-    MaterialTypesSearchQuery>((ref, query) {
-  return ref.watch(materialListingRepositoryProvider).searchMaterialTypes(
-        categoryId: query.categoryId,
-        query: query.search,
-      );
-});
+final materialTypesSearchProvider =
+    FutureProvider.family<MaterialTypeSearchResult, MaterialTypesSearchQuery>((
+      ref,
+      query,
+    ) {
+      return ref
+          .watch(materialListingRepositoryProvider)
+          .searchMaterialTypes(
+            categoryId: query.categoryId,
+            query: query.search,
+          );
+    });
 
 class MaterialTypesSearchQuery {
   const MaterialTypesSearchQuery({this.categoryId, this.search});
@@ -59,28 +65,36 @@ Future<PriceRuleRequestResult> submitPriceReview(
   WidgetRef ref,
   CreatePriceRuleRequest request,
 ) {
-  return ref.read(materialListingRepositoryProvider).createPriceRuleRequest(request);
+  return ref
+      .read(materialListingRepositoryProvider)
+      .createPriceRuleRequest(request);
 }
 
 Future<CreateCategoryRequestResult> submitCategoryRequest(
   WidgetRef ref,
   CreateCategoryRequestPayload payload,
 ) {
-  return ref.read(materialListingRepositoryProvider).createCategoryRequest(payload);
+  return ref
+      .read(materialListingRepositoryProvider)
+      .createCategoryRequest(payload);
 }
 
 Future<CategoryRequestDraftResponse> loadCategoryRequestDraft(
   WidgetRef ref,
   String id,
 ) {
-  return ref.read(materialListingRepositoryProvider).fetchCategoryRequestDraft(id);
+  return ref
+      .read(materialListingRepositoryProvider)
+      .fetchCategoryRequestDraft(id);
 }
 
 Future<PriceRuleRequestDraftResponse> loadPriceRuleRequestDraft(
   WidgetRef ref,
   String id,
 ) {
-  return ref.read(materialListingRepositoryProvider).fetchPriceRuleRequestDraft(id);
+  return ref
+      .read(materialListingRepositoryProvider)
+      .fetchPriceRuleRequestDraft(id);
 }
 
 Future<List<UploadedMaterialImage>> uploadMaterialImages(

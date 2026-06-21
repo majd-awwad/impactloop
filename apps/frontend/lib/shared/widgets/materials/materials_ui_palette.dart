@@ -1,95 +1,98 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/theme/app_color_tokens.dart';
+import '../../../app/theme/app_theme_colors.dart';
+
 // Premium Emerald Tech — Material Discovery palette (single source of truth).
 
 // --- Base surfaces ---
-const materialAppBackground = Color(0xFF050807);
-const materialPageBackground = Color(0xFF050807);
-const materialSectionBackground = Color(0xFF080D0B);
-const materialCardSurface = Color(0xFF0B1512);
-const materialCardSurfaceAlt = Color(0xFF101F1A);
-const materialPanelSurface = Color(0xFF101614);
-const materialMutedSurface = Color(0xFF202A25);
-const materialInputSurface = Color(0xFF202A25);
+const materialAppBackground = AppColorTokens.darkBackground;
+const materialPageBackground = AppColorTokens.darkBackground;
+const materialSectionBackground = AppColorTokens.darkBackgroundAlt;
+const materialCardSurface = AppColorTokens.darkSurface;
+const materialCardSurfaceAlt = AppColorTokens.darkCardAlt;
+const materialPanelSurface = AppColorTokens.darkPanel;
+const materialMutedSurface = AppColorTokens.darkSurfaceMuted;
+const materialInputSurface = AppColorTokens.darkSurfaceMuted;
 
 // --- Borders ---
-const materialBorderSubtle = Color(0xFF28352F);
-const materialBorderStrong = Color(0xFF284C40);
+const materialBorderSubtle = AppColorTokens.darkBorderAlt;
+const materialBorderStrong = AppColorTokens.darkBorderCard;
 
 // --- Text ---
-const materialTextPrimary = Color(0xFFF4F7F2);
-const materialTextSecondary = Color(0xFFC5CEC8);
-const materialTextMuted = Color(0xFF8B9891);
+const materialTextPrimary = AppColorTokens.darkTextPrimary;
+const materialTextSecondary = AppColorTokens.darkTextSecondary;
+const materialTextMuted = AppColorTokens.darkTextMuted;
 
 // --- Accents (emerald / mint / lime) ---
-const materialEmerald = Color(0xFF34D399);
-const materialEmeraldStrong = Color(0xFF10B981);
-const materialEmeraldDark = Color(0xFF065F46);
-const materialMint = Color(0xFF5EEAD4);
-const materialMintDark = Color(0xFF065F46);
-const materialLime = Color(0xFFA3E635);
-const materialLimeSoft = Color(0xFFD9F99D);
-const materialCtaForeground = Color(0xFF04231D);
+const materialEmerald = AppColorTokens.success;
+const materialEmeraldStrong = AppColorTokens.emerald;
+const materialEmeraldDark = AppColorTokens.forest;
+const materialMint = AppColorTokens.mintBright;
+const materialMintDark = AppColorTokens.forest;
+const materialLime = AppColorTokens.lime;
+const materialLimeSoft = AppColorTokens.limeSoft;
+const materialCtaForeground = AppColorTokens.emeraldDeep;
 
 // --- Semantic ---
-const materialWarning = Color(0xFFF59E0B);
-const materialDanger = Color(0xFFEF4444);
-const materialInfo = Color(0xFF60A5FA);
+const materialWarning = AppColorTokens.warning;
+const materialDanger = AppColorTokens.danger;
+const materialInfo = AppColorTokens.info;
 
 // --- Panels & overlays ---
-const materialHintSurface = Color(0xFF171F1B);
-const materialHintBorder = Color(0xFF28352F);
-const materialMapSurface = Color(0xFF080D0B);
-const materialMapGrid = Color(0xFF1E2622);
-const materialCardShadow = Color(0x1F000000);
-const materialOverlayDark = Color(0x66050807);
-const materialOverlaySoft = Color(0x66050807);
+const materialHintSurface = AppColorTokens.darkSurfaceSoft;
+const materialHintBorder = AppColorTokens.darkBorderAlt;
+const materialMapSurface = AppColorTokens.darkBackgroundAlt;
+const materialMapGrid = AppColorTokens.darkSurfaceMuted;
+const materialCardShadow = AppColorTokens.darkShadow;
+const materialOverlayDark = AppColorTokens.darkOverlay;
+const materialOverlaySoft = AppColorTokens.darkOverlay;
 
 // --- Hero (neutral charcoal / navy; emerald glow only) ---
-const materialHeroStart = Color(0xFF050807);
-const materialHeroMid = Color(0xFF0A1018);
-const materialHeroEnd = Color(0xFF0E1520);
-const materialHeroGlow = Color(0x1434D399);
+const materialHeroStart = AppColorTokens.darkHeroStart;
+const materialHeroMid = AppColorTokens.darkHeroMid;
+const materialHeroEnd = AppColorTokens.darkHeroEnd;
+const materialHeroGlow = AppColorTokens.darkSurfaceSoft;
 
 // --- Card media fallback (cool charcoal; distinct from card body) ---
-const materialFallbackStart = Color(0xFF122A22);
-const materialFallbackMid = Color(0xFF17382E);
-const materialFallbackEnd = Color(0xFF0E1E19);
+const materialFallbackStart = AppColorTokens.darkFallbackStart;
+const materialFallbackMid = AppColorTokens.darkFallbackMid;
+const materialFallbackEnd = AppColorTokens.darkFallbackEnd;
 
 // --- Status badges ---
-const materialAvailableBackground = Color(0x1A34D399);
-const materialAvailableForeground = Color(0xFF34D399);
-const materialAvailableBorder = Color(0xFF10B981);
+const materialAvailableBackground = AppColorTokens.darkSurfaceSoft;
+const materialAvailableForeground = AppColorTokens.success;
+const materialAvailableBorder = AppColorTokens.emerald;
 
-const materialReservedBackground = Color(0x1AF59E0B);
-const materialReservedForeground = Color(0xFFFFD89A);
-const materialReservedBorder = Color(0xFFB45309);
+const materialReservedBackground = AppColorTokens.darkSurfaceSoft;
+const materialReservedForeground = AppColorTokens.warningDarkText;
+const materialReservedBorder = AppColorTokens.warningBorder;
 
-const materialReusedBackground = Color(0xFF171F1B);
-const materialReusedForeground = Color(0xFF8B9891);
-const materialReusedBorder = Color(0xFF28352F);
+const materialReusedBackground = AppColorTokens.darkSurfaceSoft;
+const materialReusedForeground = AppColorTokens.darkTextMuted;
+const materialReusedBorder = AppColorTokens.darkBorderAlt;
 
-const materialDraftBackground = Color(0xFF202A25);
-const materialDraftForeground = Color(0xFF8B9891);
-const materialDraftBorder = Color(0xFF28352F);
+const materialDraftBackground = AppColorTokens.darkSurfaceMuted;
+const materialDraftForeground = AppColorTokens.darkTextMuted;
+const materialDraftBorder = AppColorTokens.darkBorderAlt;
 
 // --- Condition badges (neutral; fair uses amber) ---
-const materialConditionLikeNewBackground = Color(0xFF171F1B);
-const materialConditionLikeNewForeground = Color(0xFFF4F7F2);
-const materialConditionGoodBackground = Color(0xFF202A25);
-const materialConditionGoodForeground = Color(0xFFC5CEC8);
-const materialConditionFairBackground = Color(0x1AF59E0B);
-const materialConditionFairForeground = Color(0xFFFFD89A);
-const materialConditionMixedBackground = Color(0xFF171F1B);
-const materialConditionMixedForeground = Color(0xFFC5CEC8);
+const materialConditionLikeNewBackground = AppColorTokens.darkSurfaceSoft;
+const materialConditionLikeNewForeground = AppColorTokens.darkTextPrimary;
+const materialConditionGoodBackground = AppColorTokens.darkSurfaceMuted;
+const materialConditionGoodForeground = AppColorTokens.darkTextSecondary;
+const materialConditionFairBackground = AppColorTokens.darkSurfaceSoft;
+const materialConditionFairForeground = AppColorTokens.warningDarkText;
+const materialConditionMixedBackground = AppColorTokens.darkSurfaceSoft;
+const materialConditionMixedForeground = AppColorTokens.darkTextSecondary;
 
 // --- Price badges ---
-const materialPriceFreeBackground = Color(0x1A34D399);
-const materialPriceFreeBorder = Color(0xFF10B981);
-const materialPriceFreeForeground = Color(0xFF5EEAD4);
-const materialPricePaidBackground = Color(0xFF171F1B);
-const materialPricePaidBorder = Color(0xFF2A4A42);
-const materialPricePaidForeground = Color(0xFFC5CEC8);
+const materialPriceFreeBackground = AppColorTokens.darkSurfaceSoft;
+const materialPriceFreeBorder = AppColorTokens.emerald;
+const materialPriceFreeForeground = AppColorTokens.mintBright;
+const materialPricePaidBackground = AppColorTokens.darkSurfaceSoft;
+const materialPricePaidBorder = AppColorTokens.darkBorderCard;
+const materialPricePaidForeground = AppColorTokens.darkTextSecondary;
 
 // --- Badge sizing ---
 const materialBadgeFontSize = 12.5;
@@ -185,29 +188,29 @@ class MaterialsUiPalette {
     fallbackEnd: materialFallbackEnd,
   );
 
-  static const light = MaterialsUiPalette(
-    pageBackground: Color(0xFFFAFBF7),
-    cardSurface: Color(0xFFFFFFFF),
-    cardSurfaceAlt: Color(0xFFF3F8F4),
-    panelSurface: Color(0xFFFFFFFF),
-    mutedSurface: Color(0xFFEAF3EC),
-    inputSurface: Color(0xFFFFFFFF),
-    borderSubtle: Color(0xFFD9E2D7),
-    borderStrong: Color(0xFFC8DCCF),
-    textPrimary: Color(0xFF102019),
-    textSecondary: Color(0xFF526158),
-    textMuted: Color(0xFF738075),
-    mint: Color(0xFF047857),
-    ctaForeground: Color(0xFFFFFFFF),
-    hintSurface: Color(0xFFFFFFFF),
-    hintBorder: Color(0xFFD9E2D7),
-    cardShadow: Color(0x120F1F17),
-    overlayDark: Color(0x24050807),
-    heroStart: Color(0xFFE8F7EF),
-    heroMid: Color(0xFFF6FAF4),
-    heroEnd: Color(0xFFE6F2EF),
-    fallbackStart: Color(0xFFEAF7F0),
-    fallbackMid: Color(0xFFDDF0E6),
-    fallbackEnd: Color(0xFFF8FBF7),
+  static final light = MaterialsUiPalette(
+    pageBackground: AppThemeColors.light.pageBackground,
+    cardSurface: AppThemeColors.light.cardSurface,
+    cardSurfaceAlt: AppThemeColors.light.cardSurfaceAlt,
+    panelSurface: AppThemeColors.light.panelSurface,
+    mutedSurface: AppThemeColors.light.surfaceMuted,
+    inputSurface: AppThemeColors.light.surface,
+    borderSubtle: AppThemeColors.light.borderSubtle,
+    borderStrong: AppThemeColors.light.borderStrong,
+    textPrimary: AppColorTokens.textPrimaryForest,
+    textSecondary: AppColorTokens.textSecondaryForest,
+    textMuted: AppColorTokens.textMutedForest,
+    mint: AppColorTokens.forest,
+    ctaForeground: AppThemeColors.light.textOnPrimary,
+    hintSurface: AppThemeColors.light.surface,
+    hintBorder: AppThemeColors.light.borderSubtle,
+    cardShadow: AppThemeColors.light.shadow,
+    overlayDark: AppThemeColors.light.overlay,
+    heroStart: AppThemeColors.light.heroStart,
+    heroMid: AppThemeColors.light.heroMid,
+    heroEnd: AppThemeColors.light.heroEnd,
+    fallbackStart: AppThemeColors.light.fallbackStart,
+    fallbackMid: AppThemeColors.light.fallbackMid,
+    fallbackEnd: AppThemeColors.light.fallbackEnd,
   );
 }

@@ -18,14 +18,16 @@ class IncomingRequestTabNotifier extends Notifier<SupplierIncomingRequestTab> {
 
 final incomingRequestTabProvider =
     NotifierProvider<IncomingRequestTabNotifier, SupplierIncomingRequestTab>(
-  IncomingRequestTabNotifier.new,
-);
+      IncomingRequestTabNotifier.new,
+    );
 
 final incomingRequestsProvider =
     FutureProvider.autoDispose<List<SupplierIncomingRequest>>((ref) async {
-  final tab = ref.watch(incomingRequestTabProvider);
-  return ref.read(supplierRequestsRepositoryProvider).fetchIncomingRequests(tab);
-});
+      final tab = ref.watch(incomingRequestTabProvider);
+      return ref
+          .read(supplierRequestsRepositoryProvider)
+          .fetchIncomingRequests(tab);
+    });
 
 Future<void> acceptIncomingRequest(
   WidgetRef ref, {
@@ -43,10 +45,9 @@ Future<void> declineIncomingRequest(
   required String requestId,
   String? reason,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).declineRequest(
-        requestId,
-        reason: reason,
-      );
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .declineRequest(requestId, reason: reason);
   ref.invalidate(incomingRequestsProvider);
 }
 
@@ -61,8 +62,8 @@ class CompletingReservationNotifier extends Notifier<String?> {
 
 final completingReservationIdProvider =
     NotifierProvider<CompletingReservationNotifier, String?>(
-  CompletingReservationNotifier.new,
-);
+      CompletingReservationNotifier.new,
+    );
 
 Future<SupplierIncomingRequest> completeIncomingRequest(
   WidgetRef ref, {

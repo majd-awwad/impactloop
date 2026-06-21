@@ -54,9 +54,7 @@ class _AcceptIncomingRequestDialogState
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 480;
-    final dialogWidth = compact
-        ? MediaQuery.sizeOf(context).width - 32
-        : 440.0;
+    final dialogWidth = compact ? MediaQuery.sizeOf(context).width - 32 : 440.0;
 
     return Dialog(
       backgroundColor: AuthDarkColors.surfaceSolid,
@@ -86,30 +84,32 @@ class _AcceptIncomingRequestDialogState
                 children: [
                   Text(
                     'Accept request',
-                    style: AuthDarkTextStyles.title(context).copyWith(
-                      fontSize: 20,
-                    ),
+                    style: AuthDarkTextStyles.title(
+                      context,
+                    ).copyWith(fontSize: 20),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     'Choose a pickup window for the learner.',
-                    style: AuthDarkTextStyles.body(context).copyWith(
-                      color: AuthDarkColors.textPrimary,
-                    ),
+                    style: AuthDarkTextStyles.body(
+                      context,
+                    ).copyWith(color: AuthDarkColors.textPrimary),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(AppSpacing.sm),
                     decoration: BoxDecoration(
-                      color: AuthDarkColors.chipUnselected.withValues(alpha: 0.5),
+                      color: AuthDarkColors.chipUnselected.withValues(
+                        alpha: 0.5,
+                      ),
                       borderRadius: AppRadius.mdAll,
                     ),
                     child: Text(
                       '${widget.materialTitle} · ${widget.learnerName}',
-                      style: AuthDarkTextStyles.label(context).copyWith(
-                        color: AuthDarkColors.textPrimary,
-                      ),
+                      style: AuthDarkTextStyles.label(
+                        context,
+                      ).copyWith(color: AuthDarkColors.textPrimary),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -167,7 +167,9 @@ class _AcceptIncomingRequestDialogState
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AuthDarkColors.textSecondary,
                             side: BorderSide(
-                              color: AuthDarkColors.border.withValues(alpha: 0.45),
+                              color: AuthDarkColors.border.withValues(
+                                alpha: 0.45,
+                              ),
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
@@ -179,8 +181,8 @@ class _AcceptIncomingRequestDialogState
                         child: FilledButton(
                           onPressed: _submit,
                           style: FilledButton.styleFrom(
-                            backgroundColor:
-                                AuthDarkColors.accentMuted.withValues(alpha: 0.9),
+                            backgroundColor: AuthDarkColors.accentMuted
+                                .withValues(alpha: 0.9),
                             foregroundColor: AuthDarkColors.textOnAccent,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),

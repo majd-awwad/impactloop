@@ -27,10 +27,8 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
     return showDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.58),
-      builder: (context) => PickupScheduleDetailsDialog(
-        item: item,
-        groupKind: groupKind,
-      ),
+      builder: (context) =>
+          PickupScheduleDetailsDialog(item: item, groupKind: groupKind),
     );
   }
 
@@ -102,11 +100,7 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
-              const Divider(
-                height: 1,
-                thickness: 1,
-                color: Color(0x332DD4BF),
-              ),
+              const Divider(height: 1, thickness: 1, color: Color(0x332DD4BF)),
               const SizedBox(height: AppSpacing.md),
               Flexible(
                 child: SingleChildScrollView(
@@ -116,10 +110,7 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
                       _DetailRow(label: 'Material', value: item.materialTitle),
                       _DetailRow(label: 'Learner', value: item.learnerName),
                       _DetailRow(label: 'Quantity', value: item.quantityLabel),
-                      _DetailRow(
-                        label: 'Pickup type',
-                        value: item.pickupType,
-                      ),
+                      _DetailRow(label: 'Pickup type', value: item.pickupType),
                       _DetailRow(label: 'Status', value: item.status.label),
                       if (window != null) ...[
                         const _SectionDivider(),
@@ -158,23 +149,19 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              const Divider(
-                height: 1,
-                thickness: 1,
-                color: Color(0x332DD4BF),
-              ),
+              const Divider(height: 1, thickness: 1, color: Color(0x332DD4BF)),
               const SizedBox(height: AppSpacing.md),
               Align(
-                alignment:
-                    compact ? Alignment.center : Alignment.centerRight,
+                alignment: compact ? Alignment.center : Alignment.centerRight,
                 child: SizedBox(
                   width: compact ? double.infinity : null,
                   child: TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: TextButton.styleFrom(
                       foregroundColor: AuthDarkColors.textPrimary,
-                      backgroundColor: AuthDarkColors.chipUnselected
-                          .withValues(alpha: 0.55),
+                      backgroundColor: AuthDarkColors.chipUnselected.withValues(
+                        alpha: 0.55,
+                      ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.lg,
                         vertical: AppSpacing.sm + 2,
@@ -206,20 +193,13 @@ class _SectionDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Divider(
-        height: 1,
-        thickness: 1,
-        color: Color(0x1F2DD4BF),
-      ),
+      child: Divider(height: 1, thickness: 1, color: Color(0x1F2DD4BF)),
     );
   }
 }
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({
-    required this.label,
-    required this.value,
-  });
+  const _DetailRow({required this.label, required this.value});
 
   final String label;
   final String value;

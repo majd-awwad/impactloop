@@ -1,16 +1,8 @@
 import 'supplier_incoming_request.dart';
 
-enum SupplierPickupScheduleFilter {
-  today,
-  upcoming,
-  completed,
-  all,
-}
+enum SupplierPickupScheduleFilter { today, upcoming, completed, all }
 
-enum SupplierPickupScheduleStatus {
-  accepted,
-  completed,
-}
+enum SupplierPickupScheduleStatus { accepted, completed }
 
 extension SupplierPickupScheduleFilterLabels on SupplierPickupScheduleFilter {
   String get label {
@@ -103,8 +95,9 @@ class SupplierPickupScheduleItem {
   }
 
   String get quantityLabel {
-    final value =
-        quantity == quantity.roundToDouble() ? quantity.toInt() : quantity;
+    final value = quantity == quantity.roundToDouble()
+        ? quantity.toInt()
+        : quantity;
     return '$value $unit';
   }
 
@@ -163,17 +156,17 @@ class SupplierPickupScheduleItem {
 
     return SupplierPickupScheduleItem(
       id: json['id'] as String? ?? '',
-      materialTitle: material?['title'] as String? ??
+      materialTitle:
+          material?['title'] as String? ??
           json['materialTitle'] as String? ??
           '',
       materialImageUrl: imageUrl,
-      learnerName: learner?['displayName'] as String? ??
+      learnerName:
+          learner?['displayName'] as String? ??
           requester?['displayName'] as String? ??
           '',
       quantity: (json['quantityRequested'] as num?)?.toDouble() ?? 0,
-      unit: json['unit'] as String? ??
-          material?['unit'] as String? ??
-          'piece',
+      unit: json['unit'] as String? ?? material?['unit'] as String? ?? 'piece',
       status: scheduleStatus,
       pickupType: pickupTypeLabel,
       pickupWindow: pickupWindow,
@@ -184,12 +177,7 @@ class SupplierPickupScheduleItem {
   }
 }
 
-enum PickupScheduleGroupKind {
-  today,
-  tomorrow,
-  date,
-  completed,
-}
+enum PickupScheduleGroupKind { today, tomorrow, date, completed }
 
 class PickupScheduleDateGroup {
   const PickupScheduleDateGroup({

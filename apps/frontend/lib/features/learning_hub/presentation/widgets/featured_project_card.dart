@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../data/learning_hub_mock_data.dart';
@@ -50,7 +51,10 @@ class FeaturedProjectCard extends StatelessWidget {
                       _FeaturedMedia(project: project, compact: false),
                       const SizedBox(width: AppSpacing.lg),
                       Expanded(
-                        child: _FeaturedContent(project: project, compact: false),
+                        child: _FeaturedContent(
+                          project: project,
+                          compact: false,
+                        ),
                       ),
                     ],
                   );
@@ -62,10 +66,7 @@ class FeaturedProjectCard extends StatelessWidget {
 }
 
 class _FeaturedContent extends StatelessWidget {
-  const _FeaturedContent({
-    required this.project,
-    required this.compact,
-  });
+  const _FeaturedContent({required this.project, required this.compact});
 
   final LearningProject project;
   final bool compact;
@@ -77,9 +78,7 @@ class _FeaturedContent extends StatelessWidget {
       onPressed: () => context.go('/learning/${project.id}'),
       style: FilledButton.styleFrom(
         backgroundColor: palette.lime,
-        foregroundColor: Theme.of(context).brightness == Brightness.dark
-            ? Colors.black
-            : Colors.white,
+        foregroundColor: AppColorTokens.emeraldDeep,
         padding: const EdgeInsetsDirectional.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
@@ -158,10 +157,7 @@ class _FeaturedContent extends StatelessWidget {
 }
 
 class _FeaturedMedia extends StatelessWidget {
-  const _FeaturedMedia({
-    required this.project,
-    required this.compact,
-  });
+  const _FeaturedMedia({required this.project, required this.compact});
 
   final LearningProject project;
   final bool compact;

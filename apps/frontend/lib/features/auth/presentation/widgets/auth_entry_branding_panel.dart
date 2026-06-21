@@ -63,7 +63,7 @@ class AuthEntryBrandingPanel extends StatelessWidget {
         border: Border.all(color: _panelBorderColor(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.14),
+            color: colors.primary.withValues(alpha: isDark ? 0.18 : 0.12),
             blurRadius: compact ? 14 : 22,
             offset: const Offset(0, 12),
           ),

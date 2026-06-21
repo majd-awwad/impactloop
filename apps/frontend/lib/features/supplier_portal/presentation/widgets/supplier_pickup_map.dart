@@ -16,11 +16,7 @@ const palestineFallbackCenter = LatLng(31.9522, 35.2332);
 /// Nablus fallback center.
 const nablusFallbackCenter = LatLng(32.2211, 35.2544);
 
-enum SupplierLocationButtonState {
-  idle,
-  loading,
-  captured,
-}
+enum SupplierLocationButtonState { idle, loading, captured }
 
 class SupplierPickupMap extends StatefulWidget {
   const SupplierPickupMap({
@@ -78,8 +74,9 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
     return city == 'nablus' ? 12 : 8;
   }
 
-  LatLng get _mapCenter =>
-      _hasCoordinates ? LatLng(widget.latitude!, widget.longitude!) : _fallbackCenter;
+  LatLng get _mapCenter => _hasCoordinates
+      ? LatLng(widget.latitude!, widget.longitude!)
+      : _fallbackCenter;
 
   double get _mapZoom => _hasCoordinates ? 14 : _fallbackZoom;
 
@@ -206,10 +203,13 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
         if (widget.showLocationButton) ...[
           OutlinedButton.icon(
             onPressed:
-                widget.locationButtonState == SupplierLocationButtonState.loading
+                widget.locationButtonState ==
+                    SupplierLocationButtonState.loading
                 ? null
                 : widget.onUseCurrentLocation,
-            icon: widget.locationButtonState == SupplierLocationButtonState.loading
+            icon:
+                widget.locationButtonState ==
+                    SupplierLocationButtonState.loading
                 ? const SizedBox(
                     width: 16,
                     height: 16,
@@ -225,7 +225,8 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
             label: Text(_locationButtonLabel),
             style: OutlinedButton.styleFrom(
               foregroundColor:
-                  widget.locationButtonState == SupplierLocationButtonState.captured
+                  widget.locationButtonState ==
+                      SupplierLocationButtonState.captured
                   ? AuthDarkColors.accent
                   : AuthDarkColors.textPrimary,
               side: BorderSide(
@@ -240,7 +241,8 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
           ),
           const SizedBox(height: AppSpacing.md),
         ],
-        if (widget.locationButtonState == SupplierLocationButtonState.captured &&
+        if (widget.locationButtonState ==
+                SupplierLocationButtonState.captured &&
             widget.isEditable) ...[
           Container(
             width: double.infinity,
@@ -262,9 +264,9 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
                 Expanded(
                   child: Text(
                     'Location captured. Confirm city and area, then save profile.',
-                    style: AuthDarkTextStyles.body(context).copyWith(
-                      color: AuthDarkColors.accent,
-                    ),
+                    style: AuthDarkTextStyles.body(
+                      context,
+                    ).copyWith(color: AuthDarkColors.accent),
                   ),
                 ),
               ],
@@ -277,7 +279,8 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
             latitude: widget.latitude!,
             longitude: widget.longitude!,
             showCaptureHelper:
-                widget.locationButtonState == SupplierLocationButtonState.captured,
+                widget.locationButtonState ==
+                SupplierLocationButtonState.captured,
           ),
           const SizedBox(height: AppSpacing.md),
         ],
@@ -316,7 +319,10 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
                         MarkerLayer(
                           markers: [
                             Marker(
-                              point: LatLng(widget.latitude!, widget.longitude!),
+                              point: LatLng(
+                                widget.latitude!,
+                                widget.longitude!,
+                              ),
                               width: 44,
                               height: 44,
                               alignment: Alignment.topCenter,
@@ -396,9 +402,9 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Visibility: ${visibilityLabel(widget.visibility!)}',
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.accent,
-            ),
+            style: AuthDarkTextStyles.body(
+              context,
+            ).copyWith(color: AuthDarkColors.accent),
           ),
         ],
         if (widget.fallbackCountry != null &&

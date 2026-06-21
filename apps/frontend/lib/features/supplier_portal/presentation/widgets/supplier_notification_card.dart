@@ -25,7 +25,8 @@ class SupplierNotificationCard extends StatelessWidget {
     );
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
-    final showAction = notification.actionLabel != null &&
+    final showAction =
+        notification.actionLabel != null &&
         onAction != null &&
         !notification.isCompleted;
     final muted = notification.isCompleted;
@@ -123,8 +124,9 @@ class SupplierNotificationCard extends StatelessWidget {
             if (showAction) ...[
               const SizedBox(height: AppSpacing.sm),
               Align(
-                alignment:
-                    compact ? Alignment.centerLeft : Alignment.centerRight,
+                alignment: compact
+                    ? Alignment.centerLeft
+                    : Alignment.centerRight,
                 child: TextButton(
                   onPressed: onAction,
                   style: TextButton.styleFrom(
@@ -193,14 +195,18 @@ class _SourceBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: AuthDarkColors.chipUnselected.withValues(alpha: muted ? 0.28 : 0.5),
+        color: AuthDarkColors.chipUnselected.withValues(
+          alpha: muted ? 0.28 : 0.5,
+        ),
         borderRadius: AppRadius.pillAll,
       ),
       child: Text(
         label,
         style: AuthDarkTextStyles.chip(context).copyWith(
           fontSize: 10,
-          color: muted ? AuthDarkColors.textMuted : AuthDarkColors.textSecondary,
+          color: muted
+              ? AuthDarkColors.textMuted
+              : AuthDarkColors.textSecondary,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -264,11 +270,9 @@ class _PillBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AuthDarkTextStyles.chip(context).copyWith(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
+        style: AuthDarkTextStyles.chip(
+          context,
+        ).copyWith(color: color, fontSize: 10, fontWeight: FontWeight.w700),
       ),
     );
   }

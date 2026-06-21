@@ -203,7 +203,8 @@ class _MaterialsDiscoveryViewState extends State<MaterialsDiscoveryView> {
         : _apiBackedCategories[_selectedCategoryIndex].resolve(context);
 
     return widget.materials.where((material) {
-      final matchesCategory = selectedCategory == null ||
+      final matchesCategory =
+          selectedCategory == null ||
           material.category.resolve(context) == selectedCategory;
 
       final matchesQuickFilter = switch (_selectedQuickFilterIndex) {
@@ -307,9 +308,7 @@ class _ResultsHeader extends StatelessWidget {
               en: 'Shared card component ready',
               ar: 'مكون البطاقة المشترك جاهز',
             ).resolve(context),
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.mint),
+            style: AppTextStyles.label(context).copyWith(color: palette.mint),
             textAlign: TextAlign.start,
           ),
         );
@@ -371,9 +370,9 @@ class _EmptyStatePanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             title.resolve(context),
-          style: AppTextStyles.title(
-            context,
-          ).copyWith(color: palette.textPrimary),
+            style: AppTextStyles.title(
+              context,
+            ).copyWith(color: palette.textPrimary),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.sm),

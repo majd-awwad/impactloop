@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'app_theme_colors.dart';
+
 /// Landing page color tokens for light and dark themes.
 final class LandingColors {
   const LandingColors({
@@ -40,44 +42,44 @@ final class LandingColors {
   final Color border;
   final Color borderStrong;
 
-  static const LandingColors dark = LandingColors(
-    background: Color(0xFF06110F),
-    backgroundAlt: Color(0xFF081B17),
-    surface: Color(0xFF0C241F),
-    surfaceElevated: Color(0xFF102C26),
-    surfaceGlass: Color(0xCC102C26),
-    surfaceSoft: Color(0xFF173A32),
-    primary: Color(0xFF2DD4A3),
-    primarySoft: Color(0x332DD4A3),
-    accentMint: Color(0xFF64F4D2),
-    accentAmber: Color(0xFFEAB75F),
-    accentBlue: Color(0xFF4FA3FF),
-    textPrimary: Color(0xFFF4FBF8),
-    textSecondary: Color(0xFFB8C8C1),
-    textMuted: Color(0xFF8EA19A),
-    textOnPrimary: Color(0xFF052016),
-    border: Color(0xFF244E43),
-    borderStrong: Color(0xFF2F6F5F),
+  static final LandingColors dark = LandingColors(
+    background: AppThemeColors.dark.pageBackground,
+    backgroundAlt: AppThemeColors.dark.pageBackgroundAlt,
+    surface: AppThemeColors.dark.surface,
+    surfaceElevated: AppThemeColors.dark.surfaceElevated,
+    surfaceGlass: AppThemeColors.dark.surfaceGlass,
+    surfaceSoft: AppThemeColors.dark.primarySoft,
+    primary: AppThemeColors.dark.primary,
+    primarySoft: AppThemeColors.dark.primarySoft,
+    accentMint: AppThemeColors.dark.accentMint,
+    accentAmber: AppThemeColors.dark.accentAmber,
+    accentBlue: AppThemeColors.dark.accentBlue,
+    textPrimary: AppThemeColors.dark.textPrimary,
+    textSecondary: AppThemeColors.dark.textSecondary,
+    textMuted: AppThemeColors.dark.textMuted,
+    textOnPrimary: AppThemeColors.dark.textOnPrimary,
+    border: AppThemeColors.dark.borderSubtle,
+    borderStrong: AppThemeColors.dark.borderStrong,
   );
 
-  static const LandingColors light = LandingColors(
-    background: Color(0xFFF7F8F3),
-    backgroundAlt: Color(0xFFEFF5EE),
-    surface: Color(0xFFFFFFFF),
-    surfaceElevated: Color(0xFFF1F5EE),
-    surfaceGlass: Color(0xF7FFFFFF),
-    surfaceSoft: Color(0xFFE4F4EC),
-    primary: Color(0xFF0F7A5A),
-    primarySoft: Color(0xFFE4F4EC),
-    accentMint: Color(0xFF20B996),
-    accentAmber: Color(0xFFD9A441),
-    accentBlue: Color(0xFF2F6F8F),
-    textPrimary: Color(0xFF111827),
-    textSecondary: Color(0xFF4B5B6B),
-    textMuted: Color(0xFF728095),
-    textOnPrimary: Color(0xFFFFFFFF),
-    border: Color(0xFFDCE7DD),
-    borderStrong: Color(0xFFB8D2C3),
+  static final LandingColors light = LandingColors(
+    background: AppThemeColors.light.pageBackground,
+    backgroundAlt: AppThemeColors.light.pageBackgroundAlt,
+    surface: AppThemeColors.light.surface,
+    surfaceElevated: AppThemeColors.light.surfaceElevated,
+    surfaceGlass: AppThemeColors.light.surfaceGlass,
+    surfaceSoft: AppThemeColors.light.primarySoft,
+    primary: AppThemeColors.light.primary,
+    primarySoft: AppThemeColors.light.primarySoft,
+    accentMint: AppThemeColors.light.accentMint,
+    accentAmber: AppThemeColors.light.accentAmber,
+    accentBlue: AppThemeColors.light.accentBlue,
+    textPrimary: AppThemeColors.light.textPrimary,
+    textSecondary: AppThemeColors.light.textSecondary,
+    textMuted: AppThemeColors.light.textMuted,
+    textOnPrimary: AppThemeColors.light.textOnPrimary,
+    border: AppThemeColors.light.borderSubtle,
+    borderStrong: AppThemeColors.light.borderStrong,
   );
 
   static LandingColors of(BuildContext context) {

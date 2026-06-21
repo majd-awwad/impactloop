@@ -71,7 +71,8 @@ class IncomingRequestCard extends StatelessWidget {
     final isPending = request.status == SupplierIncomingRequestStatus.pending;
     final isDeclined = request.status == SupplierIncomingRequestStatus.declined;
     final isAccepted = request.status == SupplierIncomingRequestStatus.accepted;
-    final isCompleted = request.status == SupplierIncomingRequestStatus.completed;
+    final isCompleted =
+        request.status == SupplierIncomingRequestStatus.completed;
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
     final pendingHeight = compact ? 312.0 : _pendingCardHeight;
@@ -178,8 +179,9 @@ class IncomingRequestCard extends StatelessWidget {
                 child: FilledButton.tonal(
                   onPressed: isCompleting ? null : onMarkCompleted,
                   style: FilledButton.styleFrom(
-                    backgroundColor:
-                        AuthDarkColors.accentSoft.withValues(alpha: 0.22),
+                    backgroundColor: AuthDarkColors.accentSoft.withValues(
+                      alpha: 0.22,
+                    ),
                     foregroundColor: AuthDarkColors.textPrimary,
                     padding: EdgeInsets.symmetric(
                       horizontal: compact ? 12 : 14,
@@ -222,10 +224,7 @@ class IncomingRequestCard extends StatelessWidget {
 }
 
 class _MaterialThumbnail extends StatelessWidget {
-  const _MaterialThumbnail({
-    required this.size,
-    this.imageUrl,
-  });
+  const _MaterialThumbnail({required this.size, this.imageUrl});
 
   final double size;
   final String? imageUrl;
@@ -298,10 +297,9 @@ class _MetaItem extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           label,
-          style: AuthDarkTextStyles.body(context).copyWith(
-            fontSize: 12,
-            color: AuthDarkColors.textSecondary,
-          ),
+          style: AuthDarkTextStyles.body(
+            context,
+          ).copyWith(fontSize: 12, color: AuthDarkColors.textSecondary),
         ),
       ],
     );
@@ -389,10 +387,9 @@ class _PickupFooter extends StatelessWidget {
                   window.note!.trim(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AuthDarkTextStyles.body(context).copyWith(
-                    fontSize: 12,
-                    color: AuthDarkColors.textSecondary,
-                  ),
+                  style: AuthDarkTextStyles.body(
+                    context,
+                  ).copyWith(fontSize: 12, color: AuthDarkColors.textSecondary),
                 ),
             ],
           ),
@@ -427,10 +424,9 @@ class _DeclineFooter extends StatelessWidget {
               reason,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AuthDarkTextStyles.body(context).copyWith(
-                fontSize: 12,
-                color: AuthDarkColors.textSecondary,
-              ),
+              style: AuthDarkTextStyles.body(
+                context,
+              ).copyWith(fontSize: 12, color: AuthDarkColors.textSecondary),
             ),
           ),
         ),
@@ -491,10 +487,7 @@ class _IncomingRequestActionButtonMetrics {
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
       side: side ?? BorderSide.none,
-      textStyle: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-      ),
+      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
     );
   }
 }
@@ -534,21 +527,22 @@ class _DeclineButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return FilledButton.icon(
       onPressed: onPressed,
-      style: _IncomingRequestActionButtonMetrics.baseStyle(
-        background: _background,
-        foreground: _foreground,
-        side: const BorderSide(color: _border),
-      ).copyWith(
-        overlayColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) {
-            return const Color(0x4DEF4444);
-          }
-          if (states.contains(WidgetState.hovered)) {
-            return const Color(0x29EF4444);
-          }
-          return null;
-        }),
-      ),
+      style:
+          _IncomingRequestActionButtonMetrics.baseStyle(
+            background: _background,
+            foreground: _foreground,
+            side: const BorderSide(color: _border),
+          ).copyWith(
+            overlayColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.pressed)) {
+                return const Color(0x4DEF4444);
+              }
+              if (states.contains(WidgetState.hovered)) {
+                return const Color(0x29EF4444);
+              }
+              return null;
+            }),
+          ),
       icon: const Icon(
         Icons.close,
         size: _IncomingRequestActionButtonMetrics.iconSize,

@@ -45,9 +45,9 @@ class SupplierProfileSummaryCard extends StatelessWidget {
                       .characters
                       .first
                       .toUpperCase(),
-                  style: AuthDarkTextStyles.title(context).copyWith(
-                    color: AuthDarkColors.accent,
-                  ),
+                  style: AuthDarkTextStyles.title(
+                    context,
+                  ).copyWith(color: AuthDarkColors.accent),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -62,7 +62,10 @@ class SupplierProfileSummaryCard extends StatelessWidget {
                       style: AuthDarkTextStyles.title(context),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Text(profile.user.email, style: AuthDarkTextStyles.body(context)),
+                    Text(
+                      profile.user.email,
+                      style: AuthDarkTextStyles.body(context),
+                    ),
                     if (supplier != null) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Wrap(
@@ -91,7 +94,10 @@ class SupplierProfileSummaryCard extends StatelessWidget {
           ),
           if (supplier?.description?.isNotEmpty == true) ...[
             const SizedBox(height: AppSpacing.lg),
-            Text(supplier!.description!, style: AuthDarkTextStyles.body(context)),
+            Text(
+              supplier!.description!,
+              style: AuthDarkTextStyles.body(context),
+            ),
           ],
           if (supplier?.defaultPickupLocation != null) ...[
             const SizedBox(height: AppSpacing.lg),

@@ -35,7 +35,9 @@ class SupplierProfilePage extends ConsumerWidget {
       data: (data) => _SupplierProfileContent(profile: data),
       loading: () => const _SupplierProfileLoading(),
       error: (error, _) => _SupplierProfileError(
-        message: error is ApiException ? error.message : 'Profile could not load.',
+        message: error is ApiException
+            ? error.message
+            : 'Profile could not load.',
       ),
     );
   }
@@ -231,17 +233,20 @@ class _SupplierProfileContentState
         : supplier?.defaultPickupLocation?.longitude;
 
     final preview = SupplierProfilePreviewCard(
-      publicName: draft?.publicName ??
+      publicName:
+          draft?.publicName ??
           (supplier?.publicName.isNotEmpty == true
               ? supplier!.publicName
               : profile.user.displayName),
-      supplierType: draft?.supplierType ?? supplier?.supplierType ?? _supplierType,
+      supplierType:
+          draft?.supplierType ?? supplier?.supplierType ?? _supplierType,
       verificationStatus: supplier?.verificationStatus ?? 'UNVERIFIED',
       description: draft?.description ?? supplier?.description,
       city: draft?.city ?? supplier?.defaultPickupLocation?.city,
       area: draft?.area ?? supplier?.defaultPickupLocation?.area,
       country: draft?.country ?? supplier?.defaultPickupLocation?.country,
-      visibility: draft?.visibility ?? supplier?.defaultPickupLocation?.visibility,
+      visibility:
+          draft?.visibility ?? supplier?.defaultPickupLocation?.visibility,
     );
 
     final sideColumn = Column(
@@ -253,7 +258,8 @@ class _SupplierProfileContentState
         ),
         const SizedBox(height: AppSpacing.lg),
         SupplierLocationPrivacyCard(
-          visibility: draft?.visibility ?? supplier?.defaultPickupLocation?.visibility,
+          visibility:
+              draft?.visibility ?? supplier?.defaultPickupLocation?.visibility,
         ),
         const SizedBox(height: AppSpacing.lg),
         SupplierPickupMapPreview(

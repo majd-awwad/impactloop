@@ -36,7 +36,10 @@ class MaterialDiscoveryApiMapper {
     final conditionMeta = _conditionMeta(condition);
     final statusMeta = _statusMeta(status);
     final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
-    final title = _stringOrFallback(json['title'], fallback: 'Untitled material');
+    final title = _stringOrFallback(
+      json['title'],
+      fallback: 'Untitled material',
+    );
     final description = _stringOrFallback(
       json['description'],
       fallback: 'No description available.',
@@ -62,10 +65,7 @@ class MaterialDiscoveryApiMapper {
       deliveryAvailable: deliveryAvailable,
       isFree: isFree,
       supplierName: LocalizedText(en: supplierName, ar: supplierName),
-      supplierSubtitle: LocalizedText(
-        en: 'Material supplier',
-        ar: 'مورد مواد',
-      ),
+      supplierSubtitle: LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
       heroIconData: _heroIconForCategory(categoryNameEn),
       cardGradient: _gradientForCategory(categoryNameEn),
       imageUrl: _imageUrl(json, categoryNameEn),
@@ -173,11 +173,10 @@ class MaterialDiscoveryApiMapper {
   }
 
   static LocalizedText _quantityLabel(double? quantity, String unit) {
-    final quantityText = quantity == null ? '--' : _formatCompactNumber(quantity);
-    return LocalizedText(
-      en: '$quantityText $unit',
-      ar: '$quantityText $unit',
-    );
+    final quantityText = quantity == null
+        ? '--'
+        : _formatCompactNumber(quantity);
+    return LocalizedText(en: '$quantityText $unit', ar: '$quantityText $unit');
   }
 
   static LocalizedText _priceLabel({
@@ -193,10 +192,7 @@ class MaterialDiscoveryApiMapper {
     }
 
     final priceText = _formatCompactNumber(price);
-    return LocalizedText(
-      en: 'NIS $priceText',
-      ar: '$priceText شيكل',
-    );
+    return LocalizedText(en: 'NIS $priceText', ar: '$priceText شيكل');
   }
 
   static LocalizedText _locationLabel({
@@ -218,9 +214,8 @@ class MaterialDiscoveryApiMapper {
     return LocalizedText(en: label, ar: label);
   }
 
-  static ({LocalizedText label, MaterialConditionBadgeTone tone}) _conditionMeta(
-    String value,
-  ) {
+  static ({LocalizedText label, MaterialConditionBadgeTone tone})
+  _conditionMeta(String value) {
     switch (value) {
       case 'LIKE_NEW':
         return (
@@ -332,6 +327,9 @@ class MaterialDiscoveryApiMapper {
       return value.toStringAsFixed(0);
     }
 
-    return value.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+    return value
+        .toStringAsFixed(2)
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
   }
 }

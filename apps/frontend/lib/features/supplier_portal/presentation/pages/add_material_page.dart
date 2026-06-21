@@ -29,13 +29,7 @@ import '../widgets/supplier_dark_form_field.dart';
 import '../widgets/supplier_feedback.dart';
 import '../widgets/supplier_pickup_map_preview.dart';
 
-const _conditions = [
-  'NEW',
-  'LIKE_NEW',
-  'GOOD',
-  'USED',
-  'NEEDS_REPAIR',
-];
+const _conditions = ['NEW', 'LIKE_NEW', 'GOOD', 'USED', 'NEEDS_REPAIR'];
 
 const _sourceTypes = [
   'STUDENT_LEFTOVER',
@@ -100,7 +94,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     super.initState();
     _sourceCategoryRequestId = widget.categoryRequestId?.trim();
     _sourcePriceRuleRequestId = widget.priceRuleRequestId?.trim();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeResumeFromRoute());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _maybeResumeFromRoute(),
+    );
   }
 
   @override
@@ -112,7 +108,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       _resumeError = null;
       _sourceCategoryRequestId = widget.categoryRequestId?.trim();
       _sourcePriceRuleRequestId = widget.priceRuleRequestId?.trim();
-      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeResumeFromRoute());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _maybeResumeFromRoute(),
+      );
     }
   }
 
@@ -142,8 +140,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     final profile = ref.watch(supplierProfileProvider);
     final categories = ref.watch(materialCategoriesProvider);
     final policy = ref.watch(materialListingPolicyProvider);
-    final compact = MediaQuery.sizeOf(context).width <
-        AppSpacing.supplierLayoutBreakpoint;
+    final compact =
+        MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
 
     return SingleChildScrollView(
       padding: SupplierDecorations.pagePadding(compact: compact),
@@ -259,10 +257,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (_createdMaterial != null) ...[
-            _SuccessCard(
-              material: _createdMaterial!,
-              onAddAnother: _resetForm,
-            ),
+            _SuccessCard(material: _createdMaterial!, onAddAnother: _resetForm),
             const SizedBox(height: AppSpacing.xl),
           ],
           _Card(
@@ -288,9 +283,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Use the common name of the item. We use this to verify paid listing prices.',
-                  style: AuthDarkTextStyles.body(context).copyWith(
-                    color: AuthDarkColors.textMuted,
-                  ),
+                  style: AuthDarkTextStyles.body(
+                    context,
+                  ).copyWith(color: AuthDarkColors.textMuted),
                 ),
                 const SupplierFieldGap(),
                 SupplierDarkTextField(
@@ -392,7 +387,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                 const SizedBox(height: AppSpacing.sm),
                 TextButton(
                   onPressed: () => setState(
-                    () => _showCategoryRequestField = !_showCategoryRequestField,
+                    () =>
+                        _showCategoryRequestField = !_showCategoryRequestField,
                   ),
                   child: Text(
                     _showCategoryRequestField
@@ -498,8 +494,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                       controller: _quantityController,
                       label: 'Quantity',
                       hint: '8',
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: _positiveNumber,
                       onChanged: (_) => _invalidatePriceCheck(),
                     ),
@@ -535,18 +532,18 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                     controller: _priceController,
                     label: 'Price per unit (₪)',
                     hint: '25',
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     validator: _unitPriceValidator,
                     onChanged: (_) => _invalidatePriceCheck(),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     'Enter the price for one unit. Quantity is handled separately.',
-                    style: AuthDarkTextStyles.body(context).copyWith(
-                      fontSize: 12,
-                      color: AuthDarkColors.textMuted,
-                    ),
+                    style: AuthDarkTextStyles.body(
+                      context,
+                    ).copyWith(fontSize: 12, color: AuthDarkColors.textMuted),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   OutlinedButton.icon(
@@ -608,7 +605,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                 const SizedBox(height: AppSpacing.md),
                 SupplierDarkSwitchTile(
                   title: 'Pickup allowed',
-                  subtitle: 'Learners can request self pickup for this material.',
+                  subtitle:
+                      'Learners can request self pickup for this material.',
                   value: _pickupAllowed,
                   onChanged: (value) => setState(() => _pickupAllowed = value),
                 ),
@@ -916,8 +914,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     _unitController.text = json['unit'] as String? ?? 'piece';
     _isFree = isFree;
     if (price is num && !isFree) {
-      _priceController.text =
-          price % 1 == 0 ? price.toInt().toString() : price.toString();
+      _priceController.text = price % 1 == 0
+          ? price.toInt().toString()
+          : price.toString();
     } else if (isFree) {
       _priceController.clear();
     }
@@ -962,10 +961,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       final approvedCategoryId =
           draft.approvedCategoryId ?? draft.approvedCategory?.id;
       if (approvedCategoryId != null) {
-        final categories =
-            await ref.read(materialCategoriesProvider.future);
-        final categoryExists =
-            categories.any((category) => category.id == approvedCategoryId);
+        final categories = await ref.read(materialCategoriesProvider.future);
+        final categoryExists = categories.any(
+          (category) => category.id == approvedCategoryId,
+        );
         if (!categoryExists) {
           setState(() {
             _isResumingDraft = false;
@@ -1133,7 +1132,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (!mounted) return;
       setState(() {
         _isRequestingPriceReview = false;
-        _priceReviewMessage = result.message ??
+        _priceReviewMessage =
+            result.message ??
             'Price review submitted. A Gemini-assisted price suggestion was generated for admin review.';
       });
     } on ApiException catch (error) {
@@ -1219,21 +1219,21 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (kDebugMode) {
         debugPrint('[price-check failed] unexpected: $error\n$stackTrace');
       }
-      showSupplierErrorSnackBar(
-        context,
-        'Price verification failed: $error',
-      );
+      showSupplierErrorSnackBar(context, 'Price verification failed: $error');
     }
   }
 
   String _apiErrorMessage(ApiException error) {
     final issues = error.fieldIssues;
     if (issues.isNotEmpty) {
-      return issues.map((issue) => '${issue.path}: ${issue.message}').join('\n');
+      return issues
+          .map((issue) => '${issue.path}: ${issue.message}')
+          .join('\n');
     }
 
-    final statusPrefix =
-        error.statusCode != null ? '[${error.statusCode}] ' : '';
+    final statusPrefix = error.statusCode != null
+        ? '[${error.statusCode}] '
+        : '';
     final message = error.displayMessage.trim();
 
     if (message.isNotEmpty) {
@@ -1249,11 +1249,14 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     }
     final quantity = double.tryParse(_quantityController.text.trim());
     if (quantity == null || quantity <= 0) return;
-    final price = _isFree ? null : double.tryParse(_priceController.text.trim());
+    final price = _isFree
+        ? null
+        : double.tryParse(_priceController.text.trim());
     if (!_isFree) {
       final hasApprovedSourceMax =
           _sourcePriceRuleRequestId != null && _maxAllowedUnitPrice != null;
-      final withinSourceMax = hasApprovedSourceMax &&
+      final withinSourceMax =
+          hasApprovedSourceMax &&
           price != null &&
           price <= _maxAllowedUnitPrice!;
 
@@ -1425,7 +1428,10 @@ class _Header extends StatelessWidget {
           policy.when(
             data: (value) => Padding(
               padding: const EdgeInsets.only(top: AppSpacing.md),
-              child: Text(value.message, style: AuthDarkTextStyles.body(context)),
+              child: Text(
+                value.message,
+                style: AuthDarkTextStyles.body(context),
+              ),
             ),
             loading: () => const SizedBox.shrink(),
             error: (_, _) => const SizedBox.shrink(),
@@ -1482,22 +1488,28 @@ class _ResponsiveRow extends StatelessWidget {
     final wide = MediaQuery.sizeOf(context).width >= 760;
     if (!wide) {
       return Column(
-        children: children
-            .expand((child) => [child, const SizedBox(height: AppSpacing.md)])
-            .toList()
-          ..removeLast(),
+        children:
+            children
+                .expand(
+                  (child) => [child, const SizedBox(height: AppSpacing.md)],
+                )
+                .toList()
+              ..removeLast(),
       );
     }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: children
-          .expand((child) => [
-                Expanded(child: child),
-                const SizedBox(width: AppSpacing.md),
-              ])
-          .toList()
-        ..removeLast(),
+      children:
+          children
+              .expand(
+                (child) => [
+                  Expanded(child: child),
+                  const SizedBox(width: AppSpacing.md),
+                ],
+              )
+              .toList()
+            ..removeLast(),
     );
   }
 }
@@ -1558,10 +1570,9 @@ class _ResumeErrorBanner extends StatelessWidget {
         children: [
           Text(
             'Could not restore listing draft',
-            style: AuthDarkTextStyles.title(context).copyWith(
-              fontSize: 15,
-              color: AuthDarkColors.error,
-            ),
+            style: AuthDarkTextStyles.title(
+              context,
+            ).copyWith(fontSize: 15, color: AuthDarkColors.error),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(message, style: AuthDarkTextStyles.body(context)),
@@ -1570,8 +1581,14 @@ class _ResumeErrorBanner extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
-              OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
-              TextButton(onPressed: onBack, child: const Text('Back to Notifications')),
+              OutlinedButton(
+                onPressed: onRetry,
+                child: const Text('Try again'),
+              ),
+              TextButton(
+                onPressed: onBack,
+                child: const Text('Back to Notifications'),
+              ),
             ],
           ),
         ],
@@ -1597,10 +1614,7 @@ class _InlineInfo extends StatelessWidget {
 }
 
 class _SuccessCard extends StatelessWidget {
-  const _SuccessCard({
-    required this.material,
-    required this.onAddAnother,
-  });
+  const _SuccessCard({required this.material, required this.onAddAnother});
 
   final CreatedMaterial material;
   final VoidCallback onAddAnother;
@@ -1613,9 +1627,9 @@ class _SuccessCard extends StatelessWidget {
         children: [
           Text(
             'Material listed successfully.',
-            style: AuthDarkTextStyles.title(context).copyWith(
-              color: AuthDarkColors.accent,
-            ),
+            style: AuthDarkTextStyles.title(
+              context,
+            ).copyWith(color: AuthDarkColors.accent),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(

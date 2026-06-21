@@ -34,10 +34,7 @@ Future<void> _handleCompletePickup(
     showSupplierInfoSnackBar(context, 'Pickup marked as completed.');
   } catch (_) {
     if (!context.mounted) return;
-    showSupplierErrorSnackBar(
-      context,
-      'Could not mark pickup as completed.',
-    );
+    showSupplierErrorSnackBar(context, 'Could not mark pickup as completed.');
   } finally {
     ref.read(completingReservationIdProvider.notifier).setCompleting(null);
   }
@@ -95,19 +92,18 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                             item: item,
                             groupKind: groups[i].kind,
                             isCompleting: completingId == item.id,
-                            onViewDetails: () => PickupScheduleDetailsDialog.show(
-                              context,
-                              item: item,
-                              groupKind: groups[i].kind,
-                            ),
+                            onViewDetails: () =>
+                                PickupScheduleDetailsDialog.show(
+                                  context,
+                                  item: item,
+                                  groupKind: groups[i].kind,
+                                ),
                             onMarkCompleted:
-                                item.status == SupplierPickupScheduleStatus.accepted
-                                    ? () => _handleCompletePickup(
-                                          context,
-                                          ref,
-                                          item,
-                                        )
-                                    : null,
+                                item.status ==
+                                    SupplierPickupScheduleStatus.accepted
+                                ? () =>
+                                      _handleCompletePickup(context, ref, item)
+                                : null,
                           ),
                         ),
                       ],
@@ -143,9 +139,9 @@ class _EmptyState extends StatelessWidget {
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: AuthDarkTextStyles.body(context).copyWith(
-            color: AuthDarkColors.textMuted,
-          ),
+          style: AuthDarkTextStyles.body(
+            context,
+          ).copyWith(color: AuthDarkColors.textMuted),
         ),
       ),
     );
@@ -170,10 +166,9 @@ class _LoadingState extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Text(
             'Loading pickup schedule…',
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.textMuted,
-              fontSize: 14,
-            ),
+            style: AuthDarkTextStyles.body(
+              context,
+            ).copyWith(color: AuthDarkColors.textMuted, fontSize: 14),
           ),
         ],
       ),
@@ -195,14 +190,11 @@ class _ErrorState extends StatelessWidget {
           Text(
             'We could not load pickup schedule.',
             textAlign: TextAlign.center,
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.textMuted,
-            ),
+            style: AuthDarkTextStyles.body(
+              context,
+            ).copyWith(color: AuthDarkColors.textMuted),
           ),
-          TextButton(
-            onPressed: onRetry,
-            child: const Text('Try again'),
-          ),
+          TextButton(onPressed: onRetry, child: const Text('Try again')),
         ],
       ),
     );

@@ -13,10 +13,7 @@ import '../../domain/material_discovery_repository.dart';
 import '../views/materials_discovery_view.dart';
 
 class MaterialsDiscoveryPage extends ConsumerStatefulWidget {
-  const MaterialsDiscoveryPage({
-    super.key,
-    this.repository,
-  });
+  const MaterialsDiscoveryPage({super.key, this.repository});
 
   final MaterialDiscoveryRepository? repository;
 
@@ -25,7 +22,8 @@ class MaterialsDiscoveryPage extends ConsumerStatefulWidget {
       _MaterialsDiscoveryPageState();
 }
 
-class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage> {
+class _MaterialsDiscoveryPageState
+    extends ConsumerState<MaterialsDiscoveryPage> {
   late final MaterialDiscoveryRepository _defaultRepository;
   late MaterialDiscoveryRepository _activeRepository;
   late Future<List<DiscoveryMaterial>> _materialsFuture;
@@ -87,7 +85,8 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
                     );
                   }
 
-                  final materials = snapshot.data ?? const <DiscoveryMaterial>[];
+                  final materials =
+                      snapshot.data ?? const <DiscoveryMaterial>[];
 
                   return SingleChildScrollView(
                     padding: const EdgeInsetsDirectional.fromSTEB(
@@ -142,9 +141,7 @@ class _StateMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text.resolve(context),
-      style: Theme.of(
-        context,
-      ).textTheme.titleMedium?.copyWith(
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
         color: MaterialsUiPalette.of(context).textPrimary,
       ),
       textAlign: TextAlign.center,

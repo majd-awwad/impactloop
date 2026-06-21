@@ -70,11 +70,11 @@ class AddMaterialPreviewCard extends StatelessWidget {
             style: AuthDarkTextStyles.sectionTitle(context),
           ),
           const SizedBox(height: AppSpacing.sm),
-          _PreviewRow(label: 'Material name', value: materialName.isEmpty ? '—' : materialName),
           _PreviewRow(
-            label: 'Category',
-            value: category?.nameEn ?? '—',
+            label: 'Material name',
+            value: materialName.isEmpty ? '—' : materialName,
           ),
+          _PreviewRow(label: 'Category', value: category?.nameEn ?? '—'),
           _PreviewRow(label: 'Condition', value: _label(condition)),
           _PreviewRow(label: 'Quantity', value: '$quantity $unit'),
           _PreviewRow(
@@ -93,8 +93,8 @@ class AddMaterialPreviewCard extends StatelessWidget {
                 priceCheck?.allowed == true
                     ? 'Price verified'
                     : priceCheck == null
-                        ? 'Verify price before publishing'
-                        : 'Price verification required',
+                    ? 'Verify price before publishing'
+                    : 'Price verification required',
                 style: AuthDarkTextStyles.body(context).copyWith(
                   color: priceCheck?.allowed == true
                       ? AuthDarkColors.accent
@@ -133,14 +133,12 @@ class _PreviewRow extends StatelessWidget {
             width: 110,
             child: Text(
               label,
-              style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.textMuted,
-              ),
+              style: AuthDarkTextStyles.body(
+                context,
+              ).copyWith(color: AuthDarkColors.textMuted),
             ),
           ),
-          Expanded(
-            child: Text(value, style: AuthDarkTextStyles.body(context)),
-          ),
+          Expanded(child: Text(value, style: AuthDarkTextStyles.body(context))),
         ],
       ),
     );

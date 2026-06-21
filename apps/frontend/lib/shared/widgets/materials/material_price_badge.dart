@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../../app/theme/app_theme_colors.dart';
 import 'materials_ui_palette.dart';
 
 class MaterialPriceBadge extends StatelessWidget {
@@ -17,15 +18,16 @@ class MaterialPriceBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppThemeColors.of(context);
     final background = isFree
-        ? (isDark ? materialPriceFreeBackground : const Color(0xFFE4F4EC))
-        : (isDark ? materialPricePaidBackground : const Color(0xFFF3F8F4));
+        ? (isDark ? materialPriceFreeBackground : colors.successSoft)
+        : (isDark ? materialPricePaidBackground : colors.cardSurfaceAlt);
     final border = isFree
-        ? (isDark ? materialPriceFreeBorder : const Color(0xFFB8D2C3))
-        : (isDark ? materialPricePaidBorder : const Color(0xFFD4E5D9));
+        ? (isDark ? materialPriceFreeBorder : colors.borderStrong)
+        : (isDark ? materialPricePaidBorder : colors.borderSubtle);
     final foreground = isFree
-        ? (isDark ? materialPriceFreeForeground : const Color(0xFF0F7A5A))
-        : (isDark ? materialPricePaidForeground : const Color(0xFF506258));
+        ? (isDark ? materialPriceFreeForeground : colors.success)
+        : (isDark ? materialPricePaidForeground : colors.textSecondary);
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(

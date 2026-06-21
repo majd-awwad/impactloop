@@ -100,8 +100,8 @@ List<PickupScheduleDateGroup> groupPickupScheduleItems(
     final kind = date == today
         ? PickupScheduleGroupKind.today
         : date == tomorrow
-            ? PickupScheduleGroupKind.tomorrow
-            : PickupScheduleGroupKind.date;
+        ? PickupScheduleGroupKind.tomorrow
+        : PickupScheduleGroupKind.date;
 
     groups.add(
       PickupScheduleDateGroup(
@@ -124,8 +124,9 @@ List<PickupScheduleDateGroup> groupPickupScheduleItems(
   }
 
   groups.sort((a, b) {
-    final kindCompare =
-        _groupSortOrder(a.kind).compareTo(_groupSortOrder(b.kind));
+    final kindCompare = _groupSortOrder(
+      a.kind,
+    ).compareTo(_groupSortOrder(b.kind));
     if (kindCompare != 0) {
       return kindCompare;
     }
@@ -141,14 +142,15 @@ List<PickupScheduleDateGroup> groupPickupScheduleItems(
 List<SupplierPickupScheduleItem> _sortByPickupStart(
   List<SupplierPickupScheduleItem> items,
 ) {
-  return List.of(items)
-    ..sort((a, b) {
-      final aTime = a.pickupWindow?.start ??
-          a.completedAt ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      final bTime = b.pickupWindow?.start ??
-          b.completedAt ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      return aTime.compareTo(bTime);
-    });
+  return List.of(items)..sort((a, b) {
+    final aTime =
+        a.pickupWindow?.start ??
+        a.completedAt ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    final bTime =
+        b.pickupWindow?.start ??
+        b.completedAt ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    return aTime.compareTo(bTime);
+  });
 }

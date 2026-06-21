@@ -38,14 +38,15 @@ List<SupplierPickupScheduleItem> filterPickupScheduleItems(
 List<SupplierPickupScheduleItem> _sortPickupScheduleItems(
   List<SupplierPickupScheduleItem> items,
 ) {
-  return List.of(items)
-    ..sort((a, b) {
-      final aTime = a.pickupWindow?.start ??
-          a.completedAt ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      final bTime = b.pickupWindow?.start ??
-          b.completedAt ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      return aTime.compareTo(bTime);
-    });
+  return List.of(items)..sort((a, b) {
+    final aTime =
+        a.pickupWindow?.start ??
+        a.completedAt ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    final bTime =
+        b.pickupWindow?.start ??
+        b.completedAt ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    return aTime.compareTo(bTime);
+  });
 }

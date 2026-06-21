@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_theme_colors.dart';
+
 @immutable
 class AuthUiPalette {
   const AuthUiPalette({
@@ -36,40 +38,40 @@ class AuthUiPalette {
   final Color border;
   final Color borderStrong;
 
-  static const AuthUiPalette light = AuthUiPalette(
-    background: Color(0xFFF7F8F3),
-    surface: Color(0xFFFFFFFF),
-    surfaceElevated: Color(0xFFF1F6F2),
-    panelDark: Color(0xFF0B2D26),
-    panelDark2: Color(0xFF103B32),
-    primary: Color(0xFF0F7A5A),
-    primarySoft: Color(0xFFE4F4EC),
-    accentMint: Color(0xFF20B996),
-    accentAmber: Color(0xFFD9A441),
-    textPrimary: Color(0xFF111827),
-    textSecondary: Color(0xFF4B5B6B),
-    textMuted: Color(0xFF728095),
-    textOnPrimary: Color(0xFFFFFFFF),
-    border: Color(0xFFDCE7DD),
-    borderStrong: Color(0xFFB8D2C3),
+  static final AuthUiPalette light = AuthUiPalette(
+    background: AppThemeColors.light.pageBackground,
+    surface: AppThemeColors.light.surface,
+    surfaceElevated: AppThemeColors.light.surfaceElevated,
+    panelDark: AppThemeColors.dark.panelSurface,
+    panelDark2: AppThemeColors.dark.panelSurfaceAlt,
+    primary: AppThemeColors.light.primary,
+    primarySoft: AppThemeColors.light.primarySoft,
+    accentMint: AppThemeColors.light.accentMint,
+    accentAmber: AppThemeColors.light.accentAmber,
+    textPrimary: AppThemeColors.light.textPrimary,
+    textSecondary: AppThemeColors.light.textSecondary,
+    textMuted: AppThemeColors.light.textMuted,
+    textOnPrimary: AppThemeColors.light.textOnPrimary,
+    border: AppThemeColors.light.borderSubtle,
+    borderStrong: AppThemeColors.light.borderStrong,
   );
 
-  static const AuthUiPalette dark = AuthUiPalette(
-    background: Color(0xFF06110F),
-    surface: Color(0xFF0B1512),
-    surfaceElevated: Color(0xFF10231E),
-    panelDark: Color(0xFF082A24),
-    panelDark2: Color(0xFF103B32),
-    primary: Color(0xFF2DD4A3),
-    primarySoft: Color(0x332DD4A3),
-    accentMint: Color(0xFF64F4D2),
-    accentAmber: Color(0xFFEAB75F),
-    textPrimary: Color(0xFFF4FBF8),
-    textSecondary: Color(0xFFB8C8C1),
-    textMuted: Color(0xFF8EA19A),
-    textOnPrimary: Color(0xFF052016),
-    border: Color(0xFF244E43),
-    borderStrong: Color(0xFF2F6F5F),
+  static final AuthUiPalette dark = AuthUiPalette(
+    background: AppThemeColors.dark.pageBackground,
+    surface: AppThemeColors.dark.surface,
+    surfaceElevated: AppThemeColors.dark.surfaceElevated,
+    panelDark: AppThemeColors.dark.panelSurface,
+    panelDark2: AppThemeColors.dark.panelSurfaceAlt,
+    primary: AppThemeColors.dark.primary,
+    primarySoft: AppThemeColors.dark.primarySoft,
+    accentMint: AppThemeColors.dark.accentMint,
+    accentAmber: AppThemeColors.dark.accentAmber,
+    textPrimary: AppThemeColors.dark.textPrimary,
+    textSecondary: AppThemeColors.dark.textSecondary,
+    textMuted: AppThemeColors.dark.textMuted,
+    textOnPrimary: AppThemeColors.dark.textOnPrimary,
+    border: AppThemeColors.dark.borderSubtle,
+    borderStrong: AppThemeColors.dark.borderStrong,
   );
 
   static AuthUiPalette of(BuildContext context) {

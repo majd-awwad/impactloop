@@ -62,9 +62,9 @@ class MaterialImagePickerSection extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         'Add up to 5 photos. JPG, PNG, or WebP.',
-                        style: AuthDarkTextStyles.body(context).copyWith(
-                          color: AuthDarkColors.textSecondary,
-                        ),
+                        style: AuthDarkTextStyles.body(
+                          context,
+                        ).copyWith(color: AuthDarkColors.textSecondary),
                       ),
                     ],
                   ),
@@ -83,9 +83,9 @@ class MaterialImagePickerSection extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
             Text(
               'Selected photos',
-              style: AuthDarkTextStyles.label(context).copyWith(
-                color: AuthDarkColors.textPrimary,
-              ),
+              style: AuthDarkTextStyles.label(
+                context,
+              ).copyWith(color: AuthDarkColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.sm),
             LayoutBuilder(
@@ -244,9 +244,9 @@ class _UploadDropZone extends StatelessWidget {
                 Text(
                   'Drag photos here or choose from your device',
                   textAlign: TextAlign.center,
-                  style: AuthDarkTextStyles.body(context).copyWith(
-                    color: AuthDarkColors.textPrimary,
-                  ),
+                  style: AuthDarkTextStyles.body(
+                    context,
+                  ).copyWith(color: AuthDarkColors.textPrimary),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 OutlinedButton.icon(
@@ -257,9 +257,9 @@ class _UploadDropZone extends StatelessWidget {
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   '$imageCount/$_maxImages photos',
-                  style: AuthDarkTextStyles.label(context).copyWith(
-                    color: AuthDarkColors.textSecondary,
-                  ),
+                  style: AuthDarkTextStyles.label(
+                    context,
+                  ).copyWith(color: AuthDarkColors.textSecondary),
                 ),
               ],
             ),

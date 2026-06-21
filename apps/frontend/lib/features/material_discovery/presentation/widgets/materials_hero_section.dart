@@ -96,9 +96,9 @@ class MaterialsHeroSection extends StatelessWidget {
                       const SizedBox(height: AppSpacing.md),
                       Text(
                         subtitle.resolve(context),
-                        style: AppTextStyles.brandingSubtitle(context).copyWith(
-                          color: palette.textSecondary,
-                        ),
+                        style: AppTextStyles.brandingSubtitle(
+                          context,
+                        ).copyWith(color: palette.textSecondary),
                         textAlign: TextAlign.start,
                       ),
                     ],
@@ -142,10 +142,10 @@ class _HeroStat extends StatelessWidget {
         AppSpacing.md,
       ),
       decoration: BoxDecoration(
-            color: palette.cardSurface.withValues(alpha: 0.72),
-            borderRadius: AppRadius.lgAll,
-            border: Border.all(color: palette.borderStrong),
-          ),
+        color: palette.cardSurface.withValues(alpha: 0.72),
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderStrong),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

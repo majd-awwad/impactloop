@@ -38,18 +38,18 @@ class MaterialListingFoundationPreview extends ConsumerWidget {
             ),
             error: (_, _) => Text(
               'Categories could not be loaded yet.',
-              style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.error,
-              ),
+              style: AuthDarkTextStyles.body(
+                context,
+              ).copyWith(color: AuthDarkColors.error),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           policy.when(
             data: (value) => Text(
               value.message,
-              style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.accent,
-              ),
+              style: AuthDarkTextStyles.body(
+                context,
+              ).copyWith(color: AuthDarkColors.accent),
             ),
             loading: () => Text(
               'Loading listing policy...',

@@ -15,21 +15,23 @@ class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
 
   @override
   Future<List<DiscoveryMaterial>> getMaterials() {
-    return unwrapApiResponse(
-      _client.get<Map<String, dynamic>>(_basePath),
-      (json) {
-        final items = json['items'];
-        if (items is! List) {
-          return const <DiscoveryMaterial>[];
-        }
+    return unwrapApiResponse(_client.get<Map<String, dynamic>>(_basePath), (
+      json,
+    ) {
+      final items = json['items'];
+      if (items is! List) {
+        return const <DiscoveryMaterial>[];
+      }
 
-        return items.whereType<Map>().map((item) {
-          return MaterialDiscoveryApiMapper.fromJson(
-            Map<String, dynamic>.from(item),
-          );
-        }).toList(growable: false);
-      },
-    );
+      return items
+          .whereType<Map>()
+          .map((item) {
+            return MaterialDiscoveryApiMapper.fromJson(
+              Map<String, dynamic>.from(item),
+            );
+          })
+          .toList(growable: false);
+    });
   }
 
   @override

@@ -36,16 +36,16 @@ class SupplierSelectedCoordinatesPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Latitude: ${latitude.toStringAsFixed(5)}',
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.accent,
-            ),
+            style: AuthDarkTextStyles.body(
+              context,
+            ).copyWith(color: AuthDarkColors.accent),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Longitude: ${longitude.toStringAsFixed(5)}',
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.accent,
-            ),
+            style: AuthDarkTextStyles.body(
+              context,
+            ).copyWith(color: AuthDarkColors.accent),
           ),
           if (showCaptureHelper) ...[
             const SizedBox(height: AppSpacing.sm),

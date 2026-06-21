@@ -75,9 +75,9 @@ class CategoryRequestsPanel extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             'Waiting for admin approval.',
-                            style: AuthDarkTextStyles.body(context).copyWith(
-                              fontSize: 13,
-                            ),
+                            style: AuthDarkTextStyles.body(
+                              context,
+                            ).copyWith(fontSize: 13),
                           ),
                         ],
                       ],

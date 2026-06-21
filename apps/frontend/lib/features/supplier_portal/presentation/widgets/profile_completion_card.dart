@@ -7,11 +7,7 @@ import '../../../../app/theme/supplier_decorations.dart';
 import '../../data/models/supplier_profile.dart';
 
 class ProfileCompletionCard extends StatelessWidget {
-  const ProfileCompletionCard({
-    super.key,
-    required this.profile,
-    this.draft,
-  });
+  const ProfileCompletionCard({super.key, required this.profile, this.draft});
 
   final SupplierProfileResponse profile;
   final SupplierProfileDraft? draft;
@@ -105,7 +101,10 @@ class ProfileCompletionCard extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: Text(item.label, style: AuthDarkTextStyles.body(context)),
+                    child: Text(
+                      item.label,
+                      style: AuthDarkTextStyles.body(context),
+                    ),
                   ),
                 ],
               ),

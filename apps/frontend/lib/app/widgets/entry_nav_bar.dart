@@ -3,11 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../application/app_settings_notifier.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
-import '../theme/auth_dark_colors.dart';
 import '../theme/auth_dark_text_styles.dart';
+import '../theme/app_theme_colors.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/data/models/user.dart';
 import '../../shared/widgets/app_feedback.dart';
@@ -41,12 +40,14 @@ class EntryNavBar extends ConsumerWidget {
     final settings = ref.watch(appSettingsProvider);
     final authState = ref.watch(authControllerProvider);
     final user = authState.user;
-    final isAuthenticated = authState.status == AuthStatus.authenticated &&
+    final isAuthenticated =
+        authState.status == AuthStatus.authenticated &&
         authState.isAuthenticated &&
         user != null;
     final effectiveShowSignIn = !isAuthenticated && showSignIn;
     final effectiveShowCreateAccount = !isAuthenticated && showCreateAccount;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppThemeColors.of(context);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -60,18 +61,16 @@ class EntryNavBar extends ConsumerWidget {
           constraints: const BoxConstraints(maxWidth: 1530),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: isDark
-                  ? AppColors.darkSurfaceElevated.withValues(alpha: 0.96)
-                  : AppColors.surfaceElevated.withValues(alpha: 0.97),
+              color: colors.surfaceElevated.withValues(
+                alpha: isDark ? 0.96 : 0.97,
+              ),
               borderRadius: isPhone ? AppRadius.lgAll : AppRadius.xlAll,
               border: Border.all(
-                color: isDark
-                    ? AppColors.darkBorder.withValues(alpha: 0.72)
-                    : AppColors.border,
+                color: colors.borderSubtle.withValues(alpha: isDark ? 0.72 : 1),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.06),
+                  color: colors.shadow.withValues(alpha: isDark ? 0.9 : 0.7),
                   blurRadius: isDark ? 18 : 20,
                   offset: const Offset(0, 8),
                 ),
@@ -149,7 +148,7 @@ class _DesktopNavLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppThemeColors.of(context);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -167,20 +166,14 @@ class _DesktopNavLayout extends StatelessWidget {
               vertical: AppSpacing.sm,
             ),
             decoration: BoxDecoration(
-              color: isDark
-                  ? AuthDarkColors.chipUnselected
-                  : AppColors.surfaceContainer,
+              color: colors.surfaceMuted,
               borderRadius: AppRadius.pillAll,
-              border: Border.all(
-                color: isDark ? AuthDarkColors.border : AppColors.border,
-              ),
+              border: Border.all(color: colors.borderSubtle),
             ),
             child: Text(
               'Learn. Reuse. Build.',
               style: AuthDarkTextStyles.body(context).copyWith(
-                color: isDark
-                    ? AuthDarkColors.textPrimary
-                    : AppColors.textPrimary,
+                color: colors.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -287,13 +280,10 @@ class _NavLinkPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = isDark ? AuthDarkColors.accent : AppColors.primary;
-    final border = isDark ? AppColors.darkBorder : AppColors.border;
-    final foreground = selected
-        ? accent
-        : isDark
-        ? AuthDarkColors.textSecondary
-        : AppColors.textSecondary;
+    final colors = AppThemeColors.of(context);
+    final accent = colors.primary;
+    final border = colors.borderSubtle;
+    final foreground = selected ? accent : colors.textSecondary;
     final background = selected
         ? accent.withValues(alpha: isDark ? 0.16 : 0.1)
         : Colors.transparent;
@@ -491,7 +481,9 @@ class _AccountMenu extends StatelessWidget {
   bool get _isSupplier => user.hasRole('SUPPLIER');
 
   Future<void> _logout(BuildContext context) async {
-    final logoutError = await ref.read(authControllerProvider.notifier).logout();
+    final logoutError = await ref
+        .read(authControllerProvider.notifier)
+        .logout();
 
     if (!context.mounted) {
       return;
@@ -510,23 +502,16 @@ class _AccountMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surface = isDark
-        ? AuthDarkColors.chipUnselected
-        : AppColors.surfaceElevated;
-    final primaryText = isDark
-        ? AuthDarkColors.textPrimary
-        : AppColors.textPrimary;
-    final secondaryText = isDark
-        ? AuthDarkColors.textSecondary
-        : AppColors.textSecondary;
-    final border = isDark ? AuthDarkColors.border : AppColors.border;
-    final accent = isDark ? AuthDarkColors.accent : AppColors.primary;
+    final colors = AppThemeColors.of(context);
+    final surface = colors.surfaceElevated;
+    final primaryText = colors.textPrimary;
+    final secondaryText = colors.textSecondary;
+    final border = colors.borderSubtle;
+    final accent = colors.primary;
 
     return MenuAnchor(
       style: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll(
-          isDark ? AppColors.darkSurfaceElevated : AppColors.surfaceElevated,
-        ),
+        backgroundColor: WidgetStatePropertyAll(colors.surfaceElevated),
         elevation: const WidgetStatePropertyAll(10),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
@@ -558,9 +543,7 @@ class _AccountMenu extends StatelessWidget {
               decoration: BoxDecoration(
                 color: surface,
                 borderRadius: AppRadius.pillAll,
-                border: Border.all(
-                  color: controller.isOpen ? accent : border,
-                ),
+                border: Border.all(color: controller.isOpen ? accent : border),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -575,10 +558,9 @@ class _AccountMenu extends StatelessWidget {
                     ),
                     child: Text(
                       _initial,
-                      style: AuthDarkTextStyles.label(context).copyWith(
-                        color: accent,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: AuthDarkTextStyles.label(
+                        context,
+                      ).copyWith(color: accent, fontWeight: FontWeight.w800),
                     ),
                   ),
                   if (!compact) ...[
@@ -627,10 +609,9 @@ class _AccountMenu extends StatelessWidget {
                   backgroundColor: accent.withValues(alpha: 0.14),
                   child: Text(
                     _initial,
-                    style: AuthDarkTextStyles.title(context).copyWith(
-                      color: accent,
-                      fontSize: 18,
-                    ),
+                    style: AuthDarkTextStyles.title(
+                      context,
+                    ).copyWith(color: accent, fontSize: 18),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -651,10 +632,9 @@ class _AccountMenu extends StatelessWidget {
                         user.email,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AuthDarkTextStyles.body(context).copyWith(
-                          color: secondaryText,
-                          fontSize: 12,
-                        ),
+                        style: AuthDarkTextStyles.body(
+                          context,
+                        ).copyWith(color: secondaryText, fontSize: 12),
                       ),
                     ],
                   ),
@@ -667,7 +647,8 @@ class _AccountMenu extends StatelessWidget {
         _AccountMenuItem(
           icon: Icons.person_outline_rounded,
           label: _isSupplier ? 'View supplier profile' : 'Profile',
-          onPressed: () => context.go(_isSupplier ? '/supplier/profile' : '/home'),
+          onPressed: () =>
+              context.go(_isSupplier ? '/supplier/profile' : '/home'),
         ),
         if (_isSupplier)
           _AccountMenuItem(
@@ -726,12 +707,8 @@ class _AccountMenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = destructive
-        ? (isDark ? AuthDarkColors.error : AppColors.error)
-        : isDark
-        ? AuthDarkColors.textPrimary
-        : AppColors.textPrimary;
+    final colors = AppThemeColors.of(context);
+    final color = destructive ? colors.danger : colors.textPrimary;
 
     return MenuItemButton(
       onPressed: onPressed,
@@ -792,14 +769,12 @@ class _CompactNavLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppThemeColors.of(context);
 
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        foregroundColor: isDark
-            ? AuthDarkColors.textPrimary
-            : AppColors.textPrimary,
+        foregroundColor: colors.textPrimary,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.xs,
@@ -809,10 +784,9 @@ class _CompactNavLink extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AuthDarkTextStyles.label(context).copyWith(
-          color: isDark ? AuthDarkColors.textPrimary : AppColors.textPrimary,
-          fontWeight: FontWeight.w600,
-        ),
+        style: AuthDarkTextStyles.label(
+          context,
+        ).copyWith(color: colors.textPrimary, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -833,15 +807,11 @@ class _NavActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AuthDarkColors.accent : AppColors.primary;
-    final textOnAccent = isDark
-        ? AuthDarkColors.textOnAccent
-        : AppColors.textOnBrand;
-    final primaryText = isDark
-        ? AuthDarkColors.textPrimary
-        : AppColors.textPrimary;
-    final border = isDark ? AuthDarkColors.border : AppColors.border;
+    final colors = AppThemeColors.of(context);
+    final accent = colors.primary;
+    final textOnAccent = colors.textOnPrimary;
+    final primaryText = colors.textPrimary;
+    final border = colors.borderSubtle;
     final button = filled
         ? FilledButton.icon(
             onPressed: onPressed,
@@ -858,10 +828,9 @@ class _NavActionButton extends StatelessWidget {
             icon: Icon(icon, size: 18),
             label: Text(
               label,
-              style: AuthDarkTextStyles.body(context).copyWith(
-                color: textOnAccent,
-                fontWeight: FontWeight.w700,
-              ),
+              style: AuthDarkTextStyles.body(
+                context,
+              ).copyWith(color: textOnAccent, fontWeight: FontWeight.w700),
             ),
           )
         : OutlinedButton.icon(
@@ -879,10 +848,9 @@ class _NavActionButton extends StatelessWidget {
             icon: Icon(icon, size: 18),
             label: Text(
               label,
-              style: AuthDarkTextStyles.body(context).copyWith(
-                color: primaryText,
-                fontWeight: FontWeight.w700,
-              ),
+              style: AuthDarkTextStyles.body(
+                context,
+              ).copyWith(color: primaryText, fontWeight: FontWeight.w700),
             ),
           );
 

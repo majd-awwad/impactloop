@@ -136,18 +136,16 @@ class _SupplierIncomingRequestsPageState
             child: IncomingRequestCard(
               request: request,
               isCompleting: completingId == request.id,
-              onAccept:
-                  request.status == SupplierIncomingRequestStatus.pending
-                      ? () => _handleAccept(context, ref, request)
-                      : null,
-              onDecline:
-                  request.status == SupplierIncomingRequestStatus.pending
-                      ? () => _handleDecline(context, ref, request)
-                      : null,
+              onAccept: request.status == SupplierIncomingRequestStatus.pending
+                  ? () => _handleAccept(context, ref, request)
+                  : null,
+              onDecline: request.status == SupplierIncomingRequestStatus.pending
+                  ? () => _handleDecline(context, ref, request)
+                  : null,
               onMarkCompleted:
                   request.status == SupplierIncomingRequestStatus.accepted
-                      ? () => _handleComplete(context, ref, request)
-                      : null,
+                  ? () => _handleComplete(context, ref, request)
+                  : null,
             ),
           ),
         )
@@ -176,9 +174,9 @@ class _SupplierIncomingRequestsPageState
       );
       if (!context.mounted) return;
       showSupplierInfoSnackBar(context, 'Request accepted.');
-      ref.read(incomingRequestTabProvider.notifier).selectTab(
-            SupplierIncomingRequestTab.accepted,
-          );
+      ref
+          .read(incomingRequestTabProvider.notifier)
+          .selectTab(SupplierIncomingRequestTab.accepted);
     } catch (_) {
       if (!context.mounted) return;
       showSupplierErrorSnackBar(context, 'Could not accept the request.');
@@ -209,9 +207,9 @@ class _SupplierIncomingRequestsPageState
       );
       if (!context.mounted) return;
       showSupplierInfoSnackBar(context, 'Request declined.');
-      ref.read(incomingRequestTabProvider.notifier).selectTab(
-            SupplierIncomingRequestTab.declined,
-          );
+      ref
+          .read(incomingRequestTabProvider.notifier)
+          .selectTab(SupplierIncomingRequestTab.declined);
     } catch (_) {
       if (!context.mounted) return;
       showSupplierErrorSnackBar(context, 'Could not decline the request.');
@@ -228,20 +226,19 @@ class _SupplierIncomingRequestsPageState
       return;
     }
 
-    ref.read(completingReservationIdProvider.notifier).setCompleting(request.id);
+    ref
+        .read(completingReservationIdProvider.notifier)
+        .setCompleting(request.id);
     try {
       await completeIncomingRequest(ref, requestId: request.id);
       if (!context.mounted) return;
       showSupplierInfoSnackBar(context, 'Pickup marked as completed.');
-      ref.read(incomingRequestTabProvider.notifier).selectTab(
-            SupplierIncomingRequestTab.completed,
-          );
+      ref
+          .read(incomingRequestTabProvider.notifier)
+          .selectTab(SupplierIncomingRequestTab.completed);
     } catch (_) {
       if (!context.mounted) return;
-      showSupplierErrorSnackBar(
-        context,
-        'Could not mark pickup as completed.',
-      );
+      showSupplierErrorSnackBar(context, 'Could not mark pickup as completed.');
     } finally {
       ref.read(completingReservationIdProvider.notifier).setCompleting(null);
     }
@@ -287,9 +284,9 @@ class _PageHeader extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       'Review learner requests and schedule pickups.',
-                      style: AuthDarkTextStyles.body(context).copyWith(
-                        color: AuthDarkColors.textPrimary,
-                      ),
+                      style: AuthDarkTextStyles.body(
+                        context,
+                      ).copyWith(color: AuthDarkColors.textPrimary),
                     ),
                   ],
                 ),
@@ -303,10 +300,7 @@ class _PageHeader extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({
-    required this.title,
-    required this.subtitle,
-  });
+  const _EmptyState({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
@@ -344,9 +338,9 @@ class _EmptyState extends StatelessWidget {
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.textSecondary,
-            ),
+            style: AuthDarkTextStyles.body(
+              context,
+            ).copyWith(color: AuthDarkColors.textSecondary),
           ),
         ],
       ),
@@ -377,9 +371,9 @@ class _LoadingState extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           Text(
             'Loading incoming requests…',
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.textPrimary,
-            ),
+            style: AuthDarkTextStyles.body(
+              context,
+            ).copyWith(color: AuthDarkColors.textPrimary),
           ),
         ],
       ),

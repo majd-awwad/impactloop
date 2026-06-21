@@ -230,10 +230,7 @@ class SupplierProfileForm extends StatelessWidget {
                       value: 'ORDER_ONLY',
                       child: Text('Order only'),
                     ),
-                    DropdownMenuItem(
-                      value: 'PRIVATE',
-                      child: Text('Private'),
-                    ),
+                    DropdownMenuItem(value: 'PRIVATE', child: Text('Private')),
                   ],
                   onChanged: (value) {
                     if (value != null) {
@@ -433,10 +430,7 @@ class _FormActions extends StatelessWidget {
     return Wrap(
       spacing: AppSpacing.md,
       runSpacing: AppSpacing.sm,
-      children: [
-        saveButton,
-        if (cancelButton != null) cancelButton,
-      ],
+      children: [saveButton, if (cancelButton != null) cancelButton],
     );
   }
 }

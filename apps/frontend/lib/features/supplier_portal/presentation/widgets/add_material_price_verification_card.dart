@@ -27,7 +27,8 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final allowed = result.allowed;
-    final canSubmitPriceReview = showPriceReview && _showPriceReviewButton(result.reason);
+    final canSubmitPriceReview =
+        showPriceReview && _showPriceReviewButton(result.reason);
 
     return Container(
       width: double.infinity,
@@ -48,9 +49,9 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               'Matched price reference: ${result.matchedReference!.displayLabel}',
-              style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.textMuted,
-              ),
+              style: AuthDarkTextStyles.body(
+                context,
+              ).copyWith(color: AuthDarkColors.textMuted),
             ),
           ],
           if (result.maxAllowedPrice != null)
@@ -77,7 +78,8 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
                   .map(
                     (candidate) => ActionChip(
                       label: Text(candidate.displayLabel),
-                      onPressed: () => onSelectSuggestion(candidate.displayLabel),
+                      onPressed: () =>
+                          onSelectSuggestion(candidate.displayLabel),
                     ),
                   )
                   .toList(),
@@ -87,21 +89,26 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               'Price review is required before paid publishing. A Gemini-assisted price suggestion will be generated for admin review.',
-              style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.textMuted,
-              ),
+              style: AuthDarkTextStyles.body(
+                context,
+              ).copyWith(color: AuthDarkColors.textMuted),
             ),
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: isRequestingPriceReview ? null : onSubmitPriceReview,
               icon: const Icon(Icons.request_quote_outlined),
               label: Text(
-                isRequestingPriceReview ? 'Submitting...' : 'Submit price review',
+                isRequestingPriceReview
+                    ? 'Submitting...'
+                    : 'Submit price review',
               ),
             ),
             if (priceReviewMessage != null) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text(priceReviewMessage!, style: AuthDarkTextStyles.body(context)),
+              Text(
+                priceReviewMessage!,
+                style: AuthDarkTextStyles.body(context),
+              ),
             ],
           ],
         ],
@@ -114,8 +121,10 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
       'PAID_OTHER_NOT_ALLOWED' => 'Paid listings cannot use Other',
       'AMBIGUOUS_MATERIAL_MATCH' => 'Please clarify the material name',
       'PRICE_TOO_HIGH' => 'Price is above the allowed limit',
-      'PRICE_RULE_REQUIRED' => 'This paid material needs price review before publishing',
-      'MATERIAL_REVIEW_REQUIRED' => 'This paid material needs price review before publishing',
+      'PRICE_RULE_REQUIRED' =>
+        'This paid material needs price review before publishing',
+      'MATERIAL_REVIEW_REQUIRED' =>
+        'This paid material needs price review before publishing',
       _ => 'This paid material needs price review before publishing',
     };
   }

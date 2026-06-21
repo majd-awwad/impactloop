@@ -23,8 +23,7 @@ class PickupScheduleStatusStyle {
   /// Filter chips: Today / Upcoming / Completed / All.
   static PickupScheduleStatusStyle styleForPickupFilter(
     SupplierPickupScheduleFilter filter,
-  ) =>
-      forFilter(filter);
+  ) => forFilter(filter);
 
   static PickupScheduleStatusStyle forFilter(
     SupplierPickupScheduleFilter filter,

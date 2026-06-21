@@ -103,9 +103,13 @@ class CreatedMaterial {
       ),
       images: rawImages is List
           ? rawImages
-              .whereType<Map>()
-              .map((item) => CreatedMaterialImage.fromJson(Map<String, dynamic>.from(item)))
-              .toList()
+                .whereType<Map>()
+                .map(
+                  (item) => CreatedMaterialImage.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList()
           : const [],
       createdAt: json['createdAt'] as String? ?? '',
     );

@@ -73,8 +73,8 @@ class CategoryRequestDraftResponse {
       listingDraftJson: json['listingDraftJson'] is Map<String, dynamic>
           ? Map<String, dynamic>.from(json['listingDraftJson'] as Map)
           : json['listingDraftJson'] is Map
-              ? Map<String, dynamic>.from(json['listingDraftJson'] as Map)
-              : null,
+          ? Map<String, dynamic>.from(json['listingDraftJson'] as Map)
+          : null,
     );
   }
 }

@@ -27,7 +27,9 @@ final materialTypesApiProvider = Provider<MaterialTypesApi>((ref) {
   return MaterialTypesApi(ref.watch(apiClientProvider));
 });
 
-final materialListingPolicyApiProvider = Provider<MaterialListingPolicyApi>((ref) {
+final materialListingPolicyApiProvider = Provider<MaterialListingPolicyApi>((
+  ref,
+) {
   return MaterialListingPolicyApi(ref.watch(apiClientProvider));
 });
 
@@ -47,7 +49,9 @@ final materialUploadApiProvider = Provider<MaterialUploadApi>((ref) {
   return MaterialUploadApi(ref.watch(apiClientProvider));
 });
 
-final materialListingRepositoryProvider = Provider<MaterialListingRepository>((ref) {
+final materialListingRepositoryProvider = Provider<MaterialListingRepository>((
+  ref,
+) {
   return MaterialListingRepository(
     categoriesApi: ref.watch(categoriesApiProvider),
     materialTypesApi: ref.watch(materialTypesApiProvider),

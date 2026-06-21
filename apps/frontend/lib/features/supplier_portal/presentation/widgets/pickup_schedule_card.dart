@@ -33,7 +33,7 @@ class PickupScheduleCard extends StatelessWidget {
     final note = _displayNote(item);
     final showMarkCompleted =
         item.status == SupplierPickupScheduleStatus.accepted &&
-            onMarkCompleted != null;
+        onMarkCompleted != null;
 
     return Material(
       color: Colors.transparent,
@@ -86,8 +86,9 @@ class PickupScheduleCard extends StatelessWidget {
                   Container(
                     width: 1,
                     height: compact ? 48 : 52,
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
                     color: AuthDarkColors.border.withValues(alpha: 0.28),
                   ),
                   Expanded(
@@ -102,11 +103,11 @@ class PickupScheduleCard extends StatelessWidget {
                                 item.materialTitle,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style:
-                                    AuthDarkTextStyles.title(context).copyWith(
-                                  fontSize: compact ? 15 : 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: AuthDarkTextStyles.title(context)
+                                    .copyWith(
+                                      fontSize: compact ? 15 : 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                             ),
                             const SizedBox(width: AppSpacing.xs),
@@ -132,8 +133,9 @@ class PickupScheduleCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: AuthDarkTextStyles.body(context).copyWith(
                               fontSize: 12,
-                              color: AuthDarkColors.textPrimary
-                                  .withValues(alpha: 0.78),
+                              color: AuthDarkColors.textPrimary.withValues(
+                                alpha: 0.78,
+                              ),
                               height: 1.3,
                             ),
                           ),
@@ -156,8 +158,9 @@ class PickupScheduleCard extends StatelessWidget {
                 child: FilledButton.tonal(
                   onPressed: isCompleting ? null : onMarkCompleted,
                   style: FilledButton.styleFrom(
-                    backgroundColor:
-                        AuthDarkColors.accentSoft.withValues(alpha: 0.22),
+                    backgroundColor: AuthDarkColors.accentSoft.withValues(
+                      alpha: 0.22,
+                    ),
                     foregroundColor: AuthDarkColors.textPrimary,
                     padding: EdgeInsets.symmetric(
                       horizontal: compact ? 12 : 14,
@@ -175,8 +178,9 @@ class PickupScheduleCard extends StatelessWidget {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: AuthDarkColors.textPrimary
-                                .withValues(alpha: 0.8),
+                            color: AuthDarkColors.textPrimary.withValues(
+                              alpha: 0.8,
+                            ),
                           ),
                         )
                       : Text(
@@ -203,10 +207,7 @@ class PickupScheduleCard extends StatelessWidget {
 
     final start = window.start.toLocal();
     final end = window.end.toLocal();
-    return (
-      _formatClock(start),
-      _formatClock(end),
-    );
+    return (_formatClock(start), _formatClock(end));
   }
 
   String? _displayNote(SupplierPickupScheduleItem item) {
@@ -227,10 +228,7 @@ class PickupScheduleCard extends StatelessWidget {
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({
-    required this.status,
-    required this.style,
-  });
+  const _StatusBadge({required this.status, required this.style});
 
   final SupplierPickupScheduleStatus status;
   final PickupScheduleStatusStyle style;
@@ -257,10 +255,7 @@ class _StatusBadge extends StatelessWidget {
 }
 
 class _MaterialThumbnail extends StatelessWidget {
-  const _MaterialThumbnail({
-    required this.imageUrl,
-    required this.size,
-  });
+  const _MaterialThumbnail({required this.imageUrl, required this.size});
 
   final String? imageUrl;
   final double size;

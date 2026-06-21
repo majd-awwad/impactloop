@@ -71,7 +71,9 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
     });
 
     try {
-      await ref.read(authRepositoryProvider).changePassword(
+      await ref
+          .read(authRepositoryProvider)
+          .changePassword(
             currentPassword: _currentPasswordController.text,
             newPassword: _newPasswordController.text,
             confirmNewPassword: _confirmPasswordController.text,
@@ -86,10 +88,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
       _confirmPasswordController.clear();
 
       Navigator.of(context).pop();
-      showSupplierInfoSnackBar(
-        context,
-        'Password updated successfully.',
-      );
+      showSupplierInfoSnackBar(context, 'Password updated successfully.');
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -185,7 +184,10 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                       onPressed: _isSubmitting
                           ? null
                           : () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close, color: AuthDarkColors.textMuted),
+                      icon: const Icon(
+                        Icons.close,
+                        color: AuthDarkColors.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -238,9 +240,9 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     _formError!,
-                    style: AuthDarkTextStyles.body(context).copyWith(
-                      color: AuthDarkColors.error,
-                    ),
+                    style: AuthDarkTextStyles.body(
+                      context,
+                    ).copyWith(color: AuthDarkColors.error),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.lg),
@@ -251,7 +253,9 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                     style: FilledButton.styleFrom(
                       backgroundColor: AuthDarkColors.accent,
                       foregroundColor: AuthDarkColors.background,
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.md,
+                      ),
                     ),
                     child: _isSubmitting
                         ? const SizedBox(

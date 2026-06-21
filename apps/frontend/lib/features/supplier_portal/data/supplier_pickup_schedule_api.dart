@@ -29,7 +29,8 @@ class SupplierPickupScheduleApi {
       final body = response.data;
       if (body == null || body['success'] != true) {
         throw ApiException(
-          message: body?['message'] as String? ?? 'Could not load pickup schedule',
+          message:
+              body?['message'] as String? ?? 'Could not load pickup schedule',
           statusCode: response.statusCode,
         );
       }
