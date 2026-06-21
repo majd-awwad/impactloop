@@ -17,6 +17,7 @@ class SupplierPickupMapPreview extends StatelessWidget {
     this.onUseCurrentLocation,
     this.compact = false,
     this.showCoordinateDetails = false,
+    this.showCoordinatesAsLabel = false,
   });
 
   final String city;
@@ -30,6 +31,7 @@ class SupplierPickupMapPreview extends StatelessWidget {
   final VoidCallback? onUseCurrentLocation;
   final bool compact;
   final bool showCoordinateDetails;
+  final bool showCoordinatesAsLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +49,7 @@ class SupplierPickupMapPreview extends StatelessWidget {
       showPanelChrome: true,
       compact: compact,
       showCoordinateDetails: showCoordinateDetails,
+      showCoordinatesAsLabel: showCoordinatesAsLabel,
     );
   }
 }

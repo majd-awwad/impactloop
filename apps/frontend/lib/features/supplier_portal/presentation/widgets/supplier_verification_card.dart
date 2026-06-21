@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import 'supplier_verification_badge.dart';
 
 class SupplierVerificationCard extends StatelessWidget {
@@ -17,7 +16,7 @@ class SupplierVerificationCard extends StatelessWidget {
       width: double.infinity,
       constraints: const BoxConstraints(minHeight: 180),
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.sideInsightCard,
+      decoration: context.supplierDecorations.sideInsightCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -28,22 +27,22 @@ class SupplierVerificationCard extends StatelessWidget {
                 height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AuthDarkColors.accentSoft.withValues(alpha: 0.16),
+                  color: context.supplierColors.accentSoft.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: AuthDarkColors.border.withValues(alpha: 0.35),
+                    color: context.supplierColors.border.withValues(alpha: 0.35),
                   ),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.verified_user_outlined,
-                  color: AuthDarkColors.accent,
+                  color: context.supplierColors.accent,
                   size: 20,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                'Verification',
-                style: AuthDarkTextStyles.sectionTitle(context),
+                context.s.verification,
+                style: context.supplierSectionTitle(),
               ),
             ],
           ),
@@ -51,8 +50,8 @@ class SupplierVerificationCard extends StatelessWidget {
           SupplierVerificationBadge(status: status),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Verification is read-only for now. Document upload and review workflows will come later.',
-            style: AuthDarkTextStyles.body(context),
+            context.s.verificationReadOnlyNote,
+            style: context.supplierBody(),
           ),
         ],
       ),

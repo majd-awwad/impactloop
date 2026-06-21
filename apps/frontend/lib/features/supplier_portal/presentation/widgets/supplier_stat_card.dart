@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 class SupplierStatCard extends StatelessWidget {
   const SupplierStatCard({
@@ -27,17 +25,20 @@ class SupplierStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: highlight
-          ? SupplierDecorations.highlightedStatCard
-          : SupplierDecorations.statCard,
+          ? decorations.highlightedStatCard
+          : decorations.statCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: AuthDarkColors.accent, size: 20),
+              Icon(icon, color: colors.accent, size: 20),
               const Spacer(),
               if (badge != null)
                 Container(
@@ -45,14 +46,15 @@ class SupplierStatCard extends StatelessWidget {
                     horizontal: AppSpacing.sm,
                     vertical: AppSpacing.xs,
                   ),
-                  decoration: SupplierDecorations.badge(
-                    background: AuthDarkColors.chipSelected,
+                  decoration: decorations.badge(
+                    background: colors.chipSelected,
                   ),
                   child: Text(
                     badge!,
-                    style: AuthDarkTextStyles.chip(
-                      context,
-                    ).copyWith(color: AuthDarkColors.accent, fontSize: 11),
+                    style: context.supplierChip().copyWith(
+                      color: colors.accent,
+                      fontSize: 11,
+                    ),
                   ),
                 ),
             ],
@@ -60,15 +62,15 @@ class SupplierStatCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             value,
-            style: AuthDarkTextStyles.title(context).copyWith(fontSize: 20),
+            style: context.supplierTitle().copyWith(fontSize: 20),
           ),
-          Text(label, style: AuthDarkTextStyles.body(context)),
+          Text(label, style: context.supplierBody()),
           if (subtitle != null) ...[
             Text(
               subtitle!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AuthDarkTextStyles.body(context).copyWith(fontSize: 12),
+              style: context.supplierBody().copyWith(fontSize: 12),
             ),
           ],
           if (progress != null) ...[
@@ -79,10 +81,10 @@ class SupplierStatCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 minHeight: 6,
                 value: progress!.clamp(0, 1),
-                backgroundColor: AuthDarkColors.chipUnselected.withValues(
+                backgroundColor: colors.chipUnselected.withValues(
                   alpha: 0.8,
                 ),
-                color: AuthDarkColors.accent,
+                color: colors.accent,
               ),
             ),
           ],
@@ -106,13 +108,18 @@ class SupplierImpactCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
     final progress = totalMaterials == 0
         ? 0.0
         : reusedMaterials / totalMaterials;
+    final quantityText = reusedQuantity.toStringAsFixed(
+      reusedQuantity.truncateToDouble() == reusedQuantity ? 0 : 1,
+    );
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: SupplierDecorations.highlightedStatCard,
+      decoration: decorations.highlightedStatCard,
       child: Row(
         children: [
           SizedBox(
@@ -124,12 +131,12 @@ class SupplierImpactCard extends StatelessWidget {
                 CircularProgressIndicator(
                   value: progress.clamp(0, 1),
                   strokeWidth: 6,
-                  backgroundColor: AuthDarkColors.chipUnselected,
-                  color: AuthDarkColors.accent,
+                  backgroundColor: colors.chipUnselected,
+                  color: colors.accent,
                 ),
                 Icon(
                   Icons.recycling_rounded,
-                  color: AuthDarkColors.accent,
+                  color: colors.accent,
                   size: 22,
                 ),
               ],
@@ -142,27 +149,28 @@ class SupplierImpactCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Reuse impact',
-                  style: AuthDarkTextStyles.label(context).copyWith(
-                    color: AuthDarkColors.textPrimary,
+                  context.s.reuseImpact,
+                  style: context.supplierLabel().copyWith(
+                    color: colors.textPrimary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  '$reusedMaterials reused · ${reusedQuantity.toStringAsFixed(reusedQuantity.truncateToDouble() == reusedQuantity ? 0 : 1)} units',
+                  context.s.reusedMaterialsSummary(
+                    reusedMaterials,
+                    quantityText,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AuthDarkTextStyles.body(context),
+                  style: context.supplierBody(),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Impact is calculated from completed reuse data.',
+                  context.s.reuseImpactNote,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: AuthDarkTextStyles.body(
-                    context,
-                  ).copyWith(fontSize: 12),
+                  style: context.supplierBody().copyWith(fontSize: 12),
                 ),
               ],
             ),
@@ -185,16 +193,18 @@ class SupplierRatingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
     final activeStars = averageRating.round().clamp(0, 5);
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: SupplierDecorations.statCard,
+      decoration: decorations.statCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.star_rounded, color: AuthDarkColors.accent, size: 20),
+          Icon(Icons.star_rounded, color: colors.accent, size: 20),
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
@@ -203,7 +213,7 @@ class SupplierRatingCard extends StatelessWidget {
                   index < activeStars
                       ? Icons.star_rounded
                       : Icons.star_border_rounded,
-                  color: AuthDarkColors.accent,
+                  color: colors.accent,
                   size: 18,
                 ),
             ],
@@ -211,15 +221,17 @@ class SupplierRatingCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             totalReviews == 0
-                ? 'No reviews yet'
+                ? context.s.noReviewsYet
                 : averageRating.toStringAsFixed(1),
-            style: AuthDarkTextStyles.title(context).copyWith(fontSize: 20),
+            style: context.supplierTitle().copyWith(fontSize: 20),
           ),
           Text(
-            totalReviews == 0 ? 'Rating' : '$totalReviews reviews',
+            totalReviews == 0
+                ? context.s.ratingLabel
+                : context.s.reviewsCount(totalReviews),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AuthDarkTextStyles.body(context),
+            style: context.supplierBody(),
           ),
         ],
       ),
@@ -243,24 +255,26 @@ class SupplierLifecycleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
     final items = [
-      ('Listed', total),
-      ('Available', available),
-      ('Reserved', reserved),
-      ('Reused', reused),
+      (context.s.lifecycleListed, total),
+      (context.s.lifecycleAvailable, available),
+      (context.s.lifecycleReserved, reserved),
+      (context.s.lifecycleReused, reused),
     ];
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: SupplierDecorations.dashboardCard,
+      decoration: decorations.dashboardCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Material lifecycle',
-            style: AuthDarkTextStyles.sectionTitle(context),
+            context.s.materialLifecycle,
+            style: context.supplierSectionTitle(),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -278,7 +292,7 @@ class SupplierLifecycleCard extends StatelessWidget {
                   Container(
                     width: AppSpacing.md,
                     height: 2,
-                    color: AuthDarkColors.border.withValues(alpha: 0.7),
+                    color: colors.border.withValues(alpha: 0.7),
                   ),
               ],
             ],
@@ -302,20 +316,21 @@ class _LifecycleNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.sm,
       ),
-      decoration: SupplierDecorations.lifecycleNode(isActive: isActive),
+      decoration: decorations.lifecycleNode(isActive: isActive),
       child: Column(
         children: [
           Text(
             '$value',
-            style: AuthDarkTextStyles.label(context).copyWith(
-              color: isActive
-                  ? AuthDarkColors.accent
-                  : AuthDarkColors.textSecondary,
+            style: context.supplierLabel().copyWith(
+              color: isActive ? colors.accent : colors.textSecondary,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -324,7 +339,7 @@ class _LifecycleNode extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AuthDarkTextStyles.body(context).copyWith(fontSize: 11),
+            style: context.supplierBody().copyWith(fontSize: 11),
           ),
         ],
       ),

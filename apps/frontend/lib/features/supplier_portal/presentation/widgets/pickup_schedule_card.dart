@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../core/config/api_config.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
+import '../theme/supplier_theme_extension.dart';
 import 'pickup_schedule_status_style.dart';
 
 class PickupScheduleCard extends StatelessWidget {
@@ -26,10 +25,12 @@ class PickupScheduleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
     final style = PickupScheduleStatusStyle.forItem(item, groupKind);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
-    final times = _timeParts(item);
+    final times = _timeParts(item, l.scheduleDone);
     final note = _displayNote(item);
     final showMarkCompleted =
         item.status == SupplierPickupScheduleStatus.accepted &&
@@ -43,10 +44,10 @@ class PickupScheduleCard extends StatelessWidget {
           vertical: compact ? AppSpacing.sm : AppSpacing.md,
         ),
         decoration: BoxDecoration(
-          color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.55),
+          color: colors.surfaceSolid.withValues(alpha: 0.55),
           borderRadius: AppRadius.mdAll,
           border: Border.all(
-            color: AuthDarkColors.border.withValues(alpha: 0.22),
+            color: colors.border.withValues(alpha: 0.22),
           ),
         ),
         child: Column(
@@ -65,7 +66,7 @@ class PickupScheduleCard extends StatelessWidget {
                       children: [
                         Text(
                           times.$1,
-                          style: AuthDarkTextStyles.title(context).copyWith(
+                          style: context.supplierTitle().copyWith(
                             fontSize: compact ? 15 : 16,
                             fontWeight: FontWeight.w700,
                             color: style.foreground,
@@ -74,9 +75,9 @@ class PickupScheduleCard extends StatelessWidget {
                         ),
                         Text(
                           times.$2,
-                          style: AuthDarkTextStyles.label(context).copyWith(
+                          style: context.supplierLabel().copyWith(
                             fontSize: compact ? 13 : 14,
-                            color: AuthDarkColors.textMuted,
+                            color: colors.textMuted,
                             height: 1.1,
                           ),
                         ),
@@ -88,7 +89,7 @@ class PickupScheduleCard extends StatelessWidget {
                     height: compact ? 48 : 52,
                     margin:
                         const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                    color: AuthDarkColors.border.withValues(alpha: 0.28),
+                    color: colors.border.withValues(alpha: 0.28),
                   ),
                   Expanded(
                     child: Column(
@@ -102,8 +103,7 @@ class PickupScheduleCard extends StatelessWidget {
                                 item.materialTitle,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style:
-                                    AuthDarkTextStyles.title(context).copyWith(
+                                style: context.supplierTitle().copyWith(
                                   fontSize: compact ? 15 : 16,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -118,9 +118,9 @@ class PickupScheduleCard extends StatelessWidget {
                           '${item.learnerName} · ${item.quantityLabel} · ${item.pickupType}',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AuthDarkTextStyles.body(context).copyWith(
+                          style: context.supplierBody().copyWith(
                             fontSize: 13,
-                            color: AuthDarkColors.textMuted,
+                            color: colors.textMuted,
                             height: 1.3,
                           ),
                         ),
@@ -130,10 +130,9 @@ class PickupScheduleCard extends StatelessWidget {
                             note,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: AuthDarkTextStyles.body(context).copyWith(
+                            style: context.supplierBody().copyWith(
                               fontSize: 12,
-                              color: AuthDarkColors.textPrimary
-                                  .withValues(alpha: 0.78),
+                              color: colors.textPrimary.withValues(alpha: 0.78),
                               height: 1.3,
                             ),
                           ),
@@ -157,8 +156,8 @@ class PickupScheduleCard extends StatelessWidget {
                   onPressed: isCompleting ? null : onMarkCompleted,
                   style: FilledButton.styleFrom(
                     backgroundColor:
-                        AuthDarkColors.accentSoft.withValues(alpha: 0.22),
-                    foregroundColor: AuthDarkColors.textPrimary,
+                        colors.accentSoft.withValues(alpha: 0.22),
+                    foregroundColor: colors.textPrimary,
                     padding: EdgeInsets.symmetric(
                       horizontal: compact ? 12 : 14,
                       vertical: compact ? 8 : 10,
@@ -175,13 +174,12 @@ class PickupScheduleCard extends StatelessWidget {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: AuthDarkColors.textPrimary
-                                .withValues(alpha: 0.8),
+                            color: colors.textPrimary.withValues(alpha: 0.8),
                           ),
                         )
                       : Text(
-                          'Mark completed',
-                          style: AuthDarkTextStyles.label(context).copyWith(
+                          l.markCompleted,
+                          style: context.supplierLabel().copyWith(
                             fontSize: compact ? 12 : 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -195,10 +193,10 @@ class PickupScheduleCard extends StatelessWidget {
     );
   }
 
-  (String, String) _timeParts(SupplierPickupScheduleItem item) {
+  (String, String) _timeParts(SupplierPickupScheduleItem item, String doneLabel) {
     final window = item.pickupWindow;
     if (window == null) {
-      return item.isCompleted ? ('Done', '') : ('—', '');
+      return item.isCompleted ? (doneLabel, '') : ('—', '');
     }
 
     final start = window.start.toLocal();
@@ -245,8 +243,8 @@ class _StatusBadge extends StatelessWidget {
         border: Border.all(color: style.border.withValues(alpha: 0.7)),
       ),
       child: Text(
-        status.label,
-        style: AuthDarkTextStyles.chip(context).copyWith(
+        context.s.pickupScheduleStatusLabel(status),
+        style: context.supplierChip().copyWith(
           fontSize: 10,
           color: style.foreground,
           fontWeight: FontWeight.w600,
@@ -267,35 +265,37 @@ class _MaterialThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
     return ClipRRect(
       borderRadius: AppRadius.smAll,
       child: Container(
         width: size,
         height: size,
-        color: AuthDarkColors.surfaceSolid,
+        color: colors.surfaceSolid,
         child: imageUrl != null && imageUrl!.isNotEmpty
             ? Image.network(
                 ApiConfig.resolveMediaUrl(imageUrl!),
                 width: size,
                 height: size,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _placeholder(size),
+                errorBuilder: (_, _, _) => _placeholder(size, context),
               )
-            : _placeholder(size),
+            : _placeholder(size, context),
       ),
     );
   }
 
-  Widget _placeholder(double size) {
+  Widget _placeholder(double size, BuildContext context) {
+    final colors = context.supplierColors;
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
-      color: AuthDarkColors.accentSoft.withValues(alpha: 0.1),
+      color: colors.accentSoft.withValues(alpha: 0.1),
       child: Icon(
         Icons.inventory_2_outlined,
         size: size * 0.45,
-        color: AuthDarkColors.textMuted,
+        color: colors.textMuted,
       ),
     );
   }

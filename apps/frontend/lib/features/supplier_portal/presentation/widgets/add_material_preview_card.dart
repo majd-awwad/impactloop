@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../materials/data/models/category.dart';
 import '../../../materials/data/models/material_price_check_result.dart';
@@ -38,14 +37,16 @@ class AddMaterialPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.dashboardCard,
+      decoration: context.supplierDecorations.dashboardCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Listing preview', style: AuthDarkTextStyles.title(context)),
+          Text(context.s.listingPreview, style: context.supplierTitle()),
           const SizedBox(height: AppSpacing.lg),
           if (coverImageUrl != null && coverImageUrl!.isNotEmpty) ...[
             ClipRRect(
@@ -57,7 +58,7 @@ class AddMaterialPreviewCard extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => Container(
                   height: 160,
-                  color: AuthDarkColors.surfaceSolid,
+                  color: colors.surfaceSolid,
                   alignment: Alignment.center,
                   child: const Icon(Icons.broken_image_outlined),
                 ),
@@ -66,39 +67,48 @@ class AddMaterialPreviewCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
           ],
           Text(
-            title.isEmpty ? 'Listing title' : title,
-            style: AuthDarkTextStyles.sectionTitle(context),
+            title.isEmpty ? context.s.listingTitle : title,
+            style: context.supplierSectionTitle(),
           ),
           const SizedBox(height: AppSpacing.sm),
-          _PreviewRow(label: 'Material name', value: materialName.isEmpty ? '—' : materialName),
           _PreviewRow(
-            label: 'Category',
+            label: context.s.materialName,
+            value: materialName.isEmpty ? '—' : materialName,
+          ),
+          _PreviewRow(
+            label: context.s.categorySectionTitle,
             value: category?.nameEn ?? '—',
           ),
-          _PreviewRow(label: 'Condition', value: _label(condition)),
-          _PreviewRow(label: 'Quantity', value: '$quantity $unit'),
           _PreviewRow(
-            label: 'Price',
-            value: isFree ? 'Free' : '₪${price ?? '—'}',
+            label: context.s.condition,
+            value: context.s.conditionLabel(condition),
+          ),
+          _PreviewRow(
+            label: context.s.quantity,
+            value: '$quantity $unit',
+          ),
+          _PreviewRow(
+            label: context.s.price,
+            value: isFree ? context.s.free : '₪${price ?? '—'}',
           ),
           if (pickupCity != null && pickupCity!.isNotEmpty)
-            _PreviewRow(label: 'Pickup', value: pickupCity!),
+            _PreviewRow(label: context.s.pickupSectionTitle, value: pickupCity!),
           if (!isFree) ...[
             const SizedBox(height: AppSpacing.md),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: SupplierDecorations.profileSectionPanel,
+              decoration: context.supplierDecorations.profileSectionPanel,
               child: Text(
                 priceCheck?.allowed == true
-                    ? 'Price verified'
+                    ? context.s.priceVerified
                     : priceCheck == null
-                        ? 'Verify price before publishing'
-                        : 'Price verification required',
-                style: AuthDarkTextStyles.body(context).copyWith(
+                        ? context.s.verifyPriceBeforePublishing
+                        : context.s.priceVerificationRequired,
+                style: context.supplierBody().copyWith(
                   color: priceCheck?.allowed == true
-                      ? AuthDarkColors.accent
-                      : AuthDarkColors.textMuted,
+                      ? colors.accent
+                      : colors.textMuted,
                 ),
               ),
             ),
@@ -106,13 +116,6 @@ class AddMaterialPreviewCard extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _label(String value) {
-    return value
-        .split('_')
-        .map((part) => part[0] + part.substring(1).toLowerCase())
-        .join(' ');
   }
 }
 
@@ -133,13 +136,13 @@ class _PreviewRow extends StatelessWidget {
             width: 110,
             child: Text(
               label,
-              style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.textMuted,
+              style: context.supplierBody().copyWith(
+                color: context.supplierColors.textMuted,
               ),
             ),
           ),
           Expanded(
-            child: Text(value, style: AuthDarkTextStyles.body(context)),
+            child: Text(value, style: context.supplierBody()),
           ),
         ],
       ),

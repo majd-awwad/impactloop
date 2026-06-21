@@ -1,61 +1,36 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 class SupplierVerificationBadge extends StatelessWidget {
   const SupplierVerificationBadge({super.key, required this.status});
 
   final String status;
 
-  Color get _background {
-    switch (status.toUpperCase()) {
-      case 'VERIFIED':
-        return AuthDarkColors.accentSoft;
-      case 'REJECTED':
-        return AuthDarkColors.error.withValues(alpha: 0.18);
-      case 'NOT_REQUIRED':
-        return AuthDarkColors.chipUnselected;
-      default:
-        return AuthDarkColors.chipSelected;
-    }
-  }
-
-  Color get _foreground {
-    switch (status.toUpperCase()) {
-      case 'VERIFIED':
-        return AuthDarkColors.accent;
-      case 'REJECTED':
-        return AuthDarkColors.error;
-      default:
-        return AuthDarkColors.textSecondary;
-    }
-  }
-
-  String get _label {
-    switch (status.toUpperCase()) {
-      case 'VERIFIED':
-        return 'Verified';
-      case 'REJECTED':
-        return 'Rejected';
-      case 'NOT_REQUIRED':
-        return 'Not required';
-      case 'PENDING':
-        return 'Pending verification';
-      default:
-        return status;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
+    final background = switch (status.toUpperCase()) {
+      'VERIFIED' => colors.accentSoft,
+      'REJECTED' => colors.error.withValues(alpha: 0.18),
+      'NOT_REQUIRED' => colors.chipUnselected,
+      _ => colors.chipSelected,
+    };
+
+    final foreground = switch (status.toUpperCase()) {
+      'VERIFIED' => colors.accent,
+      'REJECTED' => colors.error,
+      _ => colors.textSecondary,
+    };
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: SupplierDecorations.badge(background: _background),
+      decoration: decorations.badge(background: background),
       child: Text(
-        _label,
-        style: AuthDarkTextStyles.chip(context).copyWith(color: _foreground),
+        context.s.verificationStatusLabel(status),
+        style: context.supplierChip().copyWith(color: foreground),
       ),
     );
   }

@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../../data/pickup_schedule_grouping.dart';
 import '../controllers/supplier_pickup_schedule_providers.dart';
 import '../controllers/supplier_requests_providers.dart';
+import '../theme/supplier_theme_extension.dart';
 import '../widgets/complete_pickup_dialog.dart';
 import '../widgets/pickup_schedule_card.dart';
 import '../widgets/pickup_schedule_date_section.dart';
@@ -31,13 +30,10 @@ Future<void> _handleCompletePickup(
   try {
     await completeIncomingRequest(ref, requestId: item.id);
     if (!context.mounted) return;
-    showSupplierInfoSnackBar(context, 'Pickup marked as completed.');
+    showSupplierInfoSnackBar(context, context.s.pickupCompleted);
   } catch (_) {
     if (!context.mounted) return;
-    showSupplierErrorSnackBar(
-      context,
-      'Could not mark pickup as completed.',
-    );
+    showSupplierErrorSnackBar(context, context.s.pickupCompleteFailed);
   } finally {
     ref.read(completingReservationIdProvider.notifier).setCompleting(null);
   }
@@ -54,6 +50,7 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
     final completingId = ref.watch(completingReservationIdProvider);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
+    final l = context.s;
 
     return Align(
       alignment: Alignment.topCenter,
@@ -80,7 +77,9 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
               scheduleAsync.when(
                 data: (items) {
                   if (items.isEmpty) {
-                    return _EmptyState(message: filter.emptyMessage);
+                    return _EmptyState(
+                      message: l.pickupScheduleEmptyMessage(filter),
+                    );
                   }
 
                   final groups = groupPickupScheduleItems(items, filter);
@@ -137,14 +136,16 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Center(
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: AuthDarkTextStyles.body(context).copyWith(
-            color: AuthDarkColors.textMuted,
+          style: context.supplierBody().copyWith(
+            color: colors.textMuted,
           ),
         ),
       ),
@@ -157,6 +158,8 @@ class _LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Row(
@@ -169,9 +172,9 @@ class _LoadingState extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           Text(
-            'Loading pickup schedule…',
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.textMuted,
+            context.s.loadingPickupSchedule,
+            style: context.supplierBody().copyWith(
+              color: colors.textMuted,
               fontSize: 14,
             ),
           ),
@@ -188,20 +191,23 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Column(
         children: [
           Text(
-            'We could not load pickup schedule.',
+            l.pickupScheduleLoadError,
             textAlign: TextAlign.center,
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.textMuted,
+            style: context.supplierBody().copyWith(
+              color: colors.textMuted,
             ),
           ),
           TextButton(
             onPressed: onRetry,
-            child: const Text('Try again'),
+            child: Text(l.tryAgain),
           ),
         ],
       ),

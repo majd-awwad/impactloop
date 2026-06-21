@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import '../../data/models/supplier_action_notification.dart';
 import '../../../materials/data/models/category_request.dart';
 
 class CategoryRequestsPanel extends StatelessWidget {
@@ -25,13 +25,13 @@ class CategoryRequestsPanel extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: SupplierDecorations.profileSectionPanel,
+      decoration: context.supplierDecorations.profileSectionPanel,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Category requests',
-            style: AuthDarkTextStyles.sectionTitle(context),
+            context.s.categoryRequests,
+            style: context.supplierSectionTitle(),
           ),
           const SizedBox(height: AppSpacing.md),
           ...requests.take(5).map((request) {
@@ -46,14 +46,14 @@ class CategoryRequestsPanel extends StatelessWidget {
                       children: [
                         Text(
                           request.requestedName,
-                          style: AuthDarkTextStyles.label(context),
+                          style: context.supplierLabel(),
                         ),
                         if (request.title.isNotEmpty) ...[
                           const SizedBox(height: 2),
                           Text(
                             request.title,
-                            style: AuthDarkTextStyles.body(context).copyWith(
-                              color: AuthDarkColors.textMuted,
+                            style: context.supplierBody().copyWith(
+                              color: context.supplierColors.textMuted,
                               fontSize: 13,
                             ),
                           ),
@@ -64,18 +64,18 @@ class CategoryRequestsPanel extends StatelessWidget {
                             request.approvedCategoryName != null) ...[
                           const SizedBox(height: 4),
                           Text(
-                            'Approved as ${request.approvedCategoryName}',
-                            style: AuthDarkTextStyles.body(context).copyWith(
+                            context.s.approvedAs(request.approvedCategoryName!),
+                            style: context.supplierBody().copyWith(
                               fontSize: 13,
-                              color: AuthDarkColors.accent,
+                              color: context.supplierColors.accent,
                             ),
                           ),
                         ],
                         if (request.status == 'PENDING') ...[
                           const SizedBox(height: 4),
                           Text(
-                            'Waiting for admin approval.',
-                            style: AuthDarkTextStyles.body(context).copyWith(
+                            context.s.waitingAdminApproval,
+                            style: context.supplierBody().copyWith(
                               fontSize: 13,
                             ),
                           ),
@@ -86,7 +86,7 @@ class CategoryRequestsPanel extends StatelessWidget {
                   if (request.canContinue)
                     TextButton(
                       onPressed: () => onContinue(request.id),
-                      child: const Text('Continue listing'),
+                      child: Text(context.s.continueListing),
                     ),
                 ],
               ),
@@ -106,9 +106,13 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = switch (status) {
-      'APPROVED' => 'Approved',
-      'REJECTED' => 'Rejected',
-      _ => 'Pending',
+      'APPROVED' => context.s.notificationStatusLabel(
+          SupplierActionNotificationStatus.approved,
+        ),
+      'REJECTED' => context.s.notificationStatusLabel(
+          SupplierActionNotificationStatus.rejected,
+        ),
+      _ => context.s.tabPending,
     };
 
     return Container(
@@ -116,10 +120,10 @@ class _StatusChip extends StatelessWidget {
         horizontal: AppSpacing.sm,
         vertical: 2,
       ),
-      decoration: SupplierDecorations.badge(
-        background: AuthDarkColors.accentSoft.withValues(alpha: 0.12),
+      decoration: context.supplierDecorations.badge(
+        background: context.supplierColors.accentSoft.withValues(alpha: 0.12),
       ),
-      child: Text(label, style: AuthDarkTextStyles.chip(context)),
+      child: Text(label, style: context.supplierChip()),
     );
   }
 }

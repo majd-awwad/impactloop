@@ -1,64 +1,102 @@
 import 'package:flutter/material.dart';
 
+import '../theme/supplier_theme_extension.dart';
+
 class SupplierNavItem {
   const SupplierNavItem({
-    required this.label,
+    required this.labelKey,
     required this.route,
     required this.icon,
-    this.mobileLabel,
+    this.mobileLabelKey,
   });
 
-  final String label;
+  final SupplierNavLabelKey labelKey;
   final String route;
   final IconData icon;
-  final String? mobileLabel;
+  final SupplierNavLabelKey? mobileLabelKey;
+
+  String label(BuildContext context) => labelKey.resolve(context);
+  String? mobileLabel(BuildContext context) => mobileLabelKey?.resolve(context);
+}
+
+enum SupplierNavLabelKey {
+  overview,
+  home,
+  myMaterials,
+  materialsShort,
+  addMaterial,
+  addShort,
+  incomingRequests,
+  requestsShort,
+  pickupSchedule,
+  browseMaterials,
+  notifications,
+  profile;
+
+  String resolve(BuildContext context) {
+    final l = context.s;
+    return switch (this) {
+      SupplierNavLabelKey.overview => l.navOverview,
+      SupplierNavLabelKey.home => l.navHome,
+      SupplierNavLabelKey.myMaterials => l.navMyMaterials,
+      SupplierNavLabelKey.materialsShort => l.navMaterialsShort,
+      SupplierNavLabelKey.addMaterial => l.navAddMaterial,
+      SupplierNavLabelKey.addShort => l.navAddShort,
+      SupplierNavLabelKey.incomingRequests => l.navIncomingRequests,
+      SupplierNavLabelKey.requestsShort => l.navRequestsShort,
+      SupplierNavLabelKey.pickupSchedule => l.navPickupSchedule,
+      SupplierNavLabelKey.browseMaterials => l.navBrowseMaterials,
+      SupplierNavLabelKey.notifications => l.navNotifications,
+      SupplierNavLabelKey.profile => l.navProfile,
+    };
+  }
 }
 
 const supplierNavItems = [
   SupplierNavItem(
-    label: 'Overview',
+    labelKey: SupplierNavLabelKey.overview,
     route: '/supplier',
     icon: Icons.dashboard_outlined,
-    mobileLabel: 'Home',
+    mobileLabelKey: SupplierNavLabelKey.home,
   ),
   SupplierNavItem(
-    label: 'My Materials',
+    labelKey: SupplierNavLabelKey.myMaterials,
     route: '/supplier/materials',
     icon: Icons.inventory_2_outlined,
-    mobileLabel: 'Materials',
+    mobileLabelKey: SupplierNavLabelKey.materialsShort,
   ),
   SupplierNavItem(
-    label: 'Add Material',
+    labelKey: SupplierNavLabelKey.addMaterial,
     route: '/supplier/materials/new',
     icon: Icons.add_circle_outline,
-    mobileLabel: 'Add',
+    mobileLabelKey: SupplierNavLabelKey.addShort,
   ),
   SupplierNavItem(
-    label: 'Incoming Requests',
+    labelKey: SupplierNavLabelKey.incomingRequests,
     route: '/supplier/reservations',
     icon: Icons.inbox_outlined,
-    mobileLabel: 'Requests',
+    mobileLabelKey: SupplierNavLabelKey.requestsShort,
   ),
   SupplierNavItem(
-    label: 'Pickup Schedule',
+    labelKey: SupplierNavLabelKey.pickupSchedule,
     route: '/supplier/pickup-schedule',
     icon: Icons.local_shipping_outlined,
   ),
   SupplierNavItem(
-    label: 'Browse Materials',
+    labelKey: SupplierNavLabelKey.browseMaterials,
     route: '/materials',
     icon: Icons.search,
   ),
   SupplierNavItem(
-    label: 'Notifications',
+    labelKey: SupplierNavLabelKey.notifications,
     route: '/supplier/notifications',
     icon: Icons.notifications_none_rounded,
   ),
   SupplierNavItem(
-    label: 'Profile',
+    labelKey: SupplierNavLabelKey.profile,
     route: '/supplier/profile',
     icon: Icons.person_outline,
-    mobileLabel: 'Profile',
+    mobileLabelKey: SupplierNavLabelKey.profile,
   ),
 ];
 
@@ -70,64 +108,11 @@ final supplierMobileNavItems = [
   supplierNavItems[7],
 ];
 
-String supplierPageTitle(String location) {
-  if (location == '/supplier/materials/new') {
-    return 'Add Material';
-  }
+String supplierPageTitle(BuildContext context, String location) =>
+    context.s.pageTitle(location);
 
-  if (location == '/supplier' || location == '/supplier/') {
-    return 'Overview';
-  }
-
-  if (location == '/supplier/profile') {
-    return 'Supplier Profile';
-  }
-
-  for (final item in supplierNavItems.reversed) {
-    if (location == item.route || location.startsWith('${item.route}/')) {
-      return item.label;
-    }
-  }
-
-  return 'Supplier Portal';
-}
-
-String supplierPageSubtitle(String location) {
-  if (location == '/supplier/materials/new') {
-    return 'List surplus materials for reuse by learners and makers.';
-  }
-
-  if (location == '/supplier' || location == '/supplier/') {
-    return 'Track materials, requests, and impact.';
-  }
-
-  if (location == '/supplier/profile') {
-    return 'Manage public supplier details and pickup location.';
-  }
-
-  if (location == '/supplier/reservations' ||
-      location.startsWith('/supplier/reservations/')) {
-    return 'Review learner requests and schedule pickups.';
-  }
-
-  if (location == '/supplier/pickup-schedule' ||
-      location.startsWith('/supplier/pickup-schedule/')) {
-    return 'Track accepted pickups and upcoming handovers.';
-  }
-
-  if (location == '/supplier/notifications' ||
-      location.startsWith('/supplier/notifications/')) {
-    return 'Review updates and new actions that need your attention.';
-  }
-
-  for (final item in supplierNavItems) {
-    if (location == item.route || location.startsWith('${item.route}/')) {
-      return 'Coming soon in the Supplier Portal.';
-    }
-  }
-
-  return 'Manage your supplier activity.';
-}
+String supplierPageSubtitle(BuildContext context, String location) =>
+    context.s.pageSubtitle(location);
 
 bool isSupplierNavActive(String currentLocation, String route) {
   if (route == '/supplier/materials/new') {

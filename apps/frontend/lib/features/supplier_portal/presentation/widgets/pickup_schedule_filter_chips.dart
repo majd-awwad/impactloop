@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../controllers/supplier_pickup_schedule_providers.dart';
+import '../theme/supplier_theme_extension.dart';
 import 'pickup_schedule_status_style.dart';
 
 class PickupScheduleFilterChips extends ConsumerWidget {
@@ -14,6 +14,7 @@ class PickupScheduleFilterChips extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(pickupScheduleFilterProvider);
+    final l = context.s;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -23,7 +24,7 @@ class PickupScheduleFilterChips extends ConsumerWidget {
           return Padding(
             padding: const EdgeInsets.only(right: AppSpacing.sm),
             child: _FilterChip(
-              label: filter.label,
+              label: l.pickupScheduleFilterLabel(filter),
               style: PickupScheduleStatusStyle.styleForPickupFilter(filter),
               isSelected: isSelected,
               onTap: () {
@@ -73,7 +74,7 @@ class _FilterChip extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: AuthDarkTextStyles.chip(context).copyWith(
+            style: context.supplierChip().copyWith(
               fontSize: 13,
               color: isSelected
                   ? style.foreground

@@ -4,11 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../controllers/supplier_dashboard_providers.dart';
+import '../theme/supplier_theme_extension.dart';
 import 'supplier_nav_config.dart';
 
 class SupplierSidebar extends ConsumerWidget {
@@ -22,34 +20,37 @@ class SupplierSidebar extends ConsumerWidget {
     final supplier = ref
         .watch(supplierDashboardProvider)
         .maybeWhen(data: (dashboard) => dashboard.supplier, orElse: () => null);
+    final l = context.s;
     final displayName = supplier?.publicName.isNotEmpty == true
         ? supplier!.publicName
-        : user?.displayName ?? 'Supplier';
+        : user?.displayName ?? l.supplierFallbackName;
 
     return Container(
       width: AppSpacing.supplierSidebarWidth,
-      decoration: SupplierDecorations.sidebar,
+      decoration: context.supplierDecorations.sidebar(
+        direction: context.supplierTextDirection,
+      ),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(
+              padding: const EdgeInsetsDirectional.fromSTEB(
                 AppSpacing.lg,
                 AppSpacing.lg,
                 AppSpacing.lg,
                 AppSpacing.md,
               ),
               child: Text(
-                'ImpactLoop',
-                style: AuthDarkTextStyles.navBrand(context),
+                l.brandName,
+                style: context.supplierNavBrand(),
               ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Text(
-                'Supplier',
-                style: AuthDarkTextStyles.sectionTitle(context),
+                l.supplierRole,
+                style: context.supplierSectionTitle(),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -75,7 +76,7 @@ class SupplierSidebar extends ConsumerWidget {
               padding: const EdgeInsets.all(AppSpacing.md),
               child: _SidebarProfileCard(
                 name: displayName,
-                subtitle: user?.email ?? 'Supplier role',
+                subtitle: user?.email ?? l.supplierRoleSubtitle,
               ),
             ),
           ],
@@ -93,6 +94,8 @@ class _SidebarNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Material(
@@ -100,30 +103,28 @@ class _SidebarNavItem extends StatelessWidget {
         child: InkWell(
           onTap: () => context.go(item.route),
           borderRadius: AppRadius.mdAll,
-          hoverColor: AuthDarkColors.chipSelected.withValues(alpha: 0.28),
+          hoverColor: colors.chipSelected.withValues(alpha: 0.28),
           child: Ink(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
               vertical: AppSpacing.sm,
             ),
-            decoration: SupplierDecorations.navItem(isActive: isActive),
+            decoration: context.supplierDecorations.navItem(isActive: isActive),
             child: Row(
               children: [
                 Icon(
                   item.icon,
                   size: 20,
-                  color: isActive
-                      ? AuthDarkColors.accent
-                      : AuthDarkColors.textSecondary,
+                  color: isActive ? colors.accent : colors.textSecondary,
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    item.label,
-                    style: AuthDarkTextStyles.label(context).copyWith(
+                    item.label(context),
+                    style: context.supplierLabel().copyWith(
                       color: isActive
-                          ? AuthDarkColors.textPrimary
-                          : AuthDarkColors.textSecondary,
+                          ? colors.textPrimary
+                          : colors.textSecondary,
                       fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
@@ -150,23 +151,25 @@ class _SidebarProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return InkWell(
       onTap: () => context.go('/supplier/profile'),
       borderRadius: AppRadius.lgAll,
       child: Ink(
         padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: SupplierDecorations.sidebarProfile,
+        decoration: context.supplierDecorations.sidebarProfile,
         child: Row(
           children: [
             Container(
               width: 36,
               height: 36,
               alignment: Alignment.center,
-              decoration: SupplierDecorations.avatarCircle,
+              decoration: context.supplierDecorations.avatarCircle,
               child: Text(
                 _initial,
-                style: AuthDarkTextStyles.label(context).copyWith(
-                  color: AuthDarkColors.accent,
+                style: context.supplierLabel().copyWith(
+                  color: colors.accent,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -180,8 +183,8 @@ class _SidebarProfileCard extends StatelessWidget {
                     name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AuthDarkTextStyles.label(context).copyWith(
-                      color: AuthDarkColors.textPrimary,
+                    style: context.supplierLabel().copyWith(
+                      color: colors.textPrimary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -189,16 +192,16 @@ class _SidebarProfileCard extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AuthDarkTextStyles.body(
-                      context,
-                    ).copyWith(fontSize: 12),
+                    style: context.supplierBody().copyWith(fontSize: 12),
                   ),
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AuthDarkColors.textSecondary,
+            Icon(
+              context.isSupplierArabic
+                  ? Icons.chevron_left_rounded
+                  : Icons.chevron_right_rounded,
+              color: colors.textSecondary,
             ),
           ],
         ),

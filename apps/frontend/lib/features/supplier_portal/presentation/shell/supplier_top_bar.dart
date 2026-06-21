@@ -4,12 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_radius.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../controllers/supplier_dashboard_providers.dart';
 import '../controllers/supplier_notifications_providers.dart';
+import '../theme/supplier_theme_extension.dart';
 import 'supplier_nav_config.dart';
 import 'supplier_profile_popover.dart';
 import 'supplier_settings_controls.dart';
@@ -27,6 +25,8 @@ class SupplierTopBar extends ConsumerWidget {
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
     final unreadCount = actionNeededCount;
+    final colors = context.supplierColors;
+    final l = context.s;
 
     final user = authState.user;
     final supplier = dashboardAsync.maybeWhen(
@@ -39,7 +39,7 @@ class SupplierTopBar extends ConsumerWidget {
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.md,
       ),
-      decoration: SupplierDecorations.topBar,
+      decoration: context.supplierDecorations.topBar,
       child: SafeArea(
         bottom: false,
         child: Row(
@@ -49,14 +49,12 @@ class SupplierTopBar extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    supplierPageTitle(currentLocation),
-                    style: AuthDarkTextStyles.title(
-                      context,
-                    ).copyWith(fontSize: 20),
+                    supplierPageTitle(context, currentLocation),
+                    style: context.supplierTitle().copyWith(fontSize: 20),
                   ),
                   Text(
-                    supplierPageSubtitle(currentLocation),
-                    style: AuthDarkTextStyles.body(context),
+                    supplierPageSubtitle(context, currentLocation),
+                    style: context.supplierBody(),
                   ),
                 ],
               ),
@@ -72,15 +70,15 @@ class SupplierTopBar extends ConsumerWidget {
                 borderRadius: AppRadius.pillAll,
                 child: Ink(
                   padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: SupplierDecorations.topBarPill,
+                  decoration: context.supplierDecorations.topBarPill,
                   child: Badge(
                     isLabelVisible: unreadCount > 0,
                     label: Text('$unreadCount'),
-                    backgroundColor: AuthDarkColors.accent,
-                    textColor: AuthDarkColors.textOnAccent,
-                    child: const Icon(
+                    backgroundColor: colors.accent,
+                    textColor: colors.textOnAccent,
+                    child: Icon(
                       Icons.notifications_none_rounded,
-                      color: AuthDarkColors.textPrimary,
+                      color: colors.textPrimary,
                     ),
                   ),
                 ),
@@ -90,7 +88,7 @@ class SupplierTopBar extends ConsumerWidget {
             SupplierProfileButton(
               displayName: supplier?.publicName.isNotEmpty == true
                   ? supplier!.publicName
-                  : user?.displayName ?? 'Supplier',
+                  : user?.displayName ?? l.supplierFallbackName,
               email: user?.email,
               supplierType:
                   supplier?.supplierType ?? user?.supplierProfile?.supplierType,

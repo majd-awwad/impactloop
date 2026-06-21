@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../data/models/supplier_action_notification.dart';
+import '../theme/supplier_theme_extension.dart';
 import 'supplier_notification_style.dart';
 
 class SupplierNotificationCard extends StatelessWidget {
@@ -19,7 +18,10 @@ class SupplierNotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final l = context.s;
     final style = SupplierNotificationStyle.forKind(
+      context,
       notification.kind,
       isCompleted: notification.isCompleted,
     );
@@ -29,151 +31,184 @@ class SupplierNotificationCard extends StatelessWidget {
         onAction != null &&
         !notification.isCompleted;
     final muted = notification.isCompleted;
+    final borderColor = colors.border.withValues(
+      alpha: colors.isDark ? 0.35 : 0.9,
+    );
 
     return Opacity(
       opacity: muted ? 0.72 : 1,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm + 2,
-        ),
         decoration: BoxDecoration(
           color: muted
-              ? AuthDarkColors.surfaceSolid.withValues(alpha: 0.5)
-              : AuthDarkColors.surfaceSolid.withValues(alpha: 0.78),
+              ? colors.backgroundElevated
+              : colors.surfaceSolid,
           borderRadius: AppRadius.lgAll,
-          border: Border.all(
-            color: muted
-                ? style.border.withValues(alpha: 0.35)
-                : style.border.withValues(alpha: 0.7),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: style.background,
-                    borderRadius: AppRadius.mdAll,
+          border: Border.all(color: borderColor),
+          boxShadow: muted
+              ? null
+              : [
+                  BoxShadow(
+                    color: colors.cardShadow,
+                    blurRadius: colors.isDark ? 12 : 8,
+                    offset: const Offset(0, 4),
                   ),
-                  child: Icon(style.icon, color: style.foreground, size: 16),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
+                ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                width: 4,
+                color: style.accent.withValues(alpha: muted ? 0.4 : 1),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(
+                    AppSpacing.md,
+                    AppSpacing.sm + 2,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: style.accent.withValues(alpha: 0.16),
+                              borderRadius: AppRadius.mdAll,
+                            ),
+                            child: Icon(
+                              style.icon,
+                              color: style.accent,
+                              size: 15,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  notification.title,
+                                  style: context.supplierTitle().copyWith(
+                                    fontSize: compact ? 14 : 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: muted
+                                        ? colors.textSecondary
+                                        : colors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _formatTimestamp(context, notification.createdAt),
+                                  style: context.supplierBody().copyWith(
+                                    fontSize: 11,
+                                    color: colors.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          _StatusBadge(notification: notification),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        children: [
+                          _TypeBadge(label: style.typeLabel, muted: muted),
+                          if (notification.maxAllowedUnitPriceNis != null &&
+                              notification.unit != null)
+                            _TypeBadge(
+                              label: l.maxPriceLabel(
+                                notification.maxAllowedUnitPriceNis!,
+                                notification.unit!,
+                              ),
+                              muted: muted,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
-                        notification.title,
-                        style: AuthDarkTextStyles.title(context).copyWith(
-                          fontSize: compact ? 14 : 15,
-                          fontWeight: FontWeight.w700,
+                        notification.body,
+                        style: context.supplierBody().copyWith(
                           color: muted
-                              ? AuthDarkColors.textSecondary
-                              : AuthDarkColors.textPrimary,
+                              ? colors.textMuted
+                              : colors.textSecondary,
+                          fontSize: 13,
+                          height: 1.45,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _formatTimestamp(notification.createdAt),
-                        style: AuthDarkTextStyles.body(context).copyWith(
-                          fontSize: 11,
-                          color: AuthDarkColors.textMuted,
+                      if (showAction) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: TextButton(
+                            onPressed: onAction,
+                            style: TextButton.styleFrom(
+                              backgroundColor:
+                                  style.accent.withValues(alpha: 0.16),
+                              foregroundColor: style.accent,
+                              minimumSize:
+                                  Size(compact ? double.infinity : 0, 36),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: AppSpacing.xs,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: AppRadius.mdAll,
+                                side: BorderSide(
+                                  color: style.accent.withValues(alpha: 0.45),
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              l.notificationActionLabel(
+                                notification.actionType,
+                                fallback: notification.actionLabel,
+                              ),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                _StatusBadge(notification: notification),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                _SourceBadge(label: style.typeLabel, muted: muted),
-                if (notification.maxAllowedUnitPriceNis != null &&
-                    notification.unit != null) ...[
-                  const SizedBox(width: AppSpacing.xs),
-                  _SourceBadge(
-                    label:
-                        'Max ${notification.maxAllowedUnitPriceNis!.toStringAsFixed(0)} NIS/${notification.unit}',
-                    muted: muted,
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              notification.body,
-              style: AuthDarkTextStyles.body(context).copyWith(
-                color: muted
-                    ? AuthDarkColors.textMuted
-                    : AuthDarkColors.textSecondary,
-                fontSize: 13,
-                height: 1.45,
-              ),
-            ),
-            if (showAction) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Align(
-                alignment:
-                    compact ? Alignment.centerLeft : Alignment.centerRight,
-                child: TextButton(
-                  onPressed: onAction,
-                  style: TextButton.styleFrom(
-                    backgroundColor: style.actionBackground,
-                    foregroundColor: style.actionForeground,
-                    minimumSize: Size(compact ? double.infinity : 0, 34),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.xs,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdAll,
-                      side: BorderSide(
-                        color: style.border.withValues(alpha: 0.45),
-                      ),
-                    ),
-                  ),
-                  child: Text(
-                    notification.actionLabel!,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
                   ),
                 ),
               ),
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 
-  String _formatTimestamp(DateTime value) {
+  String _formatTimestamp(BuildContext context, DateTime value) {
     final local = value.toLocal();
+    final l = context.s;
+    if (l.isArabic) {
+      final hour = local.hour.toString().padLeft(2, '0');
+      final minute = local.minute.toString().padLeft(2, '0');
+      return '${local.day}/${local.month}/${local.year} · $hour:$minute';
+    }
+
     const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     final month = months[local.month - 1];
     final hour = local.hour.toString().padLeft(2, '0');
@@ -182,25 +217,30 @@ class SupplierNotificationCard extends StatelessWidget {
   }
 }
 
-class _SourceBadge extends StatelessWidget {
-  const _SourceBadge({required this.label, this.muted = false});
+class _TypeBadge extends StatelessWidget {
+  const _TypeBadge({required this.label, this.muted = false});
 
   final String label;
   final bool muted;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: AuthDarkColors.chipUnselected.withValues(alpha: muted ? 0.28 : 0.5),
+        color: colors.chipUnselected,
         borderRadius: AppRadius.pillAll,
+        border: Border.all(
+          color: colors.border.withValues(alpha: colors.isDark ? 0.35 : 0.65),
+        ),
       ),
       child: Text(
         label,
-        style: AuthDarkTextStyles.chip(context).copyWith(
+        style: context.supplierChip().copyWith(
           fontSize: 10,
-          color: muted ? AuthDarkColors.textMuted : AuthDarkColors.textSecondary,
+          color: muted ? colors.textMuted : colors.textSecondary,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -215,30 +255,28 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+
     if (notification.isCompleted) {
       return _PillBadge(
-        label: 'Completed',
-        color: const Color(0xFF64748B),
-        background: const Color(0x33475569),
+        label: l.notificationCompleted,
+        color: colors.textMuted,
+        background: colors.chipUnselected,
       );
     }
 
-    final label = switch (notification.status) {
-      SupplierActionNotificationStatus.approved => 'Approved',
-      SupplierActionNotificationStatus.rejected => 'Rejected',
-      SupplierActionNotificationStatus.pending => 'Pending',
-    };
-
+    final label = l.notificationStatusLabel(notification.status);
     final color = switch (notification.status) {
-      SupplierActionNotificationStatus.approved => const Color(0xFF2DD4BF),
-      SupplierActionNotificationStatus.rejected => const Color(0xFFF87171),
-      SupplierActionNotificationStatus.pending => const Color(0xFF94A3B8),
+      SupplierActionNotificationStatus.approved => colors.accentMuted,
+      SupplierActionNotificationStatus.rejected => colors.redAccent,
+      SupplierActionNotificationStatus.pending => colors.textSecondary,
     };
 
     return _PillBadge(
       label: label,
       color: color,
-      background: color.withValues(alpha: 0.16),
+      background: color.withValues(alpha: 0.14),
     );
   }
 }
@@ -264,7 +302,7 @@ class _PillBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AuthDarkTextStyles.chip(context).copyWith(
+        style: context.supplierChip().copyWith(
           color: color,
           fontSize: 10,
           fontWeight: FontWeight.w700,

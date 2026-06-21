@@ -3,19 +3,21 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
 import '../../../../app/theme/auth_dark_decorations.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import '../theme/supplier_theme_extension.dart';
 
 class SupplierAccessDeniedPage extends StatelessWidget {
   const SupplierAccessDeniedPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
     return Scaffold(
       body: DecoratedBox(
-        decoration: SupplierDecorations.pageBackground,
+        decoration: decorations.pageBackground,
         child: Stack(
           children: [
             ...AuthDarkDecorations.backgroundBlobs(),
@@ -30,13 +32,13 @@ class SupplierAccessDeniedPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Supplier access required',
-                          style: AuthDarkTextStyles.title(context),
+                          l.supplierAccessRequired,
+                          style: context.supplierTitle(),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Text(
-                          'You need a Supplier role to access the Supplier Portal.',
-                          style: AuthDarkTextStyles.body(context),
+                          l.supplierAccessRequiredMessage,
+                          style: context.supplierBody(),
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         Wrap(
@@ -46,27 +48,27 @@ class SupplierAccessDeniedPage extends StatelessWidget {
                             FilledButton(
                               onPressed: () => context.go('/home'),
                               style: FilledButton.styleFrom(
-                                backgroundColor: AuthDarkColors.accent,
-                                foregroundColor: AuthDarkColors.textOnAccent,
+                                backgroundColor: colors.accent,
+                                foregroundColor: colors.textOnAccent,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: AppRadius.pillAll,
                                 ),
                               ),
-                              child: const Text('Go to home'),
+                              child: Text(l.goToHome),
                             ),
                             OutlinedButton(
                               onPressed: () => context.go('/login'),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: AuthDarkColors.textPrimary,
+                                foregroundColor: colors.textPrimary,
                                 side: BorderSide(
-                                  color: AuthDarkColors.borderFocused
+                                  color: colors.borderFocused
                                       .withValues(alpha: 0.5),
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: AppRadius.pillAll,
                                 ),
                               ),
-                              child: const Text('Sign in'),
+                              child: Text(l.signIn),
                             ),
                           ],
                         ),

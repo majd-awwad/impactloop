@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../core/config/api_config.dart';
 import '../../data/models/supplier_incoming_request.dart';
+import '../theme/supplier_theme_extension.dart';
 import 'incoming_request_status_style.dart';
 
 const _noteAreaHeight = 48.0;
@@ -68,6 +67,8 @@ class IncomingRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
     final isPending = request.status == SupplierIncomingRequestStatus.pending;
     final isDeclined = request.status == SupplierIncomingRequestStatus.declined;
     final isAccepted = request.status == SupplierIncomingRequestStatus.accepted;
@@ -82,12 +83,12 @@ class IncomingRequestCard extends StatelessWidget {
         width: double.infinity,
         height: isPending ? pendingHeight : null,
         decoration: BoxDecoration(
-          color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.78),
+          color: colors.surfaceSolid.withValues(alpha: 0.78),
           borderRadius: AppRadius.lgAll,
           border: Border.all(
             color: isPending
-                ? AuthDarkColors.border.withValues(alpha: 0.42)
-                : AuthDarkColors.border.withValues(alpha: 0.28),
+                ? colors.border.withValues(alpha: 0.42)
+                : colors.border.withValues(alpha: 0.28),
           ),
         ),
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -114,7 +115,7 @@ class IncomingRequestCard extends StatelessWidget {
                               request.materialTitle,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: AuthDarkTextStyles.title(context).copyWith(
+                              style: context.supplierTitle().copyWith(
                                 fontSize: compact ? 16 : 17,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -129,8 +130,8 @@ class IncomingRequestCard extends StatelessWidget {
                         request.learnerName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AuthDarkTextStyles.body(context).copyWith(
-                          color: AuthDarkColors.textSecondary,
+                        style: context.supplierBody().copyWith(
+                          color: colors.textSecondary,
                           fontSize: 13,
                         ),
                       ),
@@ -144,7 +145,7 @@ class IncomingRequestCard extends StatelessWidget {
               quantity:
                   '${_formatQuantity(request.quantityRequested)} ${request.unit}',
               requestedAt: formatIncomingRequestDateTime(request.requestedAt),
-              pickupPreference: request.pickupPreference ?? 'Self pickup',
+              pickupPreference: request.pickupPreference ?? l.selfPickup,
             ),
             const SizedBox(height: AppSpacing.sm),
             _LearnerNoteSlot(note: request.learnerNote),
@@ -179,8 +180,8 @@ class IncomingRequestCard extends StatelessWidget {
                   onPressed: isCompleting ? null : onMarkCompleted,
                   style: FilledButton.styleFrom(
                     backgroundColor:
-                        AuthDarkColors.accentSoft.withValues(alpha: 0.22),
-                    foregroundColor: AuthDarkColors.textPrimary,
+                        colors.accentSoft.withValues(alpha: 0.22),
+                    foregroundColor: colors.textPrimary,
                     padding: EdgeInsets.symmetric(
                       horizontal: compact ? 12 : 14,
                       vertical: compact ? 8 : 10,
@@ -198,8 +199,8 @@ class IncomingRequestCard extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : Text(
-                          'Mark completed',
-                          style: AuthDarkTextStyles.label(context).copyWith(
+                          l.markCompleted,
+                          style: context.supplierLabel().copyWith(
                             fontSize: compact ? 12 : 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -232,16 +233,17 @@ class _MaterialThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
     return ClipRRect(
       borderRadius: AppRadius.mdAll,
       child: Container(
         width: size,
         height: size,
-        color: AuthDarkColors.backgroundElevated,
+        color: colors.backgroundElevated,
         child: imageUrl == null || imageUrl!.isEmpty
             ? Icon(
                 Icons.inventory_2_outlined,
-                color: AuthDarkColors.textSecondary,
+                color: colors.textSecondary,
                 size: size * 0.38,
               )
             : Image.network(
@@ -249,7 +251,7 @@ class _MaterialThumbnail extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => Icon(
                   Icons.broken_image_outlined,
-                  color: AuthDarkColors.textSecondary,
+                  color: colors.textSecondary,
                   size: size * 0.38,
                 ),
               ),
@@ -291,16 +293,17 @@ class _MetaItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: AuthDarkColors.textMuted),
+        Icon(icon, size: 13, color: colors.textMuted),
         const SizedBox(width: 4),
         Text(
           label,
-          style: AuthDarkTextStyles.body(context).copyWith(
+          style: context.supplierBody().copyWith(
             fontSize: 12,
-            color: AuthDarkColors.textSecondary,
+            color: colors.textSecondary,
           ),
         ),
       ],
@@ -315,6 +318,8 @@ class _LearnerNoteSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
     final hasNote = note != null && note!.trim().isNotEmpty;
 
     return SizedBox(
@@ -322,7 +327,7 @@ class _LearnerNoteSlot extends StatelessWidget {
       width: double.infinity,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AuthDarkColors.chipUnselected.withValues(alpha: 0.45),
+          color: colors.chipUnselected.withValues(alpha: 0.45),
           borderRadius: AppRadius.mdAll,
         ),
         child: Padding(
@@ -333,14 +338,12 @@ class _LearnerNoteSlot extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              hasNote ? '"${note!.trim()}"' : 'No learner note.',
+              hasNote ? '"${note!.trim()}"' : l.noLearnerNote,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AuthDarkTextStyles.body(context).copyWith(
+              style: context.supplierBody().copyWith(
                 fontSize: 13,
-                color: hasNote
-                    ? AuthDarkColors.textPrimary
-                    : AuthDarkColors.textMuted,
+                color: hasNote ? colors.textPrimary : colors.textMuted,
                 fontStyle: hasNote ? FontStyle.italic : FontStyle.normal,
               ),
             ),
@@ -358,11 +361,13 @@ class _PickupFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
     return SizedBox(
       height: _footerHeight,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AuthDarkColors.accentSoft.withValues(alpha: 0.16),
+          color: colors.accentSoft.withValues(alpha: 0.16),
           borderRadius: AppRadius.mdAll,
         ),
         child: Padding(
@@ -375,11 +380,11 @@ class _PickupFooter extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Pickup: ${formatPickupWindowShort(window)}',
+                l.pickupWindowLabel(formatPickupWindowShort(window)),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AuthDarkTextStyles.label(context).copyWith(
-                  color: AuthDarkColors.textPrimary,
+                style: context.supplierLabel().copyWith(
+                  color: colors.textPrimary,
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                 ),
@@ -389,9 +394,9 @@ class _PickupFooter extends StatelessWidget {
                   window.note!.trim(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AuthDarkTextStyles.body(context).copyWith(
+                  style: context.supplierBody().copyWith(
                     fontSize: 12,
-                    color: AuthDarkColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ),
             ],
@@ -409,11 +414,12 @@ class _DeclineFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
     return SizedBox(
       height: _footerHeight,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AuthDarkColors.backgroundElevated.withValues(alpha: 0.45),
+          color: colors.backgroundElevated.withValues(alpha: 0.45),
           borderRadius: AppRadius.mdAll,
         ),
         child: Padding(
@@ -427,9 +433,9 @@ class _DeclineFooter extends StatelessWidget {
               reason,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AuthDarkTextStyles.body(context).copyWith(
+              style: context.supplierBody().copyWith(
                 fontSize: 12,
-                color: AuthDarkColors.textSecondary,
+                color: colors.textSecondary,
               ),
             ),
           ),
@@ -506,17 +512,19 @@ class _AcceptButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
     return FilledButton.icon(
       onPressed: onPressed,
       style: _IncomingRequestActionButtonMetrics.baseStyle(
-        background: AuthDarkColors.accentMuted.withValues(alpha: 0.82),
-        foreground: AuthDarkColors.textOnAccent,
+        background: colors.accentMuted.withValues(alpha: 0.82),
+        foreground: colors.textOnAccent,
       ),
       icon: const Icon(
         Icons.check_circle_outline,
         size: _IncomingRequestActionButtonMetrics.iconSize,
       ),
-      label: const Text('Accept'),
+      label: Text(l.accept),
     );
   }
 }
@@ -553,7 +561,7 @@ class _DeclineButton extends StatelessWidget {
         Icons.close,
         size: _IncomingRequestActionButtonMetrics.iconSize,
       ),
-      label: const Text('Decline'),
+      label: Text(context.s.decline),
     );
   }
 }
@@ -575,8 +583,8 @@ class _StatusBadge extends StatelessWidget {
         border: Border.all(color: style.border),
       ),
       child: Text(
-        status.label,
-        style: AuthDarkTextStyles.chip(context).copyWith(
+        context.s.incomingRequestStatusLabel(status),
+        style: context.supplierChip().copyWith(
           color: style.foreground,
           fontSize: 11,
           fontWeight: FontWeight.w600,

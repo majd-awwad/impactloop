@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../data/models/supplier_action_notification.dart';
 import '../controllers/supplier_notifications_providers.dart';
+import '../theme/supplier_theme_extension.dart';
 import 'supplier_notification_style.dart';
 
 class SupplierNotificationFilterChips extends ConsumerWidget {
@@ -24,16 +23,21 @@ class SupplierNotificationFilterChips extends ConsumerWidget {
     final selected = ref.watch(supplierNotificationFilterProvider);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
+    final colors = context.supplierColors;
+    final l = context.s;
 
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
       children: _filters.map((filter) {
         final isSelected = selected == filter;
-        final accent = SupplierNotificationStyle.filterSelectedColor(filter);
+        final accent = SupplierNotificationStyle.filterSelectedColor(
+          context,
+          filter,
+        );
 
         return FilterChip(
-          label: Text(filter.label),
+          label: Text(l.notificationFilterLabel(filter)),
           selected: isSelected,
           showCheckmark: false,
           onSelected: (_) {
@@ -41,18 +45,16 @@ class SupplierNotificationFilterChips extends ConsumerWidget {
                   filter,
                 );
           },
-          labelStyle: AuthDarkTextStyles.chip(context).copyWith(
-            color: isSelected ? Colors.white : AuthDarkColors.textPrimary,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          labelStyle: context.supplierChip().copyWith(
+            color: isSelected ? colors.textOnAccent : colors.textPrimary,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
             fontSize: compact ? 12 : 13,
           ),
           selectedColor: accent,
-          backgroundColor: AuthDarkColors.surfaceSolid.withValues(alpha: 0.92),
+          backgroundColor: isSelected ? accent : colors.chipUnselected,
           side: BorderSide(
-            color: isSelected
-                ? accent
-                : AuthDarkColors.border.withValues(alpha: 0.55),
-            width: isSelected ? 1.2 : 1,
+            color: isSelected ? accent : colors.border,
+            width: isSelected ? 1.5 : 1,
           ),
           padding: EdgeInsets.symmetric(
             horizontal: compact ? 10 : 12,

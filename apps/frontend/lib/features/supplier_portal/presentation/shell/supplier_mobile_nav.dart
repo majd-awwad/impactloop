@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import '../theme/supplier_theme_extension.dart';
 import 'supplier_nav_config.dart';
 
 class SupplierMobileNav extends StatelessWidget {
@@ -16,7 +14,7 @@ class SupplierMobileNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: AppSpacing.supplierMobileNavHeight,
-      decoration: SupplierDecorations.mobileNavBar,
+      decoration: context.supplierDecorations.mobileNavBar,
       child: SafeArea(
         top: false,
         child: Row(
@@ -48,7 +46,8 @@ class _MobileNavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = item.mobileLabel ?? item.label;
+    final colors = context.supplierColors;
+    final label = item.mobileLabel(context) ?? item.label(context);
 
     return InkWell(
       onTap: onTap,
@@ -63,18 +62,14 @@ class _MobileNavButton extends StatelessWidget {
             Icon(
               item.icon,
               size: 22,
-              color: isActive
-                  ? AuthDarkColors.accent
-                  : AuthDarkColors.textMuted,
+              color: isActive ? colors.accent : colors.textMuted,
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: AuthDarkTextStyles.chip(context).copyWith(
+              style: context.supplierChip().copyWith(
                 fontSize: 11,
-                color: isActive
-                    ? AuthDarkColors.accent
-                    : AuthDarkColors.textMuted,
+                color: isActive ? colors.accent : colors.textMuted,
               ),
             ),
           ],
