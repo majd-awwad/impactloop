@@ -112,6 +112,12 @@ export const env = {
   aiProvider: resolveAiProvider(),
   geminiApiKey: readGeminiApiKey(),
   geminiModel: process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash',
+  nominatimBaseUrl:
+    process.env.NOMINATIM_BASE_URL?.trim() ||
+    'https://nominatim.openstreetmap.org',
+  nominatimUserAgent:
+    process.env.NOMINATIM_USER_AGENT?.trim() ||
+    'ImpactLoop/1.0 (supplier profile reverse geocoding)',
 };
 
 export const isAiProviderOperational = (): boolean => {
