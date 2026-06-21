@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { materialImageUrlSchema } from '../../utils/material-image-url.js';
+import { paginationQuerySchema } from '../../utils/zod-helpers.js';
 
 const supplierTypes = [
   'STUDENT_SUPPLIER',
