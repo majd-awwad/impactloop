@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/auth_dark_colors.dart';
-import 'dark_auth_text_field.dart';
+import 'auth_text_field.dart';
+import 'auth_ui_palette.dart';
 
-class DarkAuthPasswordField extends StatefulWidget {
-  const DarkAuthPasswordField({
+class AuthPasswordField extends StatefulWidget {
+  const AuthPasswordField({
     super.key,
     required this.controller,
     required this.label,
@@ -26,15 +26,17 @@ class DarkAuthPasswordField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
 
   @override
-  State<DarkAuthPasswordField> createState() => _DarkAuthPasswordFieldState();
+  State<AuthPasswordField> createState() => _AuthPasswordFieldState();
 }
 
-class _DarkAuthPasswordFieldState extends State<DarkAuthPasswordField> {
+class _AuthPasswordFieldState extends State<AuthPasswordField> {
   bool _obscure = true;
 
   @override
   Widget build(BuildContext context) {
-    return DarkAuthTextField(
+    final colors = AuthUiPalette.of(context);
+
+    return AuthTextField(
       controller: widget.controller,
       label: widget.label,
       obscureText: _obscure,
@@ -47,7 +49,7 @@ class _DarkAuthPasswordFieldState extends State<DarkAuthPasswordField> {
       suffixIcon: IconButton(
         icon: Icon(
           _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-          color: AuthDarkColors.textMuted,
+          color: colors.textMuted,
         ),
         onPressed: () => setState(() => _obscure = !_obscure),
       ),

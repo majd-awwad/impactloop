@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../application/auth_controller.dart';
@@ -11,11 +10,11 @@ import '../../application/auth_navigation.dart';
 import '../../data/models/register_request.dart';
 import '../../data/models/registration_draft.dart';
 import '../models/registration_intent.dart';
-import 'dark_auth_buttons.dart';
-import 'dark_auth_form_card.dart';
-import 'dark_auth_form_fields.dart';
-import 'dark_auth_password_field.dart';
-import 'dark_auth_text_field.dart';
+import 'auth_buttons.dart';
+import 'auth_form_fields.dart';
+import 'auth_password_field.dart';
+import 'auth_text_field.dart';
+import 'auth_ui_palette.dart';
 
 class UnifiedRegisterForm extends ConsumerStatefulWidget {
   const UnifiedRegisterForm({super.key});
@@ -219,9 +218,9 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
             : null,
       );
 
-      final user = await ref.read(authControllerProvider.notifier).register(
-        request,
-      );
+      final user = await ref
+          .read(authControllerProvider.notifier)
+          .register(request);
 
       if (!mounted) {
         return;
@@ -256,7 +255,12 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
         children: [
           Text(
             'How do you want to use ImpactLoop?',
-            style: AuthDarkTextStyles.subtitle(context),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              height: 1.5,
+              color: AuthUiPalette.of(context).textPrimary,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
@@ -276,7 +280,7 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
           ),
           if (_intentError != null) AppInlineError(message: _intentError!),
           const SizedBox(height: AppSpacing.lg),
-          DarkAuthTextField(
+          AuthTextField(
             controller: _displayNameController,
             label: 'Full name',
             hint: 'Your name',
@@ -295,8 +299,8 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
               return null;
             },
           ),
-          const DarkAuthFieldGap(),
-          DarkAuthTextField(
+          const AuthFieldGap(),
+          AuthTextField(
             controller: _emailController,
             label: 'Email address',
             hint: 'you@example.com',
@@ -320,8 +324,8 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
               return null;
             },
           ),
-          const DarkAuthFieldGap(),
-          DarkAuthTextField(
+          const AuthFieldGap(),
+          AuthTextField(
             controller: _phoneController,
             label: 'Phone number (optional)',
             hint: '+970 000 000 000',
@@ -335,8 +339,8 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
               }
             },
           ),
-          const DarkAuthFieldGap(),
-          DarkAuthPasswordField(
+          const AuthFieldGap(),
+          AuthPasswordField(
             controller: _passwordController,
             label: 'Password',
             textInputAction: TextInputAction.next,
@@ -354,8 +358,8 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
               return null;
             },
           ),
-          const DarkAuthFieldGap(),
-          DarkAuthPasswordField(
+          const AuthFieldGap(),
+          AuthPasswordField(
             controller: _confirmPasswordController,
             label: 'Confirm password',
             textInputAction: TextInputAction.next,
@@ -377,11 +381,11 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
           ),
           if (_showLearnerFields) ...[
             const SizedBox(height: AppSpacing.lg),
-            const DarkAuthSectionTitle(title: 'Learner profile'),
+            const AuthSectionTitle(title: 'Learner profile'),
             if (_errorFor('learnerProfile') != null)
               AppInlineError(message: _errorFor('learnerProfile')!),
-            const DarkAuthFieldGap(),
-            DarkAuthDropdownField<String>(
+            const AuthFieldGap(),
+            AuthDropdownField<String>(
               label: 'Learner type',
               hint: 'Select your learner type',
               value: _learnerType,
@@ -404,8 +408,8 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
                 return null;
               },
             ),
-            const DarkAuthFieldGap(),
-            DarkAuthDropdownField<String>(
+            const AuthFieldGap(),
+            AuthDropdownField<String>(
               label: 'Skill level',
               hint: 'Select your skill level',
               value: _skillLevel,
@@ -428,8 +432,8 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
                 return null;
               },
             ),
-            const DarkAuthFieldGap(),
-            DarkAuthTextField(
+            const AuthFieldGap(),
+            AuthTextField(
               controller: _interestsController,
               label: 'Interests (optional)',
               hint: 'Arduino, robotics, electronics',
@@ -441,8 +445,8 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
                 }
               },
             ),
-            const DarkAuthFieldGap(),
-            DarkAuthTextArea(
+            const AuthFieldGap(),
+            AuthTextArea(
               controller: _bioController,
               label: 'Bio (optional)',
               hint: 'Tell others a little about your learning goals',
@@ -456,11 +460,11 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
           ],
           if (_showSupplierFields) ...[
             const SizedBox(height: AppSpacing.lg),
-            const DarkAuthSectionTitle(title: 'Supplier profile'),
+            const AuthSectionTitle(title: 'Supplier profile'),
             if (_errorFor('supplierProfile') != null)
               AppInlineError(message: _errorFor('supplierProfile')!),
-            const DarkAuthFieldGap(),
-            DarkAuthDropdownField<String>(
+            const AuthFieldGap(),
+            AuthDropdownField<String>(
               label: 'Supplier type',
               hint: 'Select your supplier type',
               value: _supplierType,
@@ -483,8 +487,8 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
                 return null;
               },
             ),
-            const DarkAuthFieldGap(),
-            DarkAuthTextField(
+            const AuthFieldGap(),
+            AuthTextField(
               controller: _publicNameController,
               label: 'Public name',
               hint: 'How others will see you',
@@ -505,8 +509,8 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
                 return null;
               },
             ),
-            const DarkAuthFieldGap(),
-            DarkAuthTextField(
+            const AuthFieldGap(),
+            AuthTextField(
               controller: _pickupAreaController,
               label: 'Pickup area / location',
               hint: 'Nablus, Rafidia',
@@ -527,8 +531,8 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
                 return null;
               },
             ),
-            const DarkAuthFieldGap(),
-            DarkAuthTextArea(
+            const AuthFieldGap(),
+            AuthTextArea(
               controller: _descriptionController,
               label: 'Short description (optional)',
               hint: 'What kinds of materials do you usually share?',
@@ -547,7 +551,7 @@ class _UnifiedRegisterFormState extends ConsumerState<UnifiedRegisterForm> {
             AppInlineError(message: _formError!),
           ],
           const SizedBox(height: AppSpacing.lg),
-          DarkAuthPrimaryButton(
+          AuthPrimaryButton(
             label: 'Create account',
             isLoading: _isSubmitting,
             onPressed: _handleSubmit,

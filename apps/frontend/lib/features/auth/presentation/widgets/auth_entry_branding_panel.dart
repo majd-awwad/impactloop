@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_decorations.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../app/widgets/impact_loop_logo.dart';
+import 'auth_ui_palette.dart';
 
 enum AuthEntryBrandingVariant { login, register }
 
@@ -46,6 +44,11 @@ class AuthEntryBrandingPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AuthUiPalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onPanel = _panelTextColor(context);
+    final onPanelMuted = _panelMutedColor(context);
+    final accent = _panelAccentColor(context);
     final padding = minimal
         ? AppSpacing.md
         : compact
@@ -55,12 +58,12 @@ class AuthEntryBrandingPanel extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        gradient: AuthDarkDecorations.brandingGradient,
+        gradient: _panelGradient(context),
         borderRadius: compact ? AppRadius.lgAll : AppRadius.xlAll,
-        border: Border.all(color: AuthDarkColors.border),
+        border: Border.all(color: _panelBorderColor(context)),
         boxShadow: [
           BoxShadow(
-            color: AuthDarkColors.blobPrimary.withValues(alpha: 0.08),
+            color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.14),
             blurRadius: compact ? 14 : 22,
             offset: const Offset(0, 12),
           ),
@@ -68,11 +71,20 @@ class AuthEntryBrandingPanel extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          ...AuthDarkDecorations.backgroundBlobs(compact: compact),
+          ..._panelBlobs(colors: colors, compact: compact, isDark: isDark),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ImpactLoopLogo(compact: compact, showWordmark: !minimal),
+              ImpactLoopLogo(
+                compact: compact,
+                showWordmark: !minimal,
+                iconColor: accent,
+                iconSurfaceColor: isDark
+                    ? colors.primarySoft
+                    : colors.surface.withValues(alpha: 0.9),
+                borderColor: _panelBorderColor(context),
+                textColor: onPanel,
+              ),
               SizedBox(
                 height: minimal
                     ? AppSpacing.sm
@@ -99,16 +111,8 @@ class AuthEntryBrandingPanel extends StatelessWidget {
                       ? TextOverflow.ellipsis
                       : TextOverflow.visible,
                   style: compact
-                      ? AuthDarkTextStyles.body(context).copyWith(
-                          color: AuthDarkColors.textPrimary.withValues(
-                            alpha: 0.82,
-                          ),
-                        )
-                      : AuthDarkTextStyles.brandingSubtitle(context).copyWith(
-                          color: AuthDarkColors.textPrimary.withValues(
-                            alpha: 0.82,
-                          ),
-                        ),
+                      ? _bodyStyle(context, color: onPanelMuted)
+                      : _brandingSubtitleStyle(context, color: onPanelMuted),
                 ),
               ),
               if (minimal) ...[
@@ -117,6 +121,8 @@ class AuthEntryBrandingPanel extends StatelessWidget {
                   icon: _features.first.$1,
                   label: _features.first.$2,
                   compact: true,
+                  textColor: onPanel,
+                  accentColor: accent,
                 ),
               ] else ...[
                 const SizedBox(height: AppSpacing.lg),
@@ -126,7 +132,12 @@ class AuthEntryBrandingPanel extends StatelessWidget {
                     child: Row(
                       children: [
                         for (final feature in _features) ...[
-                          _FeatureChip(icon: feature.$1, label: feature.$2),
+                          _FeatureChip(
+                            icon: feature.$1,
+                            label: feature.$2,
+                            textColor: onPanel,
+                            accentColor: accent,
+                          ),
                           const SizedBox(width: AppSpacing.sm),
                         ],
                       ],
@@ -138,7 +149,12 @@ class AuthEntryBrandingPanel extends StatelessWidget {
                     runSpacing: AppSpacing.sm,
                     children: [
                       for (final feature in _features)
-                        _FeatureChip(icon: feature.$1, label: feature.$2),
+                        _FeatureChip(
+                          icon: feature.$1,
+                          label: feature.$2,
+                          textColor: onPanel,
+                          accentColor: accent,
+                        ),
                     ],
                   ),
                 const SizedBox(height: AppSpacing.lg),
@@ -171,15 +187,13 @@ class _Eyebrow extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AuthDarkColors.chipUnselected,
+        color: _panelSurfaceColor(context),
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: AuthDarkColors.border),
+        border: Border.all(color: _panelBorderColor(context)),
       ),
       child: Text(
         label,
-        style: AuthDarkTextStyles.label(
-          context,
-        ).copyWith(color: AuthDarkColors.accent),
+        style: _labelStyle(context, color: _panelAccentColor(context)),
       ),
     );
   }
@@ -198,9 +212,12 @@ class _Headline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onPanel = _panelTextColor(context);
+    final highlight = _panelHighlightColor(context);
+
     return RichText(
       text: TextSpan(
-        style: AuthDarkTextStyles.brandingHeadline(context).copyWith(
+        style: _brandingHeadlineStyle(context, color: onPanel).copyWith(
           fontSize: minimal
               ? 24
               : compact
@@ -217,7 +234,7 @@ class _Headline extends StatelessWidget {
           const TextSpan(text: 'Learn. '),
           TextSpan(
             text: '$middle. ',
-            style: const TextStyle(color: AuthDarkColors.accent),
+            style: TextStyle(color: highlight),
           ),
           const TextSpan(text: 'Build.'),
         ],
@@ -230,11 +247,15 @@ class _FeatureChip extends StatelessWidget {
   const _FeatureChip({
     required this.icon,
     required this.label,
+    required this.textColor,
+    required this.accentColor,
     this.compact = false,
   });
 
   final IconData icon;
   final String label;
+  final Color textColor;
+  final Color accentColor;
   final bool compact;
 
   @override
@@ -245,21 +266,19 @@ class _FeatureChip extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AuthDarkColors.chipUnselected,
+        color: _panelSurfaceColor(context),
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: AuthDarkColors.border),
+        border: Border.all(color: _panelBorderColor(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: AuthDarkColors.accent),
+          Icon(icon, size: 16, color: accentColor),
           const SizedBox(width: AppSpacing.xs),
           Text(
             label,
             overflow: TextOverflow.ellipsis,
-            style: AuthDarkTextStyles.chip(
-              context,
-            ).copyWith(color: AuthDarkColors.textPrimary),
+            style: _chipStyle(context, color: textColor),
           ),
         ],
       ),
@@ -272,13 +291,15 @@ class _SignalStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AuthUiPalette.of(context);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.86),
+        color: _panelSurfaceColor(context),
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: AuthDarkColors.border),
+        border: Border.all(color: _panelBorderColor(context)),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -329,9 +350,9 @@ class _SignalStage extends StatelessWidget {
                   AppSpacing.md,
                 ),
                 decoration: BoxDecoration(
-                  color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.94),
+                  color: _panelSurfaceColor(context, elevated: true),
                   borderRadius: AppRadius.lgAll,
-                  border: Border.all(color: AuthDarkColors.border),
+                  border: Border.all(color: _panelBorderColor(context)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,7 +365,10 @@ class _SignalStage extends StatelessWidget {
                       children: [
                         Text(
                           'Live impact trend',
-                          style: AuthDarkTextStyles.label(context),
+                          style: _labelStyle(
+                            context,
+                            color: _panelMutedColor(context),
+                          ),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -352,14 +376,15 @@ class _SignalStage extends StatelessWidget {
                             vertical: AppSpacing.xs,
                           ),
                           decoration: BoxDecoration(
-                            color: AuthDarkColors.accentSoft,
+                            color: _panelSoftAccentColor(context),
                             borderRadius: AppRadius.pillAll,
                           ),
                           child: Text(
                             '+18% this month',
-                            style: AuthDarkTextStyles.label(
+                            style: _labelStyle(
                               context,
-                            ).copyWith(color: AuthDarkColors.accent),
+                              color: _panelAccentColor(context),
+                            ),
                           ),
                         ),
                       ],
@@ -374,7 +399,9 @@ class _SignalStage extends StatelessWidget {
                             bottom: 12,
                             child: Container(
                               height: 2,
-                              color: AuthDarkColors.border,
+                              color: _panelBorderColor(
+                                context,
+                              ).withValues(alpha: 0.7),
                             ),
                           ),
                           Positioned.fill(
@@ -382,7 +409,9 @@ class _SignalStage extends StatelessWidget {
                               padding: const EdgeInsets.only(
                                 bottom: AppSpacing.sm,
                               ),
-                              child: CustomPaint(painter: _SignalLinePainter()),
+                              child: CustomPaint(
+                                painter: _SignalLinePainter(colors: colors),
+                              ),
                             ),
                           ),
                         ],
@@ -408,9 +437,9 @@ class _CompactSignalCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.88),
+        color: _panelSurfaceColor(context),
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: AuthDarkColors.border),
+        border: Border.all(color: _panelBorderColor(context)),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -463,14 +492,12 @@ class _TrendPill extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AuthDarkColors.accentSoft,
+        color: _panelSoftAccentColor(context),
         borderRadius: AppRadius.pillAll,
       ),
       child: Text(
         label,
-        style: AuthDarkTextStyles.label(
-          context,
-        ).copyWith(color: AuthDarkColors.accent),
+        style: _labelStyle(context, color: _panelAccentColor(context)),
       ),
     );
   }
@@ -493,15 +520,18 @@ class _SignalMetric extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: AuthDarkTextStyles.label(context)),
+        Text(
+          label,
+          style: _labelStyle(context, color: _panelMutedColor(context)),
+        ),
         const SizedBox(height: AppSpacing.xs),
         Text(
           value,
-          style: AuthDarkTextStyles.title(context).copyWith(
+          style: _titleStyle(context).copyWith(
             fontSize: 24,
             color: highlight
-                ? AuthDarkColors.accent
-                : AuthDarkColors.textPrimary,
+                ? _panelAccentColor(context)
+                : _panelTextColor(context),
           ),
         ),
       ],
@@ -527,20 +557,21 @@ class _MissionStrip extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AuthDarkColors.accentSoft.withValues(alpha: 0.9),
+        color: _panelSoftAccentColor(context),
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: AuthDarkColors.border),
+        border: Border.all(color: _panelBorderColor(context)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.eco, color: AuthDarkColors.accent, size: 20),
+          Icon(Icons.eco, color: _panelAccentColor(context), size: 20),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               message,
-              style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.textPrimary.withValues(alpha: 0.9),
+              style: _bodyStyle(
+                context,
+                color: _panelTextColor(context).withValues(alpha: 0.9),
               ),
             ),
           ),
@@ -551,6 +582,10 @@ class _MissionStrip extends StatelessWidget {
 }
 
 class _SignalLinePainter extends CustomPainter {
+  const _SignalLinePainter({required this.colors});
+
+  final AuthUiPalette colors;
+
   @override
   void paint(Canvas canvas, Size size) {
     final fillPaint = Paint()
@@ -558,8 +593,8 @@ class _SignalLinePainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          AuthDarkColors.accent.withValues(alpha: 0.34),
-          AuthDarkColors.accent.withValues(alpha: 0.02),
+          colors.accentMint.withValues(alpha: 0.34),
+          colors.accentMint.withValues(alpha: 0.02),
         ],
       ).createShader(Offset.zero & size);
 
@@ -567,11 +602,7 @@ class _SignalLinePainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.centerLeft,
         end: Alignment.centerRight,
-        colors: [
-          AuthDarkColors.accentMuted,
-          AuthDarkColors.accent,
-          AuthDarkColors.textPrimary,
-        ],
+        colors: [colors.primary, colors.accentMint, colors.accentAmber],
       ).createShader(Offset.zero & size)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
@@ -607,4 +638,173 @@ class _SignalLinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+List<Widget> _panelBlobs({
+  required AuthUiPalette colors,
+  required bool compact,
+  required bool isDark,
+}) {
+  final size = compact ? 96.0 : 180.0;
+
+  return [
+    Positioned(
+      top: compact ? -30 : -60,
+      right: compact ? -20 : -40,
+      child: _Blob(
+        size: size,
+        color: colors.accentMint.withValues(alpha: isDark ? 0.1 : 0.14),
+      ),
+    ),
+    Positioned(
+      bottom: compact ? 40 : 80,
+      left: compact ? -40 : -80,
+      child: _Blob(
+        size: size * 0.85,
+        color: colors.accentAmber.withValues(alpha: isDark ? 0.08 : 0.12),
+      ),
+    ),
+    Positioned(
+      top: compact ? 100 : 180,
+      left: compact ? 40 : 80,
+      child: _Blob(
+        size: size * 0.55,
+        color: colors.primary.withValues(alpha: isDark ? 0.1 : 0.14),
+      ),
+    ),
+  ];
+}
+
+Color _panelTextColor(BuildContext context) {
+  final colors = AuthUiPalette.of(context);
+  return colors.textPrimary;
+}
+
+Color _panelMutedColor(BuildContext context) {
+  final colors = AuthUiPalette.of(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return isDark
+      ? colors.textPrimary.withValues(alpha: 0.74)
+      : colors.textSecondary;
+}
+
+LinearGradient _panelGradient(BuildContext context) {
+  final colors = AuthUiPalette.of(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  if (isDark) {
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [colors.panelDark2, colors.panelDark, colors.background],
+    );
+  }
+
+  return LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [colors.surface, colors.surfaceElevated, colors.primarySoft],
+  );
+}
+
+Color _panelSurfaceColor(BuildContext context, {bool elevated = false}) {
+  final colors = AuthUiPalette.of(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  if (isDark) {
+    return colors.surface.withValues(alpha: elevated ? 0.24 : 0.18);
+  }
+
+  return (elevated ? colors.surface : colors.surfaceElevated).withValues(
+    alpha: elevated ? 0.92 : 0.82,
+  );
+}
+
+Color _panelSoftAccentColor(BuildContext context) {
+  final colors = AuthUiPalette.of(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return isDark
+      ? colors.primarySoft
+      : colors.primarySoft.withValues(alpha: 0.92);
+}
+
+Color _panelBorderColor(BuildContext context) {
+  final colors = AuthUiPalette.of(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return isDark
+      ? colors.borderStrong.withValues(alpha: 0.7)
+      : colors.borderStrong;
+}
+
+Color _panelAccentColor(BuildContext context) {
+  final colors = AuthUiPalette.of(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return isDark ? colors.accentMint : colors.primary;
+}
+
+Color _panelHighlightColor(BuildContext context) {
+  final colors = AuthUiPalette.of(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return isDark ? colors.accentMint : colors.accentAmber;
+}
+
+TextStyle _brandingHeadlineStyle(BuildContext context, {required Color color}) {
+  return TextStyle(
+    fontSize: 36,
+    fontWeight: FontWeight.w800,
+    height: 1.15,
+    color: color,
+    letterSpacing: 0,
+  );
+}
+
+TextStyle _brandingSubtitleStyle(BuildContext context, {required Color color}) {
+  return TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    height: 1.55,
+    color: color,
+  );
+}
+
+TextStyle _titleStyle(BuildContext context) {
+  return TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.w700,
+    height: 1.25,
+    color: _panelTextColor(context),
+  );
+}
+
+TextStyle _bodyStyle(BuildContext context, {required Color color}) {
+  return TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.45,
+    color: color,
+  );
+}
+
+TextStyle _labelStyle(BuildContext context, {required Color color}) {
+  return TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color);
+}
+
+TextStyle _chipStyle(BuildContext context, {required Color color}) {
+  return TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color);
+}
+
+class _Blob extends StatelessWidget {
+  const _Blob({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+    );
+  }
 }

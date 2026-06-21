@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
+import 'auth_ui_palette.dart';
 
-class DarkAuthPrimaryButton extends StatelessWidget {
-  const DarkAuthPrimaryButton({
+class AuthPrimaryButton extends StatelessWidget {
+  const AuthPrimaryButton({
     super.key,
     required this.label,
     required this.onPressed,
@@ -18,24 +18,28 @@ class DarkAuthPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AuthUiPalette.of(context);
+
     return SizedBox(
       width: double.infinity,
       child: FilledButton(
         style: FilledButton.styleFrom(
-          backgroundColor: AuthDarkColors.accent,
-          foregroundColor: AuthDarkColors.textOnAccent,
-          disabledBackgroundColor: AuthDarkColors.accentSoft,
+          backgroundColor: colors.primary,
+          foregroundColor: colors.textOnPrimary,
+          disabledBackgroundColor: colors.primarySoft,
+          minimumSize: const Size.fromHeight(52),
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
         onPressed: isLoading ? null : onPressed,
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 height: AppSpacing.lg,
                 width: AppSpacing.lg,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AuthDarkColors.textOnAccent,
+                  color: colors.textOnPrimary,
                 ),
               )
             : Text(label),
@@ -44,8 +48,8 @@ class DarkAuthPrimaryButton extends StatelessWidget {
   }
 }
 
-class DarkAuthOutlinedButton extends StatelessWidget {
-  const DarkAuthOutlinedButton({
+class AuthOutlinedButton extends StatelessWidget {
+  const AuthOutlinedButton({
     super.key,
     required this.label,
     required this.onPressed,
@@ -56,14 +60,18 @@ class DarkAuthOutlinedButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AuthUiPalette.of(context);
+
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AuthDarkColors.textPrimary,
-          side: const BorderSide(color: AuthDarkColors.border),
+          foregroundColor: colors.textPrimary,
+          side: BorderSide(color: colors.borderStrong),
+          minimumSize: const Size.fromHeight(52),
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
         onPressed: onPressed,
         child: Text(label),

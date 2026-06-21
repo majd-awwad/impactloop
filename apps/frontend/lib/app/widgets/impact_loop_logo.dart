@@ -11,21 +11,33 @@ class ImpactLoopLogo extends StatelessWidget {
     super.key,
     this.compact = false,
     this.showWordmark = true,
+    this.iconColor,
+    this.iconSurfaceColor,
+    this.borderColor,
+    this.textColor,
   });
 
   final bool compact;
   final bool showWordmark;
+  final Color? iconColor;
+  final Color? iconSurfaceColor;
+  final Color? borderColor;
+  final Color? textColor;
 
   @override
   Widget build(BuildContext context) {
     final iconSize = compact ? 22.0 : 28.0;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AuthDarkColors.accent : AppColors.primary;
-    final accentSurface = isDark
-        ? AuthDarkColors.accentSoft
-        : AppColors.primaryContainer;
-    final border = isDark ? AuthDarkColors.border : AppColors.border;
-    final textColor = isDark ? AuthDarkColors.textPrimary : AppColors.textPrimary;
+    final accent =
+        iconColor ?? (isDark ? AuthDarkColors.accent : AppColors.primary);
+    final accentSurface =
+        iconSurfaceColor ??
+        (isDark ? AuthDarkColors.accentSoft : AppColors.primaryContainer);
+    final border =
+        borderColor ?? (isDark ? AuthDarkColors.border : AppColors.border);
+    final effectiveTextColor =
+        textColor ??
+        (isDark ? AuthDarkColors.textPrimary : AppColors.textPrimary);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -49,7 +61,7 @@ class ImpactLoopLogo extends StatelessWidget {
                         : AuthDarkTextStyles.brandingHeadline(
                             context,
                           ).copyWith(fontSize: compact ? 18 : 22))
-                    .copyWith(color: textColor),
+                    .copyWith(color: effectiveTextColor),
           ),
         ],
       ],
