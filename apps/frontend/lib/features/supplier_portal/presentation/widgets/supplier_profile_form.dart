@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import '../theme/supplier_theme_extension.dart';
+import 'supplier_location_input_mode.dart';
+import 'supplier_reverse_geocode_state.dart';
 import 'supplier_dark_form_field.dart';
 import 'supplier_pickup_map.dart';
 import 'supplier_selected_coordinates_panel.dart';
@@ -41,6 +41,12 @@ class SupplierProfileForm extends StatelessWidget {
     required this.onSeparateBusinessLocationChanged,
     required this.onFieldChanged,
     required this.onSave,
+    required this.locationInputMode,
+    required this.locationCapturedThisSession,
+    required this.reverseGeocodeState,
+    this.locationStatusMessage,
+    required this.onPickupAddressFieldChanged,
+    required this.onLocationInputModeChanged,
     this.onCancel,
     this.showMapInForm = true,
     this.showLocationButton = false,
@@ -79,6 +85,12 @@ class SupplierProfileForm extends StatelessWidget {
   final VoidCallback onFieldChanged;
   final VoidCallback? onCancel;
   final VoidCallback onSave;
+  final SupplierLocationInputMode locationInputMode;
+  final bool locationCapturedThisSession;
+  final SupplierReverseGeocodeState reverseGeocodeState;
+  final String? locationStatusMessage;
+  final VoidCallback onPickupAddressFieldChanged;
+  final ValueChanged<SupplierLocationInputMode> onLocationInputModeChanged;
   final bool showMapInForm;
   final bool showLocationButton;
   final double? latitude;
@@ -88,39 +100,61 @@ class SupplierProfileForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
     final showOrganization = isOrganizationSupplierType(supplierType);
     final isWide = MediaQuery.sizeOf(context).width >= 1024;
+    final usingCurrentLocation =
+        locationInputMode == SupplierLocationInputMode.currentLocation;
+    final hasCoordinates = latitude != null && longitude != null;
+    final hasFreshCapture = usingCurrentLocation && locationCapturedThisSession;
+
+    String? cityValidator(String? value) {
+      if (hasFreshCapture && hasCoordinates) {
+        return null;
+      }
+      if (!usingCurrentLocation &&
+          (value == null || value.trim().isEmpty)) {
+        return l.required;
+      }
+      return null;
+    }
+
+    String? requiredValidator(String? value) {
+      return value == null || value.trim().isEmpty ? l.required : null;
+    }
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.profileGlassCard,
+      decoration: decorations.profileGlassCard,
       child: Form(
         key: formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              hasExistingProfile ? 'Edit profile' : 'Create your profile',
-              style: AuthDarkTextStyles.title(context),
+              hasExistingProfile ? l.editProfileTitle : l.createProfile,
+              style: context.supplierTitle(),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Update how learners discover you and where materials can be collected.',
-              style: AuthDarkTextStyles.body(context),
+              l.profileIntro,
+              style: context.supplierBody(),
             ),
             const SupplierSectionGap(),
-            const SupplierFormSectionHeader(
+            SupplierFormSectionHeader(
               icon: Icons.person_outline,
-              title: 'Public supplier details',
-              subtitle: 'These details appear on your public supplier profile.',
+              title: l.publicDetails,
+              subtitle: l.publicDetailsSubtitle,
             ),
             const SizedBox(height: AppSpacing.lg),
             SupplierDarkTextField(
               controller: publicNameController,
-              label: 'Public supplier name',
-              hint: 'How learners will see you',
-              validator: _required,
+              label: l.publicName,
+              hint: l.publicNameHint,
+              validator: requiredValidator,
               onChanged: (_) => onFieldChanged(),
             ),
             const SupplierFieldGap(),
@@ -134,34 +168,142 @@ class SupplierProfileForm extends StatelessWidget {
             const SupplierFieldGap(),
             SupplierDarkTextArea(
               controller: descriptionController,
-              label: 'About your materials',
-              hint: 'Share the material types you usually offer.',
+              label: l.aboutMaterials,
+              hint: l.aboutMaterialsHint,
               maxLines: 4,
               onChanged: (_) => onFieldChanged(),
             ),
             const SupplierSectionGap(),
-            const SupplierFormSectionHeader(
+            SupplierFormSectionHeader(
               icon: Icons.location_on_outlined,
-              title: 'Default pickup area',
-              subtitle:
-                  'Use a general pickup area. Exact addresses stay hidden until needed.',
+              title: l.defaultPickupArea,
+              subtitle: l.defaultPickupSubtitle,
             ),
+            const SizedBox(height: AppSpacing.md),
+            SegmentedButton<SupplierLocationInputMode>(
+              segments: [
+                ButtonSegment(
+                  value: SupplierLocationInputMode.currentLocation,
+                  label: Text(l.useCurrentLocation),
+                  icon: const Icon(Icons.my_location_outlined, size: 18),
+                ),
+                ButtonSegment(
+                  value: SupplierLocationInputMode.manual,
+                  label: Text(l.enterManually),
+                  icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
+                ),
+              ],
+              selected: {locationInputMode},
+              style: SegmentedButton.styleFrom(
+                foregroundColor: colors.textPrimary,
+                selectedForegroundColor: colors.textOnAccent,
+                selectedBackgroundColor: colors.accent,
+                backgroundColor: colors.chipUnselected,
+                disabledForegroundColor: colors.textMuted,
+                side: BorderSide(
+                  color: colors.borderFocused.withValues(alpha: 0.7),
+                ),
+              ),
+              onSelectionChanged: (selection) {
+                onLocationInputModeChanged(selection.first);
+              },
+            ),
+            if (usingCurrentLocation) ...[
+              const SizedBox(height: AppSpacing.md),
+              if (locationButtonState == SupplierLocationButtonState.loading)
+                Row(
+                  children: [
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(locationStatusMessage ?? l.gettingLocation),
+                  ],
+                )
+              else if (hasFreshCapture && hasCoordinates) ...[
+                SupplierSelectedCoordinatesPanel(
+                  latitude: latitude!,
+                  longitude: longitude!,
+                  helperMessage: locationStatusMessage,
+                ),
+                if (reverseGeocodeState == SupplierReverseGeocodeState.loading)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.sm),
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(l.findingAddress),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton.icon(
+                  onPressed:
+                      reverseGeocodeState == SupplierReverseGeocodeState.loading
+                      ? null
+                      : onUseCurrentLocation,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: Text(l.refreshLocation),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: colors.accent,
+                    side: BorderSide(
+                      color: colors.borderFocused.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ),
+              ] else
+                OutlinedButton.icon(
+                  onPressed: onUseCurrentLocation,
+                  icon: const Icon(Icons.my_location_outlined, size: 18),
+                  label: Text(l.useCurrentLocation),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: colors.textPrimary,
+                    side: BorderSide(
+                      color: colors.borderFocused.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ),
+            ],
+            if (hasFreshCapture) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                l.optionalAddressDetails,
+                style: context.supplierLabel().copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                l.coordinatesSourceOfTruth,
+                style: context.supplierBody().copyWith(
+                  color: colors.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             _ResponsiveFieldRow(
               children: [
                 SupplierDarkTextField(
                   controller: countryController,
-                  label: 'Country',
-                  hint: 'Country',
-                  validator: _required,
-                  onChanged: (_) => onFieldChanged(),
+                  label: hasFreshCapture ? l.countryOptionalLabel : l.country,
+                  hint: hasFreshCapture ? l.optional : l.country,
+                  onChanged: (_) => onPickupAddressFieldChanged(),
                 ),
                 SupplierDarkTextField(
                   controller: cityController,
-                  label: 'City',
-                  hint: 'City',
-                  validator: _required,
-                  onChanged: (_) => onFieldChanged(),
+                  label: hasFreshCapture ? l.cityOptionalLabel : l.city,
+                  hint: hasFreshCapture ? l.optional : l.city,
+                  validator: cityValidator,
+                  onChanged: (_) => onPickupAddressFieldChanged(),
                 ),
               ],
             ),
@@ -170,25 +312,29 @@ class SupplierProfileForm extends StatelessWidget {
               children: [
                 SupplierDarkTextField(
                   controller: areaController,
-                  label: 'Area',
-                  hint: 'Neighborhood or district',
-                  onChanged: (_) => onFieldChanged(),
+                  label: hasFreshCapture ? l.areaOptionalLabel : l.area,
+                  hint: hasFreshCapture ? l.optionalNeighborhoodOrDistrict : l.areaHint,
+                  onChanged: (_) => onPickupAddressFieldChanged(),
                 ),
                 SupplierDarkTextField(
                   controller: addressLineController,
-                  label: 'Address line',
-                  hint: 'Street or building (kept private)',
-                  onChanged: (_) => onFieldChanged(),
+                  label: hasFreshCapture
+                      ? l.addressLineOptionalLabel
+                      : l.addressLine,
+                  hint: hasFreshCapture
+                      ? l.optionalStreetOrBuilding
+                      : l.addressHint,
+                  onChanged: (_) => onPickupAddressFieldChanged(),
                 ),
               ],
             ),
-            if (latitude != null && longitude != null) ...[
+            if (latitude != null &&
+                longitude != null &&
+                !usingCurrentLocation) ...[
               const SupplierSectionGap(),
               SupplierSelectedCoordinatesPanel(
                 latitude: latitude!,
                 longitude: longitude!,
-                showCaptureHelper:
-                    locationButtonState == SupplierLocationButtonState.captured,
               ),
             ],
             if (showMapInForm) ...[
@@ -196,43 +342,54 @@ class SupplierProfileForm extends StatelessWidget {
               SupplierPickupMap(
                 latitude: latitude,
                 longitude: longitude,
-                fallbackCity: cityController.text,
-                fallbackArea: areaController.text,
-                fallbackCountry: countryController.text,
+                fallbackCity: hasFreshCapture && cityController.text.trim().isEmpty
+                    ? ''
+                    : cityController.text,
+                fallbackArea: hasFreshCapture && areaController.text.trim().isEmpty
+                    ? null
+                    : areaController.text,
+                fallbackCountry:
+                    hasFreshCapture && countryController.text.trim().isEmpty
+                    ? ''
+                    : countryController.text,
                 visibility: visibility,
                 isEditable: true,
                 showLocationButton: showLocationButton,
                 locationButtonState: locationButtonState,
                 onUseCurrentLocation: onUseCurrentLocation,
                 compact: true,
+                showCoordinatesAsLabel:
+                    hasFreshCapture &&
+                    hasCoordinates &&
+                    cityController.text.trim().isEmpty &&
+                    areaController.text.trim().isEmpty,
               ),
             ],
             const SupplierSectionGap(),
-            const SupplierFormSectionHeader(
+            SupplierFormSectionHeader(
               icon: Icons.privacy_tip_outlined,
-              title: 'Location privacy',
-              subtitle:
-                  'Your exact pickup address stays private. Learners only see a general area until a reservation is accepted.',
+              title: l.locationPrivacy,
+              subtitle: l.locationPrivacySubtitle,
             ),
             const SizedBox(height: AppSpacing.lg),
             _ResponsiveFieldRow(
               children: [
                 SupplierDarkDropdownField<String>(
-                  label: 'Location visibility',
-                  hint: 'Choose visibility',
+                  label: l.locationVisibility,
+                  hint: l.chooseVisibility,
                   value: visibility,
-                  items: const [
+                  items: [
                     DropdownMenuItem(
                       value: 'PUBLIC',
-                      child: Text('Public area'),
+                      child: Text(l.visibilityPublic),
                     ),
                     DropdownMenuItem(
                       value: 'ORDER_ONLY',
-                      child: Text('Order only'),
+                      child: Text(l.visibilityOrderOnly),
                     ),
                     DropdownMenuItem(
                       value: 'PRIVATE',
-                      child: Text('Private'),
+                      child: Text(l.visibilityPrivate),
                     ),
                   ],
                   onChanged: (value) {
@@ -243,8 +400,8 @@ class SupplierProfileForm extends StatelessWidget {
                   },
                 ),
                 SupplierDarkSwitchTile(
-                  title: 'Show as approximate',
-                  subtitle: 'Learners see a general area, not an exact pin.',
+                  title: l.showApproximate,
+                  subtitle: l.showApproximateSubtitle,
                   value: isApproximate,
                   onChanged: (value) {
                     onApproximateChanged(value);
@@ -255,26 +412,25 @@ class SupplierProfileForm extends StatelessWidget {
             ),
             if (showOrganization) ...[
               const SupplierSectionGap(),
-              const SupplierFormSectionHeader(
+              SupplierFormSectionHeader(
                 icon: Icons.business_outlined,
-                title: 'Organization details',
-                subtitle:
-                    'For workshops, factories, and educational institutions only.',
+                title: l.organizationDetails,
+                subtitle: l.organizationSubtitle,
               ),
               const SizedBox(height: AppSpacing.lg),
               _ResponsiveFieldRow(
                 children: [
                   SupplierDarkTextField(
                     controller: organizationNameController,
-                    label: 'Organization name',
-                    hint: 'Legal or public organization name',
-                    validator: _required,
+                    label: l.organizationName,
+                    hint: l.organizationNameHint,
+                    validator: requiredValidator,
                     onChanged: (_) => onFieldChanged(),
                   ),
                   SupplierDarkTextField(
                     controller: contactPersonController,
-                    label: 'Contact person',
-                    hint: 'Optional contact name',
+                    label: l.contactPerson,
+                    hint: l.contactPersonHint,
                     onChanged: (_) => onFieldChanged(),
                   ),
                 ],
@@ -284,19 +440,19 @@ class SupplierProfileForm extends StatelessWidget {
                 children: [
                   SupplierDarkTextField(
                     controller: workingDaysController,
-                    label: 'Working days',
-                    hint: 'Mon, Tue, Wed',
+                    label: l.workingDays,
+                    hint: l.workingDaysHint,
                     onChanged: (_) => onFieldChanged(),
                   ),
                   SupplierDarkTextField(
                     controller: workingFromController,
-                    label: 'Open from',
+                    label: l.openFrom,
                     hint: '09:00',
                     onChanged: (_) => onFieldChanged(),
                   ),
                   SupplierDarkTextField(
                     controller: workingToController,
-                    label: 'Open until',
+                    label: l.openUntil,
                     hint: '17:00',
                     onChanged: (_) => onFieldChanged(),
                   ),
@@ -304,8 +460,8 @@ class SupplierProfileForm extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               SupplierDarkSwitchTile(
-                title: 'Use a separate business location',
-                subtitle: 'Leave off to use your default pickup location.',
+                title: l.separateBusinessLocation,
+                subtitle: l.separateBusinessLocationSubtitle,
                 value: useSeparateBusinessLocation,
                 onChanged: onSeparateBusinessLocationChanged,
               ),
@@ -315,14 +471,14 @@ class SupplierProfileForm extends StatelessWidget {
                   children: [
                     SupplierDarkTextField(
                       controller: businessCountryController,
-                      label: 'Business country',
-                      validator: _required,
+                      label: l.businessCountry,
+                      validator: requiredValidator,
                       onChanged: (_) => onFieldChanged(),
                     ),
                     SupplierDarkTextField(
                       controller: businessCityController,
-                      label: 'Business city',
-                      validator: _required,
+                      label: l.businessCity,
+                      validator: requiredValidator,
                       onChanged: (_) => onFieldChanged(),
                     ),
                   ],
@@ -332,12 +488,12 @@ class SupplierProfileForm extends StatelessWidget {
                   children: [
                     SupplierDarkTextField(
                       controller: businessAreaController,
-                      label: 'Business area',
+                      label: l.businessArea,
                       onChanged: (_) => onFieldChanged(),
                     ),
                     SupplierDarkTextField(
                       controller: businessAddressLineController,
-                      label: 'Business address line',
+                      label: l.businessAddressLine,
                       onChanged: (_) => onFieldChanged(),
                     ),
                   ],
@@ -356,10 +512,6 @@ class SupplierProfileForm extends StatelessWidget {
       ),
     );
   }
-
-  static String? _required(String? value) {
-    return value == null || value.trim().isEmpty ? 'Required' : null;
-  }
 }
 
 class _FormActions extends StatelessWidget {
@@ -377,6 +529,8 @@ class _FormActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
     final saveButton = FilledButton.icon(
       onPressed: isSaving ? null : onSave,
       icon: isSaving
@@ -386,11 +540,11 @@ class _FormActions extends StatelessWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : const Icon(Icons.save_outlined, size: 18),
-      label: Text(isSaving ? 'Saving...' : 'Save Profile'),
+      label: Text(isSaving ? l.savingProfile : l.saveProfile),
       style: FilledButton.styleFrom(
-        backgroundColor: AuthDarkColors.accent,
-        foregroundColor: AuthDarkColors.textOnAccent,
-        disabledBackgroundColor: AuthDarkColors.accentSoft,
+        backgroundColor: colors.accent,
+        foregroundColor: colors.textOnAccent,
+        disabledBackgroundColor: colors.accentSoft,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
@@ -404,9 +558,9 @@ class _FormActions extends StatelessWidget {
         : OutlinedButton(
             onPressed: isSaving ? null : onCancel,
             style: OutlinedButton.styleFrom(
-              foregroundColor: AuthDarkColors.textPrimary,
+              foregroundColor: colors.textPrimary,
               side: BorderSide(
-                color: AuthDarkColors.border.withValues(alpha: 0.55),
+                color: colors.border.withValues(alpha: 0.55),
               ),
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg,
@@ -414,7 +568,7 @@ class _FormActions extends StatelessWidget {
               ),
               shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
             ),
-            child: const Text('Cancel'),
+            child: Text(l.cancel),
           );
 
     if (compact) {

@@ -1,26 +1,28 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../data/supplier_location_service.dart';
+import '../../data/models/reverse_geocode_result.dart';
 import '../../data/models/supplier_profile.dart';
 import '../../data/models/update_supplier_profile_request.dart';
 import '../../data/supplier_profile_repository.dart';
 import '../controllers/supplier_dashboard_providers.dart';
 import '../controllers/supplier_profile_providers.dart';
+import '../theme/supplier_theme_extension.dart';
 import '../widgets/profile_completion_card.dart';
 import '../widgets/supplier_account_security_card.dart';
 import '../widgets/supplier_feedback.dart';
 import '../widgets/supplier_location_privacy_card.dart';
+import '../widgets/supplier_location_input_mode.dart';
 import '../widgets/supplier_pickup_map.dart';
 import '../widgets/supplier_pickup_map_preview.dart';
 import '../widgets/supplier_profile_form.dart';
 import '../widgets/supplier_profile_identity_card.dart';
 import '../widgets/supplier_profile_preview_card.dart';
+import '../widgets/supplier_reverse_geocode_state.dart';
 import '../widgets/supplier_type_selector.dart';
 import '../widgets/supplier_verification_card.dart';
 
@@ -35,7 +37,9 @@ class SupplierProfilePage extends ConsumerWidget {
       data: (data) => _SupplierProfileContent(profile: data),
       loading: () => const _SupplierProfileLoading(),
       error: (error, _) => _SupplierProfileError(
-        message: error is ApiException ? error.message : 'Profile could not load.',
+        message: error is ApiException
+            ? error.message
+            : context.s.profileLoadError,
       ),
     );
   }
@@ -78,6 +82,12 @@ class _SupplierProfileContentState
   int _draftTick = 0;
   double? _latitude;
   double? _longitude;
+  SupplierLocationInputMode _locationInputMode =
+      SupplierLocationInputMode.manual;
+  bool _locationCapturedThisSession = false;
+  bool _manualAddressEditedAfterCapture = false;
+  SupplierReverseGeocodeState _reverseGeocodeState =
+      SupplierReverseGeocodeState.idle;
   SupplierLocationButtonState _locationButtonState =
       SupplierLocationButtonState.idle;
   final _locationService = const SupplierLocationService();
@@ -110,6 +120,21 @@ class _SupplierProfileContentState
     if (oldWidget.profile != widget.profile && !_isEditing) {
       _applyProfile(widget.profile);
     }
+  }
+
+  void _clearManualAddressFields() {
+    _countryController.clear();
+    _cityController.clear();
+    _areaController.clear();
+    _addressLineController.clear();
+  }
+
+  void _restoreManualAddressFromProfile() {
+    final location = widget.profile.supplier?.defaultPickupLocation;
+    _countryController.text = location?.country ?? '';
+    _cityController.text = location?.city ?? '';
+    _areaController.text = location?.area ?? '';
+    _addressLineController.text = location?.addressLine ?? '';
   }
 
   void _applyProfile(SupplierProfileResponse profile) {
@@ -145,11 +170,88 @@ class _SupplierProfileContentState
     _useSeparateBusinessLocation = businessLocation != null;
     _latitude = location?.latitude;
     _longitude = location?.longitude;
+    _locationInputMode = SupplierLocationInputMode.manual;
+    _locationCapturedThisSession = false;
+    _manualAddressEditedAfterCapture = false;
+    _reverseGeocodeState = SupplierReverseGeocodeState.idle;
     _locationButtonState = SupplierLocationButtonState.idle;
   }
 
+  void _applyReverseGeocodeResult(ReverseGeocodeResult result) {
+    if (result.country != null) {
+      _countryController.text = result.country!;
+    }
+    if (result.city != null) {
+      _cityController.text = result.city!;
+    }
+    if (result.area != null) {
+      _areaController.text = result.area!;
+    }
+    if (result.addressLine != null) {
+      _addressLineController.text = result.addressLine!;
+    }
+  }
+
+  Future<void> _lookupAddressFromCoordinates(
+    double latitude,
+    double longitude,
+  ) async {
+    setState(() => _reverseGeocodeState = SupplierReverseGeocodeState.loading);
+
+    try {
+      final result = await ref
+          .read(supplierProfileRepositoryProvider)
+          .reverseGeocode(latitude: latitude, longitude: longitude);
+
+      if (!mounted) {
+        return;
+      }
+
+      if (!_manualAddressEditedAfterCapture) {
+        _applyReverseGeocodeResult(result);
+      }
+
+      setState(() {
+        _reverseGeocodeState = SupplierReverseGeocodeState.success;
+        _draftTick++;
+      });
+
+      if (kDebugMode) {
+        debugPrint(
+          '[SupplierProfile] reverse geocode country=${result.country} '
+          'city=${result.city} area=${result.area} '
+          'address=${result.addressLine}',
+        );
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _reverseGeocodeState = SupplierReverseGeocodeState.failure;
+      });
+
+      if (kDebugMode) {
+        debugPrint('[SupplierProfile] reverse geocode failed: $error');
+      }
+    }
+  }
+
+  void _onPickupAddressFieldChanged() {
+    if (_locationCapturedThisSession) {
+      _manualAddressEditedAfterCapture = true;
+    }
+    setState(() => _draftTick++);
+  }
+
   Future<void> _captureCurrentLocation() async {
-    setState(() => _locationButtonState = SupplierLocationButtonState.loading);
+    setState(() {
+      _locationButtonState = SupplierLocationButtonState.loading;
+      _locationCapturedThisSession = false;
+      _manualAddressEditedAfterCapture = false;
+      _reverseGeocodeState = SupplierReverseGeocodeState.idle;
+    });
 
     try {
       final capture = await _locationService.captureCurrentLocation();
@@ -160,27 +262,78 @@ class _SupplierProfileContentState
       setState(() {
         _latitude = capture.latitude;
         _longitude = capture.longitude;
+        _locationInputMode = SupplierLocationInputMode.currentLocation;
+        _locationCapturedThisSession = true;
         _locationButtonState = SupplierLocationButtonState.captured;
+        _clearManualAddressFields();
         _draftTick++;
       });
+
+      if (kDebugMode) {
+        debugPrint(
+          '[SupplierProfile] form state lat=$_latitude lng=$_longitude '
+          '(manual address fields cleared)',
+        );
+      }
+
+      await _lookupAddressFromCoordinates(capture.latitude, capture.longitude);
     } on SupplierLocationException catch (error) {
       if (!mounted) {
         return;
       }
 
-      setState(() => _locationButtonState = SupplierLocationButtonState.idle);
+      setState(() {
+        _locationButtonState = SupplierLocationButtonState.idle;
+        _locationCapturedThisSession = false;
+        _manualAddressEditedAfterCapture = false;
+        _reverseGeocodeState = SupplierReverseGeocodeState.idle;
+        _restoreManualAddressFromProfile();
+      });
       showSupplierErrorSnackBar(context, error.message);
     } catch (_) {
       if (!mounted) {
         return;
       }
 
-      setState(() => _locationButtonState = SupplierLocationButtonState.idle);
-      showSupplierErrorSnackBar(
-        context,
-        'Current location is not available on this browser or device.',
-      );
+      setState(() {
+        _locationButtonState = SupplierLocationButtonState.idle;
+        _locationCapturedThisSession = false;
+        _manualAddressEditedAfterCapture = false;
+        _reverseGeocodeState = SupplierReverseGeocodeState.idle;
+        _restoreManualAddressFromProfile();
+      });
+      showSupplierErrorSnackBar(context, context.s.couldNotGetLocation);
     }
+  }
+
+  void _onLocationInputModeChanged(SupplierLocationInputMode mode) {
+    if (mode == SupplierLocationInputMode.currentLocation) {
+      setState(() {
+        _locationInputMode = mode;
+        _latitude = null;
+        _longitude = null;
+        _locationCapturedThisSession = false;
+        _manualAddressEditedAfterCapture = false;
+        _reverseGeocodeState = SupplierReverseGeocodeState.idle;
+        _locationButtonState = SupplierLocationButtonState.idle;
+        _clearManualAddressFields();
+      });
+      _captureCurrentLocation();
+      return;
+    }
+
+    setState(() {
+      _locationInputMode = mode;
+      _locationCapturedThisSession = false;
+      _manualAddressEditedAfterCapture = false;
+      _reverseGeocodeState = SupplierReverseGeocodeState.idle;
+      _locationButtonState = SupplierLocationButtonState.idle;
+      if (_latitude == null && _longitude == null) {
+        final savedLocation = widget.profile.supplier?.defaultPickupLocation;
+        _latitude = savedLocation?.latitude;
+        _longitude = savedLocation?.longitude;
+      }
+    });
   }
 
   @override
@@ -204,6 +357,12 @@ class _SupplierProfileContentState
   }
 
   SupplierProfileDraft get _draft {
+    final usesCoordinateSource = _locationInputMode ==
+            SupplierLocationInputMode.currentLocation &&
+        _locationCapturedThisSession &&
+        _latitude != null &&
+        _longitude != null;
+
     return SupplierProfileDraft(
       publicName: _publicNameController.text,
       supplierType: _supplierType,
@@ -212,11 +371,47 @@ class _SupplierProfileContentState
       city: _cityController.text,
       area: _areaController.text,
       visibility: _visibility,
+      latitude: _latitude,
+      longitude: _longitude,
+      usesCurrentLocationCoordinates: usesCoordinateSource,
     );
+  }
+
+  bool get _hasAutofilledOrEditedAddress {
+    return _countryController.text.trim().isNotEmpty ||
+        _cityController.text.trim().isNotEmpty ||
+        _areaController.text.trim().isNotEmpty ||
+        _addressLineController.text.trim().isNotEmpty;
+  }
+
+  String? _locationStatusMessage(SupplierL10n l) {
+    if (_locationButtonState == SupplierLocationButtonState.loading) {
+      return l.gettingLocation;
+    }
+
+    if (_reverseGeocodeState == SupplierReverseGeocodeState.loading) {
+      return l.findingAddress;
+    }
+
+    if (_reverseGeocodeState == SupplierReverseGeocodeState.success) {
+      return l.addressFoundFromLocation;
+    }
+
+    if (_reverseGeocodeState == SupplierReverseGeocodeState.failure &&
+        _locationCapturedThisSession) {
+      return l.addressLookupFailed;
+    }
+
+    if (_locationCapturedThisSession) {
+      return l.locationCapturedOptionalDetails;
+    }
+
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
     final profile = widget.profile;
     final supplier = profile.supplier;
     final isWide = MediaQuery.sizeOf(context).width >= 1024;
@@ -229,6 +424,22 @@ class _SupplierProfileContentState
     final activeLongitude = _isEditing
         ? _longitude
         : supplier?.defaultPickupLocation?.longitude;
+    final useCoordinateMapLabel = _isEditing &&
+        _locationInputMode == SupplierLocationInputMode.currentLocation &&
+        _locationCapturedThisSession &&
+        activeLatitude != null &&
+        activeLongitude != null &&
+        !_hasAutofilledOrEditedAddress;
+    final mapCityLabel = useCoordinateMapLabel
+        ? ''
+        : (draft?.city ?? supplier?.defaultPickupLocation?.city ?? '');
+    final mapAreaLabel = useCoordinateMapLabel
+        ? null
+        : (draft?.area ?? supplier?.defaultPickupLocation?.area);
+
+    final previewLocationLabel = useCoordinateMapLabel
+        ? l.currentLocationLabel
+        : null;
 
     final preview = SupplierProfilePreviewCard(
       publicName: draft?.publicName ??
@@ -238,10 +449,17 @@ class _SupplierProfileContentState
       supplierType: draft?.supplierType ?? supplier?.supplierType ?? _supplierType,
       verificationStatus: supplier?.verificationStatus ?? 'UNVERIFIED',
       description: draft?.description ?? supplier?.description,
-      city: draft?.city ?? supplier?.defaultPickupLocation?.city,
-      area: draft?.area ?? supplier?.defaultPickupLocation?.area,
-      country: draft?.country ?? supplier?.defaultPickupLocation?.country,
+      city: useCoordinateMapLabel
+          ? null
+          : (draft?.city ?? supplier?.defaultPickupLocation?.city),
+      area: useCoordinateMapLabel
+          ? null
+          : (draft?.area ?? supplier?.defaultPickupLocation?.area),
+      country: useCoordinateMapLabel
+          ? null
+          : (draft?.country ?? supplier?.defaultPickupLocation?.country),
       visibility: draft?.visibility ?? supplier?.defaultPickupLocation?.visibility,
+      locationSummaryOverride: previewLocationLabel,
     );
 
     final sideColumn = Column(
@@ -257,9 +475,11 @@ class _SupplierProfileContentState
         ),
         const SizedBox(height: AppSpacing.lg),
         SupplierPickupMapPreview(
-          city: draft?.city ?? supplier?.defaultPickupLocation?.city ?? '',
-          area: draft?.area ?? supplier?.defaultPickupLocation?.area,
-          country: draft?.country ?? supplier?.defaultPickupLocation?.country,
+          city: mapCityLabel,
+          area: mapAreaLabel,
+          country: useCoordinateMapLabel
+              ? null
+              : (draft?.country ?? supplier?.defaultPickupLocation?.country),
           visibility:
               draft?.visibility ?? supplier?.defaultPickupLocation?.visibility,
           latitude: activeLatitude,
@@ -268,6 +488,7 @@ class _SupplierProfileContentState
           locationButtonState: _locationButtonState,
           onUseCurrentLocation: _captureCurrentLocation,
           showCoordinateDetails: _isEditing,
+          showCoordinatesAsLabel: useCoordinateMapLabel,
         ),
         const SizedBox(height: AppSpacing.lg),
         const SupplierAccountSecurityCard(),
@@ -345,6 +566,12 @@ class _SupplierProfileContentState
                   }
                 : null,
             onSave: _saveProfile,
+            locationInputMode: _locationInputMode,
+            locationCapturedThisSession: _locationCapturedThisSession,
+            reverseGeocodeState: _reverseGeocodeState,
+            locationStatusMessage: _locationStatusMessage(l),
+            onPickupAddressFieldChanged: _onPickupAddressFieldChanged,
+            onLocationInputModeChanged: _onLocationInputModeChanged,
             showMapInForm: !isWide,
             showLocationButton: !isWide,
             latitude: _latitude,
@@ -357,7 +584,7 @@ class _SupplierProfileContentState
     );
 
     return SingleChildScrollView(
-      padding: SupplierDecorations.pagePadding(compact: !isWide),
+      padding: context.supplierDecorations.pagePadding(compact: !isWide),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -383,13 +610,45 @@ class _SupplierProfileContentState
   }
 
   Future<void> _saveProfile() async {
-    if (_isSaving || !(_formKey.currentState?.validate() ?? false)) {
+    if (_isSaving) {
       return;
+    }
+
+    final usingCurrentLocation =
+        _locationInputMode == SupplierLocationInputMode.currentLocation;
+    final hasCoordinates = _latitude != null && _longitude != null;
+
+    if (usingCurrentLocation &&
+        (!_locationCapturedThisSession || !hasCoordinates)) {
+      showSupplierErrorSnackBar(context, context.s.captureLocationBeforeSave);
+      return;
+    }
+
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+        '[SupplierProfile] save payload lat=$_latitude lng=$_longitude '
+        'city="${_cityController.text.trim()}" '
+        'area="${_areaController.text.trim()}" '
+        'address="${_addressLineController.text.trim()}" '
+        'mode=$_locationInputMode captured=$_locationCapturedThisSession',
+      );
     }
 
     setState(() => _isSaving = true);
     try {
       final request = _buildRequest();
+      if (kDebugMode) {
+        final loc = request.defaultPickupLocation;
+        debugPrint(
+          '[SupplierProfile] request location lat=${loc.latitude} '
+          'lng=${loc.longitude} city="${loc.city}" area="${loc.area}" '
+          'address="${loc.addressLine}"',
+        );
+      }
       await ref.read(supplierProfileRepositoryProvider).updateProfile(request);
       final refreshed = await ref.refresh(supplierProfileProvider.future);
       ref.invalidate(supplierDashboardProvider);
@@ -400,12 +659,12 @@ class _SupplierProfileContentState
           _isEditing = false;
           _locationButtonState = SupplierLocationButtonState.idle;
         });
-        showSupplierInfoSnackBar(context, 'Supplier profile updated');
+        showSupplierInfoSnackBar(context, context.s.profileUpdated);
       }
     } on ApiException catch (error) {
       _showSaveError(error.message);
     } catch (_) {
-      _showSaveError('Profile could not be saved.');
+      _showSaveError(context.s.profileCouldNotSave);
     }
   }
 
@@ -483,20 +742,19 @@ class _PageIntro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: SupplierDecorations.profileGlassCard,
+      decoration: context.supplierDecorations.profileGlassCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Supplier Profile', style: AuthDarkTextStyles.display(context)),
+          Text(l.supplierProfileTitle, style: context.supplierDisplay()),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            hasProfile
-                ? 'Keep your public supplier details accurate, trustworthy, and easy for learners to understand.'
-                : 'Create your supplier profile so learners know where and how to collect materials.',
-            style: AuthDarkTextStyles.body(context),
+            hasProfile ? l.profileIntroHasProfile : l.profileIntroNoProfile,
+            style: context.supplierBody(),
           ),
         ],
       ),
@@ -510,7 +768,7 @@ class _SupplierProfileLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: CircularProgressIndicator(color: AuthDarkColors.accent),
+      child: CircularProgressIndicator(color: context.supplierColors.accent),
     );
   }
 }
@@ -522,36 +780,40 @@ class _SupplierProfileError extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: SupplierDecorations.dashboardCard,
+          decoration: decorations.dashboardCard,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.error_outline,
-                color: AuthDarkColors.error,
+                color: colors.error,
                 size: 40,
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Profile unavailable',
-                style: AuthDarkTextStyles.title(context),
+                l.profileUnavailable,
+                style: context.supplierTitle(),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: AuthDarkTextStyles.body(context),
+                style: context.supplierBody(),
               ),
               const SizedBox(height: AppSpacing.lg),
               OutlinedButton.icon(
                 onPressed: () => ref.invalidate(supplierProfileProvider),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
+                label: Text(l.tryAgain),
               ),
             ],
           ),
