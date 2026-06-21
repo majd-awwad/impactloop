@@ -1,15 +1,18 @@
 import type { Request, Response } from 'express';
 
+import { readValidatedQuery } from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
 
 import {
   createSupplierMaterial,
   getSupplierDashboard,
+  getSupplierMaterials,
   getSupplierProfile,
   updateSupplierProfile,
 } from './supplier.service.js';
 import type {
   CreateSupplierMaterialInput,
+  SupplierMaterialsQuery,
   UpdateSupplierProfileInput,
 } from './supplier.validation.js';
 
@@ -35,6 +38,18 @@ export const patchProfile = async (
   );
 
   res.json(successResponse('Supplier profile updated', profile));
+};
+
+export const getMaterials = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const materials = await getSupplierMaterials(
+    req.auth!.sub,
+    readValidatedQuery<SupplierMaterialsQuery>(req),
+  );
+
+  res.json(successResponse('Supplier materials loaded', materials));
 };
 
 export const postMaterial = async (

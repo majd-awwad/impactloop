@@ -24,6 +24,7 @@ import { checkMaterialPrice, resolveMaterialReferenceForCreate } from '../materi
 import * as supplierRepository from './supplier.repository.js';
 import type {
   CreateSupplierMaterialInput,
+  SupplierMaterialsQuery,
   UpdateSupplierProfileInput,
 } from './supplier.validation.js';
 
@@ -642,4 +643,71 @@ export const updateSupplierProfile = async (
   );
 
   return mapSupplierProfileResponse(record);
+};
+
+const mapSupplierOwnedMaterial = (
+  material: Awaited<
+    ReturnType<typeof supplierRepository.findSupplierMaterials>
+  >['items'][number],
+) => ({
+  id: material.id,
+  title: material.title,
+  description: material.description,
+  category: material.category
+    ? {
+        id: material.category.id,
+        nameEn: material.category.nameEn,
+        nameAr: material.category.nameAr,
+      }
+    : null,
+  status: material.status,
+  condition: material.condition,
+  quantity:
+    typeof material.quantity === 'number'
+      ? material.quantity
+      : material.quantity.toNumber(),
+  unit: material.unit,
+  isFree: material.isFree,
+  price: decimalToNumber(material.price),
+  currency: material.currency,
+  location: {
+    city: material.location.city,
+    area: material.location.area,
+  },
+  pickupAllowed: material.pickupAllowed,
+  deliveryAllowed: material.deliveryAllowed,
+  images: material.images.map((image) => ({
+    imageUrl: image.imageUrl,
+    isCover: image.isCover,
+  })),
+  viewsCount: material.viewsCount,
+  createdAt: material.createdAt.toISOString(),
+  updatedAt: material.updatedAt.toISOString(),
+});
+
+export const getSupplierMaterials = async (
+  userId: string,
+  query: SupplierMaterialsQuery,
+) => {
+  const [result, summary, categories] = await Promise.all([
+    supplierRepository.findSupplierMaterials(userId, query),
+    supplierRepository.findSupplierMaterialsSummary(userId),
+    supplierRepository.findSupplierMaterialCategories(userId),
+  ]);
+
+  const totalPages =
+    result.total === 0 ? 0 : Math.ceil(result.total / query.limit);
+
+  return {
+    items: result.items.map(mapSupplierOwnedMaterial),
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      totalItems: result.total,
+      totalPages,
+    },
+    summary,
+    categoryFacets: categories,
+    categories,
+  };
 };
