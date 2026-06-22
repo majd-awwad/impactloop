@@ -5,14 +5,18 @@ import { successResponse } from '../../utils/api-response.js';
 
 import {
   createSupplierMaterial,
+  deleteSupplierMaterial,
   getSupplierDashboard,
+  getSupplierMaterial,
   getSupplierMaterials,
   getSupplierProfile,
+  updateSupplierMaterial,
   updateSupplierProfile,
 } from './supplier.service.js';
 import type {
   CreateSupplierMaterialInput,
   SupplierMaterialsQuery,
+  UpdateSupplierMaterialInput,
   UpdateSupplierProfileInput,
 } from './supplier.validation.js';
 
@@ -50,6 +54,37 @@ export const getMaterials = async (
   );
 
   res.json(successResponse('Supplier materials loaded', materials));
+};
+
+export const getMaterial = async (req: Request, res: Response): Promise<void> => {
+  const material = await getSupplierMaterial(
+    req.auth!.sub,
+    req.params.id as string,
+  );
+
+  res.json(successResponse('Supplier material loaded', material));
+};
+
+export const patchMaterial = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const material = await updateSupplierMaterial(
+    req.auth!.sub,
+    req.params.id as string,
+    req.body as UpdateSupplierMaterialInput,
+  );
+
+  res.json(successResponse('Material updated successfully.', material));
+};
+
+export const deleteMaterial = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  await deleteSupplierMaterial(req.auth!.sub, req.params.id as string);
+
+  res.json(successResponse('Material deleted successfully.', null));
 };
 
 export const postMaterial = async (

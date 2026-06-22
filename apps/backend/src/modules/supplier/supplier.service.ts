@@ -25,6 +25,7 @@ import * as supplierRepository from './supplier.repository.js';
 import type {
   CreateSupplierMaterialInput,
   SupplierMaterialsQuery,
+  UpdateSupplierMaterialInput,
   UpdateSupplierProfileInput,
 } from './supplier.validation.js';
 
@@ -645,10 +646,49 @@ export const updateSupplierProfile = async (
   return mapSupplierProfileResponse(record);
 };
 
+export type SupplierMaterialDeleteBlockedReason =
+  | 'REUSED_HISTORY'
+  | 'ACTIVE_REQUESTS';
+
+export const DELETE_REUSED_MATERIAL_MESSAGE =
+  'Cannot delete reused material history.';
+
+export const DELETE_ACTIVE_REQUESTS_MESSAGE =
+  'Cannot delete a material with active requests.';
+
+export const resolveSupplierMaterialDeleteEligibility = (
+  status: string,
+  blockingReservationCount: number,
+): {
+  canDelete: boolean;
+  deleteBlockedReason: SupplierMaterialDeleteBlockedReason | null;
+} => {
+  if (status === 'REUSED') {
+    return { canDelete: false, deleteBlockedReason: 'REUSED_HISTORY' };
+  }
+
+  if (status === 'PENDING_RESERVATION' || status === 'RESERVED') {
+    return { canDelete: false, deleteBlockedReason: 'ACTIVE_REQUESTS' };
+  }
+
+  if (status !== 'AVAILABLE' && status !== 'UNAVAILABLE') {
+    return { canDelete: false, deleteBlockedReason: 'ACTIVE_REQUESTS' };
+  }
+
+  if (blockingReservationCount > 0) {
+    return { canDelete: false, deleteBlockedReason: 'ACTIVE_REQUESTS' };
+  }
+
+  return { canDelete: true, deleteBlockedReason: null };
+};
+
+type SupplierOwnedMaterialRecord = Awaited<
+  ReturnType<typeof supplierRepository.findSupplierMaterials>
+>['items'][number];
+
 const mapSupplierOwnedMaterial = (
-  material: Awaited<
-    ReturnType<typeof supplierRepository.findSupplierMaterials>
-  >['items'][number],
+  material: SupplierOwnedMaterialRecord,
+  blockingReservationCount = 0,
 ) => ({
   id: material.id,
   title: material.title,
@@ -660,6 +700,7 @@ const mapSupplierOwnedMaterial = (
         nameAr: material.category.nameAr,
       }
     : null,
+  materialType: material.materialType,
   status: material.status,
   condition: material.condition,
   quantity:
@@ -673,16 +714,24 @@ const mapSupplierOwnedMaterial = (
   location: {
     city: material.location.city,
     area: material.location.area,
+    addressLine: material.location.addressLine,
   },
   pickupAllowed: material.pickupAllowed,
   deliveryAllowed: material.deliveryAllowed,
+  pickupNotes: material.pickupNotes,
+  suggestedUses: material.suggestedUses,
   images: material.images.map((image) => ({
     imageUrl: image.imageUrl,
     isCover: image.isCover,
+    sortOrder: image.sortOrder,
   })),
   viewsCount: material.viewsCount,
   createdAt: material.createdAt.toISOString(),
   updatedAt: material.updatedAt.toISOString(),
+  ...resolveSupplierMaterialDeleteEligibility(
+    material.status,
+    blockingReservationCount,
+  ),
 });
 
 export const getSupplierMaterials = async (
@@ -695,11 +744,21 @@ export const getSupplierMaterials = async (
     supplierRepository.findSupplierMaterialCategories(userId),
   ]);
 
+  const blockingReservationCounts =
+    await supplierRepository.countBlockingReservationsByMaterialIds(
+      result.items.map((item) => item.id),
+    );
+
   const totalPages =
     result.total === 0 ? 0 : Math.ceil(result.total / query.limit);
 
   return {
-    items: result.items.map(mapSupplierOwnedMaterial),
+    items: result.items.map((item) =>
+      mapSupplierOwnedMaterial(
+        item,
+        blockingReservationCounts.get(item.id) ?? 0,
+      ),
+    ),
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -710,4 +769,84 @@ export const getSupplierMaterials = async (
     categoryFacets: categories,
     categories,
   };
+};
+
+export const getSupplierMaterial = async (userId: string, materialId: string) => {
+  const material = await supplierRepository.findSupplierOwnedMaterialById(
+    userId,
+    materialId,
+  );
+
+  if (!material) {
+    throw new AppError('Material not found', 404, 'NOT_FOUND');
+  }
+
+  const blockingReservationCount =
+    await supplierRepository.countBlockingReservationsForMaterial(materialId);
+
+  return mapSupplierOwnedMaterial(material, blockingReservationCount);
+};
+
+export const updateSupplierMaterial = async (
+  userId: string,
+  materialId: string,
+  input: UpdateSupplierMaterialInput,
+) => {
+  const updated = await supplierRepository.updateSupplierOwnedMaterial(
+    userId,
+    materialId,
+    {
+      title: input.title,
+      description: input.description,
+      quantity: input.quantity,
+      unit: input.unit,
+      condition: input.condition,
+      pickupAllowed: input.pickupAllowed,
+      deliveryAllowed: input.deliveryAllowed,
+      pickupNotes: input.pickupNotes ?? null,
+      suggestedUses: input.suggestedUses ?? null,
+    },
+  );
+
+  if (!updated) {
+    throw new AppError('Material not found', 404, 'NOT_FOUND');
+  }
+
+  const blockingReservationCount =
+    await supplierRepository.countBlockingReservationsForMaterial(materialId);
+
+  return mapSupplierOwnedMaterial(updated, blockingReservationCount);
+};
+
+export const deleteSupplierMaterial = async (
+  userId: string,
+  materialId: string,
+) => {
+  const material = await supplierRepository.findSupplierOwnedMaterialById(
+    userId,
+    materialId,
+  );
+
+  if (!material) {
+    throw new AppError('Material not found', 404, 'NOT_FOUND');
+  }
+
+  const blockingReservationCount =
+    await supplierRepository.countBlockingReservationsForMaterial(materialId);
+  const eligibility = resolveSupplierMaterialDeleteEligibility(
+    material.status,
+    blockingReservationCount,
+  );
+
+  if (!eligibility.canDelete) {
+    throw new AppError(
+      eligibility.deleteBlockedReason === 'REUSED_HISTORY'
+        ? DELETE_REUSED_MATERIAL_MESSAGE
+        : DELETE_ACTIVE_REQUESTS_MESSAGE,
+      409,
+      'CONFLICT',
+    );
+  }
+
+  await supplierRepository.deleteSupplierOwnedMaterial(materialId);
 };
