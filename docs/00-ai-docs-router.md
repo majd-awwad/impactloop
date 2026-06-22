@@ -8,6 +8,7 @@ Before editing code, read this file.
 - [01-project-map.md](01-project-map.md)
 - [02-architecture.md](02-architecture.md)
 - [08-implementation-status.md](08-implementation-status.md) — what is actually built
+- [09-open-questions.md](09-open-questions.md) — unresolved risks and **Needs verification** items
 
 ## If editing Flutter
 
@@ -99,7 +100,20 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static UI; no API |
 | Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — suggested materials **API-backed**; learning spotlight **mock-only** |
 
-**Not documented as implemented:** learner reservations, delivery, AI agent, admin portal, moderator portal (unless code changes prove otherwise).
+### Phase 2C — gaps and open questions
+
+| Area | Feature doc | Flow doc(s) | Ship status (summary) |
+|------|-------------|-------------|------------------------|
+| Open questions (index) | [09-open-questions.md](09-open-questions.md) | — | Unresolved / **Needs verification** across features |
+| Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner create + UI **not implemented**; supplier workflow **Partial** |
+| Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Schema-only** / **not implemented** |
+| AI material matching agent | [features/ai-agent.md](features/ai-agent.md) | [flows/ai-material-matching-flow.md](flows/ai-material-matching-flow.md) | **Not implemented** (distinct from price suggestion **Partial**) |
+| Admin portal | [features/admin.md](features/admin.md) | — | **Not implemented** — `POST /api/invitations` **Backend-only** only |
+| Moderator portal | [features/moderator.md](features/moderator.md) | — | **Not implemented** |
+
+Gap docs are stubs — see [09-open-questions.md](09-open-questions.md) before implementing.
+
+**Not documented as implemented:** learner reservation create, delivery workflow, AI material matching agent, admin portal, moderator portal (unless code changes prove otherwise).
 
 ADRs (`docs/adr/`) — not written yet.
 

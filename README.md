@@ -79,6 +79,7 @@ Start here for agents and contributors:
 | [docs/01-project-map.md](docs/01-project-map.md) | Repo map and feature inventory |
 | [docs/02-architecture.md](docs/02-architecture.md) | Architecture (code-derived) |
 | [docs/08-implementation-status.md](docs/08-implementation-status.md) | What is implemented vs partial vs not built |
+| [docs/09-open-questions.md](docs/09-open-questions.md) | Unresolved risks and **Needs verification** items |
 
 ### Inventories (code-derived)
 
@@ -122,6 +123,17 @@ ADRs (`docs/adr/`) are **not written yet**.
 | Invitations | [docs/features/invitations.md](docs/features/invitations.md) | [invitation-flow](docs/flows/invitation-flow.md) | **Backend-only** |
 | Landing | [docs/features/landing.md](docs/features/landing.md) | — | **Implemented** — static; no API |
 | Home (learner) | [docs/features/home-learner.md](docs/features/home-learner.md) | — | **Partial** — suggested materials API; learning spotlight **mock-only** |
+
+### Gap docs and open questions (Phase 2C)
+
+| Area | Doc | Flow(s) | Status (summary) |
+|------|-----|---------|------------------|
+| Open questions | [docs/09-open-questions.md](docs/09-open-questions.md) | — | Index of unresolved / **Needs verification** items |
+| Reservations (learner) | [docs/features/reservations.md](docs/features/reservations.md) | [learner-reservation-flow](docs/flows/learner-reservation-flow.md) | Learner **not implemented**; supplier **Partial** |
+| Delivery | [docs/features/delivery.md](docs/features/delivery.md) | [delivery-flow](docs/flows/delivery-flow.md) | **Schema-only** / **not implemented** |
+| AI material matching | [docs/features/ai-agent.md](docs/features/ai-agent.md) | [ai-material-matching-flow](docs/flows/ai-material-matching-flow.md) | **Not implemented** (price suggestion is **Partial**, separate) |
+| Admin portal | [docs/features/admin.md](docs/features/admin.md) | — | **Not implemented** |
+| Moderator portal | [docs/features/moderator.md](docs/features/moderator.md) | — | **Not implemented** |
 
 ### Supplementary docs (context — not canonical inventories)
 

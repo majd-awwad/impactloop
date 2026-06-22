@@ -117,6 +117,7 @@ Not Express modules; live in `apps/backend/src/services/`:
 | Flutter routes | [frontend/routes-map.md](frontend/routes-map.md) |
 | Shared widgets | [frontend/reusable-widgets.md](frontend/reusable-widgets.md) |
 | Ship status | [08-implementation-status.md](08-implementation-status.md) |
+| Unresolved risks | [09-open-questions.md](09-open-questions.md) |
 
 ### Feature & flow docs (code-derived)
 
@@ -124,7 +125,9 @@ Not Express modules; live in `apps/backend/src/services/`:
 
 **Phase 2B — supporting:** [materials-listing](features/materials-listing.md), [locations](features/locations.md), [invitations](features/invitations.md) + [invitation-flow](flows/invitation-flow.md), [landing](features/landing.md), [home-learner](features/home-learner.md).
 
-Index with status summaries: [00-ai-docs-router.md](00-ai-docs-router.md#feature--flow-docs), [08-implementation-status.md](08-implementation-status.md#documentation-phase).
+**Phase 2C — gaps:** [09-open-questions](09-open-questions.md), [reservations](features/reservations.md) + [learner-reservation-flow](flows/learner-reservation-flow.md), [delivery](features/delivery.md) + [delivery-flow](flows/delivery-flow.md), [ai-agent](features/ai-agent.md) + [ai-material-matching-flow](flows/ai-material-matching-flow.md), [admin](features/admin.md), [moderator](features/moderator.md).
+
+Index with status summaries: [00-ai-docs-router.md](00-ai-docs-router.md#feature--flow-docs), [08-implementation-status.md](08-implementation-status.md#documentation-phase). Unresolved risks: [09-open-questions.md](09-open-questions.md).
 
 ## Tests (backend)
 

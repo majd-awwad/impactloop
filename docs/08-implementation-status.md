@@ -73,7 +73,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 
 ### Flutter **not implemented** as features
 
-`reservations` (learner), `delivery`, `ai_agent`, `admin`, `moderator`, `reports`, `reviews`, `driver`
+`reservations` (learner), `delivery`, `ai_agent`, `admin`, `moderator`, `reports`, `reviews`, `driver` — gap docs: [reservations.md](features/reservations.md), [delivery.md](features/delivery.md), [ai-agent.md](features/ai-agent.md), [admin.md](features/admin.md), [moderator.md](features/moderator.md); see [09-open-questions.md](09-open-questions.md).
 
 ---
 
@@ -88,16 +88,16 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Role invitations (DRIVER/MODERATOR/ADMIN) | **Backend-only** | `invitations` module; no Flutter accept UI found |
 | Material discovery (public) | **Implemented** | Backend + Flutter |
 | Supplier list/create materials | **Implemented** | |
-| Supplier reservations workflow | **Partial** | Supplier side only; seeded data may exist |
-| Learner create reservation | **Not implemented** | No `/api/reservations` router |
-| Delivery workflow | **Not implemented** | `Reservation` delivery columns in schema only |
-| Driver portal | **Not implemented** | |
-| AI material matching agent | **Not implemented** | No `ai-agent` module; no `ai_requests` table |
-| AI price suggestions (listing) | **Partial** | `ai-price-suggestion.service.ts`, `AiPriceLookupLog` — internal to price rules |
+| Supplier reservations workflow | **Partial** | Supplier side only; seeded data may exist — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
+| Learner create reservation | **Not implemented** | No `/api/reservations` router — [reservations.md](features/reservations.md), [learner-reservation-flow](flows/learner-reservation-flow.md) |
+| Delivery workflow | **Not implemented** | `Reservation` delivery columns **schema-only** — [delivery.md](features/delivery.md) |
+| Driver portal | **Not implemented** | [delivery.md](features/delivery.md) |
+| AI material matching agent | **Not implemented** | No `ai-agent` module; no `ai_requests` table — [ai-agent.md](features/ai-agent.md) |
+| AI price suggestions (listing) | **Partial** | `ai-price-suggestion.service.ts`, `AiPriceLookupLog` — internal to price rules; **not** material-matching agent |
 | Learning hub API → Flutter | **Backend-only** | API mounted; UI mock |
 | Reviews | **Not implemented** | `reviews` table; no API/UI |
 | General notifications API | **Not implemented** | `notifications` table; supplier-derived notifications only |
-| Admin / moderator dashboards | **Not implemented** | |
+| Admin / moderator dashboards | **Not implemented** | [admin.md](features/admin.md), [moderator.md](features/moderator.md); invitations create **Backend-only** |
 | Impact analytics | **Not implemented** | No impact tables in schema |
 
 ---
@@ -153,7 +153,10 @@ Mapped from [05-roadmap.md](05-roadmap.md) to **code reality** — roadmap text 
 | Phase 2A feature docs (`docs/features/`) | **Partial** — 4 core features documented |
 | Phase 2A flow docs (`docs/flows/`) | **Partial** — 5 flows documented |
 | Phase 2B supporting docs (`docs/features/`, `docs/flows/`) | **Partial** — 5 features + 1 flow documented (see tables below) |
+| Phase 2C gap docs + [09-open-questions.md](09-open-questions.md) | **Partial** — 5 gap features + 3 stub flows + open-question index |
 | ADRs (`docs/adr/`) | **Not implemented** |
+
+Unresolved risks and **Needs verification** items: [09-open-questions.md](09-open-questions.md).
 
 ### Phase 2A canonical docs (code-derived)
 
@@ -175,3 +178,14 @@ Mapped from [05-roadmap.md](05-roadmap.md) to **code reality** — roadmap text 
 | Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Backend-only** |
 | Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static; no API |
 | Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — materials API; learning spotlight **mock-only** |
+
+### Phase 2C gap docs (stubs — not implemented proof)
+
+| Area | Feature doc | Flow doc(s) | Code status (unchanged) |
+|------|-------------|-------------|-------------------------|
+| Open questions | [09-open-questions.md](09-open-questions.md) | — | Unresolved / **Needs verification** index |
+| Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner **not implemented**; supplier **Partial** |
+| Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Schema-only** / **not implemented** |
+| AI material matching | [features/ai-agent.md](features/ai-agent.md) | [flows/ai-material-matching-flow.md](flows/ai-material-matching-flow.md) | **Not implemented** (price AI **Partial**, separate) |
+| Admin portal | [features/admin.md](features/admin.md) | — | **Not implemented** |
+| Moderator portal | [features/moderator.md](features/moderator.md) | — | **Not implemented** |
