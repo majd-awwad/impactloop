@@ -1,0 +1,28 @@
+---
+globs: apps/backend/prisma/**/*.prisma
+---
+
+# Database and Prisma Rules
+
+Database uses PostgreSQL + PostGIS.
+
+Rules:
+- Do not change schema unless task explicitly requests it.
+- Keep final 34-table baseline in mind.
+- No delivery_requests table.
+- No impact_logs table.
+- No impact_summaries table.
+- No delivery_partners table.
+- No partner_driver_profiles table.
+- No Mentor role.
+- users table must not contain role column.
+- user_roles supports multiple roles per user.
+- Add UNIQUE(user_id, role) for user_roles.
+- role_invitations stores token hash only.
+- locations should support PostGIS geography(Point).
+- reservations contains delivery fields.
+
+When AI behavior, credit rules, logs, or matching logic changes:
+- Update docs/features/ai-agent.md
+- Update docs/flows/ai-material-matching-flow.md
+- Update docs/database/tables-catalog.md if AI tables/fields changed

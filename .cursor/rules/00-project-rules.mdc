@@ -1,0 +1,40 @@
+---
+alwaysApply: true
+---
+
+# ImpactLoop Cursor Rules
+
+You are working on ImpactLoop.
+
+Always:
+- Read AGENTS.md first.
+- Follow docs in /docs.
+- Plan before coding.
+- Keep changes small.
+- Do not modify unrelated files.
+- Do not add dependencies without approval.
+- Do not change database schema unless requested.
+- Do not duplicate logic.
+- Do not hardcode secrets.
+- Summarize changed files after implementation.
+
+Project decisions:
+- Flutter is used for both mobile and web.
+- Backend is Node.js + Express.js.
+- PostgreSQL + PostGIS is used.
+- Prisma is used for database access.
+- Public signup supports only LEARNER and SUPPLIER.
+- DRIVER, MODERATOR, and ADMIN are invitation-only.
+- MENTOR does not exist.
+- Delivery is internal only.
+- No delivery_requests table.
+- Delivery fields live inside reservations.
+- Impact is calculated from materials and reservations.
+
+Always read:
+- AGENTS.md
+- docs/00-ai-docs-router.md
+
+Do not create documentation files with new naming patterns.
+Use the docs router to decide what to read/update.
+If unsure whether docs are needed, ask the human explicitly.
