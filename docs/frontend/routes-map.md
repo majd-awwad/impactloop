@@ -2,6 +2,11 @@
 
 Routes and access guards derived from `apps/frontend/lib/app/router/app_router.dart` and `apps/frontend/lib/features/auth/application/auth_navigation.dart`.
 
+Related frontend architecture docs:
+- [reusable-widgets.md](reusable-widgets.md)
+- [state-management.md](state-management.md)
+- [../07-theme-system.md](../07-theme-system.md)
+
 **Source files:**
 - `app_router.dart` — route tree and redirect logic
 - `auth_navigation.dart` — route constants and post-auth routing

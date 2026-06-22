@@ -92,6 +92,8 @@ Start here for agents and contributors:
 | [docs/database/enums.md](docs/database/enums.md) | Database enums |
 | [docs/frontend/routes-map.md](docs/frontend/routes-map.md) | Flutter routes and guards |
 | [docs/frontend/reusable-widgets.md](docs/frontend/reusable-widgets.md) | Shared UI widgets |
+| [docs/frontend/state-management.md](docs/frontend/state-management.md) | Flutter Riverpod/provider organization |
+| [docs/07-theme-system.md](docs/07-theme-system.md) | Flutter theme tokens, palettes, dark/light mode |
 
 ### Conventions and older docs
 
@@ -101,7 +103,7 @@ Start here for agents and contributors:
 | [docs/01-requirements.md](docs/01-requirements.md) | **Aspirational** product requirements |
 | [docs/03-database.md](docs/03-database.md) | **Stale** — superseded by `docs/database/*` |
 | [docs/05-roadmap.md](docs/05-roadmap.md) | **Aspirational** phased plan — see [implementation status](docs/08-implementation-status.md) |
-| [docs/07-ui-style-guide.md](docs/07-ui-style-guide.md) | Auth UI style reference (partial theme coverage) |
+| [docs/07-ui-style-guide.md](docs/07-ui-style-guide.md) | Legacy/auth-specific UI style reference |
 
 ### Feature & flow docs (Phase 2A — code-derived)
 

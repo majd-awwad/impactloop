@@ -1,5 +1,9 @@
 # ImpactLoop UI Style Guide
 
+**Status:** legacy/auth-specific style reference. For current app-wide theme layers, raw tokens, semantic colors, dark/light mode, supplier theme, and feature palettes, use [07-theme-system.md](07-theme-system.md).
+
+This file is kept because auth widgets still have feature-specific layout and palette rules. Do not treat it as the complete frontend theme system.
+
 ## Auth visual concept: Green loop, bright start
 
 Auth screens use a modern eco-tech startup feel:
