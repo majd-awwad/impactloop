@@ -167,3 +167,23 @@ export const supplierMaterialsQuerySchema = paginationQuerySchema
 export type SupplierMaterialsQuery = z.infer<
   typeof supplierMaterialsQuerySchema
 >;
+
+export const supplierMaterialIdParamSchema = z.object({
+  id: z.string().trim().min(1),
+});
+
+export const updateSupplierMaterialSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().min(1).max(5000),
+  quantity: z.number().positive(),
+  unit: z.string().trim().min(1).max(50),
+  condition: z.enum(materialConditions),
+  pickupAllowed: z.boolean(),
+  deliveryAllowed: z.boolean(),
+  pickupNotes: z.string().trim().max(500).optional().nullable(),
+  suggestedUses: z.string().trim().max(1000).optional().nullable(),
+});
+
+export type UpdateSupplierMaterialInput = z.infer<
+  typeof updateSupplierMaterialSchema
+>;

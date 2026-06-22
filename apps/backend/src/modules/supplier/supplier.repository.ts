@@ -259,7 +259,7 @@ const supplierMaterialListInclude = {
     select: { id: true, nameEn: true, nameAr: true },
   },
   location: {
-    select: { city: true, area: true },
+    select: { city: true, area: true, addressLine: true },
   },
   images: {
     orderBy: { sortOrder: 'asc' as const },
@@ -439,6 +439,83 @@ export const findSupplierMaterialCategories = async (ownerId: string) => {
       };
     })
     .filter((category) => category.count > 0);
+};
+
+export const findSupplierOwnedMaterialById = async (
+  ownerId: string,
+  materialId: string,
+) => {
+  return prisma.material.findFirst({
+    where: { id: materialId, ownerId },
+    include: supplierMaterialListInclude,
+  });
+};
+
+export const countBlockingReservationsByMaterialIds = async (
+  materialIds: string[],
+) => {
+  if (materialIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const groups = await prisma.reservation.groupBy({
+    by: ['materialId'],
+    where: {
+      materialId: { in: materialIds },
+      status: { in: ['PENDING', 'ACCEPTED', 'COMPLETED'] },
+    },
+    _count: { _all: true },
+  });
+
+  return new Map(
+    groups.map((group) => [group.materialId, group._count._all]),
+  );
+};
+
+export const countBlockingReservationsForMaterial = async (materialId: string) => {
+  return prisma.reservation.count({
+    where: {
+      materialId,
+      status: { in: ['PENDING', 'ACCEPTED', 'COMPLETED'] },
+    },
+  });
+};
+
+export const updateSupplierOwnedMaterial = async (
+  ownerId: string,
+  materialId: string,
+  data: {
+    title: string;
+    description: string;
+    quantity: number;
+    unit: string;
+    condition: MaterialCondition;
+    pickupAllowed: boolean;
+    deliveryAllowed: boolean;
+    pickupNotes: string | null;
+    suggestedUses: string | null;
+  },
+) => {
+  const existing = await prisma.material.findFirst({
+    where: { id: materialId, ownerId },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  return prisma.material.update({
+    where: { id: materialId },
+    data,
+    include: supplierMaterialListInclude,
+  });
+};
+
+export const deleteSupplierOwnedMaterial = async (materialId: string) => {
+  return prisma.material.delete({
+    where: { id: materialId },
+  });
 };
 
 export const findRecentMaterials = async (ownerId: string, limit = 3) => {
