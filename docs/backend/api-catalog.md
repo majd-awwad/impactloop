@@ -108,9 +108,16 @@ All routes below require Bearer JWT + `SUPPLIER` role unless noted. Source: `sup
 | GET | `/api/supplier/profile` | `supplier/supplier.routes.ts` |
 | PATCH | `/api/supplier/profile` | `supplier/supplier.routes.ts` |
 | GET | `/api/supplier/materials` | `supplier/supplier.routes.ts` |
+| GET | `/api/supplier/materials/:id` | `supplier/supplier.routes.ts` |
+| PATCH | `/api/supplier/materials/:id` | `supplier/supplier.routes.ts` |
 | POST | `/api/supplier/materials` | `supplier/supplier.routes.ts` |
+| DELETE | `/api/supplier/materials/:id` | `supplier/supplier.routes.ts` |
 
 `POST /api/supplier/materials` body (pickup-related): `useDefaultPickupLocation` (boolean, default `true`); `pickupLocation` (location object, required when `useDefaultPickupLocation` is `false`). Organization suppliers must use profile default; override is rejected with `ORG_PICKUP_OVERRIDE_NOT_ALLOWED`. Each create stores a **new** `locations` row on the material (copy or override), not the profile row id.
+
+`PATCH /api/supplier/materials/:id` updates safe listing fields only (`title`, `description`, `quantity`, `unit`, `condition`, `pickupAllowed`, `pickupNotes`, `suggestedUses`). `deliveryAllowed` is forced `false` on update. Edit is allowed only when `canEdit` is true (same lifecycle rules as delete). List/detail responses include `canEdit` / `editBlockedReason` and `canDelete` / `deleteBlockedReason`.
+
+`DELETE /api/supplier/materials/:id` removes an owned listing when `canDelete` is true (409 when blocked).
 
 ### Category requests — `/api/supplier/category-requests`
 

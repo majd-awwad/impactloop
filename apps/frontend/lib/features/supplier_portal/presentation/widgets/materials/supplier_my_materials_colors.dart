@@ -95,15 +95,18 @@ abstract final class SupplierMyMaterialsColors {
     );
   }
 
-  static ButtonStyle editButtonStyle(BuildContext context) {
+  static ButtonStyle editButtonStyle(BuildContext context, {bool enabled = true}) {
     final accent =
         context.supplierColors.isDark ? context.supplierColors.accent : lightTeal;
 
     return OutlinedButton.styleFrom(
-      foregroundColor: accent,
+      foregroundColor: enabled ? accent : accent.withValues(alpha: 0.45),
       minimumSize: const Size(0, 40),
       padding: const EdgeInsets.symmetric(horizontal: 14),
-      side: BorderSide(color: accent, width: 1.5),
+      side: BorderSide(
+        color: enabled ? accent : accent.withValues(alpha: 0.35),
+        width: 1.5,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
     );

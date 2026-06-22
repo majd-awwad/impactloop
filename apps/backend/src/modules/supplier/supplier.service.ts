@@ -721,15 +721,53 @@ export const updateSupplierProfile = async (
   return mapSupplierProfileResponse(record);
 };
 
-export type SupplierMaterialDeleteBlockedReason =
+export type SupplierMaterialMutationBlockedReason =
   | 'REUSED_HISTORY'
   | 'ACTIVE_REQUESTS';
+
+export type SupplierMaterialDeleteBlockedReason =
+  SupplierMaterialMutationBlockedReason;
+
+export type SupplierMaterialEditBlockedReason =
+  SupplierMaterialMutationBlockedReason;
 
 export const DELETE_REUSED_MATERIAL_MESSAGE =
   'Cannot delete reused material history.';
 
 export const DELETE_ACTIVE_REQUESTS_MESSAGE =
   'Cannot delete a material with active requests.';
+
+export const EDIT_REUSED_MATERIAL_MESSAGE =
+  'Cannot edit reused material history.';
+
+export const EDIT_ACTIVE_REQUESTS_MESSAGE =
+  'Cannot edit a material with active requests or blocked status.';
+
+const resolveSupplierMaterialMutationEligibility = (
+  status: string,
+  blockingReservationCount: number,
+): {
+  canMutate: boolean;
+  blockedReason: SupplierMaterialMutationBlockedReason | null;
+} => {
+  if (status === 'REUSED') {
+    return { canMutate: false, blockedReason: 'REUSED_HISTORY' };
+  }
+
+  if (status === 'PENDING_RESERVATION' || status === 'RESERVED') {
+    return { canMutate: false, blockedReason: 'ACTIVE_REQUESTS' };
+  }
+
+  if (status !== 'AVAILABLE' && status !== 'UNAVAILABLE') {
+    return { canMutate: false, blockedReason: 'ACTIVE_REQUESTS' };
+  }
+
+  if (blockingReservationCount > 0) {
+    return { canMutate: false, blockedReason: 'ACTIVE_REQUESTS' };
+  }
+
+  return { canMutate: true, blockedReason: null };
+};
 
 export const resolveSupplierMaterialDeleteEligibility = (
   status: string,
@@ -738,23 +776,33 @@ export const resolveSupplierMaterialDeleteEligibility = (
   canDelete: boolean;
   deleteBlockedReason: SupplierMaterialDeleteBlockedReason | null;
 } => {
-  if (status === 'REUSED') {
-    return { canDelete: false, deleteBlockedReason: 'REUSED_HISTORY' };
-  }
+  const eligibility = resolveSupplierMaterialMutationEligibility(
+    status,
+    blockingReservationCount,
+  );
 
-  if (status === 'PENDING_RESERVATION' || status === 'RESERVED') {
-    return { canDelete: false, deleteBlockedReason: 'ACTIVE_REQUESTS' };
-  }
+  return {
+    canDelete: eligibility.canMutate,
+    deleteBlockedReason: eligibility.blockedReason,
+  };
+};
 
-  if (status !== 'AVAILABLE' && status !== 'UNAVAILABLE') {
-    return { canDelete: false, deleteBlockedReason: 'ACTIVE_REQUESTS' };
-  }
+export const resolveSupplierMaterialEditEligibility = (
+  status: string,
+  blockingReservationCount: number,
+): {
+  canEdit: boolean;
+  editBlockedReason: SupplierMaterialEditBlockedReason | null;
+} => {
+  const eligibility = resolveSupplierMaterialMutationEligibility(
+    status,
+    blockingReservationCount,
+  );
 
-  if (blockingReservationCount > 0) {
-    return { canDelete: false, deleteBlockedReason: 'ACTIVE_REQUESTS' };
-  }
-
-  return { canDelete: true, deleteBlockedReason: null };
+  return {
+    canEdit: eligibility.canMutate,
+    editBlockedReason: eligibility.blockedReason,
+  };
 };
 
 type SupplierOwnedMaterialRecord = Awaited<
@@ -804,6 +852,10 @@ const mapSupplierOwnedMaterial = (
   createdAt: material.createdAt.toISOString(),
   updatedAt: material.updatedAt.toISOString(),
   ...resolveSupplierMaterialDeleteEligibility(
+    material.status,
+    blockingReservationCount,
+  ),
+  ...resolveSupplierMaterialEditEligibility(
     material.status,
     blockingReservationCount,
   ),
@@ -867,6 +919,32 @@ export const updateSupplierMaterial = async (
   materialId: string,
   input: UpdateSupplierMaterialInput,
 ) => {
+  const material = await supplierRepository.findSupplierOwnedMaterialById(
+    userId,
+    materialId,
+  );
+
+  if (!material) {
+    throw new AppError('Material not found', 404, 'NOT_FOUND');
+  }
+
+  const blockingReservationCount =
+    await supplierRepository.countBlockingReservationsForMaterial(materialId);
+  const eligibility = resolveSupplierMaterialEditEligibility(
+    material.status,
+    blockingReservationCount,
+  );
+
+  if (!eligibility.canEdit) {
+    throw new AppError(
+      eligibility.editBlockedReason === 'REUSED_HISTORY'
+        ? EDIT_REUSED_MATERIAL_MESSAGE
+        : EDIT_ACTIVE_REQUESTS_MESSAGE,
+      409,
+      'CONFLICT',
+    );
+  }
+
   const updated = await supplierRepository.updateSupplierOwnedMaterial(
     userId,
     materialId,
@@ -877,7 +955,7 @@ export const updateSupplierMaterial = async (
       unit: input.unit,
       condition: input.condition,
       pickupAllowed: input.pickupAllowed,
-      deliveryAllowed: input.deliveryAllowed,
+      deliveryAllowed: false,
       pickupNotes: input.pickupNotes ?? null,
       suggestedUses: input.suggestedUses ?? null,
     },
@@ -886,9 +964,6 @@ export const updateSupplierMaterial = async (
   if (!updated) {
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
-
-  const blockingReservationCount =
-    await supplierRepository.countBlockingReservationsForMaterial(materialId);
 
   return mapSupplierOwnedMaterial(updated, blockingReservationCount);
 };

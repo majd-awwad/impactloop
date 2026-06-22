@@ -13,6 +13,7 @@ import '../theme/supplier_theme_extension.dart';
 import '../widgets/materials/supplier_material_category_filter.dart';
 import '../widgets/materials/supplier_material_filter_chips.dart';
 import '../widgets/materials/supplier_material_delete_helper.dart';
+import '../widgets/materials/supplier_material_edit_helper.dart';
 import '../widgets/materials/supplier_materials_grid.dart';
 import '../widgets/materials/supplier_materials_summary_row.dart';
 
@@ -301,6 +302,12 @@ class _SupplierMyMaterialsPageState
                                         supplierMaterialDeleteBlockedMessage(
                                       l,
                                       material.deleteBlockedReason,
+                                    ),
+                                    canEdit: material.canEdit,
+                                    editBlockedMessage:
+                                        supplierMaterialEditBlockedMessage(
+                                      l,
+                                      material.editBlockedReason,
                                     ),
                                     onManage: () => context.go(
                                       '/supplier/materials/${material.id}',

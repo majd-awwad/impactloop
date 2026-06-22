@@ -10,6 +10,7 @@ import '../../application/supplier_my_materials_providers.dart';
 import '../../data/models/supplier_my_materials_models.dart';
 import '../../data/supplier_my_materials_repository.dart';
 import '../theme/supplier_theme_extension.dart';
+import '../widgets/materials/supplier_material_edit_helper.dart';
 import '../widgets/materials/supplier_material_label_helper.dart';
 import '../widgets/materials/supplier_my_materials_colors.dart';
 import '../widgets/supplier_dark_form_field.dart';
@@ -21,9 +22,12 @@ const _conditions = [
   'NEW',
   'LIKE_NEW',
   'GOOD',
-  'USED',
   'NEEDS_REPAIR',
 ];
+
+String _editableConditionValue(String? value) {
+  return value == 'USED' ? 'GOOD' : value ?? 'GOOD';
+}
 
 class SupplierEditMaterialPage extends ConsumerStatefulWidget {
   const SupplierEditMaterialPage({
@@ -49,7 +53,6 @@ class _SupplierEditMaterialPageState extends ConsumerState<SupplierEditMaterialP
 
   String _condition = 'GOOD';
   bool _pickupAllowed = true;
-  bool _deliveryAllowed = false;
   String? _loadedMaterialId;
   bool _saving = false;
 
@@ -82,9 +85,8 @@ class _SupplierEditMaterialPageState extends ConsumerState<SupplierEditMaterialP
     _descriptionController.text = material.description;
     _quantityController.text = _formatQuantity(material.quantity);
     _unitController.text = material.unit;
-    _condition = material.condition;
+    _condition = _editableConditionValue(material.condition);
     _pickupAllowed = material.pickupAllowed;
-    _deliveryAllowed = material.deliveryAllowed;
     _pickupNotesController.text = material.pickupNotes ?? '';
     _suggestedUsesController.text = material.suggestedUses ?? '';
   }
@@ -126,7 +128,7 @@ class _SupplierEditMaterialPageState extends ConsumerState<SupplierEditMaterialP
       unit: _unitController.text.trim(),
       condition: _condition,
       pickupAllowed: _pickupAllowed,
-      deliveryAllowed: _deliveryAllowed,
+      deliveryAllowed: false,
       pickupNotes: pickupNotes.isEmpty ? null : pickupNotes,
       suggestedUses: suggestedUses.isEmpty ? null : suggestedUses,
     );
@@ -206,6 +208,36 @@ class _SupplierEditMaterialPageState extends ConsumerState<SupplierEditMaterialP
           },
           data: (material) {
             _bindMaterialToForm(material);
+
+            if (!material.canEdit) {
+              return Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l.editMaterialBlockedTitle,
+                      style: context.supplierSectionTitle(),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      supplierMaterialEditBlockedMessage(
+                        l,
+                        material.editBlockedReason,
+                      ),
+                      style: context.supplierBody(),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    OutlinedButton(
+                      onPressed: _goBack,
+                      child: Text(l.backToMyMaterials),
+                    ),
+                  ],
+                ),
+              );
+            }
 
             final isArabic = l.isArabic;
             final category =
@@ -321,14 +353,6 @@ class _SupplierEditMaterialPageState extends ConsumerState<SupplierEditMaterialP
                       value: _pickupAllowed,
                       onChanged: (value) =>
                           setState(() => _pickupAllowed = value),
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(l.deliveryAllowed),
-                      subtitle: Text(l.deliveryAllowedSubtitle),
-                      value: _deliveryAllowed,
-                      onChanged: (value) =>
-                          setState(() => _deliveryAllowed = value),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     SupplierDarkTextField(

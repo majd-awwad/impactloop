@@ -176,6 +176,22 @@ class SupplierL10n {
         'This material cannot be deleted right now.',
         'لا يمكن حذف هذه المادة الآن.',
       );
+  String get editMaterialBlockedReused => t(
+        'Reused materials cannot be edited because they are part of reuse history.',
+        'لا يمكن تعديل المواد المعاد استخدامها لأنها جزء من سجل إعادة الاستخدام.',
+      );
+  String get editMaterialBlockedActiveRequests => t(
+        'Cannot edit a material with active requests or blocked status.',
+        'لا يمكن تعديل مادة لديها طلبات نشطة أو حالة محظورة.',
+      );
+  String get editMaterialBlockedDefault => t(
+        'This material cannot be edited right now.',
+        'لا يمكن تعديل هذه المادة الآن.',
+      );
+  String get editMaterialBlockedTitle => t(
+        'Editing not available',
+        'التعديل غير متاح',
+      );
   String get saveChanges => t('Save changes', 'حفظ التغييرات');
   String get readOnlyLabel => t('Read-only', 'للقراءة فقط');
   String get materialTypeLabel => t('Material type', 'نوع المادة');

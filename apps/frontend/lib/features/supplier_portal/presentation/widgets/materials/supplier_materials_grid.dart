@@ -142,6 +142,8 @@ List<Widget> buildSupplierMaterialCardActions({
   String? deleteLabel,
   String? deleteBlockedMessage,
   bool canDelete = false,
+  bool canEdit = true,
+  String? editBlockedMessage,
 }) {
   final actions = <Widget>[
     FilledButton(
@@ -149,10 +151,16 @@ List<Widget> buildSupplierMaterialCardActions({
       style: SupplierMyMaterialsColors.manageButtonStyle(context),
       child: Text(manageLabel),
     ),
-    OutlinedButton(
-      onPressed: onEdit,
-      style: SupplierMyMaterialsColors.editButtonStyle(context),
-      child: Text(editLabel),
+    Tooltip(
+      message: canEdit ? '' : (editBlockedMessage ?? ''),
+      child: OutlinedButton(
+        onPressed: canEdit ? onEdit : null,
+        style: SupplierMyMaterialsColors.editButtonStyle(
+          context,
+          enabled: canEdit,
+        ),
+        child: Text(editLabel),
+      ),
     ),
   ];
 

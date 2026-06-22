@@ -398,10 +398,14 @@ describe('getSupplierMaterials', () => {
     assert.ok(availableItem);
     assert.equal(availableItem.canDelete, true);
     assert.equal(availableItem.deleteBlockedReason, null);
+    assert.equal(availableItem.canEdit, true);
+    assert.equal(availableItem.editBlockedReason, null);
 
     assert.ok(reusedItem);
     assert.equal(reusedItem.canDelete, false);
     assert.equal(reusedItem.deleteBlockedReason, 'REUSED_HISTORY');
+    assert.equal(reusedItem.canEdit, false);
+    assert.equal(reusedItem.editBlockedReason, 'REUSED_HISTORY');
   });
 });
 
@@ -940,12 +944,18 @@ describe('updateSupplierMaterial', () => {
     });
     const supplier = await createSupplierUser('update');
     const otherSupplier = await createSupplierUser('update-other');
+    const learner = await prisma.user.findFirst({
+      where: { roles: { some: { role: 'LEARNER' } } },
+      select: { id: true },
+    });
 
     assert.ok(category);
+    assert.ok(learner);
     ctx.categoryId = category.id;
     ctx.locationId = location.id;
     ctx.supplierId = supplier.id;
     ctx.otherSupplierId = otherSupplier.id;
+    ctx.learnerId = learner.id;
     ctx.createdUserIds.push(supplier.id, otherSupplier.id);
   });
 
@@ -1079,6 +1089,7 @@ describe('updateSupplierMaterial', () => {
         isFree: true,
         price: true,
         locationId: true,
+        deliveryAllowed: true,
       },
     });
 
@@ -1102,10 +1113,158 @@ describe('updateSupplierMaterial', () => {
         isFree: true,
         price: true,
         locationId: true,
+        deliveryAllowed: true,
       },
     });
 
     assert.deepEqual(after, before);
+    assert.equal(after?.deliveryAllowed, false);
+  });
+
+  test('updates UNAVAILABLE material with no blocking reservations', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'edit-unavailable',
+      'UNAVAILABLE',
+    );
+
+    const updated = await updateSupplierMaterial(ctx.supplierId, material.id, {
+      title: `${TEST_MARKER} unavailable-updated`,
+      description: `${TEST_MARKER} unavailable description`,
+      quantity: 3,
+      unit: 'piece',
+      condition: 'GOOD',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    });
+
+    assert.equal(updated.title, `${TEST_MARKER} unavailable-updated`);
+    assert.equal(updated.status, 'UNAVAILABLE');
+    assert.equal(updated.canEdit, true);
+  });
+
+  test('rejects edit for PENDING_RESERVATION status', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'edit-pending',
+      'PENDING_RESERVATION',
+    );
+
+    await assert.rejects(
+      () =>
+        updateSupplierMaterial(ctx.supplierId, material.id, {
+          title: 'Blocked',
+          description: 'Blocked description',
+          quantity: 1,
+          unit: 'piece',
+          condition: 'GOOD',
+          pickupAllowed: true,
+          deliveryAllowed: false,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(error.message, /cannot edit/i);
+        return true;
+      },
+    );
+  });
+
+  test('rejects edit for RESERVED status', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'edit-reserved',
+      'RESERVED',
+    );
+
+    await assert.rejects(
+      () =>
+        updateSupplierMaterial(ctx.supplierId, material.id, {
+          title: 'Blocked',
+          description: 'Blocked description',
+          quantity: 1,
+          unit: 'piece',
+          condition: 'GOOD',
+          pickupAllowed: true,
+          deliveryAllowed: false,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        return true;
+      },
+    );
+  });
+
+  test('rejects edit for REUSED status', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'edit-reused',
+      'REUSED',
+    );
+
+    await assert.rejects(
+      () =>
+        updateSupplierMaterial(ctx.supplierId, material.id, {
+          title: 'Blocked',
+          description: 'Blocked description',
+          quantity: 1,
+          unit: 'piece',
+          condition: 'GOOD',
+          pickupAllowed: true,
+          deliveryAllowed: false,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(error.message, /reused material history/i);
+        return true;
+      },
+    );
+  });
+
+  test('rejects edit when blocking reservation history exists', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'edit-with-completed',
+      'AVAILABLE',
+    );
+
+    const reservation = await prisma.reservation.create({
+      data: {
+        materialId: material.id,
+        requesterId: ctx.learnerId,
+        ownerId: ctx.supplierId,
+        quantityRequested: 1,
+        status: 'COMPLETED',
+        completedAt: new Date(),
+      },
+    });
+    ctx.createdReservationIds.push(reservation.id);
+
+    await assert.rejects(
+      () =>
+        updateSupplierMaterial(ctx.supplierId, material.id, {
+          title: 'Blocked',
+          description: 'Blocked description',
+          quantity: 1,
+          unit: 'piece',
+          condition: 'GOOD',
+          pickupAllowed: true,
+          deliveryAllowed: false,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(error.message, /cannot edit/i);
+        return true;
+      },
+    );
   });
 });
 

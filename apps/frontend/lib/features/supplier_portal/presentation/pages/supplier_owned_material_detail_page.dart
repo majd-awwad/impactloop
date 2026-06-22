@@ -12,6 +12,7 @@ import '../../application/supplier_my_materials_providers.dart';
 import '../../data/models/supplier_my_materials_models.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/materials/supplier_material_delete_helper.dart';
+import '../widgets/materials/supplier_material_edit_helper.dart';
 import '../widgets/materials/supplier_material_label_helper.dart';
 import '../widgets/materials/supplier_my_materials_colors.dart';
 
@@ -75,6 +76,10 @@ class _DetailBody extends ConsumerWidget {
     final deleteBlockedMessage = supplierMaterialDeleteBlockedMessage(
       l,
       material.deleteBlockedReason,
+    );
+    final editBlockedMessage = supplierMaterialEditBlockedMessage(
+      l,
+      material.editBlockedReason,
     );
 
     return Column(
@@ -225,11 +230,19 @@ class _DetailBody extends ConsumerWidget {
               onPressed: () => context.go('/supplier/materials'),
               child: Text(l.backToMyMaterials),
             ),
-            OutlinedButton(
-              onPressed: () =>
-                  context.go('/supplier/materials/${material.id}/edit'),
-              style: SupplierMyMaterialsColors.editButtonStyle(context),
-              child: Text(l.editListing),
+            Tooltip(
+              message: material.canEdit ? '' : editBlockedMessage,
+              child: OutlinedButton(
+                onPressed: material.canEdit
+                    ? () =>
+                        context.go('/supplier/materials/${material.id}/edit')
+                    : null,
+                style: SupplierMyMaterialsColors.editButtonStyle(
+                  context,
+                  enabled: material.canEdit,
+                ),
+                child: Text(l.editListing),
+              ),
             ),
             Tooltip(
               message: material.canDelete ? '' : deleteBlockedMessage,

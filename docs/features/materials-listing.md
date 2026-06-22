@@ -8,7 +8,7 @@ Shared Flutter **data layer** and Riverpod providers that power **supplier mater
 
 The `materials` feature folder has **no routes** — it is consumed by `supplier_portal` only. It does **not** feed the `material_discovery` repository or `ApiMaterialDiscoveryRepository`. Any overlap with discovery UI is limited to shared widgets, models, or patterns where applicable (e.g. `AppMaterialCard`), not this data layer.
 
-**Not in scope:** public material discovery (`material_discovery` feature), learner material create, material update/delete API.
+**Not in scope:** public material discovery (`material_discovery` feature), learner material create, material image/location/price/category edit on update.
 
 ## Current status
 
@@ -21,7 +21,7 @@ The `materials` feature folder has **no routes** — it is consumed by `supplier
 | Category requests | **Implemented** | Create + list + draft under `/api/supplier/category-requests` |
 | Price rule requests | **Partial** | Create (`/api/price-rule-requests`) + supplier drafts; AI suggestion internal to backend |
 | Material create (`POST /api/supplier/materials`) | **Implemented** | Via `supplier_materials_repository.dart`, not in this feature folder |
-| Material update/delete | **Not implemented** | No matching API |
+| Material update/delete | **Implemented** | `PATCH` / `DELETE` `/api/supplier/materials/:id` via `supplier_my_materials_api.dart`; lifecycle-gated |
 
 ## Relation to supplier material create
 
@@ -112,7 +112,6 @@ Static: `GET /uploads/materials/*`
 
 ## Known gaps / Needs verification
 
-- No material **edit/delete** API or shared repository methods.
 - `POST /api/price-rule-requests` requires auth but **not** `requireRoles('SUPPLIER')` in route file.
 - Moderator approval for category/price requests — **backend workflow**; no moderator UI.
 - AI price suggestion operational only when `isAiProviderOperational` — env-dependent.

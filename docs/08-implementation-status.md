@@ -67,7 +67,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `material_discovery` | **Implemented** | `GET /api/materials` | `ApiMaterialDiscoveryRepository` default | — |
 | `materials` | **Partial** | taxonomy/upload APIs | Data layer for supplier add-material; no routes | [materials-listing.md](features/materials-listing.md) |
 | `learning_hub` | **Partial** | `GET /api/learning-projects` implemented | **Frontend mock-only** — `learning_hub_mock_data.dart`, not wired to API | — |
-| `supplier_portal` | **Partial** | `/api/supplier/*` | API repositories (mocks exist but providers use API); material **read/create** only — no update/delete API | — |
+| `supplier_portal` | **Partial** | `/api/supplier/*` | API repositories; material **read/create/update/delete** with lifecycle gating | — |
 | `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH | `supplier_portal` profile/map | [locations.md](features/locations.md) |
 | `invitations` *(no Flutter feature folder)* | **Backend-only** | `/api/invitations` | No Flutter UI | [invitations.md](features/invitations.md) |
 
@@ -87,7 +87,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Forgot / reset password | **Partial** | Backend: `auth.routes.ts`; Flutter: login shows “coming soon” (`login_form.dart`) |
 | Role invitations (DRIVER/MODERATOR/ADMIN) | **Backend-only** | `invitations` module; no Flutter accept UI found |
 | Material discovery (public) | **Implemented** | Backend + Flutter |
-| Supplier list/create materials | **Implemented** | |
+| Supplier list/create/update/delete materials | **Implemented** | Edit/delete gated by status + reservation history |
 | Supplier reservations workflow | **Partial** | Supplier side only; seeded data may exist — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
 | Learner create reservation | **Not implemented** | No `/api/reservations` router — [reservations.md](features/reservations.md), [learner-reservation-flow](flows/learner-reservation-flow.md) |
 | Delivery workflow | **Not implemented** | `Reservation` delivery columns **schema-only** — [delivery.md](features/delivery.md) |

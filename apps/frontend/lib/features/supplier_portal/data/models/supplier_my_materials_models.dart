@@ -118,6 +118,8 @@ class SupplierMyMaterial {
     required this.updatedAt,
     required this.canDelete,
     this.deleteBlockedReason,
+    required this.canEdit,
+    this.editBlockedReason,
   });
 
   final String id;
@@ -143,6 +145,8 @@ class SupplierMyMaterial {
   final DateTime updatedAt;
   final bool canDelete;
   final String? deleteBlockedReason;
+  final bool canEdit;
+  final String? editBlockedReason;
 
   String? get coverImageUrl {
     for (final image in images) {
@@ -199,6 +203,8 @@ class SupplierMyMaterial {
           DateTime.fromMillisecondsSinceEpoch(0),
       canDelete: json['canDelete'] == true,
       deleteBlockedReason: json['deleteBlockedReason'] as String?,
+      canEdit: json['canEdit'] == true,
+      editBlockedReason: json['editBlockedReason'] as String?,
     );
   }
 }

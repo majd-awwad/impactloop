@@ -100,26 +100,47 @@ Material type not in taxonomy or price needs review.
 
 ### User path
 
-`/supplier/materials` → filter/search → tap row → `/supplier/materials/:id` detail (read-only).
+`/supplier/materials` → filter/search → tap row → `/supplier/materials/:id` detail. **Edit** (`/supplier/materials/:id/edit`) and **delete** available when API returns `canEdit` / `canDelete`.
 
 ### Frontend path
 
-`supplier_my_materials_providers.dart` → `GET /api/supplier/materials` with query params.
+`supplier_my_materials_providers.dart` → `GET /api/supplier/materials` with query params. Edit/delete via `supplier_my_materials_api.dart`.
 
 ### Backend path
 
-`supplier.service` list with owner scope.
+`supplier.service` list with owner scope. Responses include `canEdit`, `editBlockedReason`, `canDelete`, `deleteBlockedReason`.
 
 ### Database changes
 
-Read-only.
+Read-only for list/detail. `PATCH` updates safe material fields; `DELETE` removes material row when allowed.
 
 ---
 
-## Not implemented
+## Flow — Edit material
 
-- Edit or delete existing material via API/UI.
-- Learner-facing publish moderation in Flutter.
+### User path
+
+Open edit from My Materials or detail when `canEdit`. Update title, description, quantity, unit, condition, pickup notes, pickup allowed. Save → `PATCH /api/supplier/materials/:id`.
+
+### Eligibility
+
+Allowed: `AVAILABLE`, `UNAVAILABLE` with no blocking reservations (`PENDING`, `ACCEPTED`, or `COMPLETED`). Blocked: `PENDING_RESERVATION`, `RESERVED`, `REUSED`, or any blocking reservation count.
+
+### Not editable
+
+Price, category, material type/name, images, pickup location, status, `deliveryAllowed` (forced false server-side).
+
+---
+
+## Flow — Delete material
+
+### User path
+
+Delete from My Materials or detail when `canDelete` → confirm → `DELETE /api/supplier/materials/:id`.
+
+### Eligibility
+
+Same rules as edit.
 
 ---
 
