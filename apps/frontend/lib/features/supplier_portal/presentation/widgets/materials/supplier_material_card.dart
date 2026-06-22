@@ -56,6 +56,12 @@ class SupplierMaterialCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
     final hasImage = imageUrl != null && imageUrl!.trim().isNotEmpty;
+    final compact =
+        MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
+    final actionCount = actions?.length ?? 0;
+    final cardHeight = compact && actionCount > 2
+        ? supplierMaterialCardHeight + 100
+        : supplierMaterialCardHeight;
 
     return Material(
       color: Colors.transparent,
@@ -63,7 +69,7 @@ class SupplierMaterialCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: AppRadius.xlAll,
         child: Ink(
-          height: supplierMaterialCardHeight,
+          height: cardHeight,
           decoration: BoxDecoration(
             color: colors.surfaceSolid.withValues(
               alpha: colors.isDark ? 0.78 : 1,
@@ -180,16 +186,9 @@ class SupplierMaterialCard extends StatelessWidget {
                         ),
                       if (actions != null && actions!.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.sm),
-                        SizedBox(
-                          width: double.infinity,
-                          child: Row(
-                            children: [
-                              for (var i = 0; i < actions!.length; i++) ...[
-                                if (i > 0) const SizedBox(width: AppSpacing.sm),
-                                Expanded(child: actions![i]),
-                              ],
-                            ],
-                          ),
+                        _CardActions(
+                          actions: actions!,
+                          compact: compact,
                         ),
                       ],
                     ],
@@ -200,6 +199,57 @@ class SupplierMaterialCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CardActions extends StatelessWidget {
+  const _CardActions({
+    required this.actions,
+    required this.compact,
+  });
+
+  final List<Widget> actions;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < actions.length; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.xs),
+            actions[i],
+          ],
+        ],
+      );
+    }
+
+    if (actions.length <= 2) {
+      return Row(
+        children: [
+          for (var i = 0; i < actions.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpacing.sm),
+            Expanded(child: actions[i]),
+          ],
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(child: actions[0]),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: actions[1]),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        actions[2],
+      ],
     );
   }
 }

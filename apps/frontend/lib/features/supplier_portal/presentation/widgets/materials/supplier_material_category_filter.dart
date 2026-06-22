@@ -5,17 +5,20 @@ import '../../../../../app/theme/app_spacing.dart';
 import '../../../data/models/supplier_my_materials_models.dart';
 import '../../theme/supplier_theme_extension.dart';
 import 'supplier_my_materials_colors.dart';
+import 'supplier_responsive_chip_row.dart';
 
 class SupplierMaterialCategoryFilter extends StatelessWidget {
   const SupplierMaterialCategoryFilter({
     super.key,
     required this.categories,
     required this.selectedCategoryId,
+    required this.totalCount,
     required this.onSelected,
   });
 
   final List<SupplierMyMaterialsCategoryOption> categories;
   final String? selectedCategoryId;
+  final int totalCount;
   final ValueChanged<String?> onSelected;
 
   @override
@@ -28,7 +31,7 @@ class SupplierMaterialCategoryFilter extends StatelessWidget {
     }
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           l.filterCategory,
@@ -38,32 +41,22 @@ class SupplierMaterialCategoryFilter extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
+        SupplierResponsiveChipRow(
+          children: [
+            _CategoryChip(
+              label: l.filterAllCategories,
+              selected: selectedCategoryId == null,
+              count: totalCount,
+              onTap: () => onSelected(null),
+            ),
+            for (final category in categories)
               _CategoryChip(
-                label: l.filterAllCategories,
-                selected: selectedCategoryId == null,
-                count: categories.fold<int>(
-                  0,
-                  (sum, category) => sum + category.count,
-                ),
-                onTap: () => onSelected(null),
+                label: context.s.isArabic ? category.nameAr : category.nameEn,
+                selected: selectedCategoryId == category.id,
+                count: category.count,
+                onTap: () => onSelected(category.id),
               ),
-              for (final category in categories) ...[
-                const SizedBox(width: AppSpacing.sm),
-                _CategoryChip(
-                  label: context.s.isArabic
-                      ? category.nameAr
-                      : category.nameEn,
-                  selected: selectedCategoryId == category.id,
-                  count: category.count,
-                  onTap: () => onSelected(category.id),
-                ),
-              ],
-            ],
-          ),
+          ],
         ),
       ],
     );
@@ -124,6 +117,7 @@ class _CategoryChip extends StatelessWidget {
           ),
           child: Text(
             '$label ($count)',
+            softWrap: false,
             style: context.supplierBody().copyWith(
               color: selected
                   ? SupplierMyMaterialsColors.chipSelectedText(context, accent)

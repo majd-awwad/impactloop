@@ -109,6 +109,23 @@ abstract final class SupplierMyMaterialsColors {
     );
   }
 
+  static ButtonStyle deleteButtonStyle(BuildContext context, {bool enabled = true}) {
+    final accent =
+        context.supplierColors.isDark ? lightRed : lightRedDark;
+
+    return OutlinedButton.styleFrom(
+      foregroundColor: enabled ? accent : accent.withValues(alpha: 0.45),
+      minimumSize: const Size(0, 40),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      side: BorderSide(
+        color: enabled ? accent : accent.withValues(alpha: 0.35),
+        width: 1.5,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+    );
+  }
+
   static Color darkenForLightMode(Color accent) {
     if (accent == lightBlue || accent == AppColorTokens.supplierDashboardReserved) {
       return lightBlueDark;

@@ -22,20 +22,18 @@ class SupplierMaterialsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final viewportWidth = MediaQuery.sizeOf(context).width;
         final width = constraints.maxWidth.isFinite && constraints.maxWidth > 0
             ? constraints.maxWidth
-            : viewportWidth;
+            : MediaQuery.sizeOf(context).width;
         var columns = 1;
 
         if (width >= 1100) {
           columns = 3;
-        } else if (width >= 720) {
+        } else if (width >= AppSpacing.supplierLayoutBreakpoint) {
           columns = 2;
         }
 
-        final itemWidth =
-            (width - ((columns - 1) * AppSpacing.md)) / columns;
+        final itemWidth = (width - ((columns - 1) * AppSpacing.md)) / columns;
 
         return Wrap(
           spacing: AppSpacing.md,
@@ -140,21 +138,39 @@ List<Widget> buildSupplierMaterialCardActions({
   required VoidCallback onEdit,
   required String manageLabel,
   required String editLabel,
-  String? editUnavailableMessage,
+  VoidCallback? onDelete,
+  String? deleteLabel,
+  String? deleteBlockedMessage,
+  bool canDelete = false,
 }) {
-  return [
+  final actions = <Widget>[
     FilledButton(
       onPressed: onManage,
       style: SupplierMyMaterialsColors.manageButtonStyle(context),
       child: Text(manageLabel),
     ),
-    Tooltip(
-      message: editUnavailableMessage ?? '',
-      child: OutlinedButton(
-        onPressed: onEdit,
-        style: SupplierMyMaterialsColors.editButtonStyle(context),
-        child: Text(editLabel),
-      ),
+    OutlinedButton(
+      onPressed: onEdit,
+      style: SupplierMyMaterialsColors.editButtonStyle(context),
+      child: Text(editLabel),
     ),
   ];
+
+  if (deleteLabel != null) {
+    actions.add(
+      Tooltip(
+        message: canDelete ? '' : (deleteBlockedMessage ?? ''),
+        child: OutlinedButton(
+          onPressed: canDelete ? onDelete : null,
+          style: SupplierMyMaterialsColors.deleteButtonStyle(
+            context,
+            enabled: canDelete,
+          ),
+          child: Text(deleteLabel),
+        ),
+      ),
+    );
+  }
+
+  return actions;
 }

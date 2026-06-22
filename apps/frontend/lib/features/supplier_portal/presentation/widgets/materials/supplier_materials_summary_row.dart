@@ -17,8 +17,6 @@ class SupplierMaterialsSummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.s;
-    final compact =
-        MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
 
     final items = [
       (
@@ -53,46 +51,51 @@ class SupplierMaterialsSummaryRow extends StatelessWidget {
       ),
     ];
 
-    if (compact) {
-      return Wrap(
-        spacing: AppSpacing.sm,
-        runSpacing: AppSpacing.sm,
-        children: items
-            .map(
-              (item) => SizedBox(
-                width: (MediaQuery.sizeOf(context).width -
-                        AppSpacing.md * 2 -
-                        AppSpacing.sm) /
-                    2,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth.isFinite && constraints.maxWidth > 0
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final compact = maxWidth < AppSpacing.supplierLayoutBreakpoint;
+
+        if (compact) {
+          final tileWidth = (maxWidth - AppSpacing.sm) / 2;
+
+          return Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: items
+                .map(
+                  (item) => SizedBox(
+                    width: tileWidth,
+                    child: _StatTile(
+                      label: item.$1,
+                      value: item.$2,
+                      icon: item.$3,
+                      accent: item.$4,
+                    ),
+                  ),
+                )
+                .toList(),
+          );
+        }
+
+        return Row(
+          children: [
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) const SizedBox(width: AppSpacing.sm),
+              Expanded(
                 child: _StatTile(
-                  label: item.$1,
-                  value: item.$2,
-                  icon: item.$3,
-                  accent: item.$4,
+                  label: items[i].$1,
+                  value: items[i].$2,
+                  icon: items[i].$3,
+                  accent: items[i].$4,
                 ),
               ),
-            )
-            .toList(),
-      );
-    }
-
-    return SizedBox(
-      width: double.infinity,
-      child: Row(
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _StatTile(
-                label: items[i].$1,
-                value: items[i].$2,
-                icon: items[i].$3,
-                accent: items[i].$4,
-              ),
-            ),
+            ],
           ],
-        ],
-      ),
+        );
+      },
     );
   }
 }

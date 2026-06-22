@@ -4,6 +4,7 @@ import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../theme/supplier_theme_extension.dart';
 import 'supplier_my_materials_colors.dart';
+import 'supplier_responsive_chip_row.dart';
 
 enum SupplierMaterialStatusFilter {
   all,
@@ -55,6 +56,22 @@ extension SupplierMaterialStatusFilterX on SupplierMaterialStatusFilter {
       };
 }
 
+/// Maps API query status to the status filter chip selection.
+SupplierMaterialStatusFilter statusFilterFromQuery(String? status) {
+  return SupplierMaterialStatusFilter.values.firstWhere(
+    (filter) => filter.apiValue == status,
+    orElse: () => SupplierMaterialStatusFilter.all,
+  );
+}
+
+/// Maps API query isFree to the price filter chip selection.
+SupplierMaterialPriceFilter priceFilterFromQuery(bool? isFree) {
+  return SupplierMaterialPriceFilter.values.firstWhere(
+    (filter) => filter.apiValue == isFree,
+    orElse: () => SupplierMaterialPriceFilter.all,
+  );
+}
+
 extension SupplierMaterialPriceFilterX on SupplierMaterialPriceFilter {
   bool? get apiValue => switch (this) {
         SupplierMaterialPriceFilter.free => true,
@@ -97,7 +114,7 @@ class SupplierMaterialFilterChips extends StatelessWidget {
     final l = context.s;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           l.filterStatusLabel,
@@ -107,7 +124,7 @@ class SupplierMaterialFilterChips extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
-        _ChipRow(
+        SupplierResponsiveChipRow(
           children: SupplierMaterialStatusFilter.values
               .map(
                 (filter) => _FilterChip(
@@ -128,7 +145,7 @@ class SupplierMaterialFilterChips extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
-        _ChipRow(
+        SupplierResponsiveChipRow(
           children: SupplierMaterialPriceFilter.values
               .map(
                 (filter) => _FilterChip(
@@ -141,27 +158,6 @@ class SupplierMaterialFilterChips extends StatelessWidget {
               .toList(),
         ),
       ],
-    );
-  }
-}
-
-class _ChipRow extends StatelessWidget {
-  const _ChipRow({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const SizedBox(width: AppSpacing.sm),
-            children[i],
-          ],
-        ],
-      ),
     );
   }
 }
@@ -218,6 +214,7 @@ class _FilterChip extends StatelessWidget {
           ),
           child: Text(
             label,
+            softWrap: false,
             style: context.supplierBody().copyWith(
               color: selected
                   ? SupplierMyMaterialsColors.chipSelectedText(context, accent)
