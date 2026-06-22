@@ -119,7 +119,7 @@ Gap docs are stubs — see [09-open-questions.md](09-open-questions.md) before i
 
 **Not documented as implemented:** learner reservation create, delivery workflow, AI material matching agent, admin portal, moderator portal (unless code changes prove otherwise).
 
-ADRs (`docs/adr/`) — not written yet.
+ADRs (`docs/adr/`) — accepted architecture decisions.
 
 ## Doc filename reference
 
@@ -129,6 +129,10 @@ ADRs (`docs/adr/`) — not written yet.
 | `05-database-guide.md` | `database/schema-overview.md` + `tables-catalog.md` |
 | `06-frontend-guide.md` | Not written — use `frontend/routes-map.md` + `frontend/reusable-widgets.md` + `frontend/state-management.md` |
 | `07-ui-style-guide.md` | Legacy/auth-specific reference — use `07-theme-system.md` for app theme architecture |
+
+## ADRs
+
+Use [docs/adr/](adr/) for accepted architecture decisions. Do not create ADRs for unresolved questions or not-implemented features unless the ADR explicitly records a proven current decision.
 
 ## If unsure whether docs need update
 

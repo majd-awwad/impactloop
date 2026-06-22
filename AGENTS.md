@@ -94,10 +94,12 @@ Before editing, read:
 - docs/00-ai-docs-router.md
 
 Documentation must be updated when changing:
-- API endpoints, request bodies, response shapes
+- API behavior, endpoints, request bodies, response shapes
 - Database schema, enums, relations, migrations
-- Feature behavior or user flows
-- Shared widgets, theme tokens, reusable UI patterns
+- Feature behavior
+- User flows
+- Shared widgets, reusable UI patterns
+- Theme tokens, colors, palettes
 - Auth, roles, permissions, delivery, AI credit rules
 - Architecture or major technical decisions
 

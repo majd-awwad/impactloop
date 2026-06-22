@@ -114,7 +114,7 @@ Start here for agents and contributors:
 | Supplier portal | [docs/features/supplier-portal.md](docs/features/supplier-portal.md) | [supplier-material-listing-flow](docs/flows/supplier-material-listing-flow.md), [supplier-reservation-flow](docs/flows/supplier-reservation-flow.md) | **Partial** |
 | Learning hub | [docs/features/learning-hub.md](docs/features/learning-hub.md) | [learning-hub-browse-flow](docs/flows/learning-hub-browse-flow.md) | **Partial** — Flutter **mock-only**; API **backend-only** |
 
-ADRs (`docs/adr/`) are **not written yet**.
+ADRs live in [docs/adr/](docs/adr/) for accepted architecture decisions.
 
 ### Feature & flow docs (Phase 2B — supporting)
 
