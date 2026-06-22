@@ -23,7 +23,7 @@ Update:
 - [frontend/routes-map.md](frontend/routes-map.md) if routes/guards changed
 - [frontend/reusable-widgets.md](frontend/reusable-widgets.md) if a shared widget was added/changed
 - [08-implementation-status.md](08-implementation-status.md) if feature ship status changed
-- Matching [features/](features/) and [flows/](flows/) doc when user-facing behavior changed (see [Canonical feature & flow docs](#canonical-feature--flow-docs-phase-2a))
+- Matching [features/](features/) and [flows/](flows/) doc when user-facing behavior changed (see [Feature & flow docs](#feature--flow-docs))
 
 ## If editing backend API
 
@@ -38,7 +38,7 @@ Update:
 - [backend/api-catalog.md](backend/api-catalog.md) if endpoint/request/response changed
 - [backend/modules-map.md](backend/modules-map.md) if module responsibilities changed
 - [08-implementation-status.md](08-implementation-status.md) if feature ship status changed
-- Matching [features/](features/) and [flows/](flows/) doc when API or flow behavior changed (see [Canonical feature & flow docs](#canonical-feature--flow-docs-phase-2a))
+- Matching [features/](features/) and [flows/](flows/) doc when API or flow behavior changed (see [Feature & flow docs](#feature--flow-docs))
 
 ## If editing Prisma/database
 
@@ -66,6 +66,8 @@ Read:
 - [backend/api-catalog.md](backend/api-catalog.md) (auth section)
 - [features/auth.md](features/auth.md)
 - [flows/auth-flow.md](flows/auth-flow.md)
+- [features/invitations.md](features/invitations.md) if invitation roles change
+- [flows/invitation-flow.md](flows/invitation-flow.md)
 
 Ask the human if:
 
@@ -74,9 +76,11 @@ Ask the human if:
 - Token storage changes
 - Role permissions change
 
-## Canonical feature & flow docs (Phase 2A)
+## Feature & flow docs
 
-Code-derived narratives for implemented/partial core features. Status labels in each doc match [08-implementation-status.md](08-implementation-status.md).
+Code-derived narratives. Status labels match [08-implementation-status.md](08-implementation-status.md).
+
+### Phase 2A — core features
 
 | Feature | Feature doc | Flow doc(s) | Ship status (summary) |
 |---------|-------------|-------------|------------------------|
@@ -85,7 +89,17 @@ Code-derived narratives for implemented/partial core features. Status labels in 
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** — material read/create; supplier reservations only; no learner create |
 | Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — Flutter **mock-only**; `GET /api/learning-projects` **backend-only** until wired |
 
-**Not documented as implemented:** learner reservations, delivery, AI agent, admin, moderator (unless code changes prove otherwise).
+### Phase 2B — supporting features
+
+| Area | Feature doc | Flow doc(s) | Ship status (summary) |
+|------|-------------|-------------|------------------------|
+| Materials listing (shared data layer) | [features/materials-listing.md](features/materials-listing.md) | — (see [supplier-material-listing-flow](flows/supplier-material-listing-flow.md)) | **Partial** — supplier create support; no update/delete |
+| Locations | [features/locations.md](features/locations.md) | — | **Partial** — reverse geocode + profile/material usage; public redaction **Needs verification** |
+| Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Backend-only** — no admin portal or Flutter accept UI |
+| Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static UI; no API |
+| Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — suggested materials **API-backed**; learning spotlight **mock-only** |
+
+**Not documented as implemented:** learner reservations, delivery, AI agent, admin portal, moderator portal (unless code changes prove otherwise).
 
 ADRs (`docs/adr/`) — not written yet.
 

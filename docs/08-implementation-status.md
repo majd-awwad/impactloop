@@ -58,16 +58,18 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 
 ## Flutter features (9 folders)
 
-| Feature | Status | Backend | Frontend data |
-|---------|--------|---------|---------------|
-| `auth` | **Partial** | `/api/auth/*` (incl. forgot/reset API) | API for register/login/me/change-password; forgot-password UI **not built** (`login_form.dart`) |
-| `health` | **Implemented** | `/health` | API |
-| `landing` | **Implemented** | — | Static UI |
-| `home` | **Partial** | — | Suggested materials: API; learning spotlight: **mock** |
-| `material_discovery` | **Implemented** | `GET /api/materials` | `ApiMaterialDiscoveryRepository` default |
-| `materials` | **Partial** | taxonomy/upload APIs | Data layer for supplier add-material; no routes |
-| `learning_hub` | **Partial** | `GET /api/learning-projects` implemented | **Frontend mock-only** — `learning_hub_mock_data.dart`, not wired to API |
-| `supplier_portal` | **Partial** | `/api/supplier/*` | API repositories (mocks exist but providers use API); material **read/create** only — no update/delete API |
+| Feature | Status | Backend | Frontend data | Feature doc |
+|---------|--------|---------|---------------|-------------|
+| `auth` | **Partial** | `/api/auth/*` (incl. forgot/reset API) | API for register/login/me/change-password; forgot-password UI **not built** (`login_form.dart`) | — |
+| `health` | **Implemented** | `/health` | API | — |
+| `landing` | **Implemented** | — | Static UI | [landing.md](features/landing.md) |
+| `home` | **Partial** | — | Suggested materials: API; learning spotlight: **mock** | [home-learner.md](features/home-learner.md) |
+| `material_discovery` | **Implemented** | `GET /api/materials` | `ApiMaterialDiscoveryRepository` default | — |
+| `materials` | **Partial** | taxonomy/upload APIs | Data layer for supplier add-material; no routes | [materials-listing.md](features/materials-listing.md) |
+| `learning_hub` | **Partial** | `GET /api/learning-projects` implemented | **Frontend mock-only** — `learning_hub_mock_data.dart`, not wired to API | — |
+| `supplier_portal` | **Partial** | `/api/supplier/*` | API repositories (mocks exist but providers use API); material **read/create** only — no update/delete API | — |
+| `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH | `supplier_portal` profile/map | [locations.md](features/locations.md) |
+| `invitations` *(no Flutter feature folder)* | **Backend-only** | `/api/invitations` | No Flutter UI | [invitations.md](features/invitations.md) |
 
 ### Flutter **not implemented** as features
 
@@ -148,8 +150,9 @@ Mapped from [05-roadmap.md](05-roadmap.md) to **code reality** — roadmap text 
 | Doc set | Status |
 |---------|--------|
 | Phase 0–1 inventories (this file, api-catalog, database/*, routes-map) | **Implemented** |
-| Phase 2A feature docs (`docs/features/`) | **Partial** — 4 core features documented (see table below) |
-| Phase 2A flow docs (`docs/flows/`) | **Partial** — 5 flows documented (see table below) |
+| Phase 2A feature docs (`docs/features/`) | **Partial** — 4 core features documented |
+| Phase 2A flow docs (`docs/flows/`) | **Partial** — 5 flows documented |
+| Phase 2B supporting docs (`docs/features/`, `docs/flows/`) | **Partial** — 5 features + 1 flow documented (see tables below) |
 | ADRs (`docs/adr/`) | **Not implemented** |
 
 ### Phase 2A canonical docs (code-derived)
@@ -161,4 +164,14 @@ Mapped from [05-roadmap.md](05-roadmap.md) to **code reality** — roadmap text 
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** |
 | Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — UI **mock-only**; API **backend-only** |
 
-**Not covered as implemented:** learner reservations, delivery, AI agent, admin, moderator.
+**Not covered as implemented:** learner reservations, delivery, AI agent, admin portal, moderator portal.
+
+### Phase 2B supporting docs (code-derived)
+
+| Area | Feature doc | Flow doc(s) | Code status (unchanged) |
+|------|-------------|-------------|-------------------------|
+| Materials listing | [features/materials-listing.md](features/materials-listing.md) | — | **Partial** |
+| Locations | [features/locations.md](features/locations.md) | — | **Partial** — public redaction **Needs verification** |
+| Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Backend-only** |
+| Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static; no API |
+| Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — materials API; learning spotlight **mock-only** |

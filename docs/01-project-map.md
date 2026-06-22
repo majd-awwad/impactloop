@@ -118,7 +118,13 @@ Not Express modules; live in `apps/backend/src/services/`:
 | Shared widgets | [frontend/reusable-widgets.md](frontend/reusable-widgets.md) |
 | Ship status | [08-implementation-status.md](08-implementation-status.md) |
 
-Feature docs (`docs/features/`, `docs/flows/`) — **planned, not written in Phase 0–1**.
+### Feature & flow docs (code-derived)
+
+**Phase 2A — core:** [auth](features/auth.md), [material-discovery](features/material-discovery.md), [supplier-portal](features/supplier-portal.md), [learning-hub](features/learning-hub.md) — flows under [flows/](flows/).
+
+**Phase 2B — supporting:** [materials-listing](features/materials-listing.md), [locations](features/locations.md), [invitations](features/invitations.md) + [invitation-flow](flows/invitation-flow.md), [landing](features/landing.md), [home-learner](features/home-learner.md).
+
+Index with status summaries: [00-ai-docs-router.md](00-ai-docs-router.md#feature--flow-docs), [08-implementation-status.md](08-implementation-status.md#documentation-phase).
 
 ## Tests (backend)
 

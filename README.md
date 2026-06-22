@@ -113,6 +113,16 @@ Start here for agents and contributors:
 
 ADRs (`docs/adr/`) are **not written yet**.
 
+### Feature & flow docs (Phase 2B — supporting)
+
+| Area | Doc | Flow(s) | Status (summary) |
+|------|-----|---------|------------------|
+| Materials listing | [docs/features/materials-listing.md](docs/features/materials-listing.md) | — | **Partial** |
+| Locations | [docs/features/locations.md](docs/features/locations.md) | — | **Partial** — public redaction **Needs verification** |
+| Invitations | [docs/features/invitations.md](docs/features/invitations.md) | [invitation-flow](docs/flows/invitation-flow.md) | **Backend-only** |
+| Landing | [docs/features/landing.md](docs/features/landing.md) | — | **Implemented** — static; no API |
+| Home (learner) | [docs/features/home-learner.md](docs/features/home-learner.md) | — | **Partial** — suggested materials API; learning spotlight **mock-only** |
+
 ### Supplementary docs (context — not canonical inventories)
 
 | Doc | Status |
