@@ -967,12 +967,12 @@ class SupplierL10n {
       t('What are you listing?', 'ماذا تدرج؟');
   String get listingSectionSubtitle =>
       t('Describe the surplus material clearly.', 'صف المادة الفائضة بوضوح.');
-  String get materialName => t('Material name', 'اسم المادة');
+  String get materialName => t('Material type/name', 'نوع/اسم المادة');
   String get materialNameHint =>
       t('Wax molds, Arduino Uno, fabric scraps...', 'قوالب شمع، Arduino Uno، بقايا قماش...');
   String get materialNameHelper => t(
-        'Use the common name of the item. We use this to verify paid listing prices.',
-        'استخدم الاسم الشائع للعنصر. نستخدمه للتحقق من أسعار الإدراج المدفوعة.',
+        'Use the common material type or alias. We use this for matching and paid price checks.',
+        'استخدم نوع المادة الشائع أو الاسم البديل. نستخدمه للمطابقة والتحقق من الأسعار المدفوعة.',
       );
   String get listingTitle => t('Listing title', 'عنوان الإدراج');
   String get listingTitleHint =>
@@ -1206,8 +1206,12 @@ class SupplierL10n {
   String get recentMaterials => t('Recent materials', 'المواد الأخيرة');
   String get materialPhotos => t('Material photos', 'صور المادة');
   String get materialPhotosSubtitle => t(
-        'Add up to 5 photos. JPG, PNG, or WebP.',
-        'أضف حتى 5 صور. JPG أو PNG أو WebP.',
+        'Add 1 to 5 photos. JPG, PNG, or WebP.',
+        'أضف من صورة إلى 5 صور. JPG أو PNG أو WebP.',
+      );
+  String get addAtLeastOneMaterialPhoto => t(
+        'Add at least one material photo before publishing.',
+        'أضف صورة واحدة على الأقل للمادة قبل النشر.',
       );
   String get selectedPhotos => t('Selected photos', 'الصور المحددة');
   String get addImages => t('Add images', 'إضافة صور');

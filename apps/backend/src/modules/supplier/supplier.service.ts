@@ -35,6 +35,23 @@ const MISSING_PROFILE_MESSAGE =
 const MISSING_PICKUP_LOCATION_MESSAGE =
   'Add a default pickup location before listing materials.';
 
+const deriveMaterialSourceType = (supplierType: string | null) => {
+  switch (supplierType) {
+    case 'WORKSHOP':
+      return 'WORKSHOP_SURPLUS' as const;
+    case 'FACTORY':
+      return 'FACTORY_SURPLUS' as const;
+    case 'EDUCATIONAL_INSTITUTION':
+      return 'EDUCATIONAL_INSTITUTION' as const;
+    case 'INDIVIDUAL_SUPPLIER':
+      // TODO: MVP fallback. Revisit when the source enum can distinguish individual suppliers.
+      return 'STUDENT_LEFTOVER' as const;
+    case 'STUDENT_SUPPLIER':
+    default:
+      return 'STUDENT_LEFTOVER' as const;
+  }
+};
+
 const assertSourceRequestPublishable = async (
   userId: string,
   input: CreateSupplierMaterialInput,
@@ -324,6 +341,7 @@ export const createSupplierMaterial = async (
   }
 
   await assertSourceRequestPublishable(userId, input);
+  const sourceType = deriveMaterialSourceType(supplierProfile.supplierType);
 
   const requestedCategory = await categoriesRepository.findCategoryById(
     input.categoryId,
@@ -369,7 +387,7 @@ export const createSupplierMaterial = async (
       quantity: input.quantity,
       unit: input.unit,
       condition: input.condition,
-      sourceType: input.sourceType,
+      sourceType,
       isFree: true,
       price: null,
       currency: 'NIS',
@@ -445,7 +463,7 @@ export const createSupplierMaterial = async (
     quantity: input.quantity,
     unit: input.unit,
     condition: input.condition,
-    sourceType: input.sourceType,
+    sourceType,
     isFree: false,
     price: input.price,
     currency: 'NIS',

@@ -13,37 +13,37 @@ Supplier chooses **Add material** (`/supplier/materials/new`) or resumes from ap
 ### User path
 
 1. Open add material form in supplier shell.
-2. Select category, material type/name, condition, quantity, price/free, source type, pickup options.
+2. Enter material type/name, listing title, category, condition, quantity, price/free, and pickup options.
 3. Run price check (paid listings).
-4. Upload images.
-5. Set pickup location (map / reverse geocode).
+4. Upload at least one image.
+5. Review pickup location from the supplier profile.
 6. Submit → material created → navigate to my materials or detail.
 
 ### Frontend path
 
 `AddMaterialPage` → Riverpod providers:
 
-- `material_listing_providers.dart` → categories, listing policy, material types, price check
+- `material_listing_providers.dart` → categories, listing policy, price check
 - `material_upload_api.dart` → `POST /api/uploads/material-images`
 - `supplier_materials_repository.dart` → `POST /api/supplier/materials`
-- `locations_api.dart` → `POST /api/locations/reverse-geocode` when coordinates used
 - Optional: `category_requests_api.dart`, `price_rule_requests_api.dart`
 
 ### Backend path
 
-1. `GET /api/categories`, `GET /api/material-types`, `GET /api/materials/listing-policy`
-2. `POST /api/materials/price-check` (authenticated)
+1. `GET /api/categories`, `GET /api/materials/listing-policy`
+2. `POST /api/materials/price-check` (authenticated; resolves `materialName` against material types/aliases)
 3. `POST /api/uploads/material-images` (SUPPLIER)
 4. `POST /api/supplier/materials` → `supplier.service.createMaterial` → `supplier.repository.createSupplierMaterial`
 
 May link `sourceCategoryRequestId` / `sourcePriceRuleRequestId` to mark request published.
 
+`materialName` is free text used for backend material type/alias matching and price checks. The current Add Material UI does not implement material-type autocomplete; `GET /api/material-types` remains available for future type search flows. `title` is display-only. `sourceType` is derived server-side from the supplier profile and legacy client values are ignored.
+
 ### Database changes
 
 Insert/update:
 
-- `materials`, `material_images`, `material_tags` (if any)
-- `locations` (if new location created inline — **Needs verification**)
+- `materials`, `material_images`, `material_tags`
 - `category_requests` / `price_rule_requests` → `publishedMaterialId`, `publishedAt` when sourced from request
 
 ### Success state
@@ -53,6 +53,7 @@ Insert/update:
 ### Error states
 
 - Validation 400 → field errors on form
+- Missing images → frontend block and backend create validation rejection
 - Price above max allowed → price check / create rejection
 - Upload failure → image section error
 - 403 if not SUPPLIER
@@ -120,6 +121,5 @@ Read-only.
 
 ## Open questions
 
-- Exact payload for `CreateMaterialRequest` and required location fields?
 - When does price-rule AI write to `ai_price_lookup_logs`?
 - Organization supplier type: extra `organization_profiles` fields on create?

@@ -15,7 +15,7 @@ Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials,
 | Supplier shell + routes | **Implemented** | `/supplier/*` with role guard |
 | Dashboard, profile, notifications | **Implemented** | API-backed |
 | My materials list + detail | **Partial** | List/detail read; **no update/delete** |
-| Add material | **Implemented** | Create + uploads + price check + category/price-rule requests |
+| Add material | **Implemented** | Create + required image upload + price check + category/price-rule requests |
 | Incoming reservations | **Partial** | Supplier accept/decline/complete only; reservations created via **seed**, not learner API |
 | Pickup schedule | **Implemented** | API-backed (`supplier_pickup_schedule_api.dart`) |
 | Mock repositories | **Not used** | `MockSupplier*Repository` files exist; providers wire API impl |
@@ -24,11 +24,13 @@ Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials,
 
 1. Supplier logs in → redirect `/supplier` (dashboard).
 2. Navigate via shell: materials, add material, reservations, pickup schedule, notifications, profile.
-3. **Add material:** taxonomy → price check → images → `POST /api/supplier/materials`.
+3. **Add material:** taxonomy → price check → at least one image → `POST /api/supplier/materials`.
 4. **Reservations:** review pending → accept with pickup window / decline / mark complete after pickup.
 5. **Profile:** `PATCH /api/supplier/profile`, reverse geocode for location, change password via auth API.
 
 Supplier API calls use the shared authenticated Dio client. When the access token expires, eligible Supplier JSON requests now refresh the token centrally through the auth/network layer and retry once. Material image uploads are not auto-retried because replaying multipart request bodies is unsafe; expired sessions during upload surface as an auth/API error.
+
+Add-material create sends a `materialName` used for backend material type/alias matching and paid price checks. `Listing title` remains display-only. The UI no longer asks for source type; backend derives `materials.sourceType` from `supplierProfile.supplierType` (`WORKSHOP` → `WORKSHOP_SURPLUS`, `FACTORY` → `FACTORY_SURPLUS`, `EDUCATIONAL_INSTITUTION` → `EDUCATIONAL_INSTITUTION`, `INDIVIDUAL_SUPPLIER` → `STUDENT_LEFTOVER`). The individual mapping is an MVP fallback and may need a more precise enum later.
 
 ## Frontend files
 

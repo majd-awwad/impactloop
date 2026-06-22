@@ -22,7 +22,7 @@ export const listingDraftJsonSchema = z.object({
   requestedCategoryName: z.string().trim().min(1).max(200),
   categoryId: z.string().trim().min(1).nullable().optional(),
   condition: materialConditionSchema,
-  sourceType: materialSourceTypeSchema,
+  sourceType: materialSourceTypeSchema.optional(),
   quantity: z.number().positive(),
   unit: z.string().trim().min(1).max(40),
   isFree: z.boolean(),

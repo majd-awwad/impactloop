@@ -7,7 +7,6 @@ class CreateMaterialRequest {
     required this.quantity,
     required this.unit,
     required this.condition,
-    required this.sourceType,
     required this.isFree,
     this.price,
     this.currency = 'NIS',
@@ -27,7 +26,6 @@ class CreateMaterialRequest {
   final double quantity;
   final String unit;
   final String condition;
-  final String sourceType;
   final bool isFree;
   final double? price;
   final String currency;
@@ -48,7 +46,6 @@ class CreateMaterialRequest {
       'quantity': quantity,
       'unit': unit,
       'condition': condition,
-      'sourceType': sourceType,
       'isFree': isFree,
       'price': price,
       'currency': currency,

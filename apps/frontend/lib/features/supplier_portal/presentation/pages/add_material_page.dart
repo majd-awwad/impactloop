@@ -31,16 +31,12 @@ const _conditions = [
   'NEW',
   'LIKE_NEW',
   'GOOD',
-  'USED',
   'NEEDS_REPAIR',
 ];
 
-const _sourceTypes = [
-  'STUDENT_LEFTOVER',
-  'WORKSHOP_SURPLUS',
-  'FACTORY_SURPLUS',
-  'EDUCATIONAL_INSTITUTION',
-];
+String _createConditionValue(String? value) {
+  return value == 'USED' ? 'GOOD' : value ?? 'GOOD';
+}
 
 class AddMaterialPage extends ConsumerStatefulWidget {
   const AddMaterialPage({
@@ -69,8 +65,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   final _requestedCategoryController = TextEditingController();
 
   String? _categoryId;
-  String _condition = 'USED';
-  String _sourceType = 'STUDENT_LEFTOVER';
+  String _condition = 'GOOD';
   bool _isFree = true;
   bool _pickupAllowed = true;
   bool _showCategoryRequestField = false;
@@ -311,43 +306,24 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   maxLines: 5,
                 ),
                 const SupplierFieldGap(),
-                _ResponsiveRow(
-                  children: [
-                    SupplierDarkDropdownField<String>(
-                      label: l.sourceType,
-                      hint: l.chooseSource,
-                      value: _sourceType,
-                      items: _sourceTypes
-                          .map(
-                            (value) => DropdownMenuItem(
-                              value: value,
-                              child: Text(l.sourceTypeLabel(value)),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) =>
-                          setState(() => _sourceType = value ?? _sourceType),
-                    ),
-                    SupplierDarkDropdownField<String>(
-                      label: l.condition,
-                      hint: l.chooseCondition,
-                      value: _condition,
-                      items: _conditions
-                          .map(
-                            (value) => DropdownMenuItem(
-                              value: value,
-                              child: Text(l.conditionLabel(value)),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _condition = value ?? _condition;
-                          _invalidatePriceCheck();
-                        });
-                      },
-                    ),
-                  ],
+                SupplierDarkDropdownField<String>(
+                  label: l.condition,
+                  hint: l.chooseCondition,
+                  value: _condition,
+                  items: _conditions
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(l.conditionLabel(value)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _condition = _createConditionValue(value);
+                      _invalidatePriceCheck();
+                    });
+                  },
                 ),
                 const SupplierFieldGap(),
                 SupplierDarkTextArea(
@@ -701,7 +677,6 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       'requestedCategoryName': requestedCategoryName,
       'categoryId': _categoryId,
       'condition': _condition,
-      'sourceType': _sourceType,
       'quantity': quantity,
       'unit': _unitController.text.trim().isEmpty
           ? 'piece'
@@ -904,8 +879,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     _materialNameController.text = json['materialName'] as String? ?? '';
     _titleController.text = json['title'] as String? ?? '';
     _descriptionController.text = json['description'] as String? ?? '';
-    _condition = json['condition'] as String? ?? _condition;
-    _sourceType = json['sourceType'] as String? ?? _sourceType;
+    _condition = _createConditionValue(json['condition'] as String?);
     _quantityController.text = (json['quantity'] as num?)?.toString() ?? '1';
     _unitController.text = json['unit'] as String? ?? 'piece';
     _isFree = isFree;
@@ -1241,6 +1215,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     if (!(_formKey.currentState?.validate() ?? false) || _categoryId == null) {
       return;
     }
+    if (_images.isEmpty) {
+      showSupplierErrorSnackBar(context, context.s.addAtLeastOneMaterialPhoto);
+      return;
+    }
     final quantity = double.tryParse(_quantityController.text.trim());
     if (quantity == null || quantity <= 0) return;
     final price = _isFree ? null : double.tryParse(_priceController.text.trim());
@@ -1291,7 +1269,6 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               quantity: quantity,
               unit: _unitController.text.trim(),
               condition: _condition,
-              sourceType: _sourceType,
               isFree: _isFree,
               price: price,
               pickupAllowed: _pickupAllowed,

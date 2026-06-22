@@ -5,13 +5,17 @@ import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 
 import {
+  createSupplierMaterial,
   deleteSupplierMaterial,
   getSupplierMaterial,
   getSupplierMaterials,
   updateSupplierMaterial,
 } from './supplier.service.js';
 import { AppError } from '../../utils/app-error.js';
-import { updateSupplierMaterialSchema } from './supplier.validation.js';
+import {
+  createSupplierMaterialSchema,
+  updateSupplierMaterialSchema,
+} from './supplier.validation.js';
 
 const TEST_MARKER = '[test-supplier-materials]';
 
@@ -398,6 +402,117 @@ describe('getSupplierMaterials', () => {
     assert.ok(reusedItem);
     assert.equal(reusedItem.canDelete, false);
     assert.equal(reusedItem.deleteBlockedReason, 'REUSED_HISTORY');
+  });
+});
+
+describe('createSupplierMaterial', () => {
+  const ctx: TestContext = {
+    supplierId: '',
+    otherSupplierId: '',
+    categoryId: '',
+    locationId: '',
+    createdMaterialIds: [],
+    createdUserIds: [],
+    createdReservationIds: [],
+    learnerId: '',
+  };
+
+  before(async () => {
+    const category = await prisma.category.findFirst({
+      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      select: { id: true },
+    });
+    const location = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: 'Nablus',
+        area: `${TEST_MARKER}-create`,
+        visibility: 'PRIVATE',
+        isApproximate: true,
+      },
+      select: { id: true },
+    });
+    const supplier = await createSupplierUser('create');
+
+    assert.ok(category);
+    ctx.categoryId = category.id;
+    ctx.locationId = location.id;
+    ctx.supplierId = supplier.id;
+    ctx.createdUserIds.push(supplier.id);
+
+    await prisma.supplierProfile.update({
+      where: { userId: supplier.id },
+      data: {
+        supplierType: 'WORKSHOP',
+        defaultPickupLocationId: location.id,
+      },
+    });
+  });
+
+  after(async () => {
+    await cleanup(ctx);
+    await prisma.location.deleteMany({ where: { id: ctx.locationId } });
+  });
+
+  test('requires at least one material image in create schema', () => {
+    const basePayload = {
+      materialName: 'Test material',
+      title: 'Reusable test material',
+      description: 'Reusable test material description.',
+      categoryId: ctx.categoryId,
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      isFree: true,
+      price: null,
+      currency: 'NIS',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    };
+
+    assert.equal(createSupplierMaterialSchema.safeParse(basePayload).success, false);
+    assert.equal(
+      createSupplierMaterialSchema.safeParse({
+        ...basePayload,
+        imageUrls: [],
+      }).success,
+      false,
+    );
+    assert.equal(
+      createSupplierMaterialSchema.safeParse({
+        ...basePayload,
+        imageUrls: ['/uploads/materials/test-create.jpg'],
+      }).success,
+      true,
+    );
+  });
+
+  test('derives source type from supplier profile and ignores client value', async () => {
+    const material = await createSupplierMaterial(ctx.supplierId, {
+      materialName: 'Unmatched create material',
+      title: `${TEST_MARKER} create source derivation`,
+      description: `${TEST_MARKER} create source derivation description`,
+      categoryId: ctx.categoryId,
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      sourceType: 'FACTORY_SURPLUS',
+      isFree: true,
+      price: null,
+      currency: 'NIS',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ['/uploads/materials/test-create-source.jpg'],
+    });
+    ctx.createdMaterialIds.push(material.id);
+
+    const persisted = await prisma.material.findUnique({
+      where: { id: material.id },
+      select: { sourceType: true, images: true },
+    });
+
+    assert.equal(persisted?.sourceType, 'WORKSHOP_SURPLUS');
+    assert.equal(persisted?.images.length, 1);
   });
 });
 

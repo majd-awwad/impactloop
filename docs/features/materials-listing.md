@@ -17,7 +17,7 @@ The `materials` feature folder has **no routes** — it is consumed by `supplier
 | Flutter `features/materials` data layer | **Partial** | API clients + `MaterialListingRepository`; no presentation routes |
 | Categories + material types | **Implemented** | Public read APIs wired |
 | Listing policy + price check | **Implemented** | Used before paid create |
-| Image upload | **Implemented** | `POST /api/uploads/material-images` (SUPPLIER) |
+| Image upload | **Implemented** | `POST /api/uploads/material-images` (SUPPLIER); create requires 1-5 image URLs |
 | Category requests | **Implemented** | Create + list + draft under `/api/supplier/category-requests` |
 | Price rule requests | **Partial** | Create (`/api/price-rule-requests`) + supplier drafts; AI suggestion internal to backend |
 | Material create (`POST /api/supplier/materials`) | **Implemented** | Via `supplier_materials_repository.dart`, not in this feature folder |
@@ -31,7 +31,7 @@ End-to-end create flow is documented in [supplier-material-listing-flow](../flow
 AddMaterialPage
   → material_listing_providers.dart
   → MaterialListingRepository
-      → categories, material-types, listing-policy, price-check
+      → categories, listing-policy, price-check
       → category-requests, price-rule-requests (optional)
       → material-images upload
   → supplier_materials_repository → POST /api/supplier/materials
@@ -39,13 +39,17 @@ AddMaterialPage
 
 **Pickup location** for create uses the supplier profile’s `defaultPickupLocation` (set on profile page) — not a separate field on `CreateMaterialRequest`. Backend assigns `locationId` from `supplierProfile.defaultPickupLocationId` (`supplier.service.ts`).
 
+**Source type** is no longer supplied by the add-material UI. Backend derives `materials.sourceType` from `supplierProfile.supplierType`: `WORKSHOP` → `WORKSHOP_SURPLUS`, `FACTORY` → `FACTORY_SURPLUS`, `EDUCATIONAL_INSTITUTION` → `EDUCATIONAL_INSTITUTION`, and `INDIVIDUAL_SUPPLIER` → `STUDENT_LEFTOVER` as an MVP fallback. Legacy client `sourceType` values may still be accepted by validation but are ignored on create.
+
+**Material type/name** is sent as `materialName`. It is used for material type/alias matching, paid price checks, and the saved `materialType` / `customMaterialType`. The separate `title` field is display copy only.
+
 ## Main user flow (supplier add material)
 
 1. Load categories, listing policy, optional pending category requests.
-2. Search material types by category (`GET /api/material-types`).
+2. Enter free-text material type/name (`materialName`); backend resolves material types/aliases during price check and create.
 3. For paid listings: run price check (`POST /api/materials/price-check`).
 4. If taxonomy/price unknown: submit category request and/or price rule request; later resume from draft query params.
-5. Upload draft images (`POST /api/uploads/material-images`).
+5. Upload at least one draft image (`POST /api/uploads/material-images`).
 6. Submit create via supplier API (uses uploaded `imageUrls` + taxonomy fields).
 
 ## Frontend files
@@ -95,7 +99,7 @@ Static: `GET /uploads/materials/*`
 | Table | Role |
 |-------|------|
 | `categories`, `material_types`, `material_price_rules` | Taxonomy and pricing |
-| `materials`, `material_images`, `material_tags` | Created listing (via supplier create) |
+| `materials`, `material_images`, `material_tags` | Created listing (via supplier create; at least one material image is required) |
 | `category_requests` | Pending/approved category proposals + `listingDraftJson` |
 | `price_rule_requests` | Pending price reviews + AI result JSON |
 | `ai_price_lookup_logs` | Internal AI price lookups — **Needs verification** when written |

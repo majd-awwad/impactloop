@@ -123,7 +123,7 @@ export const createSupplierMaterialSchema = z.object({
   quantity: z.number().positive(),
   unit: z.string().trim().min(1).max(40),
   condition: z.enum(materialConditions),
-  sourceType: z.enum(materialSourceTypes),
+  sourceType: z.enum(materialSourceTypes).optional(),
   isFree: z.boolean(),
   price: z.number().nonnegative().optional().nullable(),
   currency: z.literal('NIS').default('NIS'),
@@ -131,7 +131,7 @@ export const createSupplierMaterialSchema = z.object({
   deliveryAllowed: z.literal(false).default(false),
   pickupNotes: z.string().trim().max(500).optional().nullable(),
   suggestedUses: z.string().trim().max(1000).optional().nullable(),
-  imageUrls: z.array(materialImageUrlSchema).max(5).optional().default([]),
+  imageUrls: z.array(materialImageUrlSchema).min(1).max(5),
   sourceCategoryRequestId: z.string().trim().min(1).optional(),
   sourcePriceRuleRequestId: z.string().trim().min(1).optional(),
 });
