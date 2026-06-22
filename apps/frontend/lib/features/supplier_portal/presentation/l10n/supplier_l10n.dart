@@ -1295,6 +1295,10 @@ class SupplierL10n {
         'Price verification required',
         'التحقق من السعر مطلوب',
       );
+  String get verifyPriceWithinApprovedCap => t(
+        'Within approved cap — verify price to publish',
+        'ضمن الحد المعتمد — تحقق من السعر للنشر',
+      );
   String get categoryRequests => t('Category requests', 'طلبات الفئات');
   String approvedAs(String name) => t('Approved as $name', 'موافق عليه كـ $name');
   String get waitingAdminApproval => t(

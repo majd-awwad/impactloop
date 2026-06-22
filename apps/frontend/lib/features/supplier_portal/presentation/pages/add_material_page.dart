@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../materials/application/material_listing_providers.dart';
+import '../../../materials/data/material_listing_repository.dart';
 import '../../../materials/data/models/category.dart';
 import '../../../materials/data/models/create_material_request.dart';
 import '../../../materials/data/models/created_material.dart';
@@ -162,6 +163,116 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     });
   }
 
+  MaterialCategory? _findCategoryById(
+    List<MaterialCategory> categories,
+    String? categoryId,
+  ) {
+    if (categoryId == null) {
+      return null;
+    }
+    for (final category in categories) {
+      if (category.id == categoryId) {
+        return category;
+      }
+    }
+    return null;
+  }
+
+  bool _isPaidOtherBlockedForCategory(MaterialCategory? category) {
+    if (_isFree || category == null) {
+      return false;
+    }
+    return category.nameEn.toLowerCase() == 'other';
+  }
+
+  /// Paid listings can publish only after a successful price check.
+  /// Backend create always requires `checkMaterialPrice.allowed`.
+  bool _paidListingCanPublish(MaterialCategory? category) {
+    if (_isFree) {
+      return true;
+    }
+    if (_isPaidOtherBlockedForCategory(category)) {
+      return false;
+    }
+    return _priceCheck?.allowed == true;
+  }
+
+  bool _canPublishListing(MaterialCategory? category) {
+    return _paidListingCanPublish(category);
+  }
+
+  bool _isWithinApprovedPriceRuleCap() {
+    if (_isFree || _maxAllowedUnitPrice == null) {
+      return false;
+    }
+    final price = double.tryParse(_priceController.text.trim());
+    return price != null && price > 0 && price <= _maxAllowedUnitPrice!;
+  }
+
+  AddMaterialPreviewPriceStatus? _previewPriceStatus(MaterialCategory? category) {
+    if (_isFree) {
+      return null;
+    }
+    if (_paidListingCanPublish(category)) {
+      return AddMaterialPreviewPriceStatus.verified;
+    }
+    if (_priceCheck != null && !_priceCheck!.allowed) {
+      return AddMaterialPreviewPriceStatus.verificationFailed;
+    }
+    if (_isWithinApprovedPriceRuleCap() &&
+        _sourcePriceRuleRequestId != null &&
+        !_isPaidOtherBlockedForCategory(category)) {
+      return AddMaterialPreviewPriceStatus.withinApprovedCapVerifyPending;
+    }
+    return AddMaterialPreviewPriceStatus.verifyRequired;
+  }
+
+  void _onCategoryChanged(String? value) {
+    if (value == _categoryId) {
+      return;
+    }
+    setState(() {
+      _categoryId = value;
+      _materialNameController.clear();
+      _selectedMaterialType = null;
+      _priceCheck = null;
+      _priceReviewMessage = null;
+      _maxAllowedUnitPrice = null;
+      _maxAllowedUnitLabel = null;
+      _categoryResumeMessage = null;
+    });
+  }
+
+  Future<void> _restoreSelectedMaterialTypeFromDraft() async {
+    final categoryId = _categoryId;
+    final materialName = _materialNameController.text.trim();
+    if (categoryId == null || materialName.length < 2) {
+      return;
+    }
+
+    try {
+      final result = await ref
+          .read(materialListingRepositoryProvider)
+          .searchMaterialTypes(categoryId: categoryId, query: materialName);
+
+      material_models.MaterialType? exactMatch;
+      for (final item in result.items) {
+        if (item.nameEn.toLowerCase() == materialName.toLowerCase()) {
+          exactMatch = item;
+          break;
+        }
+      }
+
+      if (!mounted || exactMatch == null) {
+        return;
+      }
+
+      setState(() => _selectedMaterialType = exactMatch);
+    } catch (_) {
+      // Leave unselected when lookup fails.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = context.s;
@@ -271,9 +382,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         break;
       }
     }
-    final isOther = selectedCategory?.nameEn.toLowerCase() == 'other';
-    final paidOtherBlocked = !_isFree && isOther;
-    final paidCanPublish = _isFree || (_priceCheck?.allowed == true);
+    final paidOtherBlocked = _isPaidOtherBlockedForCategory(selectedCategory);
+    final canPublish = _canPublishListing(selectedCategory);
     final wide = MediaQuery.sizeOf(context).width >= 1100;
     final formContent = Form(
       key: _formKey,
@@ -309,14 +419,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                         ),
                       )
                       .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _categoryId = value;
-                      _selectedMaterialType = null;
-                      _priceCheck = null;
-                      _priceReviewMessage = null;
-                    });
-                  },
+                  onChanged: _onCategoryChanged,
                   validator: (value) =>
                       value == null ? l.categoryRequired : null,
                 ),
@@ -388,7 +491,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   const SizedBox(height: AppSpacing.md),
                   _InlineInfo(message: _categoryResumeMessage!),
                 ],
-                if (_isFree && isOther && !_showCategoryRequestField) ...[
+                if (_isFree &&
+                    selectedCategory?.nameEn.toLowerCase() == 'other' &&
+                    !_showCategoryRequestField) ...[
                   const SizedBox(height: AppSpacing.md),
                   _InlineInfo(
                     message: l.freeOtherAllowed,
@@ -616,7 +721,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: _isSubmitting || !paidCanPublish ? null : _publish,
+              onPressed: _isSubmitting || !canPublish ? null : _publish,
               icon: _isSubmitting
                   ? const SizedBox(
                       width: 18,
@@ -627,7 +732,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               label: Text(_isSubmitting ? l.publishing : l.publishMaterial),
             ),
           ),
-          if (!_isFree && !paidCanPublish) ...[
+          if (!_isFree && !canPublish) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
               paidOtherBlocked
@@ -663,7 +768,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             pickupLabel: _pickupSectionKey.currentState?.buildPreviewPickupLabel() ??
                 pickupLocation.summary,
             coverImageUrl: _images.isEmpty ? null : _images.first.url,
-            priceCheck: _priceCheck,
+            priceStatus: _previewPriceStatus(selectedCategory),
           ),
         ),
       ],
@@ -965,6 +1070,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         _isResumingDraft = false;
         _resumeError = null;
       });
+
+      await _restoreSelectedMaterialTypeFromDraft();
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -1026,6 +1133,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         _isResumingDraft = false;
         _resumeError = null;
       });
+
+      await _restoreSelectedMaterialTypeFromDraft();
 
       if (mounted) {
         await _verifyPrice();
@@ -1238,16 +1347,17 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     if (quantity == null || quantity <= 0) return;
     final price = _isFree ? null : double.tryParse(_priceController.text.trim());
     if (!_isFree) {
-      final hasApprovedSourceMax =
-          _sourcePriceRuleRequestId != null && _maxAllowedUnitPrice != null;
-      final withinSourceMax = hasApprovedSourceMax &&
-          price != null &&
-          price <= _maxAllowedUnitPrice!;
-
-      if (_priceCheck?.allowed != true && !withinSourceMax) {
+      final categoriesAsync = ref.read(materialCategoriesProvider);
+      final categories = categoriesAsync.hasValue
+          ? categoriesAsync.value!
+          : <MaterialCategory>[];
+      final selectedCategory = _findCategoryById(categories, _categoryId);
+      if (!_paidListingCanPublish(selectedCategory)) {
         showSupplierErrorSnackBar(
           context,
-          'Verify price before publishing paid listings.',
+          _isPaidOtherBlockedForCategory(selectedCategory)
+              ? context.s.paidCannotUseOther
+              : context.s.paidMustVerifyPrice,
         );
         return;
       }

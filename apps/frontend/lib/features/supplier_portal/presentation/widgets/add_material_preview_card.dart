@@ -5,7 +5,13 @@ import 'package:frontend/features/supplier_portal/presentation/theme/supplier_th
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../materials/data/models/category.dart';
-import '../../../materials/data/models/material_price_check_result.dart';
+
+enum AddMaterialPreviewPriceStatus {
+  verified,
+  withinApprovedCapVerifyPending,
+  verificationFailed,
+  verifyRequired,
+}
 
 class AddMaterialPreviewCard extends StatelessWidget {
   const AddMaterialPreviewCard({
@@ -20,7 +26,7 @@ class AddMaterialPreviewCard extends StatelessWidget {
     this.price,
     this.pickupLabel,
     this.coverImageUrl,
-    this.priceCheck,
+    this.priceStatus,
   });
 
   final String materialName;
@@ -33,7 +39,7 @@ class AddMaterialPreviewCard extends StatelessWidget {
   final String? price;
   final String? pickupLabel;
   final String? coverImageUrl;
-  final MaterialPriceCheckResult? priceCheck;
+  final AddMaterialPreviewPriceStatus? priceStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -93,20 +99,16 @@ class AddMaterialPreviewCard extends StatelessWidget {
           ),
           if (pickupLabel != null && pickupLabel!.isNotEmpty)
             _PreviewRow(label: context.s.pickupSectionTitle, value: pickupLabel!),
-          if (!isFree) ...[
+          if (!isFree && priceStatus != null) ...[
             const SizedBox(height: AppSpacing.md),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: context.supplierDecorations.profileSectionPanel,
               child: Text(
-                priceCheck?.allowed == true
-                    ? context.s.priceVerified
-                    : priceCheck == null
-                        ? context.s.verifyPriceBeforePublishing
-                        : context.s.priceVerificationRequired,
+                _priceStatusMessage(context, priceStatus!),
                 style: context.supplierBody().copyWith(
-                  color: priceCheck?.allowed == true
+                  color: priceStatus == AddMaterialPreviewPriceStatus.verified
                       ? colors.accent
                       : colors.textMuted,
                 ),
@@ -116,6 +118,22 @@ class AddMaterialPreviewCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _priceStatusMessage(
+    BuildContext context,
+    AddMaterialPreviewPriceStatus status,
+  ) {
+    final l = context.s;
+    return switch (status) {
+      AddMaterialPreviewPriceStatus.verified => l.priceVerified,
+      AddMaterialPreviewPriceStatus.withinApprovedCapVerifyPending =>
+        l.verifyPriceWithinApprovedCap,
+      AddMaterialPreviewPriceStatus.verificationFailed =>
+        l.priceVerificationRequired,
+      AddMaterialPreviewPriceStatus.verifyRequired =>
+        l.verifyPriceBeforePublishing,
+    };
   }
 }
 
