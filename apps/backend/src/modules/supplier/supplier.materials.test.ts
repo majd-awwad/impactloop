@@ -450,8 +450,20 @@ describe('createSupplierMaterial', () => {
   });
 
   after(async () => {
+    const materials = await prisma.material.findMany({
+      where: { id: { in: ctx.createdMaterialIds } },
+      select: { locationId: true },
+    });
+    const materialLocationIds = materials.map((material) => material.locationId);
+
     await cleanup(ctx);
-    await prisma.location.deleteMany({ where: { id: ctx.locationId } });
+    await prisma.location.deleteMany({
+      where: {
+        id: {
+          in: [...new Set([ctx.locationId, ...materialLocationIds])],
+        },
+      },
+    });
   });
 
   test('requires at least one material image in create schema', () => {
@@ -508,11 +520,317 @@ describe('createSupplierMaterial', () => {
 
     const persisted = await prisma.material.findUnique({
       where: { id: material.id },
-      select: { sourceType: true, images: true },
+      select: { sourceType: true, images: true, locationId: true },
     });
 
     assert.equal(persisted?.sourceType, 'WORKSHOP_SURPLUS');
     assert.equal(persisted?.images.length, 1);
+    assert.notEqual(persisted?.locationId, ctx.locationId);
+  });
+
+  test('rejects organization pickup override attempts', async () => {
+    await assert.rejects(
+      () =>
+        createSupplierMaterial(ctx.supplierId, {
+          materialName: 'Org override material',
+          title: `${TEST_MARKER} org pickup override`,
+          description: `${TEST_MARKER} org pickup override description`,
+          categoryId: ctx.categoryId,
+          quantity: 1,
+          unit: 'piece',
+          condition: 'GOOD',
+          isFree: true,
+          price: null,
+          currency: 'NIS',
+          pickupAllowed: true,
+          deliveryAllowed: false,
+          imageUrls: ['/uploads/materials/test-org-override.jpg'],
+          useDefaultPickupLocation: false,
+          pickupLocation: {
+            country: 'Palestine',
+            city: 'Ramallah',
+            area: 'Downtown',
+            visibility: 'ORDER_ONLY',
+            isApproximate: true,
+          },
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.equal(error.details?.reason, 'ORG_PICKUP_OVERRIDE_NOT_ALLOWED');
+        return true;
+      },
+    );
+  });
+
+  test('copies profile pickup into a new material location row for organization suppliers', async () => {
+    const material = await createSupplierMaterial(ctx.supplierId, {
+      materialName: 'Org copied pickup material',
+      title: `${TEST_MARKER} org copied pickup`,
+      description: `${TEST_MARKER} org copied pickup description`,
+      categoryId: ctx.categoryId,
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      isFree: true,
+      price: null,
+      currency: 'NIS',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ['/uploads/materials/test-org-copy.jpg'],
+      useDefaultPickupLocation: true,
+    });
+    ctx.createdMaterialIds.push(material.id);
+
+    const persisted = await prisma.material.findUnique({
+      where: { id: material.id },
+      select: { locationId: true },
+    });
+    const profileLocation = await prisma.location.findUnique({
+      where: { id: ctx.locationId },
+    });
+    const materialLocation = await prisma.location.findUnique({
+      where: { id: persisted?.locationId },
+    });
+
+    assert.ok(persisted?.locationId);
+    assert.notEqual(persisted?.locationId, ctx.locationId);
+    assert.equal(materialLocation?.city, profileLocation?.city);
+    assert.equal(materialLocation?.area, profileLocation?.area);
+    assert.equal(materialLocation?.locationType, 'MATERIAL_PICKUP');
+  });
+});
+
+describe('createSupplierMaterial pickup for individual suppliers', () => {
+  const ctx: TestContext = {
+    supplierId: '',
+    otherSupplierId: '',
+    categoryId: '',
+    locationId: '',
+    createdMaterialIds: [],
+    createdUserIds: [],
+    createdReservationIds: [],
+    learnerId: '',
+  };
+
+  before(async () => {
+    const category = await prisma.category.findFirst({
+      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      select: { id: true },
+    });
+    const location = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: 'Nablus',
+        area: `${TEST_MARKER}-individual-create`,
+        addressLine: 'Campus gate',
+        latitude: 32.2211,
+        longitude: 35.2544,
+        visibility: 'ORDER_ONLY',
+        isApproximate: true,
+        locationType: 'PICKUP_POINT',
+      },
+      select: { id: true },
+    });
+    const supplier = await createSupplierUser('individual-create');
+
+    assert.ok(category);
+    ctx.categoryId = category.id;
+    ctx.locationId = location.id;
+    ctx.supplierId = supplier.id;
+    ctx.createdUserIds.push(supplier.id);
+
+    await prisma.supplierProfile.update({
+      where: { userId: supplier.id },
+      data: {
+        supplierType: 'INDIVIDUAL_SUPPLIER',
+        defaultPickupLocationId: location.id,
+      },
+    });
+  });
+
+  after(async () => {
+    const materials = await prisma.material.findMany({
+      where: { id: { in: ctx.createdMaterialIds } },
+      select: { locationId: true },
+    });
+    const materialLocationIds = materials.map((material) => material.locationId);
+
+    await cleanup(ctx);
+    await prisma.location.deleteMany({
+      where: {
+        id: {
+          in: [...new Set([ctx.locationId, ...materialLocationIds])],
+        },
+      },
+    });
+  });
+
+  test('copies default pickup when useDefaultPickupLocation is true', async () => {
+    const material = await createSupplierMaterial(ctx.supplierId, {
+      materialName: 'Individual default pickup material',
+      title: `${TEST_MARKER} individual default pickup`,
+      description: `${TEST_MARKER} individual default pickup description`,
+      categoryId: ctx.categoryId,
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      isFree: true,
+      price: null,
+      currency: 'NIS',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ['/uploads/materials/test-individual-default.jpg'],
+      useDefaultPickupLocation: true,
+    });
+    ctx.createdMaterialIds.push(material.id);
+
+    const persisted = await prisma.material.findUnique({
+      where: { id: material.id },
+      select: { locationId: true },
+    });
+
+    assert.ok(persisted?.locationId);
+    assert.notEqual(persisted?.locationId, ctx.locationId);
+  });
+
+  test('creates a new material pickup location when override is provided', async () => {
+    const material = await createSupplierMaterial(ctx.supplierId, {
+      materialName: 'Individual override pickup material',
+      title: `${TEST_MARKER} individual override pickup`,
+      description: `${TEST_MARKER} individual override pickup description`,
+      categoryId: ctx.categoryId,
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      isFree: true,
+      price: null,
+      currency: 'NIS',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ['/uploads/materials/test-individual-override.jpg'],
+      useDefaultPickupLocation: false,
+      pickupLocation: {
+        country: 'Palestine',
+        city: 'Jenin',
+        area: 'City center',
+        addressLine: 'Near library',
+        latitude: 32.4607,
+        longitude: 35.3006,
+        visibility: 'ORDER_ONLY',
+        isApproximate: true,
+        locationType: 'MATERIAL_PICKUP',
+      },
+    });
+    ctx.createdMaterialIds.push(material.id);
+
+    const persisted = await prisma.material.findUnique({
+      where: { id: material.id },
+      select: { locationId: true },
+    });
+    const materialLocation = await prisma.location.findUnique({
+      where: { id: persisted?.locationId },
+    });
+
+    assert.ok(persisted?.locationId);
+    assert.notEqual(persisted?.locationId, ctx.locationId);
+    assert.equal(materialLocation?.city, 'Jenin');
+    assert.equal(materialLocation?.area, 'City center');
+    assert.equal(materialLocation?.addressLine, 'Near library');
+  });
+});
+
+describe('createSupplierMaterial public location redaction', () => {
+  const ctx: TestContext = {
+    supplierId: '',
+    otherSupplierId: '',
+    categoryId: '',
+    locationId: '',
+    createdMaterialIds: [],
+    createdUserIds: [],
+    createdReservationIds: [],
+    learnerId: '',
+  };
+
+  before(async () => {
+    const category = await prisma.category.findFirst({
+      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      select: { id: true },
+    });
+    const location = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: 'Nablus',
+        area: `${TEST_MARKER}-public-redaction`,
+        addressLine: 'Secret address line',
+        latitude: 32.2211,
+        longitude: 35.2544,
+        visibility: 'PRIVATE',
+        isApproximate: true,
+      },
+      select: { id: true },
+    });
+    const supplier = await createSupplierUser('public-redaction');
+
+    assert.ok(category);
+    ctx.categoryId = category.id;
+    ctx.locationId = location.id;
+    ctx.supplierId = supplier.id;
+    ctx.createdUserIds.push(supplier.id);
+
+    await prisma.supplierProfile.update({
+      where: { userId: supplier.id },
+      data: {
+        supplierType: 'INDIVIDUAL_SUPPLIER',
+        defaultPickupLocationId: location.id,
+      },
+    });
+  });
+
+  after(async () => {
+    const materials = await prisma.material.findMany({
+      where: { id: { in: ctx.createdMaterialIds } },
+      select: { locationId: true },
+    });
+    const materialLocationIds = materials.map((material) => material.locationId);
+
+    await cleanup(ctx);
+    await prisma.location.deleteMany({
+      where: {
+        id: {
+          in: [...new Set([ctx.locationId, ...materialLocationIds])],
+        },
+      },
+    });
+  });
+
+  test('public material detail exposes city and area only', async () => {
+    const { getMaterialById } = await import('../materials/materials.service.js');
+
+    const material = await createSupplierMaterial(ctx.supplierId, {
+      materialName: 'Public redaction material',
+      title: `${TEST_MARKER} public redaction`,
+      description: `${TEST_MARKER} public redaction description`,
+      categoryId: ctx.categoryId,
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      isFree: true,
+      price: null,
+      currency: 'NIS',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ['/uploads/materials/test-public-redaction.jpg'],
+    });
+    ctx.createdMaterialIds.push(material.id);
+
+    const publicMaterial = await getMaterialById(material.id);
+
+    assert.equal(publicMaterial.city, 'Nablus');
+    assert.equal(publicMaterial.area, `${TEST_MARKER}-public-redaction`);
+    assert.equal('latitude' in publicMaterial, false);
+    assert.equal('longitude' in publicMaterial, false);
+    assert.equal('addressLine' in publicMaterial, false);
   });
 });
 

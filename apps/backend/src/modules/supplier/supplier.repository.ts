@@ -57,12 +57,64 @@ export const findSupplierProfileDetailsByUserId = async (userId: string) => {
   });
 };
 
-const isOrganizationSupplierType = (supplierType: string): boolean => {
+export const isOrganizationSupplierType = (supplierType: string): boolean => {
   return (
     supplierType === 'WORKSHOP' ||
     supplierType === 'FACTORY' ||
     supplierType === 'EDUCATIONAL_INSTITUTION'
   );
+};
+
+type LocationCopySource = {
+  country: string;
+  city: string;
+  area: string | null;
+  addressLine: string | null;
+  latitude: Prisma.Decimal | number | null;
+  longitude: Prisma.Decimal | number | null;
+  visibility: string | null;
+  isApproximate: boolean;
+};
+
+export const copyLocationRow = async (
+  source: LocationCopySource,
+  locationType = 'MATERIAL_PICKUP',
+): Promise<string> => {
+  const location = await prisma.location.create({
+    data: {
+      country: source.country,
+      city: source.city,
+      area: source.area,
+      addressLine: source.addressLine,
+      latitude: source.latitude,
+      longitude: source.longitude,
+      visibility: source.visibility,
+      isApproximate: source.isApproximate,
+      locationType,
+    },
+  });
+
+  return location.id;
+};
+
+export const createMaterialPickupLocation = async (
+  input: UpdateSupplierProfileInput['defaultPickupLocation'],
+): Promise<string> => {
+  const location = await prisma.location.create({
+    data: {
+      country: input.country,
+      city: input.city,
+      area: input.area ?? null,
+      addressLine: input.addressLine ?? null,
+      latitude: input.latitude ?? null,
+      longitude: input.longitude ?? null,
+      visibility: input.visibility,
+      isApproximate: input.isApproximate,
+      locationType: input.locationType ?? 'MATERIAL_PICKUP',
+    },
+  });
+
+  return location.id;
 };
 
 const upsertLocation = async (

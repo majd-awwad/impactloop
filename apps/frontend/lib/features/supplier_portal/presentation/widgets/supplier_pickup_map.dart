@@ -39,6 +39,8 @@ class SupplierPickupMap extends StatefulWidget {
     this.compact = false,
     this.showCoordinateDetails = false,
     this.showCoordinatesAsLabel = false,
+    this.allowPinPlacement = false,
+    this.onPinMoved,
   });
 
   final double? latitude;
@@ -55,6 +57,8 @@ class SupplierPickupMap extends StatefulWidget {
   final bool compact;
   final bool showCoordinateDetails;
   final bool showCoordinatesAsLabel;
+  final bool allowPinPlacement;
+  final ValueChanged<LatLng>? onPinMoved;
 
   bool get hasCoordinates => latitude != null && longitude != null;
 
@@ -66,6 +70,8 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
   final MapController _mapController = MapController();
 
   bool get _hasCoordinates => widget.hasCoordinates;
+  bool get _canPlacePin =>
+      widget.allowPinPlacement && widget.onPinMoved != null;
 
   LatLng get _fallbackCenter {
     final city = widget.fallbackCity?.trim().toLowerCase() ?? '';
@@ -324,6 +330,9 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
                       initialZoom: _mapZoom,
                       minZoom: 5,
                       maxZoom: 18,
+                      onTap: _canPlacePin
+                          ? (_, point) => widget.onPinMoved!(point)
+                          : null,
                       interactionOptions: const InteractionOptions(
                         flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                       ),
@@ -362,25 +371,54 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
                       child: IgnorePointer(
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: AppColorTokens.supplierMapDisabledOverlay,
+                            color: _canPlacePin
+                                ? Colors.transparent
+                                : AppColorTokens.supplierMapDisabledOverlay,
                           ),
-                          child: Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(AppSpacing.lg),
-                              child: Container(
-                                padding: const EdgeInsets.all(AppSpacing.md),
-                                decoration: context.supplierDecorations.badge(
-                                  background: context.supplierColors.surfaceSolid
-                                      .withValues(alpha: 0.92),
+                          child: _canPlacePin
+                              ? Align(
+                                  alignment: Alignment.topCenter,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(AppSpacing.sm),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: AppSpacing.sm,
+                                        vertical: AppSpacing.xs,
+                                      ),
+                                      decoration:
+                                          context.supplierDecorations.badge(
+                                        background: context
+                                            .supplierColors.surfaceSolid
+                                            .withValues(alpha: 0.92),
+                                      ),
+                                      child: Text(
+                                        context.s.tapMapToPlacePickupPin,
+                                        textAlign: TextAlign.center,
+                                        style: context.supplierChip(),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(AppSpacing.lg),
+                                    child: Container(
+                                      padding:
+                                          const EdgeInsets.all(AppSpacing.md),
+                                      decoration:
+                                          context.supplierDecorations.badge(
+                                        background: context
+                                            .supplierColors.surfaceSolid
+                                            .withValues(alpha: 0.92),
+                                      ),
+                                      child: Text(
+                                        context.s.mapLocationHelp,
+                                        textAlign: TextAlign.center,
+                                        style: context.supplierBody(),
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                                child: Text(
-                                  context.s.mapLocationHelp,
-                                  textAlign: TextAlign.center,
-                                  style: context.supplierBody(),
-                                ),
-                              ),
-                            ),
-                          ),
                         ),
                       ),
                     ),

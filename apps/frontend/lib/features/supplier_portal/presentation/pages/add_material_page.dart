@@ -23,12 +23,12 @@ import '../controllers/supplier_dashboard_providers.dart';
 import '../controllers/supplier_notifications_providers.dart';
 import '../controllers/supplier_profile_providers.dart';
 import '../theme/supplier_theme_extension.dart';
+import '../widgets/add_material_pickup_section.dart';
 import '../widgets/add_material_preview_card.dart';
 import '../widgets/add_material_price_verification_card.dart';
 import '../widgets/material_image_picker_section.dart';
 import '../widgets/supplier_dark_form_field.dart';
 import '../widgets/supplier_feedback.dart';
-import '../widgets/supplier_pickup_map_preview.dart';
 
 const _conditions = [
   'NEW',
@@ -57,6 +57,7 @@ class AddMaterialPage extends ConsumerStatefulWidget {
 
 class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   final _formKey = GlobalKey<FormState>();
+  final _pickupSectionKey = GlobalKey<AddMaterialPickupSectionState>();
   final _materialNameController = TextEditingController();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -222,7 +223,11 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               }
 
               return categories.when(
-                data: (items) => _buildForm(items, pickupLocation),
+                data: (items) => _buildForm(
+                  items,
+                  pickupLocation,
+                  profile.supplier!.supplierType,
+                ),
                 loading: () => Center(
                   child: CircularProgressIndicator(
                     color: colors.accent,
@@ -251,7 +256,11 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     );
   }
 
-  Widget _buildForm(List<MaterialCategory> categories, pickupLocation) {
+  Widget _buildForm(
+    List<MaterialCategory> categories,
+    pickupLocation,
+    String supplierType,
+  ) {
     final l = context.s;
     final colors = context.supplierColors;
     final decorations = context.supplierDecorations;
@@ -592,46 +601,15 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
           ),
           const SizedBox(height: AppSpacing.lg),
           _Card(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SupplierFormSectionHeader(
-                  icon: Icons.place_outlined,
-                  title: l.pickupSectionTitle,
-                  subtitle: l.pickupSectionSubtitle,
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                SupplierPickupMapPreview(
-                  city: pickupLocation.city,
-                  area: pickupLocation.area,
-                  country: pickupLocation.country,
-                  visibility: pickupLocation.visibility,
-                  latitude: pickupLocation.latitude,
-                  longitude: pickupLocation.longitude,
-                  compact: true,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                SupplierDarkSwitchTile(
-                  title: l.pickupAllowed,
-                  subtitle: l.pickupAllowedSubtitle,
-                  value: _pickupAllowed,
-                  onChanged: (value) => setState(() => _pickupAllowed = value),
-                ),
-                const SupplierFieldGap(),
-                SupplierDarkSwitchTile(
-                  title: l.deliveryAllowed,
-                  subtitle: l.deliveryAllowedSubtitle,
-                  value: false,
-                  onChanged: (_) {},
-                ),
-                const SupplierFieldGap(),
-                SupplierDarkTextArea(
-                  controller: _pickupNotesController,
-                  label: l.pickupNotes,
-                  hint: l.pickupNotesHint,
-                  maxLines: 3,
-                ),
-              ],
+            child: AddMaterialPickupSection(
+              key: _pickupSectionKey,
+              supplierType: supplierType,
+              profilePickupLocation: pickupLocation,
+              pickupAllowed: _pickupAllowed,
+              pickupNotesController: _pickupNotesController,
+              onPickupAllowedChanged: (value) =>
+                  setState(() => _pickupAllowed = value),
+              onChanged: () => setState(() {}),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -682,7 +660,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             unit: _unitController.text.trim(),
             isFree: _isFree,
             price: _priceController.text.trim(),
-            pickupCity: pickupLocation.city,
+            pickupLabel: _pickupSectionKey.currentState?.buildPreviewPickupLabel() ??
+                pickupLocation.summary,
             coverImageUrl: _images.isEmpty ? null : _images.first.url,
             priceCheck: _priceCheck,
           ),
@@ -721,6 +700,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
           ? null
           : _suggestedUsesController.text.trim(),
       'imageUrls': imageUrls ?? _imageUrlValues(),
+      ...?_pickupSectionKey.currentState?.buildDraftPickupJson(),
     };
   }
 
@@ -940,6 +920,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     _maxAllowedUnitPrice = maxAllowedUnitPrice;
     _maxAllowedUnitLabel = maxAllowedUnitLabel ?? _unitController.text.trim();
     _categoryResumeMessage = resumeMessage;
+    _pickupSectionKey.currentState?.applyDraftPickup(json);
   }
 
   Future<void> _continueCategoryRequest(String requestId) async {
@@ -1272,6 +1253,16 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       }
     }
 
+    final pickupError =
+        _pickupSectionKey.currentState?.validateOverrideLocation();
+    if (pickupError != null) {
+      showSupplierErrorSnackBar(context, pickupError);
+      return;
+    }
+    final pickupSubmitData =
+        _pickupSectionKey.currentState?.buildSubmitData() ??
+        const MaterialPickupSubmitData(useDefaultPickupLocation: true);
+
     setState(() => _isSubmitting = true);
     List<String> imageUrls;
     try {
@@ -1316,6 +1307,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               imageUrls: imageUrls,
               sourceCategoryRequestId: _sourceCategoryRequestId,
               sourcePriceRuleRequestId: _sourcePriceRuleRequestId,
+              useDefaultPickupLocation: pickupSubmitData.useDefaultPickupLocation,
+              pickupLocation: pickupSubmitData.pickupLocation,
             ),
           );
 
@@ -1355,7 +1348,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       _priceCheck = null;
       _priceReviewMessage = null;
       _isFree = true;
+      _pickupAllowed = true;
     });
+    _pickupSectionKey.currentState?.reset();
   }
 
   String? _required(String? value) {

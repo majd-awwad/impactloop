@@ -1,3 +1,41 @@
+class CreateMaterialPickupLocationRequest {
+  const CreateMaterialPickupLocationRequest({
+    required this.country,
+    required this.city,
+    this.area,
+    this.addressLine,
+    this.latitude,
+    this.longitude,
+    this.visibility = 'ORDER_ONLY',
+    this.isApproximate = true,
+    this.locationType = 'MATERIAL_PICKUP',
+  });
+
+  final String country;
+  final String city;
+  final String? area;
+  final String? addressLine;
+  final double? latitude;
+  final double? longitude;
+  final String visibility;
+  final bool isApproximate;
+  final String locationType;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'country': country,
+      'city': city,
+      'area': area,
+      'addressLine': addressLine,
+      'latitude': latitude,
+      'longitude': longitude,
+      'visibility': visibility,
+      'isApproximate': isApproximate,
+      'locationType': locationType,
+    };
+  }
+}
+
 class CreateMaterialRequest {
   const CreateMaterialRequest({
     required this.materialName,
@@ -17,6 +55,8 @@ class CreateMaterialRequest {
     this.imageUrls = const [],
     this.sourceCategoryRequestId,
     this.sourcePriceRuleRequestId,
+    this.useDefaultPickupLocation = true,
+    this.pickupLocation,
   });
 
   final String materialName;
@@ -36,6 +76,8 @@ class CreateMaterialRequest {
   final List<String> imageUrls;
   final String? sourceCategoryRequestId;
   final String? sourcePriceRuleRequestId;
+  final bool useDefaultPickupLocation;
+  final CreateMaterialPickupLocationRequest? pickupLocation;
 
   Map<String, dynamic> toJson() {
     return {
@@ -54,6 +96,9 @@ class CreateMaterialRequest {
       'pickupNotes': pickupNotes,
       'suggestedUses': suggestedUses,
       'imageUrls': imageUrls,
+      'useDefaultPickupLocation': useDefaultPickupLocation,
+      if (!useDefaultPickupLocation && pickupLocation != null)
+        'pickupLocation': pickupLocation!.toJson(),
       if (sourceCategoryRequestId != null)
         'sourceCategoryRequestId': sourceCategoryRequestId,
       if (sourcePriceRuleRequestId != null)

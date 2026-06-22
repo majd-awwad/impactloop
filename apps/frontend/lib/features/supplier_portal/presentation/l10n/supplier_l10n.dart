@@ -1060,6 +1060,32 @@ class SupplierL10n {
         'Pickup location comes from your Supplier Profile.',
         'موقع الاستلام يأتي من ملف المورد.',
       );
+  String get orgPickupSectionSubtitle => t(
+        'Organization listings use your profile pickup location.',
+        'تستخدم إدراجات المؤسسة موقع الاستلام من ملفك.',
+      );
+  String get orgFixedPickupMessage => t(
+        'This fixed pickup location from your profile is used for every listing. Update it in Supplier Profile if your workshop or business address changes.',
+        'يُستخدم موقع الاستلام الثابت من ملفك لكل إدراج. حدّثه في ملف المورد إذا تغيّر عنوان الورشة أو المنشأة.',
+      );
+  String get editPickupInProfile =>
+      t('Edit pickup in profile', 'تعديل الاستلام في الملف');
+  String get useProfilePickupLocation =>
+      t('Use profile pickup location', 'استخدام موقع الاستلام من الملف');
+  String get useProfilePickupLocationSubtitle => t(
+        'Use your default pickup area, or set a different pickup point for this material only.',
+        'استخدم منطقة الاستلام الافتراضية، أو حدّد نقطة استلام مختلفة لهذه المادة فقط.',
+      );
+  String get materialPickupOverrideTitle =>
+      t('Material pickup location', 'موقع استلام المادة');
+  String get materialPickupOverrideSubtitle => t(
+        'Set where learners should pick up this material.',
+        'حدد المكان الذي يجب على المتعلمين استلام هذه المادة منه.',
+      );
+  String get cityRequiredForPickup => t(
+        'Enter a city or capture your current location for pickup.',
+        'أدخل مدينة أو التقط موقعك الحالي للاستلام.',
+      );
   String get pickupAllowed => t('Pickup allowed', 'الاستلام مسموح');
   String get pickupAllowedSubtitle => t(
         'Learners can request self pickup for this material.',
@@ -1360,6 +1386,14 @@ class SupplierL10n {
   String get mapLocationHelp => t(
         'Use your current location or enter pickup details manually.',
         'استخدم موقعك الحالي أو أدخل تفاصيل الاستلام يدوياً.',
+      );
+  String get tapMapToPlacePickupPin => t(
+        'Tap the map to place the pickup pin',
+        'اضغط على الخريطة لوضع دبوس الاستلام',
+      );
+  String get pickupPinSelectedOnMap => t(
+        'Pickup pin selected on map',
+        'تم تحديد دبوس الاستلام على الخريطة',
       );
   String get materialLabel => t('Material', 'المادة');
   String get learnerLabel => t('Learner', 'المتعلم');

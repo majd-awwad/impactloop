@@ -110,6 +110,8 @@ All routes below require Bearer JWT + `SUPPLIER` role unless noted. Source: `sup
 | GET | `/api/supplier/materials` | `supplier/supplier.routes.ts` |
 | POST | `/api/supplier/materials` | `supplier/supplier.routes.ts` |
 
+`POST /api/supplier/materials` body (pickup-related): `useDefaultPickupLocation` (boolean, default `true`); `pickupLocation` (location object, required when `useDefaultPickupLocation` is `false`). Organization suppliers must use profile default; override is rejected with `ORG_PICKUP_OVERRIDE_NOT_ALLOWED`. Each create stores a **new** `locations` row on the material (copy or override), not the profile row id.
+
 ### Category requests — `/api/supplier/category-requests`
 
 | Method | Path | Source file |

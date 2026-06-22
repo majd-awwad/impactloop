@@ -16,7 +16,7 @@ Locations are **created/updated inline** through supplier profile PATCH and refe
 | Reverse geocode API | **Implemented** | `POST /api/locations/reverse-geocode` |
 | Locations CRUD API | **Not implemented** | No `GET/POST/PATCH /api/locations` |
 | Supplier profile location | **Implemented** | `defaultPickupLocation` on `PATCH /api/supplier/profile` |
-| Material create location | **Implemented** | Uses profile `defaultPickupLocationId` |
+| Material create location | **Implemented** | Copies profile default or optional per-material override (individual/student only); never reuses profile row |
 | Public discovery location fields | **Partial** | API returns `city` + `area` only — no lat/lng/address |
 | Public redaction / visibility enforcement | **Needs verification** | `visibility`, `isApproximate` stored; public `mapMaterial` does not expose coordinates but redaction rules not centrally documented in code |
 
@@ -25,7 +25,11 @@ Locations are **created/updated inline** through supplier profile PATCH and refe
 1. Supplier opens profile → sets pickup location (map pin or manual fields).
 2. On coordinate change, Flutter calls reverse geocode → fills city/area/address fields.
 3. Supplier saves profile → backend upserts `locations` row, links `supplier_profiles.default_pickup_location_id`.
-4. Supplier adds material → form shows read-only pickup location from profile → create uses that `locationId`.
+4. Supplier adds material → pickup UI depends on `supplierType`:
+   - **Organization** (WORKSHOP / FACTORY / EDUCATIONAL_INSTITUTION): read-only profile pickup preview; backend copies profile location into a new `locations` row for the material.
+   - **Individual / student**: default copies profile pickup; optional per-material override creates a separate `locations` row (`useDefaultPickupLocation: false` + `pickupLocation`).
+
+Profile edits do **not** retroactively change existing material pickup rows because each create copies or creates a dedicated material location.
 
 ## Frontend files
 
@@ -34,7 +38,7 @@ Locations are **created/updated inline** through supplier profile PATCH and refe
 | API | `supplier_portal/data/locations_api.dart` |
 | Model | `supplier_portal/data/models/reverse_geocode_result.dart` |
 | Profile usage | `supplier_portal/presentation/pages/supplier_profile_page.dart`, `supplier_profile_form.dart`, `supplier_location_input_mode.dart`, `supplier_pickup_map.dart` |
-| Add material (read-only location) | `supplier_portal/presentation/pages/add_material_page.dart`, `supplier_pickup_map_preview.dart` |
+| Add material pickup | `supplier_portal/presentation/pages/add_material_page.dart`, `add_material_pickup_section.dart`, `supplier_pickup_map_preview.dart` |
 | Repository | `supplier_portal/data/supplier_profile_repository.dart` (`reverseGeocode`) |
 | State enum | `supplier_portal/presentation/widgets/supplier_reverse_geocode_state.dart` |
 
@@ -46,7 +50,8 @@ Locations are **created/updated inline** through supplier profile PATCH and refe
 |------|------|
 | Locations module | `modules/locations/locations.routes.ts`, `.controller.ts`, `.service.ts`, `.validation.ts` |
 | Geocoding | `services/reverse-geocoding.service.ts` (Nominatim, cache, rate limit) |
-| Profile upsert | `modules/supplier/supplier.repository.ts` (`upsertLocationForSupplier`) |
+| Profile upsert | `modules/supplier/supplier.repository.ts` (`upsertLocation`, profile PATCH) |
+| Material create pickup | `modules/supplier/supplier.service.ts` (`resolveMaterialPickupLocationId`), `supplier.repository.ts` (`copyLocationRow`, `createMaterialPickupLocation`) |
 | Public material mapper | `modules/materials/materials.service.ts` (`mapMaterial` — city/area only) |
 | Supplier-owned material mapper | `modules/supplier/supplier.service.ts` (`mapLocation` — full fields for owner) |
 
@@ -62,6 +67,13 @@ Location persistence is via:
 |--------|------|------|
 | PATCH | `/api/supplier/profile` | Bearer JWT + **SUPPLIER** | Includes `defaultPickupLocation` object |
 
+Material create (`POST /api/supplier/materials`) pickup fields:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `useDefaultPickupLocation` | boolean | Default `true` |
+| `pickupLocation` | location object | Required when `useDefaultPickupLocation` is `false`; rejected for organization supplier types |
+
 Public material discovery:
 
 | Method | Path | Location in response |
@@ -75,7 +87,7 @@ Public material discovery:
 | `locations` | `country`, `city`, `area`, `address_line`, `latitude`, `longitude`, PostGIS `location`, `visibility`, `is_approximate`, `location_type` |
 | `supplier_profiles.default_pickup_location_id` | Default pickup for listings |
 | `organization_profiles` | Optional `business_location` relation |
-| `materials.location_id` | Pickup location per listing |
+| `materials.location_id` | Pickup location per listing (copied or override row; not the profile row) |
 
 `visibility` enum in validation: `PUBLIC`, `ORDER_ONLY`, `PRIVATE` (`supplier.validation.ts`).
 
@@ -86,7 +98,7 @@ Public material discovery:
 
 ## Known gaps / Needs verification
 
-- **Public redaction:** AGENTS.md says never expose precise locations publicly before booking/delivery; public materials API omits coordinates/address — **Needs verification** that all public paths consistently redact and that `visibility` / `ORDER_ONLY` is enforced beyond storage.
+- **Public redaction:** Public materials API omits coordinates/address on list/detail (`mapMaterial`). `visibility` / `ORDER_ONLY` is stored but not enforced on public reads — **Needs verification** beyond create-time copy behavior.
 - No learner-facing precise location reveal after reservation (reservation create **not implemented**).
 - No dedicated locations list/manage API for learners or drivers.
 - Reverse geocode requires external Nominatim — env/network dependent (`reverse-geocoding.service.ts`).

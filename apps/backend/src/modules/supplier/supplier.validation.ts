@@ -115,26 +115,39 @@ export type UpdateSupplierProfileInput = z.infer<
   typeof updateSupplierProfileSchema
 >;
 
-export const createSupplierMaterialSchema = z.object({
-  materialName: z.string().trim().min(1).max(120),
-  title: z.string().trim().min(3).max(120),
-  description: z.string().trim().min(10).max(2000),
-  categoryId: z.string().trim().min(1),
-  quantity: z.number().positive(),
-  unit: z.string().trim().min(1).max(40),
-  condition: z.enum(materialConditions),
-  sourceType: z.enum(materialSourceTypes).optional(),
-  isFree: z.boolean(),
-  price: z.number().nonnegative().optional().nullable(),
-  currency: z.literal('NIS').default('NIS'),
-  pickupAllowed: z.boolean().default(true),
-  deliveryAllowed: z.literal(false).default(false),
-  pickupNotes: z.string().trim().max(500).optional().nullable(),
-  suggestedUses: z.string().trim().max(1000).optional().nullable(),
-  imageUrls: z.array(materialImageUrlSchema).min(1).max(5),
-  sourceCategoryRequestId: z.string().trim().min(1).optional(),
-  sourcePriceRuleRequestId: z.string().trim().min(1).optional(),
-});
+export const createSupplierMaterialSchema = z
+  .object({
+    materialName: z.string().trim().min(1).max(120),
+    title: z.string().trim().min(3).max(120),
+    description: z.string().trim().min(10).max(2000),
+    categoryId: z.string().trim().min(1),
+    quantity: z.number().positive(),
+    unit: z.string().trim().min(1).max(40),
+    condition: z.enum(materialConditions),
+    sourceType: z.enum(materialSourceTypes).optional(),
+    isFree: z.boolean(),
+    price: z.number().nonnegative().optional().nullable(),
+    currency: z.literal('NIS').default('NIS'),
+    pickupAllowed: z.boolean().default(true),
+    deliveryAllowed: z.literal(false).default(false),
+    pickupNotes: z.string().trim().max(500).optional().nullable(),
+    suggestedUses: z.string().trim().max(1000).optional().nullable(),
+    imageUrls: z.array(materialImageUrlSchema).min(1).max(5),
+    sourceCategoryRequestId: z.string().trim().min(1).optional(),
+    sourcePriceRuleRequestId: z.string().trim().min(1).optional(),
+    useDefaultPickupLocation: z.boolean().default(true),
+    pickupLocation: locationSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.useDefaultPickupLocation && !data.pickupLocation) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['pickupLocation'],
+        message:
+          'pickupLocation is required when useDefaultPickupLocation is false',
+      });
+    }
+  });
 
 export type CreateSupplierMaterialInput = z.infer<
   typeof createSupplierMaterialSchema

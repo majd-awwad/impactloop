@@ -32,12 +32,15 @@ Supplier API calls use the shared authenticated Dio client. When the access toke
 
 Add-material uses category-scoped material type/name autocomplete backed by `GET /api/material-types?categoryId=&q=`. Suppliers can still type a custom `materialName`; selecting a reviewed type sends `materialTypeId` to price check only, while create continues to send `materialName` for backend material type/alias matching. `Listing title` remains display-only. The UI no longer asks for source type; backend derives `materials.sourceType` from `supplierProfile.supplierType` (`WORKSHOP` → `WORKSHOP_SURPLUS`, `FACTORY` → `FACTORY_SURPLUS`, `EDUCATIONAL_INSTITUTION` → `EDUCATIONAL_INSTITUTION`, `INDIVIDUAL_SUPPLIER` → `STUDENT_LEFTOVER`). The individual mapping is an MVP fallback and may need a more precise enum later.
 
+**Pickup location on create:** Organization suppliers see a read-only profile pickup map; individual/student suppliers can use profile default or override per material. Backend always requires a profile default pickup, copies it into a dedicated `locations` row per material (or creates override row for individual/student). Organization suppliers cannot send `useDefaultPickupLocation: false` or `pickupLocation`.
+
 ## Frontend files
 
 | Area | Path |
 |------|------|
 | Shell | `presentation/shell/supplier_shell.dart`, `supplier_sidebar.dart`, `supplier_mobile_nav.dart`, `supplier_nav_config.dart`, `supplier_top_bar.dart` |
 | Pages | `presentation/pages/supplier_dashboard_page.dart`, `supplier_my_materials_page.dart`, `supplier_owned_material_detail_page.dart`, `add_material_page.dart`, `supplier_incoming_requests_page.dart`, `supplier_pickup_schedule_page.dart`, `supplier_notifications_page.dart`, `supplier_profile_page.dart`, `supplier_access_denied_page.dart` |
+| Pickup on add material | `presentation/widgets/add_material_pickup_section.dart` |
 | Controllers | `presentation/controllers/supplier_*_providers.dart` |
 | Data APIs | `data/supplier_dashboard_repository.dart`, `supplier_profile_api.dart`, `supplier_my_materials_api.dart`, `supplier_materials_repository.dart`, `supplier_requests_api.dart`, `supplier_pickup_schedule_api.dart`, `supplier_notifications_api.dart`, `locations_api.dart` |
 | Theme | `presentation/theme/supplier_*` |

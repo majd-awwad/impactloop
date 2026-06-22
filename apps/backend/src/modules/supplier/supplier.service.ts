@@ -35,6 +35,58 @@ const MISSING_PROFILE_MESSAGE =
 const MISSING_PICKUP_LOCATION_MESSAGE =
   'Add a default pickup location before listing materials.';
 
+const ORG_PICKUP_OVERRIDE_MESSAGE =
+  'Organization suppliers must use the profile pickup location for all listings.';
+
+type SupplierProfileForMaterialCreate = NonNullable<
+  Awaited<ReturnType<typeof supplierRepository.findSupplierProfileForMaterialCreate>>
+>;
+
+const assertOrganizationPickupPolicy = (
+  input: CreateSupplierMaterialInput,
+  supplierType: string | null,
+) => {
+  if (!supplierRepository.isOrganizationSupplierType(supplierType ?? '')) {
+    return;
+  }
+
+  const useDefaultPickupLocation = input.useDefaultPickupLocation ?? true;
+
+  if (!useDefaultPickupLocation || input.pickupLocation != null) {
+    throw new AppError(ORG_PICKUP_OVERRIDE_MESSAGE, 400, 'VALIDATION_ERROR', {
+      reason: 'ORG_PICKUP_OVERRIDE_NOT_ALLOWED',
+    });
+  }
+};
+
+const resolveMaterialPickupLocationId = async (
+  supplierProfile: SupplierProfileForMaterialCreate,
+  input: CreateSupplierMaterialInput,
+): Promise<string> => {
+  const defaultLocation = supplierProfile.defaultPickupLocation;
+  const useDefaultPickupLocation = input.useDefaultPickupLocation ?? true;
+
+  if (!defaultLocation || !supplierProfile.defaultPickupLocationId) {
+    throw new AppError(
+      MISSING_PICKUP_LOCATION_MESSAGE,
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  assertOrganizationPickupPolicy(input, supplierProfile.supplierType);
+
+  if (supplierRepository.isOrganizationSupplierType(supplierProfile.supplierType ?? '')) {
+    return supplierRepository.copyLocationRow(defaultLocation, 'MATERIAL_PICKUP');
+  }
+
+  if (useDefaultPickupLocation || !input.pickupLocation) {
+    return supplierRepository.copyLocationRow(defaultLocation, 'MATERIAL_PICKUP');
+  }
+
+  return supplierRepository.createMaterialPickupLocation(input.pickupLocation);
+};
+
 const deriveMaterialSourceType = (supplierType: string | null) => {
   switch (supplierType) {
     case 'WORKSHOP':
@@ -340,6 +392,11 @@ export const createSupplierMaterial = async (
     );
   }
 
+  const materialLocationId = await resolveMaterialPickupLocationId(
+    supplierProfile,
+    input,
+  );
+
   await assertSourceRequestPublishable(userId, input);
   const sourceType = deriveMaterialSourceType(supplierProfile.supplierType);
 
@@ -378,7 +435,7 @@ export const createSupplierMaterial = async (
       ownerId: userId,
       supplierProfileId: supplierProfile.id,
       categoryId: matchedType?.categoryId ?? input.categoryId,
-      locationId: supplierProfile.defaultPickupLocationId,
+      locationId: materialLocationId,
       title: input.title,
       description: input.description,
       materialType: displayMaterialType,
@@ -454,7 +511,7 @@ export const createSupplierMaterial = async (
     ownerId: userId,
     supplierProfileId: supplierProfile.id,
     categoryId: materialType.categoryId,
-    locationId: supplierProfile.defaultPickupLocationId,
+    locationId: materialLocationId,
     title: input.title,
     description: input.description,
     materialType: materialType.nameEn,

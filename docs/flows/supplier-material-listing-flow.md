@@ -16,7 +16,7 @@ Supplier chooses **Add material** (`/supplier/materials/new`) or resumes from ap
 2. Choose a category, then select or type material type/name, listing title, condition, quantity, price/free, and pickup options.
 3. Run price check (paid listings).
 4. Upload at least one image.
-5. Review pickup location from the supplier profile.
+5. Review pickup location — organization: read-only profile pickup; individual/student: profile default or optional per-material override.
 6. Submit → material created → navigate to my materials or detail.
 
 ### Frontend path
@@ -34,7 +34,9 @@ Supplier chooses **Add material** (`/supplier/materials/new`) or resumes from ap
 2. `GET /api/material-types?categoryId=&q=` for category-scoped combobox suggestions
 3. `POST /api/materials/price-check` (authenticated; receives `materialName` and selected `materialTypeId` when available)
 4. `POST /api/uploads/material-images` (SUPPLIER)
-5. `POST /api/supplier/materials` → `supplier.service.createMaterial` → `supplier.repository.createSupplierMaterial`
+5. `POST /api/supplier/materials` → `supplier.service.createSupplierMaterial` → resolves material pickup location (copy or override) → `supplier.repository.createSupplierMaterial`
+
+Pickup body fields: `useDefaultPickupLocation` (default `true`), optional `pickupLocation` when false (individual/student only; organization override rejected).
 
 May link `sourceCategoryRequestId` / `sourcePriceRuleRequestId` to mark request published.
 
@@ -45,6 +47,7 @@ May link `sourceCategoryRequestId` / `sourcePriceRuleRequestId` to mark request 
 Insert/update:
 
 - `materials`, `material_images`, `material_tags`
+- `locations` — new row per material create (copy of profile default or override payload)
 - `category_requests` / `price_rule_requests` → `publishedMaterialId`, `publishedAt` when sourced from request
 
 ### Success state
@@ -61,7 +64,7 @@ Insert/update:
 
 ### Files involved
 
-`add_material_page.dart`, `material_listing_providers.dart`, `create_material_request.dart`, `supplier_materials_api.dart`, `supplier.service.ts`, `supplier.repository.ts`, `materials.service.ts` (price-check), `uploads.controller.ts`
+`add_material_page.dart`, `add_material_pickup_section.dart`, `material_listing_providers.dart`, `create_material_request.dart`, `supplier_materials_api.dart`, `supplier.service.ts`, `supplier.repository.ts`, `materials.service.ts` (price-check), `uploads.controller.ts`
 
 ---
 

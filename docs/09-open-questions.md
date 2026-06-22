@@ -37,12 +37,12 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 | Question | Status | Source |
 |----------|--------|--------|
-| Exact `CreateMaterialRequest` / supplier create payload and required location fields? | Open | [supplier-material-listing-flow](flows/supplier-material-listing-flow.md) |
-| Inline `locations` row creation on material create vs profile-only? | **Needs verification** | [supplier-material-listing-flow](flows/supplier-material-listing-flow.md) |
+| Exact `CreateMaterialRequest` / supplier create payload and required location fields? | **Resolved** — `useDefaultPickupLocation` + optional `pickupLocation`; profile default still required | [supplier-material-listing-flow](flows/supplier-material-listing-flow.md), `supplier.validation.ts` |
+| Inline `locations` row creation on material create vs profile-only? | **Resolved** — each create copies or creates a dedicated material `locations` row | [supplier-material-listing-flow](flows/supplier-material-listing-flow.md), `supplier.service.ts` |
 | When does price-rule AI write to `ai_price_lookup_logs`? | **Needs verification** | [materials-listing](features/materials-listing.md), `ai-price-lookup.repository.ts` |
 | Organization supplier: required `organization_profiles` fields on create? | Open | [supplier-material-listing-flow](flows/supplier-material-listing-flow.md) |
 | `POST /api/price-rule-requests` — should route require `SUPPLIER` role? | **Needs verification** | [api-catalog](backend/api-catalog.md), [materials-listing](features/materials-listing.md) |
-| Which location fields are on public material DTOs — consistent redaction on list and detail? | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md), [locations](features/locations.md) |
+| Which location fields are on public material DTOs — consistent redaction on list and detail? | **Partially resolved** — list/detail return `city`/`area` only; `visibility` enforcement still open | [material-discovery-flow](flows/material-discovery-flow.md), [locations](features/locations.md) |
 | Is discovery pagination exposed in Flutter UI? | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md), [material-discovery](features/material-discovery.md) |
 | Does material detail increment `materials.views_count`? | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md) |
 | Server-side filter parity with client-side discovery chips? | **Needs verification** | [material-discovery](features/material-discovery.md) |

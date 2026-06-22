@@ -18,7 +18,7 @@ class AddMaterialPreviewCard extends StatelessWidget {
     required this.unit,
     required this.isFree,
     this.price,
-    this.pickupCity,
+    this.pickupLabel,
     this.coverImageUrl,
     this.priceCheck,
   });
@@ -31,7 +31,7 @@ class AddMaterialPreviewCard extends StatelessWidget {
   final String unit;
   final bool isFree;
   final String? price;
-  final String? pickupCity;
+  final String? pickupLabel;
   final String? coverImageUrl;
   final MaterialPriceCheckResult? priceCheck;
 
@@ -91,8 +91,8 @@ class AddMaterialPreviewCard extends StatelessWidget {
             label: context.s.price,
             value: isFree ? context.s.free : '₪${price ?? '—'}',
           ),
-          if (pickupCity != null && pickupCity!.isNotEmpty)
-            _PreviewRow(label: context.s.pickupSectionTitle, value: pickupCity!),
+          if (pickupLabel != null && pickupLabel!.isNotEmpty)
+            _PreviewRow(label: context.s.pickupSectionTitle, value: pickupLabel!),
           if (!isFree) ...[
             const SizedBox(height: AppSpacing.md),
             Container(
