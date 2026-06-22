@@ -12,6 +12,10 @@ When reviewing a feature:
    - docs/00-ai-docs-router.md
    - docs/02-architecture.md
    - docs/04-api-conventions.md
+   - docs/backend/api-catalog.md
+   - docs/frontend/reusable-widgets.md
+   - docs/07-theme-system.md
+   - docs/08-implementation-status.md
    - any feature/docs files selected by docs/00-ai-docs-router.md
 
 2. Check:
@@ -25,6 +29,7 @@ When reviewing a feature:
    - Is there duplicated business logic?
    - Are any secrets hardcoded?
    - Did the developer add dependencies without approval?
+   - Are docs updated for API behavior, DB schema/enums/relations, feature behavior, user flows, reusable widgets, theme/tokens/colors, and auth/roles/security changes?
 
 3. Output:
    - Critical issues

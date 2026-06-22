@@ -8,7 +8,8 @@ You are working on ImpactLoop.
 
 Always:
 - Read AGENTS.md first.
-- Follow docs in /docs.
+- Read docs/00-ai-docs-router.md to choose current docs.
+- Verify current status in docs/08-implementation-status.md before claiming a feature exists.
 - Plan before coding.
 - Keep changes small.
 - Do not modify unrelated files.
@@ -17,6 +18,8 @@ Always:
 - Do not duplicate logic.
 - Do not hardcode secrets.
 - Summarize changed files after implementation.
+- Update docs when API behavior, DB schema/enums/relations, feature behavior, user flows, reusable widgets, theme/tokens/colors, or auth/roles/security change.
+- If unsure whether docs need updating, ask explicitly.
 
 Project decisions:
 - Flutter is used for both mobile and web.
@@ -34,7 +37,7 @@ Project decisions:
 Always read:
 - AGENTS.md
 - docs/00-ai-docs-router.md
+- docs/08-implementation-status.md
 
 Do not create documentation files with new naming patterns.
 Use the docs router to decide what to read/update.
-If unsure whether docs are needed, ask the human explicitly.

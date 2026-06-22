@@ -12,6 +12,8 @@ When creating a backend module:
    - docs/00-ai-docs-router.md
    - docs/02-architecture.md
    - docs/04-api-conventions.md
+   - docs/backend/api-catalog.md
+   - docs/08-implementation-status.md
    - any feature/docs files selected by docs/00-ai-docs-router.md
 
 2. Plan:
@@ -44,6 +46,8 @@ apps/backend/src/modules/<module>/
    - Explain how to test.
 
 6. Documentation:
+   - Update docs/backend/api-catalog.md when endpoint behavior changes.
+   - Update docs/08-implementation-status.md when ship status changes.
    - List docs that were updated.
    - If no docs were updated, explain why using docs/00-ai-docs-router.md.
    - If unsure, ask the human explicitly before finalizing.

@@ -22,7 +22,17 @@ Rules:
 Before creating UI:
 - Search shared widgets first.
 - Read docs/frontend/reusable-widgets.md.
+- Read docs/frontend/state-management.md for providers/controllers/repositories.
 - Read docs/07-theme-system.md for colors/theme.
+- Verify feature status in docs/08-implementation-status.md.
 
 When adding reusable widgets:
 - Update docs/frontend/reusable-widgets.md.
+
+When changing theme, tokens, colors, or palettes:
+- Update docs/07-theme-system.md.
+
+When changing providers/controllers/repositories:
+- Update docs/frontend/state-management.md.
+
+If unsure whether docs are needed, ask explicitly.

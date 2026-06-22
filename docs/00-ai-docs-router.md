@@ -16,13 +16,17 @@ Read:
 
 - [frontend/routes-map.md](frontend/routes-map.md)
 - [frontend/reusable-widgets.md](frontend/reusable-widgets.md)
-- [07-ui-style-guide.md](07-ui-style-guide.md) if auth UI changed (partial theme coverage)
+- [frontend/state-management.md](frontend/state-management.md) if Riverpod providers/controllers/repositories changed
+- [07-theme-system.md](07-theme-system.md) if theme, tokens, palettes, reusable visual primitives, or dark/light behavior changed
+- [07-ui-style-guide.md](07-ui-style-guide.md) only if auth UI changed (legacy/auth-specific reference)
 - **Future:** `06-frontend-guide.md` — not written yet
 
 Update:
 
 - [frontend/routes-map.md](frontend/routes-map.md) if routes/guards changed
 - [frontend/reusable-widgets.md](frontend/reusable-widgets.md) if a shared widget was added/changed
+- [frontend/state-management.md](frontend/state-management.md) if provider/controller/repository organization changed
+- [07-theme-system.md](07-theme-system.md) if shared theme, tokens, palettes, dark/light handling, or reusable visual architecture changed
 - [08-implementation-status.md](08-implementation-status.md) if feature ship status changed
 - Matching [features/](features/) and [flows/](flows/) doc when user-facing behavior changed (see [Feature & flow docs](#feature--flow-docs))
 
@@ -115,7 +119,7 @@ Gap docs are stubs — see [09-open-questions.md](09-open-questions.md) before i
 
 **Not documented as implemented:** learner reservation create, delivery workflow, AI material matching agent, admin portal, moderator portal (unless code changes prove otherwise).
 
-ADRs (`docs/adr/`) — not written yet.
+ADRs (`docs/adr/`) — accepted architecture decisions.
 
 ## Doc filename reference
 
@@ -123,8 +127,12 @@ ADRs (`docs/adr/`) — not written yet.
 |----------------------|-------------|
 | `01-project-map.md` | ✅ exists |
 | `05-database-guide.md` | `database/schema-overview.md` + `tables-catalog.md` |
-| `06-frontend-guide.md` | Not written — use `frontend/routes-map.md` + `reusable-widgets.md` |
-| `07-theme-system.md` | `07-ui-style-guide.md` (auth only) until theme doc expanded |
+| `06-frontend-guide.md` | Not written — use `frontend/routes-map.md` + `frontend/reusable-widgets.md` + `frontend/state-management.md` |
+| `07-ui-style-guide.md` | Legacy/auth-specific reference — use `07-theme-system.md` for app theme architecture |
+
+## ADRs
+
+Use [docs/adr/](adr/) for accepted architecture decisions. Do not create ADRs for unresolved questions or not-implemented features unless the ADR explicitly records a proven current decision.
 
 ## If unsure whether docs need update
 

@@ -25,3 +25,5 @@ When backend API behavior changes:
 - Update docs/backend/api-catalog.md
 - Update docs/features/<feature>.md
 - Update docs/flows/<flow>.md if the user journey changed
+- Update docs/08-implementation-status.md if ship status changed
+- If unsure whether docs are needed, ask explicitly

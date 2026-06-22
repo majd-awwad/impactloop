@@ -12,6 +12,11 @@ When creating a Flutter feature:
    - docs/00-ai-docs-router.md
    - docs/02-architecture.md
    - docs/04-api-conventions.md
+   - docs/backend/api-catalog.md
+   - docs/frontend/reusable-widgets.md
+   - docs/frontend/state-management.md
+   - docs/07-theme-system.md
+   - docs/08-implementation-status.md
    - any feature/docs files selected by docs/00-ai-docs-router.md
 
 2. Plan:
@@ -46,6 +51,10 @@ apps/frontend/lib/features/<feature>/
    - Explain how to test.
 
 6. Documentation:
+   - Update docs/frontend/reusable-widgets.md when shared widgets change.
+   - Update docs/frontend/state-management.md when providers/controllers/repositories change.
+   - Update docs/07-theme-system.md when theme/tokens/colors/palettes change.
+   - Update docs/08-implementation-status.md when ship status changes.
    - List docs that were updated.
    - If no docs were updated, explain why using docs/00-ai-docs-router.md.
    - If unsure, ask the human explicitly before finalizing.

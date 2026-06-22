@@ -1,110 +1,208 @@
 # Reusable Widgets
 
-Widget inventory for Flutter UI reuse. **Source:** `apps/frontend/lib/shared/widgets/`, `apps/frontend/lib/app/widgets/`, and feature folders.
+Current Flutter widget reuse inventory. Prefer documented shared/app widgets before creating new reusable UI.
 
-## Shared widgets (`lib/shared/widgets/`)
+**Inspected source files:**
+- `apps/frontend/lib/app/widgets/entry_nav_bar.dart`
+- `apps/frontend/lib/app/widgets/hero_workshop_visual.dart`
+- `apps/frontend/lib/app/widgets/impact_loop_logo.dart`
+- `apps/frontend/lib/app/widgets/nav_pill_menu.dart`
+- `apps/frontend/lib/shared/widgets/app_dropdown_field.dart`
+- `apps/frontend/lib/shared/widgets/app_feedback.dart`
+- `apps/frontend/lib/shared/widgets/app_inline_error.dart`
+- `apps/frontend/lib/shared/widgets/app_link_button.dart`
+- `apps/frontend/lib/shared/widgets/app_primary_button.dart`
+- `apps/frontend/lib/shared/widgets/app_text_area.dart`
+- `apps/frontend/lib/shared/widgets/app_text_field.dart`
+- `apps/frontend/lib/shared/widgets/materials/app_material_card.dart`
+- `apps/frontend/lib/shared/widgets/materials/material_condition_badge.dart`
+- `apps/frontend/lib/shared/widgets/materials/material_price_badge.dart`
+- `apps/frontend/lib/shared/widgets/materials/material_status_badge.dart`
+- `apps/frontend/lib/shared/widgets/materials/materials_ui_palette.dart`
+- `apps/frontend/lib/features/auth/presentation/widgets/**`
+- `apps/frontend/lib/features/home/presentation/widgets/**`
+- `apps/frontend/lib/features/landing/presentation/widgets/**`
+- `apps/frontend/lib/features/learning_hub/presentation/widgets/**`
+- `apps/frontend/lib/features/material_discovery/presentation/widgets/**`
+- `apps/frontend/lib/features/supplier_portal/presentation/widgets/**`
+- `apps/frontend/lib/features/supplier_portal/presentation/theme/**`
 
-**Intended for reuse** across features. Prefer these before creating new form controls or material display primitives.
+Theme details are documented in [07-theme-system.md](../07-theme-system.md). State/provider placement is documented in [state-management.md](state-management.md).
 
-**Inspected:** all `.dart` files under `shared/widgets/`
+## Shared Widgets
 
-### Form and feedback
+`apps/frontend/lib/shared/widgets/` is the current cross-feature reusable widget area.
 
-| Widget | File | Purpose |
-|--------|------|---------|
-| `AppTextField` | `app_text_field.dart` | Themed text input; includes `AppFieldGap` |
-| `AppTextArea` | `app_text_area.dart` | Multiline input |
-| `AppDropdownField<T>` | `app_dropdown_field.dart` | Themed dropdown |
-| `AppPrimaryButton` | `app_primary_button.dart` | Full-width primary action with loading state |
-| `AppLinkButton` | `app_link_button.dart` | Text link button |
-| `AppInlineError` | `app_inline_error.dart` | Inline error text |
-| `showErrorSnackBar`, `showInfoSnackBar`, `showSuccessSnackBar` | `app_feedback.dart` | Snackbar helpers (functions, not widgets) |
+### Form And Feedback
 
-### Materials (`shared/widgets/materials/`)
+| Widget/helper | File | Current purpose |
+|---------------|------|-----------------|
+| `AppTextField` | `app_text_field.dart` | Themed single-line or controlled multiline `TextFormField`; supports validation, forced error text, autofill, submit, and change callbacks. |
+| `AppFieldGap` | `app_text_field.dart` | Standard vertical field gap using `AppSpacing.md`. |
+| `AppTextArea` | `app_text_area.dart` | Themed multiline text field with label, hint, validation, forced error text, and callbacks. |
+| `AppDropdownField<T>` | `app_dropdown_field.dart` | Themed `DropdownButtonFormField` using generic values and forced error text. |
+| `AppPrimaryButton` | `app_primary_button.dart` | Full-width `FilledButton`; disables itself and shows a spinner when `isLoading` is true. |
+| `AppLinkButton` | `app_link_button.dart` | Aligned text button using `AppTextStyles.link`. |
+| `AppInlineError` | `app_inline_error.dart` | Inline body-small error text using `Theme.of(context).colorScheme.error`. |
+| `showErrorSnackBar` | `app_feedback.dart` | Error snackbar using normalized API-friendly message text. |
+| `showInfoSnackBar` | `app_feedback.dart` | Informational snackbar. |
 
-Designed for public discovery and any material list/detail surface.
+No `showSuccessSnackBar` exists in current code.
 
-| Widget | File | Purpose |
-|--------|------|---------|
-| `AppMaterialCard` | `app_material_card.dart` | Route-independent material card; **must not** import GoRouter or call APIs |
-| `MaterialStatusBadge` | `material_status_badge.dart` | Status chip |
-| `MaterialConditionBadge` | `material_condition_badge.dart` | Condition chip |
-| `MaterialPriceBadge` | `material_price_badge.dart` | Price / free display |
-| `MaterialsUiPalette` | `materials_ui_palette.dart` | Shared colors for material UIs |
+### Materials
 
-**Architecture rule** (from supplementary [material-discovery-handoff.md](material-discovery-handoff.md), still valid): map API DTOs before passing data into `AppMaterialCard`. Canonical API list: [backend/api-catalog.md](../backend/api-catalog.md).
+`apps/frontend/lib/shared/widgets/materials/` contains route-independent material display primitives.
 
----
+| Widget/type | File | Current purpose |
+|-------------|------|-----------------|
+| `AppMaterialCard` | `app_material_card.dart` | Material card for discovery-shaped material data. It accepts display-ready values, callbacks, optional image URL, optional trailing widget, variant, fallback icon, and media height override. |
+| `AppMaterialCardVariant` | `app_material_card.dart` | `standard` and `compact` card sizing. |
+| `MaterialStatusBadge` / `MaterialStatusBadgeTone` | `material_status_badge.dart` | Available/reserved/reused/draft status badge. |
+| `MaterialConditionBadge` / `MaterialConditionBadgeTone` | `material_condition_badge.dart` | Like-new/good/fair/mixed condition badge. |
+| `MaterialPriceBadge` | `material_price_badge.dart` | Free/paid price badge. |
+| `MaterialsUiPalette` and material constants | `materials_ui_palette.dart` | Shared material-card/discovery palette and badge/card sizing constants. |
 
-## App-level widgets (`lib/app/widgets/`)
+`AppMaterialCard` must stay API- and router-independent. Map API DTOs into labels, tones, booleans, and callbacks before passing them to the widget.
 
-Shared across entry/marketing surfaces — not feature-specific.
+## App-Level Widgets
 
-**Inspected:** all `.dart` files under `app/widgets/`
+`apps/frontend/lib/app/widgets/` contains reusable app/entry-surface widgets, not feature business widgets.
 
-| Widget | File | Purpose |
-|--------|------|---------|
-| `EntryNavBar` | `entry_nav_bar.dart` | Top nav for landing, learning hub, materials discovery |
-| `ImpactLoopLogo` | `impact_loop_logo.dart` | Brand logo |
-| `HeroWorkshopVisual` | `hero_workshop_visual.dart` | Landing hero illustration |
-| `NavPillMenu<T>` | `nav_pill_menu.dart` | Generic pill tab menu |
+| Widget | File | Current purpose |
+|--------|------|-----------------|
+| `EntryNavBar` | `entry_nav_bar.dart` | Consumer top nav for landing/entry surfaces. It watches auth/settings state and includes theme/language controls. |
+| `ImpactLoopLogo` | `impact_loop_logo.dart` | Brand mark/wordmark with optional colors and compact mode. |
+| `HeroWorkshopVisual` | `hero_workshop_visual.dart` | Landing hero visual using landing assets/palette. App-level but landing-oriented. |
+| `NavPillMenu<T>` | `nav_pill_menu.dart` | Generic pill-style menu for selecting one value from a typed list. |
 
----
+`EntryNavBar` is app-level but not purely presentational because it watches `authControllerProvider` and `appSettingsProvider`.
 
-## Feature-specific widgets — **do not reuse yet**
+## Feature-Specific Widgets
 
-These live inside feature folders and are tied to auth, supplier portal, or learning hub styling. Copying them into other features is discouraged until promoted to `shared/` or `app/widgets/`.
+Widgets under `features/<feature>/presentation/widgets/` are not shared by default. Reuse them only inside their owning feature unless promoted.
 
-### Auth (`features/auth/presentation/widgets/`)
+### Auth
 
-**Inspected:** public widget classes in auth widgets folder
+Source: `apps/frontend/lib/features/auth/presentation/widgets/`
 
-Examples: `AuthShell`, `AuthBrandingPanel`, `AuthEntryBrandingPanel`, `AuthFormCard`, `AuthHeader`, `AuthTextField`, `LoginForm`, `UnifiedRegisterForm`, `CompleteLearnerProfileForm`, `CompleteSupplierProfileForm`, dark-auth variants (`DarkAuthShell`, `DarkAuthFormCard`, …).
+Feature-specific widgets include:
 
-Documented visually in [07-ui-style-guide.md](../07-ui-style-guide.md) — auth-only.
+- `AuthShell`
+- `AuthBrandingPanel`
+- `AuthEntryBrandingPanel`
+- `AuthFormCard`
+- `AuthHeader`
+- `AuthFeatureBadge`
+- `AuthTextField`
+- `AuthPasswordField`
+- `LoginForm`
+- `UnifiedRegisterForm`
+- `CompleteLearnerProfileForm`
+- `CompleteSupplierProfileForm`
+- auth branding assets and buttons
+- `AuthUiPalette`
 
-**Legacy / unwired:** `ChooseRoleForm` + `choose_role_page.dart` (page not in router).
+Auth widgets use auth-specific layout and palette rules. Keep them auth-scoped unless a widget is deliberately promoted and decoupled from auth copy, registration flow, and auth palette.
 
-### Supplier portal (`features/supplier_portal/presentation/widgets/`)
+Candidate for future reuse:
 
-Large feature-specific set including shell (`supplier_shell.dart`, `supplier_sidebar.dart`), dashboard charts, pickup schedule, profile cards, dialogs.
+| Candidate | Why not shared yet |
+|-----------|--------------------|
+| `AuthTextField` / `AuthPasswordField` | Auth palette and visual treatment are feature-specific; shared form controls already exist as `AppTextField` and `AppTextArea`. |
+| `AuthFormCard` | Tied to auth screen composition and styling. |
+| `AuthShell` | Tied to auth entry layouts and branding. |
 
-**Not for cross-feature reuse yet:**
+### Supplier Portal
 
-| Widget | File | Why |
-|--------|------|-----|
-| `SupplierMaterialCard` | `widgets/materials/supplier_material_card.dart` | Supplier-themed card; parallel to but separate from `AppMaterialCard` |
-| `SupplierMaterialsGrid`, filter chips, summary row | `widgets/materials/*` | Supplier my-materials layout |
-| Dashboard widgets | `widgets/dashboard/*` | Supplier dashboard only |
-| Theme types | `presentation/theme/*` | `SupplierThemeExtension`, palettes — supplier scope only |
+Source: `apps/frontend/lib/features/supplier_portal/presentation/widgets/` and `presentation/theme/`
 
-Supplier portal **does** reuse `AppMaterialCard` in some flows per handoff doc — prefer shared card when showing discovery-shaped data.
+Supplier widgets are supplier-feature UI and should not be reused across other features yet. They include:
 
-### Learning hub (`features/learning_hub/presentation/widgets/`)
+- request dialogs and cards
+- pickup schedule cards/dialogs/filter chips/status styles
+- supplier profile cards/forms/location widgets
+- dashboard cards/charts/panels
+- supplier material cards/grid/filter/summary widgets
+- supplier shell/top/sidebar/profile/navigation widgets outside the inspected widget folder
+- supplier theme, palette, decoration, text, locale helpers
 
-All widgets assume mock data and learning-specific palette (`LearningUiPalette` in learning hub code).
+Candidate for future reuse:
 
-Examples: `LearningProjectCard`, `FeaturedProjectCard`, `LearningHubHero`, `DisabledAiPanel`, `MockRatingSummaryCard`.
+| Candidate | Why not shared yet |
+|-----------|--------------------|
+| `SupplierMaterialCard` | Supplier-owned material actions and supplier palette differ from public `AppMaterialCard`. |
+| supplier filter chip widgets | Tied to supplier enums, queries, and theme. |
+| supplier dashboard/stat cards | Tied to supplier metrics and supplier theme extension. |
+| `SupplierDarkFormField` | Supplier theme-specific; shared form fields already exist. |
 
-**Do not reuse** until learning hub is API-backed and widgets are decoupled from `learning_hub_mock_data.dart`.
+Treat supplier theme as scoped/legacy-compatible; see [07-theme-system.md](../07-theme-system.md).
 
-### Landing / home (`features/landing/`, `features/home/`)
+### Material Discovery
 
-Presentation widgets are page-specific (hero sections, feature cards, spotlight). **Not promoted** to shared.
+Source: `apps/frontend/lib/features/material_discovery/presentation/widgets/`
 
-### Materials data feature (`features/materials/`)
+Feature widgets:
 
-No `presentation/pages/` routes — data layer + providers only. UI for listing lives in `supplier_portal` add-material flow.
+- `MaterialSearchFilters`
+- `MaterialsHeroSection`
+- `NearbyMapPlaceholder`
 
----
+These are discovery-page composition widgets. Shared material card/badge primitives live under `shared/widgets/materials/`.
 
-## Promotion criteria (for future docs)
+Candidate for future reuse:
 
-Move a widget to `shared/widgets/` when:
+| Candidate | Why not shared yet |
+|-----------|--------------------|
+| `MaterialSearchFilters` | Tied to discovery filter behavior and page state. |
 
-1. Used (or planned) in **two or more features**
-2. No feature-specific theme extension required
-3. No direct API calls inside the widget
-4. Documented in this file
+### Learning Hub
 
-When promoting, update [00-ai-docs-router.md](../00-ai-docs-router.md) Flutter section pointers.
+Source: `apps/frontend/lib/features/learning_hub/presentation/widgets/`
+
+Feature widgets include project cards, hero, category chips, text helpers, component/step/link sections, disabled AI panel, and mock rating summary card.
+
+Do not reuse these outside learning hub yet. The learning hub remains mock-data oriented in current docs/code inventory, and widgets are coupled to learning-specific models/palette.
+
+### Home And Landing
+
+Sources:
+
+- `apps/frontend/lib/features/home/presentation/widgets/`
+- `apps/frontend/lib/features/landing/presentation/widgets/`
+
+Home widgets are learner-home section/card widgets. Landing widgets are page-specific hero/nav/feature/footer composition. They are not promoted to shared.
+
+Candidate for future reuse:
+
+| Candidate | Why not shared yet |
+|-----------|--------------------|
+| `HomeSectionHeader` | Looks generic, but currently belongs to learner home and should not be reused until another feature needs the same API. |
+| landing feature cards | Marketing/landing-specific content and layout. |
+
+## Where A Widget Belongs
+
+Use `shared/widgets/` when all are true:
+
+- It is needed by more than one feature or is clearly a cross-feature primitive.
+- It does not import feature-specific providers, repositories, routes, DTOs, l10n, or palettes.
+- It accepts display values and callbacks instead of fetching data.
+- It works in light/dark mode through `Theme.of(context)`, `AppThemeColors`, or a shared palette.
+- It is documented in this file.
+
+Use `app/widgets/` when the widget is app shell/entry/brand infrastructure rather than feature business UI.
+
+Keep the widget inside a feature when:
+
+- It uses feature-specific state, models, providers, or route assumptions.
+- It needs a feature palette such as auth or supplier.
+- It contains feature copy or user-flow assumptions.
+- It has only one current feature consumer.
+
+## Reuse Rules
+
+- Reuse `AppTextField`, `AppTextArea`, `AppDropdownField`, `AppPrimaryButton`, `AppLinkButton`, `AppInlineError`, and snackbar helpers before creating feature form controls.
+- Reuse `AppMaterialCard` and material badges for public/discovery-shaped material displays.
+- Do not import supplier widgets into learner/public features.
+- Do not import auth widgets into non-auth features.
+- Do not add API calls to reusable widgets.
+- Promote candidates only when a second real usage appears and the widget can be decoupled cleanly.
