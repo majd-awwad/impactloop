@@ -11,8 +11,9 @@ import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../application/supplier_my_materials_providers.dart';
 import '../../data/models/supplier_my_materials_models.dart';
 import '../theme/supplier_theme_extension.dart';
+import '../widgets/materials/supplier_material_delete_helper.dart';
 import '../widgets/materials/supplier_material_label_helper.dart';
-import '../widgets/supplier_feedback.dart';
+import '../widgets/materials/supplier_my_materials_colors.dart';
 
 const _contentMaxWidth = 960.0;
 
@@ -46,10 +47,6 @@ class SupplierOwnedMaterialDetailPage extends ConsumerWidget {
             },
           ),
           data: (material) {
-            if (material == null) {
-              return _NotFound(onBack: () => context.go('/supplier/materials'));
-            }
-
             return SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: _DetailBody(material: material),
@@ -61,13 +58,13 @@ class SupplierOwnedMaterialDetailPage extends ConsumerWidget {
   }
 }
 
-class _DetailBody extends StatelessWidget {
+class _DetailBody extends ConsumerWidget {
   const _DetailBody({required this.material});
 
   final SupplierMyMaterial material;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = context.s;
     final colors = context.supplierColors;
     final isArabic = l.isArabic;
@@ -75,6 +72,10 @@ class _DetailBody extends StatelessWidget {
     final status = SupplierMaterialLabelHelper.statusMeta(material.status);
     final category =
         isArabic ? material.category.nameAr : material.category.nameEn;
+    final deleteBlockedMessage = supplierMaterialDeleteBlockedMessage(
+      l,
+      material.deleteBlockedReason,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -148,6 +149,15 @@ class _DetailBody extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         Text(material.description, style: context.supplierBody()),
+        if (material.materialType != null &&
+            material.materialType!.trim().isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          _InfoRow(
+            label: l.materialTypeLabel,
+            value: material.materialType!,
+            icon: Icons.category_outlined,
+          ),
+        ],
         const SizedBox(height: AppSpacing.lg),
         _InfoRow(
           label: SupplierMaterialLabelHelper.resolveText(
@@ -169,6 +179,12 @@ class _DetailBody extends StatelessWidget {
           ),
           icon: Icons.location_on_outlined,
         ),
+        if (material.location.addressLine != null &&
+            material.location.addressLine!.trim().isNotEmpty)
+          _InfoRow(
+            label: material.location.addressLine!,
+            icon: Icons.home_outlined,
+          ),
         _InfoRow(
           label: SupplierMaterialLabelHelper.resolveText(
             SupplierMaterialLabelHelper.availabilityLabel(
@@ -179,6 +195,18 @@ class _DetailBody extends StatelessWidget {
           ),
           icon: Icons.local_shipping_outlined,
         ),
+        if (material.pickupNotes != null &&
+            material.pickupNotes!.trim().isNotEmpty)
+          _InfoRow(
+            label: material.pickupNotes!,
+            icon: Icons.notes_outlined,
+          ),
+        if (material.suggestedUses != null &&
+            material.suggestedUses!.trim().isNotEmpty)
+          _InfoRow(
+            label: material.suggestedUses!,
+            icon: Icons.lightbulb_outline,
+          ),
         _InfoRow(
           label: '${l.viewsLabel}: ${material.viewsCount}',
           icon: Icons.visibility_outlined,
@@ -189,17 +217,36 @@ class _DetailBody extends StatelessWidget {
           icon: Icons.schedule_outlined,
         ),
         const SizedBox(height: AppSpacing.lg),
-        Row(
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
           children: [
             OutlinedButton(
               onPressed: () => context.go('/supplier/materials'),
               child: Text(l.backToMyMaterials),
             ),
-            const SizedBox(width: AppSpacing.sm),
             OutlinedButton(
               onPressed: () =>
-                  showSupplierInfoSnackBar(context, l.editListingComingSoon),
+                  context.go('/supplier/materials/${material.id}/edit'),
+              style: SupplierMyMaterialsColors.editButtonStyle(context),
               child: Text(l.editListing),
+            ),
+            Tooltip(
+              message: material.canDelete ? '' : deleteBlockedMessage,
+              child: OutlinedButton(
+                onPressed: material.canDelete
+                    ? () => handleSupplierMaterialDelete(
+                          context: context,
+                          ref: ref,
+                          material: material,
+                        )
+                    : null,
+                style: SupplierMyMaterialsColors.deleteButtonStyle(
+                  context,
+                  enabled: material.canDelete,
+                ),
+                child: Text(l.deleteMaterial),
+              ),
             ),
           ],
         ),
@@ -215,9 +262,14 @@ class _DetailBody extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.icon});
+  const _InfoRow({
+    required this.label,
+    required this.icon,
+    this.value,
+  });
 
   final String label;
+  final String? value;
   final IconData icon;
 
   @override
@@ -225,34 +277,16 @@ class _InfoRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 18, color: context.supplierColors.textMuted),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(child: Text(label, style: context.supplierBody())),
-        ],
-      ),
-    );
-  }
-}
-
-class _NotFound extends StatelessWidget {
-  const _NotFound({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = context.s;
-
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Column(
-        children: [
-          Text(l.materialNotFoundTitle, style: context.supplierSectionTitle()),
-          const SizedBox(height: AppSpacing.sm),
-          Text(l.materialNotFoundSubtitle, textAlign: TextAlign.center),
-          const SizedBox(height: AppSpacing.lg),
-          FilledButton(onPressed: onBack, child: Text(l.backToMyMaterials)),
+          Expanded(
+            child: Text(
+              value ?? label,
+              style: context.supplierBody(),
+            ),
+          ),
         ],
       ),
     );
