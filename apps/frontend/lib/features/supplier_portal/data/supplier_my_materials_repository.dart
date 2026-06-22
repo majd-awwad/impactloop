@@ -23,4 +23,19 @@ class SupplierMyMaterialsRepository {
   ) {
     return _api.listMaterials(query);
   }
+
+  Future<SupplierMyMaterial> getMaterial(String materialId) {
+    return _api.getMaterial(materialId);
+  }
+
+  Future<SupplierMyMaterial> updateMaterial(
+    String materialId,
+    UpdateSupplierMyMaterialRequest request,
+  ) {
+    return _api.updateMaterial(materialId, request);
+  }
+
+  Future<void> deleteMaterial(String materialId) {
+    return _api.deleteMaterial(materialId);
+  }
 }

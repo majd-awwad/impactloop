@@ -30,4 +30,32 @@ class SupplierMyMaterialsApi {
       SupplierMyMaterialsListResult.fromJson,
     );
   }
+
+  Future<SupplierMyMaterial> getMaterial(String materialId) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>('/api/supplier/materials/$materialId'),
+      SupplierMyMaterial.fromJson,
+    );
+  }
+
+  Future<SupplierMyMaterial> updateMaterial(
+    String materialId,
+    UpdateSupplierMyMaterialRequest request,
+  ) {
+    return unwrapApiResponse(
+      _client.patch<Map<String, dynamic>>(
+        '/api/supplier/materials/$materialId',
+        data: request.toJson(),
+      ),
+      SupplierMyMaterial.fromJson,
+    );
+  }
+
+  Future<void> deleteMaterial(String materialId) {
+    return unwrapApiVoidResponse(
+      _client.delete<Map<String, dynamic>>(
+        '/api/supplier/materials/$materialId',
+      ),
+    );
+  }
 }

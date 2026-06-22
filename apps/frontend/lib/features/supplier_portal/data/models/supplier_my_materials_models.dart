@@ -53,10 +53,12 @@ class SupplierMyMaterialsLocation {
   const SupplierMyMaterialsLocation({
     required this.city,
     this.area,
+    this.addressLine,
   });
 
   final String city;
   final String? area;
+  final String? addressLine;
 
   factory SupplierMyMaterialsLocation.fromJson(Map<String, dynamic>? json) {
     if (json == null) {
@@ -66,6 +68,7 @@ class SupplierMyMaterialsLocation {
     return SupplierMyMaterialsLocation(
       city: json['city'] as String? ?? '',
       area: json['area'] as String?,
+      addressLine: json['addressLine'] as String?,
     );
   }
 }
@@ -74,15 +77,18 @@ class SupplierMyMaterialsImage {
   const SupplierMyMaterialsImage({
     required this.imageUrl,
     required this.isCover,
+    this.sortOrder = 0,
   });
 
   final String imageUrl;
   final bool isCover;
+  final int sortOrder;
 
   factory SupplierMyMaterialsImage.fromJson(Map<String, dynamic> json) {
     return SupplierMyMaterialsImage(
       imageUrl: json['imageUrl'] as String? ?? '',
       isCover: json['isCover'] == true,
+      sortOrder: json['sortOrder'] as int? ?? 0,
     );
   }
 }
@@ -93,6 +99,7 @@ class SupplierMyMaterial {
     required this.title,
     required this.description,
     required this.category,
+    this.materialType,
     required this.status,
     required this.condition,
     required this.quantity,
@@ -103,16 +110,21 @@ class SupplierMyMaterial {
     required this.location,
     required this.pickupAllowed,
     required this.deliveryAllowed,
+    this.pickupNotes,
+    this.suggestedUses,
     required this.images,
     required this.viewsCount,
     required this.createdAt,
     required this.updatedAt,
+    required this.canDelete,
+    this.deleteBlockedReason,
   });
 
   final String id;
   final String title;
   final String description;
   final SupplierMyMaterialsCategory category;
+  final String? materialType;
   final String status;
   final String condition;
   final double quantity;
@@ -123,10 +135,14 @@ class SupplierMyMaterial {
   final SupplierMyMaterialsLocation location;
   final bool pickupAllowed;
   final bool deliveryAllowed;
+  final String? pickupNotes;
+  final String? suggestedUses;
   final List<SupplierMyMaterialsImage> images;
   final int viewsCount;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool canDelete;
+  final String? deleteBlockedReason;
 
   String? get coverImageUrl {
     for (final image in images) {
@@ -148,6 +164,7 @@ class SupplierMyMaterial {
       category: SupplierMyMaterialsCategory.fromJson(
         json['category'] as Map<String, dynamic>?,
       ),
+      materialType: json['materialType'] as String?,
       status: json['status'] as String? ?? 'AVAILABLE',
       condition: json['condition'] as String? ?? 'GOOD',
       quantity: (json['quantity'] as num?)?.toDouble() ?? 0,
@@ -160,6 +177,8 @@ class SupplierMyMaterial {
       ),
       pickupAllowed: json['pickupAllowed'] != false,
       deliveryAllowed: json['deliveryAllowed'] == true,
+      pickupNotes: json['pickupNotes'] as String?,
+      suggestedUses: json['suggestedUses'] as String?,
       images: imagesJson is List
           ? imagesJson
               .whereType<Map>()
@@ -178,7 +197,53 @@ class SupplierMyMaterial {
           DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
+      canDelete: json['canDelete'] == true,
+      deleteBlockedReason: json['deleteBlockedReason'] as String?,
     );
+  }
+}
+
+class UpdateSupplierMyMaterialRequest {
+  const UpdateSupplierMyMaterialRequest({
+    required this.title,
+    required this.description,
+    required this.quantity,
+    required this.unit,
+    required this.condition,
+    required this.pickupAllowed,
+    required this.deliveryAllowed,
+    this.pickupNotes,
+    this.suggestedUses,
+  });
+
+  final String title;
+  final String description;
+  final double quantity;
+  final String unit;
+  final String condition;
+  final bool pickupAllowed;
+  final bool deliveryAllowed;
+  final String? pickupNotes;
+  final String? suggestedUses;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'description': description,
+      'quantity': quantity,
+      'unit': unit,
+      'condition': condition,
+      'pickupAllowed': pickupAllowed,
+      'deliveryAllowed': deliveryAllowed,
+      'pickupNotes':
+          pickupNotes == null || pickupNotes!.trim().isEmpty
+              ? null
+              : pickupNotes!.trim(),
+      'suggestedUses':
+          suggestedUses == null || suggestedUses!.trim().isEmpty
+              ? null
+              : suggestedUses!.trim(),
+    };
   }
 }
 
@@ -329,6 +394,12 @@ class SupplierMyMaterialsQuery {
   final bool? isFree;
   final String? categoryId;
 
+  bool get hasActiveFilters =>
+      search.trim().isNotEmpty ||
+      status != null ||
+      isFree != null ||
+      categoryId != null;
+
   SupplierMyMaterialsQuery copyWith({
     int? page,
     int? limit,
@@ -339,14 +410,29 @@ class SupplierMyMaterialsQuery {
     bool clearStatus = false,
     bool clearIsFree = false,
     bool clearCategoryId = false,
+    bool clearSearch = false,
   }) {
     return SupplierMyMaterialsQuery(
       page: page ?? this.page,
       limit: limit ?? this.limit,
-      search: search ?? this.search,
+      search: clearSearch ? '' : search ?? this.search,
       status: clearStatus ? null : status ?? this.status,
       isFree: clearIsFree ? null : isFree ?? this.isFree,
       categoryId: clearCategoryId ? null : categoryId ?? this.categoryId,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SupplierMyMaterialsQuery &&
+        other.page == page &&
+        other.limit == limit &&
+        other.search == search &&
+        other.status == status &&
+        other.isFree == isFree &&
+        other.categoryId == categoryId;
+  }
+
+  @override
+  int get hashCode => Object.hash(page, limit, search, status, isFree, categoryId);
 }

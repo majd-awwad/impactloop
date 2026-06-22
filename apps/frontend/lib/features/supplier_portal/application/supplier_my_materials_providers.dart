@@ -39,26 +39,22 @@ final supplierMyMaterialsProvider =
 });
 
 final supplierMyMaterialByIdProvider =
-    FutureProvider.autoDispose.family<SupplierMyMaterial?, String>((
+    FutureProvider.autoDispose.family<SupplierMyMaterial, String>((
   ref,
   materialId,
 ) async {
-  final result = await ref.watch(supplierMyMaterialsProvider.future);
-  for (final item in result.items) {
-    if (item.id == materialId) {
-      return item;
-    }
+  final auth = ref.watch(authControllerProvider);
+
+  if (!auth.isAuthenticated) {
+    throw const ApiException(
+      message: 'Sign in as a supplier to view your materials.',
+      code: 'UNAUTHORIZED',
+    );
   }
 
-  final fallback = await ref
-      .read(supplierMyMaterialsRepositoryProvider)
-      .listMaterials(const SupplierMyMaterialsQuery(page: 1, limit: 100));
-
-  for (final item in fallback.items) {
-    if (item.id == materialId) {
-      return item;
-    }
-  }
-
-  return null;
+  return ref.watch(supplierMyMaterialsRepositoryProvider).getMaterial(materialId);
 });
+
+void invalidateSupplierMyMaterials(WidgetRef ref) {
+  ref.invalidate(supplierMyMaterialsProvider);
+}
