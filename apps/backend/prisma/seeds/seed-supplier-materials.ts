@@ -276,6 +276,17 @@ export async function seedSupplierMaterials(prisma: PrismaClient) {
     );
   }
 
+  const alignedCount = await alignSupplierElectronicsFocus(
+    prisma,
+    supplier.id,
+    electronicsCategoryId,
+  );
+  if (alignedCount > 0) {
+    console.log(
+      `Aligned ${alignedCount} supplier materials to Electronics category.`,
+    );
+  }
+
   const imagesAdded = await ensureMissingMaterialImages(prisma, supplier.id);
   if (imagesAdded > 0) {
     console.log(`Added default images to ${imagesAdded} materials.`);
