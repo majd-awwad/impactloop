@@ -29,7 +29,6 @@ enum SupplierNavLabelKey {
   incomingRequests,
   requestsShort,
   pickupSchedule,
-  browseMaterials,
   notifications,
   profile;
 
@@ -45,7 +44,6 @@ enum SupplierNavLabelKey {
       SupplierNavLabelKey.incomingRequests => l.navIncomingRequests,
       SupplierNavLabelKey.requestsShort => l.navRequestsShort,
       SupplierNavLabelKey.pickupSchedule => l.navPickupSchedule,
-      SupplierNavLabelKey.browseMaterials => l.navBrowseMaterials,
       SupplierNavLabelKey.notifications => l.navNotifications,
       SupplierNavLabelKey.profile => l.navProfile,
     };
@@ -83,11 +81,6 @@ const supplierNavItems = [
     icon: Icons.local_shipping_outlined,
   ),
   SupplierNavItem(
-    labelKey: SupplierNavLabelKey.browseMaterials,
-    route: '/materials',
-    icon: Icons.search,
-  ),
-  SupplierNavItem(
     labelKey: SupplierNavLabelKey.notifications,
     route: '/supplier/notifications',
     icon: Icons.notifications_none_rounded,
@@ -105,7 +98,7 @@ final supplierMobileNavItems = [
   supplierNavItems[1],
   supplierNavItems[2],
   supplierNavItems[3],
-  supplierNavItems[7],
+  supplierNavItems[5],
 ];
 
 String supplierPageTitle(BuildContext context, String location) =>
