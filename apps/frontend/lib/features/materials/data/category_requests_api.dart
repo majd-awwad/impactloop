@@ -26,7 +26,9 @@ class CategoryRequestsApi {
       final body = response.data;
       if (body == null || body['success'] != true) {
         throw ApiException(
-          message: body?['message'] as String? ?? 'Unexpected category request response',
+          message:
+              body?['message'] as String? ??
+              'Unexpected category request response',
           statusCode: response.statusCode,
         );
       }

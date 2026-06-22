@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'supplier_color_scheme.dart';
+import 'supplier_ui_palette.dart';
 
 abstract final class SupplierTextStyles {
-  static TextStyle display(BuildContext context, SupplierColorScheme c) =>
+  static TextStyle display(BuildContext context, SupplierUiPalette c) =>
       TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.w700,
@@ -11,7 +11,7 @@ abstract final class SupplierTextStyles {
         color: c.textPrimary,
       );
 
-  static TextStyle title(BuildContext context, SupplierColorScheme c) =>
+  static TextStyle title(BuildContext context, SupplierUiPalette c) =>
       TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.w600,
@@ -19,7 +19,7 @@ abstract final class SupplierTextStyles {
         color: c.textPrimary,
       );
 
-  static TextStyle subtitle(BuildContext context, SupplierColorScheme c) =>
+  static TextStyle subtitle(BuildContext context, SupplierUiPalette c) =>
       TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.w400,
@@ -27,7 +27,7 @@ abstract final class SupplierTextStyles {
         color: c.textSecondary,
       );
 
-  static TextStyle body(BuildContext context, SupplierColorScheme c) =>
+  static TextStyle body(BuildContext context, SupplierUiPalette c) =>
       TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w400,
@@ -35,35 +35,35 @@ abstract final class SupplierTextStyles {
         color: c.textSecondary,
       );
 
-  static TextStyle label(BuildContext context, SupplierColorScheme c) =>
+  static TextStyle label(BuildContext context, SupplierUiPalette c) =>
       TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w500,
         color: c.textSecondary,
       );
 
-  static TextStyle link(BuildContext context, SupplierColorScheme c) =>
+  static TextStyle link(BuildContext context, SupplierUiPalette c) =>
       TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: c.link,
       );
 
-  static TextStyle chip(BuildContext context, SupplierColorScheme c) =>
+  static TextStyle chip(BuildContext context, SupplierUiPalette c) =>
       TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w500,
         color: c.textPrimary,
       );
 
-  static TextStyle navBrand(BuildContext context, SupplierColorScheme c) =>
+  static TextStyle navBrand(BuildContext context, SupplierUiPalette c) =>
       TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w700,
         color: c.textPrimary,
       );
 
-  static TextStyle sectionTitle(BuildContext context, SupplierColorScheme c) =>
+  static TextStyle sectionTitle(BuildContext context, SupplierUiPalette c) =>
       TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,

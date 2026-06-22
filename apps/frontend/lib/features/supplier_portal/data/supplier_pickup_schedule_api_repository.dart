@@ -6,17 +6,18 @@ import 'pickup_schedule_filters.dart';
 import 'supplier_pickup_schedule_api.dart';
 import 'supplier_pickup_schedule_repository.dart';
 
-final supplierPickupScheduleApiProvider =
-    Provider<SupplierPickupScheduleApi>((ref) {
+final supplierPickupScheduleApiProvider = Provider<SupplierPickupScheduleApi>((
+  ref,
+) {
   return SupplierPickupScheduleApi(ref.watch(apiClientProvider));
 });
 
 final supplierPickupScheduleRepositoryProvider =
     Provider<SupplierPickupScheduleRepository>((ref) {
-  return ApiSupplierPickupScheduleRepository(
-    ref.watch(supplierPickupScheduleApiProvider),
-  );
-});
+      return ApiSupplierPickupScheduleRepository(
+        ref.watch(supplierPickupScheduleApiProvider),
+      );
+    });
 
 class ApiSupplierPickupScheduleRepository
     implements SupplierPickupScheduleRepository {

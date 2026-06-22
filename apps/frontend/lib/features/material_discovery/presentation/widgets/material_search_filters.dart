@@ -51,7 +51,9 @@ class MaterialSearchFilters extends StatelessWidget {
           TextField(
             controller: controller,
             onChanged: onSearchChanged,
-            style: AppTextStyles.body(context).copyWith(color: palette.textPrimary),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textPrimary),
             textAlign: TextAlign.start,
             decoration: InputDecoration(
               hintText: LocalizedText(
@@ -66,10 +68,7 @@ class MaterialSearchFilters extends StatelessWidget {
                 color: palette.textSecondary,
               ),
               suffixIcon: searchValue.isEmpty
-                  ? Icon(
-                      Icons.grid_view_rounded,
-                      color: palette.mint,
-                    )
+                  ? Icon(Icons.grid_view_rounded, color: palette.mint)
                   : IconButton(
                       onPressed: () {
                         controller.clear();
@@ -98,10 +97,7 @@ class MaterialSearchFilters extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            LocalizedText(
-              en: 'Categories',
-              ar: 'الفئات',
-            ).resolve(context),
+            LocalizedText(en: 'Categories', ar: 'الفئات').resolve(context),
             style: AppTextStyles.label(
               context,
             ).copyWith(color: palette.textPrimary),

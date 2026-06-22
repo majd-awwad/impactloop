@@ -1,5 +1,9 @@
 # ImpactLoop Database Reference
 
+> **⚠️ Stale / aspirational.** This file describes a planned 34-table baseline and tables not in the current schema.  
+> **Use instead (code-derived):** [database/schema-overview.md](database/schema-overview.md), [database/tables-catalog.md](database/tables-catalog.md), [database/enums.md](database/enums.md).  
+> **Source of truth:** `apps/backend/prisma/schema.prisma` (28 models as of last inventory).
+
 ## Final Database Baseline
 
 The project uses 34 tables.

@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import 'supplier_color_scheme.dart';
+import 'supplier_ui_palette.dart';
 
-/// Theme-aware supplier decorations derived from [SupplierColorScheme].
+/// Theme-aware supplier decorations derived from [SupplierUiPalette].
 class SupplierDecorationSet {
   const SupplierDecorationSet(this.colors);
 
-  final SupplierColorScheme colors;
+  final SupplierUiPalette colors;
 
   LinearGradient get heroGradient => LinearGradient(
         begin: Alignment.topLeft,

@@ -5,9 +5,9 @@ class MaterialDraftImage {
     required Uint8List bytes,
     required this.fileName,
     required this.mimeType,
-  })  : bytes = bytes,
-        url = null,
-        sizeBytes = bytes.length;
+  }) : bytes = bytes,
+       url = null,
+       sizeBytes = bytes.length;
 
   const MaterialDraftImage.uploaded({
     required this.url,

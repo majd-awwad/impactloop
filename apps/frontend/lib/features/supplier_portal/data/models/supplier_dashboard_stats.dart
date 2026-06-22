@@ -96,9 +96,7 @@ class SupplierNotificationStats {
   final int unread;
 
   factory SupplierNotificationStats.fromJson(Map<String, dynamic> json) {
-    return SupplierNotificationStats(
-      unread: json['unread'] as int? ?? 0,
-    );
+    return SupplierNotificationStats(unread: json['unread'] as int? ?? 0);
   }
 }
 

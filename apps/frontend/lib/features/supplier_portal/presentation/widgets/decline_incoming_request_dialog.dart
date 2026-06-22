@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
@@ -142,7 +143,7 @@ class _DeclineIncomingRequestDialogState
                         style: FilledButton.styleFrom(
                           backgroundColor:
                               colors.error.withValues(alpha: 0.88),
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColorTokens.lightSurface,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: Text(context.s.declineRequest),

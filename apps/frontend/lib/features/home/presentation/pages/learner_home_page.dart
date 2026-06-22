@@ -92,7 +92,10 @@ class _WelcomeHero extends StatelessWidget {
 
   final String greeting;
 
-  List<Widget> _heroActionButtons(BuildContext context, {required bool compact}) {
+  List<Widget> _heroActionButtons(
+    BuildContext context, {
+    required bool compact,
+  }) {
     final palette = MaterialsUiPalette.of(context);
 
     return [
@@ -175,7 +178,9 @@ class _WelcomeHero extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: palette.cardShadow.withValues(alpha: isDark ? 0.95 : 0.7),
+                color: palette.cardShadow.withValues(
+                  alpha: isDark ? 0.95 : 0.7,
+                ),
                 blurRadius: 28,
                 offset: const Offset(0, 10),
               ),
@@ -467,11 +472,7 @@ class _ResponsiveGrid extends StatelessWidget {
           spacing: AppSpacing.md,
           runSpacing: AppSpacing.md,
           children: children.map((child) {
-            return SizedBox(
-              width: itemWidth,
-              height: itemHeight,
-              child: child,
-            );
+            return SizedBox(width: itemWidth, height: itemHeight, child: child);
           }).toList(),
         );
       },

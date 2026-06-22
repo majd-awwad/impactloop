@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../../data/pickup_schedule_grouping.dart';
-
-const _dialogSurface = Color(0xFF071A16);
 
 class PickupScheduleDetailsDialog extends StatelessWidget {
   const PickupScheduleDetailsDialog({
@@ -25,7 +24,7 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
   }) {
     return showDialog<void>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.58),
+      barrierColor: AppColorTokens.supplierDialogBarrier,
       builder: (context) => PickupScheduleDetailsDialog(
         item: item,
         groupKind: groupKind,
@@ -43,9 +42,9 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
     final dialogWidth = compact ? screenSize.width - 32 : 560.0;
 
     return Dialog(
-      backgroundColor: _dialogSurface,
+      backgroundColor: AppColorTokens.supplierDialogSurface,
       elevation: 16,
-      shadowColor: Colors.black.withValues(alpha: 0.5),
+      shadowColor: AppColorTokens.supplierDialogShadow,
       insetPadding: EdgeInsets.symmetric(
         horizontal: compact ? AppSpacing.md : AppSpacing.lg,
         vertical: AppSpacing.lg,
@@ -105,7 +104,7 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
               const Divider(
                 height: 1,
                 thickness: 1,
-                color: Color(0x332DD4BF),
+                color: AppColorTokens.supplierDividerStrong,
               ),
               const SizedBox(height: AppSpacing.md),
               Flexible(
@@ -161,7 +160,7 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
               const Divider(
                 height: 1,
                 thickness: 1,
-                color: Color(0x332DD4BF),
+                color: AppColorTokens.supplierDividerStrong,
               ),
               const SizedBox(height: AppSpacing.md),
               Align(
@@ -209,7 +208,7 @@ class _SectionDivider extends StatelessWidget {
       child: Divider(
         height: 1,
         thickness: 1,
-        color: Color(0x1F2DD4BF),
+        color: AppColorTokens.supplierDividerSubtle,
       ),
     );
   }

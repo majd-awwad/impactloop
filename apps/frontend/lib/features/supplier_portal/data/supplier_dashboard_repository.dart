@@ -10,8 +10,10 @@ final supplierDashboardApiProvider = Provider<SupplierDashboardApi>((ref) {
 
 final supplierDashboardRepositoryProvider =
     Provider<SupplierDashboardRepository>((ref) {
-  return SupplierDashboardRepository(ref.watch(supplierDashboardApiProvider));
-});
+      return SupplierDashboardRepository(
+        ref.watch(supplierDashboardApiProvider),
+      );
+    });
 
 class SupplierDashboardRepository {
   const SupplierDashboardRepository(this._api);

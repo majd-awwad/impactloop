@@ -145,7 +145,8 @@ String _homeMaterialImageUrl(DiscoveryMaterial material, int index) {
     return _homeMaterialFallbackImages[4];
   }
 
-  return _homeMaterialFallbackImages[index % _homeMaterialFallbackImages.length];
+  return _homeMaterialFallbackImages[index %
+      _homeMaterialFallbackImages.length];
 }
 
 const _homeMaterialFallbackImages = [

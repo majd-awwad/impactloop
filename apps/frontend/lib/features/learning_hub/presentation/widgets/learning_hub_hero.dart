@@ -42,7 +42,7 @@ class LearningHubHero extends StatelessWidget {
             start: -28,
             child: _HeroOrb(
               size: 140,
-              color: Colors.white.withValues(alpha: 0.05),
+              color: palette.cardSurface.withValues(alpha: 0.05),
             ),
           ),
           PositionedDirectional(
@@ -58,7 +58,7 @@ class LearningHubHero extends StatelessWidget {
             end: 160,
             child: _HeroOrb(
               size: 180,
-              color: Colors.white.withValues(alpha: 0.04),
+              color: palette.cardSurface.withValues(alpha: 0.04),
             ),
           ),
           Padding(
@@ -125,9 +125,9 @@ class LearningHubHero extends StatelessWidget {
                       constraints: const BoxConstraints(maxWidth: 760),
                       child: Text(
                         subtitle.resolve(context),
-                        style: AppTextStyles.brandingSubtitle(context).copyWith(
-                          color: palette.textSecondary,
-                        ),
+                        style: AppTextStyles.brandingSubtitle(
+                          context,
+                        ).copyWith(color: palette.textSecondary),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -185,10 +185,7 @@ class _HeroStat extends StatelessWidget {
 }
 
 class _HeroActionButton extends StatelessWidget {
-  const _HeroActionButton({
-    required this.icon,
-    required this.onPressed,
-  });
+  const _HeroActionButton({required this.icon, required this.onPressed});
 
   final IconData icon;
   final VoidCallback onPressed;
@@ -199,9 +196,9 @@ class _HeroActionButton extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: palette.cardSurface.withValues(alpha: 0.08),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: palette.cardSurface.withValues(alpha: 0.08)),
       ),
       child: IconButton(
         onPressed: onPressed,

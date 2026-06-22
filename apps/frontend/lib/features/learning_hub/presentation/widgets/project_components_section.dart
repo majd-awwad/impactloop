@@ -112,10 +112,8 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
                         ar: 'عرض مكونات أقل',
                       ).resolve(context)
                     : LocalizedText(
-                        en:
-                            'Show all components (${widget.components.length})',
-                        ar:
-                            'عرض كل المكونات (${widget.components.length})',
+                        en: 'Show all components (${widget.components.length})',
+                        ar: 'عرض كل المكونات (${widget.components.length})',
                       ).resolve(context),
               ),
             ),

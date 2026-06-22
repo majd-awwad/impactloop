@@ -438,10 +438,7 @@ class _DetailsSideColumn extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _SectionTitle(
-                title: const LocalizedText(
-                  en: 'Supplier',
-                  ar: 'المورد',
-                ),
+                title: const LocalizedText(en: 'Supplier', ar: 'المورد'),
               ),
               const SizedBox(height: AppSpacing.md),
               Row(
@@ -453,10 +450,7 @@ class _DetailsSideColumn extends StatelessWidget {
                       color: palette.mint.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Icon(
-                      Icons.apartment_rounded,
-                      color: palette.mint,
-                    ),
+                    child: Icon(Icons.apartment_rounded, color: palette.mint),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
@@ -523,10 +517,7 @@ class _DetailsSideColumn extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _SectionTitle(
-                title: const LocalizedText(
-                  en: 'Reservation',
-                  ar: 'الحجز',
-                ),
+                title: const LocalizedText(en: 'Reservation', ar: 'الحجز'),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -633,12 +624,12 @@ class _InfoRow extends StatelessWidget {
         Container(
           width: 42,
           height: 42,
-        decoration: BoxDecoration(
-          color: palette.cardSurfaceAlt,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: palette.borderSubtle),
-        ),
-        child: Icon(icon, color: palette.mint, size: 20),
+          decoration: BoxDecoration(
+            color: palette.cardSurfaceAlt,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: palette.borderSubtle),
+          ),
+          child: Icon(icon, color: palette.mint, size: 20),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(

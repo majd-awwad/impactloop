@@ -207,7 +207,7 @@ class SupplierMaterialCard extends StatelessWidget {
 class _Placeholder extends StatelessWidget {
   const _Placeholder({required this.colors});
 
-  final SupplierColorScheme colors;
+  final SupplierUiPalette colors;
 
   @override
   Widget build(BuildContext context) {

@@ -30,7 +30,10 @@ class CategoriesApi {
 
       return data
           .whereType<Map>()
-          .map((item) => MaterialCategory.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) =>
+                MaterialCategory.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList();
     } on DioException catch (error) {
       throw mapDioException(error);

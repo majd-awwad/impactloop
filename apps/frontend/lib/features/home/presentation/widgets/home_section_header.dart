@@ -56,10 +56,7 @@ class HomeSectionHeader extends StatelessWidget {
               titleBlock,
               if (action != null) ...[
                 const SizedBox(height: AppSpacing.md),
-                SizedBox(
-                  width: double.infinity,
-                  child: action,
-                ),
+                SizedBox(width: double.infinity, child: action),
               ],
             ],
           );

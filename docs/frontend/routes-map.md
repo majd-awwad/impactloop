@@ -1,0 +1,114 @@
+# Flutter Routes Map
+
+Routes and access guards derived from `apps/frontend/lib/app/router/app_router.dart` and `apps/frontend/lib/features/auth/application/auth_navigation.dart`.
+
+**Source files:**
+- `app_router.dart` — route tree and redirect logic
+- `auth_navigation.dart` — route constants and post-auth routing
+- `supplier_nav_config.dart` — supplier shell nav items (not separate routes)
+
+## Route constants
+
+From `auth_navigation.dart`:
+
+| Constant | Path |
+|----------|------|
+| `rootRoute` | `/` |
+| `loginRoute` | `/login` |
+| `registerRoute` | `/register` |
+| `authCheckingRoute` | `/auth/checking` |
+| `supplierPortalRoute` | `/supplier` |
+| `homeRoute` | `/home` |
+
+## Access levels
+
+Defined in `app_router.dart` as `_RouteAccessLevel`:
+
+| Level | Paths | Guard behavior |
+|-------|-------|----------------|
+| **public** | Most routes (landing, materials, learning, auth pages, profile completion) | No login required |
+| **authenticated** | `/home`, `/supplier/access-denied` | Requires login |
+| **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
+
+### Redirect rules (summary)
+
+**Inspected:** `_resolveRouteRedirect`, `_resolveProtectedRoute`, `legacyOnboardingRedirect` in `app_router.dart`
+
+1. **Auth unknown** → redirect to `/auth/checking?from=<destination>`
+2. **Protected route + unauthenticated** → `/login?from=<destination>`
+3. **Supplier route without SUPPLIER role** → `/supplier/access-denied`
+4. **Authenticated user on login/register** → redirect to `from` query or `postAuthRouteForUser(user)`:
+   - Supplier role → `/supplier`
+   - Otherwise → `/home`
+5. **Profile completion paths** (`/complete-learner-profile`, `/complete-supplier-profile`) → `legacyOnboardingRedirect` validates `registrationDraftProvider` and intent
+
+## Route table
+
+| Path | Page widget | Access | Notes |
+|------|-------------|--------|-------|
+| `/` | `LandingPage` | public | |
+| `/health` | `HealthPage` | public | Backend health diagnostic |
+| `/home` | `HomePage` → `LearnerHomePage` | authenticated | |
+| `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
+| `/learning` | `LearningHubPage` | public | **Partial** — mock data; backend API exists but not wired |
+| `/learning/add-draft` | `LearningAddDraftPage` | public | **Mock form** — no submit API |
+| `/learning/:id` | `LearningProjectDetailsPage` | public | **Mock data** |
+| `/materials` | `MaterialsDiscoveryPage` | public | API-backed default |
+| `/materials/:id` | `MaterialDetailsPage` | public | API-backed default |
+| `/login` | `LoginPage` | public | `_AuthPageGuard` |
+| `/register` | `RegisterPage` | public | `_AuthPageGuard` |
+| `/complete-learner-profile` | `CompleteLearnerProfilePage` | public | Registration draft flow; `?intent=both` supported |
+| `/complete-supplier-profile` | `CompleteSupplierProfilePage` | public | Registration draft flow |
+| `/supplier/access-denied` | `SupplierAccessDeniedPage` | authenticated | |
+| `/supplier` | `SupplierDashboardPage` | supplier | Inside `SupplierShell` |
+| `/supplier/materials/new` | `AddMaterialPage` | supplier | Query: `categoryRequestId`, `priceRuleRequestId` |
+| `/supplier/materials/:id` | `SupplierOwnedMaterialDetailPage` | supplier | Redirects `id=new` → `/supplier/materials/new` |
+| `/supplier/materials` | `SupplierMyMaterialsPage` | supplier | |
+| `/supplier/reservations` | `SupplierIncomingRequestsPage` | supplier | Query: `tab`, `focus` |
+| `/supplier/pickup-schedule` | `SupplierPickupSchedulePage` | supplier | |
+| `/supplier/notifications` | `SupplierNotificationsPage` | supplier | |
+| `/supplier/profile` | `SupplierProfilePage` | supplier | |
+
+## Supplier shell navigation
+
+From `supplier_nav_config.dart` — `supplierNavItems` (sidebar / desktop):
+
+| Nav label key | Route |
+|---------------|-------|
+| overview | `/supplier` |
+| myMaterials | `/supplier/materials` |
+| addMaterial | `/supplier/materials/new` |
+| incomingRequests | `/supplier/reservations` |
+| pickupSchedule | `/supplier/pickup-schedule` |
+| browseMaterials | `/materials` (exits shell to public discovery) |
+| notifications | `/supplier/notifications` |
+| profile | `/supplier/profile` |
+
+Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial, incomingRequests, profile.
+
+## Pages **not** in router
+
+**Inspected:** `app_router.dart` has no import/route for:
+
+| File | Status |
+|------|--------|
+| `auth/presentation/pages/choose_role_page.dart` | **Unwired** — legacy; registration uses `UnifiedRegisterForm` with intent chips |
+| `supplier_portal/presentation/pages/supplier_coming_soon_page.dart` | **Unwired** |
+
+## Query parameters
+
+| Route | Params | Purpose |
+|-------|--------|---------|
+| `/login`, `/register`, protected redirects | `from` | Return URL after auth |
+| `/complete-learner-profile` | `intent=both` | Dual-role registration hint |
+| `/supplier/materials/new` | `categoryRequestId`, `priceRuleRequestId` | Resume listing from approved request |
+| `/supplier/reservations` | `tab`, `focus` | Deep link into reservation inbox |
+
+## Post-auth default destination
+
+`postAuthRouteForUser` (`auth_navigation.dart`):
+
+- User has `SUPPLIER` role → `/supplier`
+- Else → `/home`
+
+**Needs verification:** users with both LEARNER and SUPPLIER always land on supplier portal when supplier role present.

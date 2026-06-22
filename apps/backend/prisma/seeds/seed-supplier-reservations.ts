@@ -157,6 +157,25 @@ async function ensureSeedCategory(prisma: PrismaClient) {
   return category.id;
 }
 
+async function replaceSeedMaterialImage(
+  prisma: PrismaClient,
+  materialId: string,
+  imageUrl: string,
+) {
+  await prisma.materialImage.deleteMany({
+    where: { materialId },
+  });
+
+  await prisma.materialImage.create({
+    data: {
+      materialId,
+      imageUrl,
+      sortOrder: 0,
+      isCover: true,
+    },
+  });
+}
+
 async function ensureSeedMaterials(
   prisma: PrismaClient,
   context: Pick<SeedContext, 'supplierUserId' | 'supplierProfileId' | 'categoryId' | 'locationId'>,
@@ -174,6 +193,7 @@ async function ensureSeedMaterials(
     });
 
     if (existing) {
+      await replaceSeedMaterialImage(prisma, existing.id, material.imageUrl);
       materialIds.set(material.key, existing.id);
       continue;
     }
@@ -200,6 +220,7 @@ async function ensureSeedMaterials(
       select: { id: true },
     });
 
+    await replaceSeedMaterialImage(prisma, created.id, material.imageUrl);
     materialIds.set(material.key, created.id);
   }
 

@@ -1,16 +1,6 @@
-enum SupplierIncomingRequestTab {
-  pending,
-  accepted,
-  declined,
-  completed,
-}
+enum SupplierIncomingRequestTab { pending, accepted, declined, completed }
 
-enum SupplierIncomingRequestStatus {
-  pending,
-  accepted,
-  declined,
-  completed,
-}
+enum SupplierIncomingRequestStatus { pending, accepted, declined, completed }
 
 extension SupplierIncomingRequestTabLabels on SupplierIncomingRequestTab {
   String get label {
@@ -229,26 +219,29 @@ class SupplierIncomingRequest {
 
     return SupplierIncomingRequest(
       id: json['id'] as String? ?? '',
-      materialTitle: material?['title'] as String? ??
+      materialTitle:
+          material?['title'] as String? ??
           json['materialTitle'] as String? ??
           '',
       materialImageUrl: imageUrl,
-      learnerName: learner?['displayName'] as String? ??
+      learnerName:
+          learner?['displayName'] as String? ??
           requester?['displayName'] as String? ??
           json['learnerName'] as String? ??
           '',
-      quantityRequested:
-          (json['quantityRequested'] as num?)?.toDouble() ?? 0,
+      quantityRequested: (json['quantityRequested'] as num?)?.toDouble() ?? 0,
       unit: material?['unit'] as String? ?? json['unit'] as String? ?? 'piece',
       status: SupplierIncomingRequestStatusLabels.fromApiValue(
         json['status'] as String? ?? 'PENDING',
       ),
-      requestedAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+      requestedAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
       learnerNote: json['message'] as String?,
       pickupPreference: preference,
       pickupWindow: pickupWindow,
-      declineReason: json['rejectionReason'] as String? ??
+      declineReason:
+          json['rejectionReason'] as String? ??
           json['declineReason'] as String?,
     );
   }

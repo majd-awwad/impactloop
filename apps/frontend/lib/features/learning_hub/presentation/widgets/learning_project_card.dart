@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../data/learning_hub_mock_data.dart';
@@ -168,7 +169,7 @@ class _ProjectCardHeader extends StatelessWidget {
                         project.difficulty.resolve(context),
                         style: AppTextStyles.label(
                           context,
-                        ).copyWith(color: Theme.of(context).brightness == Brightness.dark ? Colors.black87 : Colors.white),
+                        ).copyWith(color: AppColorTokens.emeraldDeep),
                       ),
                     ),
                   ),

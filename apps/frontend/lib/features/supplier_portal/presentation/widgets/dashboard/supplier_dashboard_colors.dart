@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../app/theme/app_color_tokens.dart';
+
 /// Semantic accent colors for Supplier Overview dashboard only.
 abstract final class SupplierDashboardColors {
-  static const Color pending = Color(0xFFFBBF24);
-  static const Color accepted = Color(0xFF38BDF8);
-  static const Color completed = Color(0xFF34D399);
-  static const Color reused = Color(0xFF2DD4BF);
-  static const Color available = Color(0xFF5EEAD4);
-  static const Color reserved = Color(0xFF60A5FA);
-  static const Color unavailable = Color(0xFFF87171);
-  static const Color neutral = Color(0xFF94A3B8);
+  static const Color pending = AppColorTokens.supplierDashboardPending;
+  static const Color accepted = AppColorTokens.supplierDashboardAccepted;
+  static const Color completed = AppColorTokens.supplierDashboardCompleted;
+  static const Color reused = AppColorTokens.supplierDashboardReused;
+  static const Color available = AppColorTokens.supplierDashboardAvailable;
+  static const Color reserved = AppColorTokens.supplierDashboardReserved;
+  static const Color unavailable = AppColorTokens.supplierDashboardUnavailable;
+  static const Color neutral = AppColorTokens.supplierDashboardNeutral;
 }
 
 class SupplierDashboardChartSegment {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
@@ -336,12 +337,15 @@ class _ThumbnailTile extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.72),
+                color: AppColorTokens.supplierImageOverlay,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 context.s.coverPhoto,
-                style: const TextStyle(color: Colors.white, fontSize: 10),
+                style: const TextStyle(
+                  color: AppColorTokens.lightSurface,
+                  fontSize: 10,
+                ),
               ),
             ),
           ),
@@ -349,7 +353,7 @@ class _ThumbnailTile extends StatelessWidget {
           right: 4,
           top: 4,
           child: Material(
-            color: Colors.black.withValues(alpha: 0.72),
+            color: AppColorTokens.supplierImageOverlay,
             shape: const CircleBorder(),
             clipBehavior: Clip.antiAlias,
             child: IconButton(
@@ -357,7 +361,11 @@ class _ThumbnailTile extends StatelessWidget {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints.tightFor(width: 28, height: 28),
               onPressed: isUploading ? null : onRemove,
-              icon: Icon(Icons.close, size: 16, color: Colors.white),
+              icon: const Icon(
+                Icons.close,
+                size: 16,
+                color: AppColorTokens.lightSurface,
+              ),
             ),
           ),
         ),

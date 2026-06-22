@@ -135,9 +135,9 @@ class _LearningPreviewCard extends StatelessWidget {
                                   child: Container(
                                     padding:
                                         const EdgeInsetsDirectional.symmetric(
-                                      horizontal: AppSpacing.sm,
-                                      vertical: AppSpacing.xs,
-                                    ),
+                                          horizontal: AppSpacing.sm,
+                                          vertical: AppSpacing.xs,
+                                        ),
                                     decoration: BoxDecoration(
                                       color: palette.cardSurface.withValues(
                                         alpha: isDark ? 0.78 : 0.86,
@@ -151,13 +151,12 @@ class _LearningPreviewCard extends StatelessWidget {
                                     ),
                                     child: Text(
                                       'Learning Hub preview',
-                                      style: AppTextStyles.label(
-                                        context,
-                                      ).copyWith(
-                                        color: palette.textPrimary,
-                                        fontSize: 12,
-                                        letterSpacing: 0,
-                                      ),
+                                      style: AppTextStyles.label(context)
+                                          .copyWith(
+                                            color: palette.textPrimary,
+                                            fontSize: 12,
+                                            letterSpacing: 0,
+                                          ),
                                     ),
                                   ),
                                 ),
@@ -199,9 +198,7 @@ class _LearningPreviewCard extends StatelessWidget {
                       children: [
                         Text(
                           project.title.resolve(context),
-                          style: AppTextStyles.title(
-                            context,
-                          ).copyWith(
+                          style: AppTextStyles.title(context).copyWith(
                             color: palette.textPrimary,
                             letterSpacing: 0,
                           ),

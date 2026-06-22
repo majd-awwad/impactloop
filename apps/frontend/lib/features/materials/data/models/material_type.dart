@@ -72,7 +72,8 @@ class MaterialTypeSearchResult {
           ? rawItems
                 .whereType<Map>()
                 .map(
-                  (item) => MaterialType.fromJson(Map<String, dynamic>.from(item)),
+                  (item) =>
+                      MaterialType.fromJson(Map<String, dynamic>.from(item)),
                 )
                 .toList()
           : const [],

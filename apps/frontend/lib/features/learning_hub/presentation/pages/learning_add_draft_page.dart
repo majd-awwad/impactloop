@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../data/learning_hub_mock_data.dart';
@@ -393,7 +394,7 @@ class _LearningAddDraftPageState extends State<LearningAddDraftPage> {
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(54),
                           backgroundColor: learningLime,
-                          foregroundColor: Colors.black,
+                          foregroundColor: AppColorTokens.emeraldDeep,
                           shape: RoundedRectangleBorder(
                             borderRadius: AppRadius.lgAll,
                           ),
@@ -440,10 +441,7 @@ class _LearningAddDraftPageState extends State<LearningAddDraftPage> {
 }
 
 class _AddDraftHero extends StatelessWidget {
-  const _AddDraftHero({
-    required this.title,
-    required this.subtitle,
-  });
+  const _AddDraftHero({required this.title, required this.subtitle});
 
   final LocalizedText title;
   final LocalizedText subtitle;
@@ -524,12 +522,11 @@ class _AddDraftHero extends StatelessWidget {
                       children: [
                         Text(
                           title.resolve(context),
-                          style: AppTextStyles.brandingHeadline(
-                            context,
-                          ).copyWith(
-                            color: learningTextPrimary,
-                            fontWeight: FontWeight.w800,
-                          ),
+                          style: AppTextStyles.brandingHeadline(context)
+                              .copyWith(
+                                color: learningTextPrimary,
+                                fontWeight: FontWeight.w800,
+                              ),
                           textAlign: TextAlign.start,
                         ),
                         const SizedBox(height: AppSpacing.sm),
@@ -574,7 +571,7 @@ class _DraftSectionCard extends StatelessWidget {
         border: Border.all(color: learningBorderSubtle),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x12000000),
+            color: AppColorTokens.shadow,
             blurRadius: 18,
             offset: Offset(0, 8),
           ),
@@ -606,10 +603,7 @@ class _DraftSectionCard extends StatelessWidget {
 }
 
 class _FormFieldShell extends StatelessWidget {
-  const _FormFieldShell({
-    required this.width,
-    required this.child,
-  });
+  const _FormFieldShell({required this.width, required this.child});
 
   final double width;
   final Widget child;
@@ -636,11 +630,7 @@ class _DraftInputField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       style: const TextStyle(color: learningTextPrimary),
-      decoration: _draftDecoration(
-        context: context,
-        label: label,
-        hint: hint,
-      ),
+      decoration: _draftDecoration(context: context, label: label, hint: hint),
     );
   }
 }
@@ -702,11 +692,7 @@ class _DraftDropdownField<T> extends StatelessWidget {
       dropdownColor: learningDarkSurface,
       style: const TextStyle(color: learningTextPrimary),
       iconEnabledColor: learningLime,
-      decoration: _draftDecoration(
-        context: context,
-        label: label,
-        hint: hint,
-      ),
+      decoration: _draftDecoration(context: context, label: label, hint: hint),
     );
   }
 }
@@ -727,11 +713,7 @@ class _ChoiceField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InputDecorator(
-      decoration: _draftDecoration(
-        context: context,
-        label: label,
-        hint: '',
-      ),
+      decoration: _draftDecoration(context: context, label: label, hint: ''),
       child: Wrap(
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
@@ -748,7 +730,9 @@ class _ChoiceField extends StatelessWidget {
               color: selected ? learningLime : learningBorderSubtle,
             ),
             labelStyle: TextStyle(
-              color: selected ? Colors.black87 : learningTextPrimary,
+              color: selected
+                  ? AppColorTokens.emeraldDeep
+                  : learningTextPrimary,
               fontWeight: FontWeight.w600,
             ),
           );
@@ -759,10 +743,7 @@ class _ChoiceField extends StatelessWidget {
 }
 
 class _ChoiceOption {
-  const _ChoiceOption({
-    required this.value,
-    required this.text,
-  });
+  const _ChoiceOption({required this.value, required this.text});
 
   final String value;
   final LocalizedText text;

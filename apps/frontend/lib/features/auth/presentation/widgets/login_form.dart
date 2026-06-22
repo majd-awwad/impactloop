@@ -4,13 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
-import '../../../../shared/widgets/app_link_button.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
-import '../../../../shared/widgets/app_primary_button.dart';
-import '../../../../shared/widgets/app_text_field.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
+import 'auth_buttons.dart';
+import 'auth_password_field.dart';
+import 'auth_text_field.dart';
+import 'auth_ui_palette.dart';
 
 class LoginForm extends ConsumerStatefulWidget {
   const LoginForm({super.key});
@@ -46,17 +47,43 @@ class _LoginFormState extends ConsumerState<LoginForm> {
   }
 
   void _applyLoginError(ApiException error) {
+    final emailIssue = firstFieldError(error, const ['email']);
+    final passwordIssue = firstFieldError(error, const ['password']);
+
     setState(() {
-      _emailError = firstFieldError(error, const ['email']);
-      _passwordError = firstFieldError(error, const ['password']);
+      _emailError = emailIssue;
+      _passwordError = passwordIssue;
       _formError = null;
 
       if (error.code == 'UNAUTHENTICATED') {
-        _passwordError = 'Invalid email or password.';
-      } else if (_emailError == null && _passwordError == null) {
+        _passwordError = _loginErrorMessage(error);
+        return;
+      }
+
+      if (_emailError == null &&
+          _passwordError == null &&
+          error.code == 'VALIDATION_ERROR') {
+        _formError = error.displayMessage;
+        return;
+      }
+
+      if (_emailError == null && _passwordError == null) {
         _formError = error.displayMessage;
       }
     });
+  }
+
+  String _loginErrorMessage(ApiException error) {
+    if (error.code == 'UNAUTHENTICATED') {
+      final message = error.message.trim();
+      if (message.isNotEmpty) {
+        return message;
+      }
+
+      return 'Invalid email or password.';
+    }
+
+    return error.displayMessage;
   }
 
   Future<void> _handleSubmit() async {
@@ -69,10 +96,12 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     setState(() => _isSubmitting = true);
 
     try {
-      final user = await ref.read(authControllerProvider.notifier).login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      final user = await ref
+          .read(authControllerProvider.notifier)
+          .login(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
 
       if (!mounted) {
         return;
@@ -108,7 +137,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppTextField(
+          AuthTextField(
             controller: _emailController,
             label: 'Email',
             hint: 'you@example.com',
@@ -132,11 +161,10 @@ class _LoginFormState extends ConsumerState<LoginForm> {
               return null;
             },
           ),
-          const AppFieldGap(),
-          AppTextField(
+          const AuthFieldGap(),
+          AuthPasswordField(
             controller: _passwordController,
             label: 'Password',
-            obscureText: true,
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.password],
             onFieldSubmitted: (_) => _handleSubmit(),
@@ -155,14 +183,26 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           ),
           if (_formError != null) AppInlineError(message: _formError!),
           const SizedBox(height: AppSpacing.sm),
-          AppLinkButton(
-            label: 'Forgot password?',
-            onPressed: () {
-              showInfoSnackBar(context, 'Forgot password screen coming soon.');
-            },
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () {
+                showInfoSnackBar(
+                  context,
+                  'Forgot password screen coming soon.',
+                );
+              },
+              child: Text(
+                'Forgot password?',
+                style: TextStyle(
+                  color: AuthUiPalette.of(context).primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          AppPrimaryButton(
+          AuthPrimaryButton(
             label: 'Sign in',
             isLoading: _isSubmitting,
             onPressed: _handleSubmit,

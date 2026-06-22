@@ -24,7 +24,11 @@ class RegistrationDraftNotifier extends Notifier<RegistrationDraft> {
   }
 
   void setIntent(RegistrationIntent intent) {
-    state = state.copyWith(intent: intent);
+    state = state.copyWith(
+      intent: intent,
+      clearLearnerProfile: intent == RegistrationIntent.supplier,
+      clearSupplierProfile: intent == RegistrationIntent.learner,
+    );
   }
 
   void setLearnerProfile(LearnerProfileDraft profile) {

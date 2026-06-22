@@ -1,0 +1,22 @@
+---
+globs: apps/backend/src/modules/ai-agent/**/*.ts,apps/frontend/lib/features/ai_agent/**/*.dart
+---
+
+# AI Agent Rules
+
+AI is part of the MVP but must be controlled by credits and logs.
+
+Rules:
+- Every AI operation must create ai_requests.
+- Every AI operation must record ai_usage_logs.
+- Check ai_credit_wallets before processing.
+- If credits are insufficient, return LIMIT_REACHED.
+- AI material search uses project_required_components.
+- AI results are stored in ai_material_matches.
+- Match types are:
+  EXACT
+  SIMILAR
+  ALTERNATIVE
+  MISSING
+- Do not implement YouTube video analysis in MVP.
+- Do not build unlimited AI chat memory.

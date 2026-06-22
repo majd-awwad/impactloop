@@ -182,9 +182,7 @@ class _LearningHubPageState extends State<LearningHubPage> {
                                         text: 'ImpactLoop ',
                                         style: AppTextStyles.label(
                                           context,
-                                        ).copyWith(
-                                          color: palette.textPrimary,
-                                        ),
+                                        ).copyWith(color: palette.textPrimary),
                                       ),
                                       TextSpan(
                                         text: learningFeaturedTip.resolve(

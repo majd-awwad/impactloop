@@ -42,7 +42,9 @@ String sanitizeRedirectTarget(String? from, {String fallback = rootRoute}) {
     return fallback;
   }
 
-  if (path == authCheckingRoute || path == loginRoute || path == registerRoute) {
+  if (path == authCheckingRoute ||
+      path == loginRoute ||
+      path == registerRoute) {
     return fallback;
   }
 

@@ -18,7 +18,8 @@ class MaterialTypesApi {
       _client.get<Map<String, dynamic>>(
         '/api/material-types',
         queryParameters: {
-          if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
+          if (categoryId != null && categoryId.isNotEmpty)
+            'categoryId': categoryId,
           if (query != null && query.isNotEmpty) 'q': query,
         },
       ),

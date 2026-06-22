@@ -59,9 +59,8 @@ class MaterialUploadApi {
       return images
           .whereType<Map>()
           .map(
-            (item) => UploadedMaterialImage.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
+            (item) =>
+                UploadedMaterialImage.fromJson(Map<String, dynamic>.from(item)),
           )
           .where((image) => image.url.isNotEmpty)
           .toList();

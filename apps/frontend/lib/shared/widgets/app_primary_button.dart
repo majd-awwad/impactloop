@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
+import '../../app/theme/app_theme_colors.dart';
 
 class AppPrimaryButton extends StatelessWidget {
   const AppPrimaryButton({
@@ -17,17 +17,19 @@ class AppPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
     return SizedBox(
       width: double.infinity,
       child: FilledButton(
         onPressed: isLoading ? null : onPressed,
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 height: AppSpacing.lg,
                 width: AppSpacing.lg,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppColors.textOnBrand,
+                  color: colors.textOnPrimary,
                 ),
               )
             : Text(label),

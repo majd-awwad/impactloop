@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../../app/theme/app_theme_colors.dart';
 import 'materials_ui_palette.dart';
 
-enum MaterialStatusBadgeTone {
-  available,
-  reserved,
-  reused,
-  draft,
-}
+enum MaterialStatusBadgeTone { available, reserved, reused, draft }
 
 class MaterialStatusBadge extends StatelessWidget {
   const MaterialStatusBadge({
@@ -24,32 +20,34 @@ class MaterialStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppThemeColors.of(context);
     final palette = switch (tone) {
-      MaterialStatusBadgeTone.available => isDark
-          ? (
-              background: materialAvailableBackground,
-              foreground: materialAvailableForeground,
-              border: materialAvailableBorder,
-            )
-          : (
-              background: const Color(0xFFE4F4EC),
-              foreground: const Color(0xFF0F7A5A),
-              border: const Color(0xFFB8D2C3),
-            ),
+      MaterialStatusBadgeTone.available =>
+        isDark
+            ? (
+                background: materialAvailableBackground,
+                foreground: materialAvailableForeground,
+                border: materialAvailableBorder,
+              )
+            : (
+                background: colors.successSoft,
+                foreground: colors.success,
+                border: colors.borderStrong,
+              ),
       MaterialStatusBadgeTone.reserved => (
-        background: isDark ? materialReservedBackground : const Color(0xFFFFF4DB),
-        foreground: isDark ? materialReservedForeground : const Color(0xFF8A5A00),
-        border: isDark ? materialReservedBorder : const Color(0xFFE5C574),
+        background: isDark ? materialReservedBackground : colors.warningSoft,
+        foreground: isDark ? materialReservedForeground : colors.warningText,
+        border: isDark ? materialReservedBorder : colors.warningBorder,
       ),
       MaterialStatusBadgeTone.reused => (
-        background: isDark ? materialReusedBackground : const Color(0xFFF3F8F4),
-        foreground: isDark ? materialReusedForeground : const Color(0xFF647268),
-        border: isDark ? materialReusedBorder : const Color(0xFFD4E5D9),
+        background: isDark ? materialReusedBackground : colors.cardSurfaceAlt,
+        foreground: isDark ? materialReusedForeground : colors.textMuted,
+        border: isDark ? materialReusedBorder : colors.borderSubtle,
       ),
       MaterialStatusBadgeTone.draft => (
-        background: isDark ? materialDraftBackground : const Color(0xFFF3F8F4),
-        foreground: isDark ? materialDraftForeground : const Color(0xFF647268),
-        border: isDark ? materialDraftBorder : const Color(0xFFD4E5D9),
+        background: isDark ? materialDraftBackground : colors.cardSurfaceAlt,
+        foreground: isDark ? materialDraftForeground : colors.textMuted,
+        border: isDark ? materialDraftBorder : colors.borderSubtle,
       ),
     };
 
@@ -65,9 +63,7 @@ class MaterialStatusBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.label(
-          context,
-        ).copyWith(
+        style: AppTextStyles.label(context).copyWith(
           color: palette.foreground,
           fontSize: materialBadgeFontSize,
           fontWeight: FontWeight.w700,

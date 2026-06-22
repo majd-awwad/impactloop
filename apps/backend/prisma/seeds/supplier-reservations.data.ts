@@ -28,6 +28,8 @@ export const SEED_MATERIALS = [
     quantity: 5,
     condition: 'GOOD' as MaterialCondition,
     sourceType: 'WORKSHOP_SURPLUS' as MaterialSourceType,
+    imageUrl:
+      'https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&w=1200&q=80',
   },
   {
     key: 'cotton-fabric',
@@ -38,6 +40,8 @@ export const SEED_MATERIALS = [
     quantity: 12,
     condition: 'USED' as MaterialCondition,
     sourceType: 'WORKSHOP_SURPLUS' as MaterialSourceType,
+    imageUrl:
+      'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=1200&q=80',
   },
   {
     key: 'wood-scraps',
@@ -48,6 +52,8 @@ export const SEED_MATERIALS = [
     quantity: 20,
     condition: 'GOOD' as MaterialCondition,
     sourceType: 'WORKSHOP_SURPLUS' as MaterialSourceType,
+    imageUrl:
+      'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80',
   },
   {
     key: 'cardboard-boxes',
@@ -58,6 +64,8 @@ export const SEED_MATERIALS = [
     quantity: 10,
     condition: 'LIKE_NEW' as MaterialCondition,
     sourceType: 'FACTORY_SURPLUS' as MaterialSourceType,
+    imageUrl:
+      'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1200&q=80',
   },
   {
     key: 'epoxy-resin',
@@ -68,6 +76,8 @@ export const SEED_MATERIALS = [
     quantity: 4,
     condition: 'NEW' as MaterialCondition,
     sourceType: 'EDUCATIONAL_INSTITUTION' as MaterialSourceType,
+    imageUrl:
+      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80',
   },
 ] as const;
 

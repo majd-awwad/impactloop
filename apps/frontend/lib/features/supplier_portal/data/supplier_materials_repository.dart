@@ -11,8 +11,10 @@ final supplierMaterialsApiProvider = Provider<SupplierMaterialsApi>((ref) {
 
 final supplierMaterialsRepositoryProvider =
     Provider<SupplierMaterialsRepository>((ref) {
-  return SupplierMaterialsRepository(ref.watch(supplierMaterialsApiProvider));
-});
+      return SupplierMaterialsRepository(
+        ref.watch(supplierMaterialsApiProvider),
+      );
+    });
 
 class SupplierMaterialsRepository {
   const SupplierMaterialsRepository(this._api);

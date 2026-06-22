@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'app_color_tokens.dart';
 import 'app_radius.dart';
 import 'app_spacing.dart';
+import 'app_theme_colors.dart';
 
 class AppTheme {
   const AppTheme._();
@@ -20,7 +22,7 @@ class AppTheme {
           primaryContainer: AppColors.primaryContainer,
           secondaryContainer: AppColors.secondaryContainer,
           surfaceContainer: AppColors.surfaceContainer,
-          surfaceContainerHighest: const Color(0xFFE4ECE1),
+          surfaceContainerHighest: AppThemeColors.light.surfaceMuted,
           onSurface: AppColors.textPrimary,
           onSurfaceVariant: AppColors.textSecondary,
           onPrimary: AppColors.textOnBrand,
@@ -32,6 +34,7 @@ class AppTheme {
     return ThemeData(
       colorScheme: colorScheme,
       useMaterial3: true,
+      extensions: const [AppThemeColors.light],
       scaffoldBackgroundColor: AppColors.background,
       textTheme: _textTheme,
       iconTheme: const IconThemeData(color: AppColors.textPrimary),
@@ -150,14 +153,15 @@ class AppTheme {
           onSurfaceVariant: AppColors.darkTextSecondary,
           outline: AppColors.darkBorder,
           outlineVariant: AppColors.darkBorder,
-          error: const Color(0xFFF87171),
-          onPrimary: const Color(0xFF042F2E),
-          onSecondary: const Color(0xFF042F2E),
+          error: AppThemeColors.dark.danger,
+          onPrimary: AppThemeColors.dark.textOnPrimary,
+          onSecondary: AppThemeColors.dark.textOnPrimary,
         );
 
     return ThemeData(
       colorScheme: colorScheme,
       useMaterial3: true,
+      extensions: const [AppThemeColors.dark],
       scaffoldBackgroundColor: AppColors.darkBackground,
       textTheme: _textTheme.apply(
         bodyColor: AppColors.darkTextPrimary,
@@ -203,24 +207,27 @@ class AppTheme {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadius.mdAll,
-          borderSide: const BorderSide(color: Color(0xFFF87171)),
+          borderSide: const BorderSide(color: AppColorTokens.dangerDark),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: AppRadius.mdAll,
-          borderSide: const BorderSide(color: Color(0xFFF87171), width: 2),
+          borderSide: const BorderSide(
+            color: AppColorTokens.dangerDark,
+            width: 2,
+          ),
         ),
         labelStyle: const TextStyle(
           color: AppColors.darkTextPrimary,
           fontWeight: FontWeight.w600,
         ),
         hintStyle: const TextStyle(color: AppColors.darkTextSecondary),
-        errorStyle: const TextStyle(color: Color(0xFFF87171)),
+        errorStyle: const TextStyle(color: AppColorTokens.dangerDark),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
           backgroundColor: AppColors.darkPrimary,
-          foregroundColor: const Color(0xFF042F2E),
+          foregroundColor: AppThemeColors.dark.textOnPrimary,
           shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
           textStyle: const TextStyle(
             fontSize: 16,

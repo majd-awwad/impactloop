@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../theme/supplier_color_scheme.dart';
+import '../../../../app/theme/app_color_tokens.dart';
+import '../theme/supplier_ui_palette.dart';
 import '../../data/models/supplier_action_notification.dart';
 import '../l10n/supplier_l10n.dart';
 
@@ -21,7 +22,7 @@ class SupplierNotificationStyle {
     bool isCompleted = false,
   }) {
     final l = SupplierL10n.of(context);
-    final c = SupplierColorScheme.of(context);
+    final c = SupplierUiPalette.of(context);
 
     if (isCompleted) {
       return SupplierNotificationStyle(
@@ -36,7 +37,8 @@ class SupplierNotificationStyle {
       case SupplierActionNotificationKind.categorySuggestion:
         return SupplierNotificationStyle(
           icon: Icons.category_outlined,
-          accent: c.isDark ? const Color(0xFF7DD3FC) : c.purpleAccent,
+          accent:
+              c.isDark ? AppColorTokens.supplierNotificationCategoryDark : c.purpleAccent,
           typeLabel: l.notificationTypeLabel(kind),
         );
       case SupplierActionNotificationKind.categoryRejected:
@@ -60,7 +62,7 @@ class SupplierNotificationStyle {
       case SupplierActionNotificationKind.priceApproved:
         return SupplierNotificationStyle(
           icon: Icons.payments_outlined,
-          accent: c.isDark ? const Color(0xFF60A5FA) : c.blueAccent,
+          accent: c.isDark ? AppColorTokens.supplierDarkBlue : c.blueAccent,
           typeLabel: l.notificationTypeLabel(kind),
         );
       case SupplierActionNotificationKind.priceRejected:
@@ -84,7 +86,9 @@ class SupplierNotificationStyle {
       case SupplierActionNotificationKind.reservationPending:
         return SupplierNotificationStyle(
           icon: Icons.inbox_outlined,
-          accent: c.isDark ? const Color(0xFF93C5FD) : c.blueAccent,
+          accent: c.isDark
+              ? AppColorTokens.supplierNotificationReservationDark
+              : c.blueAccent,
           typeLabel: l.notificationTypeLabel(kind),
         );
     }
@@ -94,11 +98,11 @@ class SupplierNotificationStyle {
     BuildContext context,
     SupplierNotificationFilter filter,
   ) {
-    final c = SupplierColorScheme.of(context);
+    final c = SupplierUiPalette.of(context);
     return switch (filter) {
       SupplierNotificationFilter.all => c.accentMuted,
       SupplierNotificationFilter.actionNeeded => c.isDark
-          ? const Color(0xFF0891B2)
+          ? AppColorTokens.supplierNotificationActionNeededDark
           : c.accent,
       SupplierNotificationFilter.reservations => c.blueAccent,
       SupplierNotificationFilter.completed => c.textMuted,

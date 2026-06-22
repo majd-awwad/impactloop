@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
@@ -164,7 +165,10 @@ class IncomingRequestCard extends StatelessWidget {
               ),
             if (isPending) ...[
               const SizedBox(height: AppSpacing.md),
-              const Divider(height: 1, color: Color(0x332DD4BF)),
+              const Divider(
+                height: 1,
+                color: AppColorTokens.supplierDividerStrong,
+              ),
               const SizedBox(height: AppSpacing.md),
               _ActionRow(
                 onAccept: onAccept,
@@ -534,25 +538,21 @@ class _DeclineButton extends StatelessWidget {
 
   final VoidCallback? onPressed;
 
-  static const _background = Color(0x38EF4444);
-  static const _border = Color(0x8CEF4444);
-  static const _foreground = Color(0xFFF87171);
-
   @override
   Widget build(BuildContext context) {
     return FilledButton.icon(
       onPressed: onPressed,
       style: _IncomingRequestActionButtonMetrics.baseStyle(
-        background: _background,
-        foreground: _foreground,
-        side: const BorderSide(color: _border),
+        background: AppColorTokens.supplierDeclineButtonBackground,
+        foreground: AppColorTokens.supplierDashboardUnavailable,
+        side: const BorderSide(color: AppColorTokens.supplierDeclineButtonBorder),
       ).copyWith(
         overlayColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.pressed)) {
-            return const Color(0x4DEF4444);
+            return AppColorTokens.supplierDeclineButtonPressedOverlay;
           }
           if (states.contains(WidgetState.hovered)) {
-            return const Color(0x29EF4444);
+            return AppColorTokens.supplierDeclineButtonHoverOverlay;
           }
           return null;
         }),

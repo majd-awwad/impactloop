@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 
-import 'supplier_color_scheme.dart';
 import 'supplier_decoration_set.dart';
 import 'supplier_text_styles.dart';
+import 'supplier_ui_palette.dart';
 import '../l10n/supplier_l10n.dart';
 import '../theme/supplier_locale_scope.dart';
 
 export '../l10n/supplier_l10n.dart';
 export 'supplier_color_scheme.dart';
 export 'supplier_decoration_set.dart';
+export 'supplier_ui_palette.dart';
 
 extension SupplierThemeX on BuildContext {
-  SupplierColorScheme get supplierColors => SupplierColorScheme.of(this);
+  SupplierUiPalette get supplierColors => SupplierUiPalette.of(this);
 
   SupplierDecorationSet get supplierDecorations =>
       SupplierDecorationSet(supplierColors);

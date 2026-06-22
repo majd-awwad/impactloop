@@ -33,7 +33,8 @@ class MaterialPriceCheckApi {
               ? errorBody['code'] as String?
               : null,
           statusCode: response.statusCode,
-          details: errorBody is Map<String, dynamic> &&
+          details:
+              errorBody is Map<String, dynamic> &&
                   errorBody['details'] is Map<String, dynamic>
               ? Map<String, dynamic>.from(errorBody['details'] as Map)
               : null,
@@ -66,11 +67,7 @@ class MaterialPriceCheckApi {
     }
   }
 
-  void _logPriceCheckFailure({
-    int? statusCode,
-    Object? body,
-    String? message,
-  }) {
+  void _logPriceCheckFailure({int? statusCode, Object? body, String? message}) {
     if (!kDebugMode) {
       return;
     }

@@ -9,26 +9,26 @@ export '../../data/supplier_pickup_schedule_api_repository.dart'
 class PickupScheduleFilterNotifier
     extends Notifier<SupplierPickupScheduleFilter> {
   @override
-  SupplierPickupScheduleFilter build() =>
-      SupplierPickupScheduleFilter.today;
+  SupplierPickupScheduleFilter build() => SupplierPickupScheduleFilter.today;
 
   void selectFilter(SupplierPickupScheduleFilter filter) {
     state = filter;
   }
 }
 
-final pickupScheduleFilterProvider = NotifierProvider<
-    PickupScheduleFilterNotifier, SupplierPickupScheduleFilter>(
-  PickupScheduleFilterNotifier.new,
-);
+final pickupScheduleFilterProvider =
+    NotifierProvider<
+      PickupScheduleFilterNotifier,
+      SupplierPickupScheduleFilter
+    >(PickupScheduleFilterNotifier.new);
 
 final pickupScheduleProvider =
     FutureProvider.autoDispose<List<SupplierPickupScheduleItem>>((ref) async {
-  final filter = ref.watch(pickupScheduleFilterProvider);
-  return ref
-      .read(supplierPickupScheduleRepositoryProvider)
-      .fetchPickupSchedule(filter);
-});
+      final filter = ref.watch(pickupScheduleFilterProvider);
+      return ref
+          .read(supplierPickupScheduleRepositoryProvider)
+          .fetchPickupSchedule(filter);
+    });
 
 class PickupScheduleSummary {
   const PickupScheduleSummary({
@@ -44,16 +44,16 @@ class PickupScheduleSummary {
 
 final pickupScheduleSummaryProvider =
     FutureProvider.autoDispose<PickupScheduleSummary>((ref) async {
-  final repository = ref.read(supplierPickupScheduleRepositoryProvider);
-  final results = await Future.wait([
-    repository.fetchPickupSchedule(SupplierPickupScheduleFilter.today),
-    repository.fetchPickupSchedule(SupplierPickupScheduleFilter.upcoming),
-    repository.fetchPickupSchedule(SupplierPickupScheduleFilter.completed),
-  ]);
+      final repository = ref.read(supplierPickupScheduleRepositoryProvider);
+      final results = await Future.wait([
+        repository.fetchPickupSchedule(SupplierPickupScheduleFilter.today),
+        repository.fetchPickupSchedule(SupplierPickupScheduleFilter.upcoming),
+        repository.fetchPickupSchedule(SupplierPickupScheduleFilter.completed),
+      ]);
 
-  return PickupScheduleSummary(
-    todayCount: results[0].length,
-    upcomingCount: results[1].length,
-    completedCount: results[2].length,
-  );
-});
+      return PickupScheduleSummary(
+        todayCount: results[0].length,
+        upcomingCount: results[1].length,
+        completedCount: results[2].length,
+      );
+    });

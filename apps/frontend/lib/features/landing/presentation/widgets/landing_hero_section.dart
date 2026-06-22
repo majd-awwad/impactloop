@@ -76,11 +76,7 @@ class _HeroContent extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.eco_outlined,
-                size: 16,
-                color: chipAccent,
-              ),
+              Icon(Icons.eco_outlined, size: 16, color: chipAccent),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 'Build a better future',
@@ -315,10 +311,7 @@ class _HeroMetricCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: AuthDarkTextStyles.title(
                       context,
-                    ).copyWith(
-                      color: colors.textPrimary,
-                      fontSize: 18,
-                    ),
+                    ).copyWith(color: colors.textPrimary, fontSize: 18),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
@@ -382,10 +375,9 @@ class _LandingPrimaryCta extends StatelessWidget {
         icon: Icon(icon, size: 20),
         label: Text(
           label,
-          style: AuthDarkTextStyles.body(context).copyWith(
-            color: colors.textOnPrimary,
-            fontWeight: FontWeight.w800,
-          ),
+          style: AuthDarkTextStyles.body(
+            context,
+          ).copyWith(color: colors.textOnPrimary, fontWeight: FontWeight.w800),
         ),
       ),
     );
@@ -431,10 +423,9 @@ class _LandingOutlinedCta extends StatelessWidget {
       icon: Icon(icon, size: 20, color: colors.textSecondary),
       label: Text(
         label,
-        style: AuthDarkTextStyles.body(context).copyWith(
-          color: colors.textPrimary,
-          fontWeight: FontWeight.w700,
-        ),
+        style: AuthDarkTextStyles.body(
+          context,
+        ).copyWith(color: colors.textPrimary, fontWeight: FontWeight.w700),
       ),
     );
 

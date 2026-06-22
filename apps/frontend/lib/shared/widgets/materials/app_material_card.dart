@@ -8,10 +8,7 @@ import 'material_price_badge.dart';
 import 'material_status_badge.dart';
 import 'materials_ui_palette.dart';
 
-enum AppMaterialCardVariant {
-  standard,
-  compact,
-}
+enum AppMaterialCardVariant { standard, compact }
 
 class AppMaterialCard extends StatelessWidget {
   const AppMaterialCard({
@@ -73,6 +70,16 @@ class AppMaterialCard extends StatelessWidget {
     final cardHeight = compact
         ? materialCompactCardHeight
         : materialStandardCardHeight;
+    final descriptionText = Text(
+      description,
+      style: AppTextStyles.body(context).copyWith(
+        color: palette.textSecondary,
+        height: compact ? 1.45 : 1.55,
+      ),
+      textAlign: TextAlign.start,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
 
     return Material(
       color: Colors.transparent,
@@ -120,15 +127,9 @@ class AppMaterialCard extends StatelessWidget {
                           trailing: trailing,
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          description,
-                          style: AppTextStyles.body(
-                            context,
-                          ).copyWith(color: palette.textSecondary, height: 1.55),
-                          textAlign: TextAlign.start,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        compact
+                            ? SizedBox(height: 48, child: descriptionText)
+                            : descriptionText,
                         const Spacer(),
                         _CardChipRow(
                           minHeight: compact ? 42 : 46,
@@ -155,10 +156,12 @@ class AppMaterialCard extends StatelessWidget {
                             _MetaLine(
                               icon: Icons.straighten_rounded,
                               label: quantityLabel,
+                              maxLabelWidth: compact ? 92 : 180,
                             ),
                             _MetaLine(
                               icon: Icons.location_on_outlined,
                               label: locationLabel,
+                              maxLabelWidth: compact ? 132 : 180,
                             ),
                           ],
                         ),
@@ -172,6 +175,7 @@ class AppMaterialCard extends StatelessWidget {
                                   ? Icons.local_shipping_outlined
                                   : Icons.storefront_outlined,
                               label: availabilityLabel,
+                              maxLabelWidth: compact ? 132 : 180,
                             ),
                           ],
                         ),
@@ -226,11 +230,7 @@ class _MaterialMedia extends StatelessWidget {
     final topRadius = compact ? AppRadius.lg : AppRadius.xl;
     final mediaGradientColors = hasImage
         ? gradientColors
-        : [
-            palette.fallbackStart,
-            palette.fallbackMid,
-            palette.fallbackEnd,
-          ];
+        : [palette.fallbackStart, palette.fallbackMid, palette.fallbackEnd];
     final overlayColor = hasImage
         ? palette.overlayDark.withValues(alpha: isDark ? 0.72 : 0.34)
         : palette.overlayDark.withValues(alpha: isDark ? 0.08 : 0.02);
@@ -264,9 +264,7 @@ class _MaterialMedia extends StatelessWidget {
                   errorBuilder: (context, error, stackTrace) =>
                       const SizedBox.shrink(),
                 ),
-              DecoratedBox(
-                decoration: BoxDecoration(color: overlayColor),
-              ),
+              DecoratedBox(decoration: BoxDecoration(color: overlayColor)),
               Padding(
                 padding: const EdgeInsetsDirectional.all(AppSpacing.md),
                 child: Column(
@@ -313,7 +311,7 @@ class _MaterialMedia extends StatelessWidget {
                             border: Border.all(
                               color: isDark
                                   ? palette.borderStrong.withValues(alpha: 0.82)
-                                  : const Color(0xFFD4E5D9),
+                                  : palette.borderSubtle,
                             ),
                           ),
                           child: Icon(
@@ -357,7 +355,7 @@ class _MediaTagChip extends StatelessWidget {
         border: Border.all(
           color: isDark
               ? palette.borderStrong.withValues(alpha: 0.7)
-              : const Color(0xFFD4E5D9),
+              : palette.borderSubtle,
         ),
       ),
       child: Text(
@@ -432,9 +430,7 @@ class _CardHeader extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xs),
                 Text(
                   ratingText,
-                  style: AppTextStyles.label(
-                  context,
-                  ).copyWith(
+                  style: AppTextStyles.label(context).copyWith(
                     color: palette.textPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -507,14 +503,19 @@ class _CardChipRow extends StatelessWidget {
 }
 
 class _MetaLine extends StatelessWidget {
-  const _MetaLine({required this.icon, required this.label});
+  const _MetaLine({
+    required this.icon,
+    required this.label,
+    required this.maxLabelWidth,
+  });
 
   final IconData icon;
   final String label;
+  final double maxLabelWidth;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = MaterialsUiPalette.of(context);
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
@@ -522,29 +523,21 @@ class _MetaLine extends StatelessWidget {
         vertical: materialMetaChipVerticalPadding,
       ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF101F1A) : const Color(0xFFF3F8F4),
+        color: palette.cardSurfaceAlt,
         borderRadius: AppRadius.pillAll,
-        border: Border.all(
-          color: isDark ? const Color(0xFF284C40) : const Color(0xFFD4E5D9),
-        ),
+        border: Border.all(color: palette.borderStrong),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 16,
-            color: isDark ? const Color(0xFF64F4D2) : const Color(0xFF0F7A5A),
-          ),
+          Icon(icon, size: 16, color: palette.mint),
           const SizedBox(width: AppSpacing.xs),
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 180),
+            constraints: BoxConstraints(maxWidth: maxLabelWidth),
             child: Text(
               label,
               style: AppTextStyles.label(context).copyWith(
-                color: isDark
-                    ? const Color(0xFFB8C8C1)
-                    : const Color(0xFF506258),
+                color: palette.textSecondary,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
                 height: 1.15,

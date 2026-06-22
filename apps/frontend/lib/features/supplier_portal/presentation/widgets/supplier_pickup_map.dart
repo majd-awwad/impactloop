@@ -5,6 +5,7 @@ import 'package:frontend/features/supplier_portal/presentation/theme/supplier_th
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import 'supplier_selected_coordinates_panel.dart';
@@ -361,7 +362,7 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
                       child: IgnorePointer(
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.28),
+                            color: AppColorTokens.supplierMapDisabledOverlay,
                           ),
                           child: Center(
                             child: Padding(

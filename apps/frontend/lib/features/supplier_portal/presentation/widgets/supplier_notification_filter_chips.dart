@@ -41,9 +41,9 @@ class SupplierNotificationFilterChips extends ConsumerWidget {
           selected: isSelected,
           showCheckmark: false,
           onSelected: (_) {
-            ref.read(supplierNotificationFilterProvider.notifier).selectFilter(
-                  filter,
-                );
+            ref
+                .read(supplierNotificationFilterProvider.notifier)
+                .selectFilter(filter);
           },
           labelStyle: context.supplierChip().copyWith(
             color: isSelected ? colors.textOnAccent : colors.textPrimary,
