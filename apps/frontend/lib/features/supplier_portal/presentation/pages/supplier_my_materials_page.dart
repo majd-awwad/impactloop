@@ -10,9 +10,9 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../application/supplier_my_materials_providers.dart';
 import '../../data/models/supplier_my_materials_models.dart';
 import '../theme/supplier_theme_extension.dart';
-import '../widgets/supplier_feedback.dart';
 import '../widgets/materials/supplier_material_category_filter.dart';
 import '../widgets/materials/supplier_material_filter_chips.dart';
+import '../widgets/materials/supplier_material_delete_helper.dart';
 import '../widgets/materials/supplier_materials_grid.dart';
 import '../widgets/materials/supplier_materials_summary_row.dart';
 
@@ -30,9 +30,6 @@ class _SupplierMyMaterialsPageState
     extends ConsumerState<SupplierMyMaterialsPage> {
   late final TextEditingController _searchController;
   Timer? _searchDebounce;
-  SupplierMaterialStatusFilter _statusFilter = SupplierMaterialStatusFilter.all;
-  SupplierMaterialPriceFilter _priceFilter = SupplierMaterialPriceFilter.all;
-  String? _categoryFilter;
 
   @override
   void initState() {
@@ -52,42 +49,46 @@ class _SupplierMyMaterialsPageState
 
   void _applyQuery(SupplierMyMaterialsQuery query) {
     ref.read(supplierMyMaterialsQueryProvider.notifier).updateQuery(query);
+    ref.invalidate(supplierMyMaterialsProvider);
   }
 
   void _updateSearch(String value) {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 350), () {
       final current = ref.read(supplierMyMaterialsQueryProvider);
-      _applyQuery(current.copyWith(page: 1, search: value));
+      _applyQuery(
+        current.copyWith(
+          page: 1,
+          search: value,
+          clearSearch: value.trim().isEmpty,
+        ),
+      );
     });
   }
 
   void _updateStatusFilter(SupplierMaterialStatusFilter filter) {
-    setState(() => _statusFilter = filter);
     final current = ref.read(supplierMyMaterialsQueryProvider);
     _applyQuery(
       current.copyWith(
         page: 1,
         status: filter.apiValue,
-        clearStatus: filter.apiValue == null,
+        clearStatus: filter == SupplierMaterialStatusFilter.all,
       ),
     );
   }
 
   void _updatePriceFilter(SupplierMaterialPriceFilter filter) {
-    setState(() => _priceFilter = filter);
     final current = ref.read(supplierMyMaterialsQueryProvider);
     _applyQuery(
       current.copyWith(
         page: 1,
         isFree: filter.apiValue,
-        clearIsFree: filter.apiValue == null,
+        clearIsFree: filter == SupplierMaterialPriceFilter.all,
       ),
     );
   }
 
   void _updateCategory(String? categoryId) {
-    setState(() => _categoryFilter = categoryId);
     final current = ref.read(supplierMyMaterialsQueryProvider);
     _applyQuery(
       current.copyWith(
@@ -99,13 +100,10 @@ class _SupplierMyMaterialsPageState
   }
 
   void _clearFilters() {
-    setState(() {
-      _statusFilter = SupplierMaterialStatusFilter.all;
-      _priceFilter = SupplierMaterialPriceFilter.all;
-      _categoryFilter = null;
-      _searchController.clear();
-    });
-    _applyQuery(const SupplierMyMaterialsQuery());
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    ref.read(supplierMyMaterialsQueryProvider.notifier).reset();
+    ref.invalidate(supplierMyMaterialsProvider);
   }
 
   Future<void> _retry() async {
@@ -127,198 +125,226 @@ class _SupplierMyMaterialsPageState
   Widget build(BuildContext context) {
     final l = context.s;
     final colors = context.supplierColors;
-    final compact =
-        MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
     final materialsAsync = ref.watch(supplierMyMaterialsProvider);
     final query = ref.watch(supplierMyMaterialsQueryProvider);
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
-        child: SingleChildScrollView(
+    ref.listen(supplierMyMaterialsQueryProvider, (previous, next) {
+      if (next.search != _searchController.text) {
+        _searchController.text = next.search;
+        _searchController.selection = TextSelection.collapsed(
+          offset: _searchController.text.length,
+        );
+      }
+    });
+
+    final statusFilter = statusFilterFromQuery(query.status);
+    final priceFilter = priceFilterFromQuery(query.isFree);
+    final compact =
+        MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
+    final bottomInset = compact
+        ? AppSpacing.supplierMobileNavHeight +
+            MediaQuery.paddingOf(context).bottom +
+            AppSpacing.lg
+        : AppSpacing.lg;
+
+    return LayoutBuilder(
+      builder: (context, viewportConstraints) {
+        final viewportWidth = viewportConstraints.maxWidth;
+        final isCompact =
+            viewportWidth < AppSpacing.supplierLayoutBreakpoint;
+        final contentWidth = isCompact
+            ? viewportWidth
+            : viewportWidth.clamp(0.0, _contentMaxWidth).toDouble();
+
+        return SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsetsDirectional.fromSTEB(
-            compact ? AppSpacing.md : AppSpacing.lg,
-            compact ? AppSpacing.sm : AppSpacing.md,
-            compact ? AppSpacing.md : AppSpacing.lg,
-            compact ? AppSpacing.md : AppSpacing.lg,
+            isCompact ? AppSpacing.md : AppSpacing.lg,
+            isCompact ? AppSpacing.sm : AppSpacing.md,
+            isCompact ? AppSpacing.md : AppSpacing.lg,
+            bottomInset,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _PageHeader(
-                title: l.myMaterialsTitle,
-                subtitle: l.myMaterialsSubtitle,
-                actionLabel: l.navAddMaterial,
-                onAction: () => context.go('/supplier/materials/new'),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              materialsAsync.when(
-                loading: () {
-                  if (kDebugMode) {
-                    debugPrint('[SupplierMyMaterialsPage] provider: loading');
-                  }
-                  return Container(
-                    width: double.infinity,
-                    child: _LoadingBody(compact: compact),
-                  );
-                },
-                error: (error, _) {
-                  if (kDebugMode) {
-                    debugPrint(
-                      '[SupplierMyMaterialsPage] provider: error $error',
-                    );
-                  }
-                  return Container(
-                    width: double.infinity,
-                    child: _ErrorState(
-                      message: l.myMaterialsLoadError,
-                      detail: error.toString(),
-                      onRetry: _retry,
-                    ),
-                  );
-                },
-                data: (result) {
-                  if (kDebugMode) {
-                    debugPrint(
-                      '[SupplierMyMaterialsPage] provider: data '
-                      'items=${result.items.length} '
-                      'totalPages=${result.pagination.totalPages}',
-                    );
-                  }
-                  final categories = result.categories;
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: contentWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _PageHeader(
+                    title: l.myMaterialsTitle,
+                    subtitle: l.myMaterialsSubtitle,
+                    actionLabel: l.navAddMaterial,
+                    onAction: () => context.go('/supplier/materials/new'),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  materialsAsync.when(
+                    loading: () {
+                      if (kDebugMode) {
+                        debugPrint('[SupplierMyMaterialsPage] provider: loading');
+                      }
+                      return _LoadingBody(compact: isCompact);
+                    },
+                    error: (error, _) {
+                      if (kDebugMode) {
+                        debugPrint(
+                          '[SupplierMyMaterialsPage] provider: error $error',
+                        );
+                      }
+                      return _ErrorState(
+                        message: l.myMaterialsLoadError,
+                        detail: error.toString(),
+                        onRetry: _retry,
+                      );
+                    },
+                    data: (result) {
+                      if (kDebugMode) {
+                        debugPrint(
+                          '[SupplierMyMaterialsPage] provider: data '
+                          'items=${result.items.length} '
+                          'totalPages=${result.pagination.totalPages}',
+                        );
+                      }
+                      final categories = result.categories;
 
-                  return Container(
-                    width: double.infinity,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                      SupplierMaterialsSummaryRow(summary: result.summary),
-                      const SizedBox(height: AppSpacing.md),
-                      TextField(
-                        controller: _searchController,
-                        onChanged: _updateSearch,
-                        style: context.supplierBody().copyWith(
-                          color: colors.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: l.myMaterialsSearchHint,
-                          hintStyle: context.supplierBody().copyWith(
-                            color: colors.textMuted,
-                          ),
-                          prefixIcon:
-                              Icon(Icons.search, color: colors.accent),
-                          filled: true,
-                          fillColor: colors.surfaceSolid,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: 14,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: AppRadius.lgAll,
-                            borderSide: BorderSide(color: colors.border),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: AppRadius.lgAll,
-                            borderSide: BorderSide(color: colors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: AppRadius.lgAll,
-                            borderSide: BorderSide(
-                              color: colors.borderFocused,
-                              width: 1.5,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SupplierMaterialsSummaryRow(summary: result.summary),
+                          const SizedBox(height: AppSpacing.md),
+                          TextField(
+                            controller: _searchController,
+                            onChanged: _updateSearch,
+                            style: context.supplierBody().copyWith(
+                              color: colors.textPrimary,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: l.myMaterialsSearchHint,
+                              hintStyle: context.supplierBody().copyWith(
+                                color: colors.textMuted,
+                              ),
+                              prefixIcon:
+                                  Icon(Icons.search, color: colors.accent),
+                              filled: true,
+                              fillColor: colors.surfaceSolid,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: 14,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: AppRadius.lgAll,
+                                borderSide: BorderSide(color: colors.border),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: AppRadius.lgAll,
+                                borderSide: BorderSide(color: colors.border),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: AppRadius.lgAll,
+                                borderSide: BorderSide(
+                                  color: colors.borderFocused,
+                                  width: 1.5,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      SupplierMaterialFilterChips(
-                        statusFilter: _statusFilter,
-                        priceFilter: _priceFilter,
-                        onStatusSelected: _updateStatusFilter,
-                        onPriceSelected: _updatePriceFilter,
-                      ),
-                      if (categories.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        SupplierMaterialCategoryFilter(
-                          categories: categories,
-                          selectedCategoryId: _categoryFilter,
-                          onSelected: _updateCategory,
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        l.materialsResultCount(result.items.length),
-                        style: context.supplierBody().copyWith(
-                          color: colors.textMuted,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      if (result.pagination.totalItems == 0)
-                        _EmptyState(
-                          onAdd: () => context.go('/supplier/materials/new'),
-                        )
-                      else if (result.items.isEmpty)
-                        _FilteredEmptyState(onClear: _clearFilters)
-                      else ...[
-                        Container(
-                          width: double.infinity,
-                          child: SupplierMaterialsGrid(
-                            itemCount: result.items.length,
-                            itemBuilder: (context, index) {
-                              final material = result.items[index];
-                              return buildSupplierMaterialCard(
-                                context: context,
-                                material: material,
-                                isArabic: l.isArabic,
-                                createdAtLabel: _formatCreatedAt(material),
-                                onTap: () => context.go(
-                                  '/supplier/materials/${material.id}',
-                                ),
-                                actions: buildSupplierMaterialCardActions(
+                          const SizedBox(height: AppSpacing.sm),
+                          SupplierMaterialFilterChips(
+                            statusFilter: statusFilter,
+                            priceFilter: priceFilter,
+                            onStatusSelected: _updateStatusFilter,
+                            onPriceSelected: _updatePriceFilter,
+                          ),
+                          if (categories.isNotEmpty) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            SupplierMaterialCategoryFilter(
+                              categories: categories,
+                              selectedCategoryId: query.categoryId,
+                              totalCount: result.summary.total,
+                              onSelected: _updateCategory,
+                            ),
+                          ],
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            l.materialsResultCount(result.items.length),
+                            style: context.supplierBody().copyWith(
+                              color: colors.textMuted,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          if (result.pagination.totalItems == 0)
+                            _EmptyState(
+                              onAdd: () => context.go('/supplier/materials/new'),
+                            )
+                          else if (result.items.isEmpty)
+                            _FilteredEmptyState(onClear: _clearFilters)
+                          else ...[
+                            SupplierMaterialsGrid(
+                              itemCount: result.items.length,
+                              itemBuilder: (context, index) {
+                                final material = result.items[index];
+                                return buildSupplierMaterialCard(
                                   context: context,
-                                  manageLabel: l.manageMaterial,
-                                  editLabel: l.editListing,
-                                  editUnavailableMessage:
-                                      l.editListingComingSoon,
-                                  onManage: () => context.go(
+                                  material: material,
+                                  isArabic: l.isArabic,
+                                  createdAtLabel: _formatCreatedAt(material),
+                                  onTap: () => context.go(
                                     '/supplier/materials/${material.id}',
                                   ),
-                                  onEdit: () => showSupplierInfoSnackBar(
-                                    context,
-                                    l.editListingComingSoon,
+                                  actions: buildSupplierMaterialCardActions(
+                                    context: context,
+                                    manageLabel: l.manageMaterial,
+                                    editLabel: l.editListing,
+                                    deleteLabel: l.deleteMaterial,
+                                    canDelete: material.canDelete,
+                                    deleteBlockedMessage:
+                                        supplierMaterialDeleteBlockedMessage(
+                                      l,
+                                      material.deleteBlockedReason,
+                                    ),
+                                    onManage: () => context.go(
+                                      '/supplier/materials/${material.id}',
+                                    ),
+                                    onEdit: () => context.go(
+                                      '/supplier/materials/${material.id}/edit',
+                                    ),
+                                    onDelete: () =>
+                                        handleSupplierMaterialDelete(
+                                      context: context,
+                                      ref: ref,
+                                      material: material,
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        _PaginationBar(
-                          page: query.page,
-                          totalPages: result.pagination.totalPages,
-                          onPrevious: query.page > 1
-                              ? () => _applyQuery(
-                                    query.copyWith(page: query.page - 1),
-                                  )
-                              : null,
-                          onNext: query.page < result.pagination.totalPages
-                              ? () => _applyQuery(
-                                    query.copyWith(page: query.page + 1),
-                                  )
-                              : null,
-                        ),
-                      ],
-                    ],
-                    ),
-                  );
-                },
+                                );
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            _PaginationBar(
+                              page: query.page,
+                              totalPages: result.pagination.totalPages,
+                              compact: isCompact,
+                              onPrevious: query.page > 1
+                                  ? () => _applyQuery(
+                                        query.copyWith(page: query.page - 1),
+                                      )
+                                  : null,
+                              onNext: query.page < result.pagination.totalPages
+                                  ? () => _applyQuery(
+                                        query.copyWith(page: query.page + 1),
+                                      )
+                                  : null,
+                            ),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -403,12 +429,9 @@ class _LoadingBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        Container(
-          width: double.infinity,
-          child: SupplierMaterialsGrid(
-            itemCount: compact ? 2 : 3,
-            itemBuilder: (_, _) => const SupplierMaterialCardSkeleton(),
-          ),
+        SupplierMaterialsGrid(
+          itemCount: compact ? 1 : 3,
+          itemBuilder: (_, _) => const SupplierMaterialCardSkeleton(),
         ),
       ],
     );
@@ -419,12 +442,14 @@ class _PaginationBar extends StatelessWidget {
   const _PaginationBar({
     required this.page,
     required this.totalPages,
+    required this.compact,
     required this.onPrevious,
     required this.onNext,
   });
 
   final int page;
   final int totalPages;
+  final bool compact;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
 
@@ -432,26 +457,54 @@ class _PaginationBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.s;
 
-    return Container(
-      width: double.infinity,
-      child: Row(
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          OutlinedButton(
-            onPressed: onPrevious,
-            child: Text(l.previousPage),
-          ),
-          const Spacer(),
           Text(
             l.paginationLabel(page, totalPages),
+            textAlign: TextAlign.center,
             style: context.supplierBody(),
           ),
-          const Spacer(),
-          OutlinedButton(
-            onPressed: onNext,
-            child: Text(l.nextPage),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onPrevious,
+                  child: Text(l.previousPage),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onNext,
+                  child: Text(l.nextPage),
+                ),
+              ),
+            ],
           ),
         ],
-      ),
+      );
+    }
+
+    return Row(
+      children: [
+        OutlinedButton(
+          onPressed: onPrevious,
+          child: Text(l.previousPage),
+        ),
+        const Spacer(),
+        Text(
+          l.paginationLabel(page, totalPages),
+          style: context.supplierBody(),
+        ),
+        const Spacer(),
+        OutlinedButton(
+          onPressed: onNext,
+          child: Text(l.nextPage),
+        ),
+      ],
     );
   }
 }

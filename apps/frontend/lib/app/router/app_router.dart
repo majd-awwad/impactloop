@@ -21,6 +21,7 @@ import '../../features/material_discovery/presentation/pages/material_details_pa
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
 import '../../features/supplier_portal/presentation/pages/add_material_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_edit_material_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_my_materials_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_owned_material_detail_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_incoming_requests_page.dart';
@@ -283,6 +284,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               categoryRequestId: state.uri.queryParameters['categoryRequestId'],
               priceRuleRequestId:
                   state.uri.queryParameters['priceRuleRequestId'],
+            ),
+          ),
+          GoRoute(
+            path: '/supplier/materials/:id/edit',
+            builder: (context, state) => SupplierEditMaterialPage(
+              key: ValueKey(state.pathParameters['id']),
+              materialId: state.pathParameters['id']!,
             ),
           ),
           GoRoute(

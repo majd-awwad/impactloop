@@ -132,6 +132,55 @@ class SupplierL10n {
   String get filterAllCategories => t('All categories', 'كل الفئات');
   String get manageMaterial => t('Manage', 'إدارة');
   String get editListing => t('Edit', 'تعديل');
+  String get editMaterialTitle => t('Edit material', 'تعديل المادة');
+  String get editMaterialSubtitle => t(
+        'Update safe listing details. Price and category changes require review.',
+        'حدّث تفاصيل الإدراج الآمنة. تغييرات السعر والفئة تتطلب مراجعة.',
+      );
+  String get editMaterialReadOnlyHelper => t(
+        'Price, category, location, and images are not editable here yet.',
+        'السعر والفئة والموقع والصور غير قابلة للتعديل هنا بعد.',
+      );
+  String get materialUpdatedSuccess => t(
+        'Material updated successfully.',
+        'تم تحديث المادة بنجاح.',
+      );
+  String get materialUpdateFailed => t(
+        'Could not update material. Please try again.',
+        'تعذر تحديث المادة. يرجى المحاولة مرة أخرى.',
+      );
+  String get deleteMaterial => t('Delete', 'حذف');
+  String get deleteMaterialTitle => t('Delete material?', 'حذف المادة؟');
+  String get deleteMaterialBody => t(
+        'This will remove the material from your listings. This action cannot be undone.',
+        'سيؤدي هذا إلى إزالة المادة من إدراجاتك. لا يمكن التراجع عن هذا الإجراء.',
+      );
+  String get deleteMaterialConfirm => t('Delete', 'حذف');
+  String get materialDeletedSuccess => t(
+        'Material deleted successfully.',
+        'تم حذف المادة بنجاح.',
+      );
+  String get deleteMaterialFailed => t(
+        'Could not delete material. Please try again.',
+        'تعذر حذف المادة. يرجى المحاولة مرة أخرى.',
+      );
+  String get deleteMaterialBlockedReused => t(
+        'Reused materials cannot be deleted because they are part of reuse history.',
+        'لا يمكن حذف المواد المعاد استخدامها لأنها جزء من سجل إعادة الاستخدام.',
+      );
+  String get deleteMaterialBlockedActiveRequests => t(
+        'Cannot delete a material with active requests.',
+        'لا يمكن حذف مادة لديها طلبات نشطة.',
+      );
+  String get deleteMaterialBlockedDefault => t(
+        'This material cannot be deleted right now.',
+        'لا يمكن حذف هذه المادة الآن.',
+      );
+  String get saveChanges => t('Save changes', 'حفظ التغييرات');
+  String get readOnlyLabel => t('Read-only', 'للقراءة فقط');
+  String get materialTypeLabel => t('Material type', 'نوع المادة');
+  String get pickupNotesLabel => pickupNotes;
+  String get suggestedUsesLabel => suggestedUses;
   String get editListingComingSoon => t(
         'Editing listings is coming soon.',
         'تعديل الإدراجات قريباً.',
@@ -172,6 +221,9 @@ class SupplierL10n {
       return navNotifications;
     }
     if (location == '/supplier/materials') return navMyMaterials;
+    if (location.endsWith('/edit') && location.startsWith('/supplier/materials/')) {
+      return editMaterialTitle;
+    }
     if (location.startsWith('/supplier/materials')) return navMyMaterials;
     return navPortalFallback;
   }
@@ -195,6 +247,9 @@ class SupplierL10n {
       return subtitleNotifications;
     }
     if (location == '/supplier/materials') return subtitleMyMaterials;
+    if (location.endsWith('/edit') && location.startsWith('/supplier/materials/')) {
+      return editMaterialSubtitle;
+    }
     return subtitleDefault;
   }
 
