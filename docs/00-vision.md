@@ -1,5 +1,7 @@
 # ImpactLoop Vision
 
+> **Aspirational — product vision, not implementation status.** For what is built today, see [08-implementation-status.md](08-implementation-status.md).
+
 ImpactLoop is a graduation software project that encourages reuse of surplus materials and helps learners build practical projects.
 
 ## Problem
