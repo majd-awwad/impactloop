@@ -4,7 +4,14 @@ import { after, before, describe, test } from 'node:test';
 import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 
-import { getSupplierMaterials } from './supplier.service.js';
+import {
+  deleteSupplierMaterial,
+  getSupplierMaterial,
+  getSupplierMaterials,
+  updateSupplierMaterial,
+} from './supplier.service.js';
+import { AppError } from '../../utils/app-error.js';
+import { updateSupplierMaterialSchema } from './supplier.validation.js';
 
 const TEST_MARKER = '[test-supplier-materials]';
 
@@ -15,6 +22,8 @@ type TestContext = {
   locationId: string;
   createdMaterialIds: string[];
   createdUserIds: string[];
+  createdReservationIds: string[];
+  learnerId: string;
 };
 
 async function createSupplierUser(emailSuffix: string) {
@@ -83,6 +92,15 @@ async function createMaterial(
 }
 
 async function cleanup(ctx: TestContext) {
+  if (ctx.createdReservationIds.length) {
+    await prisma.reservationStatusHistory.deleteMany({
+      where: { reservationId: { in: ctx.createdReservationIds } },
+    });
+    await prisma.reservation.deleteMany({
+      where: { id: { in: ctx.createdReservationIds } },
+    });
+  }
+
   if (ctx.createdMaterialIds.length) {
     await prisma.materialImage.deleteMany({
       where: { materialId: { in: ctx.createdMaterialIds } },
@@ -119,6 +137,8 @@ describe('getSupplierMaterials', () => {
     locationId: '',
     createdMaterialIds: [],
     createdUserIds: [],
+    createdReservationIds: [],
+    learnerId: '',
   };
 
   before(async () => {
@@ -142,11 +162,18 @@ describe('getSupplierMaterials', () => {
 
     const supplier = await createSupplierUser('primary');
     const otherSupplier = await createSupplierUser('other');
+    const learner = await prisma.user.findFirst({
+      where: { roles: { some: { role: 'LEARNER' } } },
+      select: { id: true },
+    });
+
+    assert.ok(learner, 'Expected at least one learner user');
 
     ctx.categoryId = category.id;
     ctx.locationId = location.id;
     ctx.supplierId = supplier.id;
     ctx.otherSupplierId = otherSupplier.id;
+    ctx.learnerId = learner.id;
     ctx.createdUserIds.push(supplier.id, otherSupplier.id);
 
     for (let index = 0; index < 11; index += 1) {
@@ -340,5 +367,431 @@ describe('getSupplierMaterials', () => {
     assert.equal(result.items.length, 1);
     assert.ok(result.items[0]!.images.length >= 1);
     assert.ok(result.items[0]!.images[0]!.imageUrl.length > 0);
+  });
+
+  test('includes delete eligibility in list items', async () => {
+    const available = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'delete-eligible',
+      'AVAILABLE',
+    );
+    const reused = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'delete-blocked-reused',
+      'REUSED',
+    );
+
+    const result = await getSupplierMaterials(ctx.supplierId, {
+      ...defaultQuery,
+      search: 'delete-',
+    });
+
+    const availableItem = result.items.find((item) => item.id === available.id);
+    const reusedItem = result.items.find((item) => item.id === reused.id);
+
+    assert.ok(availableItem);
+    assert.equal(availableItem.canDelete, true);
+    assert.equal(availableItem.deleteBlockedReason, null);
+
+    assert.ok(reusedItem);
+    assert.equal(reusedItem.canDelete, false);
+    assert.equal(reusedItem.deleteBlockedReason, 'REUSED_HISTORY');
+  });
+});
+
+describe('getSupplierMaterial', () => {
+  const ctx: TestContext = {
+    supplierId: '',
+    otherSupplierId: '',
+    categoryId: '',
+    locationId: '',
+    createdMaterialIds: [],
+    createdUserIds: [],
+    createdReservationIds: [],
+    learnerId: '',
+  };
+
+  before(async () => {
+    const category = await prisma.category.findFirst({
+      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      select: { id: true },
+    });
+    const location = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: 'Nablus',
+        area: `${TEST_MARKER}-single`,
+        visibility: 'PUBLIC_APPROXIMATE',
+        isApproximate: true,
+      },
+      select: { id: true },
+    });
+    const supplier = await createSupplierUser('single');
+    const otherSupplier = await createSupplierUser('single-other');
+
+    assert.ok(category);
+    ctx.categoryId = category.id;
+    ctx.locationId = location.id;
+    ctx.supplierId = supplier.id;
+    ctx.otherSupplierId = otherSupplier.id;
+    ctx.createdUserIds.push(supplier.id, otherSupplier.id);
+  });
+
+  after(async () => {
+    await cleanup(ctx);
+  });
+
+  test('returns owned material by id', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'single-owned',
+      'AVAILABLE',
+    );
+
+    const result = await getSupplierMaterial(ctx.supplierId, material.id);
+
+    assert.equal(result.id, material.id);
+    assert.match(result.title, /single-owned/);
+    assert.ok(result.category);
+    assert.ok(Array.isArray(result.images));
+  });
+
+  test('rejects another supplier material', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.otherSupplierId,
+      'single-other',
+      'AVAILABLE',
+    );
+
+    await assert.rejects(
+      () => getSupplierMaterial(ctx.supplierId, material.id),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 404);
+        return true;
+      },
+    );
+  });
+});
+
+describe('updateSupplierMaterial', () => {
+  const ctx: TestContext = {
+    supplierId: '',
+    otherSupplierId: '',
+    categoryId: '',
+    locationId: '',
+    createdMaterialIds: [],
+    createdUserIds: [],
+    createdReservationIds: [],
+    learnerId: '',
+  };
+
+  before(async () => {
+    const category = await prisma.category.findFirst({
+      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      select: { id: true },
+    });
+    const location = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: 'Nablus',
+        area: `${TEST_MARKER}-update`,
+        visibility: 'PUBLIC_APPROXIMATE',
+        isApproximate: true,
+      },
+      select: { id: true },
+    });
+    const supplier = await createSupplierUser('update');
+    const otherSupplier = await createSupplierUser('update-other');
+
+    assert.ok(category);
+    ctx.categoryId = category.id;
+    ctx.locationId = location.id;
+    ctx.supplierId = supplier.id;
+    ctx.otherSupplierId = otherSupplier.id;
+    ctx.createdUserIds.push(supplier.id, otherSupplier.id);
+  });
+
+  after(async () => {
+    await cleanup(ctx);
+  });
+
+  test('updates safe editable fields for owned material', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'editable-item',
+      'AVAILABLE',
+    );
+
+    const before = await prisma.material.findUnique({
+      where: { id: material.id },
+      select: { categoryId: true, isFree: true, price: true },
+    });
+
+    const updated = await updateSupplierMaterial(ctx.supplierId, material.id, {
+      title: `${TEST_MARKER} Updated title`,
+      description: `${TEST_MARKER} Updated description`,
+      quantity: 7,
+      unit: 'packs',
+      condition: 'LIKE_NEW',
+      pickupAllowed: false,
+      deliveryAllowed: false,
+      pickupNotes: 'Ring bell on arrival',
+      suggestedUses: 'Student robotics kits',
+    });
+
+    assert.equal(updated.title, `${TEST_MARKER} Updated title`);
+    assert.equal(updated.quantity, 7);
+    assert.equal(updated.unit, 'packs');
+    assert.equal(updated.condition, 'LIKE_NEW');
+    assert.equal(updated.pickupNotes, 'Ring bell on arrival');
+
+    const after = await prisma.material.findUnique({
+      where: { id: material.id },
+      select: { categoryId: true, isFree: true, price: true },
+    });
+
+    assert.deepEqual(after, before);
+  });
+
+  test('rejects editing another supplier material', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.otherSupplierId,
+      'not-editable',
+      'AVAILABLE',
+    );
+
+    await assert.rejects(
+      () =>
+        updateSupplierMaterial(ctx.supplierId, material.id, {
+          title: 'Hacked',
+          description: 'Hacked',
+          quantity: 1,
+          unit: 'piece',
+          condition: 'GOOD',
+          pickupAllowed: true,
+          deliveryAllowed: false,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 404);
+        return true;
+      },
+    );
+  });
+
+  test('rejects invalid quantity in request schema', () => {
+    const result = updateSupplierMaterialSchema.safeParse({
+      title: 'Valid title',
+      description: 'Valid description',
+      quantity: 0,
+      unit: 'piece',
+      condition: 'GOOD',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    });
+
+    assert.equal(result.success, false);
+  });
+
+  test('does not create duplicate material on update', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'no-duplicate',
+      'AVAILABLE',
+    );
+
+    const countBefore = await prisma.material.count({
+      where: { ownerId: ctx.supplierId },
+    });
+
+    await updateSupplierMaterial(ctx.supplierId, material.id, {
+      title: `${TEST_MARKER} no-duplicate-updated`,
+      description: `${TEST_MARKER} no-duplicate description`,
+      quantity: 4,
+      unit: 'pack',
+      condition: 'GOOD',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    });
+
+    const countAfter = await prisma.material.count({
+      where: { ownerId: ctx.supplierId },
+    });
+
+    assert.equal(countBefore, countAfter);
+  });
+
+  test('read-only fields remain unchanged after update', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'readonly-check',
+      'AVAILABLE',
+      false,
+    );
+
+    const before = await prisma.material.findUnique({
+      where: { id: material.id },
+      select: {
+        ownerId: true,
+        categoryId: true,
+        isFree: true,
+        price: true,
+        locationId: true,
+      },
+    });
+
+    await updateSupplierMaterial(ctx.supplierId, material.id, {
+      title: `${TEST_MARKER} readonly-updated`,
+      description: `${TEST_MARKER} readonly description`,
+      quantity: 9,
+      unit: 'kit',
+      condition: 'USED',
+      pickupAllowed: false,
+      deliveryAllowed: true,
+      pickupNotes: 'Updated notes',
+      suggestedUses: 'Updated uses',
+    });
+
+    const after = await prisma.material.findUnique({
+      where: { id: material.id },
+      select: {
+        ownerId: true,
+        categoryId: true,
+        isFree: true,
+        price: true,
+        locationId: true,
+      },
+    });
+
+    assert.deepEqual(after, before);
+  });
+});
+
+describe('deleteSupplierMaterial', () => {
+  const ctx: TestContext = {
+    supplierId: '',
+    otherSupplierId: '',
+    categoryId: '',
+    locationId: '',
+    createdMaterialIds: [],
+    createdUserIds: [],
+    createdReservationIds: [],
+    learnerId: '',
+  };
+
+  before(async () => {
+    const category = await prisma.category.findFirst({
+      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      select: { id: true },
+    });
+    const location = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: 'Nablus',
+        area: `${TEST_MARKER}-delete`,
+        visibility: 'PUBLIC_APPROXIMATE',
+        isApproximate: true,
+      },
+      select: { id: true },
+    });
+    const supplier = await createSupplierUser('delete');
+    const otherSupplier = await createSupplierUser('delete-other');
+    const learner = await prisma.user.findFirst({
+      where: { roles: { some: { role: 'LEARNER' } } },
+      select: { id: true },
+    });
+
+    assert.ok(category);
+    assert.ok(learner);
+
+    ctx.categoryId = category.id;
+    ctx.locationId = location.id;
+    ctx.supplierId = supplier.id;
+    ctx.otherSupplierId = otherSupplier.id;
+    ctx.learnerId = learner.id;
+    ctx.createdUserIds.push(supplier.id, otherSupplier.id);
+  });
+
+  after(async () => {
+    await cleanup(ctx);
+  });
+
+  test('deletes AVAILABLE material without reservation history', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'delete-available',
+      'AVAILABLE',
+    );
+
+    await deleteSupplierMaterial(ctx.supplierId, material.id);
+
+    const deleted = await prisma.material.findUnique({
+      where: { id: material.id },
+    });
+
+    assert.equal(deleted, null);
+    ctx.createdMaterialIds = ctx.createdMaterialIds.filter(
+      (id) => id !== material.id,
+    );
+  });
+
+  test('rejects REUSED material', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'delete-reused',
+      'REUSED',
+    );
+
+    await assert.rejects(
+      () => deleteSupplierMaterial(ctx.supplierId, material.id),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(error.message, /reused material history/i);
+        return true;
+      },
+    );
+  });
+
+  test('rejects material with completed reservation history', async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      'delete-with-completed',
+      'AVAILABLE',
+    );
+
+    const reservation = await prisma.reservation.create({
+      data: {
+        materialId: material.id,
+        requesterId: ctx.learnerId,
+        ownerId: ctx.supplierId,
+        quantityRequested: 1,
+        status: 'COMPLETED',
+        completedAt: new Date(),
+      },
+    });
+    ctx.createdReservationIds.push(reservation.id);
+
+    await assert.rejects(
+      () => deleteSupplierMaterial(ctx.supplierId, material.id),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(error.message, /active requests/i);
+        return true;
+      },
+    );
   });
 });
