@@ -23,7 +23,7 @@ Update:
 - [frontend/routes-map.md](frontend/routes-map.md) if routes/guards changed
 - [frontend/reusable-widgets.md](frontend/reusable-widgets.md) if a shared widget was added/changed
 - [08-implementation-status.md](08-implementation-status.md) if feature ship status changed
-- **Future:** `docs/features/<feature>.md` when that doc exists
+- Matching [features/](features/) and [flows/](flows/) doc when user-facing behavior changed (see [Canonical feature & flow docs](#canonical-feature--flow-docs-phase-2a))
 
 ## If editing backend API
 
@@ -38,7 +38,7 @@ Update:
 - [backend/api-catalog.md](backend/api-catalog.md) if endpoint/request/response changed
 - [backend/modules-map.md](backend/modules-map.md) if module responsibilities changed
 - [08-implementation-status.md](08-implementation-status.md) if feature ship status changed
-- **Future:** `docs/features/<feature>.md`, `docs/flows/<flow>.md`
+- Matching [features/](features/) and [flows/](flows/) doc when API or flow behavior changed (see [Canonical feature & flow docs](#canonical-feature--flow-docs-phase-2a))
 
 ## If editing Prisma/database
 
@@ -64,7 +64,8 @@ Read:
 
 - [04-api-conventions.md](04-api-conventions.md)
 - [backend/api-catalog.md](backend/api-catalog.md) (auth section)
-- **Future:** `docs/features/auth.md`, `docs/flows/auth-flow.md`
+- [features/auth.md](features/auth.md)
+- [flows/auth-flow.md](flows/auth-flow.md)
 
 Ask the human if:
 
@@ -72,6 +73,21 @@ Ask the human if:
 - Public registration rules change
 - Token storage changes
 - Role permissions change
+
+## Canonical feature & flow docs (Phase 2A)
+
+Code-derived narratives for implemented/partial core features. Status labels in each doc match [08-implementation-status.md](08-implementation-status.md).
+
+| Feature | Feature doc | Flow doc(s) | Ship status (summary) |
+|---------|-------------|-------------|------------------------|
+| Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Partial** — forgot-password UI not built |
+| Material discovery | [features/material-discovery.md](features/material-discovery.md) | [flows/material-discovery-flow.md](flows/material-discovery-flow.md) | **Implemented** |
+| Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** — material read/create; supplier reservations only; no learner create |
+| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — Flutter **mock-only**; `GET /api/learning-projects` **backend-only** until wired |
+
+**Not documented as implemented:** learner reservations, delivery, AI agent, admin, moderator (unless code changes prove otherwise).
+
+ADRs (`docs/adr/`) — not written yet.
 
 ## Doc filename reference
 

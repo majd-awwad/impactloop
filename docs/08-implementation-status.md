@@ -148,6 +148,17 @@ Mapped from [05-roadmap.md](05-roadmap.md) to **code reality** — roadmap text 
 | Doc set | Status |
 |---------|--------|
 | Phase 0–1 inventories (this file, api-catalog, database/*, routes-map) | **Implemented** |
-| Feature docs (`docs/features/`) | **Not implemented** |
-| Flow docs (`docs/flows/`) | **Not implemented** |
+| Phase 2A feature docs (`docs/features/`) | **Partial** — 4 core features documented (see table below) |
+| Phase 2A flow docs (`docs/flows/`) | **Partial** — 5 flows documented (see table below) |
 | ADRs (`docs/adr/`) | **Not implemented** |
+
+### Phase 2A canonical docs (code-derived)
+
+| Area | Feature doc | Flow doc(s) | Code status (unchanged) |
+|------|-------------|-------------|-------------------------|
+| Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Partial** |
+| Material discovery | [features/material-discovery.md](features/material-discovery.md) | [flows/material-discovery-flow.md](flows/material-discovery-flow.md) | **Implemented** |
+| Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** |
+| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — UI **mock-only**; API **backend-only** |
+
+**Not covered as implemented:** learner reservations, delivery, AI agent, admin, moderator.

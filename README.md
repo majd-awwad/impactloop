@@ -102,7 +102,16 @@ Start here for agents and contributors:
 | [docs/05-roadmap.md](docs/05-roadmap.md) | **Aspirational** phased plan — see [implementation status](docs/08-implementation-status.md) |
 | [docs/07-ui-style-guide.md](docs/07-ui-style-guide.md) | Auth UI style reference (partial theme coverage) |
 
-Feature narrative docs (`docs/features/`, `docs/flows/`, `docs/adr/`) are **not written yet** (Phase 2+).
+### Feature & flow docs (Phase 2A — code-derived)
+
+| Feature | Doc | Flow(s) | Status (summary) |
+|---------|-----|---------|------------------|
+| Auth | [docs/features/auth.md](docs/features/auth.md) | [auth-flow](docs/flows/auth-flow.md) | **Partial** |
+| Material discovery | [docs/features/material-discovery.md](docs/features/material-discovery.md) | [material-discovery-flow](docs/flows/material-discovery-flow.md) | **Implemented** |
+| Supplier portal | [docs/features/supplier-portal.md](docs/features/supplier-portal.md) | [supplier-material-listing-flow](docs/flows/supplier-material-listing-flow.md), [supplier-reservation-flow](docs/flows/supplier-reservation-flow.md) | **Partial** |
+| Learning hub | [docs/features/learning-hub.md](docs/features/learning-hub.md) | [learning-hub-browse-flow](docs/flows/learning-hub-browse-flow.md) | **Partial** — Flutter **mock-only**; API **backend-only** |
+
+ADRs (`docs/adr/`) are **not written yet**.
 
 ### Supplementary docs (context — not canonical inventories)
 

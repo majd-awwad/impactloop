@@ -1,0 +1,162 @@
+# Supplier Reservation Flow
+
+**Sources inspected:** `supplier_incoming_requests_page.dart`, `supplier_requests_api.dart`, `supplier_requests_providers.dart`, `accept_incoming_request_dialog.dart`, `decline_incoming_request_dialog.dart`, `complete_pickup_dialog.dart`, `supplier-reservations.*`
+
+## Trigger
+
+Supplier opens **Incoming requests** (`/supplier/reservations`) or arrives via notification deep link (`?tab=&focus=`).
+
+**Prerequisite:** `reservations` rows must already exist. **Learner create reservation API is not implemented** — current data typically from **database seed** (`seed-supplier-reservations.ts`).
+
+---
+
+## Flow — List reservations by tab
+
+### User path
+
+Switch tabs: pending / accepted / declined / completed (wording per UI). See cards with learner info, material summary, quantity, message.
+
+### Frontend path
+
+`SupplierIncomingRequestsPage` → `supplier_requests_providers.dart` → `SupplierRequestsApi.fetchIncomingRequests(tab)` → `GET /api/supplier/reservations?status=<tab>`.
+
+### Backend path
+
+`listSupplierReservations` → map tab to `ReservationStatus` (`declined` → `REJECTED`) → `findSupplierReservations(ownerId, status)`.
+
+### Database changes
+
+Read-only.
+
+### Success state
+
+List renders `SupplierIncomingRequest` cards.
+
+### Error states
+
+API failure → error/empty state in page (`supplier_feedback.dart` patterns).
+
+---
+
+## Flow — Accept pending reservation
+
+### Trigger
+
+Supplier taps **Accept** on pending request → dialog collects pickup window (+ optional note).
+
+### User path
+
+Confirm pickup start/end → reservation accepted → moves to accepted tab / pickup schedule.
+
+### Frontend path
+
+`accept_incoming_request_dialog.dart` → `supplierRequestsRepository.acceptRequest` → `PATCH /api/supplier/reservations/:id/accept` with body `{ pickupWindowStart, pickupWindowEnd, supplierNote? }`.
+
+### Backend path
+
+`acceptSupplierReservation` transaction:
+
+- `reservations.status`: `PENDING` → `ACCEPTED`
+- Set `pickupWindowStart`, `pickupWindowEnd`, `supplierNote`, `acceptedAt`
+- Insert `reservation_status_history` (RESERVATION group)
+
+**Note:** Does **not** update `materials.status` in this transaction (only **complete** sets `REUSED`).
+
+### Database changes
+
+Update `reservations`; insert `reservation_status_history`.
+
+### Success state
+
+Returns mapped reservation DTO; providers invalidated (`incomingRequestsProvider`, `pickupScheduleProvider`).
+
+### Error states
+
+- 404 not found
+- 409 `CONFLICT` — not pending
+- Validation errors on pickup window — **Needs verification** of schema
+
+---
+
+## Flow — Decline pending reservation
+
+### Trigger
+
+Supplier taps **Decline** → optional reason.
+
+### Frontend path
+
+`decline_incoming_request_dialog.dart` → `PATCH .../decline` with `{ reason? }`.
+
+### Backend path
+
+`reservations.status` → `REJECTED`; `rejectionReason`, `rejectedAt`; history row.
+
+### Database changes
+
+Update `reservations`; insert history.
+
+### Error states
+
+404, 409 if not pending.
+
+---
+
+## Flow — Complete accepted reservation (pickup done)
+
+### Trigger
+
+Supplier marks pickup complete (incoming requests or pickup schedule UI).
+
+### Frontend path
+
+`complete_pickup_dialog.dart` / providers → `PATCH .../complete` (no body).
+
+### Backend path
+
+Transaction:
+
+- `reservations.status`: `ACCEPTED` → `COMPLETED`; `completedAt`
+- History: ACCEPTED → COMPLETED
+- `materials.status` → `REUSED`; `reusedAt`; `reusedByReservationId`
+
+### Database changes
+
+Update `reservations` + `materials`; insert history.
+
+### Success state
+
+Reservation completed; material marked reused.
+
+### Error states
+
+409 if not accepted.
+
+---
+
+## Pickup schedule (related)
+
+### Status
+
+**Implemented** — separate page `/supplier/pickup-schedule` reads accepted reservations via `supplier_pickup_schedule_api.dart` (same reservation data, different presentation).
+
+---
+
+## Not implemented
+
+- Learner `POST /api/reservations`
+- Delivery request / driver assignment (`deliveryRequested`, `deliveryStatus` on schema)
+- Cancel/expiry flows in UI
+- Material status `RESERVED` on accept — **Needs verification**
+
+---
+
+## Open questions
+
+- How are new PENDING reservations created in production without learner API?
+- Should accept also set `materials.status` to `RESERVED`?
+- Notification generation when reservation state changes?
+
+### Files involved
+
+`supplier_incoming_requests_page.dart`, `supplier_requests_api.dart`, `supplier_requests_providers.dart`, `accept_incoming_request_dialog.dart`, `decline_incoming_request_dialog.dart`, `complete_pickup_dialog.dart`, `supplier-reservations.service.ts`, `supplier-reservations.repository.ts`, `pickup_schedule_*`
