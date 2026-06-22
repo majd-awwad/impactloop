@@ -126,6 +126,28 @@ Refresh fails → unauthenticated; protected routes redirect to login.
 
 ---
 
+## Flow E2 — Access token refresh after 401
+
+### Trigger
+
+An authenticated request made through the shared Dio client receives `401`.
+
+### Frontend path
+
+`AuthInterceptor.onError` checks that the request is eligible for refresh. It skips login, register, refresh, logout, requests marked `skipAuthRefresh`, and requests already retried after refresh.
+
+Eligible requests await `AuthSessionRefresher.refreshAccessToken()`, which uses a bare Dio client, not the shared intercepted client, to call `POST /api/auth/refresh`. On success it updates the in-memory access token and persists a rotated refresh token when the backend returns one. The original request is retried once with the new bearer token.
+
+### Concurrency
+
+Concurrent 401s share the same in-flight refresh future, so only one refresh request is sent. Each failed request awaits that result and then retries once.
+
+### Error states
+
+If refresh fails, the access token and refresh storage are cleared, `AuthController` receives a session-expired state event, and the original request fails with a `SESSION_EXPIRED` auth error.
+
+---
+
 ## Flow F — Change password (supplier)
 
 ### Trigger

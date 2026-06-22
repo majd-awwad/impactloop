@@ -13,7 +13,7 @@ Public signup and login for **LEARNER** and **SUPPLIER** roles, session bootstra
 | Layer | Status | Notes |
 |-------|--------|-------|
 | Backend `auth` module | **Implemented** | Register, login, refresh, logout, me, change-password, forgot/reset **API** |
-| Flutter `auth` feature | **Partial** | Register/login/session/change-password work; forgot-password shows “coming soon” |
+| Flutter `auth` feature | **Partial** | Register/login/session/change-password work; shared Dio refreshes eligible 401s and retries once; forgot-password shows “coming soon” |
 | Role invitations | **Backend-only** | `invitations` module — no Flutter accept flow |
 | Forgot / reset password UI | **Not implemented** | `login_form.dart` |
 
@@ -23,7 +23,8 @@ Public signup and login for **LEARNER** and **SUPPLIER** roles, session bootstra
 2. **Register:** basic info + intent (learner / supplier / both) → profile completion page(s) → `POST /api/auth/register` → redirect to `/home` or `/supplier` based on roles.
 3. **Login:** email/password → `POST /api/auth/login` → same redirect rule.
 4. **Session restore:** app/router sends unknown auth to `/auth/checking` → `AuthController.bootstrapSession()` → refresh + `/me`.
-5. **Change password:** supplier account security card → `PATCH /api/auth/change-password` (uses `authRepository`).
+5. **Authenticated request refresh:** shared Dio requests attach the in-memory access token. If an eligible request receives 401, the auth interceptor uses a bare refresh client to call `/api/auth/refresh`, updates the token holder/storage, and retries the original request once.
+6. **Change password:** supplier account security card → `PATCH /api/auth/change-password` (uses `authRepository`).
 
 ## Frontend files
 
@@ -39,7 +40,7 @@ Public signup and login for **LEARNER** and **SUPPLIER** roles, session bootstra
 
 **Legacy (unwired):** `presentation/pages/choose_role_page.dart`, `choose_role_form.dart`.
 
-**Cross-cutting:** `core/auth/token_storage.dart`, `access_token_holder.dart`, `auth_interceptor.dart`
+**Cross-cutting:** `core/auth/token_storage.dart`, `access_token_holder.dart`, `auth_interceptor.dart`, `auth_session_refresh.dart`
 
 ## Backend files
 
@@ -85,7 +86,7 @@ From [reusable-widgets](../frontend/reusable-widgets.md):
 ## Known gaps / Needs verification
 
 - Forgot-password and reset-password screens **not implemented** on Flutter.
-- Web refresh token: `WebCookieTokenStorage` is a no-op; refresh relies on **httpOnly cookie** from backend (`auth-token-delivery.ts`) — **Needs verification** on all browsers.
+- Web refresh token: `WebCookieTokenStorage` is a no-op; refresh relies on **httpOnly cookie** from backend (`auth-token-delivery.ts`) and a credentialed bare refresh Dio client — **Needs verification** on all browsers.
 - `RegistrationIntent.both` registers both roles in one API call after both profile steps.
 - Email/phone verification enforcement — **Needs verification** (`account_status` vs actual gate).
 - `choose_role_page.dart` exists but is **not** in `app_router.dart`.

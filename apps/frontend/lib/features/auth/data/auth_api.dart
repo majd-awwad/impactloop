@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/auth/auth_interceptor.dart';
 import '../../../core/network/api_response.dart';
 import 'models/auth_tokens.dart';
 import 'models/register_request.dart';
@@ -33,6 +34,9 @@ class AuthApi {
         data: refreshToken == null
             ? const <String, dynamic>{}
             : {'refreshToken': refreshToken},
+        options: Options(
+          extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
+        ),
       ),
       AuthTokens.fromJson,
     );

@@ -85,8 +85,18 @@ Auth dependencies are provider-built:
 - `authRepositoryProvider`
 - `accessTokenHolderProvider`
 - `apiClientProvider`
+- `authSessionRefresherProvider`
+- `authSessionExpiryProvider`
 
 Registration draft state is separate in `registrationDraftProvider`. It stores basic registration data, selected intent, learner profile draft, and supplier profile draft before producing a `RegisterRequest`.
+
+Shared network auth behavior:
+
+- `AuthInterceptor` attaches the current bearer token and client platform header.
+- On eligible 401s, `AuthInterceptor` uses `AuthSessionRefresher` to refresh once through a bare Dio client, then retries the original request once.
+- Concurrent 401s share one refresh operation.
+- Refresh failure clears token storage and emits `authSessionExpiryProvider`, which drives `AuthController` to an unauthenticated/session-expired state.
+- Multipart material-image uploads are marked `skipAuthRefresh` because replaying a consumed multipart request body is unsafe.
 
 ## Async Data Loading
 

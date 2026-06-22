@@ -28,6 +28,8 @@ Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials,
 4. **Reservations:** review pending → accept with pickup window / decline / mark complete after pickup.
 5. **Profile:** `PATCH /api/supplier/profile`, reverse geocode for location, change password via auth API.
 
+Supplier API calls use the shared authenticated Dio client. When the access token expires, eligible Supplier JSON requests now refresh the token centrally through the auth/network layer and retry once. Material image uploads are not auto-retried because replaying multipart request bodies is unsafe; expired sessions during upload surface as an auth/API error.
+
 ## Frontend files
 
 | Area | Path |

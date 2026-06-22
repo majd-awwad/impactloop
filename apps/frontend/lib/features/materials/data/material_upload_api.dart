@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/auth/auth_interceptor.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_response.dart';
 import 'models/material_draft_image.dart';
@@ -35,6 +36,7 @@ class MaterialUploadApi {
           contentType: 'multipart/form-data',
           sendTimeout: const Duration(seconds: 60),
           receiveTimeout: const Duration(seconds: 60),
+          extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
         ),
       );
 

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/auth/auth_session_refresh.dart';
 import '../../../core/errors/api_exception.dart';
 import '../data/auth_repository.dart';
 import '../data/models/register_request.dart';
@@ -59,7 +60,24 @@ class AuthController extends Notifier<AuthState> {
   Future<void>? _bootstrapOperation;
 
   @override
-  AuthState build() => const AuthState();
+  AuthState build() {
+    ref.listen<AuthSessionExpiryState?>(authSessionExpiryProvider, (
+      previous,
+      next,
+    ) {
+      if (next == null || previous?.generation == next.generation) {
+        return;
+      }
+
+      state = AuthState(
+        isLoading: false,
+        hasBootstrapped: true,
+        error: next.error,
+      );
+    });
+
+    return const AuthState();
+  }
 
   AuthRepository get _repository => ref.read(authRepositoryProvider);
 
