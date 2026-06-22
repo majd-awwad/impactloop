@@ -13,7 +13,7 @@ Supplier chooses **Add material** (`/supplier/materials/new`) or resumes from ap
 ### User path
 
 1. Open add material form in supplier shell.
-2. Enter material type/name, listing title, category, condition, quantity, price/free, and pickup options.
+2. Choose a category, then select or type material type/name, listing title, condition, quantity, price/free, and pickup options.
 3. Run price check (paid listings).
 4. Upload at least one image.
 5. Review pickup location from the supplier profile.
@@ -23,7 +23,7 @@ Supplier chooses **Add material** (`/supplier/materials/new`) or resumes from ap
 
 `AddMaterialPage` → Riverpod providers:
 
-- `material_listing_providers.dart` → categories, listing policy, price check
+- `material_listing_providers.dart` → categories, material type search, listing policy, price check
 - `material_upload_api.dart` → `POST /api/uploads/material-images`
 - `supplier_materials_repository.dart` → `POST /api/supplier/materials`
 - Optional: `category_requests_api.dart`, `price_rule_requests_api.dart`
@@ -31,13 +31,14 @@ Supplier chooses **Add material** (`/supplier/materials/new`) or resumes from ap
 ### Backend path
 
 1. `GET /api/categories`, `GET /api/materials/listing-policy`
-2. `POST /api/materials/price-check` (authenticated; resolves `materialName` against material types/aliases)
-3. `POST /api/uploads/material-images` (SUPPLIER)
-4. `POST /api/supplier/materials` → `supplier.service.createMaterial` → `supplier.repository.createSupplierMaterial`
+2. `GET /api/material-types?categoryId=&q=` for category-scoped combobox suggestions
+3. `POST /api/materials/price-check` (authenticated; receives `materialName` and selected `materialTypeId` when available)
+4. `POST /api/uploads/material-images` (SUPPLIER)
+5. `POST /api/supplier/materials` → `supplier.service.createMaterial` → `supplier.repository.createSupplierMaterial`
 
 May link `sourceCategoryRequestId` / `sourcePriceRuleRequestId` to mark request published.
 
-`materialName` is free text used for backend material type/alias matching and price checks. The current Add Material UI does not implement material-type autocomplete; `GET /api/material-types` remains available for future type search flows. `title` is display-only. `sourceType` is derived server-side from the supplier profile and legacy client values are ignored.
+`materialName` remains the create-contract field used for backend material type/alias matching. The Add Material UI now offers category-scoped autocomplete from active material types and aliases; selecting a result passes `materialTypeId` to price check only. `title` is display-only. `sourceType` is derived server-side from the supplier profile and legacy client values are ignored.
 
 ### Database changes
 

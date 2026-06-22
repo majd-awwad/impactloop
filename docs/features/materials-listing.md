@@ -41,12 +41,12 @@ AddMaterialPage
 
 **Source type** is no longer supplied by the add-material UI. Backend derives `materials.sourceType` from `supplierProfile.supplierType`: `WORKSHOP` → `WORKSHOP_SURPLUS`, `FACTORY` → `FACTORY_SURPLUS`, `EDUCATIONAL_INSTITUTION` → `EDUCATIONAL_INSTITUTION`, and `INDIVIDUAL_SUPPLIER` → `STUDENT_LEFTOVER` as an MVP fallback. Legacy client `sourceType` values may still be accepted by validation but are ignored on create.
 
-**Material type/name** is sent as `materialName`. It is used for material type/alias matching, paid price checks, and the saved `materialType` / `customMaterialType`. The separate `title` field is display copy only.
+**Material type/name** uses a searchable combobox backed by `GET /api/material-types?categoryId=&q=`. Suppliers can still type a custom name. Selecting a reviewed type sends its `id` as `materialTypeId` for price checks, while create still sends `materialName`; backend create resolves the saved `materialTypeId` / `customMaterialType` server-side. The separate `title` field is display copy only.
 
 ## Main user flow (supplier add material)
 
 1. Load categories, listing policy, optional pending category requests.
-2. Enter free-text material type/name (`materialName`); backend resolves material types/aliases during price check and create.
+2. Choose a category, then search or type material type/name (`materialName`) within that category.
 3. For paid listings: run price check (`POST /api/materials/price-check`).
 4. If taxonomy/price unknown: submit category request and/or price rule request; later resume from draft query params.
 5. Upload at least one draft image (`POST /api/uploads/material-images`).

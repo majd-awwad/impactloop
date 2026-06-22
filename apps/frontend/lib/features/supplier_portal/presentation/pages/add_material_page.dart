@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +16,7 @@ import '../../../materials/data/models/material_price_check_request.dart';
 import '../../../materials/data/models/category_request.dart';
 import '../../../materials/data/models/material_draft_image.dart';
 import '../../../materials/data/models/material_price_check_result.dart';
+import '../../../materials/data/models/material_type.dart' as material_models;
 import '../../../materials/data/models/price_rule_request.dart';
 import '../../data/supplier_materials_repository.dart';
 import '../controllers/supplier_dashboard_providers.dart';
@@ -65,8 +68,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   final _requestedCategoryController = TextEditingController();
 
   String? _categoryId;
+  material_models.MaterialType? _selectedMaterialType;
   String _condition = 'GOOD';
   bool _isFree = true;
+  bool _unitEditedByUser = false;
   bool _pickupAllowed = true;
   bool _showCategoryRequestField = false;
   bool _isSubmittingCategoryRequest = false;
@@ -125,6 +130,32 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
 
   void _invalidatePriceCheck() {
     setState(() {
+      _priceCheck = null;
+      _priceReviewMessage = null;
+    });
+  }
+
+  void _onMaterialNameChanged(String value) {
+    setState(() {
+      if (_selectedMaterialType != null &&
+          value.trim() != _selectedMaterialType!.nameEn) {
+        _selectedMaterialType = null;
+      }
+      _priceCheck = null;
+      _priceReviewMessage = null;
+    });
+  }
+
+  void _selectMaterialType(material_models.MaterialType materialType) {
+    setState(() {
+      _selectedMaterialType = materialType;
+      _materialNameController.text = materialType.nameEn;
+      final currentUnit = _unitController.text.trim();
+      if (!_unitEditedByUser &&
+          (currentUnit.isEmpty || currentUnit == 'piece') &&
+          materialType.defaultUnit.isNotEmpty) {
+        _unitController.text = materialType.defaultUnit;
+      }
       _priceCheck = null;
       _priceReviewMessage = null;
     });
@@ -235,21 +266,6 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     final paidOtherBlocked = !_isFree && isOther;
     final paidCanPublish = _isFree || (_priceCheck?.allowed == true);
     final wide = MediaQuery.sizeOf(context).width >= 1100;
-    final isResumingFromNotification =
-        (widget.categoryRequestId?.trim().isNotEmpty ?? false) ||
-        (widget.priceRuleRequestId?.trim().isNotEmpty ?? false) ||
-        _isResumingDraft;
-
-    if (_categoryId == null &&
-        categories.isNotEmpty &&
-        !isResumingFromNotification) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _categoryId == null) {
-          setState(() => _categoryId = categories.first.id);
-        }
-      });
-    }
-
     final formContent = Form(
       key: _formKey,
       child: Column(
@@ -262,80 +278,6 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             ),
             const SizedBox(height: AppSpacing.xl),
           ],
-          _Card(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SupplierFormSectionHeader(
-                  icon: Icons.edit_note_outlined,
-                  title: l.listingSectionTitle,
-                  subtitle: l.listingSectionSubtitle,
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                SupplierDarkTextField(
-                  controller: _materialNameController,
-                  label: l.materialName,
-                  hint: l.materialNameHint,
-                  validator: _required,
-                  onChanged: (_) {
-                    setState(() {});
-                    _invalidatePriceCheck();
-                  },
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  l.materialNameHelper,
-                  style: context.supplierBody().copyWith(
-                    color: colors.textMuted,
-                  ),
-                ),
-                const SupplierFieldGap(),
-                SupplierDarkTextField(
-                  controller: _titleController,
-                  label: l.listingTitle,
-                  hint: l.listingTitleHint,
-                  validator: _required,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SupplierFieldGap(),
-                SupplierDarkTextArea(
-                  controller: _descriptionController,
-                  label: l.description,
-                  hint: l.descriptionHint,
-                  validator: _required,
-                  maxLines: 5,
-                ),
-                const SupplierFieldGap(),
-                SupplierDarkDropdownField<String>(
-                  label: l.condition,
-                  hint: l.chooseCondition,
-                  value: _condition,
-                  items: _conditions
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(l.conditionLabel(value)),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _condition = _createConditionValue(value);
-                      _invalidatePriceCheck();
-                    });
-                  },
-                ),
-                const SupplierFieldGap(),
-                SupplierDarkTextArea(
-                  controller: _suggestedUsesController,
-                  label: l.suggestedUses,
-                  hint: l.suggestedUsesHint,
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
           _Card(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,16 +303,19 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   onChanged: (value) {
                     setState(() {
                       _categoryId = value;
-                      _invalidatePriceCheck();
+                      _selectedMaterialType = null;
+                      _priceCheck = null;
+                      _priceReviewMessage = null;
                     });
                   },
                   validator: (value) =>
-                      value == null ? 'Category is required' : null,
+                      value == null ? l.categoryRequired : null,
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 TextButton(
                   onPressed: () => setState(
-                    () => _showCategoryRequestField = !_showCategoryRequestField,
+                    () =>
+                        _showCategoryRequestField = !_showCategoryRequestField,
                   ),
                   child: Text(
                     _showCategoryRequestField
@@ -455,6 +400,86 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SupplierFormSectionHeader(
+                  icon: Icons.edit_note_outlined,
+                  title: l.listingSectionTitle,
+                  subtitle: l.listingSectionSubtitle,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _MaterialTypeAutocompleteField(
+                  controller: _materialNameController,
+                  label: l.materialName,
+                  hint: l.materialNameHint,
+                  categoryId: _categoryId,
+                  selectedMaterialType: _selectedMaterialType,
+                  validator: _required,
+                  onChanged: _onMaterialNameChanged,
+                  onSelected: _selectMaterialType,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  l.materialNameHelper,
+                  style: context.supplierBody().copyWith(
+                    color: colors.textMuted,
+                  ),
+                ),
+                if (!_isFree &&
+                    (_selectedMaterialType == null ||
+                        !_selectedMaterialType!.hasActivePriceRule)) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _InlineInfo(message: l.paidListingsNeedReviewedMaterialType),
+                ],
+                const SupplierFieldGap(),
+                SupplierDarkTextField(
+                  controller: _titleController,
+                  label: l.listingTitle,
+                  hint: l.listingTitleHint,
+                  validator: _required,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SupplierFieldGap(),
+                SupplierDarkTextArea(
+                  controller: _descriptionController,
+                  label: l.description,
+                  hint: l.descriptionHint,
+                  validator: _required,
+                  maxLines: 5,
+                ),
+                const SupplierFieldGap(),
+                SupplierDarkDropdownField<String>(
+                  label: l.condition,
+                  hint: l.chooseCondition,
+                  value: _condition,
+                  items: _conditions
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(l.conditionLabel(value)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _condition = _createConditionValue(value);
+                      _invalidatePriceCheck();
+                    });
+                  },
+                ),
+                const SupplierFieldGap(),
+                SupplierDarkTextArea(
+                  controller: _suggestedUsesController,
+                  label: l.suggestedUses,
+                  hint: l.suggestedUsesHint,
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SupplierFormSectionHeader(
                   icon: Icons.straighten_outlined,
                   title: l.quantityAndPricing,
                   subtitle: l.quantityPricingSubtitle,
@@ -485,7 +510,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                       label: l.unit,
                       hint: l.unitHint,
                       validator: _required,
-                      onChanged: (_) => _invalidatePriceCheck(),
+                      onChanged: (_) {
+                        _unitEditedByUser = true;
+                        _invalidatePriceCheck();
+                      },
                     ),
                   ],
                 ),
@@ -877,11 +905,13 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     final isFree = json['isFree'] as bool? ?? true;
 
     _materialNameController.text = json['materialName'] as String? ?? '';
+    _selectedMaterialType = null;
     _titleController.text = json['title'] as String? ?? '';
     _descriptionController.text = json['description'] as String? ?? '';
     _condition = _createConditionValue(json['condition'] as String?);
     _quantityController.text = (json['quantity'] as num?)?.toString() ?? '1';
     _unitController.text = json['unit'] as String? ?? 'piece';
+    _unitEditedByUser = _unitController.text.trim().isNotEmpty;
     _isFree = isFree;
     if (price is num && !isFree) {
       _priceController.text =
@@ -1037,6 +1067,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   void _applySuggestion(String suggestion) {
     setState(() {
       _materialNameController.text = suggestion;
+      _selectedMaterialType = null;
       _priceCheck = null;
       _priceReviewMessage = null;
     });
@@ -1057,7 +1088,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     }
 
     final materialTypeId =
-        _priceCheck?.materialTypeId ?? _priceCheck?.matchedReference?.id;
+        _selectedMaterialType?.id ??
+        _priceCheck?.materialTypeId ??
+        _priceCheck?.matchedReference?.id;
     final materialName = _materialNameController.text.trim();
     final unit = _unitController.text.trim().isEmpty
         ? 'piece'
@@ -1150,6 +1183,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         isFree: false,
         categoryId: _categoryId!,
         materialName: materialName,
+        materialTypeId: _selectedMaterialType?.id,
         condition: _condition,
         quantity: quantity,
         unit: unit,
@@ -1308,12 +1342,14 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     setState(() {
       _createdMaterial = null;
       _materialNameController.clear();
+      _selectedMaterialType = null;
       _titleController.clear();
       _descriptionController.clear();
       _suggestedUsesController.clear();
       _pickupNotesController.clear();
       _quantityController.text = '1';
       _unitController.text = 'piece';
+      _unitEditedByUser = false;
       _priceController.clear();
       _images.clear();
       _priceCheck = null;
@@ -1353,6 +1389,299 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     }
 
     return null;
+  }
+}
+
+class _MaterialTypeAutocompleteField extends ConsumerStatefulWidget {
+  const _MaterialTypeAutocompleteField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.categoryId,
+    required this.selectedMaterialType,
+    required this.onChanged,
+    required this.onSelected,
+    this.validator,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final String? categoryId;
+  final material_models.MaterialType? selectedMaterialType;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<material_models.MaterialType> onSelected;
+  final String? Function(String?)? validator;
+
+  @override
+  ConsumerState<_MaterialTypeAutocompleteField> createState() =>
+      _MaterialTypeAutocompleteFieldState();
+}
+
+class _MaterialTypeAutocompleteFieldState
+    extends ConsumerState<_MaterialTypeAutocompleteField> {
+  static const _debounceDuration = Duration(milliseconds: 300);
+
+  final _focusNode = FocusNode();
+  Timer? _debounce;
+  String _debouncedSearch = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _debouncedSearch = widget.controller.text.trim();
+    _focusNode.addListener(() => setState(() {}));
+  }
+
+  @override
+  void didUpdateWidget(covariant _MaterialTypeAutocompleteField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.categoryId != widget.categoryId) {
+      _debounce?.cancel();
+      _debouncedSearch = widget.controller.text.trim();
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleChanged(String value) {
+    widget.onChanged(value);
+    _debounce?.cancel();
+    _debounce = Timer(_debounceDuration, () {
+      if (!mounted) return;
+      setState(() => _debouncedSearch = value.trim());
+    });
+  }
+
+  void _select(material_models.MaterialType materialType) {
+    _debounce?.cancel();
+    setState(() => _debouncedSearch = materialType.nameEn);
+    widget.onSelected(materialType);
+    _focusNode.unfocus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+    final trimmedSearch = _debouncedSearch.trim();
+    final canSearch =
+        widget.categoryId != null && trimmedSearch.length >= 2;
+    final searchResult = canSearch
+        ? ref.watch(
+            materialTypesSearchProvider(
+              MaterialTypesSearchQuery(
+                categoryId: widget.categoryId,
+                search: trimmedSearch,
+              ),
+            ),
+          )
+        : null;
+    final showPanel = _focusNode.hasFocus && canSearch;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SupplierFormLabel(label: widget.label),
+        const SizedBox(height: AppSpacing.sm),
+        TextFormField(
+          controller: widget.controller,
+          focusNode: _focusNode,
+          validator: widget.validator,
+          onChanged: _handleChanged,
+          style: TextStyle(color: colors.textPrimary),
+          decoration: decorations.formFieldDecoration(hint: widget.hint).copyWith(
+            suffixIcon: widget.selectedMaterialType == null
+                ? Icon(Icons.search_outlined, color: colors.textMuted)
+                : Tooltip(
+                    message: l.reviewedPriceAvailable,
+                    child: Icon(
+                      Icons.check_circle_outline,
+                      color: widget.selectedMaterialType!.hasActivePriceRule
+                          ? colors.accent
+                          : colors.amberAccent,
+                    ),
+                  ),
+          ),
+        ),
+        if (widget.categoryId == null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l.chooseCategoryFirstToSearchReviewedMaterialTypes,
+            style: context.supplierBody().copyWith(
+              fontSize: 12,
+              color: colors.textMuted,
+            ),
+          ),
+        ],
+        if (showPanel) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxHeight: 280),
+            decoration: decorations.profileSectionPanel,
+            child: searchResult!.when(
+              data: (result) {
+                if (result.items.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Text(
+                      l.noMaterialTypeResults,
+                      style: context.supplierBody().copyWith(
+                        color: colors.textMuted,
+                      ),
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                  itemCount: result.items.length,
+                  separatorBuilder: (_, _) => Divider(
+                    height: 1,
+                    color: colors.border.withValues(alpha: 0.25),
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = result.items[index];
+                    return _MaterialTypeOptionRow(
+                      materialType: item,
+                      onSelect: () => _select(item),
+                    );
+                  },
+                );
+              },
+              loading: () => Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colors.accent,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(l.loading, style: context.supplierBody()),
+                  ],
+                ),
+              ),
+              error: (_, _) => Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Text(
+                  l.noMaterialTypeResults,
+                  style: context.supplierBody().copyWith(
+                    color: colors.textMuted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MaterialTypeOptionRow extends StatelessWidget {
+  const _MaterialTypeOptionRow({
+    required this.materialType,
+    required this.onSelect,
+  });
+
+  final material_models.MaterialType materialType;
+  final VoidCallback onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final aliasText = materialType.aliases.take(3).join(', ');
+    final secondaryParts = [
+      materialType.category.nameEn,
+      materialType.defaultUnit,
+      if (aliasText.isNotEmpty) l.materialTypeAliases(aliasText),
+    ];
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => onSelect(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    materialType.nameEn,
+                    style: context.supplierLabel().copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    secondaryParts.join(' • '),
+                    style: context.supplierBody().copyWith(
+                      fontSize: 12,
+                      color: colors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            _MaterialTypePriceRuleBadge(
+              hasActivePriceRule: materialType.hasActivePriceRule,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MaterialTypePriceRuleBadge extends StatelessWidget {
+  const _MaterialTypePriceRuleBadge({required this.hasActivePriceRule});
+
+  final bool hasActivePriceRule;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final label = hasActivePriceRule
+        ? l.reviewedPriceAvailable
+        : l.noReviewedPrice;
+    final color = hasActivePriceRule ? colors.accent : colors.amberAccent;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: context.supplierDecorations.badge(
+        background: color.withValues(alpha: 0.16),
+      ),
+      child: Text(
+        label,
+        style: context.supplierChip().copyWith(color: color),
+      ),
+    );
   }
 }
 

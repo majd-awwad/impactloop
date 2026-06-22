@@ -974,6 +974,24 @@ class SupplierL10n {
         'Use the common material type or alias. We use this for matching and paid price checks.',
         'استخدم نوع المادة الشائع أو الاسم البديل. نستخدمه للمطابقة والتحقق من الأسعار المدفوعة.',
       );
+  String get chooseCategoryFirstToSearchReviewedMaterialTypes => t(
+        'Choose a category first to search reviewed material types.',
+        'اختر فئة أولاً للبحث في أنواع المواد المراجعة.',
+      );
+  String get noMaterialTypeResults => t(
+        'No reviewed material types found. Free listings can continue with this name.',
+        'لم يتم العثور على أنواع مواد مراجعة. يمكن للإدراجات المجانية المتابعة بهذا الاسم.',
+      );
+  String get reviewedPriceAvailable =>
+      t('Reviewed price available', 'سعر مراجع متاح');
+  String get noReviewedPrice =>
+      t('No reviewed price', 'لا يوجد سعر مراجع');
+  String get paidListingsNeedReviewedMaterialType => t(
+        'Paid listings need a reviewed material type with an active price rule.',
+        'تحتاج الإدراجات المدفوعة إلى نوع مادة مراجع مع قاعدة سعر نشطة.',
+      );
+  String materialTypeAliases(String aliases) =>
+      t('Aliases: $aliases', 'أسماء بديلة: $aliases');
   String get listingTitle => t('Listing title', 'عنوان الإدراج');
   String get listingTitleHint =>
       t('Used wax molds - 8 pieces', 'قوالب شمع مستعملة - 8 قطع');
