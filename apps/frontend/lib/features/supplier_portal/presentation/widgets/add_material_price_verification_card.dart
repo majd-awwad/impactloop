@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../../materials/data/models/material_price_check_result.dart';
 
 class AddMaterialPriceVerificationCard extends StatelessWidget {
@@ -26,6 +25,7 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
     final allowed = result.allowed;
     final canSubmitPriceReview =
         showPriceReview && _showPriceReviewButton(result.reason);
@@ -33,42 +33,50 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: SupplierDecorations.profileSectionPanel,
+      decoration: context.supplierDecorations.profileSectionPanel,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            allowed ? 'Price verified' : _blockedTitle(result.reason),
-            style: AuthDarkTextStyles.sectionTitle(context).copyWith(
-              color: allowed ? AuthDarkColors.accent : AuthDarkColors.error,
+            allowed
+                ? l.priceVerified
+                : _blockedTitle(context, result.reason),
+            style: context.supplierSectionTitle().copyWith(
+              color: allowed
+                  ? context.supplierColors.accent
+                  : context.supplierColors.error,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(result.message, style: AuthDarkTextStyles.body(context)),
+          Text(result.message, style: context.supplierBody()),
           if (result.matchedReference != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Matched price reference: ${result.matchedReference!.displayLabel}',
-              style: AuthDarkTextStyles.body(
-                context,
-              ).copyWith(color: AuthDarkColors.textMuted),
+              l.matchedPriceReference(result.matchedReference!.displayLabel),
+              style: context.supplierBody().copyWith(
+                color: context.supplierColors.textMuted,
+              ),
             ),
           ],
           if (result.maxAllowedPrice != null)
             Text(
-              'Maximum allowed unit price: ${result.currencySymbol}${result.maxAllowedPrice!.toStringAsFixed(2)}${result.approvedUnit != null ? ' per ${result.approvedUnit}' : ''}',
-              style: AuthDarkTextStyles.body(context),
+              l.maxAllowedUnitPriceMessage(
+                result.currencySymbol,
+                result.maxAllowedPrice!.toStringAsFixed(2),
+                result.approvedUnit,
+              ),
+              style: context.supplierBody(),
             ),
           if (result.approvedUnit != null)
             Text(
-              'Approved unit: ${result.approvedUnit}',
-              style: AuthDarkTextStyles.body(context),
+              l.approvedUnitLabel(result.approvedUnit!),
+              style: context.supplierBody(),
             ),
           if (result.candidates.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Did you mean one of these?',
-              style: AuthDarkTextStyles.label(context),
+              l.didYouMeanThese,
+              style: context.supplierLabel(),
             ),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
@@ -78,8 +86,7 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
                   .map(
                     (candidate) => ActionChip(
                       label: Text(candidate.displayLabel),
-                      onPressed: () =>
-                          onSelectSuggestion(candidate.displayLabel),
+                      onPressed: () => onSelectSuggestion(candidate.displayLabel),
                     ),
                   )
                   .toList(),
@@ -88,10 +95,10 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
           if (canSubmitPriceReview) ...[
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Price review is required before paid publishing. A Gemini-assisted price suggestion will be generated for admin review.',
-              style: AuthDarkTextStyles.body(
-                context,
-              ).copyWith(color: AuthDarkColors.textMuted),
+              l.priceReviewRequiredMessage,
+              style: context.supplierBody().copyWith(
+                color: context.supplierColors.textSecondary,
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
@@ -99,16 +106,13 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
               icon: const Icon(Icons.request_quote_outlined),
               label: Text(
                 isRequestingPriceReview
-                    ? 'Submitting...'
-                    : 'Submit price review',
+                    ? l.sending
+                    : l.submitPriceReview,
               ),
             ),
             if (priceReviewMessage != null) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text(
-                priceReviewMessage!,
-                style: AuthDarkTextStyles.body(context),
-              ),
+              Text(priceReviewMessage!, style: context.supplierBody()),
             ],
           ],
         ],
@@ -116,16 +120,15 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
     );
   }
 
-  String _blockedTitle(String? reason) {
+  String _blockedTitle(BuildContext context, String? reason) {
+    final l = context.s;
     return switch (reason) {
-      'PAID_OTHER_NOT_ALLOWED' => 'Paid listings cannot use Other',
-      'AMBIGUOUS_MATERIAL_MATCH' => 'Please clarify the material name',
-      'PRICE_TOO_HIGH' => 'Price is above the allowed limit',
-      'PRICE_RULE_REQUIRED' =>
-        'This paid material needs price review before publishing',
-      'MATERIAL_REVIEW_REQUIRED' =>
-        'This paid material needs price review before publishing',
-      _ => 'This paid material needs price review before publishing',
+      'PAID_OTHER_NOT_ALLOWED' => l.paidCannotUseOther,
+      'AMBIGUOUS_MATERIAL_MATCH' => l.clarifyMaterialName,
+      'PRICE_TOO_HIGH' => l.priceBlockedReason('PRICE_TOO_HIGH'),
+      'PRICE_RULE_REQUIRED' || 'MATERIAL_REVIEW_REQUIRED' =>
+        l.priceVerificationRequired,
+      _ => l.priceVerificationRequired,
     };
   }
 

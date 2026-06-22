@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../data/learning_hub_mock_data.dart';
@@ -50,12 +51,10 @@ class _CategoryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final background = selected
-        ? palette.lime.withValues(alpha: isDark ? 0.2 : 0.12)
-        : palette.cardSurface;
+    final background = selected ? palette.lime : palette.cardSurface;
     final border = selected ? palette.lime : palette.borderSubtle;
     final foreground = selected
-        ? palette.limeSoft
+        ? AppColorTokens.emeraldDeep
         : isDark
         ? palette.textSecondary
         : palette.textPrimary;
@@ -70,14 +69,6 @@ class _CategoryChip extends StatelessWidget {
         color: background,
         borderRadius: AppRadius.pillAll,
         border: Border.all(color: border),
-        boxShadow: [
-          if (!isDark && !selected)
-            BoxShadow(
-              color: palette.cardShadow,
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-        ],
       ),
       child: Center(
         child: Text(

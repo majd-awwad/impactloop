@@ -14,6 +14,7 @@ import { materialTypesRouter } from './modules/material-types/material-types.rou
 import { materialsRouter } from './modules/materials/materials.routes.js';
 import { priceRuleRequestsRouter } from './modules/price-rule-requests/price-rule-requests.routes.js';
 import { supplierRouter } from './modules/supplier/supplier.routes.js';
+import { locationsRouter } from './modules/locations/locations.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
 import {
   ensureMaterialUploadsDir,
@@ -54,6 +55,7 @@ app.use('/api/invitations', invitationsRouter);
 app.use('/api/learning-projects', learningProjectsRouter);
 app.use('/api/materials', materialsRouter);
 app.use('/api/uploads', uploadsRouter);
+app.use('/api/locations', locationsRouter);
 app.use('/api/supplier', supplierRouter);
 
 app.use(notFoundMiddleware);

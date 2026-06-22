@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../data/models/supplier_incoming_request.dart';
 
 class IncomingRequestStatusStyle {
@@ -33,34 +34,34 @@ class IncomingRequestStatusStyle {
   }
 
   static const _pending = IncomingRequestStatusStyle(
-    background: Color(0x24F59E0B),
-    border: Color(0x73F59E0B),
-    foreground: Color(0xFFFBBF24),
-    selectedBackground: Color(0x38F59E0B),
-    selectedBorder: Color(0x8CF59E0B),
+    background: AppColorTokens.supplierIncomingPendingBackground,
+    border: AppColorTokens.supplierIncomingPendingBorder,
+    foreground: AppColorTokens.supplierDashboardPending,
+    selectedBackground: AppColorTokens.supplierIncomingPendingSelectedBackground,
+    selectedBorder: AppColorTokens.supplierIncomingPendingSelectedBorder,
   );
 
   static const _accepted = IncomingRequestStatusStyle(
-    background: Color(0x2422C55E),
-    border: Color(0x7322C55E),
-    foreground: Color(0xFF4ADE80),
-    selectedBackground: Color(0x3822C55E),
-    selectedBorder: Color(0x8C22C55E),
+    background: AppColorTokens.supplierIncomingAcceptedBackground,
+    border: AppColorTokens.supplierIncomingAcceptedBorder,
+    foreground: AppColorTokens.supplierIncomingAcceptedForeground,
+    selectedBackground: AppColorTokens.supplierIncomingAcceptedSelectedBackground,
+    selectedBorder: AppColorTokens.supplierIncomingAcceptedSelectedBorder,
   );
 
   static const _declined = IncomingRequestStatusStyle(
-    background: Color(0x24EF4444),
-    border: Color(0x73EF4444),
-    foreground: Color(0xFFF87171),
-    selectedBackground: Color(0x38EF4444),
-    selectedBorder: Color(0x8CEF4444),
+    background: AppColorTokens.supplierIncomingDeclinedBackground,
+    border: AppColorTokens.supplierIncomingDeclinedBorder,
+    foreground: AppColorTokens.supplierDashboardUnavailable,
+    selectedBackground: AppColorTokens.supplierIncomingDeclinedSelectedBackground,
+    selectedBorder: AppColorTokens.supplierIncomingDeclinedSelectedBorder,
   );
 
   static const _completed = IncomingRequestStatusStyle(
-    background: Color(0x243B82F6),
-    border: Color(0x733B82F6),
-    foreground: Color(0xFF60A5FA),
-    selectedBackground: Color(0x383B82F6),
-    selectedBorder: Color(0x8C3B82F6),
+    background: AppColorTokens.supplierIncomingCompletedBackground,
+    border: AppColorTokens.supplierIncomingCompletedBorder,
+    foreground: AppColorTokens.supplierDashboardReserved,
+    selectedBackground: AppColorTokens.supplierIncomingCompletedSelectedBackground,
+    selectedBorder: AppColorTokens.supplierIncomingCompletedSelectedBorder,
   );
 }

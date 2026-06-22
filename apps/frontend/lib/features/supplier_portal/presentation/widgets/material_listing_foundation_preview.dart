@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../../materials/application/material_listing_providers.dart';
 
 class MaterialListingFoundationPreview extends ConsumerWidget {
@@ -18,46 +17,46 @@ class MaterialListingFoundationPreview extends ConsumerWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.sideInsightCard,
+      decoration: context.supplierDecorations.sideInsightCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Material listing foundation ready',
-            style: AuthDarkTextStyles.sectionTitle(context),
+            context.s.materialListingFoundationReady,
+            style: context.supplierSectionTitle(),
           ),
           const SizedBox(height: AppSpacing.sm),
           categories.when(
             data: (items) => Text(
-              '${items.length} material categories loaded.',
-              style: AuthDarkTextStyles.body(context),
+              context.s.materialCategoriesLoaded(items.length),
+              style: context.supplierBody(),
             ),
             loading: () => Text(
-              'Loading categories...',
-              style: AuthDarkTextStyles.body(context),
+              context.s.loadingCategories,
+              style: context.supplierBody(),
             ),
             error: (_, _) => Text(
-              'Categories could not be loaded yet.',
-              style: AuthDarkTextStyles.body(
-                context,
-              ).copyWith(color: AuthDarkColors.error),
+              context.s.categoriesCouldNotLoad,
+              style: context.supplierBody().copyWith(
+                color: context.supplierColors.error,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           policy.when(
             data: (value) => Text(
               value.message,
-              style: AuthDarkTextStyles.body(
-                context,
-              ).copyWith(color: AuthDarkColors.accent),
+              style: context.supplierBody().copyWith(
+                color: context.supplierColors.accent,
+              ),
             ),
             loading: () => Text(
-              'Loading listing policy...',
-              style: AuthDarkTextStyles.body(context),
+              context.s.loadingListingPolicy,
+              style: context.supplierBody(),
             ),
             error: (_, _) => Text(
-              'Listing policy unavailable.',
-              style: AuthDarkTextStyles.body(context),
+              context.s.listingPolicyUnavailable,
+              style: context.supplierBody(),
             ),
           ),
         ],

@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 class CompletePickupDialog extends StatelessWidget {
   const CompletePickupDialog({super.key});
@@ -17,18 +16,21 @@ class CompletePickupDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
     final compact = MediaQuery.sizeOf(context).width < 480;
-    final dialogWidth = compact ? MediaQuery.sizeOf(context).width - 32 : 420.0;
+    final dialogWidth = compact
+        ? MediaQuery.sizeOf(context).width - 32
+        : 420.0;
 
     return Dialog(
-      backgroundColor: AuthDarkColors.surfaceSolid,
+      backgroundColor: colors.surfaceSolid,
       insetPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.lg,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgAll,
-        side: BorderSide(color: AuthDarkColors.border.withValues(alpha: 0.4)),
+        side: BorderSide(color: colors.border.withValues(alpha: 0.4)),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: dialogWidth),
@@ -44,17 +46,19 @@ class CompletePickupDialog extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Mark pickup as completed?',
-                style: AuthDarkTextStyles.title(
-                  context,
-                ).copyWith(fontSize: 18, fontWeight: FontWeight.w700),
+                context.s.completePickupTitle,
+                style: context.supplierTitle().copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'This will move the reservation to Completed and mark the material as reused.',
-                style: AuthDarkTextStyles.body(
-                  context,
-                ).copyWith(color: AuthDarkColors.textSecondary, fontSize: 14),
+                context.s.completePickupMessage,
+                style: context.supplierBody().copyWith(
+                  color: colors.textSecondary,
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
               Row(
@@ -63,16 +67,16 @@ class CompletePickupDialog extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(false),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AuthDarkColors.textPrimary,
+                        foregroundColor: colors.textPrimary,
                         side: BorderSide(
-                          color: AuthDarkColors.border.withValues(alpha: 0.55),
+                          color: colors.border.withValues(alpha: 0.55),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: AppRadius.mdAll,
                         ),
                       ),
-                      child: const Text('Cancel'),
+                      child: Text(context.s.cancel),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -80,16 +84,15 @@ class CompletePickupDialog extends StatelessWidget {
                     child: FilledButton(
                       onPressed: () => Navigator.of(context).pop(true),
                       style: FilledButton.styleFrom(
-                        backgroundColor: AuthDarkColors.accentMuted.withValues(
-                          alpha: 0.82,
-                        ),
-                        foregroundColor: AuthDarkColors.textOnAccent,
+                        backgroundColor:
+                            colors.accentMuted.withValues(alpha: 0.82),
+                        foregroundColor: colors.textOnAccent,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: AppRadius.mdAll,
                         ),
                       ),
-                      child: const Text('Mark completed'),
+                      child: Text(context.s.markCompleted),
                     ),
                   ),
                 ],

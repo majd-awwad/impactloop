@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import 'supplier_dark_form_field.dart';
 
@@ -53,18 +52,21 @@ class _AcceptIncomingRequestDialogState
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
     final compact = MediaQuery.sizeOf(context).width < 480;
-    final dialogWidth = compact ? MediaQuery.sizeOf(context).width - 32 : 440.0;
+    final dialogWidth = compact
+        ? MediaQuery.sizeOf(context).width - 32
+        : 440.0;
 
     return Dialog(
-      backgroundColor: AuthDarkColors.surfaceSolid,
+      backgroundColor: colors.surfaceSolid,
       insetPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.lg,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgAll,
-        side: BorderSide(color: AuthDarkColors.border.withValues(alpha: 0.4)),
+        side: BorderSide(color: colors.border.withValues(alpha: 0.4)),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: dialogWidth),
@@ -83,51 +85,49 @@ class _AcceptIncomingRequestDialogState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Accept request',
-                    style: AuthDarkTextStyles.title(
-                      context,
-                    ).copyWith(fontSize: 20),
+                    context.s.acceptRequest,
+                    style: context.supplierTitle().copyWith(
+                      fontSize: 20,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Choose a pickup window for the learner.',
-                    style: AuthDarkTextStyles.body(
-                      context,
-                    ).copyWith(color: AuthDarkColors.textPrimary),
+                    context.s.acceptRequestSubtitle,
+                    style: context.supplierBody().copyWith(
+                      color: colors.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(AppSpacing.sm),
                     decoration: BoxDecoration(
-                      color: AuthDarkColors.chipUnselected.withValues(
-                        alpha: 0.5,
-                      ),
+                      color: colors.chipUnselected.withValues(alpha: 0.5),
                       borderRadius: AppRadius.mdAll,
                     ),
                     child: Text(
                       '${widget.materialTitle} · ${widget.learnerName}',
-                      style: AuthDarkTextStyles.label(
-                        context,
-                      ).copyWith(color: AuthDarkColors.textPrimary),
+                      style: context.supplierLabel().copyWith(
+                        color: colors.textPrimary,
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _PickerField(
-                    label: 'Pickup date',
+                    label: context.s.pickupDate,
                     value: _formatDate(_pickupDate),
                     onTap: _pickDate,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   if (compact) ...[
                     _PickerField(
-                      label: 'Start time',
+                      label: context.s.startTime,
                       value: _formatTime(_startTime),
                       onTap: () => _pickTime(isStart: true),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     _PickerField(
-                      label: 'End time',
+                      label: context.s.endTime,
                       value: _formatTime(_endTime),
                       onTap: () => _pickTime(isStart: false),
                     ),
@@ -136,7 +136,7 @@ class _AcceptIncomingRequestDialogState
                       children: [
                         Expanded(
                           child: _PickerField(
-                            label: 'Start time',
+                            label: context.s.startTime,
                             value: _formatTime(_startTime),
                             onTap: () => _pickTime(isStart: true),
                           ),
@@ -144,7 +144,7 @@ class _AcceptIncomingRequestDialogState
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: _PickerField(
-                            label: 'End time',
+                            label: context.s.endTime,
                             value: _formatTime(_endTime),
                             onTap: () => _pickTime(isStart: false),
                           ),
@@ -154,8 +154,8 @@ class _AcceptIncomingRequestDialogState
                   const SizedBox(height: AppSpacing.md),
                   SupplierDarkTextArea(
                     controller: _noteController,
-                    label: 'Pickup note (optional)',
-                    hint: 'Ring the workshop bell when you arrive.',
+                    label: context.s.pickupNoteOptional,
+                    hint: context.s.pickupNoteHint,
                     maxLines: 3,
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -165,15 +165,13 @@ class _AcceptIncomingRequestDialogState
                         child: OutlinedButton(
                           onPressed: () => Navigator.of(context).pop(),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AuthDarkColors.textSecondary,
+                            foregroundColor: colors.textSecondary,
                             side: BorderSide(
-                              color: AuthDarkColors.border.withValues(
-                                alpha: 0.45,
-                              ),
+                              color: colors.border.withValues(alpha: 0.45),
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          child: const Text('Cancel'),
+                          child: Text(context.s.cancel),
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
@@ -181,12 +179,12 @@ class _AcceptIncomingRequestDialogState
                         child: FilledButton(
                           onPressed: _submit,
                           style: FilledButton.styleFrom(
-                            backgroundColor: AuthDarkColors.accentMuted
-                                .withValues(alpha: 0.9),
-                            foregroundColor: AuthDarkColors.textOnAccent,
+                            backgroundColor:
+                                colors.accentMuted.withValues(alpha: 0.9),
+                            foregroundColor: colors.textOnAccent,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          child: const Text('Accept request'),
+                          child: Text(context.s.acceptRequest),
                         ),
                       ),
                     ],
@@ -232,7 +230,7 @@ class _AcceptIncomingRequestDialogState
   void _submit() {
     if (_pickupDate == null || _startTime == null || _endTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Choose a pickup date and time window.')),
+        SnackBar(content: Text(context.s.choosePickupDateAndTime)),
       );
       return;
     }
@@ -254,7 +252,7 @@ class _AcceptIncomingRequestDialogState
 
     if (!end.isAfter(start)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('End time must be after start time.')),
+        SnackBar(content: Text(context.s.endTimeMustBeAfterStart)),
       );
       return;
     }
@@ -296,6 +294,9 @@ class _PickerField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final tapLabel = context.s.tapToChoose;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -307,25 +308,25 @@ class _PickerField extends StatelessWidget {
             onTap: onTap,
             borderRadius: AppRadius.mdAll,
             child: InputDecorator(
-              decoration: SupplierDecorations.darkFormFieldDecoration(
-                hint: 'Tap to choose',
+              decoration: context.supplierDecorations.formFieldDecoration(
+                hint: tapLabel,
               ),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
-                      value ?? 'Tap to choose',
+                      value ?? tapLabel,
                       style: TextStyle(
                         color: value == null
-                            ? AuthDarkColors.textMuted
-                            : AuthDarkColors.textPrimary,
+                            ? colors.textMuted
+                            : colors.textPrimary,
                       ),
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.calendar_today_outlined,
                     size: 16,
-                    color: AuthDarkColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ],
               ),

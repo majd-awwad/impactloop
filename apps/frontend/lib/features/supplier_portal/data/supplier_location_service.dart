@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 enum SupplierLocationFailure {
@@ -14,14 +15,12 @@ class SupplierLocationException implements Exception {
 
   String get message {
     return switch (failure) {
-      SupplierLocationFailure.permissionDenied =>
-        'Location permission is required to use your current location.',
+      SupplierLocationFailure.permissionDenied ||
       SupplierLocationFailure.permissionDeniedForever =>
-        'Location permission is blocked. Enable it from browser or device settings.',
-      SupplierLocationFailure.serviceDisabled =>
-        'Please enable location services and try again.',
+        'Location permission was denied. Enter your location manually.',
+      SupplierLocationFailure.serviceDisabled ||
       SupplierLocationFailure.unavailable =>
-        'Current location is not available on this browser or device.',
+        'Could not get current location. Please try again or enter it manually.',
     };
   }
 
@@ -70,10 +69,17 @@ class SupplierLocationService {
 
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
+          accuracy: LocationAccuracy.best,
           timeLimit: Duration(seconds: 20),
         ),
       );
+
+      if (kDebugMode) {
+        debugPrint(
+          '[SupplierLocation] captured lat=${position.latitude} '
+          'lng=${position.longitude}',
+        );
+      }
 
       return SupplierLocationCapture(
         latitude: position.latitude,

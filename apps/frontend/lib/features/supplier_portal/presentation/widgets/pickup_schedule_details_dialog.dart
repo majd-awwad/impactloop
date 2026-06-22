@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../../data/pickup_schedule_grouping.dart';
-
-const _dialogSurface = Color(0xFF071A16);
 
 class PickupScheduleDetailsDialog extends StatelessWidget {
   const PickupScheduleDetailsDialog({
@@ -26,14 +24,17 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
   }) {
     return showDialog<void>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.58),
-      builder: (context) =>
-          PickupScheduleDetailsDialog(item: item, groupKind: groupKind),
+      barrierColor: AppColorTokens.supplierDialogBarrier,
+      builder: (context) => PickupScheduleDetailsDialog(
+        item: item,
+        groupKind: groupKind,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
     final compact = MediaQuery.sizeOf(context).width < 480;
     final screenSize = MediaQuery.sizeOf(context);
     final window = item.pickupWindow;
@@ -41,16 +42,16 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
     final dialogWidth = compact ? screenSize.width - 32 : 560.0;
 
     return Dialog(
-      backgroundColor: _dialogSurface,
+      backgroundColor: AppColorTokens.supplierDialogSurface,
       elevation: 16,
-      shadowColor: Colors.black.withValues(alpha: 0.5),
+      shadowColor: AppColorTokens.supplierDialogShadow,
       insetPadding: EdgeInsets.symmetric(
         horizontal: compact ? AppSpacing.md : AppSpacing.lg,
         vertical: AppSpacing.lg,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgAll,
-        side: BorderSide(color: AuthDarkColors.border.withValues(alpha: 0.32)),
+        side: BorderSide(color: colors.border.withValues(alpha: 0.32)),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -75,11 +76,11 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(
-                        'Pickup details',
-                        style: AuthDarkTextStyles.title(context).copyWith(
+                        context.s.pickupDetails,
+                        style: context.supplierTitle().copyWith(
                           fontSize: compact ? 18 : 20,
                           fontWeight: FontWeight.w700,
-                          color: AuthDarkColors.textPrimary,
+                          color: colors.textPrimary,
                         ),
                       ),
                     ),
@@ -91,56 +92,63 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
                       minWidth: 40,
                       minHeight: 40,
                     ),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
-                      color: AuthDarkColors.textMuted,
+                      color: colors.textMuted,
                       size: 22,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
-              const Divider(height: 1, thickness: 1, color: Color(0x332DD4BF)),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: AppColorTokens.supplierDividerStrong,
+              ),
               const SizedBox(height: AppSpacing.md),
               Flexible(
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _DetailRow(label: 'Material', value: item.materialTitle),
-                      _DetailRow(label: 'Learner', value: item.learnerName),
-                      _DetailRow(label: 'Quantity', value: item.quantityLabel),
-                      _DetailRow(label: 'Pickup type', value: item.pickupType),
-                      _DetailRow(label: 'Status', value: item.status.label),
+                      _DetailRow(label: context.s.materialName, value: item.materialTitle),
+                      _DetailRow(label: context.s.learnerLabel, value: item.learnerName),
+                      _DetailRow(label: context.s.quantity, value: item.quantityLabel),
+                      _DetailRow(
+                        label: context.s.pickupTypeLabel,
+                        value: item.pickupType,
+                      ),
+                      _DetailRow(label: context.s.statusLabel, value: item.status.label),
                       if (window != null) ...[
                         const _SectionDivider(),
                         _DetailRow(
-                          label: 'Date',
+                          label: context.s.dateLabel,
                           value: formatScheduleDateLabel(window.start),
                         ),
                         _DetailRow(
-                          label: 'Time',
+                          label: context.s.timeLabel,
                           value: formatPickupTimeRange(window),
                         ),
                       ],
                       if (item.isCompleted && item.completedAt != null) ...[
                         if (window == null) const _SectionDivider(),
                         _DetailRow(
-                          label: 'Completed',
+                          label: context.s.filterCompleted,
                           value: formatScheduleDateLabel(item.completedAt!),
                         ),
                       ],
                       if (item.supplierNote?.trim().isNotEmpty == true) ...[
                         const _SectionDivider(),
                         _DetailRow(
-                          label: 'Supplier note',
+                          label: context.s.pickupNotes,
                           value: item.supplierNote!.trim(),
                         ),
                       ],
                       if (item.learnerMessage?.trim().isNotEmpty == true) ...[
                         const _SectionDivider(),
                         _DetailRow(
-                          label: 'Learner message',
+                          label: context.s.learnerMessageLabel,
                           value: item.learnerMessage!.trim(),
                         ),
                       ],
@@ -149,19 +157,23 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              const Divider(height: 1, thickness: 1, color: Color(0x332DD4BF)),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: AppColorTokens.supplierDividerStrong,
+              ),
               const SizedBox(height: AppSpacing.md),
               Align(
-                alignment: compact ? Alignment.center : Alignment.centerRight,
+                alignment:
+                    compact ? Alignment.center : Alignment.centerRight,
                 child: SizedBox(
                   width: compact ? double.infinity : null,
                   child: TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: TextButton.styleFrom(
-                      foregroundColor: AuthDarkColors.textPrimary,
-                      backgroundColor: AuthDarkColors.chipUnselected.withValues(
-                        alpha: 0.55,
-                      ),
+                      foregroundColor: colors.textPrimary,
+                      backgroundColor: colors.chipUnselected
+                          .withValues(alpha: 0.55),
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.lg,
                         vertical: AppSpacing.sm + 2,
@@ -170,11 +182,11 @@ class PickupScheduleDetailsDialog extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: AppRadius.mdAll,
                         side: BorderSide(
-                          color: AuthDarkColors.border.withValues(alpha: 0.35),
+                          color: colors.border.withValues(alpha: 0.35),
                         ),
                       ),
                     ),
-                    child: const Text('Close'),
+                    child: Text(context.s.close),
                   ),
                 ),
               ),
@@ -193,19 +205,28 @@ class _SectionDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Divider(height: 1, thickness: 1, color: Color(0x1F2DD4BF)),
+      child: Divider(
+        height: 1,
+        thickness: 1,
+        color: AppColorTokens.supplierDividerSubtle,
+      ),
     );
   }
 }
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
+  const _DetailRow({
+    required this.label,
+    required this.value,
+  });
 
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
@@ -213,8 +234,8 @@ class _DetailRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AuthDarkTextStyles.label(context).copyWith(
-              color: AuthDarkColors.textMuted,
+            style: context.supplierLabel().copyWith(
+              color: colors.textMuted,
               fontSize: 12,
               fontWeight: FontWeight.w500,
               letterSpacing: 0.2,
@@ -223,8 +244,8 @@ class _DetailRow extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             value,
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.textPrimary,
+            style: context.supplierBody().copyWith(
+              color: colors.textPrimary,
               fontSize: 15,
               fontWeight: FontWeight.w500,
               height: 1.4,

@@ -1,11 +1,11 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../materials/data/models/material_draft_image.dart';
 
@@ -34,20 +34,20 @@ class MaterialImagePickerSection extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.dashboardCard,
+      decoration: context.supplierDecorations.dashboardCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: SupplierDecorations.profileSectionPanel,
+            decoration: context.supplierDecorations.profileSectionPanel,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
+                Icon(
                   Icons.photo_library_outlined,
-                  color: AuthDarkColors.accent,
+                  color: context.supplierColors.accent,
                   size: 22,
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -56,15 +56,15 @@ class MaterialImagePickerSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Material photos',
-                        style: AuthDarkTextStyles.sectionTitle(context),
+                        context.s.materialPhotos,
+                        style: context.supplierSectionTitle(),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        'Add up to 5 photos. JPG, PNG, or WebP.',
-                        style: AuthDarkTextStyles.body(
-                          context,
-                        ).copyWith(color: AuthDarkColors.textSecondary),
+                        context.s.materialPhotosSubtitle,
+                        style: context.supplierBody().copyWith(
+                          color: context.supplierColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -82,10 +82,10 @@ class MaterialImagePickerSection extends StatelessWidget {
           if (images.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'Selected photos',
-              style: AuthDarkTextStyles.label(
-                context,
-              ).copyWith(color: AuthDarkColors.textPrimary),
+              context.s.selectedPhotos,
+              style: context.supplierLabel().copyWith(
+                color: context.supplierColors.textPrimary,
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             LayoutBuilder(
@@ -215,8 +215,8 @@ class _UploadDropZone extends StatelessWidget {
         child: CustomPaint(
           painter: _DashedBorderPainter(
             color: canAddMore
-                ? AuthDarkColors.borderFocused.withValues(alpha: 0.55)
-                : AuthDarkColors.border.withValues(alpha: 0.35),
+                ? context.supplierColors.borderFocused.withValues(alpha: 0.55)
+                : context.supplierColors.border.withValues(alpha: 0.35),
             radius: AppRadius.lg,
             strokeWidth: 1.5,
           ),
@@ -227,7 +227,7 @@ class _UploadDropZone extends StatelessWidget {
               vertical: AppSpacing.xl,
             ),
             decoration: BoxDecoration(
-              color: AuthDarkColors.backgroundElevated.withValues(alpha: 0.55),
+              color: context.supplierColors.backgroundElevated.withValues(alpha: 0.55),
               borderRadius: AppRadius.lgAll,
             ),
             child: Column(
@@ -237,29 +237,59 @@ class _UploadDropZone extends StatelessWidget {
                   Icons.add_photo_alternate_outlined,
                   size: 40,
                   color: canAddMore
-                      ? AuthDarkColors.accent
-                      : AuthDarkColors.textSecondary,
+                      ? context.supplierColors.accent
+                      : context.supplierColors.textSecondary,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  'Drag photos here or choose from your device',
+                  context.s.dragPhotosHint,
                   textAlign: TextAlign.center,
-                  style: AuthDarkTextStyles.body(
-                    context,
-                  ).copyWith(color: AuthDarkColors.textPrimary),
+                  style: context.supplierBody().copyWith(
+                    color: context.supplierColors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 OutlinedButton.icon(
                   onPressed: canAddMore ? onPickImages : null,
-                  icon: const Icon(Icons.photo_library_outlined),
-                  label: Text(isUploading ? 'Uploading...' : 'Choose photos'),
+                  icon: Icon(
+                    Icons.add_photo_alternate_outlined,
+                    color: canAddMore
+                        ? context.supplierColors.textOnAccent
+                        : context.supplierColors.textMuted,
+                  ),
+                  label: Text(
+                    isUploading ? context.s.uploading : context.s.addImages,
+                    style: TextStyle(
+                      color: canAddMore
+                          ? context.supplierColors.textOnAccent
+                          : context.supplierColors.textMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: context.supplierColors.textOnAccent,
+                    backgroundColor: canAddMore
+                        ? context.supplierColors.accent
+                        : context.supplierColors.chipUnselected,
+                    side: BorderSide(
+                      color: canAddMore
+                          ? context.supplierColors.accent
+                          : context.supplierColors.border.withValues(alpha: 0.45),
+                      width: 1.5,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   '$imageCount/$_maxImages photos',
-                  style: AuthDarkTextStyles.label(
-                    context,
-                  ).copyWith(color: AuthDarkColors.textSecondary),
+                  style: context.supplierLabel().copyWith(
+                    color: context.supplierColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -293,7 +323,7 @@ class _ThumbnailTile extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               border: Border.all(
-                color: AuthDarkColors.border.withValues(alpha: 0.45),
+                color: context.supplierColors.border.withValues(alpha: 0.45),
               ),
               borderRadius: AppRadius.mdAll,
             ),
@@ -307,12 +337,15 @@ class _ThumbnailTile extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.72),
+                color: AppColorTokens.supplierImageOverlay,
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: const Text(
-                'Cover',
-                style: TextStyle(color: Colors.white, fontSize: 10),
+              child: Text(
+                context.s.coverPhoto,
+                style: const TextStyle(
+                  color: AppColorTokens.lightSurface,
+                  fontSize: 10,
+                ),
               ),
             ),
           ),
@@ -320,7 +353,7 @@ class _ThumbnailTile extends StatelessWidget {
           right: 4,
           top: 4,
           child: Material(
-            color: Colors.black.withValues(alpha: 0.72),
+            color: AppColorTokens.supplierImageOverlay,
             shape: const CircleBorder(),
             clipBehavior: Clip.antiAlias,
             child: IconButton(
@@ -328,7 +361,11 @@ class _ThumbnailTile extends StatelessWidget {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints.tightFor(width: 28, height: 28),
               onPressed: isUploading ? null : onRemove,
-              icon: const Icon(Icons.close, size: 16, color: Colors.white),
+              icon: const Icon(
+                Icons.close,
+                size: 16,
+                color: AppColorTokens.lightSurface,
+              ),
             ),
           ),
         ),
@@ -359,10 +396,10 @@ class _ImagePreview extends StatelessWidget {
       height: double.infinity,
       fit: BoxFit.cover,
       errorBuilder: (_, _, _) => Container(
-        color: AuthDarkColors.surfaceSolid,
-        child: const Icon(
+        color: context.supplierColors.surfaceSolid,
+        child: Icon(
           Icons.broken_image_outlined,
-          color: AuthDarkColors.textSecondary,
+          color: context.supplierColors.textSecondary,
         ),
       ),
     );

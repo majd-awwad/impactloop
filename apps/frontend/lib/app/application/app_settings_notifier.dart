@@ -20,13 +20,13 @@ class AppSettings {
 }
 
 class AppSettingsNotifier extends Notifier<AppSettings> {
-  bool _loadedThemeMode = false;
+  bool _loadedSettings = false;
 
   @override
   AppSettings build() {
-    if (!_loadedThemeMode && !_isWidgetTestBinding()) {
-      _loadedThemeMode = true;
-      unawaited(_loadThemeMode());
+    if (!_loadedSettings && !_isWidgetTestBinding()) {
+      _loadedSettings = true;
+      unawaited(_loadSettings());
     }
 
     return const AppSettings(themeMode: ThemeMode.system, languageCode: 'en');
@@ -39,16 +39,20 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
 
   void setLanguageCode(String languageCode) {
     state = state.copyWith(languageCode: languageCode);
+    unawaited(
+      ref.read(appSettingsStorageProvider).saveLanguageCode(languageCode),
+    );
   }
 
-  Future<void> _loadThemeMode() async {
-    final storedThemeMode = await ref
-        .read(appSettingsStorageProvider)
-        .readThemeMode();
+  Future<void> _loadSettings() async {
+    final storage = ref.read(appSettingsStorageProvider);
+    final storedThemeMode = await storage.readThemeMode();
+    final storedLanguage = await storage.readLanguageCode();
 
-    if (storedThemeMode != null) {
-      state = state.copyWith(themeMode: storedThemeMode);
-    }
+    state = state.copyWith(
+      themeMode: storedThemeMode ?? state.themeMode,
+      languageCode: storedLanguage ?? state.languageCode,
+    );
   }
 }
 

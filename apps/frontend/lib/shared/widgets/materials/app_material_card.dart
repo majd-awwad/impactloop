@@ -70,6 +70,16 @@ class AppMaterialCard extends StatelessWidget {
     final cardHeight = compact
         ? materialCompactCardHeight
         : materialStandardCardHeight;
+    final descriptionText = Text(
+      description,
+      style: AppTextStyles.body(context).copyWith(
+        color: palette.textSecondary,
+        height: compact ? 1.45 : 1.55,
+      ),
+      textAlign: TextAlign.start,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
 
     return Material(
       color: Colors.transparent,
@@ -117,16 +127,9 @@ class AppMaterialCard extends StatelessWidget {
                           trailing: trailing,
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          description,
-                          style: AppTextStyles.body(context).copyWith(
-                            color: palette.textSecondary,
-                            height: 1.55,
-                          ),
-                          textAlign: TextAlign.start,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        compact
+                            ? SizedBox(height: 48, child: descriptionText)
+                            : descriptionText,
                         const Spacer(),
                         _CardChipRow(
                           minHeight: compact ? 42 : 46,
@@ -153,10 +156,12 @@ class AppMaterialCard extends StatelessWidget {
                             _MetaLine(
                               icon: Icons.straighten_rounded,
                               label: quantityLabel,
+                              maxLabelWidth: compact ? 92 : 180,
                             ),
                             _MetaLine(
                               icon: Icons.location_on_outlined,
                               label: locationLabel,
+                              maxLabelWidth: compact ? 132 : 180,
                             ),
                           ],
                         ),
@@ -170,6 +175,7 @@ class AppMaterialCard extends StatelessWidget {
                                   ? Icons.local_shipping_outlined
                                   : Icons.storefront_outlined,
                               label: availabilityLabel,
+                              maxLabelWidth: compact ? 132 : 180,
                             ),
                           ],
                         ),
@@ -497,10 +503,15 @@ class _CardChipRow extends StatelessWidget {
 }
 
 class _MetaLine extends StatelessWidget {
-  const _MetaLine({required this.icon, required this.label});
+  const _MetaLine({
+    required this.icon,
+    required this.label,
+    required this.maxLabelWidth,
+  });
 
   final IconData icon;
   final String label;
+  final double maxLabelWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -522,7 +533,7 @@ class _MetaLine extends StatelessWidget {
           Icon(icon, size: 16, color: palette.mint),
           const SizedBox(width: AppSpacing.xs),
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 180),
+            constraints: BoxConstraints(maxWidth: maxLabelWidth),
             child: Text(
               label,
               style: AppTextStyles.label(context).copyWith(

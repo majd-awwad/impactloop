@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../data/models/supplier_profile.dart';
 import '../../data/models/supplier_profile_location.dart';
 import 'supplier_type_selector.dart';
 import 'supplier_verification_badge.dart';
 
-String supplierProfileHeading(String supplierType) {
+String supplierProfileHeading(BuildContext context, String supplierType) {
   if (isOrganizationSupplierType(supplierType)) {
-    return 'Organization profile';
+    return context.s.organizationProfile;
   }
   if (supplierType == 'STUDENT_SUPPLIER') {
-    return 'Student supplier';
+    return context.s.supplierTypeLabel(supplierType);
   }
-  return 'Supplier profile';
+  return context.s.supplierProfileLabel;
 }
 
 class SupplierProfileIdentityCard extends StatelessWidget {
@@ -41,7 +40,7 @@ class SupplierProfileIdentityCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      decoration: SupplierDecorations.profileGlassCard,
+      decoration: context.supplierDecorations.profileGlassCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -51,9 +50,9 @@ class SupplierProfileIdentityCard extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AuthDarkColors.accent.withValues(alpha: 0.05),
-                  AuthDarkColors.accent,
-                  AuthDarkColors.accent.withValues(alpha: 0.05),
+                  context.supplierColors.accent.withValues(alpha: 0.05),
+                  context.supplierColors.accent,
+                  context.supplierColors.accent.withValues(alpha: 0.05),
                 ],
               ),
               borderRadius: const BorderRadius.vertical(
@@ -116,7 +115,10 @@ class SupplierProfileIdentityCard extends StatelessWidget {
 }
 
 class _AvatarBlock extends StatelessWidget {
-  const _AvatarBlock({required this.displayName, this.profileImageUrl});
+  const _AvatarBlock({
+    required this.displayName,
+    this.profileImageUrl,
+  });
 
   final String displayName;
   final String? profileImageUrl;
@@ -129,7 +131,7 @@ class _AvatarBlock extends StatelessWidget {
         Container(
           width: 84,
           height: 84,
-          decoration: SupplierDecorations.avatarCircle,
+          decoration: context.supplierDecorations.avatarCircle,
           clipBehavior: Clip.antiAlias,
           child: profileImageUrl != null && profileImageUrl!.isNotEmpty
               ? Image.network(
@@ -148,14 +150,14 @@ class _AvatarBlock extends StatelessWidget {
             height: 28,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AuthDarkColors.surfaceSolid,
+              color: context.supplierColors.surfaceSolid,
               shape: BoxShape.circle,
-              border: Border.all(color: AuthDarkColors.accent),
+              border: Border.all(color: context.supplierColors.accent),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.storefront_outlined,
               size: 14,
-              color: AuthDarkColors.accent,
+              color: context.supplierColors.accent,
             ),
           ),
         ),
@@ -174,9 +176,10 @@ class _InitialsAvatar extends StatelessWidget {
     return Center(
       child: Text(
         name.characters.first.toUpperCase(),
-        style: AuthDarkTextStyles.title(
-          context,
-        ).copyWith(color: AuthDarkColors.accent, fontSize: 28),
+        style: context.supplierTitle().copyWith(
+          color: context.supplierColors.accent,
+          fontSize: 28,
+        ),
       ),
     );
   }
@@ -205,16 +208,16 @@ class _IdentityDetails extends StatelessWidget {
       children: [
         Text(
           displayName,
-          style: AuthDarkTextStyles.display(context).copyWith(fontSize: 28),
+          style: context.supplierDisplay().copyWith(fontSize: 28),
         ),
         const SizedBox(height: AppSpacing.xs),
-        Text(profile.user.email, style: AuthDarkTextStyles.body(context)),
+        Text(profile.user.email, style: context.supplierBody()),
         if (details != null) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
-            supplierProfileHeading(details.supplierType),
-            style: AuthDarkTextStyles.label(context).copyWith(
-              color: AuthDarkColors.textPrimary,
+            supplierProfileHeading(context, details.supplierType),
+            style: context.supplierLabel().copyWith(
+              color: context.supplierColors.textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -226,7 +229,7 @@ class _IdentityDetails extends StatelessWidget {
               if (details.supplierType.isNotEmpty)
                 _MetaChip(
                   icon: Icons.badge_outlined,
-                  label: supplierTypeLabel(details.supplierType),
+                  label: context.s.supplierTypeLabel(details.supplierType),
                 ),
               SupplierVerificationBadge(status: details.verificationStatus),
               if (pickup != null)
@@ -244,11 +247,11 @@ class _IdentityDetails extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: SupplierDecorations.profileSectionPanel,
+            decoration: context.supplierDecorations.profileSectionPanel,
             child: Text(
               details!.description!,
-              style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.textPrimary.withValues(alpha: 0.88),
+              style: context.supplierBody().copyWith(
+                color: context.supplierColors.textPrimary.withValues(alpha: 0.88),
               ),
             ),
           ),
@@ -271,15 +274,15 @@ class _MetaChip extends StatelessWidget {
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.xs,
       ),
-      decoration: SupplierDecorations.badge(
-        background: AuthDarkColors.accentSoft.withValues(alpha: 0.14),
+      decoration: context.supplierDecorations.badge(
+        background: context.supplierColors.accentSoft.withValues(alpha: 0.14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AuthDarkColors.accent),
+          Icon(icon, size: 14, color: context.supplierColors.accent),
           const SizedBox(width: 6),
-          Text(label, style: AuthDarkTextStyles.chip(context)),
+          Text(label, style: context.supplierChip()),
         ],
       ),
     );
@@ -296,12 +299,12 @@ class _EditButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final button = OutlinedButton.icon(
       onPressed: onEdit,
-      icon: const Icon(Icons.edit_outlined, size: 18),
-      label: const Text('Edit Profile'),
+      icon: Icon(Icons.edit_outlined, size: 18),
+      label: Text(context.s.editProfileTitle),
       style: OutlinedButton.styleFrom(
-        foregroundColor: AuthDarkColors.textPrimary,
-        backgroundColor: AuthDarkColors.surfaceSolid.withValues(alpha: 0.45),
-        side: BorderSide(color: AuthDarkColors.border.withValues(alpha: 0.55)),
+        foregroundColor: context.supplierColors.textPrimary,
+        backgroundColor: context.supplierColors.surfaceSolid.withValues(alpha: 0.45),
+        side: BorderSide(color: context.supplierColors.border.withValues(alpha: 0.55)),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,

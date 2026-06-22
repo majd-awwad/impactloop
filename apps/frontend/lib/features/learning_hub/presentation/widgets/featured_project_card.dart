@@ -221,6 +221,7 @@ class _MetaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
@@ -232,12 +233,19 @@ class _MetaChip extends StatelessWidget {
             ? palette.lime.withValues(alpha: 0.16)
             : palette.darkSurfaceSoft,
         borderRadius: AppRadius.pillAll,
+        border: Border.all(color: palette.borderSubtle),
       ),
       child: Text(
         label,
         style: AppTextStyles.body(
           context,
-        ).copyWith(color: accent ? palette.limeSoft : palette.textSecondary),
+        ).copyWith(
+          color: accent
+              ? isDark
+                    ? palette.limeSoft
+                    : AppColorTokens.emeraldDeep
+              : palette.textSecondary,
+        ),
       ),
     );
   }

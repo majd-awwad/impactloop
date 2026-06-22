@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import 'supplier_dark_form_field.dart';
 
 enum DeclineIncomingRequestResult { cancelled, declined }
@@ -49,18 +49,21 @@ class _DeclineIncomingRequestDialogState
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
     final compact = MediaQuery.sizeOf(context).width < 480;
-    final dialogWidth = compact ? MediaQuery.sizeOf(context).width - 32 : 420.0;
+    final dialogWidth = compact
+        ? MediaQuery.sizeOf(context).width - 32
+        : 420.0;
 
     return Dialog(
-      backgroundColor: AuthDarkColors.surfaceSolid,
+      backgroundColor: colors.surfaceSolid,
       insetPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.lg,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgAll,
-        side: BorderSide(color: AuthDarkColors.border.withValues(alpha: 0.4)),
+        side: BorderSide(color: colors.border.withValues(alpha: 0.4)),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: dialogWidth),
@@ -77,38 +80,38 @@ class _DeclineIncomingRequestDialogState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Decline request',
-                  style: AuthDarkTextStyles.title(
-                    context,
-                  ).copyWith(fontSize: 20),
+                  context.s.declineRequest,
+                  style: context.supplierTitle().copyWith(
+                    fontSize: 20,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'You can add an optional reason for the learner.',
-                  style: AuthDarkTextStyles.body(
-                    context,
-                  ).copyWith(color: AuthDarkColors.textPrimary),
+                  context.s.declineRequestSubtitle,
+                  style: context.supplierBody().copyWith(
+                    color: colors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
-                    color: AuthDarkColors.chipUnselected.withValues(alpha: 0.5),
+                    color: colors.chipUnselected.withValues(alpha: 0.5),
                     borderRadius: AppRadius.mdAll,
                   ),
                   child: Text(
                     '${widget.materialTitle} · ${widget.learnerName}',
-                    style: AuthDarkTextStyles.label(
-                      context,
-                    ).copyWith(color: AuthDarkColors.textPrimary),
+                    style: context.supplierLabel().copyWith(
+                      color: colors.textPrimary,
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 SupplierDarkTextArea(
                   controller: _reasonController,
-                  label: 'Reason (optional)',
-                  hint: 'Already reserved for another learner.',
+                  label: context.s.reasonOptional,
+                  hint: context.s.declineReasonHint,
                   maxLines: 3,
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -118,15 +121,13 @@ class _DeclineIncomingRequestDialogState
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AuthDarkColors.textSecondary,
+                          foregroundColor: colors.textSecondary,
                           side: BorderSide(
-                            color: AuthDarkColors.border.withValues(
-                              alpha: 0.45,
-                            ),
+                            color: colors.border.withValues(alpha: 0.45),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text('Cancel'),
+                        child: Text(context.s.cancel),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -140,13 +141,12 @@ class _DeclineIncomingRequestDialogState
                           ));
                         },
                         style: FilledButton.styleFrom(
-                          backgroundColor: AuthDarkColors.error.withValues(
-                            alpha: 0.88,
-                          ),
-                          foregroundColor: Colors.white,
+                          backgroundColor:
+                              colors.error.withValues(alpha: 0.88),
+                          foregroundColor: AppColorTokens.lightSurface,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text('Decline request'),
+                        child: Text(context.s.declineRequest),
                       ),
                     ),
                   ],

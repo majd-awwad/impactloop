@@ -436,29 +436,29 @@ List<RatingBreakdown> mockBreakdownFor(LearningProject project) {
   ];
 }
 
-const learningHintSurface = AppColorTokens.darkSurfaceSoft;
-const learningHintBorder = AppColorTokens.darkBorderStrong;
-const learningPageBackground = AppColorTokens.darkBackgroundAlt;
-const learningSectionBackground = AppColorTokens.darkSurface;
-const learningDarkSurface = AppColorTokens.darkSurfaceElevated;
-const learningDarkSurfaceSoft = AppColorTokens.darkSurfaceSoft;
-const learningCardSurface = AppColorTokens.darkPanel;
-const learningCardSurfaceAlt = AppColorTokens.darkCardAlt;
-const learningHeroStart = AppColorTokens.darkHeroStart;
-const learningHeroEnd = AppColorTokens.darkPanel2;
-const learningHeroAccent = AppColorTokens.darkPanel;
+const learningHintSurface = AppColorTokens.learningHintSurface;
+const learningHintBorder = AppColorTokens.learningHintBorder;
+const learningPageBackground = AppColorTokens.learningPageBackground;
+const learningSectionBackground = AppColorTokens.learningSectionBackground;
+const learningDarkSurface = AppColorTokens.learningDarkSurface;
+const learningDarkSurfaceSoft = AppColorTokens.learningDarkSurfaceSoft;
+const learningCardSurface = AppColorTokens.learningCardSurface;
+const learningCardSurfaceAlt = AppColorTokens.learningCardSurfaceAlt;
+const learningHeroStart = AppColorTokens.learningHeroStart;
+const learningHeroEnd = AppColorTokens.learningHeroEnd;
+const learningHeroAccent = AppColorTokens.learningHeroAccent;
 const learningLime = AppColorTokens.lime;
 const learningLimeSoft = AppColorTokens.limeSoft;
-const learningMutedChip = AppColorTokens.darkSurfaceMuted;
-const learningTimelineLine = AppColorTokens.darkBorder;
-const learningDisabledPanel = AppColorTokens.darkSurfaceMuted;
-const learningDisabledPanelBorder = AppColorTokens.darkBorderAlt;
+const learningMutedChip = AppColorTokens.learningMutedChip;
+const learningTimelineLine = AppColorTokens.learningTimelineLine;
+const learningDisabledPanel = AppColorTokens.learningDisabledPanel;
+const learningDisabledPanelBorder = AppColorTokens.learningDisabledPanelBorder;
 const learningPurpleStart = AppColorTokens.darkPurpleStart;
 const learningPurpleEnd = AppColorTokens.darkPurpleEnd;
 const learningBeigeBackground = learningPageBackground;
-const learningTextPrimary = AppColorTokens.darkTextPrimary;
-const learningTextSecondary = AppColorTokens.darkTextSecondary;
-const learningBorderSubtle = AppColorTokens.darkBorder;
+const learningTextPrimary = AppColorTokens.learningTextPrimary;
+const learningTextSecondary = AppColorTokens.learningTextSecondary;
+const learningBorderSubtle = AppColorTokens.learningBorderSubtle;
 const learningOverlayDark = AppColorTokens.learningOverlayDark;
 const learningCardShadow = AppColorTokens.shadow;
 
@@ -552,8 +552,8 @@ class LearningUiPalette {
     heroStart: AppThemeColors.light.heroStart,
     heroAccent: AppThemeColors.light.heroMid,
     heroEnd: AppThemeColors.light.heroEnd,
-    lime: AppColorTokens.forest,
-    limeSoft: AppColorTokens.emeraldDeep,
+    lime: AppColorTokens.lime,
+    limeSoft: AppColorTokens.limeSoft,
     mutedChip: AppThemeColors.light.surfaceElevated,
     timelineLine: AppThemeColors.light.borderStrong,
     disabledPanel: AppThemeColors.light.surface,

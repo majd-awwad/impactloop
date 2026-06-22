@@ -3,9 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 
 class SupplierEmptyDashboardState extends StatelessWidget {
@@ -13,33 +11,36 @@ class SupplierEmptyDashboardState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.dashboardCard,
+      decoration: decorations.dashboardCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.eco_outlined,
-            color: AuthDarkColors.accent,
+            color: colors.accent,
             size: 28,
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'No materials listed yet',
-            style: AuthDarkTextStyles.title(context),
+            context.s.noMaterialsListedYet,
+            style: context.supplierTitle(),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Start by sharing unused parts, project leftovers, or surplus components.',
-            style: AuthDarkTextStyles.body(context),
+            context.s.noMaterialsListedSubtitle,
+            style: context.supplierBody(),
           ),
           const SizedBox(height: AppSpacing.lg),
           SizedBox(
             width: 280,
             child: AppPrimaryButton(
-              label: 'Add your first material',
+              label: context.s.addFirstMaterial,
               onPressed: () => context.go('/supplier/materials/new'),
             ),
           ),
@@ -54,33 +55,36 @@ class SupplierMissingProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.dashboardCard,
+      decoration: decorations.dashboardCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.account_circle_outlined,
-            color: AuthDarkColors.accent,
+            color: colors.accent,
             size: 28,
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Complete your supplier profile',
-            style: AuthDarkTextStyles.title(context),
+            context.s.completeSupplierProfileTitle,
+            style: context.supplierTitle(),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Add your public supplier name and pickup location before listing materials.',
-            style: AuthDarkTextStyles.body(context),
+            context.s.completeSupplierProfileSubtitle,
+            style: context.supplierBody(),
           ),
           const SizedBox(height: AppSpacing.lg),
           SizedBox(
             width: 240,
             child: AppPrimaryButton(
-              label: 'Complete profile',
+              label: context.s.completeProfile,
               onPressed: () => context.go('/supplier/profile'),
             ),
           ),
@@ -97,21 +101,24 @@ class SupplierDashboardErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.dashboardCard,
+      decoration: decorations.dashboardCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'We could not load your supplier dashboard.',
-            style: AuthDarkTextStyles.title(context),
+            context.s.dashboardLoadError,
+            style: context.supplierTitle(),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Please check your connection and try again.',
-            style: AuthDarkTextStyles.body(context),
+            context.s.dashboardLoadErrorMessage,
+            style: context.supplierBody(),
           ),
           const SizedBox(height: AppSpacing.lg),
           SizedBox(
@@ -119,13 +126,13 @@ class SupplierDashboardErrorCard extends StatelessWidget {
             child: OutlinedButton(
               onPressed: onRetry,
               style: OutlinedButton.styleFrom(
-                foregroundColor: AuthDarkColors.accent,
+                foregroundColor: colors.accent,
                 side: BorderSide(
-                  color: AuthDarkColors.borderFocused.withValues(alpha: 0.6),
+                  color: colors.borderFocused.withValues(alpha: 0.6),
                 ),
                 shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
               ),
-              child: const Text('Retry'),
+              child: Text(context.s.tryAgain),
             ),
           ),
         ],
@@ -139,6 +146,8 @@ class SupplierDashboardLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final decorations = context.supplierDecorations;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -147,7 +156,7 @@ class SupplierDashboardLoading extends StatelessWidget {
           Container(
             height: 140,
             width: double.infinity,
-            decoration: SupplierDecorations.dashboardCard,
+            decoration: decorations.dashboardCard,
           ),
           const SizedBox(height: AppSpacing.lg),
           Wrap(
@@ -158,7 +167,7 @@ class SupplierDashboardLoading extends StatelessWidget {
               (_) => Container(
                 width: 140,
                 height: 80,
-                decoration: SupplierDecorations.statCard,
+                decoration: decorations.statCard,
               ),
             ),
           ),

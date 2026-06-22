@@ -4,9 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../materials/application/material_listing_providers.dart';
 import '../../../materials/data/models/category.dart';
@@ -22,6 +19,7 @@ import '../../data/supplier_materials_repository.dart';
 import '../controllers/supplier_dashboard_providers.dart';
 import '../controllers/supplier_notifications_providers.dart';
 import '../controllers/supplier_profile_providers.dart';
+import '../theme/supplier_theme_extension.dart';
 import '../widgets/add_material_preview_card.dart';
 import '../widgets/add_material_price_verification_card.dart';
 import '../widgets/material_image_picker_section.dart';
@@ -29,7 +27,13 @@ import '../widgets/supplier_dark_form_field.dart';
 import '../widgets/supplier_feedback.dart';
 import '../widgets/supplier_pickup_map_preview.dart';
 
-const _conditions = ['NEW', 'LIKE_NEW', 'GOOD', 'USED', 'NEEDS_REPAIR'];
+const _conditions = [
+  'NEW',
+  'LIKE_NEW',
+  'GOOD',
+  'USED',
+  'NEEDS_REPAIR',
+];
 
 const _sourceTypes = [
   'STUDENT_LEFTOVER',
@@ -94,9 +98,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     super.initState();
     _sourceCategoryRequestId = widget.categoryRequestId?.trim();
     _sourcePriceRuleRequestId = widget.priceRuleRequestId?.trim();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _maybeResumeFromRoute(),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeResumeFromRoute());
   }
 
   @override
@@ -108,9 +110,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       _resumeError = null;
       _sourceCategoryRequestId = widget.categoryRequestId?.trim();
       _sourcePriceRuleRequestId = widget.priceRuleRequestId?.trim();
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _maybeResumeFromRoute(),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeResumeFromRoute());
     }
   }
 
@@ -137,27 +137,30 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
     final profile = ref.watch(supplierProfileProvider);
     final categories = ref.watch(materialCategoriesProvider);
     final policy = ref.watch(materialListingPolicyProvider);
-    final compact =
-        MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
+    final compact = MediaQuery.sizeOf(context).width <
+        AppSpacing.supplierLayoutBreakpoint;
 
     return SingleChildScrollView(
-      padding: SupplierDecorations.pagePadding(compact: compact),
+      padding: decorations.pagePadding(compact: compact),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _Header(policy: policy),
           if (_isResumingDraft) ...[
             const SizedBox(height: AppSpacing.md),
-            const Center(
+            Center(
               child: SizedBox(
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AuthDarkColors.accent,
+                  color: colors.accent,
                 ),
               ),
             ),
@@ -175,10 +178,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             data: (profile) {
               if (!profile.hasSupplierProfile || profile.supplier == null) {
                 return _BlockerCard(
-                  title: 'Complete your supplier profile first.',
-                  message:
-                      'Supplier details are required before you can publish reusable materials.',
-                  buttonLabel: 'Go to Supplier Profile',
+                  title: l.completeProfileFirst,
+                  message: l.completeProfileFirstMessage,
+                  buttonLabel: l.goToProfile,
                   onPressed: () => context.go('/supplier/profile'),
                 );
               }
@@ -186,36 +188,35 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               final pickupLocation = profile.supplier!.defaultPickupLocation;
               if (pickupLocation == null) {
                 return _BlockerCard(
-                  title: 'Set your pickup location before listing materials.',
-                  message:
-                      'Pickup location comes from your Supplier Profile and is used for every material in this step.',
-                  buttonLabel: 'Edit Supplier Profile',
+                  title: l.setPickupLocation,
+                  message: l.setPickupLocationMessage,
+                  buttonLabel: l.editSupplierProfile,
                   onPressed: () => context.go('/supplier/profile'),
                 );
               }
 
               return categories.when(
                 data: (items) => _buildForm(items, pickupLocation),
-                loading: () => const Center(
+                loading: () => Center(
                   child: CircularProgressIndicator(
-                    color: AuthDarkColors.accent,
+                    color: colors.accent,
                   ),
                 ),
                 error: (_, _) => _BlockerCard(
-                  title: 'Material categories are unavailable.',
-                  message: 'Please try again after the backend is reachable.',
-                  buttonLabel: 'Back to Dashboard',
+                  title: l.categoriesUnavailable,
+                  message: l.categoriesUnavailableMessage,
+                  buttonLabel: l.backToDashboard,
                   onPressed: () => context.go('/supplier'),
                 ),
               );
             },
-            loading: () => const Center(
-              child: CircularProgressIndicator(color: AuthDarkColors.accent),
+            loading: () => Center(
+              child: CircularProgressIndicator(color: colors.accent),
             ),
             error: (_, _) => _BlockerCard(
-              title: 'Supplier profile could not load.',
-              message: 'Please refresh or complete your profile first.',
-              buttonLabel: 'Go to Supplier Profile',
+              title: l.profileLoadError,
+              message: l.profileLoadErrorMessage,
+              buttonLabel: l.goToProfile,
               onPressed: () => context.go('/supplier/profile'),
             ),
           ),
@@ -225,6 +226,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   }
 
   Widget _buildForm(List<MaterialCategory> categories, pickupLocation) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
     MaterialCategory? selectedCategory;
     for (final category in categories) {
       if (category.id == _categoryId) {
@@ -257,23 +261,26 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (_createdMaterial != null) ...[
-            _SuccessCard(material: _createdMaterial!, onAddAnother: _resetForm),
+            _SuccessCard(
+              material: _createdMaterial!,
+              onAddAnother: _resetForm,
+            ),
             const SizedBox(height: AppSpacing.xl),
           ],
           _Card(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SupplierFormSectionHeader(
+                SupplierFormSectionHeader(
                   icon: Icons.edit_note_outlined,
-                  title: 'What are you listing?',
-                  subtitle: 'Describe the surplus material clearly.',
+                  title: l.listingSectionTitle,
+                  subtitle: l.listingSectionSubtitle,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 SupplierDarkTextField(
                   controller: _materialNameController,
-                  label: 'Material name',
-                  hint: 'Wax molds, Arduino Uno, fabric scraps...',
+                  label: l.materialName,
+                  hint: l.materialNameHint,
                   validator: _required,
                   onChanged: (_) {
                     setState(() {});
@@ -282,24 +289,24 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Use the common name of the item. We use this to verify paid listing prices.',
-                  style: AuthDarkTextStyles.body(
-                    context,
-                  ).copyWith(color: AuthDarkColors.textMuted),
+                  l.materialNameHelper,
+                  style: context.supplierBody().copyWith(
+                    color: colors.textMuted,
+                  ),
                 ),
                 const SupplierFieldGap(),
                 SupplierDarkTextField(
                   controller: _titleController,
-                  label: 'Listing title',
-                  hint: 'Used wax molds - 8 pieces',
+                  label: l.listingTitle,
+                  hint: l.listingTitleHint,
                   validator: _required,
                   onChanged: (_) => setState(() {}),
                 ),
                 const SupplierFieldGap(),
                 SupplierDarkTextArea(
                   controller: _descriptionController,
-                  label: 'Description',
-                  hint: 'Describe condition, quantity, and what is included.',
+                  label: l.description,
+                  hint: l.descriptionHint,
                   validator: _required,
                   maxLines: 5,
                 ),
@@ -307,14 +314,14 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                 _ResponsiveRow(
                   children: [
                     SupplierDarkDropdownField<String>(
-                      label: 'Source type',
-                      hint: 'Choose source',
+                      label: l.sourceType,
+                      hint: l.chooseSource,
                       value: _sourceType,
                       items: _sourceTypes
                           .map(
                             (value) => DropdownMenuItem(
                               value: value,
-                              child: Text(_label(value)),
+                              child: Text(l.sourceTypeLabel(value)),
                             ),
                           )
                           .toList(),
@@ -322,14 +329,14 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                           setState(() => _sourceType = value ?? _sourceType),
                     ),
                     SupplierDarkDropdownField<String>(
-                      label: 'Condition',
-                      hint: 'Choose condition',
+                      label: l.condition,
+                      hint: l.chooseCondition,
                       value: _condition,
                       items: _conditions
                           .map(
                             (value) => DropdownMenuItem(
                               value: value,
-                              child: Text(_label(value)),
+                              child: Text(l.conditionLabel(value)),
                             ),
                           )
                           .toList(),
@@ -345,8 +352,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                 const SupplierFieldGap(),
                 SupplierDarkTextArea(
                   controller: _suggestedUsesController,
-                  label: 'Suggested uses',
-                  hint: 'Candles, resin casting, craft projects.',
+                  label: l.suggestedUses,
+                  hint: l.suggestedUsesHint,
                   maxLines: 3,
                 ),
               ],
@@ -357,15 +364,15 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SupplierFormSectionHeader(
+                SupplierFormSectionHeader(
                   icon: Icons.category_outlined,
-                  title: 'Category',
-                  subtitle: 'Choose the closest broad category.',
+                  title: l.categorySectionTitle,
+                  subtitle: l.categorySectionSubtitle,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 SupplierDarkDropdownField<String>(
-                  label: 'Broad category',
-                  hint: 'Choose category',
+                  label: l.broadCategory,
+                  hint: l.chooseCategory,
                   value: _categoryId,
                   items: categories
                       .map(
@@ -387,13 +394,12 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                 const SizedBox(height: AppSpacing.sm),
                 TextButton(
                   onPressed: () => setState(
-                    () =>
-                        _showCategoryRequestField = !_showCategoryRequestField,
+                    () => _showCategoryRequestField = !_showCategoryRequestField,
                   ),
                   child: Text(
                     _showCategoryRequestField
-                        ? 'Hide category request'
-                        : 'Cannot find your category?',
+                        ? l.hideCategoryRequest
+                        : l.cannotFindCategory,
                   ),
                 ),
                 if (_showCategoryRequestField) ...[
@@ -401,24 +407,24 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: SupplierDecorations.profileSectionPanel,
+                    decoration: decorations.profileSectionPanel,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Category request',
-                          style: AuthDarkTextStyles.sectionTitle(context),
+                          l.categoryRequest,
+                          style: context.supplierSectionTitle(),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Text(
-                          'Send this category name to admin for approval. Your current listing form will be saved so you can continue later.',
-                          style: AuthDarkTextStyles.body(context),
+                          l.categoryRequestMessage,
+                          style: context.supplierBody(),
                         ),
                         const SizedBox(height: AppSpacing.md),
                         SupplierDarkTextField(
                           controller: _requestedCategoryController,
-                          label: 'Requested category name',
-                          hint: 'Example: Candle Making Tools',
+                          label: l.requestedCategoryName,
+                          hint: l.requestedCategoryHint,
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         OutlinedButton.icon(
@@ -436,8 +442,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                               : const Icon(Icons.send_outlined),
                           label: Text(
                             _isSubmittingCategoryRequest
-                                ? 'Sending...'
-                                : 'Send category request',
+                                ? l.sending
+                                : l.sendCategoryRequest,
                           ),
                         ),
                         if (_categoryRequestMessage != null) ...[
@@ -455,15 +461,13 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                 if (_isFree && isOther && !_showCategoryRequestField) ...[
                   const SizedBox(height: AppSpacing.md),
                   _InlineInfo(
-                    message:
-                        'Free listings may use Other when no reviewed category fits.',
+                    message: l.freeOtherAllowed,
                   ),
                 ],
                 if (paidOtherBlocked && !_showCategoryRequestField) ...[
                   const SizedBox(height: AppSpacing.md),
                   _InlineInfo(
-                    message:
-                        'Paid listings cannot use Other. Use Cannot find your category? to request a reviewed category first.',
+                    message: l.paidOtherBlockedMessage,
                   ),
                 ],
               ],
@@ -474,17 +478,18 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SupplierFormSectionHeader(
+                SupplierFormSectionHeader(
                   icon: Icons.straighten_outlined,
-                  title: 'Quantity and pricing',
-                  subtitle:
-                      'Enter the price for one unit. Quantity is handled separately.',
+                  title: l.quantityAndPricing,
+                  subtitle: l.quantityPricingSubtitle,
                 ),
                 if (_maxAllowedUnitPrice != null) ...[
                   const SizedBox(height: AppSpacing.md),
                   _InlineInfo(
-                    message:
-                        'Maximum allowed price per ${_maxAllowedUnitLabel ?? _unitController.text.trim()} is ${_maxAllowedUnitPrice!.toStringAsFixed(0)} NIS.',
+                    message: l.maxPricePerUnitMessage(
+                      _maxAllowedUnitLabel ?? _unitController.text.trim(),
+                      _maxAllowedUnitPrice!.toStringAsFixed(0),
+                    ),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.lg),
@@ -492,18 +497,17 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   children: [
                     SupplierDarkTextField(
                       controller: _quantityController,
-                      label: 'Quantity',
+                      label: l.quantity,
                       hint: '8',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       validator: _positiveNumber,
                       onChanged: (_) => _invalidatePriceCheck(),
                     ),
                     SupplierDarkTextField(
                       controller: _unitController,
-                      label: 'Unit',
-                      hint: 'piece',
+                      label: l.unit,
+                      hint: l.unitHint,
                       validator: _required,
                       onChanged: (_) => _invalidatePriceCheck(),
                     ),
@@ -511,9 +515,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                 ),
                 const SupplierFieldGap(),
                 SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(value: true, label: Text('Free')),
-                    ButtonSegment(value: false, label: Text('Paid')),
+                  segments: [
+                    ButtonSegment(value: true, label: Text(l.free)),
+                    ButtonSegment(value: false, label: Text(l.paid)),
                   ],
                   selected: {_isFree},
                   onSelectionChanged: (values) {
@@ -530,20 +534,20 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   const SupplierFieldGap(),
                   SupplierDarkTextField(
                     controller: _priceController,
-                    label: 'Price per unit (₪)',
+                    label: l.pricePerUnit,
                     hint: '25',
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     validator: _unitPriceValidator,
                     onChanged: (_) => _invalidatePriceCheck(),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Enter the price for one unit. Quantity is handled separately.',
-                    style: AuthDarkTextStyles.body(
-                      context,
-                    ).copyWith(fontSize: 12, color: AuthDarkColors.textMuted),
+                    l.quantityPricingSubtitle,
+                    style: context.supplierBody().copyWith(
+                      fontSize: 12,
+                      color: colors.textMuted,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   OutlinedButton.icon(
@@ -557,7 +561,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.verified_outlined),
-                    label: const Text('Verify price'),
+                    label: Text(l.verifyPrice),
                   ),
                 ],
                 if (_priceCheck != null && !paidOtherBlocked) ...[
@@ -587,10 +591,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SupplierFormSectionHeader(
+                SupplierFormSectionHeader(
                   icon: Icons.place_outlined,
-                  title: 'Pickup',
-                  subtitle: 'Pickup location comes from your Supplier Profile.',
+                  title: l.pickupSectionTitle,
+                  subtitle: l.pickupSectionSubtitle,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 SupplierPickupMapPreview(
@@ -604,31 +608,24 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 SupplierDarkSwitchTile(
-                  title: 'Pickup allowed',
-                  subtitle:
-                      'Learners can request self pickup for this material.',
+                  title: l.pickupAllowed,
+                  subtitle: l.pickupAllowedSubtitle,
                   value: _pickupAllowed,
                   onChanged: (value) => setState(() => _pickupAllowed = value),
                 ),
                 const SupplierFieldGap(),
                 SupplierDarkSwitchTile(
-                  title: 'Delivery allowed',
-                  subtitle: 'Delivery workflow is coming later.',
+                  title: l.deliveryAllowed,
+                  subtitle: l.deliveryAllowedSubtitle,
                   value: false,
                   onChanged: (_) {},
                 ),
                 const SupplierFieldGap(),
                 SupplierDarkTextArea(
                   controller: _pickupNotesController,
-                  label: 'Pickup notes',
-                  hint: 'Pickup near campus.',
+                  label: l.pickupNotes,
+                  hint: l.pickupNotesHint,
                   maxLines: 3,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                OutlinedButton.icon(
-                  onPressed: () => context.go('/supplier/profile'),
-                  icon: const Icon(Icons.edit_location_alt_outlined),
-                  label: const Text('Edit pickup location'),
                 ),
               ],
             ),
@@ -645,16 +642,16 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.publish_outlined),
-              label: Text(_isSubmitting ? 'Publishing...' : 'Publish Material'),
+              label: Text(_isSubmitting ? l.publishing : l.publishMaterial),
             ),
           ),
           if (!_isFree && !paidCanPublish) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
               paidOtherBlocked
-                  ? 'Paid listings cannot use Other.'
-                  : 'Paid listings must pass price verification before publishing.',
-              style: AuthDarkTextStyles.body(context),
+                  ? l.paidCannotUseOther
+                  : l.paidMustVerifyPrice,
+              style: context.supplierBody(),
             ),
           ],
         ],
@@ -832,12 +829,11 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (!mounted) return;
       setState(() {
         _isSubmittingCategoryRequest = false;
-        _categoryRequestMessage =
-            'Category request submitted. Your listing draft was saved. You can continue after admin approval.';
+        _categoryRequestMessage = context.s.categoryRequestSubmittedWithApproval;
       });
       showSupplierInfoSnackBar(
         context,
-        'Category request submitted. Your listing draft was saved.',
+        context.s.categoryRequestSubmitted,
       );
       ref.invalidate(categoryRequestsProvider);
     } on ApiException catch (error) {
@@ -914,9 +910,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     _unitController.text = json['unit'] as String? ?? 'piece';
     _isFree = isFree;
     if (price is num && !isFree) {
-      _priceController.text = price % 1 == 0
-          ? price.toInt().toString()
-          : price.toString();
+      _priceController.text =
+          price % 1 == 0 ? price.toInt().toString() : price.toString();
     } else if (isFree) {
       _priceController.clear();
     }
@@ -953,7 +948,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (json == null) {
         setState(() {
           _isResumingDraft = false;
-          _resumeError = 'Saved listing draft was not found.';
+          _resumeError = context.s.savedDraftNotFound;
         });
         return;
       }
@@ -961,10 +956,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       final approvedCategoryId =
           draft.approvedCategoryId ?? draft.approvedCategory?.id;
       if (approvedCategoryId != null) {
-        final categories = await ref.read(materialCategoriesProvider.future);
-        final categoryExists = categories.any(
-          (category) => category.id == approvedCategoryId,
-        );
+        final categories =
+            await ref.read(materialCategoriesProvider.future);
+        final categoryExists =
+            categories.any((category) => category.id == approvedCategoryId);
         if (!categoryExists) {
           setState(() {
             _isResumingDraft = false;
@@ -1009,9 +1004,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (draft.requestedName.isNotEmpty) {
         return '${draft.requestedName} was approved. Continue your listing.';
       }
-      return 'Category approved. Continue your listing.';
+      return context.s.categoryApprovedContinue;
     }
-    return 'Continue editing your saved listing draft.';
+    return context.s.continueEditingDraft;
   }
 
   Future<void> _continuePriceRuleRequest(String requestId) async {
@@ -1023,7 +1018,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (json == null) {
         setState(() {
           _isResumingDraft = false;
-          _resumeError = 'Saved listing draft was not found.';
+          _resumeError = context.s.savedDraftNotFound;
         });
         return;
       }
@@ -1032,7 +1027,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       final maxPrice = draft.maxAllowedUnitPriceNis;
       final resumeMessage = maxPrice != null
           ? 'Maximum allowed price per $unitLabel is ${maxPrice.toStringAsFixed(0)} NIS.'
-          : 'Continue your listing from where you stopped.';
+          : context.s.continueListingFromDraft;
 
       setState(() {
         _applyListingDraftJson(
@@ -1083,7 +1078,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       return;
     }
     if (_categoryId == null) {
-      showSupplierErrorSnackBar(context, 'Choose a category first.');
+      showSupplierErrorSnackBar(context, context.s.chooseCategoryFirst);
       return;
     }
 
@@ -1133,8 +1128,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       setState(() {
         _isRequestingPriceReview = false;
         _priceReviewMessage =
-            result.message ??
-            'Price review submitted. A Gemini-assisted price suggestion was generated for admin review.';
+            result.message ?? context.s.priceReviewSubmitted;
       });
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -1151,24 +1145,24 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (kDebugMode) {
         debugPrint('[price-review failed] unexpected: $error\n$stackTrace');
       }
-      showSupplierErrorSnackBar(context, 'Price review request failed.');
+      showSupplierErrorSnackBar(context, context.s.priceReviewRequestFailed);
     }
   }
 
   Future<void> _verifyPrice() async {
     if (_categoryId == null) {
-      showSupplierErrorSnackBar(context, 'Choose a category first.');
+      showSupplierErrorSnackBar(context, context.s.chooseCategoryFirst);
       return;
     }
     final materialName = _materialNameController.text.trim();
     if (materialName.isEmpty) {
-      showSupplierErrorSnackBar(context, 'Enter a material name first.');
+      showSupplierErrorSnackBar(context, context.s.enterMaterialNameFirst);
       return;
     }
     final quantity = double.tryParse(_quantityController.text.trim());
     final price = double.tryParse(_priceController.text.trim());
     if (quantity == null || quantity <= 0 || price == null || price <= 0) {
-      showSupplierErrorSnackBar(context, 'Enter a valid quantity and price.');
+      showSupplierErrorSnackBar(context, context.s.enterValidQuantityPrice);
       return;
     }
 
@@ -1219,21 +1213,21 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (kDebugMode) {
         debugPrint('[price-check failed] unexpected: $error\n$stackTrace');
       }
-      showSupplierErrorSnackBar(context, 'Price verification failed: $error');
+      showSupplierErrorSnackBar(
+        context,
+        'Price verification failed: $error',
+      );
     }
   }
 
   String _apiErrorMessage(ApiException error) {
     final issues = error.fieldIssues;
     if (issues.isNotEmpty) {
-      return issues
-          .map((issue) => '${issue.path}: ${issue.message}')
-          .join('\n');
+      return issues.map((issue) => '${issue.path}: ${issue.message}').join('\n');
     }
 
-    final statusPrefix = error.statusCode != null
-        ? '[${error.statusCode}] '
-        : '';
+    final statusPrefix =
+        error.statusCode != null ? '[${error.statusCode}] ' : '';
     final message = error.displayMessage.trim();
 
     if (message.isNotEmpty) {
@@ -1249,14 +1243,11 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     }
     final quantity = double.tryParse(_quantityController.text.trim());
     if (quantity == null || quantity <= 0) return;
-    final price = _isFree
-        ? null
-        : double.tryParse(_priceController.text.trim());
+    final price = _isFree ? null : double.tryParse(_priceController.text.trim());
     if (!_isFree) {
       final hasApprovedSourceMax =
           _sourcePriceRuleRequestId != null && _maxAllowedUnitPrice != null;
-      final withinSourceMax =
-          hasApprovedSourceMax &&
+      final withinSourceMax = hasApprovedSourceMax &&
           price != null &&
           price <= _maxAllowedUnitPrice!;
 
@@ -1324,7 +1315,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         _createdMaterial = material;
         _isSubmitting = false;
       });
-      showSupplierInfoSnackBar(context, 'Material listed successfully.');
+      showSupplierInfoSnackBar(context, context.s.materialListedSuccess);
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
@@ -1332,7 +1323,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      showSupplierErrorSnackBar(context, 'Material could not be listed.');
+      showSupplierErrorSnackBar(context, context.s.materialCouldNotBeListed);
     }
   }
 
@@ -1386,13 +1377,6 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
 
     return null;
   }
-
-  String _label(String value) {
-    return value
-        .split('_')
-        .map((part) => part[0] + part.substring(1).toLowerCase())
-        .join(' ');
-  }
 }
 
 class _Header extends StatelessWidget {
@@ -1402,36 +1386,36 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final decorations = context.supplierDecorations;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: SupplierDecorations.profileGlassCard,
+      decoration: decorations.profileGlassCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Add Material', style: AuthDarkTextStyles.display(context)),
+          Text(l.navAddMaterial, style: context.supplierDisplay()),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'List surplus materials for reuse by learners and makers.',
-            style: AuthDarkTextStyles.body(context),
+            l.subtitleAddMaterial,
+            style: context.supplierBody(),
           ),
           const SizedBox(height: AppSpacing.lg),
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
-            children: const [
-              _PolicyBadge(label: 'NIS only'),
-              _PolicyBadge(label: 'Free Other allowed'),
-              _PolicyBadge(label: 'Paid needs price verification'),
+            children: [
+              _PolicyBadge(label: l.policyBadgeNisOnly),
+              _PolicyBadge(label: l.policyBadgeFreeOther),
+              _PolicyBadge(label: l.policyBadgePaidVerify),
             ],
           ),
           policy.when(
             data: (value) => Padding(
               padding: const EdgeInsets.only(top: AppSpacing.md),
-              child: Text(
-                value.message,
-                style: AuthDarkTextStyles.body(context),
-              ),
+              child: Text(value.message, style: context.supplierBody()),
             ),
             loading: () => const SizedBox.shrink(),
             error: (_, _) => const SizedBox.shrink(),
@@ -1449,15 +1433,18 @@ class _PolicyBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.xs,
       ),
-      decoration: SupplierDecorations.badge(
-        background: AuthDarkColors.accentSoft.withValues(alpha: 0.16),
+      decoration: decorations.badge(
+        background: colors.accentSoft.withValues(alpha: 0.16),
       ),
-      child: Text(label, style: AuthDarkTextStyles.chip(context)),
+      child: Text(label, style: context.supplierChip()),
     );
   }
 }
@@ -1472,7 +1459,7 @@ class _Card extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.dashboardCard,
+      decoration: context.supplierDecorations.dashboardCard,
       child: child,
     );
   }
@@ -1488,28 +1475,22 @@ class _ResponsiveRow extends StatelessWidget {
     final wide = MediaQuery.sizeOf(context).width >= 760;
     if (!wide) {
       return Column(
-        children:
-            children
-                .expand(
-                  (child) => [child, const SizedBox(height: AppSpacing.md)],
-                )
-                .toList()
-              ..removeLast(),
+        children: children
+            .expand((child) => [child, const SizedBox(height: AppSpacing.md)])
+            .toList()
+          ..removeLast(),
       );
     }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children:
-          children
-              .expand(
-                (child) => [
-                  Expanded(child: child),
-                  const SizedBox(width: AppSpacing.md),
-                ],
-              )
-              .toList()
-            ..removeLast(),
+      children: children
+          .expand((child) => [
+                Expanded(child: child),
+                const SizedBox(width: AppSpacing.md),
+              ])
+          .toList()
+        ..removeLast(),
     );
   }
 }
@@ -1533,9 +1514,9 @@ class _BlockerCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AuthDarkTextStyles.title(context)),
+          Text(title, style: context.supplierTitle()),
           const SizedBox(height: AppSpacing.sm),
-          Text(message, style: AuthDarkTextStyles.body(context)),
+          Text(message, style: context.supplierBody()),
           const SizedBox(height: AppSpacing.lg),
           OutlinedButton(onPressed: onPressed, child: Text(buttonLabel)),
         ],
@@ -1557,38 +1538,36 @@ class _ResumeErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AuthDarkColors.error.withValues(alpha: 0.12),
+        color: colors.error.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AuthDarkColors.error.withValues(alpha: 0.35)),
+        border: Border.all(color: colors.error.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Could not restore listing draft',
-            style: AuthDarkTextStyles.title(
-              context,
-            ).copyWith(fontSize: 15, color: AuthDarkColors.error),
+            l.restoreDraftError,
+            style: context.supplierTitle().copyWith(
+              fontSize: 15,
+              color: colors.error,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(message, style: AuthDarkTextStyles.body(context)),
+          Text(message, style: context.supplierBody()),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
-              OutlinedButton(
-                onPressed: onRetry,
-                child: const Text('Try again'),
-              ),
-              TextButton(
-                onPressed: onBack,
-                child: const Text('Back to Notifications'),
-              ),
+              OutlinedButton(onPressed: onRetry, child: Text(l.tryAgain)),
+              TextButton(onPressed: onBack, child: Text(l.backToNotifications)),
             ],
           ),
         ],
@@ -1607,40 +1586,53 @@ class _InlineInfo extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: SupplierDecorations.profileSectionPanel,
-      child: Text(message, style: AuthDarkTextStyles.body(context)),
+      decoration: context.supplierDecorations.profileSectionPanel,
+      child: Text(message, style: context.supplierBody()),
     );
   }
 }
 
 class _SuccessCard extends StatelessWidget {
-  const _SuccessCard({required this.material, required this.onAddAnother});
+  const _SuccessCard({
+    required this.material,
+    required this.onAddAnother,
+  });
 
   final CreatedMaterial material;
   final VoidCallback onAddAnother;
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final priceLabel = material.isFree
+        ? l.free
+        : '₪${material.price?.toStringAsFixed(2) ?? ''}';
+
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Material listed successfully.',
-            style: AuthDarkTextStyles.title(
-              context,
-            ).copyWith(color: AuthDarkColors.accent),
+            l.materialListedSuccess,
+            style: context.supplierTitle().copyWith(
+              color: colors.accent,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            '${material.title} • ${material.category.nameEn} • ${material.isFree ? 'Free' : '₪${material.price?.toStringAsFixed(2) ?? ''}'}',
-            style: AuthDarkTextStyles.body(context),
+            l.materialSummaryLine(
+              material.title,
+              material.category.nameEn,
+              priceLabel,
+            ),
+            style: context.supplierBody(),
           ),
           const SizedBox(height: AppSpacing.lg),
           OutlinedButton.icon(
             onPressed: onAddAnother,
             icon: const Icon(Icons.add_circle_outline),
-            label: const Text('Add another material'),
+            label: Text(l.addAnotherMaterial),
           ),
         ],
       ),

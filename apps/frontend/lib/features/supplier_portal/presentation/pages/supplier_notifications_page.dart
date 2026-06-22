@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../data/models/supplier_action_notification.dart';
 import '../controllers/supplier_notifications_providers.dart';
+import '../theme/supplier_theme_extension.dart';
 import '../widgets/supplier_feedback.dart';
 import '../widgets/supplier_notification_card.dart';
 import '../widgets/supplier_notification_filter_chips.dart';
@@ -22,13 +21,15 @@ class SupplierNotificationsPage extends ConsumerWidget {
     final notificationsAsync = ref.watch(supplierNotificationsProvider);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
+    final l = context.s;
+    final colors = context.supplierColors;
 
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
         child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
+          padding: EdgeInsetsDirectional.fromSTEB(
             compact ? AppSpacing.md : AppSpacing.lg,
             compact ? AppSpacing.sm : AppSpacing.md,
             compact ? AppSpacing.md : AppSpacing.lg,
@@ -38,15 +39,19 @@ class SupplierNotificationsPage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Notifications',
-                style: AuthDarkTextStyles.sectionTitle(context),
+                l.notificationsTitle,
+                style: context.supplierSectionTitle().copyWith(
+                  fontSize: 18,
+                  color: colors.textPrimary,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Review updates and actions that need your attention.',
-                style: AuthDarkTextStyles.body(
-                  context,
-                ).copyWith(color: AuthDarkColors.textMuted, fontSize: 14),
+                l.subtitleNotifications,
+                style: context.supplierBody().copyWith(
+                  color: colors.textMuted,
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
               notificationsAsync.when(
@@ -61,8 +66,7 @@ class SupplierNotificationsPage extends ConsumerWidget {
                 data: (result) {
                   final filtered = result.notifications
                       .where(
-                        (item) =>
-                            matchesSupplierNotificationFilter(item, filter),
+                        (item) => matchesSupplierNotificationFilter(item, filter),
                       )
                       .toList();
 
@@ -76,8 +80,7 @@ class SupplierNotificationsPage extends ConsumerWidget {
                         if (i > 0) const SizedBox(height: AppSpacing.sm),
                         SupplierNotificationCard(
                           notification: filtered[i],
-                          onAction:
-                              filtered[i].actionLabel == null ||
+                          onAction: filtered[i].actionLabel == null ||
                                   filtered[i].isCompleted
                               ? null
                               : () => _handleAction(context, ref, filtered[i]),
@@ -103,6 +106,8 @@ class SupplierNotificationsPage extends ConsumerWidget {
     WidgetRef ref,
     SupplierActionNotification notification,
   ) {
+    final l = context.s;
+
     switch (notification.actionType) {
       case SupplierActionNotificationActionType.continueListing:
         if (notification.priceRuleRequestId != null) {
@@ -117,10 +122,7 @@ class SupplierNotificationsPage extends ConsumerWidget {
           );
           return;
         }
-        showSupplierErrorSnackBar(
-          context,
-          'Could not open listing. Try again from Notifications.',
-        );
+        showSupplierErrorSnackBar(context, l.couldNotOpenListing);
         return;
       case SupplierActionNotificationActionType.editListing:
         final id = notification.categoryRequestId;
@@ -138,7 +140,7 @@ class SupplierNotificationsPage extends ConsumerWidget {
         context.go('/supplier/reservations?$query');
         return;
       case null:
-        showSupplierInfoSnackBar(context, 'No action available for this item.');
+        showSupplierInfoSnackBar(context, l.noActionAvailable);
     }
   }
 }
@@ -150,24 +152,22 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+
     return Wrap(
       spacing: AppSpacing.md,
       runSpacing: AppSpacing.xs,
       children: [
         _SummaryItem(
-          label: 'Action needed',
+          label: l.actionNeeded,
           count: summary.actionNeededCount,
-          color: const Color(0xFFF59E0B),
+          color: colors.amberAccent,
         ),
         _SummaryItem(
-          label: 'Review updates',
-          count: summary.reviewCount,
-          color: const Color(0xFF2DD4BF),
-        ),
-        _SummaryItem(
-          label: 'Reservations',
+          label: l.filterReservations,
           count: summary.reservationCount,
-          color: const Color(0xFF60A5FA),
+          color: colors.blueAccent,
         ),
       ],
     );
@@ -187,11 +187,14 @@ class _SummaryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Text.rich(
       TextSpan(
-        style: AuthDarkTextStyles.body(
-          context,
-        ).copyWith(fontSize: 13, color: AuthDarkColors.textMuted),
+        style: context.supplierBody().copyWith(
+          fontSize: 13,
+          color: colors.textMuted,
+        ),
         children: [
           TextSpan(
             text: '$label: ',
@@ -199,7 +202,10 @@ class _SummaryItem extends StatelessWidget {
           ),
           TextSpan(
             text: '$count',
-            style: TextStyle(color: color, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -214,17 +220,20 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Center(
         child: Text(
           filter == SupplierNotificationFilter.all
-              ? 'No notifications yet.'
-              : 'No ${filter.label.toLowerCase()} notifications.',
+              ? l.noNotificationsYet
+              : l.noFilterNotifications(
+                  l.notificationFilterLabel(filter),
+                ),
           textAlign: TextAlign.center,
-          style: AuthDarkTextStyles.body(
-            context,
-          ).copyWith(color: AuthDarkColors.textMuted),
+          style: context.supplierBody().copyWith(color: colors.textMuted),
         ),
       ),
     );
@@ -236,22 +245,25 @@ class _LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(
+          SizedBox(
             width: 18,
             height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: colors.accent,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Text(
-            'Loading notifications…',
-            style: AuthDarkTextStyles.body(
-              context,
-            ).copyWith(color: AuthDarkColors.textMuted),
+            context.s.loadingNotifications,
+            style: context.supplierBody().copyWith(color: colors.textMuted),
           ),
         ],
       ),
@@ -266,17 +278,18 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Column(
         children: [
           Text(
-            'We could not load notifications.',
-            style: AuthDarkTextStyles.body(
-              context,
-            ).copyWith(color: AuthDarkColors.textMuted),
+            l.notificationsLoadError,
+            style: context.supplierBody().copyWith(color: colors.textMuted),
           ),
-          TextButton(onPressed: onRetry, child: const Text('Try again')),
+          TextButton(onPressed: onRetry, child: Text(l.tryAgain)),
         ],
       ),
     );

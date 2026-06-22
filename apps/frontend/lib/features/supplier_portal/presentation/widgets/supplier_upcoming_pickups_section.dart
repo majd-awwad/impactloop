@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../data/models/supplier_dashboard_pickup.dart';
 
 class SupplierUpcomingPickupsSection extends StatelessWidget {
@@ -11,9 +10,9 @@ class SupplierUpcomingPickupsSection extends StatelessWidget {
 
   final List<SupplierDashboardPickup> pickups;
 
-  String _formatWindow(SupplierDashboardPickup pickup) {
+  String _formatWindow(BuildContext context, SupplierDashboardPickup pickup) {
     if (pickup.pickupWindowStart == null) {
-      return 'Schedule pending';
+      return context.s.schedulePending;
     }
 
     final start = pickup.pickupWindowStart!;
@@ -31,30 +30,32 @@ class SupplierUpcomingPickupsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Upcoming pickups',
-          style: AuthDarkTextStyles.sectionTitle(context),
+          context.s.upcomingPickups,
+          style: context.supplierSectionTitle(),
         ),
         const SizedBox(height: AppSpacing.md),
         if (pickups.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: SupplierDecorations.dashboardCard,
+            decoration: context.supplierDecorations.dashboardCard,
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.local_shipping_outlined,
-                  color: AuthDarkColors.accent,
+                  color: colors.accent,
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
-                    'Accepted reservations with pickup windows will show up here.',
-                    style: AuthDarkTextStyles.body(context),
+                    context.s.noAcceptedPickupsSubtitle,
+                    style: context.supplierBody(),
                   ),
                 ),
               ],
@@ -66,29 +67,29 @@ class SupplierUpcomingPickupsSection extends StatelessWidget {
               width: double.infinity,
               margin: const EdgeInsets.only(bottom: AppSpacing.sm),
               padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: SupplierDecorations.dashboardCard,
+              decoration: context.supplierDecorations.dashboardCard,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     pickup.materialTitle,
-                    style: AuthDarkTextStyles.label(context).copyWith(
-                      color: AuthDarkColors.textPrimary,
+                    style: context.supplierLabel().copyWith(
+                      color: colors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Requester: ${pickup.requesterName}',
-                    style: AuthDarkTextStyles.body(context),
+                    context.s.requesterLabel(pickup.requesterName),
+                    style: context.supplierBody(),
                   ),
                   Text(
-                    'Qty: ${pickup.quantityRequested}',
-                    style: AuthDarkTextStyles.body(context),
+                    context.s.qtyLabel('${pickup.quantityRequested}'),
+                    style: context.supplierBody(),
                   ),
                   Text(
-                    _formatWindow(pickup),
-                    style: AuthDarkTextStyles.body(context),
+                    _formatWindow(context, pickup),
+                    style: context.supplierBody(),
                   ),
                 ],
               ),

@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
+import '../theme/supplier_theme_extension.dart';
 import 'incoming_request_status_style.dart';
 
 class IncomingRequestFilterChips extends ConsumerWidget {
@@ -14,6 +14,7 @@ class IncomingRequestFilterChips extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(incomingRequestTabProvider);
+    final l = context.s;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -23,7 +24,7 @@ class IncomingRequestFilterChips extends ConsumerWidget {
           return Padding(
             padding: const EdgeInsets.only(right: AppSpacing.sm),
             child: _FilterChip(
-              label: tab.label,
+              label: l.incomingRequestTabLabel(tab),
               style: IncomingRequestStatusStyle.forTab(tab),
               isSelected: isSelected,
               onTap: () {
@@ -71,7 +72,7 @@ class _FilterChip extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: AuthDarkTextStyles.chip(context).copyWith(
+            style: context.supplierChip().copyWith(
               fontSize: 13,
               color: isSelected
                   ? style.foreground

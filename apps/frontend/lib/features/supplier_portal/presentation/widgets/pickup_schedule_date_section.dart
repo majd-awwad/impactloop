@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../controllers/supplier_pickup_schedule_providers.dart';
 
@@ -18,6 +17,8 @@ class PickupScheduleDateSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -25,10 +26,10 @@ class PickupScheduleDateSection extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: Text(
             group.label,
-            style: AuthDarkTextStyles.label(context).copyWith(
+            style: context.supplierLabel().copyWith(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: AuthDarkColors.textPrimary,
+              color: colors.textPrimary,
               letterSpacing: 0.2,
             ),
           ),
@@ -51,11 +52,17 @@ class PickupScheduleSummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Text(
-      'Today: ${summary.todayCount}   Upcoming: ${summary.upcomingCount}   Completed: ${summary.completedCount}',
-      style: AuthDarkTextStyles.label(context).copyWith(
+      context.s.pickupScheduleSummary(
+        summary.todayCount,
+        summary.upcomingCount,
+        summary.completedCount,
+      ),
+      style: context.supplierLabel().copyWith(
         fontSize: 13,
-        color: AuthDarkColors.textMuted,
+        color: colors.textMuted,
         fontWeight: FontWeight.w500,
       ),
     );

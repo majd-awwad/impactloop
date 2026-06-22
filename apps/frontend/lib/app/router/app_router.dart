@@ -21,7 +21,8 @@ import '../../features/material_discovery/presentation/pages/material_details_pa
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
 import '../../features/supplier_portal/presentation/pages/add_material_page.dart';
-import '../../features/supplier_portal/presentation/pages/supplier_coming_soon_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_my_materials_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_owned_material_detail_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_incoming_requests_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_notifications_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_pickup_schedule_page.dart';
@@ -277,20 +278,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const SupplierDashboardPage(),
           ),
           GoRoute(
-            path: '/supplier/materials',
-            builder: (context, state) => const SupplierComingSoonPage(
-              title: 'My Materials',
-              description:
-                  'Manage your listed materials here soon. You will be able to view, edit, and track the status of everything you share.',
-            ),
-          ),
-          GoRoute(
             path: '/supplier/materials/new',
             builder: (context, state) => AddMaterialPage(
               categoryRequestId: state.uri.queryParameters['categoryRequestId'],
               priceRuleRequestId:
                   state.uri.queryParameters['priceRuleRequestId'],
             ),
+          ),
+          GoRoute(
+            path: '/supplier/materials/:id',
+            redirect: (context, state) {
+              if (state.pathParameters['id'] == 'new') {
+                final query = state.uri.query;
+                return query.isEmpty
+                    ? '/supplier/materials/new'
+                    : '/supplier/materials/new?$query';
+              }
+              return null;
+            },
+            builder: (context, state) => SupplierOwnedMaterialDetailPage(
+              materialId: state.pathParameters['id']!,
+            ),
+          ),
+          GoRoute(
+            path: '/supplier/materials',
+            builder: (context, state) => const SupplierMyMaterialsPage(),
           ),
           GoRoute(
             path: '/supplier/reservations',

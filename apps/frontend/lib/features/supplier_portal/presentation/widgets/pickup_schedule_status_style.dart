@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 
 /// Centralized semantic colors for Pickup Schedule filters, badges, and accents.
@@ -62,53 +63,53 @@ class PickupScheduleStatusStyle {
   /// Reserved for overdue/late pickups when mock or API data supports it.
   static PickupScheduleStatusStyle forLate() => _late;
 
-  // Today — teal/green, needs attention now.
+  // Today - teal/green, needs attention now.
   static const _today = PickupScheduleStatusStyle(
-    background: Color(0x2414B8A6), // rgba(20, 184, 166, 0.14)
-    border: Color(0x8014B8A6), // rgba(20, 184, 166, 0.50)
-    foreground: Color(0xFF2DD4BF),
-    selectedBackground: Color(0x3814B8A6), // rgba(20, 184, 166, 0.22)
-    selectedBorder: Color(0xA614B8A6), // rgba(20, 184, 166, 0.65)
-    accent: Color(0xFF2DD4BF),
+    background: AppColorTokens.supplierPickupTodayBackground,
+    border: AppColorTokens.supplierPickupTodayBorder,
+    foreground: AppColorTokens.supplierDashboardReused,
+    selectedBackground: AppColorTokens.supplierPickupTodaySelectedBackground,
+    selectedBorder: AppColorTokens.supplierPickupTodaySelectedBorder,
+    accent: AppColorTokens.supplierDashboardReused,
   );
 
-  // Upcoming — blue, future/scheduled.
+  // Upcoming - blue, future/scheduled.
   static const _upcoming = PickupScheduleStatusStyle(
-    background: Color(0x243B82F6), // rgba(59, 130, 246, 0.14)
-    border: Color(0x803B82F6), // rgba(59, 130, 246, 0.50)
-    foreground: Color(0xFF60A5FA),
-    selectedBackground: Color(0x383B82F6), // rgba(59, 130, 246, 0.22)
-    selectedBorder: Color(0xA63B82F6), // rgba(59, 130, 246, 0.65)
-    accent: Color(0xFF60A5FA),
+    background: AppColorTokens.supplierPickupUpcomingBackground,
+    border: AppColorTokens.supplierPickupUpcomingBorder,
+    foreground: AppColorTokens.supplierDashboardReserved,
+    selectedBackground: AppColorTokens.supplierPickupUpcomingSelectedBackground,
+    selectedBorder: AppColorTokens.supplierPickupUpcomingSelectedBorder,
+    accent: AppColorTokens.supplierDashboardReserved,
   );
 
-  // Completed — muted green, finished and low priority.
+  // Completed - muted green, finished and low priority.
   static const _completed = PickupScheduleStatusStyle(
-    background: Color(0x1F22C55E), // rgba(34, 197, 94, 0.12)
-    border: Color(0x6622C55E), // rgba(34, 197, 94, 0.40)
-    foreground: Color(0xFF86EFAC),
-    selectedBackground: Color(0x2E22C55E), // rgba(34, 197, 94, 0.18)
-    selectedBorder: Color(0x8022C55E), // rgba(34, 197, 94, 0.50)
-    accent: Color(0xFF86EFAC),
+    background: AppColorTokens.supplierPickupCompletedBackground,
+    border: AppColorTokens.supplierPickupCompletedBorder,
+    foreground: AppColorTokens.supplierPickupCompletedForeground,
+    selectedBackground: AppColorTokens.supplierPickupCompletedSelectedBackground,
+    selectedBorder: AppColorTokens.supplierPickupCompletedSelectedBorder,
+    accent: AppColorTokens.supplierPickupCompletedForeground,
   );
 
-  // All — neutral gray.
+  // All - neutral gray.
   static const _all = PickupScheduleStatusStyle(
-    background: Color(0x1F94A3B8), // rgba(148, 163, 184, 0.12)
-    border: Color(0x5994A3B8), // rgba(148, 163, 184, 0.35)
-    foreground: Color(0xFFCBD5E1),
-    selectedBackground: Color(0x3394A3B8), // rgba(148, 163, 184, 0.20)
-    selectedBorder: Color(0x8094A3B8), // rgba(148, 163, 184, 0.50)
-    accent: Color(0xFFCBD5E1),
+    background: AppColorTokens.supplierPickupAllBackground,
+    border: AppColorTokens.supplierPickupAllBorder,
+    foreground: AppColorTokens.supplierPickupAllForeground,
+    selectedBackground: AppColorTokens.supplierPickupAllSelectedBackground,
+    selectedBorder: AppColorTokens.supplierPickupAllSelectedBorder,
+    accent: AppColorTokens.supplierPickupAllForeground,
   );
 
-  // Late/overdue — amber warning (future use).
+  // Late/overdue - amber warning (future use).
   static const _late = PickupScheduleStatusStyle(
-    background: Color(0x24F59E0B), // rgba(245, 158, 11, 0.14)
-    border: Color(0x80F59E0B), // rgba(245, 158, 11, 0.50)
-    foreground: Color(0xFFFBBF24),
-    selectedBackground: Color(0x38F59E0B),
-    selectedBorder: Color(0xA6F59E0B),
-    accent: Color(0xFFFBBF24),
+    background: AppColorTokens.supplierPickupLateBackground,
+    border: AppColorTokens.supplierPickupLateBorder,
+    foreground: AppColorTokens.supplierDashboardPending,
+    selectedBackground: AppColorTokens.supplierPickupLateSelectedBackground,
+    selectedBorder: AppColorTokens.supplierPickupLateSelectedBorder,
+    accent: AppColorTokens.supplierDashboardPending,
   );
 }

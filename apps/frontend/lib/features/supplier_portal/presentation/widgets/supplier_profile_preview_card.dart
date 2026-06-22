@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
-import 'supplier_location_privacy_card.dart';
-import 'supplier_type_selector.dart';
 import 'supplier_verification_badge.dart';
 
 class SupplierProfilePreviewCard extends StatelessWidget {
@@ -19,6 +16,7 @@ class SupplierProfilePreviewCard extends StatelessWidget {
     this.area,
     this.country,
     this.visibility,
+    this.locationSummaryOverride,
   });
 
   final String publicName;
@@ -29,50 +27,56 @@ class SupplierProfilePreviewCard extends StatelessWidget {
   final String? area;
   final String? country;
   final String? visibility;
+  final String? locationSummaryOverride;
 
-  String get _locationSummary {
+  String _locationSummary(BuildContext context) {
+    if (locationSummaryOverride != null &&
+        locationSummaryOverride!.trim().isNotEmpty) {
+      return locationSummaryOverride!.trim();
+    }
+
     final parts = [
       if (city != null && city!.trim().isNotEmpty) city!.trim(),
       if (area != null && area!.trim().isNotEmpty) area!.trim(),
       if (country != null && country!.trim().isNotEmpty) country!.trim(),
     ];
-    return parts.isEmpty ? 'Pickup area not set' : parts.join(' · ');
+    return parts.isEmpty ? context.s.pickupAreaNotSet : parts.join(' · ');
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final locationSummary = _locationSummary(context);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.profileGlassCard,
+      decoration: context.supplierDecorations.profileGlassCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.visibility_outlined,
-                color: AuthDarkColors.accent,
-              ),
+              Icon(Icons.visibility_outlined, color: colors.accent),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  'Learner preview',
-                  style: AuthDarkTextStyles.sectionTitle(context),
+                  context.s.learnerPreview,
+                  style: context.supplierSectionTitle(),
                 ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'How learners may discover your supplier profile later.',
-            style: AuthDarkTextStyles.body(context),
+            context.s.learnerPreviewSubtitle,
+            style: context.supplierBody(),
           ),
           const SizedBox(height: AppSpacing.lg),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: SupplierDecorations.dashboardCard,
+            decoration: context.supplierDecorations.dashboardCard,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -88,7 +92,7 @@ class SupplierProfilePreviewCard extends StatelessWidget {
                             publicName: publicName,
                             supplierType: supplierType,
                             verificationStatus: verificationStatus,
-                            locationSummary: _locationSummary,
+                            locationSummary: locationSummary,
                           ),
                           const SizedBox(height: AppSpacing.md),
                           const Align(
@@ -107,7 +111,7 @@ class SupplierProfilePreviewCard extends StatelessWidget {
                             publicName: publicName,
                             supplierType: supplierType,
                             verificationStatus: verificationStatus,
-                            locationSummary: _locationSummary,
+                            locationSummary: locationSummary,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.md),
@@ -120,18 +124,21 @@ class SupplierProfilePreviewCard extends StatelessWidget {
                 Text(
                   description?.trim().isNotEmpty == true
                       ? description!.trim()
-                      : 'Shares reusable materials for student and maker projects.',
-                  style: AuthDarkTextStyles.body(context).copyWith(
-                    color: AuthDarkColors.textPrimary.withValues(alpha: 0.9),
+                      : context.s.defaultMaterialsDescription,
+                  style: context.supplierBody().copyWith(
+                    color: colors.textPrimary.withValues(alpha: 0.9),
                   ),
                 ),
                 if (visibility != null && visibility!.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Location visibility: ${visibilityLabel(visibility!)}',
-                    style: AuthDarkTextStyles.body(
-                      context,
-                    ).copyWith(color: AuthDarkColors.accent, fontSize: 12),
+                    context.s.locationVisibilityLabel(
+                      context.s.visibilityLabel(visibility!),
+                    ),
+                    style: context.supplierBody().copyWith(
+                      color: colors.accent,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ],
@@ -165,14 +172,12 @@ class _PreviewIdentityRow extends StatelessWidget {
           width: 52,
           height: 52,
           alignment: Alignment.center,
-          decoration: SupplierDecorations.avatarCircle,
+          decoration: context.supplierDecorations.avatarCircle,
           child: Text(
-            publicName.isNotEmpty
-                ? publicName.characters.first.toUpperCase()
-                : '?',
-            style: AuthDarkTextStyles.title(
-              context,
-            ).copyWith(color: AuthDarkColors.accent),
+            publicName.isNotEmpty ? publicName.characters.first.toUpperCase() : '?',
+            style: context.supplierTitle().copyWith(
+              color: context.supplierColors.accent,
+            ),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
@@ -181,13 +186,13 @@ class _PreviewIdentityRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                publicName.isNotEmpty ? publicName : 'Your public name',
-                style: AuthDarkTextStyles.title(context),
+                publicName.isNotEmpty ? publicName : context.s.yourPublicName,
+                style: context.supplierTitle(),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                supplierTypeLabel(supplierType),
-                style: AuthDarkTextStyles.body(context),
+                context.s.supplierTypeLabel(supplierType),
+                style: context.supplierBody(),
               ),
               const SizedBox(height: AppSpacing.sm),
               Wrap(
@@ -223,18 +228,18 @@ class _PreviewChip extends StatelessWidget {
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.xs,
       ),
-      decoration: SupplierDecorations.badge(
-        background: AuthDarkColors.chipUnselected,
+      decoration: context.supplierDecorations.badge(
+        background: context.supplierColors.chipUnselected,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AuthDarkColors.accent),
+          Icon(icon, size: 14, color: context.supplierColors.accent),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
               label,
-              style: AuthDarkTextStyles.chip(context),
+              style: context.supplierChip(),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -255,28 +260,19 @@ class _PreviewIllustration extends StatelessWidget {
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: AuthDarkColors.accentSoft.withValues(alpha: 0.12),
+        color: context.supplierColors.accentSoft.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AuthDarkColors.border.withValues(alpha: 0.35),
-        ),
+        border: Border.all(color: context.supplierColors.border.withValues(alpha: 0.35)),
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          Icon(Icons.recycling, color: AuthDarkColors.accent, size: 18),
-          Icon(
-            Icons.handyman_outlined,
-            color: AuthDarkColors.accentMuted,
-            size: 16,
-          ),
-          Icon(
-            Icons.inventory_2_outlined,
-            color: AuthDarkColors.textSecondary,
-            size: 16,
-          ),
+          Icon(Icons.recycling, color: context.supplierColors.accent, size: 18),
+          Icon(Icons.handyman_outlined, color: context.supplierColors.accentMuted, size: 16),
+          Icon(Icons.inventory_2_outlined, color: context.supplierColors.textSecondary, size: 16),
         ],
       ),
     );
   }
 }
+

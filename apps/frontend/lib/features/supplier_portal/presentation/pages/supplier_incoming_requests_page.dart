@@ -3,11 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
+import '../theme/supplier_theme_extension.dart';
 import '../widgets/accept_incoming_request_dialog.dart';
 import '../widgets/complete_pickup_dialog.dart';
 import '../widgets/decline_incoming_request_dialog.dart';
@@ -79,13 +77,14 @@ class _SupplierIncomingRequestsPageState
     final completingId = ref.watch(completingReservationIdProvider);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
+    final l = context.s;
 
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
         child: SingleChildScrollView(
-          padding: SupplierDecorations.pagePadding(compact: compact),
+          padding: context.supplierDecorations.pagePadding(compact: compact),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -97,8 +96,8 @@ class _SupplierIncomingRequestsPageState
                 data: (requests) {
                   if (requests.isEmpty) {
                     return _EmptyState(
-                      title: tab.emptyMessage,
-                      subtitle: tab.emptySubtitle,
+                      title: l.incomingRequestEmptyTitle(tab),
+                      subtitle: l.incomingRequestEmptySubtitle(tab),
                     );
                   }
 
@@ -136,16 +135,18 @@ class _SupplierIncomingRequestsPageState
             child: IncomingRequestCard(
               request: request,
               isCompleting: completingId == request.id,
-              onAccept: request.status == SupplierIncomingRequestStatus.pending
-                  ? () => _handleAccept(context, ref, request)
-                  : null,
-              onDecline: request.status == SupplierIncomingRequestStatus.pending
-                  ? () => _handleDecline(context, ref, request)
-                  : null,
+              onAccept:
+                  request.status == SupplierIncomingRequestStatus.pending
+                      ? () => _handleAccept(context, ref, request)
+                      : null,
+              onDecline:
+                  request.status == SupplierIncomingRequestStatus.pending
+                      ? () => _handleDecline(context, ref, request)
+                      : null,
               onMarkCompleted:
                   request.status == SupplierIncomingRequestStatus.accepted
-                  ? () => _handleComplete(context, ref, request)
-                  : null,
+                      ? () => _handleComplete(context, ref, request)
+                      : null,
             ),
           ),
         )
@@ -173,13 +174,13 @@ class _SupplierIncomingRequestsPageState
         pickupWindow: pickupWindow,
       );
       if (!context.mounted) return;
-      showSupplierInfoSnackBar(context, 'Request accepted.');
-      ref
-          .read(incomingRequestTabProvider.notifier)
-          .selectTab(SupplierIncomingRequestTab.accepted);
+      showSupplierInfoSnackBar(context, context.s.requestAccepted);
+      ref.read(incomingRequestTabProvider.notifier).selectTab(
+            SupplierIncomingRequestTab.accepted,
+          );
     } catch (_) {
       if (!context.mounted) return;
-      showSupplierErrorSnackBar(context, 'Could not accept the request.');
+      showSupplierErrorSnackBar(context, context.s.requestAcceptFailed);
     }
   }
 
@@ -206,13 +207,13 @@ class _SupplierIncomingRequestsPageState
         reason: result.reason,
       );
       if (!context.mounted) return;
-      showSupplierInfoSnackBar(context, 'Request declined.');
-      ref
-          .read(incomingRequestTabProvider.notifier)
-          .selectTab(SupplierIncomingRequestTab.declined);
+      showSupplierInfoSnackBar(context, context.s.requestDeclined);
+      ref.read(incomingRequestTabProvider.notifier).selectTab(
+            SupplierIncomingRequestTab.declined,
+          );
     } catch (_) {
       if (!context.mounted) return;
-      showSupplierErrorSnackBar(context, 'Could not decline the request.');
+      showSupplierErrorSnackBar(context, context.s.requestDeclineFailed);
     }
   }
 
@@ -226,19 +227,17 @@ class _SupplierIncomingRequestsPageState
       return;
     }
 
-    ref
-        .read(completingReservationIdProvider.notifier)
-        .setCompleting(request.id);
+    ref.read(completingReservationIdProvider.notifier).setCompleting(request.id);
     try {
       await completeIncomingRequest(ref, requestId: request.id);
       if (!context.mounted) return;
-      showSupplierInfoSnackBar(context, 'Pickup marked as completed.');
-      ref
-          .read(incomingRequestTabProvider.notifier)
-          .selectTab(SupplierIncomingRequestTab.completed);
+      showSupplierInfoSnackBar(context, context.s.pickupCompleted);
+      ref.read(incomingRequestTabProvider.notifier).selectTab(
+            SupplierIncomingRequestTab.completed,
+          );
     } catch (_) {
       if (!context.mounted) return;
-      showSupplierErrorSnackBar(context, 'Could not mark pickup as completed.');
+      showSupplierErrorSnackBar(context, context.s.pickupCompleteFailed);
     } finally {
       ref.read(completingReservationIdProvider.notifier).setCompleting(null);
     }
@@ -250,10 +249,14 @@ class _PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.profileGlassCard,
+      decoration: decorations.profileGlassCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -263,12 +266,12 @@ class _PageHeader extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: AuthDarkColors.accentSoft.withValues(alpha: 0.28),
+                  color: colors.accentSoft.withValues(alpha: 0.28),
                   borderRadius: AppRadius.mdAll,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.inbox_outlined,
-                  color: AuthDarkColors.accent,
+                  color: colors.accent,
                   size: 22,
                 ),
               ),
@@ -278,15 +281,15 @@ class _PageHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Incoming Requests',
-                      style: AuthDarkTextStyles.title(context),
+                      l.incomingRequestsTitle,
+                      style: context.supplierTitle(),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      'Review learner requests and schedule pickups.',
-                      style: AuthDarkTextStyles.body(
-                        context,
-                      ).copyWith(color: AuthDarkColors.textPrimary),
+                      l.subtitleIncomingRequests,
+                      style: context.supplierBody().copyWith(
+                        color: colors.textPrimary,
+                      ),
                     ),
                   ],
                 ),
@@ -300,31 +303,37 @@ class _PageHeader extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.title, required this.subtitle});
+  const _EmptyState({
+    required this.title,
+    required this.subtitle,
+  });
 
   final String title;
   final String subtitle;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.xl,
       ),
-      decoration: SupplierDecorations.dashboardCard,
+      decoration: decorations.dashboardCard,
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: AuthDarkColors.accentSoft.withValues(alpha: 0.2),
+              color: colors.accentSoft.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.inbox_outlined,
-              color: AuthDarkColors.accent,
+              color: colors.accent,
               size: 28,
             ),
           ),
@@ -332,15 +341,15 @@ class _EmptyState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: AuthDarkTextStyles.title(context).copyWith(fontSize: 18),
+            style: context.supplierTitle().copyWith(fontSize: 18),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: AuthDarkTextStyles.body(
-              context,
-            ).copyWith(color: AuthDarkColors.textSecondary),
+            style: context.supplierBody().copyWith(
+              color: colors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -353,27 +362,30 @@ class _LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.dashboardCard,
+      decoration: decorations.dashboardCard,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(
+          SizedBox(
             width: 20,
             height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: AuthDarkColors.accent,
+              color: colors.accent,
             ),
           ),
           const SizedBox(width: AppSpacing.md),
           Text(
-            'Loading incoming requests…',
-            style: AuthDarkTextStyles.body(
-              context,
-            ).copyWith(color: AuthDarkColors.textPrimary),
+            context.s.loadingRequests,
+            style: context.supplierBody().copyWith(
+              color: colors.textPrimary,
+            ),
           ),
         ],
       ),
@@ -388,34 +400,38 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.dashboardCard,
+      decoration: decorations.dashboardCard,
       child: Column(
         children: [
-          const Icon(
+          Icon(
             Icons.cloud_off_outlined,
-            color: AuthDarkColors.textSecondary,
+            color: colors.textSecondary,
             size: 28,
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'We could not load requests.',
+            l.requestsLoadError,
             textAlign: TextAlign.center,
-            style: AuthDarkTextStyles.title(context).copyWith(fontSize: 18),
+            style: context.supplierTitle().copyWith(fontSize: 18),
           ),
           const SizedBox(height: AppSpacing.lg),
           OutlinedButton(
             onPressed: onRetry,
             style: OutlinedButton.styleFrom(
-              foregroundColor: AuthDarkColors.accent,
+              foregroundColor: colors.accent,
               side: BorderSide(
-                color: AuthDarkColors.borderFocused.withValues(alpha: 0.6),
+                color: colors.borderFocused.withValues(alpha: 0.6),
               ),
               shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
             ),
-            child: const Text('Try again'),
+            child: Text(l.tryAgain),
           ),
         ],
       ),

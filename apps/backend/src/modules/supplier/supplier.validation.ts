@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { materialImageUrlSchema } from '../../utils/material-image-url.js';
+import { paginationQuerySchema } from '../../utils/zod-helpers.js';
 
 const supplierTypes = [
   'STUDENT_SUPPLIER',
@@ -31,17 +32,34 @@ const materialSourceTypes = [
   'EDUCATIONAL_INSTITUTION',
 ] as const;
 
-const locationSchema = z.object({
-  country: z.string().trim().min(1).max(100),
-  city: z.string().trim().min(1).max(100),
-  area: z.string().trim().max(120).optional().nullable(),
-  addressLine: z.string().trim().max(250).optional().nullable(),
-  latitude: z.number().min(-90).max(90).optional().nullable(),
-  longitude: z.number().min(-180).max(180).optional().nullable(),
-  visibility: z.enum(visibilityValues),
-  isApproximate: z.boolean(),
-  locationType: z.string().trim().min(1).max(80).optional().nullable(),
-});
+const locationSchema = z
+  .object({
+    country: z.string().trim().max(100),
+    city: z.string().trim().max(100),
+    area: z.string().trim().max(120).optional().nullable(),
+    addressLine: z.string().trim().max(250).optional().nullable(),
+    latitude: z.number().min(-90).max(90).optional().nullable(),
+    longitude: z.number().min(-180).max(180).optional().nullable(),
+    visibility: z.enum(visibilityValues),
+    isApproximate: z.boolean(),
+    locationType: z.string().trim().min(1).max(80).optional().nullable(),
+  })
+  .superRefine((location, ctx) => {
+    const hasCoordinates =
+      location.latitude != null && location.longitude != null;
+
+    if (hasCoordinates) {
+      return;
+    }
+
+    if (!location.city) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['city'],
+        message: 'city is required when coordinates are not provided',
+      });
+    }
+  });
 
 const organizationProfileSchema = z.object({
   organizationName: z.string().trim().min(2).max(120),
@@ -120,4 +138,32 @@ export const createSupplierMaterialSchema = z.object({
 
 export type CreateSupplierMaterialInput = z.infer<
   typeof createSupplierMaterialSchema
+>;
+
+const SUPPLIER_MATERIAL_STATUSES = [
+  'AVAILABLE',
+  'PENDING_RESERVATION',
+  'RESERVED',
+  'REUSED',
+  'UNAVAILABLE',
+] as const;
+
+const optionalBooleanQuery = z
+  .enum(['true', 'false'])
+  .optional()
+  .transform((value): boolean | undefined =>
+      value === undefined ? undefined : value === 'true');
+
+export const supplierMaterialsQuerySchema = paginationQuerySchema
+  .extend({
+    limit: z.coerce.number().int().min(1).max(100).default(9),
+    search: z.string().trim().min(1).max(120).optional(),
+    status: z.enum(SUPPLIER_MATERIAL_STATUSES).optional(),
+    isFree: optionalBooleanQuery,
+    categoryId: z.string().trim().min(1).optional(),
+    condition: z.enum(materialConditions).optional(),
+  });
+
+export type SupplierMaterialsQuery = z.infer<
+  typeof supplierMaterialsQuerySchema
 >;
