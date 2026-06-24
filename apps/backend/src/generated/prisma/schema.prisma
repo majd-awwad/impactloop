@@ -98,6 +98,7 @@ enum VerificationDocumentStatus {
   PENDING
   VERIFIED
   REJECTED
+  CHANGES_REQUESTED
 }
 
 enum ReservationStatus {
@@ -197,38 +198,39 @@ enum ProjectLinkType {
 }
 
 model User {
-  id                           String                     @id @default(cuid())
-  displayName                  String                     @map("display_name")
-  email                        String                     @unique
-  phone                        String?                    @unique
-  passwordHash                 String                     @map("password_hash")
-  accountStatus                AccountStatus              @default(PENDING_VERIFICATION) @map("account_status")
-  profileImageUrl              String?                    @map("profile_image_url")
-  emailVerifiedAt              DateTime?                  @map("email_verified_at")
-  phoneVerifiedAt              DateTime?                  @map("phone_verified_at")
-  lastLoginAt                  DateTime?                  @map("last_login_at")
-  createdAt                    DateTime                   @default(now()) @map("created_at")
-  updatedAt                    DateTime                   @updatedAt @map("updated_at")
-  roles                        UserRoleAssignment[]
-  authTokens                   AuthToken[]
-  learnerProfile               LearnerProfile?
-  supplierProfile              SupplierProfile?
-  driverProfile                DriverProfile?
-  invitedRoles                 RoleInvitation[]           @relation("RoleInvitationInvitedBy")
-  usedInvitations              RoleInvitation[]           @relation("RoleInvitationUsedByUser")
-  assignedRoles                UserRoleAssignment[]       @relation("UserRoleAssignedBy")
-  ownedMaterials               Material[]                 @relation("MaterialOwner")
-  ownedReservationsAsOwner     Reservation[]              @relation("ReservationOwner")
-  ownedReservationsAsRequester Reservation[]              @relation("ReservationRequester")
-  reservationStatusChanges     ReservationStatusHistory[] @relation("ReservationStatusChangedBy")
-  notifications                Notification[]
-  reviewsGiven                 Review[]                   @relation("ReviewReviewer")
-  reviewsReceived              Review[]                   @relation("ReviewReviewedUser")
-  createdLearningProjects      LearningProject[]          @relation("LearningProjectCreatedBy")
-  reviewedLearningProjects     LearningProject[]          @relation("LearningProjectReviewedBy")
-  approvedProjectSteps         ProjectStep[]              @relation("ProjectStepApprovedBy")
-  priceRuleRequests            PriceRuleRequest[]
-  categoryRequests             CategoryRequest[]
+  id                            String                     @id @default(cuid())
+  displayName                   String                     @map("display_name")
+  email                         String                     @unique
+  phone                         String?                    @unique
+  passwordHash                  String                     @map("password_hash")
+  accountStatus                 AccountStatus              @default(PENDING_VERIFICATION) @map("account_status")
+  profileImageUrl               String?                    @map("profile_image_url")
+  emailVerifiedAt               DateTime?                  @map("email_verified_at")
+  phoneVerifiedAt               DateTime?                  @map("phone_verified_at")
+  lastLoginAt                   DateTime?                  @map("last_login_at")
+  createdAt                     DateTime                   @default(now()) @map("created_at")
+  updatedAt                     DateTime                   @updatedAt @map("updated_at")
+  roles                         UserRoleAssignment[]
+  authTokens                    AuthToken[]
+  learnerProfile                LearnerProfile?
+  supplierProfile               SupplierProfile?
+  driverProfile                 DriverProfile?
+  invitedRoles                  RoleInvitation[]           @relation("RoleInvitationInvitedBy")
+  usedInvitations               RoleInvitation[]           @relation("RoleInvitationUsedByUser")
+  assignedRoles                 UserRoleAssignment[]       @relation("UserRoleAssignedBy")
+  ownedMaterials                Material[]                 @relation("MaterialOwner")
+  ownedReservationsAsOwner      Reservation[]              @relation("ReservationOwner")
+  ownedReservationsAsRequester  Reservation[]              @relation("ReservationRequester")
+  reservationStatusChanges      ReservationStatusHistory[] @relation("ReservationStatusChangedBy")
+  notifications                 Notification[]
+  reviewsGiven                  Review[]                   @relation("ReviewReviewer")
+  reviewsReceived               Review[]                   @relation("ReviewReviewedUser")
+  createdLearningProjects       LearningProject[]          @relation("LearningProjectCreatedBy")
+  reviewedLearningProjects      LearningProject[]          @relation("LearningProjectReviewedBy")
+  supplierVerificationsReviewed SupplierProfile[]          @relation("SupplierVerificationReviewedBy")
+  approvedProjectSteps          ProjectStep[]              @relation("ProjectStepApprovedBy")
+  priceRuleRequests             PriceRuleRequest[]
+  categoryRequests              CategoryRequest[]
 
   @@map("users")
 }
@@ -327,21 +329,27 @@ model LearnerProfile {
 }
 
 model SupplierProfile {
-  id                      String               @id @default(cuid())
-  userId                  String               @unique @map("user_id")
-  supplierType            String?              @map("supplier_type")
-  publicName              String?              @map("public_name")
-  description             String?
-  verificationStatus      String               @default("UNVERIFIED") @map("verification_status")
-  defaultPickupLocationId String?              @map("default_pickup_location_id")
-  createdAt               DateTime             @default(now()) @map("created_at")
-  updatedAt               DateTime             @updatedAt @map("updated_at")
-  user                    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  defaultPickupLocation   Location?            @relation("SupplierDefaultPickupLocation", fields: [defaultPickupLocationId], references: [id], onDelete: SetNull)
-  organizationProfile     OrganizationProfile?
-  materials               Material[]
+  id                       String               @id @default(cuid())
+  userId                   String               @unique @map("user_id")
+  supplierType             String?              @map("supplier_type")
+  publicName               String?              @map("public_name")
+  description              String?
+  verificationStatus       String               @default("UNVERIFIED") @map("verification_status")
+  verificationSubmittedAt  DateTime?            @map("verification_submitted_at")
+  verificationReviewedAt   DateTime?            @map("verification_reviewed_at")
+  verificationReviewedById String?              @map("verification_reviewed_by_id")
+  verificationAdminNote    String?              @map("verification_admin_note")
+  defaultPickupLocationId  String?              @map("default_pickup_location_id")
+  createdAt                DateTime             @default(now()) @map("created_at")
+  updatedAt                DateTime             @updatedAt @map("updated_at")
+  user                     User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationReviewedBy   User?                @relation("SupplierVerificationReviewedBy", fields: [verificationReviewedById], references: [id], onDelete: SetNull)
+  defaultPickupLocation    Location?            @relation("SupplierDefaultPickupLocation", fields: [defaultPickupLocationId], references: [id], onDelete: SetNull)
+  organizationProfile      OrganizationProfile?
+  materials                Material[]
 
   @@index([defaultPickupLocationId])
+  @@index([verificationReviewedById])
   @@map("supplier_profiles")
 }
 
@@ -355,6 +363,8 @@ model OrganizationProfile {
   workingHours               Json?                       @map("working_hours")
   businessLocationId         String?                     @map("business_location_id")
   verificationDocumentStatus VerificationDocumentStatus? @map("verification_document_status")
+  verificationDocumentUrl    String?                     @map("verification_document_url")
+  verificationDocumentName   String?                     @map("verification_document_name")
   createdAt                  DateTime                    @default(now()) @map("created_at")
   updatedAt                  DateTime                    @updatedAt @map("updated_at")
   supplierProfile            SupplierProfile             @relation(fields: [supplierProfileId], references: [id], onDelete: Cascade)

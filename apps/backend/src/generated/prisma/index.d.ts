@@ -292,7 +292,8 @@ export type OrganizationType = (typeof OrganizationType)[keyof typeof Organizati
 export const VerificationDocumentStatus: {
   PENDING: 'PENDING',
   VERIFIED: 'VERIFIED',
-  REJECTED: 'REJECTED'
+  REJECTED: 'REJECTED',
+  CHANGES_REQUESTED: 'CHANGES_REQUESTED'
 };
 
 export type VerificationDocumentStatus = (typeof VerificationDocumentStatus)[keyof typeof VerificationDocumentStatus]
@@ -3818,6 +3819,7 @@ export namespace Prisma {
     reviewsReceived: number
     createdLearningProjects: number
     reviewedLearningProjects: number
+    supplierVerificationsReviewed: number
     approvedProjectSteps: number
     priceRuleRequests: number
     categoryRequests: number
@@ -3838,6 +3840,7 @@ export namespace Prisma {
     reviewsReceived?: boolean | UserCountOutputTypeCountReviewsReceivedArgs
     createdLearningProjects?: boolean | UserCountOutputTypeCountCreatedLearningProjectsArgs
     reviewedLearningProjects?: boolean | UserCountOutputTypeCountReviewedLearningProjectsArgs
+    supplierVerificationsReviewed?: boolean | UserCountOutputTypeCountSupplierVerificationsReviewedArgs
     approvedProjectSteps?: boolean | UserCountOutputTypeCountApprovedProjectStepsArgs
     priceRuleRequests?: boolean | UserCountOutputTypeCountPriceRuleRequestsArgs
     categoryRequests?: boolean | UserCountOutputTypeCountCategoryRequestsArgs
@@ -3950,6 +3953,13 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountReviewedLearningProjectsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: LearningProjectWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountSupplierVerificationsReviewedArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: SupplierProfileWhereInput
   }
 
   /**
@@ -4634,6 +4644,7 @@ export namespace Prisma {
     reviewsReceived?: boolean | User$reviewsReceivedArgs<ExtArgs>
     createdLearningProjects?: boolean | User$createdLearningProjectsArgs<ExtArgs>
     reviewedLearningProjects?: boolean | User$reviewedLearningProjectsArgs<ExtArgs>
+    supplierVerificationsReviewed?: boolean | User$supplierVerificationsReviewedArgs<ExtArgs>
     approvedProjectSteps?: boolean | User$approvedProjectStepsArgs<ExtArgs>
     priceRuleRequests?: boolean | User$priceRuleRequestsArgs<ExtArgs>
     categoryRequests?: boolean | User$categoryRequestsArgs<ExtArgs>
@@ -4704,6 +4715,7 @@ export namespace Prisma {
     reviewsReceived?: boolean | User$reviewsReceivedArgs<ExtArgs>
     createdLearningProjects?: boolean | User$createdLearningProjectsArgs<ExtArgs>
     reviewedLearningProjects?: boolean | User$reviewedLearningProjectsArgs<ExtArgs>
+    supplierVerificationsReviewed?: boolean | User$supplierVerificationsReviewedArgs<ExtArgs>
     approvedProjectSteps?: boolean | User$approvedProjectStepsArgs<ExtArgs>
     priceRuleRequests?: boolean | User$priceRuleRequestsArgs<ExtArgs>
     categoryRequests?: boolean | User$categoryRequestsArgs<ExtArgs>
@@ -4732,6 +4744,7 @@ export namespace Prisma {
       reviewsReceived: Prisma.$ReviewPayload<ExtArgs>[]
       createdLearningProjects: Prisma.$LearningProjectPayload<ExtArgs>[]
       reviewedLearningProjects: Prisma.$LearningProjectPayload<ExtArgs>[]
+      supplierVerificationsReviewed: Prisma.$SupplierProfilePayload<ExtArgs>[]
       approvedProjectSteps: Prisma.$ProjectStepPayload<ExtArgs>[]
       priceRuleRequests: Prisma.$PriceRuleRequestPayload<ExtArgs>[]
       categoryRequests: Prisma.$CategoryRequestPayload<ExtArgs>[]
@@ -5160,6 +5173,7 @@ export namespace Prisma {
     reviewsReceived<T extends User$reviewsReceivedArgs<ExtArgs> = {}>(args?: Subset<T, User$reviewsReceivedArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     createdLearningProjects<T extends User$createdLearningProjectsArgs<ExtArgs> = {}>(args?: Subset<T, User$createdLearningProjectsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$LearningProjectPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     reviewedLearningProjects<T extends User$reviewedLearningProjectsArgs<ExtArgs> = {}>(args?: Subset<T, User$reviewedLearningProjectsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$LearningProjectPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    supplierVerificationsReviewed<T extends User$supplierVerificationsReviewedArgs<ExtArgs> = {}>(args?: Subset<T, User$supplierVerificationsReviewedArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SupplierProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     approvedProjectSteps<T extends User$approvedProjectStepsArgs<ExtArgs> = {}>(args?: Subset<T, User$approvedProjectStepsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProjectStepPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     priceRuleRequests<T extends User$priceRuleRequestsArgs<ExtArgs> = {}>(args?: Subset<T, User$priceRuleRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PriceRuleRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     categoryRequests<T extends User$categoryRequestsArgs<ExtArgs> = {}>(args?: Subset<T, User$categoryRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CategoryRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -5987,6 +6001,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: LearningProjectScalarFieldEnum | LearningProjectScalarFieldEnum[]
+  }
+
+  /**
+   * User.supplierVerificationsReviewed
+   */
+  export type User$supplierVerificationsReviewedArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SupplierProfile
+     */
+    select?: SupplierProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SupplierProfile
+     */
+    omit?: SupplierProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SupplierProfileInclude<ExtArgs> | null
+    where?: SupplierProfileWhereInput
+    orderBy?: SupplierProfileOrderByWithRelationInput | SupplierProfileOrderByWithRelationInput[]
+    cursor?: SupplierProfileWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: SupplierProfileScalarFieldEnum | SupplierProfileScalarFieldEnum[]
   }
 
   /**
@@ -11819,6 +11857,10 @@ export namespace Prisma {
     publicName: string | null
     description: string | null
     verificationStatus: string | null
+    verificationSubmittedAt: Date | null
+    verificationReviewedAt: Date | null
+    verificationReviewedById: string | null
+    verificationAdminNote: string | null
     defaultPickupLocationId: string | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -11831,6 +11873,10 @@ export namespace Prisma {
     publicName: string | null
     description: string | null
     verificationStatus: string | null
+    verificationSubmittedAt: Date | null
+    verificationReviewedAt: Date | null
+    verificationReviewedById: string | null
+    verificationAdminNote: string | null
     defaultPickupLocationId: string | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -11843,6 +11889,10 @@ export namespace Prisma {
     publicName: number
     description: number
     verificationStatus: number
+    verificationSubmittedAt: number
+    verificationReviewedAt: number
+    verificationReviewedById: number
+    verificationAdminNote: number
     defaultPickupLocationId: number
     createdAt: number
     updatedAt: number
@@ -11857,6 +11907,10 @@ export namespace Prisma {
     publicName?: true
     description?: true
     verificationStatus?: true
+    verificationSubmittedAt?: true
+    verificationReviewedAt?: true
+    verificationReviewedById?: true
+    verificationAdminNote?: true
     defaultPickupLocationId?: true
     createdAt?: true
     updatedAt?: true
@@ -11869,6 +11923,10 @@ export namespace Prisma {
     publicName?: true
     description?: true
     verificationStatus?: true
+    verificationSubmittedAt?: true
+    verificationReviewedAt?: true
+    verificationReviewedById?: true
+    verificationAdminNote?: true
     defaultPickupLocationId?: true
     createdAt?: true
     updatedAt?: true
@@ -11881,6 +11939,10 @@ export namespace Prisma {
     publicName?: true
     description?: true
     verificationStatus?: true
+    verificationSubmittedAt?: true
+    verificationReviewedAt?: true
+    verificationReviewedById?: true
+    verificationAdminNote?: true
     defaultPickupLocationId?: true
     createdAt?: true
     updatedAt?: true
@@ -11966,6 +12028,10 @@ export namespace Prisma {
     publicName: string | null
     description: string | null
     verificationStatus: string
+    verificationSubmittedAt: Date | null
+    verificationReviewedAt: Date | null
+    verificationReviewedById: string | null
+    verificationAdminNote: string | null
     defaultPickupLocationId: string | null
     createdAt: Date
     updatedAt: Date
@@ -11995,10 +12061,15 @@ export namespace Prisma {
     publicName?: boolean
     description?: boolean
     verificationStatus?: boolean
+    verificationSubmittedAt?: boolean
+    verificationReviewedAt?: boolean
+    verificationReviewedById?: boolean
+    verificationAdminNote?: boolean
     defaultPickupLocationId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
+    verificationReviewedBy?: boolean | SupplierProfile$verificationReviewedByArgs<ExtArgs>
     defaultPickupLocation?: boolean | SupplierProfile$defaultPickupLocationArgs<ExtArgs>
     organizationProfile?: boolean | SupplierProfile$organizationProfileArgs<ExtArgs>
     materials?: boolean | SupplierProfile$materialsArgs<ExtArgs>
@@ -12012,10 +12083,15 @@ export namespace Prisma {
     publicName?: boolean
     description?: boolean
     verificationStatus?: boolean
+    verificationSubmittedAt?: boolean
+    verificationReviewedAt?: boolean
+    verificationReviewedById?: boolean
+    verificationAdminNote?: boolean
     defaultPickupLocationId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
+    verificationReviewedBy?: boolean | SupplierProfile$verificationReviewedByArgs<ExtArgs>
     defaultPickupLocation?: boolean | SupplierProfile$defaultPickupLocationArgs<ExtArgs>
   }, ExtArgs["result"]["supplierProfile"]>
 
@@ -12026,10 +12102,15 @@ export namespace Prisma {
     publicName?: boolean
     description?: boolean
     verificationStatus?: boolean
+    verificationSubmittedAt?: boolean
+    verificationReviewedAt?: boolean
+    verificationReviewedById?: boolean
+    verificationAdminNote?: boolean
     defaultPickupLocationId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
+    verificationReviewedBy?: boolean | SupplierProfile$verificationReviewedByArgs<ExtArgs>
     defaultPickupLocation?: boolean | SupplierProfile$defaultPickupLocationArgs<ExtArgs>
   }, ExtArgs["result"]["supplierProfile"]>
 
@@ -12040,14 +12121,19 @@ export namespace Prisma {
     publicName?: boolean
     description?: boolean
     verificationStatus?: boolean
+    verificationSubmittedAt?: boolean
+    verificationReviewedAt?: boolean
+    verificationReviewedById?: boolean
+    verificationAdminNote?: boolean
     defaultPickupLocationId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type SupplierProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "supplierType" | "publicName" | "description" | "verificationStatus" | "defaultPickupLocationId" | "createdAt" | "updatedAt", ExtArgs["result"]["supplierProfile"]>
+  export type SupplierProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "supplierType" | "publicName" | "description" | "verificationStatus" | "verificationSubmittedAt" | "verificationReviewedAt" | "verificationReviewedById" | "verificationAdminNote" | "defaultPickupLocationId" | "createdAt" | "updatedAt", ExtArgs["result"]["supplierProfile"]>
   export type SupplierProfileInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
+    verificationReviewedBy?: boolean | SupplierProfile$verificationReviewedByArgs<ExtArgs>
     defaultPickupLocation?: boolean | SupplierProfile$defaultPickupLocationArgs<ExtArgs>
     organizationProfile?: boolean | SupplierProfile$organizationProfileArgs<ExtArgs>
     materials?: boolean | SupplierProfile$materialsArgs<ExtArgs>
@@ -12055,10 +12141,12 @@ export namespace Prisma {
   }
   export type SupplierProfileIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
+    verificationReviewedBy?: boolean | SupplierProfile$verificationReviewedByArgs<ExtArgs>
     defaultPickupLocation?: boolean | SupplierProfile$defaultPickupLocationArgs<ExtArgs>
   }
   export type SupplierProfileIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
+    verificationReviewedBy?: boolean | SupplierProfile$verificationReviewedByArgs<ExtArgs>
     defaultPickupLocation?: boolean | SupplierProfile$defaultPickupLocationArgs<ExtArgs>
   }
 
@@ -12066,6 +12154,7 @@ export namespace Prisma {
     name: "SupplierProfile"
     objects: {
       user: Prisma.$UserPayload<ExtArgs>
+      verificationReviewedBy: Prisma.$UserPayload<ExtArgs> | null
       defaultPickupLocation: Prisma.$LocationPayload<ExtArgs> | null
       organizationProfile: Prisma.$OrganizationProfilePayload<ExtArgs> | null
       materials: Prisma.$MaterialPayload<ExtArgs>[]
@@ -12077,6 +12166,10 @@ export namespace Prisma {
       publicName: string | null
       description: string | null
       verificationStatus: string
+      verificationSubmittedAt: Date | null
+      verificationReviewedAt: Date | null
+      verificationReviewedById: string | null
+      verificationAdminNote: string | null
       defaultPickupLocationId: string | null
       createdAt: Date
       updatedAt: Date
@@ -12475,6 +12568,7 @@ export namespace Prisma {
   export interface Prisma__SupplierProfileClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    verificationReviewedBy<T extends SupplierProfile$verificationReviewedByArgs<ExtArgs> = {}>(args?: Subset<T, SupplierProfile$verificationReviewedByArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     defaultPickupLocation<T extends SupplierProfile$defaultPickupLocationArgs<ExtArgs> = {}>(args?: Subset<T, SupplierProfile$defaultPickupLocationArgs<ExtArgs>>): Prisma__LocationClient<$Result.GetResult<Prisma.$LocationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     organizationProfile<T extends SupplierProfile$organizationProfileArgs<ExtArgs> = {}>(args?: Subset<T, SupplierProfile$organizationProfileArgs<ExtArgs>>): Prisma__OrganizationProfileClient<$Result.GetResult<Prisma.$OrganizationProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     materials<T extends SupplierProfile$materialsArgs<ExtArgs> = {}>(args?: Subset<T, SupplierProfile$materialsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -12513,6 +12607,10 @@ export namespace Prisma {
     readonly publicName: FieldRef<"SupplierProfile", 'String'>
     readonly description: FieldRef<"SupplierProfile", 'String'>
     readonly verificationStatus: FieldRef<"SupplierProfile", 'String'>
+    readonly verificationSubmittedAt: FieldRef<"SupplierProfile", 'DateTime'>
+    readonly verificationReviewedAt: FieldRef<"SupplierProfile", 'DateTime'>
+    readonly verificationReviewedById: FieldRef<"SupplierProfile", 'String'>
+    readonly verificationAdminNote: FieldRef<"SupplierProfile", 'String'>
     readonly defaultPickupLocationId: FieldRef<"SupplierProfile", 'String'>
     readonly createdAt: FieldRef<"SupplierProfile", 'DateTime'>
     readonly updatedAt: FieldRef<"SupplierProfile", 'DateTime'>
@@ -12917,6 +13015,25 @@ export namespace Prisma {
   }
 
   /**
+   * SupplierProfile.verificationReviewedBy
+   */
+  export type SupplierProfile$verificationReviewedByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the User
+     */
+    select?: UserSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the User
+     */
+    omit?: UserOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserInclude<ExtArgs> | null
+    where?: UserWhereInput
+  }
+
+  /**
    * SupplierProfile.defaultPickupLocation
    */
   export type SupplierProfile$defaultPickupLocationArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -13015,6 +13132,8 @@ export namespace Prisma {
     contactPersonName: string | null
     businessLocationId: string | null
     verificationDocumentStatus: $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl: string | null
+    verificationDocumentName: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -13027,6 +13146,8 @@ export namespace Prisma {
     contactPersonName: string | null
     businessLocationId: string | null
     verificationDocumentStatus: $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl: string | null
+    verificationDocumentName: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -13041,6 +13162,8 @@ export namespace Prisma {
     workingHours: number
     businessLocationId: number
     verificationDocumentStatus: number
+    verificationDocumentUrl: number
+    verificationDocumentName: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -13055,6 +13178,8 @@ export namespace Prisma {
     contactPersonName?: true
     businessLocationId?: true
     verificationDocumentStatus?: true
+    verificationDocumentUrl?: true
+    verificationDocumentName?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -13067,6 +13192,8 @@ export namespace Prisma {
     contactPersonName?: true
     businessLocationId?: true
     verificationDocumentStatus?: true
+    verificationDocumentUrl?: true
+    verificationDocumentName?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -13081,6 +13208,8 @@ export namespace Prisma {
     workingHours?: true
     businessLocationId?: true
     verificationDocumentStatus?: true
+    verificationDocumentUrl?: true
+    verificationDocumentName?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -13168,6 +13297,8 @@ export namespace Prisma {
     workingHours: JsonValue | null
     businessLocationId: string | null
     verificationDocumentStatus: $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl: string | null
+    verificationDocumentName: string | null
     createdAt: Date
     updatedAt: Date
     _count: OrganizationProfileCountAggregateOutputType | null
@@ -13199,6 +13330,8 @@ export namespace Prisma {
     workingHours?: boolean
     businessLocationId?: boolean
     verificationDocumentStatus?: boolean
+    verificationDocumentUrl?: boolean
+    verificationDocumentName?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     supplierProfile?: boolean | SupplierProfileDefaultArgs<ExtArgs>
@@ -13215,6 +13348,8 @@ export namespace Prisma {
     workingHours?: boolean
     businessLocationId?: boolean
     verificationDocumentStatus?: boolean
+    verificationDocumentUrl?: boolean
+    verificationDocumentName?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     supplierProfile?: boolean | SupplierProfileDefaultArgs<ExtArgs>
@@ -13231,6 +13366,8 @@ export namespace Prisma {
     workingHours?: boolean
     businessLocationId?: boolean
     verificationDocumentStatus?: boolean
+    verificationDocumentUrl?: boolean
+    verificationDocumentName?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     supplierProfile?: boolean | SupplierProfileDefaultArgs<ExtArgs>
@@ -13247,11 +13384,13 @@ export namespace Prisma {
     workingHours?: boolean
     businessLocationId?: boolean
     verificationDocumentStatus?: boolean
+    verificationDocumentUrl?: boolean
+    verificationDocumentName?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type OrganizationProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "supplierProfileId" | "organizationName" | "organizationType" | "contactPersonName" | "workingDays" | "workingHours" | "businessLocationId" | "verificationDocumentStatus" | "createdAt" | "updatedAt", ExtArgs["result"]["organizationProfile"]>
+  export type OrganizationProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "supplierProfileId" | "organizationName" | "organizationType" | "contactPersonName" | "workingDays" | "workingHours" | "businessLocationId" | "verificationDocumentStatus" | "verificationDocumentUrl" | "verificationDocumentName" | "createdAt" | "updatedAt", ExtArgs["result"]["organizationProfile"]>
   export type OrganizationProfileInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     supplierProfile?: boolean | SupplierProfileDefaultArgs<ExtArgs>
     businessLocation?: boolean | OrganizationProfile$businessLocationArgs<ExtArgs>
@@ -13281,6 +13420,8 @@ export namespace Prisma {
       workingHours: Prisma.JsonValue | null
       businessLocationId: string | null
       verificationDocumentStatus: $Enums.VerificationDocumentStatus | null
+      verificationDocumentUrl: string | null
+      verificationDocumentName: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["organizationProfile"]>
@@ -13717,6 +13858,8 @@ export namespace Prisma {
     readonly workingHours: FieldRef<"OrganizationProfile", 'Json'>
     readonly businessLocationId: FieldRef<"OrganizationProfile", 'String'>
     readonly verificationDocumentStatus: FieldRef<"OrganizationProfile", 'VerificationDocumentStatus'>
+    readonly verificationDocumentUrl: FieldRef<"OrganizationProfile", 'String'>
+    readonly verificationDocumentName: FieldRef<"OrganizationProfile", 'String'>
     readonly createdAt: FieldRef<"OrganizationProfile", 'DateTime'>
     readonly updatedAt: FieldRef<"OrganizationProfile", 'DateTime'>
   }
@@ -39979,6 +40122,10 @@ export namespace Prisma {
     publicName: 'publicName',
     description: 'description',
     verificationStatus: 'verificationStatus',
+    verificationSubmittedAt: 'verificationSubmittedAt',
+    verificationReviewedAt: 'verificationReviewedAt',
+    verificationReviewedById: 'verificationReviewedById',
+    verificationAdminNote: 'verificationAdminNote',
     defaultPickupLocationId: 'defaultPickupLocationId',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
@@ -39997,6 +40144,8 @@ export namespace Prisma {
     workingHours: 'workingHours',
     businessLocationId: 'businessLocationId',
     verificationDocumentStatus: 'verificationDocumentStatus',
+    verificationDocumentUrl: 'verificationDocumentUrl',
+    verificationDocumentName: 'verificationDocumentName',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -40934,6 +41083,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewListRelationFilter
     createdLearningProjects?: LearningProjectListRelationFilter
     reviewedLearningProjects?: LearningProjectListRelationFilter
+    supplierVerificationsReviewed?: SupplierProfileListRelationFilter
     approvedProjectSteps?: ProjectStepListRelationFilter
     priceRuleRequests?: PriceRuleRequestListRelationFilter
     categoryRequests?: CategoryRequestListRelationFilter
@@ -40969,6 +41119,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewOrderByRelationAggregateInput
     createdLearningProjects?: LearningProjectOrderByRelationAggregateInput
     reviewedLearningProjects?: LearningProjectOrderByRelationAggregateInput
+    supplierVerificationsReviewed?: SupplierProfileOrderByRelationAggregateInput
     approvedProjectSteps?: ProjectStepOrderByRelationAggregateInput
     priceRuleRequests?: PriceRuleRequestOrderByRelationAggregateInput
     categoryRequests?: CategoryRequestOrderByRelationAggregateInput
@@ -41007,6 +41158,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewListRelationFilter
     createdLearningProjects?: LearningProjectListRelationFilter
     reviewedLearningProjects?: LearningProjectListRelationFilter
+    supplierVerificationsReviewed?: SupplierProfileListRelationFilter
     approvedProjectSteps?: ProjectStepListRelationFilter
     priceRuleRequests?: PriceRuleRequestListRelationFilter
     categoryRequests?: CategoryRequestListRelationFilter
@@ -41470,10 +41622,15 @@ export namespace Prisma {
     publicName?: StringNullableFilter<"SupplierProfile"> | string | null
     description?: StringNullableFilter<"SupplierProfile"> | string | null
     verificationStatus?: StringFilter<"SupplierProfile"> | string
+    verificationSubmittedAt?: DateTimeNullableFilter<"SupplierProfile"> | Date | string | null
+    verificationReviewedAt?: DateTimeNullableFilter<"SupplierProfile"> | Date | string | null
+    verificationReviewedById?: StringNullableFilter<"SupplierProfile"> | string | null
+    verificationAdminNote?: StringNullableFilter<"SupplierProfile"> | string | null
     defaultPickupLocationId?: StringNullableFilter<"SupplierProfile"> | string | null
     createdAt?: DateTimeFilter<"SupplierProfile"> | Date | string
     updatedAt?: DateTimeFilter<"SupplierProfile"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    verificationReviewedBy?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
     defaultPickupLocation?: XOR<LocationNullableScalarRelationFilter, LocationWhereInput> | null
     organizationProfile?: XOR<OrganizationProfileNullableScalarRelationFilter, OrganizationProfileWhereInput> | null
     materials?: MaterialListRelationFilter
@@ -41486,10 +41643,15 @@ export namespace Prisma {
     publicName?: SortOrderInput | SortOrder
     description?: SortOrderInput | SortOrder
     verificationStatus?: SortOrder
+    verificationSubmittedAt?: SortOrderInput | SortOrder
+    verificationReviewedAt?: SortOrderInput | SortOrder
+    verificationReviewedById?: SortOrderInput | SortOrder
+    verificationAdminNote?: SortOrderInput | SortOrder
     defaultPickupLocationId?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     user?: UserOrderByWithRelationInput
+    verificationReviewedBy?: UserOrderByWithRelationInput
     defaultPickupLocation?: LocationOrderByWithRelationInput
     organizationProfile?: OrganizationProfileOrderByWithRelationInput
     materials?: MaterialOrderByRelationAggregateInput
@@ -41505,10 +41667,15 @@ export namespace Prisma {
     publicName?: StringNullableFilter<"SupplierProfile"> | string | null
     description?: StringNullableFilter<"SupplierProfile"> | string | null
     verificationStatus?: StringFilter<"SupplierProfile"> | string
+    verificationSubmittedAt?: DateTimeNullableFilter<"SupplierProfile"> | Date | string | null
+    verificationReviewedAt?: DateTimeNullableFilter<"SupplierProfile"> | Date | string | null
+    verificationReviewedById?: StringNullableFilter<"SupplierProfile"> | string | null
+    verificationAdminNote?: StringNullableFilter<"SupplierProfile"> | string | null
     defaultPickupLocationId?: StringNullableFilter<"SupplierProfile"> | string | null
     createdAt?: DateTimeFilter<"SupplierProfile"> | Date | string
     updatedAt?: DateTimeFilter<"SupplierProfile"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    verificationReviewedBy?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
     defaultPickupLocation?: XOR<LocationNullableScalarRelationFilter, LocationWhereInput> | null
     organizationProfile?: XOR<OrganizationProfileNullableScalarRelationFilter, OrganizationProfileWhereInput> | null
     materials?: MaterialListRelationFilter
@@ -41521,6 +41688,10 @@ export namespace Prisma {
     publicName?: SortOrderInput | SortOrder
     description?: SortOrderInput | SortOrder
     verificationStatus?: SortOrder
+    verificationSubmittedAt?: SortOrderInput | SortOrder
+    verificationReviewedAt?: SortOrderInput | SortOrder
+    verificationReviewedById?: SortOrderInput | SortOrder
+    verificationAdminNote?: SortOrderInput | SortOrder
     defaultPickupLocationId?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -41539,6 +41710,10 @@ export namespace Prisma {
     publicName?: StringNullableWithAggregatesFilter<"SupplierProfile"> | string | null
     description?: StringNullableWithAggregatesFilter<"SupplierProfile"> | string | null
     verificationStatus?: StringWithAggregatesFilter<"SupplierProfile"> | string
+    verificationSubmittedAt?: DateTimeNullableWithAggregatesFilter<"SupplierProfile"> | Date | string | null
+    verificationReviewedAt?: DateTimeNullableWithAggregatesFilter<"SupplierProfile"> | Date | string | null
+    verificationReviewedById?: StringNullableWithAggregatesFilter<"SupplierProfile"> | string | null
+    verificationAdminNote?: StringNullableWithAggregatesFilter<"SupplierProfile"> | string | null
     defaultPickupLocationId?: StringNullableWithAggregatesFilter<"SupplierProfile"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"SupplierProfile"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"SupplierProfile"> | Date | string
@@ -41557,6 +41732,8 @@ export namespace Prisma {
     workingHours?: JsonNullableFilter<"OrganizationProfile">
     businessLocationId?: StringNullableFilter<"OrganizationProfile"> | string | null
     verificationDocumentStatus?: EnumVerificationDocumentStatusNullableFilter<"OrganizationProfile"> | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: StringNullableFilter<"OrganizationProfile"> | string | null
+    verificationDocumentName?: StringNullableFilter<"OrganizationProfile"> | string | null
     createdAt?: DateTimeFilter<"OrganizationProfile"> | Date | string
     updatedAt?: DateTimeFilter<"OrganizationProfile"> | Date | string
     supplierProfile?: XOR<SupplierProfileScalarRelationFilter, SupplierProfileWhereInput>
@@ -41573,6 +41750,8 @@ export namespace Prisma {
     workingHours?: SortOrderInput | SortOrder
     businessLocationId?: SortOrderInput | SortOrder
     verificationDocumentStatus?: SortOrderInput | SortOrder
+    verificationDocumentUrl?: SortOrderInput | SortOrder
+    verificationDocumentName?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     supplierProfile?: SupplierProfileOrderByWithRelationInput
@@ -41592,6 +41771,8 @@ export namespace Prisma {
     workingHours?: JsonNullableFilter<"OrganizationProfile">
     businessLocationId?: StringNullableFilter<"OrganizationProfile"> | string | null
     verificationDocumentStatus?: EnumVerificationDocumentStatusNullableFilter<"OrganizationProfile"> | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: StringNullableFilter<"OrganizationProfile"> | string | null
+    verificationDocumentName?: StringNullableFilter<"OrganizationProfile"> | string | null
     createdAt?: DateTimeFilter<"OrganizationProfile"> | Date | string
     updatedAt?: DateTimeFilter<"OrganizationProfile"> | Date | string
     supplierProfile?: XOR<SupplierProfileScalarRelationFilter, SupplierProfileWhereInput>
@@ -41608,6 +41789,8 @@ export namespace Prisma {
     workingHours?: SortOrderInput | SortOrder
     businessLocationId?: SortOrderInput | SortOrder
     verificationDocumentStatus?: SortOrderInput | SortOrder
+    verificationDocumentUrl?: SortOrderInput | SortOrder
+    verificationDocumentName?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: OrganizationProfileCountOrderByAggregateInput
@@ -41628,6 +41811,8 @@ export namespace Prisma {
     workingHours?: JsonNullableWithAggregatesFilter<"OrganizationProfile">
     businessLocationId?: StringNullableWithAggregatesFilter<"OrganizationProfile"> | string | null
     verificationDocumentStatus?: EnumVerificationDocumentStatusNullableWithAggregatesFilter<"OrganizationProfile"> | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: StringNullableWithAggregatesFilter<"OrganizationProfile"> | string | null
+    verificationDocumentName?: StringNullableWithAggregatesFilter<"OrganizationProfile"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"OrganizationProfile"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"OrganizationProfile"> | Date | string
   }
@@ -43660,6 +43845,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -43695,6 +43881,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -43730,6 +43917,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -43765,6 +43953,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -44276,9 +44465,13 @@ export namespace Prisma {
     publicName?: string | null
     description?: string | null
     verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationAdminNote?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutSupplierProfileInput
+    verificationReviewedBy?: UserCreateNestedOneWithoutSupplierVerificationsReviewedInput
     defaultPickupLocation?: LocationCreateNestedOneWithoutSupplierPickupForInput
     organizationProfile?: OrganizationProfileCreateNestedOneWithoutSupplierProfileInput
     materials?: MaterialCreateNestedManyWithoutSupplierProfileInput
@@ -44291,6 +44484,10 @@ export namespace Prisma {
     publicName?: string | null
     description?: string | null
     verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationReviewedById?: string | null
+    verificationAdminNote?: string | null
     defaultPickupLocationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -44304,9 +44501,13 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutSupplierProfileNestedInput
+    verificationReviewedBy?: UserUpdateOneWithoutSupplierVerificationsReviewedNestedInput
     defaultPickupLocation?: LocationUpdateOneWithoutSupplierPickupForNestedInput
     organizationProfile?: OrganizationProfileUpdateOneWithoutSupplierProfileNestedInput
     materials?: MaterialUpdateManyWithoutSupplierProfileNestedInput
@@ -44319,6 +44520,10 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     defaultPickupLocationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -44333,6 +44538,10 @@ export namespace Prisma {
     publicName?: string | null
     description?: string | null
     verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationReviewedById?: string | null
+    verificationAdminNote?: string | null
     defaultPickupLocationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -44344,6 +44553,9 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -44355,6 +44567,10 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     defaultPickupLocationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -44368,6 +44584,8 @@ export namespace Prisma {
     workingDays?: NullableJsonNullValueInput | InputJsonValue
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     verificationDocumentStatus?: $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: string | null
+    verificationDocumentName?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     supplierProfile: SupplierProfileCreateNestedOneWithoutOrganizationProfileInput
@@ -44384,6 +44602,8 @@ export namespace Prisma {
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     businessLocationId?: string | null
     verificationDocumentStatus?: $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: string | null
+    verificationDocumentName?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -44396,6 +44616,8 @@ export namespace Prisma {
     workingDays?: NullableJsonNullValueInput | InputJsonValue
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     verificationDocumentStatus?: NullableEnumVerificationDocumentStatusFieldUpdateOperationsInput | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationDocumentName?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     supplierProfile?: SupplierProfileUpdateOneRequiredWithoutOrganizationProfileNestedInput
@@ -44412,6 +44634,8 @@ export namespace Prisma {
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     businessLocationId?: NullableStringFieldUpdateOperationsInput | string | null
     verificationDocumentStatus?: NullableEnumVerificationDocumentStatusFieldUpdateOperationsInput | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationDocumentName?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -44426,6 +44650,8 @@ export namespace Prisma {
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     businessLocationId?: string | null
     verificationDocumentStatus?: $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: string | null
+    verificationDocumentName?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -44438,6 +44664,8 @@ export namespace Prisma {
     workingDays?: NullableJsonNullValueInput | InputJsonValue
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     verificationDocumentStatus?: NullableEnumVerificationDocumentStatusFieldUpdateOperationsInput | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationDocumentName?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -44452,6 +44680,8 @@ export namespace Prisma {
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     businessLocationId?: NullableStringFieldUpdateOperationsInput | string | null
     verificationDocumentStatus?: NullableEnumVerificationDocumentStatusFieldUpdateOperationsInput | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationDocumentName?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -46774,6 +47004,12 @@ export namespace Prisma {
     none?: LearningProjectWhereInput
   }
 
+  export type SupplierProfileListRelationFilter = {
+    every?: SupplierProfileWhereInput
+    some?: SupplierProfileWhereInput
+    none?: SupplierProfileWhereInput
+  }
+
   export type ProjectStepListRelationFilter = {
     every?: ProjectStepWhereInput
     some?: ProjectStepWhereInput
@@ -46830,6 +47066,10 @@ export namespace Prisma {
   }
 
   export type LearningProjectOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type SupplierProfileOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -47332,6 +47572,10 @@ export namespace Prisma {
     publicName?: SortOrder
     description?: SortOrder
     verificationStatus?: SortOrder
+    verificationSubmittedAt?: SortOrder
+    verificationReviewedAt?: SortOrder
+    verificationReviewedById?: SortOrder
+    verificationAdminNote?: SortOrder
     defaultPickupLocationId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -47344,6 +47588,10 @@ export namespace Prisma {
     publicName?: SortOrder
     description?: SortOrder
     verificationStatus?: SortOrder
+    verificationSubmittedAt?: SortOrder
+    verificationReviewedAt?: SortOrder
+    verificationReviewedById?: SortOrder
+    verificationAdminNote?: SortOrder
     defaultPickupLocationId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -47356,6 +47604,10 @@ export namespace Prisma {
     publicName?: SortOrder
     description?: SortOrder
     verificationStatus?: SortOrder
+    verificationSubmittedAt?: SortOrder
+    verificationReviewedAt?: SortOrder
+    verificationReviewedById?: SortOrder
+    verificationAdminNote?: SortOrder
     defaultPickupLocationId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -47413,6 +47665,8 @@ export namespace Prisma {
     workingHours?: SortOrder
     businessLocationId?: SortOrder
     verificationDocumentStatus?: SortOrder
+    verificationDocumentUrl?: SortOrder
+    verificationDocumentName?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -47425,6 +47679,8 @@ export namespace Prisma {
     contactPersonName?: SortOrder
     businessLocationId?: SortOrder
     verificationDocumentStatus?: SortOrder
+    verificationDocumentUrl?: SortOrder
+    verificationDocumentName?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -47437,6 +47693,8 @@ export namespace Prisma {
     contactPersonName?: SortOrder
     businessLocationId?: SortOrder
     verificationDocumentStatus?: SortOrder
+    verificationDocumentUrl?: SortOrder
+    verificationDocumentName?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -47498,20 +47756,10 @@ export namespace Prisma {
     not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
   }
 
-  export type SupplierProfileListRelationFilter = {
-    every?: SupplierProfileWhereInput
-    some?: SupplierProfileWhereInput
-    none?: SupplierProfileWhereInput
-  }
-
   export type OrganizationProfileListRelationFilter = {
     every?: OrganizationProfileWhereInput
     some?: OrganizationProfileWhereInput
     none?: OrganizationProfileWhereInput
-  }
-
-  export type SupplierProfileOrderByRelationAggregateInput = {
-    _count?: SortOrder
   }
 
   export type OrganizationProfileOrderByRelationAggregateInput = {
@@ -49250,6 +49498,13 @@ export namespace Prisma {
     connect?: LearningProjectWhereUniqueInput | LearningProjectWhereUniqueInput[]
   }
 
+  export type SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput = {
+    create?: XOR<SupplierProfileCreateWithoutVerificationReviewedByInput, SupplierProfileUncheckedCreateWithoutVerificationReviewedByInput> | SupplierProfileCreateWithoutVerificationReviewedByInput[] | SupplierProfileUncheckedCreateWithoutVerificationReviewedByInput[]
+    connectOrCreate?: SupplierProfileCreateOrConnectWithoutVerificationReviewedByInput | SupplierProfileCreateOrConnectWithoutVerificationReviewedByInput[]
+    createMany?: SupplierProfileCreateManyVerificationReviewedByInputEnvelope
+    connect?: SupplierProfileWhereUniqueInput | SupplierProfileWhereUniqueInput[]
+  }
+
   export type ProjectStepCreateNestedManyWithoutApprovedByUserInput = {
     create?: XOR<ProjectStepCreateWithoutApprovedByUserInput, ProjectStepUncheckedCreateWithoutApprovedByUserInput> | ProjectStepCreateWithoutApprovedByUserInput[] | ProjectStepUncheckedCreateWithoutApprovedByUserInput[]
     connectOrCreate?: ProjectStepCreateOrConnectWithoutApprovedByUserInput | ProjectStepCreateOrConnectWithoutApprovedByUserInput[]
@@ -49385,6 +49640,13 @@ export namespace Prisma {
     connectOrCreate?: LearningProjectCreateOrConnectWithoutReviewedByUserInput | LearningProjectCreateOrConnectWithoutReviewedByUserInput[]
     createMany?: LearningProjectCreateManyReviewedByUserInputEnvelope
     connect?: LearningProjectWhereUniqueInput | LearningProjectWhereUniqueInput[]
+  }
+
+  export type SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput = {
+    create?: XOR<SupplierProfileCreateWithoutVerificationReviewedByInput, SupplierProfileUncheckedCreateWithoutVerificationReviewedByInput> | SupplierProfileCreateWithoutVerificationReviewedByInput[] | SupplierProfileUncheckedCreateWithoutVerificationReviewedByInput[]
+    connectOrCreate?: SupplierProfileCreateOrConnectWithoutVerificationReviewedByInput | SupplierProfileCreateOrConnectWithoutVerificationReviewedByInput[]
+    createMany?: SupplierProfileCreateManyVerificationReviewedByInputEnvelope
+    connect?: SupplierProfileWhereUniqueInput | SupplierProfileWhereUniqueInput[]
   }
 
   export type ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput = {
@@ -49652,6 +49914,20 @@ export namespace Prisma {
     update?: LearningProjectUpdateWithWhereUniqueWithoutReviewedByUserInput | LearningProjectUpdateWithWhereUniqueWithoutReviewedByUserInput[]
     updateMany?: LearningProjectUpdateManyWithWhereWithoutReviewedByUserInput | LearningProjectUpdateManyWithWhereWithoutReviewedByUserInput[]
     deleteMany?: LearningProjectScalarWhereInput | LearningProjectScalarWhereInput[]
+  }
+
+  export type SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput = {
+    create?: XOR<SupplierProfileCreateWithoutVerificationReviewedByInput, SupplierProfileUncheckedCreateWithoutVerificationReviewedByInput> | SupplierProfileCreateWithoutVerificationReviewedByInput[] | SupplierProfileUncheckedCreateWithoutVerificationReviewedByInput[]
+    connectOrCreate?: SupplierProfileCreateOrConnectWithoutVerificationReviewedByInput | SupplierProfileCreateOrConnectWithoutVerificationReviewedByInput[]
+    upsert?: SupplierProfileUpsertWithWhereUniqueWithoutVerificationReviewedByInput | SupplierProfileUpsertWithWhereUniqueWithoutVerificationReviewedByInput[]
+    createMany?: SupplierProfileCreateManyVerificationReviewedByInputEnvelope
+    set?: SupplierProfileWhereUniqueInput | SupplierProfileWhereUniqueInput[]
+    disconnect?: SupplierProfileWhereUniqueInput | SupplierProfileWhereUniqueInput[]
+    delete?: SupplierProfileWhereUniqueInput | SupplierProfileWhereUniqueInput[]
+    connect?: SupplierProfileWhereUniqueInput | SupplierProfileWhereUniqueInput[]
+    update?: SupplierProfileUpdateWithWhereUniqueWithoutVerificationReviewedByInput | SupplierProfileUpdateWithWhereUniqueWithoutVerificationReviewedByInput[]
+    updateMany?: SupplierProfileUpdateManyWithWhereWithoutVerificationReviewedByInput | SupplierProfileUpdateManyWithWhereWithoutVerificationReviewedByInput[]
+    deleteMany?: SupplierProfileScalarWhereInput | SupplierProfileScalarWhereInput[]
   }
 
   export type ProjectStepUpdateManyWithoutApprovedByUserNestedInput = {
@@ -49922,6 +50198,20 @@ export namespace Prisma {
     deleteMany?: LearningProjectScalarWhereInput | LearningProjectScalarWhereInput[]
   }
 
+  export type SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput = {
+    create?: XOR<SupplierProfileCreateWithoutVerificationReviewedByInput, SupplierProfileUncheckedCreateWithoutVerificationReviewedByInput> | SupplierProfileCreateWithoutVerificationReviewedByInput[] | SupplierProfileUncheckedCreateWithoutVerificationReviewedByInput[]
+    connectOrCreate?: SupplierProfileCreateOrConnectWithoutVerificationReviewedByInput | SupplierProfileCreateOrConnectWithoutVerificationReviewedByInput[]
+    upsert?: SupplierProfileUpsertWithWhereUniqueWithoutVerificationReviewedByInput | SupplierProfileUpsertWithWhereUniqueWithoutVerificationReviewedByInput[]
+    createMany?: SupplierProfileCreateManyVerificationReviewedByInputEnvelope
+    set?: SupplierProfileWhereUniqueInput | SupplierProfileWhereUniqueInput[]
+    disconnect?: SupplierProfileWhereUniqueInput | SupplierProfileWhereUniqueInput[]
+    delete?: SupplierProfileWhereUniqueInput | SupplierProfileWhereUniqueInput[]
+    connect?: SupplierProfileWhereUniqueInput | SupplierProfileWhereUniqueInput[]
+    update?: SupplierProfileUpdateWithWhereUniqueWithoutVerificationReviewedByInput | SupplierProfileUpdateWithWhereUniqueWithoutVerificationReviewedByInput[]
+    updateMany?: SupplierProfileUpdateManyWithWhereWithoutVerificationReviewedByInput | SupplierProfileUpdateManyWithWhereWithoutVerificationReviewedByInput[]
+    deleteMany?: SupplierProfileScalarWhereInput | SupplierProfileScalarWhereInput[]
+  }
+
   export type ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput = {
     create?: XOR<ProjectStepCreateWithoutApprovedByUserInput, ProjectStepUncheckedCreateWithoutApprovedByUserInput> | ProjectStepCreateWithoutApprovedByUserInput[] | ProjectStepUncheckedCreateWithoutApprovedByUserInput[]
     connectOrCreate?: ProjectStepCreateOrConnectWithoutApprovedByUserInput | ProjectStepCreateOrConnectWithoutApprovedByUserInput[]
@@ -50115,6 +50405,12 @@ export namespace Prisma {
     connect?: UserWhereUniqueInput
   }
 
+  export type UserCreateNestedOneWithoutSupplierVerificationsReviewedInput = {
+    create?: XOR<UserCreateWithoutSupplierVerificationsReviewedInput, UserUncheckedCreateWithoutSupplierVerificationsReviewedInput>
+    connectOrCreate?: UserCreateOrConnectWithoutSupplierVerificationsReviewedInput
+    connect?: UserWhereUniqueInput
+  }
+
   export type LocationCreateNestedOneWithoutSupplierPickupForInput = {
     create?: XOR<LocationCreateWithoutSupplierPickupForInput, LocationUncheckedCreateWithoutSupplierPickupForInput>
     connectOrCreate?: LocationCreateOrConnectWithoutSupplierPickupForInput
@@ -50153,6 +50449,16 @@ export namespace Prisma {
     upsert?: UserUpsertWithoutSupplierProfileInput
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutSupplierProfileInput, UserUpdateWithoutSupplierProfileInput>, UserUncheckedUpdateWithoutSupplierProfileInput>
+  }
+
+  export type UserUpdateOneWithoutSupplierVerificationsReviewedNestedInput = {
+    create?: XOR<UserCreateWithoutSupplierVerificationsReviewedInput, UserUncheckedCreateWithoutSupplierVerificationsReviewedInput>
+    connectOrCreate?: UserCreateOrConnectWithoutSupplierVerificationsReviewedInput
+    upsert?: UserUpsertWithoutSupplierVerificationsReviewedInput
+    disconnect?: UserWhereInput | boolean
+    delete?: UserWhereInput | boolean
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutSupplierVerificationsReviewedInput, UserUpdateWithoutSupplierVerificationsReviewedInput>, UserUncheckedUpdateWithoutSupplierVerificationsReviewedInput>
   }
 
   export type LocationUpdateOneWithoutSupplierPickupForNestedInput = {
@@ -52999,8 +53305,12 @@ export namespace Prisma {
     publicName?: string | null
     description?: string | null
     verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationAdminNote?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    verificationReviewedBy?: UserCreateNestedOneWithoutSupplierVerificationsReviewedInput
     defaultPickupLocation?: LocationCreateNestedOneWithoutSupplierPickupForInput
     organizationProfile?: OrganizationProfileCreateNestedOneWithoutSupplierProfileInput
     materials?: MaterialCreateNestedManyWithoutSupplierProfileInput
@@ -53012,6 +53322,10 @@ export namespace Prisma {
     publicName?: string | null
     description?: string | null
     verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationReviewedById?: string | null
+    verificationAdminNote?: string | null
     defaultPickupLocationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -53631,6 +53945,50 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type SupplierProfileCreateWithoutVerificationReviewedByInput = {
+    id?: string
+    supplierType?: string | null
+    publicName?: string | null
+    description?: string | null
+    verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationAdminNote?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutSupplierProfileInput
+    defaultPickupLocation?: LocationCreateNestedOneWithoutSupplierPickupForInput
+    organizationProfile?: OrganizationProfileCreateNestedOneWithoutSupplierProfileInput
+    materials?: MaterialCreateNestedManyWithoutSupplierProfileInput
+  }
+
+  export type SupplierProfileUncheckedCreateWithoutVerificationReviewedByInput = {
+    id?: string
+    userId: string
+    supplierType?: string | null
+    publicName?: string | null
+    description?: string | null
+    verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationAdminNote?: string | null
+    defaultPickupLocationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    organizationProfile?: OrganizationProfileUncheckedCreateNestedOneWithoutSupplierProfileInput
+    materials?: MaterialUncheckedCreateNestedManyWithoutSupplierProfileInput
+  }
+
+  export type SupplierProfileCreateOrConnectWithoutVerificationReviewedByInput = {
+    where: SupplierProfileWhereUniqueInput
+    create: XOR<SupplierProfileCreateWithoutVerificationReviewedByInput, SupplierProfileUncheckedCreateWithoutVerificationReviewedByInput>
+  }
+
+  export type SupplierProfileCreateManyVerificationReviewedByInputEnvelope = {
+    data: SupplierProfileCreateManyVerificationReviewedByInput | SupplierProfileCreateManyVerificationReviewedByInput[]
+    skipDuplicates?: boolean
+  }
+
   export type ProjectStepCreateWithoutApprovedByUserInput = {
     id?: string
     stepNumber: number
@@ -53869,8 +54227,12 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    verificationReviewedBy?: UserUpdateOneWithoutSupplierVerificationsReviewedNestedInput
     defaultPickupLocation?: LocationUpdateOneWithoutSupplierPickupForNestedInput
     organizationProfile?: OrganizationProfileUpdateOneWithoutSupplierProfileNestedInput
     materials?: MaterialUpdateManyWithoutSupplierProfileNestedInput
@@ -53882,6 +54244,10 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     defaultPickupLocationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -54272,6 +54638,41 @@ export namespace Prisma {
     data: XOR<LearningProjectUpdateManyMutationInput, LearningProjectUncheckedUpdateManyWithoutReviewedByUserInput>
   }
 
+  export type SupplierProfileUpsertWithWhereUniqueWithoutVerificationReviewedByInput = {
+    where: SupplierProfileWhereUniqueInput
+    update: XOR<SupplierProfileUpdateWithoutVerificationReviewedByInput, SupplierProfileUncheckedUpdateWithoutVerificationReviewedByInput>
+    create: XOR<SupplierProfileCreateWithoutVerificationReviewedByInput, SupplierProfileUncheckedCreateWithoutVerificationReviewedByInput>
+  }
+
+  export type SupplierProfileUpdateWithWhereUniqueWithoutVerificationReviewedByInput = {
+    where: SupplierProfileWhereUniqueInput
+    data: XOR<SupplierProfileUpdateWithoutVerificationReviewedByInput, SupplierProfileUncheckedUpdateWithoutVerificationReviewedByInput>
+  }
+
+  export type SupplierProfileUpdateManyWithWhereWithoutVerificationReviewedByInput = {
+    where: SupplierProfileScalarWhereInput
+    data: XOR<SupplierProfileUpdateManyMutationInput, SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByInput>
+  }
+
+  export type SupplierProfileScalarWhereInput = {
+    AND?: SupplierProfileScalarWhereInput | SupplierProfileScalarWhereInput[]
+    OR?: SupplierProfileScalarWhereInput[]
+    NOT?: SupplierProfileScalarWhereInput | SupplierProfileScalarWhereInput[]
+    id?: StringFilter<"SupplierProfile"> | string
+    userId?: StringFilter<"SupplierProfile"> | string
+    supplierType?: StringNullableFilter<"SupplierProfile"> | string | null
+    publicName?: StringNullableFilter<"SupplierProfile"> | string | null
+    description?: StringNullableFilter<"SupplierProfile"> | string | null
+    verificationStatus?: StringFilter<"SupplierProfile"> | string
+    verificationSubmittedAt?: DateTimeNullableFilter<"SupplierProfile"> | Date | string | null
+    verificationReviewedAt?: DateTimeNullableFilter<"SupplierProfile"> | Date | string | null
+    verificationReviewedById?: StringNullableFilter<"SupplierProfile"> | string | null
+    verificationAdminNote?: StringNullableFilter<"SupplierProfile"> | string | null
+    defaultPickupLocationId?: StringNullableFilter<"SupplierProfile"> | string | null
+    createdAt?: DateTimeFilter<"SupplierProfile"> | Date | string
+    updatedAt?: DateTimeFilter<"SupplierProfile"> | Date | string
+  }
+
   export type ProjectStepUpsertWithWhereUniqueWithoutApprovedByUserInput = {
     where: ProjectStepWhereUniqueInput
     update: XOR<ProjectStepUpdateWithoutApprovedByUserInput, ProjectStepUncheckedUpdateWithoutApprovedByUserInput>
@@ -54412,6 +54813,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -54446,6 +54848,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -54485,6 +54888,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -54519,6 +54923,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -54569,6 +54974,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -54603,6 +55009,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -54648,6 +55055,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -54682,6 +55090,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -54716,6 +55125,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -54750,6 +55160,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -54800,6 +55211,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -54834,6 +55246,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -54868,6 +55281,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -54902,6 +55316,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -54941,6 +55356,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -54975,6 +55391,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -55025,6 +55442,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -55059,6 +55477,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -55104,6 +55523,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -55138,6 +55558,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -55172,6 +55593,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -55206,6 +55628,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -55256,6 +55679,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -55290,6 +55714,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -55324,6 +55749,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -55358,6 +55784,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -55408,6 +55835,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -55442,6 +55870,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -55476,6 +55905,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -55510,6 +55940,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -55518,6 +55949,81 @@ export namespace Prisma {
   export type UserCreateOrConnectWithoutSupplierProfileInput = {
     where: UserWhereUniqueInput
     create: XOR<UserCreateWithoutSupplierProfileInput, UserUncheckedCreateWithoutSupplierProfileInput>
+  }
+
+  export type UserCreateWithoutSupplierVerificationsReviewedInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserUncheckedCreateWithoutSupplierVerificationsReviewedInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserCreateOrConnectWithoutSupplierVerificationsReviewedInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutSupplierVerificationsReviewedInput, UserUncheckedCreateWithoutSupplierVerificationsReviewedInput>
   }
 
   export type LocationCreateWithoutSupplierPickupForInput = {
@@ -55569,6 +56075,8 @@ export namespace Prisma {
     workingDays?: NullableJsonNullValueInput | InputJsonValue
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     verificationDocumentStatus?: $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: string | null
+    verificationDocumentName?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     businessLocation?: LocationCreateNestedOneWithoutOrganizationBusinessForInput
@@ -55583,6 +56091,8 @@ export namespace Prisma {
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     businessLocationId?: string | null
     verificationDocumentStatus?: $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: string | null
+    verificationDocumentName?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -55716,6 +56226,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -55737,6 +56248,88 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
+    approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type UserUpsertWithoutSupplierVerificationsReviewedInput = {
+    update: XOR<UserUpdateWithoutSupplierVerificationsReviewedInput, UserUncheckedUpdateWithoutSupplierVerificationsReviewedInput>
+    create: XOR<UserCreateWithoutSupplierVerificationsReviewedInput, UserUncheckedCreateWithoutSupplierVerificationsReviewedInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutSupplierVerificationsReviewedInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutSupplierVerificationsReviewedInput, UserUncheckedUpdateWithoutSupplierVerificationsReviewedInput>
+  }
+
+  export type UserUpdateWithoutSupplierVerificationsReviewedInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutSupplierVerificationsReviewedInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
     driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
@@ -55821,6 +56414,8 @@ export namespace Prisma {
     workingDays?: NullableJsonNullValueInput | InputJsonValue
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     verificationDocumentStatus?: NullableEnumVerificationDocumentStatusFieldUpdateOperationsInput | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationDocumentName?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     businessLocation?: LocationUpdateOneWithoutOrganizationBusinessForNestedInput
@@ -55835,6 +56430,8 @@ export namespace Prisma {
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     businessLocationId?: NullableStringFieldUpdateOperationsInput | string | null
     verificationDocumentStatus?: NullableEnumVerificationDocumentStatusFieldUpdateOperationsInput | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationDocumentName?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -55861,9 +56458,13 @@ export namespace Prisma {
     publicName?: string | null
     description?: string | null
     verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationAdminNote?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutSupplierProfileInput
+    verificationReviewedBy?: UserCreateNestedOneWithoutSupplierVerificationsReviewedInput
     defaultPickupLocation?: LocationCreateNestedOneWithoutSupplierPickupForInput
     materials?: MaterialCreateNestedManyWithoutSupplierProfileInput
   }
@@ -55875,6 +56476,10 @@ export namespace Prisma {
     publicName?: string | null
     description?: string | null
     verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationReviewedById?: string | null
+    verificationAdminNote?: string | null
     defaultPickupLocationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -55944,9 +56549,13 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutSupplierProfileNestedInput
+    verificationReviewedBy?: UserUpdateOneWithoutSupplierVerificationsReviewedNestedInput
     defaultPickupLocation?: LocationUpdateOneWithoutSupplierPickupForNestedInput
     materials?: MaterialUpdateManyWithoutSupplierProfileNestedInput
   }
@@ -55958,6 +56567,10 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     defaultPickupLocationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -56017,9 +56630,13 @@ export namespace Prisma {
     publicName?: string | null
     description?: string | null
     verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationAdminNote?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutSupplierProfileInput
+    verificationReviewedBy?: UserCreateNestedOneWithoutSupplierVerificationsReviewedInput
     organizationProfile?: OrganizationProfileCreateNestedOneWithoutSupplierProfileInput
     materials?: MaterialCreateNestedManyWithoutSupplierProfileInput
   }
@@ -56031,6 +56648,10 @@ export namespace Prisma {
     publicName?: string | null
     description?: string | null
     verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationReviewedById?: string | null
+    verificationAdminNote?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     organizationProfile?: OrganizationProfileUncheckedCreateNestedOneWithoutSupplierProfileInput
@@ -56055,6 +56676,8 @@ export namespace Prisma {
     workingDays?: NullableJsonNullValueInput | InputJsonValue
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     verificationDocumentStatus?: $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: string | null
+    verificationDocumentName?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     supplierProfile: SupplierProfileCreateNestedOneWithoutOrganizationProfileInput
@@ -56069,6 +56692,8 @@ export namespace Prisma {
     workingDays?: NullableJsonNullValueInput | InputJsonValue
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     verificationDocumentStatus?: $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: string | null
+    verificationDocumentName?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -56249,21 +56874,6 @@ export namespace Prisma {
     data: XOR<SupplierProfileUpdateManyMutationInput, SupplierProfileUncheckedUpdateManyWithoutDefaultPickupLocationInput>
   }
 
-  export type SupplierProfileScalarWhereInput = {
-    AND?: SupplierProfileScalarWhereInput | SupplierProfileScalarWhereInput[]
-    OR?: SupplierProfileScalarWhereInput[]
-    NOT?: SupplierProfileScalarWhereInput | SupplierProfileScalarWhereInput[]
-    id?: StringFilter<"SupplierProfile"> | string
-    userId?: StringFilter<"SupplierProfile"> | string
-    supplierType?: StringNullableFilter<"SupplierProfile"> | string | null
-    publicName?: StringNullableFilter<"SupplierProfile"> | string | null
-    description?: StringNullableFilter<"SupplierProfile"> | string | null
-    verificationStatus?: StringFilter<"SupplierProfile"> | string
-    defaultPickupLocationId?: StringNullableFilter<"SupplierProfile"> | string | null
-    createdAt?: DateTimeFilter<"SupplierProfile"> | Date | string
-    updatedAt?: DateTimeFilter<"SupplierProfile"> | Date | string
-  }
-
   export type OrganizationProfileUpsertWithWhereUniqueWithoutBusinessLocationInput = {
     where: OrganizationProfileWhereUniqueInput
     update: XOR<OrganizationProfileUpdateWithoutBusinessLocationInput, OrganizationProfileUncheckedUpdateWithoutBusinessLocationInput>
@@ -56293,6 +56903,8 @@ export namespace Prisma {
     workingHours?: JsonNullableFilter<"OrganizationProfile">
     businessLocationId?: StringNullableFilter<"OrganizationProfile"> | string | null
     verificationDocumentStatus?: EnumVerificationDocumentStatusNullableFilter<"OrganizationProfile"> | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: StringNullableFilter<"OrganizationProfile"> | string | null
+    verificationDocumentName?: StringNullableFilter<"OrganizationProfile"> | string | null
     createdAt?: DateTimeFilter<"OrganizationProfile"> | Date | string
     updatedAt?: DateTimeFilter<"OrganizationProfile"> | Date | string
   }
@@ -57016,6 +57628,7 @@ export namespace Prisma {
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -57050,6 +57663,7 @@ export namespace Prisma {
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -57089,6 +57703,7 @@ export namespace Prisma {
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -57123,6 +57738,7 @@ export namespace Prisma {
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -57378,6 +57994,7 @@ export namespace Prisma {
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -57412,6 +58029,7 @@ export namespace Prisma {
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -57457,6 +58075,7 @@ export namespace Prisma {
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -57491,6 +58110,7 @@ export namespace Prisma {
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -57991,6 +58611,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
   }
@@ -58025,6 +58646,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
   }
@@ -58132,6 +58754,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
   }
@@ -58166,6 +58789,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
   }
@@ -58415,6 +59039,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -58449,6 +59074,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -58465,9 +59091,13 @@ export namespace Prisma {
     publicName?: string | null
     description?: string | null
     verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationAdminNote?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutSupplierProfileInput
+    verificationReviewedBy?: UserCreateNestedOneWithoutSupplierVerificationsReviewedInput
     defaultPickupLocation?: LocationCreateNestedOneWithoutSupplierPickupForInput
     organizationProfile?: OrganizationProfileCreateNestedOneWithoutSupplierProfileInput
   }
@@ -58479,6 +59109,10 @@ export namespace Prisma {
     publicName?: string | null
     description?: string | null
     verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationReviewedById?: string | null
+    verificationAdminNote?: string | null
     defaultPickupLocationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -58945,6 +59579,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -58979,6 +59614,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -59001,9 +59637,13 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutSupplierProfileNestedInput
+    verificationReviewedBy?: UserUpdateOneWithoutSupplierVerificationsReviewedNestedInput
     defaultPickupLocation?: LocationUpdateOneWithoutSupplierPickupForNestedInput
     organizationProfile?: OrganizationProfileUpdateOneWithoutSupplierProfileNestedInput
   }
@@ -59015,6 +59655,10 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     defaultPickupLocationId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -59870,6 +60514,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -59904,6 +60549,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -59943,6 +60589,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -59977,6 +60624,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -60292,6 +60940,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -60326,6 +60975,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -60371,6 +61021,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -60405,6 +61056,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -60664,6 +61316,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -60698,6 +61351,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -60815,6 +61469,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -60849,6 +61504,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -60944,6 +61600,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -60978,6 +61635,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -61017,6 +61675,7 @@ export namespace Prisma {
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -61051,6 +61710,7 @@ export namespace Prisma {
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -61168,6 +61828,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -61202,6 +61863,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -61247,6 +61909,7 @@ export namespace Prisma {
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -61281,6 +61944,7 @@ export namespace Prisma {
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -61315,6 +61979,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
@@ -61349,6 +62014,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
@@ -61399,6 +62065,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
@@ -61433,6 +62100,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
@@ -62186,6 +62854,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
   }
@@ -62220,6 +62889,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
   }
@@ -62435,6 +63105,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
   }
@@ -62469,6 +63140,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
   }
@@ -62588,6 +63260,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
   }
@@ -62622,6 +63295,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
     reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
   }
@@ -62790,6 +63464,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
   }
@@ -62824,6 +63499,7 @@ export namespace Prisma {
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
     reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
   }
@@ -63179,6 +63855,21 @@ export namespace Prisma {
     reviewNote?: string | null
     stepsGeneratedByAi?: boolean
     aiStepsGeneratedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type SupplierProfileCreateManyVerificationReviewedByInput = {
+    id?: string
+    userId: string
+    supplierType?: string | null
+    publicName?: string | null
+    description?: string | null
+    verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationAdminNote?: string | null
+    defaultPickupLocationId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -63951,6 +64642,55 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type SupplierProfileUpdateWithoutVerificationReviewedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    supplierType?: NullableStringFieldUpdateOperationsInput | string | null
+    publicName?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutSupplierProfileNestedInput
+    defaultPickupLocation?: LocationUpdateOneWithoutSupplierPickupForNestedInput
+    organizationProfile?: OrganizationProfileUpdateOneWithoutSupplierProfileNestedInput
+    materials?: MaterialUpdateManyWithoutSupplierProfileNestedInput
+  }
+
+  export type SupplierProfileUncheckedUpdateWithoutVerificationReviewedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    supplierType?: NullableStringFieldUpdateOperationsInput | string | null
+    publicName?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    defaultPickupLocationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    organizationProfile?: OrganizationProfileUncheckedUpdateOneWithoutSupplierProfileNestedInput
+    materials?: MaterialUncheckedUpdateManyWithoutSupplierProfileNestedInput
+  }
+
+  export type SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    supplierType?: NullableStringFieldUpdateOperationsInput | string | null
+    publicName?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    defaultPickupLocationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type ProjectStepUpdateWithoutApprovedByUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     stepNumber?: IntFieldUpdateOperationsInput | number
@@ -64249,6 +64989,10 @@ export namespace Prisma {
     publicName?: string | null
     description?: string | null
     verificationStatus?: string
+    verificationSubmittedAt?: Date | string | null
+    verificationReviewedAt?: Date | string | null
+    verificationReviewedById?: string | null
+    verificationAdminNote?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -64262,6 +65006,8 @@ export namespace Prisma {
     workingDays?: NullableJsonNullValueInput | InputJsonValue
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     verificationDocumentStatus?: $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: string | null
+    verificationDocumentName?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -64329,9 +65075,13 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutSupplierProfileNestedInput
+    verificationReviewedBy?: UserUpdateOneWithoutSupplierVerificationsReviewedNestedInput
     organizationProfile?: OrganizationProfileUpdateOneWithoutSupplierProfileNestedInput
     materials?: MaterialUpdateManyWithoutSupplierProfileNestedInput
   }
@@ -64343,6 +65093,10 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     organizationProfile?: OrganizationProfileUncheckedUpdateOneWithoutSupplierProfileNestedInput
@@ -64356,6 +65110,10 @@ export namespace Prisma {
     publicName?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: StringFieldUpdateOperationsInput | string
+    verificationSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    verificationReviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationAdminNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -64368,6 +65126,8 @@ export namespace Prisma {
     workingDays?: NullableJsonNullValueInput | InputJsonValue
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     verificationDocumentStatus?: NullableEnumVerificationDocumentStatusFieldUpdateOperationsInput | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationDocumentName?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     supplierProfile?: SupplierProfileUpdateOneRequiredWithoutOrganizationProfileNestedInput
@@ -64382,6 +65142,8 @@ export namespace Prisma {
     workingDays?: NullableJsonNullValueInput | InputJsonValue
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     verificationDocumentStatus?: NullableEnumVerificationDocumentStatusFieldUpdateOperationsInput | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationDocumentName?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -64395,6 +65157,8 @@ export namespace Prisma {
     workingDays?: NullableJsonNullValueInput | InputJsonValue
     workingHours?: NullableJsonNullValueInput | InputJsonValue
     verificationDocumentStatus?: NullableEnumVerificationDocumentStatusFieldUpdateOperationsInput | $Enums.VerificationDocumentStatus | null
+    verificationDocumentUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationDocumentName?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

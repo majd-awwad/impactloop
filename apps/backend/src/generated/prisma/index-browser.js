@@ -208,6 +208,10 @@ exports.Prisma.SupplierProfileScalarFieldEnum = {
   publicName: 'publicName',
   description: 'description',
   verificationStatus: 'verificationStatus',
+  verificationSubmittedAt: 'verificationSubmittedAt',
+  verificationReviewedAt: 'verificationReviewedAt',
+  verificationReviewedById: 'verificationReviewedById',
+  verificationAdminNote: 'verificationAdminNote',
   defaultPickupLocationId: 'defaultPickupLocationId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -223,6 +227,8 @@ exports.Prisma.OrganizationProfileScalarFieldEnum = {
   workingHours: 'workingHours',
   businessLocationId: 'businessLocationId',
   verificationDocumentStatus: 'verificationDocumentStatus',
+  verificationDocumentUrl: 'verificationDocumentUrl',
+  verificationDocumentName: 'verificationDocumentName',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -615,7 +621,8 @@ exports.OrganizationType = exports.$Enums.OrganizationType = {
 exports.VerificationDocumentStatus = exports.$Enums.VerificationDocumentStatus = {
   PENDING: 'PENDING',
   VERIFIED: 'VERIFIED',
-  REJECTED: 'REJECTED'
+  REJECTED: 'REJECTED',
+  CHANGES_REQUESTED: 'CHANGES_REQUESTED'
 };
 
 exports.CategoryType = exports.$Enums.CategoryType = {
