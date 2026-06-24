@@ -9,6 +9,7 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../auth/application/auth_navigation.dart';
 import '../widgets/coming_soon_card.dart';
 import '../widgets/empty_activity_card.dart';
 import '../widgets/home_action_card.dart';
@@ -288,9 +289,11 @@ class _HeroActionButton extends StatelessWidget {
   }
 }
 
-class _QuickActionsSection extends StatelessWidget {
+class _QuickActionsSection extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = userHasAdminRole(ref.watch(authControllerProvider).user);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -303,6 +306,14 @@ class _QuickActionsSection extends StatelessWidget {
           minItemWidth: 280,
           itemHeight: 224,
           children: [
+            if (isAdmin)
+              HomeActionCard(
+                icon: Icons.admin_panel_settings_outlined,
+                title: 'Open Admin Portal',
+                description:
+                    'Review platform activity, pending actions, and impact metrics.',
+                onPressed: () => context.go(adminPortalRoute),
+              ),
             HomeActionCard(
               icon: Icons.inventory_2_outlined,
               title: 'Find reusable materials',

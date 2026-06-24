@@ -8,6 +8,7 @@ import '../theme/app_spacing.dart';
 import '../theme/auth_dark_text_styles.dart';
 import '../theme/app_theme_colors.dart';
 import '../../features/auth/application/auth_controller.dart';
+import '../../features/auth/application/auth_navigation.dart';
 import '../../features/auth/data/models/user.dart';
 import '../../shared/widgets/app_feedback.dart';
 import 'impact_loop_logo.dart';
@@ -480,6 +481,8 @@ class _AccountMenu extends StatelessWidget {
 
   bool get _isSupplier => user.hasRole('SUPPLIER');
 
+  bool get _isAdmin => userHasAdminRole(user);
+
   Future<void> _logout(BuildContext context) async {
     final logoutError = await ref
         .read(authControllerProvider.notifier)
@@ -650,6 +653,12 @@ class _AccountMenu extends StatelessWidget {
           onPressed: () =>
               context.go(_isSupplier ? '/supplier/profile' : '/home'),
         ),
+        if (_isAdmin)
+          _AccountMenuItem(
+            icon: Icons.admin_panel_settings_outlined,
+            label: 'Admin Portal',
+            onPressed: () => context.go(adminPortalRoute),
+          ),
         if (_isSupplier)
           _AccountMenuItem(
             icon: Icons.dashboard_outlined,
