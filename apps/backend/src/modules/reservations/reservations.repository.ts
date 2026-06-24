@@ -25,9 +25,60 @@ const reservationInclude = {
   },
 } satisfies Prisma.ReservationInclude;
 
+const learnerReservationListInclude = {
+  material: {
+    select: {
+      id: true,
+      title: true,
+      materialType: true,
+      customMaterialType: true,
+      status: true,
+      location: {
+        select: {
+          city: true,
+          area: true,
+        },
+      },
+      images: {
+        where: { isCover: true },
+        take: 1,
+        orderBy: { sortOrder: 'asc' as const },
+      },
+    },
+  },
+  owner: {
+    select: {
+      id: true,
+      displayName: true,
+      supplierProfile: {
+        select: {
+          publicName: true,
+          organizationProfile: {
+            select: {
+              organizationName: true,
+            },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.ReservationInclude;
+
 export type LearnerReservationRecord = Prisma.ReservationGetPayload<{
   include: typeof reservationInclude;
 }>;
+
+export type LearnerReservationListRecord = Prisma.ReservationGetPayload<{
+  include: typeof learnerReservationListInclude;
+}>;
+
+export const findLearnerReservations = async (requesterId: string) => {
+  return prisma.reservation.findMany({
+    where: { requesterId },
+    include: learnerReservationListInclude,
+    orderBy: { createdAt: 'desc' },
+  });
+};
 
 export const createLearnerReservation = async (input: {
   requesterId: string;

@@ -17,6 +17,7 @@ Current Riverpod and data-flow inventory. This documents existing code organizat
 - `apps/frontend/lib/features/health/data/health_remote_data_source.dart`
 - `apps/frontend/lib/features/home/application/home_suggested_materials_provider.dart`
 - `apps/frontend/lib/features/reservations/application/reservation_create_controller.dart`
+- `apps/frontend/lib/features/reservations/application/my_reservations_provider.dart`
 - `apps/frontend/lib/features/materials/application/material_listing_providers.dart`
 - `apps/frontend/lib/features/materials/data/material_listing_repository.dart`
 - `apps/frontend/lib/features/supplier_portal/application/supplier_my_materials_providers.dart`
@@ -118,6 +119,7 @@ Examples:
 - `homeSuggestedMaterialsProvider` loads material discovery results and takes the first four.
 - `materialCategoriesProvider`, `materialListingPolicyProvider`, and `categoryRequestsProvider` load add-material support data.
 - `reservationCreateControllerProvider` submits learner reservation requests from material detail and exposes loading/error state for the Reserve button.
+- `myReservationsProvider` loads `GET /api/reservations/my` for the learner reservation page and material-detail reservation state.
 - `supplierMyMaterialsProvider` checks auth, watches query state, then fetches supplier materials.
 - Supplier dashboard/profile/request/schedule/notification providers load supplier portal data.
 
@@ -177,7 +179,8 @@ Examples:
 - Accepting/declining requests invalidates `incomingRequestsProvider`.
 - Completing requests invalidates incoming requests and pickup schedule providers.
 - Supplier material changes invalidate supplier material/dashboard/notification providers.
-- Creating a learner reservation refreshes the material detail future and invalidates `homeSuggestedMaterialsProvider`; discovery list refresh remains page-local because material discovery currently owns its own `Future`.
+- Creating a learner reservation refreshes the material detail future and invalidates `homeSuggestedMaterialsProvider` plus `myReservationsProvider`; discovery list refresh remains page-local because material discovery currently owns its own `Future`.
+- Supplier accept/decline/complete invalidates incoming requests, supplier notifications, supplier dashboard, pickup schedule, and pickup schedule summary providers.
 - Retry buttons invalidate the failed async provider.
 
 Keep invalidation close to the mutation that changes server state.

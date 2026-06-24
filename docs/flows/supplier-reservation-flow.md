@@ -67,7 +67,7 @@ Update `reservations`; update `materials`; insert `reservation_status_history`.
 
 ### Success state
 
-Returns mapped reservation DTO; providers invalidated (`incomingRequestsProvider`, `pickupScheduleProvider`).
+Returns mapped reservation DTO; providers invalidated (`incomingRequestsProvider`, supplier notifications, supplier dashboard, pickup schedule, pickup schedule summary).
 
 ### Error states
 
@@ -94,6 +94,10 @@ Supplier taps **Decline** → optional reason.
 ### Database changes
 
 Update `reservations`; update `materials`; insert history.
+
+### Frontend invalidation
+
+Decline invalidates incoming requests, supplier notifications, supplier dashboard, pickup schedule, and pickup schedule summary.
 
 ### Error states
 
@@ -127,6 +131,10 @@ Update `reservations` + `materials`; insert history.
 
 Reservation completed; material marked reused.
 
+### Frontend invalidation
+
+Complete invalidates incoming requests, supplier notifications, supplier dashboard, pickup schedule, and pickup schedule summary.
+
 ### Error states
 
 409 if not accepted.
@@ -143,7 +151,7 @@ Reservation completed; material marked reused.
 
 ## Not implemented
 
-- Learner reservation list/cancel
+- Learner reservation cancel
 - Delivery request / driver assignment (`deliveryRequested`, `deliveryStatus` on schema)
 - Cancel/expiry flows in UI
 - Multi-reservation queues / partial inventory allocation

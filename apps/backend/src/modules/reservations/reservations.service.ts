@@ -3,6 +3,17 @@ import { AppError } from '../../utils/app-error.js';
 import * as reservationsRepository from './reservations.repository.js';
 import type { CreateReservationInput } from './reservations.validation.js';
 
+const pickMaterialCoverImageUrl = (
+  images: { imageUrl: string; isCover: boolean; sortOrder: number }[],
+) => images[0]?.imageUrl ?? null;
+
+const resolveSupplierDisplayName = (
+  owner: reservationsRepository.LearnerReservationListRecord['owner'],
+) =>
+  owner.supplierProfile?.organizationProfile?.organizationName ??
+  owner.supplierProfile?.publicName ??
+  owner.displayName;
+
 const mapReservation = (
   reservation: reservationsRepository.LearnerReservationRecord,
 ) => ({
@@ -27,6 +38,43 @@ const mapReservation = (
   message: reservation.message,
   createdAt: reservation.createdAt.toISOString(),
 });
+
+const mapLearnerReservation = (
+  reservation: reservationsRepository.LearnerReservationListRecord,
+) => ({
+  id: reservation.id,
+  status: reservation.status,
+  quantityRequested: Number(reservation.quantityRequested),
+  message: reservation.message,
+  createdAt: reservation.createdAt.toISOString(),
+  updatedAt: reservation.updatedAt.toISOString(),
+  pickupWindowStart: reservation.pickupWindowStart?.toISOString() ?? null,
+  pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
+  supplierNote: reservation.supplierNote,
+  rejectionReason: reservation.rejectionReason,
+  material: {
+    id: reservation.material.id,
+    title: reservation.material.title,
+    materialType:
+      reservation.material.customMaterialType ??
+      reservation.material.materialType,
+    status: reservation.material.status,
+    imageUrl: pickMaterialCoverImageUrl(reservation.material.images),
+    city: reservation.material.location.city,
+    area: reservation.material.location.area,
+  },
+  supplier: {
+    id: reservation.owner.id,
+    displayName: resolveSupplierDisplayName(reservation.owner),
+  },
+});
+
+export const listMyReservations = async (requesterId: string) => {
+  const reservations =
+    await reservationsRepository.findLearnerReservations(requesterId);
+
+  return reservations.map(mapLearnerReservation);
+};
 
 export const createReservation = async (
   requesterId: string,

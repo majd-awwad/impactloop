@@ -6,7 +6,7 @@
 
 Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials, handle incoming reservation requests, pickup schedule, notifications, and account security.
 
-**Not in scope:** learner reservation list/cancel, delivery driver workflow, admin/moderator tools.
+**Not in scope:** learner reservation cancel, delivery driver workflow, admin/moderator tools.
 
 ## Current status
 

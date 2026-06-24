@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/supplier_incoming_request.dart';
 import '../../data/supplier_requests_api_repository.dart';
+import 'supplier_dashboard_providers.dart';
+import 'supplier_notifications_providers.dart';
 import 'supplier_pickup_schedule_providers.dart';
 
 export '../../data/supplier_requests_api_repository.dart'
@@ -38,6 +40,10 @@ Future<void> acceptIncomingRequest(
       .read(supplierRequestsRepositoryProvider)
       .acceptRequest(requestId, pickupWindow);
   ref.invalidate(incomingRequestsProvider);
+  ref.invalidate(supplierNotificationsProvider);
+  ref.invalidate(supplierDashboardProvider);
+  ref.invalidate(pickupScheduleProvider);
+  ref.invalidate(pickupScheduleSummaryProvider);
 }
 
 Future<void> declineIncomingRequest(
@@ -49,6 +55,10 @@ Future<void> declineIncomingRequest(
       .read(supplierRequestsRepositoryProvider)
       .declineRequest(requestId, reason: reason);
   ref.invalidate(incomingRequestsProvider);
+  ref.invalidate(supplierNotificationsProvider);
+  ref.invalidate(supplierDashboardProvider);
+  ref.invalidate(pickupScheduleProvider);
+  ref.invalidate(pickupScheduleSummaryProvider);
 }
 
 class CompletingReservationNotifier extends Notifier<String?> {
@@ -73,6 +83,8 @@ Future<SupplierIncomingRequest> completeIncomingRequest(
       .read(supplierRequestsRepositoryProvider)
       .completeRequest(requestId);
   ref.invalidate(incomingRequestsProvider);
+  ref.invalidate(supplierNotificationsProvider);
+  ref.invalidate(supplierDashboardProvider);
   ref.invalidate(pickupScheduleProvider);
   ref.invalidate(pickupScheduleSummaryProvider);
   return result;

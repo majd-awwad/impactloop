@@ -33,6 +33,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 |-------|-------|----------------|
 | **public** | Most routes (landing, materials, learning, auth pages, profile completion) | No login required |
 | **authenticated** | `/home`, `/supplier/access-denied` | Requires login |
+| **learner** | `/learner/reservations` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
 
 ### Redirect rules (summary)
@@ -54,6 +55,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/` | `LandingPage` | public | |
 | `/health` | `HealthPage` | public | Backend health diagnostic |
 | `/home` | `HomePage` → `LearnerHomePage` | authenticated | |
+| `/learner/reservations` | `LearnerReservationsPage` | learner | Learner reservation status list |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
 | `/learning` | `LearningHubPage` | public | **Partial** — mock data; backend API exists but not wired |
 | `/learning/add-draft` | `LearningAddDraftPage` | public | **Mock form** — no submit API |

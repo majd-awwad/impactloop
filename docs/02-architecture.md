@@ -146,6 +146,7 @@ These exist in route files today:
 - `GET /api/materials`
 - `GET /api/materials/:id`
 - `POST /api/reservations`
+- `GET /api/reservations/my`
 - `POST /api/supplier/materials`
 - `GET /api/supplier/reservations`
 - `PATCH /api/supplier/reservations/:id/accept`
@@ -154,7 +155,6 @@ These exist in route files today:
 **Not mounted** (aspirational examples from older docs):
 
 - `POST /api/materials` — use `POST /api/supplier/materials`
-- `GET /api/reservations/my`
 - `POST /api/ai/requests`
 
 ## Security rules (unchanged intent)

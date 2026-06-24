@@ -12,11 +12,13 @@ import {
 } from '../supplier/supplier.service.js';
 
 import { createReservation } from './reservations.service.js';
+import { listMyReservations } from './reservations.service.js';
 
 const TEST_MARKER = '[test-learner-reservations]';
 
 type TestContext = {
   learnerId: string;
+  otherLearnerId: string;
   supplierId: string;
   supplierOnlyId: string;
   categoryId: string;
@@ -143,6 +145,7 @@ async function cleanup(ctx: TestContext) {
 describe('createReservation', () => {
   const ctx: TestContext = {
     learnerId: '',
+    otherLearnerId: '',
     supplierId: '',
     supplierOnlyId: '',
     categoryId: '',
@@ -176,6 +179,11 @@ describe('createReservation', () => {
       emailSuffix: 'learner',
       role: 'LEARNER',
     });
+    const otherLearner = await createUser({
+      displayName: 'other learner',
+      emailSuffix: 'other-learner',
+      role: 'LEARNER',
+    });
     const supplier = await createUser({
       displayName: 'supplier',
       emailSuffix: 'supplier',
@@ -190,9 +198,15 @@ describe('createReservation', () => {
     ctx.categoryId = category.id;
     ctx.locationId = location.id;
     ctx.learnerId = learner.id;
+    ctx.otherLearnerId = otherLearner.id;
     ctx.supplierId = supplier.id;
     ctx.supplierOnlyId = supplierOnly.id;
-    ctx.createdUserIds.push(learner.id, supplier.id, supplierOnly.id);
+    ctx.createdUserIds.push(
+      learner.id,
+      otherLearner.id,
+      supplier.id,
+      supplierOnly.id,
+    );
   });
 
   after(async () => {
@@ -346,6 +360,71 @@ describe('createReservation', () => {
         return true;
       },
     );
+  });
+
+  test('learner can list only their own reservations with material summary', async () => {
+    const ownMaterial = await createMaterial(ctx, 'AVAILABLE', 2);
+    const otherMaterial = await createMaterial(ctx, 'AVAILABLE', 2);
+
+    const ownReservation = await createReservation(ctx.learnerId, {
+      materialId: ownMaterial.id,
+      quantityRequested: 1,
+      message: 'Need it for class',
+    });
+    const otherReservation = await createReservation(ctx.otherLearnerId, {
+      materialId: otherMaterial.id,
+      quantityRequested: 1,
+    });
+    ctx.createdReservationIds.push(ownReservation.id, otherReservation.id);
+
+    const reservations = await listMyReservations(ctx.learnerId);
+
+    assert.ok(reservations.some((item) => item.id === ownReservation.id));
+    assert.equal(
+      reservations.some((item) => item.id === otherReservation.id),
+      false,
+    );
+
+    const listed = reservations.find((item) => item.id === ownReservation.id);
+    assert.ok(listed);
+    assert.equal(listed?.status, 'PENDING');
+    assert.equal(listed?.quantityRequested, 1);
+    assert.equal(listed?.message, 'Need it for class');
+    assert.equal(listed?.material.id, ownMaterial.id);
+    assert.equal(listed?.material.status, 'PENDING_RESERVATION');
+    assert.equal(listed?.material.city, 'Nablus');
+    assert.equal(listed?.material.area, TEST_MARKER);
+    assert.ok(listed?.supplier.displayName);
+  });
+
+  test('accepted reservation list item includes pickup window data', async () => {
+    const material = await createMaterial(ctx, 'AVAILABLE', 2);
+    const reservation = await createReservation(ctx.learnerId, {
+      materialId: material.id,
+      quantityRequested: 1,
+    });
+    ctx.createdReservationIds.push(reservation.id);
+
+    const pickupWindowStart = new Date();
+    const pickupWindowEnd = new Date(pickupWindowStart.getTime() + 3_600_000);
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        status: 'ACCEPTED',
+        acceptedAt: pickupWindowStart,
+        pickupWindowStart,
+        pickupWindowEnd,
+        supplierNote: 'Bring your student ID.',
+      },
+    });
+
+    const reservations = await listMyReservations(ctx.learnerId);
+    const listed = reservations.find((item) => item.id === reservation.id);
+
+    assert.equal(listed?.status, 'ACCEPTED');
+    assert.equal(listed?.pickupWindowStart, pickupWindowStart.toISOString());
+    assert.equal(listed?.pickupWindowEnd, pickupWindowEnd.toISOString());
+    assert.equal(listed?.supplierNote, 'Bring your student ID.');
   });
 
   test('concurrent reservation attempts allow only one success', async () => {

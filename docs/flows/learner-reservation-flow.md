@@ -2,7 +2,7 @@
 
 Documents the implemented MVP learner reservation request path.
 
-**Out of scope:** delivery, learner reservation list/cancel, expiry jobs, reviews, multi-reservation queues, partial stock allocation, and precise pickup-location reveal.
+**Out of scope:** delivery, learner reservation cancel, expiry jobs, reviews, multi-reservation queues, partial stock allocation, and precise pickup-location reveal.
 
 ## Trigger
 
@@ -16,7 +16,7 @@ Authenticated **LEARNER** reserves an available material from public material de
 |------|--------|
 | Learner reserve UI | **Implemented MVP** — detail CTA only |
 | `POST /api/reservations` | **Implemented MVP** |
-| Learner status list UI | **Frontend-only** placeholders on `/home` |
+| Learner status list UI | **Implemented MVP** — `/learner/reservations` |
 | Supplier accept/decline/complete | **Partial** — accept/reject/complete implemented; no delivery |
 | Test data | **Partial** — seed data still exists for supplier portal demos |
 
@@ -29,20 +29,25 @@ Authenticated **LEARNER** reserves an available material from public material de
 3. If unauthenticated, the app redirects to login with `from=/materials/:id`.
 4. If authenticated as a non-learner, the UI blocks the action.
 5. The app submits `POST /api/reservations` with the material id and full listed quantity.
-6. Success creates a `PENDING` reservation and reloads material detail so the status becomes `PENDING_RESERVATION`.
-7. Supplier handles the request through the existing incoming requests page.
+6. Success creates a `PENDING` reservation, keeps the success snackbar, shows a **View reservation status** CTA, invalidates learner reservations, and reloads material detail so the status becomes `PENDING_RESERVATION`.
+7. Learner can open `/learner/reservations` from home to see pending/accepted/rejected/completed status.
+8. Supplier handles the request through the existing incoming requests page.
 
 ### Frontend Path
 
 - `material_discovery` detail CTA calls `reservationCreateControllerProvider`.
+- `material_discovery` detail reads `myReservationsProvider`; if the learner already has a reservation for the material, it shows reservation status instead of the normal reserve CTA and links to My Reservations with status-specific copy.
 - `features/reservations/data` contains the API/repository and request/response models.
-- Home “My reservations” remains a placeholder.
+- `/learner/reservations` lists the learner's reservations with loading, empty, and error states.
+- Home links to `/learner/reservations`.
 
 ### Backend Path
 
 - `modules/reservations` mounts `POST /api/reservations`.
+- `modules/reservations` mounts `GET /api/reservations/my`.
 - Create validates `LEARNER` role, material `AVAILABLE`, quantity, and self-reservation.
 - Create enforces one active reservation per material and uses `updateMany` with `status = AVAILABLE` as the race-safe guard.
+- Read returns only reservations where `requesterId` is the authenticated learner, newest first, with safe material/supplier/pickup-window summary fields.
 - Supplier accept sets material `RESERVED`; reject returns material `AVAILABLE`; complete sets material `REUSED`.
 
 ### Database Changes Per Flow
@@ -55,7 +60,7 @@ Authenticated **LEARNER** reserves an available material from public material de
 
 ### Success State
 
-Learner sees a success snack bar and refreshed material detail; supplier sees the pending request in incoming requests and derived reservation notification inbox.
+Learner sees a success snack bar, refreshed material detail, and a pending card in My Reservations. Supplier sees the pending request in incoming requests and derived reservation notification inbox.
 
 ### Error States
 
@@ -67,13 +72,14 @@ Learner sees a success snack bar and refreshed material detail; supplier sees th
 
 ### Files Involved
 
-`material_discovery` detail page, `features/reservations/*`, `modules/reservations/*`, `supplier-reservations.*`, `learner_home_page.dart` placeholders.
+`material_discovery` detail page, `features/reservations/*`, `modules/reservations/*`, `supplier-reservations.*`, `learner_home_page.dart`.
 
 ---
 
 ## Still Not Implemented
 
-- Learner reservation list/detail/cancel.
+- Learner reservation cancel.
+- Dedicated learner reservation detail page.
 - Delivery selection and driver workflow.
 - Expiry jobs.
 - Reviews.

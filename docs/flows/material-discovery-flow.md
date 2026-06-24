@@ -97,7 +97,7 @@ Pass `repository:` override into `MaterialsDiscoveryPage` / `MaterialDetailsPage
 
 ## Not implemented
 
-- Learner reservation list/cancel.
+- Learner reservation cancel.
 - **Server-side search** from discovery filters.
 - **Live map** distance browse.
 

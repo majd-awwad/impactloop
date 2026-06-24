@@ -52,7 +52,7 @@ Derived **only** from `apps/backend/src/modules/`:
 | `material-types` | `/api/material-types` | Search types + price rules |
 | `materials` | `/api/materials` | Public discovery read + listing policy + price check |
 | `price-rule-requests` | `/api/price-rule-requests`, `/api/supplier/price-rule-requests` | Create + supplier list/draft |
-| `reservations` | `/api/reservations` | Learner material reservation create |
+| `reservations` | `/api/reservations` | Learner material reservation create/read |
 | `supplier` | `/api/supplier` | Dashboard, profile, supplier materials |
 | `supplier-notifications` | `/api/supplier/notifications` | Supplier action notifications list |
 | `supplier-reservations` | `/api/supplier/reservations` | Supplier reservation list/accept/decline/complete |
@@ -81,7 +81,7 @@ Derived **only** from `apps/frontend/lib/features/`:
 | `learning_hub` | `/learning`, `/learning/:id`, `/learning/add-draft` | **Partial** — backend read API exists; UI uses mock data only |
 | `material_discovery` | `/materials`, `/materials/:id` | API default (`ApiMaterialDiscoveryRepository`); detail reserve CTA calls reservations data layer |
 | `materials` | (no dedicated routes) | Shared data layer for listing/taxonomy — used by supplier add material |
-| `reservations` | (no dedicated routes) | Learner create API/repository/controller consumed by material detail |
+| `reservations` | `/learner/reservations` | Learner create/read API/repository/controllers; status page and material-detail state |
 | `supplier_portal` | `/supplier/*` shell routes | **Partial** — API-backed; material read/create/update/delete and supplier reservations |
 
 Detail: [frontend/routes-map.md](frontend/routes-map.md), [08-implementation-status.md](08-implementation-status.md)

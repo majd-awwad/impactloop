@@ -19,6 +19,7 @@ import '../../features/learning_hub/presentation/pages/learning_project_details_
 import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
+import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
 import '../../features/supplier_portal/presentation/pages/add_material_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_edit_material_page.dart';
@@ -33,7 +34,7 @@ import '../../features/supplier_portal/presentation/shell/supplier_shell.dart';
 
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
 
-enum _RouteAccessLevel { public, authenticated, supplier }
+enum _RouteAccessLevel { public, authenticated, learner, supplier }
 
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   final path = state.matchedLocation;
@@ -98,6 +99,10 @@ _RouteAccessLevel _routeAccessForPath(String path) {
     return _RouteAccessLevel.supplier;
   }
 
+  if (path == '/learner/reservations') {
+    return _RouteAccessLevel.learner;
+  }
+
   if (path == '/home' || path == _supplierAccessDeniedRoute) {
     return _RouteAccessLevel.authenticated;
   }
@@ -107,6 +112,10 @@ _RouteAccessLevel _routeAccessForPath(String path) {
 
 bool _userHasSupplierRole(AuthState authState) {
   return userHasSupplierRole(authState.user);
+}
+
+bool _userHasLearnerRole(AuthState authState) {
+  return userHasRole(authState.user, 'LEARNER');
 }
 
 String _withFrom(String path, String from) {
@@ -138,6 +147,11 @@ String? _resolveProtectedRoute(
   if (accessLevel == _RouteAccessLevel.supplier &&
       !_userHasSupplierRole(authState)) {
     return _supplierAccessDeniedRoute;
+  }
+
+  if (accessLevel == _RouteAccessLevel.learner &&
+      !_userHasLearnerRole(authState)) {
+    return homeRoute;
   }
 
   return null;
@@ -214,6 +228,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (context, state) => const LandingPage()),
       GoRoute(path: '/health', builder: (context, state) => const HealthPage()),
       GoRoute(path: '/home', builder: (context, state) => const HomePage()),
+      GoRoute(
+        path: '/learner/reservations',
+        builder: (context, state) => const LearnerReservationsPage(),
+      ),
       GoRoute(
         path: authCheckingRoute,
         builder: (context, state) => const AuthCheckingPage(),

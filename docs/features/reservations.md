@@ -17,12 +17,12 @@ Current MVP status for material reservations.
 |-------|--------|----------|
 | Database `reservations` + `reservation_status_history` | **Implemented for MVP** | Existing schema used; no migration needed |
 | Learner `POST /api/reservations` | **Implemented MVP** | `modules/reservations` router mounted in `app.ts` |
-| Learner Flutter feature / reserve UI | **Implemented MVP** | Material detail CTA creates reservation; no list/cancel |
+| Learner `GET /api/reservations/my` | **Implemented MVP** | Learner-owned reservation list/read model |
+| Learner Flutter feature / reserve UI | **Implemented MVP** | Material detail CTA creates reservation and shows learner reservation state |
+| Learner “My Reservations” UI | **Implemented MVP** | `/learner/reservations`; no cancel/delivery |
 | Supplier list/accept/decline/complete | **Partial** | `GET/PATCH /api/supplier/reservations/*`; no delivery |
 | Material `RESERVED` on accept | **Implemented** | Accept updates reservation and material in one transaction |
-| Learner “my reservations” UI | **Frontend-only** placeholders | `learner_home_page.dart` — Coming soon cards |
-
-**Overall:** **Partial**. Learner create + supplier accept/reject/complete exist for an exclusive reservation MVP. Learner list/cancel, delivery, expiry, reviews, queues, partial stock allocation, and pickup-location reveal are not implemented.
+**Overall:** **Partial**. Learner create/read UI + supplier accept/reject/complete exist for an exclusive reservation MVP. Learner cancel, delivery, expiry, reviews, queues, partial stock allocation, and pickup-location reveal are not implemented.
 
 ## Existing Related Files
 
@@ -31,8 +31,8 @@ Current MVP status for material reservations.
 | Path | Role |
 |------|------|
 | `modules/reservations/reservations.routes.ts` | Learner reservation create endpoint |
-| `modules/reservations/reservations.service.ts` | Learner reservation business logic |
-| `modules/reservations/reservations.repository.ts` | Transactional create + material status update |
+| `modules/reservations/reservations.service.ts` | Learner reservation create/read business logic |
+| `modules/reservations/reservations.repository.ts` | Transactional create + material status update; learner-owned list query |
 | `modules/reservations/reservations.validation.ts` | Request schema |
 | `modules/reservations/reservations.create.test.ts` | Learner create tests |
 | `modules/supplier-reservations/supplier-reservations.routes.ts` | Supplier endpoints |
@@ -45,8 +45,9 @@ Current MVP status for material reservations.
 
 | Path | Role |
 |------|------|
-| `reservations/data/*`, `reservations/application/*` | Learner reservation API/repository/controller |
-| `material_discovery/.../material_details_page.dart` | Reserve button entry point |
+| `reservations/data/*`, `reservations/application/*` | Learner reservation API/repository/controllers |
+| `reservations/presentation/pages/learner_reservations_page.dart` | Learner reservation status page |
+| `material_discovery/.../material_details_page.dart` | Reserve button entry point; post-success and existing-reservation links to My Reservations |
 | `supplier_portal/.../supplier_incoming_requests_page.dart` | Supplier inbox |
 | `supplier_portal/data/supplier_requests_api.dart` | Supplier API client |
 | `home/.../learner_home_page.dart` | Placeholder “My reservations” (not wired) |
@@ -68,7 +69,8 @@ Active reservation statuses are `PENDING`, `ACCEPTED`, and `COMPLETED`. Rejected
 
 ## What Is Missing
 
-- Learner list/detail/cancel reservation API and Flutter feature.
+- Learner cancel reservation API and Flutter feature.
+- Dedicated learner reservation detail page.
 - Cancel/expiry workflows.
 - Delivery request / driver workflow.
 - Reviews.
@@ -78,7 +80,7 @@ Active reservation statuses are `PENDING`, `ACCEPTED`, and `COMPLETED`. Rejected
 
 ## Risks
 
-- Public discovery pages own local futures, so the detail page refreshes itself and home suggestions are invalidated after reservation; existing open discovery pages refresh only by re-entering/reloading.
+- Public discovery pages own local futures, so the detail page refreshes itself and home suggestions/my reservations are invalidated after reservation; existing open discovery pages refresh only by re-entering/reloading.
 - No database unique constraint enforces one active reservation per material; MVP protection is transactional service logic using material status and active-reservation checks.
 - `REUSED` happens only on supplier complete, matching the impact rule.
 

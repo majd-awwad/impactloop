@@ -145,7 +145,7 @@ Mount order: `apps/backend/src/app.ts`
 
 ## `reservations`
 
-**Purpose:** Learner-side material reservation creation.
+**Purpose:** Learner-side material reservation creation and read model.
 
 **Mounted at:** `/api/reservations`
 
@@ -153,9 +153,9 @@ Mount order: `apps/backend/src/app.ts`
 
 **Prisma:** `Reservation`, `ReservationStatusHistory`, `Material`
 
-**Behavior:** `POST /api/reservations` requires a `LEARNER`, validates the material and quantity, prevents own-material reservations, enforces one active reservation per material for MVP, creates a `PENDING` reservation, and moves the material from `AVAILABLE` to `PENDING_RESERVATION` transactionally.
+**Behavior:** `POST /api/reservations` requires a `LEARNER`, validates the material and quantity, prevents own-material reservations, enforces one active reservation per material for MVP, creates a `PENDING` reservation, and moves the material from `AVAILABLE` to `PENDING_RESERVATION` transactionally. `GET /api/reservations/my` returns the current learner's reservations newest first with safe material, supplier, status, and pickup-window summary fields.
 
-**Not implemented:** Learner list/cancel, delivery request, expiry jobs, reviews, multi-reservation queues.
+**Not implemented:** Learner cancel/detail mutation, delivery request, expiry jobs, reviews, multi-reservation queues.
 
 ---
 

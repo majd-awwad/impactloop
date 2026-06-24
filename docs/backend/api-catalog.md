@@ -63,7 +63,10 @@ Query validation: `categoriesQuerySchema`
 
 | Method | Path | Auth | Roles | Source file |
 |--------|------|------|-------|-------------|
+| GET | `/api/reservations/my` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
 | POST | `/api/reservations` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
+
+`GET /api/reservations/my` returns the authenticated learner's reservations newest first. Items include reservation status, requested quantity, message, timestamps, safe material summary, supplier display name, pickup window fields, supplier note, and rejection reason. It does not expose precise pickup coordinates.
 
 `POST /api/reservations` creates an exclusive learner reservation request for an `AVAILABLE` material. The request body is `{ materialId, quantityRequested, message? }`. The transaction creates a `PENDING` reservation, writes reservation status history, and moves the material to `PENDING_RESERVATION`. Duplicate active reservations and unavailable material states return `409 CONFLICT`.
 
@@ -166,7 +169,6 @@ These appear in `docs/04-api-conventions.md` or `docs/02-architecture.md` exampl
 | Example | Status |
 |---------|--------|
 | `POST /api/materials` | **Not implemented** — use `POST /api/supplier/materials` |
-| `GET /api/reservations/my` | **Not implemented** |
 | `PATCH /api/reservations/:id/accept` | **Not implemented** — supplier path is `/api/supplier/reservations/:id/accept` |
 | `POST /api/ai/requests` | **Not implemented** |
 | `GET /api/ai/credits/me` | **Not implemented** |

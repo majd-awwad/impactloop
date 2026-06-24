@@ -109,7 +109,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Area | Feature doc | Flow doc(s) | Ship status (summary) |
 |------|-------------|-------------|------------------------|
 | Open questions (index) | [09-open-questions.md](09-open-questions.md) | — | Unresolved / **Needs verification** across features |
-| Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner create + material detail CTA **Partial**; supplier workflow **Partial** |
+| Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner create/read + material detail status **Partial**; supplier workflow **Partial** |
 | Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Schema-only** / **not implemented** |
 | AI material matching agent | [features/ai-agent.md](features/ai-agent.md) | [flows/ai-material-matching-flow.md](flows/ai-material-matching-flow.md) | **Not implemented** (distinct from price suggestion **Partial**) |
 | Admin portal | [features/admin.md](features/admin.md) | — | **Not implemented** — `POST /api/invitations` **Backend-only** only |
@@ -117,7 +117,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 
 Gap docs are stubs — see [09-open-questions.md](09-open-questions.md) before implementing.
 
-**Not documented as implemented:** learner reservation list/cancel, delivery workflow, AI material matching agent, admin portal, moderator portal (unless code changes prove otherwise).
+**Not documented as implemented:** learner reservation cancel, delivery workflow, AI material matching agent, admin portal, moderator portal (unless code changes prove otherwise).
 
 ADRs (`docs/adr/`) — accepted architecture decisions.
 

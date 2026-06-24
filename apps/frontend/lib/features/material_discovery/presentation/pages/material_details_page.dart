@@ -16,8 +16,10 @@ import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
+import '../../../reservations/application/my_reservations_provider.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
+import '../../../reservations/data/models/learner_reservation.dart';
 import '../../data/api_material_discovery_repository.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_repository.dart';
@@ -43,6 +45,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
   late final MaterialDiscoveryRepository _defaultRepository;
   late MaterialDiscoveryRepository _activeRepository;
   late Future<DiscoveryMaterial?> _materialFuture;
+  bool _showReservationStatusCta = false;
 
   @override
   void initState() {
@@ -62,6 +65,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
         oldWidget.repository != widget.repository ||
         _activeRepository != nextRepository) {
       _activeRepository = nextRepository;
+      _showReservationStatusCta = false;
       _materialFuture = _activeRepository.getMaterialById(widget.materialId);
     }
   }
@@ -150,6 +154,24 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
                                     final reserveState = ref.watch(
                                       reservationCreateControllerProvider,
                                     );
+                                    final myReservationsState =
+                                        authState.status ==
+                                                AuthStatus.authenticated &&
+                                            authState.user?.hasRole(
+                                                  'LEARNER',
+                                                ) ==
+                                                true
+                                        ? ref.watch(myReservationsProvider)
+                                        : null;
+                                    final learnerReservation =
+                                        myReservationsState?.maybeWhen(
+                                          data: (reservations) =>
+                                              _reservationForMaterial(
+                                                reservations,
+                                                material,
+                                              ),
+                                          orElse: () => null,
+                                        );
 
                                     final mainColumn = _DetailsMainColumn(
                                       material: material,
@@ -158,6 +180,12 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
                                       material: material,
                                       authState: authState,
                                       isSubmitting: reserveState.isLoading,
+                                      isLoadingReservation:
+                                          myReservationsState?.isLoading ==
+                                          true,
+                                      showReservationStatusCta:
+                                          _showReservationStatusCta,
+                                      learnerReservation: learnerReservation,
                                       onReserve: () =>
                                           _handleReserve(material),
                                     );
@@ -231,8 +259,10 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       }
 
       showInfoSnackBar(context, 'Reservation request sent to the supplier.');
+      ref.invalidate(myReservationsProvider);
       ref.invalidate(homeSuggestedMaterialsProvider);
       setState(() {
+        _showReservationStatusCta = true;
         _materialFuture = _activeRepository.getMaterialById(widget.materialId);
       });
     } on ApiException catch (error) {
@@ -260,6 +290,25 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       );
     }
   }
+}
+
+LearnerReservation? _reservationForMaterial(
+  List<LearnerReservation> reservations,
+  DiscoveryMaterial material,
+) {
+  for (final reservation in reservations) {
+    if (reservation.material.id != material.id) {
+      continue;
+    }
+
+    if (reservation.isRejected && material.status == 'AVAILABLE') {
+      continue;
+    }
+
+    return reservation;
+  }
+
+  return null;
 }
 
 class _SimpleStateScaffold extends StatelessWidget {
@@ -502,12 +551,18 @@ class _DetailsSideColumn extends StatelessWidget {
     required this.material,
     required this.authState,
     required this.isSubmitting,
+    required this.isLoadingReservation,
+    required this.showReservationStatusCta,
+    required this.learnerReservation,
     required this.onReserve,
   });
 
   final DiscoveryMaterial material;
   final AuthState authState;
   final bool isSubmitting;
+  final bool isLoadingReservation;
+  final bool showReservationStatusCta;
+  final LearnerReservation? learnerReservation;
   final VoidCallback onReserve;
 
   @override
@@ -639,39 +694,48 @@ class _DetailsSideColumn extends StatelessWidget {
                 textAlign: TextAlign.start,
               ),
               const SizedBox(height: AppSpacing.md),
-              FilledButton.icon(
-                onPressed: canTapReserve ? onReserve : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: materialMint,
-                  foregroundColor: palette.ctaForeground,
-                  minimumSize: const Size.fromHeight(54),
-                  shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+              if (isLoadingReservation && isAuthenticatedLearner)
+                const _ReservationLoadingState()
+              else if (learnerReservation != null)
+                _LearnerReservationStateCard(reservation: learnerReservation!)
+              else if (showReservationStatusCta)
+                const _PostReservationStatusCta()
+              else
+                FilledButton.icon(
+                  onPressed: canTapReserve ? onReserve : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: materialMint,
+                    foregroundColor: palette.ctaForeground,
+                    minimumSize: const Size.fromHeight(54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.lgAll,
+                    ),
+                  ),
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.shopping_bag_outlined),
+                  label: Text(
+                    (isSubmitting
+                            ? const LocalizedText(
+                                en: 'Requesting...',
+                                ar: 'جارٍ الطلب...',
+                              )
+                            : isAuthenticatedLearner || !isAvailable
+                                ? const LocalizedText(
+                                    en: 'Reserve Material',
+                                    ar: 'احجز المادة',
+                                  )
+                                : const LocalizedText(
+                                    en: 'Sign in to Reserve',
+                                    ar: 'سجل الدخول للحجز',
+                                  ))
+                        .resolve(context),
+                  ),
                 ),
-                icon: isSubmitting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.shopping_bag_outlined),
-                label: Text(
-                  (isSubmitting
-                          ? const LocalizedText(
-                              en: 'Requesting...',
-                              ar: 'جارٍ الطلب...',
-                            )
-                          : isAuthenticatedLearner || !isAvailable
-                              ? const LocalizedText(
-                                  en: 'Reserve Material',
-                                  ar: 'احجز المادة',
-                                )
-                              : const LocalizedText(
-                                  en: 'Sign in to Reserve',
-                                  ar: 'سجل الدخول للحجز',
-                                ))
-                      .resolve(context),
-                ),
-              ),
             ],
           ),
         ),
@@ -679,6 +743,218 @@ class _DetailsSideColumn extends StatelessWidget {
     );
   }
 }
+
+class _ReservationLoadingState extends StatelessWidget {
+  const _ReservationLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: palette.mint,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          'Checking your reservations...',
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: palette.textSecondary),
+        ),
+      ],
+    );
+  }
+}
+
+class _PostReservationStatusCta extends StatelessWidget {
+  const _PostReservationStatusCta();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurfaceAlt,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Reservation request sent.',
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textPrimary),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextButton.icon(
+            onPressed: () => context.go('/learner/reservations'),
+            icon: const Icon(Icons.assignment_turned_in_outlined),
+            label: const Text('View reservation status'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LearnerReservationStateCard extends StatelessWidget {
+  const _LearnerReservationStateCard({required this.reservation});
+
+  final LearnerReservation reservation;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final detail = _reservationDetailText(reservation);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurfaceAlt,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          MaterialStatusBadge(
+            label: _reservationStatusLabel(reservation.status),
+            tone: _reservationStatusTone(reservation.status),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            detail,
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextButton.icon(
+            onPressed: () => context.go('/learner/reservations'),
+            icon: const Icon(Icons.assignment_turned_in_outlined),
+            label: Text(_reservationActionLabel(reservation.status)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _reservationActionLabel(String status) {
+  switch (status) {
+    case 'PENDING':
+      return 'View reservation request';
+    case 'ACCEPTED':
+      return 'View pickup details';
+    case 'REJECTED':
+    case 'COMPLETED':
+      return 'View reservation history';
+    default:
+      return 'View reservation status';
+  }
+}
+
+String _reservationStatusLabel(String status) {
+  switch (status) {
+    case 'PENDING':
+      return 'Reservation request sent';
+    case 'ACCEPTED':
+      return 'Reservation accepted';
+    case 'REJECTED':
+      return 'Reservation rejected';
+    case 'COMPLETED':
+      return 'Reservation completed';
+    case 'CANCELLED':
+      return 'Reservation cancelled';
+    case 'EXPIRED':
+      return 'Reservation expired';
+    default:
+      return status;
+  }
+}
+
+MaterialStatusBadgeTone _reservationStatusTone(String status) {
+  switch (status) {
+    case 'PENDING':
+    case 'ACCEPTED':
+      return MaterialStatusBadgeTone.reserved;
+    case 'COMPLETED':
+      return MaterialStatusBadgeTone.reused;
+    case 'REJECTED':
+    case 'CANCELLED':
+    case 'EXPIRED':
+    default:
+      return MaterialStatusBadgeTone.draft;
+  }
+}
+
+String _reservationDetailText(LearnerReservation reservation) {
+  if (reservation.isPending) {
+    return 'Reservation request sent. Waiting for supplier response.';
+  }
+
+  if (reservation.isAccepted) {
+    final pickup = _pickupWindowText(reservation);
+    final note = reservation.supplierNote?.trim();
+    if (pickup != null && note != null && note.isNotEmpty) {
+      return '$pickup $note';
+    }
+
+    return pickup ?? 'Reservation accepted. Pickup details are ready.';
+  }
+
+  if (reservation.isRejected) {
+    final reason = reservation.rejectionReason?.trim();
+    return reason != null && reason.isNotEmpty
+        ? reason
+        : 'The supplier rejected this reservation.';
+  }
+
+  if (reservation.isCompleted) {
+    return 'This reservation is completed.';
+  }
+
+  if (reservation.isCancelled) {
+    return 'This reservation was cancelled.';
+  }
+
+  if (reservation.isExpired) {
+    return 'This reservation expired.';
+  }
+
+  return 'Reservation status updated.';
+}
+
+String? _pickupWindowText(LearnerReservation reservation) {
+  if (reservation.pickupWindowStart == null) {
+    return null;
+  }
+
+  final start = _formatDateTime(reservation.pickupWindowStart!);
+  final end = reservation.pickupWindowEnd == null
+      ? null
+      : _formatDateTime(reservation.pickupWindowEnd!);
+
+  return end == null ? 'Pickup starts $start.' : 'Pickup window: $start - $end.';
+}
+
+String _formatDateTime(DateTime value) {
+  return '${value.year}-${_two(value.month)}-${_two(value.day)} '
+      '${_two(value.hour)}:${_two(value.minute)}';
+}
+
+String _two(int value) => value.toString().padLeft(2, '0');
 
 class _Panel extends StatelessWidget {
   const _Panel({required this.child});
