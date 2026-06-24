@@ -26,6 +26,8 @@ export type SupplierOrganizationProfileDto = {
   workingDays: unknown;
   workingHours: unknown;
   verificationDocumentStatus: string | null;
+  verificationDocumentUrl: string | null;
+  verificationDocumentName: string | null;
   businessLocation: SupplierProfileLocationDto | null;
 };
 
@@ -35,6 +37,7 @@ export type SupplierProfileDetailsDto = {
   supplierType: string;
   description: string | null;
   verificationStatus: string;
+  verificationAdminNote: string | null;
   defaultPickupLocation: SupplierProfileLocationDto | null;
   organizationProfile: SupplierOrganizationProfileDto | null;
 };

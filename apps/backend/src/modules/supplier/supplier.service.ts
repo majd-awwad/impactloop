@@ -22,6 +22,7 @@ import * as priceRuleRequestsRepository from '../price-rule-requests/price-rule-
 import { resolveApprovedMaxUnitPriceNis } from '../price-rule-requests/price-rule-request-pricing.js';
 import { checkMaterialPrice, resolveMaterialReferenceForCreate } from '../materials/materials.service.js';
 import * as supplierRepository from './supplier.repository.js';
+import { assertSupplierCanPublishMaterials } from '../supplier-verification/supplier-verification.service.js';
 import type {
   CreateSupplierMaterialInput,
   SupplierMaterialsQuery,
@@ -384,6 +385,11 @@ export const createSupplierMaterial = async (
     throw new AppError(MISSING_PROFILE_MESSAGE, 400, 'VALIDATION_ERROR');
   }
 
+  assertSupplierCanPublishMaterials({
+    supplierType: supplierProfile.supplierType,
+    verificationStatus: supplierProfile.verificationStatus,
+  });
+
   if (!supplierProfile.defaultPickupLocationId) {
     throw new AppError(
       MISSING_PICKUP_LOCATION_MESSAGE,
@@ -596,6 +602,8 @@ const mapOrganizationProfile = (organization: {
   workingDays: unknown;
   workingHours: unknown;
   verificationDocumentStatus: string | null;
+  verificationDocumentUrl: string | null;
+  verificationDocumentName: string | null;
   businessLocation: {
     id: string;
     country: string;
@@ -621,8 +629,24 @@ const mapOrganizationProfile = (organization: {
     workingDays: organization.workingDays,
     workingHours: organization.workingHours,
     verificationDocumentStatus: organization.verificationDocumentStatus,
+    verificationDocumentUrl: organization.verificationDocumentUrl,
+    verificationDocumentName: organization.verificationDocumentName,
     businessLocation: mapLocation(organization.businessLocation),
   };
+};
+
+const resolveSupplierVerificationAdminNote = (
+  verificationStatus: string,
+  adminNote: string | null | undefined,
+): string | null => {
+  const normalized = normalizeVerificationStatus(verificationStatus);
+
+  if (normalized !== 'REJECTED' && normalized !== 'CHANGES_REQUESTED') {
+    return null;
+  }
+
+  const trimmed = adminNote?.trim();
+  return trimmed ? trimmed : null;
 };
 
 const mapSupplierProfile = (supplierProfile: {
@@ -631,6 +655,7 @@ const mapSupplierProfile = (supplierProfile: {
   supplierType: string | null;
   description: string | null;
   verificationStatus: string;
+  verificationAdminNote?: string | null;
   defaultPickupLocation: {
     id: string;
     country: string;
@@ -651,6 +676,8 @@ const mapSupplierProfile = (supplierProfile: {
     workingDays: unknown;
     workingHours: unknown;
     verificationDocumentStatus: string | null;
+    verificationDocumentUrl: string | null;
+    verificationDocumentName: string | null;
     businessLocation: {
       id: string;
       country: string;
@@ -670,7 +697,13 @@ const mapSupplierProfile = (supplierProfile: {
     publicName: supplierProfile.publicName ?? '',
     supplierType: supplierProfile.supplierType ?? '',
     description: supplierProfile.description,
-    verificationStatus: supplierProfile.verificationStatus,
+    verificationStatus: normalizeVerificationStatus(
+      supplierProfile.verificationStatus,
+    ),
+    verificationAdminNote: resolveSupplierVerificationAdminNote(
+      supplierProfile.verificationStatus,
+      supplierProfile.verificationAdminNote,
+    ),
     defaultPickupLocation: mapLocation(supplierProfile.defaultPickupLocation),
     organizationProfile: mapOrganizationProfile(
       supplierProfile.organizationProfile,

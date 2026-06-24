@@ -2,6 +2,7 @@ import type {
   AuthTokenType,
   LearnerProfile,
   Location,
+  OrganizationProfile,
   SupplierProfile,
   User,
   UserRole,
@@ -10,15 +11,14 @@ import type {
 
 import { prisma } from '../../database/prisma.js';
 
-import {
-  DEFAULT_PICKUP_COUNTRY,
-  parsePickupArea,
-} from './pickup-area.js';
+import { DEFAULT_PICKUP_COUNTRY, parsePickupArea } from './pickup-area.js';
+import { normalizeSupplierTypeInput, resolveInitialVerificationStatus } from './supplier-type.js';
 
 export type UserWithRoles = User & { roles: UserRoleAssignment[] };
 
 export type SupplierProfileWithLocation = SupplierProfile & {
   defaultPickupLocation: Location | null;
+  organizationProfile: OrganizationProfile | null;
 };
 
 export type UserWithRolesAndProfiles = User & {
@@ -68,6 +68,7 @@ const userWithRolesAndProfilesInclude = {
   supplierProfile: {
     include: {
       defaultPickupLocation: true,
+      organizationProfile: true,
     },
   },
 } as const;
@@ -128,9 +129,14 @@ export const createUserWithOnboarding = async (
           ? {
               supplierProfile: {
                 create: {
-                  supplierType: input.supplierProfile.supplierType,
+                  supplierType: normalizeSupplierTypeInput(
+                    input.supplierProfile.supplierType,
+                  ),
                   publicName: input.supplierProfile.publicName,
                   description: input.supplierProfile.description,
+                  verificationStatus: resolveInitialVerificationStatus(
+                    input.supplierProfile.supplierType,
+                  ),
                   defaultPickupLocation: {
                     create: {
                       country: DEFAULT_PICKUP_COUNTRY,
