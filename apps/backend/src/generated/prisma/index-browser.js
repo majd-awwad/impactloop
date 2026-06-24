@@ -163,11 +163,31 @@ exports.Prisma.RoleInvitationScalarFieldEnum = {
   tokenHash: 'tokenHash',
   invitedBy: 'invitedBy',
   status: 'status',
+  sendStatus: 'sendStatus',
+  sentAt: 'sentAt',
+  sendError: 'sendError',
+  providerMessageId: 'providerMessageId',
+  revokedAt: 'revokedAt',
   expiresAt: 'expiresAt',
   usedAt: 'usedAt',
   usedByUserId: 'usedByUserId',
   notes: 'notes',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.DriverProfileScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  phone: 'phone',
+  city: 'city',
+  area: 'area',
+  addressLine: 'addressLine',
+  transportationType: 'transportationType',
+  availabilityNote: 'availabilityNote',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.LearnerProfileScalarFieldEnum = {
@@ -569,6 +589,23 @@ exports.RoleInvitationStatus = exports.$Enums.RoleInvitationStatus = {
   REVOKED: 'REVOKED'
 };
 
+exports.RoleInvitationSendStatus = exports.$Enums.RoleInvitationSendStatus = {
+  PENDING: 'PENDING',
+  SENT: 'SENT',
+  FAILED: 'FAILED'
+};
+
+exports.TransportationType = exports.$Enums.TransportationType = {
+  CAR: 'CAR',
+  MOTORCYCLE: 'MOTORCYCLE',
+  BICYCLE: 'BICYCLE',
+  WALKING: 'WALKING'
+};
+
+exports.DriverProfileStatus = exports.$Enums.DriverProfileStatus = {
+  ACTIVE: 'ACTIVE'
+};
+
 exports.OrganizationType = exports.$Enums.OrganizationType = {
   WORKSHOP: 'WORKSHOP',
   FACTORY: 'FACTORY',
@@ -711,6 +748,7 @@ exports.Prisma.ModelName = {
   UserRoleAssignment: 'UserRoleAssignment',
   AuthToken: 'AuthToken',
   RoleInvitation: 'RoleInvitation',
+  DriverProfile: 'DriverProfile',
   LearnerProfile: 'LearnerProfile',
   SupplierProfile: 'SupplierProfile',
   OrganizationProfile: 'OrganizationProfile',

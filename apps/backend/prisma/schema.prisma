@@ -42,6 +42,23 @@ enum RoleInvitationStatus {
   REVOKED
 }
 
+enum RoleInvitationSendStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum TransportationType {
+  CAR
+  MOTORCYCLE
+  BICYCLE
+  WALKING
+}
+
+enum DriverProfileStatus {
+  ACTIVE
+}
+
 enum MaterialCondition {
   NEW
   LIKE_NEW
@@ -196,6 +213,7 @@ model User {
   authTokens                   AuthToken[]
   learnerProfile               LearnerProfile?
   supplierProfile              SupplierProfile?
+  driverProfile                DriverProfile?
   invitedRoles                 RoleInvitation[]      @relation("RoleInvitationInvitedBy")
   usedInvitations              RoleInvitation[]      @relation("RoleInvitationUsedByUser")
   assignedRoles                UserRoleAssignment[]  @relation("UserRoleAssignedBy")
@@ -248,26 +266,50 @@ model AuthToken {
 }
 
 model RoleInvitation {
-  id            String                   @id @default(cuid())
-  targetEmail   String?                  @map("target_email")
-  targetPhone   String?                  @map("target_phone")
-  targetRole    RoleInvitationTargetRole @map("target_role")
-  tokenHash     String                   @unique @map("token_hash")
-  invitedBy     String?                  @map("invited_by")
-  status        RoleInvitationStatus     @default(PENDING)
-  expiresAt     DateTime                 @map("expires_at")
-  usedAt        DateTime?                @map("used_at")
-  usedByUserId  String?                  @map("used_by_user_id")
-  notes         String?
-  createdAt     DateTime                 @default(now()) @map("created_at")
-  invitedByUser User?                    @relation("RoleInvitationInvitedBy", fields: [invitedBy], references: [id], onDelete: SetNull)
-  usedByUser    User?                    @relation("RoleInvitationUsedByUser", fields: [usedByUserId], references: [id], onDelete: SetNull)
+  id                String                   @id @default(cuid())
+  targetEmail       String?                  @map("target_email")
+  targetPhone       String?                  @map("target_phone")
+  targetRole        RoleInvitationTargetRole @map("target_role")
+  tokenHash         String                   @unique @map("token_hash")
+  invitedBy         String?                  @map("invited_by")
+  status            RoleInvitationStatus     @default(PENDING)
+  sendStatus        RoleInvitationSendStatus @default(PENDING) @map("send_status")
+  sentAt            DateTime?                @map("sent_at")
+  sendError         String?                  @map("send_error")
+  providerMessageId String?                  @map("provider_message_id")
+  revokedAt         DateTime?                @map("revoked_at")
+  expiresAt         DateTime                 @map("expires_at")
+  usedAt            DateTime?                @map("used_at")
+  usedByUserId      String?                  @map("used_by_user_id")
+  notes             String?
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  updatedAt         DateTime                 @updatedAt @map("updated_at")
+  invitedByUser     User?                    @relation("RoleInvitationInvitedBy", fields: [invitedBy], references: [id], onDelete: SetNull)
+  usedByUser        User?                    @relation("RoleInvitationUsedByUser", fields: [usedByUserId], references: [id], onDelete: SetNull)
 
   @@index([targetEmail])
   @@index([targetPhone])
   @@index([targetRole, status])
   @@index([expiresAt])
+  @@index([sendStatus])
   @@map("role_invitations")
+}
+
+model DriverProfile {
+  id                 String              @id @default(cuid())
+  userId             String              @unique @map("user_id")
+  phone              String
+  city               String
+  area               String
+  addressLine        String?             @map("address_line")
+  transportationType TransportationType  @map("transportation_type")
+  availabilityNote   String?             @map("availability_note")
+  status             DriverProfileStatus @default(ACTIVE)
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("driver_profiles")
 }
 
 model LearnerProfile {

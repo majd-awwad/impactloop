@@ -34,6 +34,11 @@ export type AuthToken = $Result.DefaultSelection<Prisma.$AuthTokenPayload>
  */
 export type RoleInvitation = $Result.DefaultSelection<Prisma.$RoleInvitationPayload>
 /**
+ * Model DriverProfile
+ * 
+ */
+export type DriverProfile = $Result.DefaultSelection<Prisma.$DriverProfilePayload>
+/**
  * Model LearnerProfile
  * 
  */
@@ -206,6 +211,32 @@ export const RoleInvitationStatus: {
 };
 
 export type RoleInvitationStatus = (typeof RoleInvitationStatus)[keyof typeof RoleInvitationStatus]
+
+
+export const RoleInvitationSendStatus: {
+  PENDING: 'PENDING',
+  SENT: 'SENT',
+  FAILED: 'FAILED'
+};
+
+export type RoleInvitationSendStatus = (typeof RoleInvitationSendStatus)[keyof typeof RoleInvitationSendStatus]
+
+
+export const TransportationType: {
+  CAR: 'CAR',
+  MOTORCYCLE: 'MOTORCYCLE',
+  BICYCLE: 'BICYCLE',
+  WALKING: 'WALKING'
+};
+
+export type TransportationType = (typeof TransportationType)[keyof typeof TransportationType]
+
+
+export const DriverProfileStatus: {
+  ACTIVE: 'ACTIVE'
+};
+
+export type DriverProfileStatus = (typeof DriverProfileStatus)[keyof typeof DriverProfileStatus]
 
 
 export const MaterialCondition: {
@@ -425,6 +456,18 @@ export const RoleInvitationTargetRole: typeof $Enums.RoleInvitationTargetRole
 export type RoleInvitationStatus = $Enums.RoleInvitationStatus
 
 export const RoleInvitationStatus: typeof $Enums.RoleInvitationStatus
+
+export type RoleInvitationSendStatus = $Enums.RoleInvitationSendStatus
+
+export const RoleInvitationSendStatus: typeof $Enums.RoleInvitationSendStatus
+
+export type TransportationType = $Enums.TransportationType
+
+export const TransportationType: typeof $Enums.TransportationType
+
+export type DriverProfileStatus = $Enums.DriverProfileStatus
+
+export const DriverProfileStatus: typeof $Enums.DriverProfileStatus
 
 export type MaterialCondition = $Enums.MaterialCondition
 
@@ -666,6 +709,16 @@ export class PrismaClient<
     * ```
     */
   get roleInvitation(): Prisma.RoleInvitationDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.driverProfile`: Exposes CRUD operations for the **DriverProfile** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DriverProfiles
+    * const driverProfiles = await prisma.driverProfile.findMany()
+    * ```
+    */
+  get driverProfile(): Prisma.DriverProfileDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.learnerProfile`: Exposes CRUD operations for the **LearnerProfile** model.
@@ -1344,6 +1397,7 @@ export namespace Prisma {
     UserRoleAssignment: 'UserRoleAssignment',
     AuthToken: 'AuthToken',
     RoleInvitation: 'RoleInvitation',
+    DriverProfile: 'DriverProfile',
     LearnerProfile: 'LearnerProfile',
     SupplierProfile: 'SupplierProfile',
     OrganizationProfile: 'OrganizationProfile',
@@ -1383,7 +1437,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "userRoleAssignment" | "authToken" | "roleInvitation" | "learnerProfile" | "supplierProfile" | "organizationProfile" | "location" | "category" | "learningProject" | "projectImage" | "projectRequiredComponent" | "projectStep" | "projectLink" | "projectTag" | "material" | "materialImage" | "materialTag" | "reservation" | "reservationStatusHistory" | "review" | "notification" | "materialType" | "materialTypeAlias" | "materialPriceRule" | "priceRuleRequest" | "categoryRequest" | "aiPriceLookupLog"
+      modelProps: "user" | "userRoleAssignment" | "authToken" | "roleInvitation" | "driverProfile" | "learnerProfile" | "supplierProfile" | "organizationProfile" | "location" | "category" | "learningProject" | "projectImage" | "projectRequiredComponent" | "projectStep" | "projectLink" | "projectTag" | "material" | "materialImage" | "materialTag" | "reservation" | "reservationStatusHistory" | "review" | "notification" | "materialType" | "materialTypeAlias" | "materialPriceRule" | "priceRuleRequest" | "categoryRequest" | "aiPriceLookupLog"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1680,6 +1734,80 @@ export namespace Prisma {
           count: {
             args: Prisma.RoleInvitationCountArgs<ExtArgs>
             result: $Utils.Optional<RoleInvitationCountAggregateOutputType> | number
+          }
+        }
+      }
+      DriverProfile: {
+        payload: Prisma.$DriverProfilePayload<ExtArgs>
+        fields: Prisma.DriverProfileFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DriverProfileFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DriverProfileFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>
+          }
+          findFirst: {
+            args: Prisma.DriverProfileFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DriverProfileFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>
+          }
+          findMany: {
+            args: Prisma.DriverProfileFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>[]
+          }
+          create: {
+            args: Prisma.DriverProfileCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>
+          }
+          createMany: {
+            args: Prisma.DriverProfileCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.DriverProfileCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>[]
+          }
+          delete: {
+            args: Prisma.DriverProfileDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>
+          }
+          update: {
+            args: Prisma.DriverProfileUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>
+          }
+          deleteMany: {
+            args: Prisma.DriverProfileDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DriverProfileUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.DriverProfileUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>[]
+          }
+          upsert: {
+            args: Prisma.DriverProfileUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>
+          }
+          aggregate: {
+            args: Prisma.DriverProfileAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDriverProfile>
+          }
+          groupBy: {
+            args: Prisma.DriverProfileGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DriverProfileGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DriverProfileCountArgs<ExtArgs>
+            result: $Utils.Optional<DriverProfileCountAggregateOutputType> | number
           }
         }
       }
@@ -3571,6 +3699,7 @@ export namespace Prisma {
     userRoleAssignment?: UserRoleAssignmentOmit
     authToken?: AuthTokenOmit
     roleInvitation?: RoleInvitationOmit
+    driverProfile?: DriverProfileOmit
     learnerProfile?: LearnerProfileOmit
     supplierProfile?: SupplierProfileOmit
     organizationProfile?: OrganizationProfileOmit
@@ -4492,6 +4621,7 @@ export namespace Prisma {
     authTokens?: boolean | User$authTokensArgs<ExtArgs>
     learnerProfile?: boolean | User$learnerProfileArgs<ExtArgs>
     supplierProfile?: boolean | User$supplierProfileArgs<ExtArgs>
+    driverProfile?: boolean | User$driverProfileArgs<ExtArgs>
     invitedRoles?: boolean | User$invitedRolesArgs<ExtArgs>
     usedInvitations?: boolean | User$usedInvitationsArgs<ExtArgs>
     assignedRoles?: boolean | User$assignedRolesArgs<ExtArgs>
@@ -4561,6 +4691,7 @@ export namespace Prisma {
     authTokens?: boolean | User$authTokensArgs<ExtArgs>
     learnerProfile?: boolean | User$learnerProfileArgs<ExtArgs>
     supplierProfile?: boolean | User$supplierProfileArgs<ExtArgs>
+    driverProfile?: boolean | User$driverProfileArgs<ExtArgs>
     invitedRoles?: boolean | User$invitedRolesArgs<ExtArgs>
     usedInvitations?: boolean | User$usedInvitationsArgs<ExtArgs>
     assignedRoles?: boolean | User$assignedRolesArgs<ExtArgs>
@@ -4588,6 +4719,7 @@ export namespace Prisma {
       authTokens: Prisma.$AuthTokenPayload<ExtArgs>[]
       learnerProfile: Prisma.$LearnerProfilePayload<ExtArgs> | null
       supplierProfile: Prisma.$SupplierProfilePayload<ExtArgs> | null
+      driverProfile: Prisma.$DriverProfilePayload<ExtArgs> | null
       invitedRoles: Prisma.$RoleInvitationPayload<ExtArgs>[]
       usedInvitations: Prisma.$RoleInvitationPayload<ExtArgs>[]
       assignedRoles: Prisma.$UserRoleAssignmentPayload<ExtArgs>[]
@@ -5015,6 +5147,7 @@ export namespace Prisma {
     authTokens<T extends User$authTokensArgs<ExtArgs> = {}>(args?: Subset<T, User$authTokensArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuthTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     learnerProfile<T extends User$learnerProfileArgs<ExtArgs> = {}>(args?: Subset<T, User$learnerProfileArgs<ExtArgs>>): Prisma__LearnerProfileClient<$Result.GetResult<Prisma.$LearnerProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     supplierProfile<T extends User$supplierProfileArgs<ExtArgs> = {}>(args?: Subset<T, User$supplierProfileArgs<ExtArgs>>): Prisma__SupplierProfileClient<$Result.GetResult<Prisma.$SupplierProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    driverProfile<T extends User$driverProfileArgs<ExtArgs> = {}>(args?: Subset<T, User$driverProfileArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     invitedRoles<T extends User$invitedRolesArgs<ExtArgs> = {}>(args?: Subset<T, User$invitedRolesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RoleInvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     usedInvitations<T extends User$usedInvitationsArgs<ExtArgs> = {}>(args?: Subset<T, User$usedInvitationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RoleInvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     assignedRoles<T extends User$assignedRolesArgs<ExtArgs> = {}>(args?: Subset<T, User$assignedRolesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserRoleAssignmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -5547,6 +5680,25 @@ export namespace Prisma {
      */
     include?: SupplierProfileInclude<ExtArgs> | null
     where?: SupplierProfileWhereInput
+  }
+
+  /**
+   * User.driverProfile
+   */
+  export type User$driverProfileArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    where?: DriverProfileWhereInput
   }
 
   /**
@@ -8151,11 +8303,17 @@ export namespace Prisma {
     tokenHash: string | null
     invitedBy: string | null
     status: $Enums.RoleInvitationStatus | null
+    sendStatus: $Enums.RoleInvitationSendStatus | null
+    sentAt: Date | null
+    sendError: string | null
+    providerMessageId: string | null
+    revokedAt: Date | null
     expiresAt: Date | null
     usedAt: Date | null
     usedByUserId: string | null
     notes: string | null
     createdAt: Date | null
+    updatedAt: Date | null
   }
 
   export type RoleInvitationMaxAggregateOutputType = {
@@ -8166,11 +8324,17 @@ export namespace Prisma {
     tokenHash: string | null
     invitedBy: string | null
     status: $Enums.RoleInvitationStatus | null
+    sendStatus: $Enums.RoleInvitationSendStatus | null
+    sentAt: Date | null
+    sendError: string | null
+    providerMessageId: string | null
+    revokedAt: Date | null
     expiresAt: Date | null
     usedAt: Date | null
     usedByUserId: string | null
     notes: string | null
     createdAt: Date | null
+    updatedAt: Date | null
   }
 
   export type RoleInvitationCountAggregateOutputType = {
@@ -8181,11 +8345,17 @@ export namespace Prisma {
     tokenHash: number
     invitedBy: number
     status: number
+    sendStatus: number
+    sentAt: number
+    sendError: number
+    providerMessageId: number
+    revokedAt: number
     expiresAt: number
     usedAt: number
     usedByUserId: number
     notes: number
     createdAt: number
+    updatedAt: number
     _all: number
   }
 
@@ -8198,11 +8368,17 @@ export namespace Prisma {
     tokenHash?: true
     invitedBy?: true
     status?: true
+    sendStatus?: true
+    sentAt?: true
+    sendError?: true
+    providerMessageId?: true
+    revokedAt?: true
     expiresAt?: true
     usedAt?: true
     usedByUserId?: true
     notes?: true
     createdAt?: true
+    updatedAt?: true
   }
 
   export type RoleInvitationMaxAggregateInputType = {
@@ -8213,11 +8389,17 @@ export namespace Prisma {
     tokenHash?: true
     invitedBy?: true
     status?: true
+    sendStatus?: true
+    sentAt?: true
+    sendError?: true
+    providerMessageId?: true
+    revokedAt?: true
     expiresAt?: true
     usedAt?: true
     usedByUserId?: true
     notes?: true
     createdAt?: true
+    updatedAt?: true
   }
 
   export type RoleInvitationCountAggregateInputType = {
@@ -8228,11 +8410,17 @@ export namespace Prisma {
     tokenHash?: true
     invitedBy?: true
     status?: true
+    sendStatus?: true
+    sentAt?: true
+    sendError?: true
+    providerMessageId?: true
+    revokedAt?: true
     expiresAt?: true
     usedAt?: true
     usedByUserId?: true
     notes?: true
     createdAt?: true
+    updatedAt?: true
     _all?: true
   }
 
@@ -8316,11 +8504,17 @@ export namespace Prisma {
     tokenHash: string
     invitedBy: string | null
     status: $Enums.RoleInvitationStatus
+    sendStatus: $Enums.RoleInvitationSendStatus
+    sentAt: Date | null
+    sendError: string | null
+    providerMessageId: string | null
+    revokedAt: Date | null
     expiresAt: Date
     usedAt: Date | null
     usedByUserId: string | null
     notes: string | null
     createdAt: Date
+    updatedAt: Date
     _count: RoleInvitationCountAggregateOutputType | null
     _min: RoleInvitationMinAggregateOutputType | null
     _max: RoleInvitationMaxAggregateOutputType | null
@@ -8348,11 +8542,17 @@ export namespace Prisma {
     tokenHash?: boolean
     invitedBy?: boolean
     status?: boolean
+    sendStatus?: boolean
+    sentAt?: boolean
+    sendError?: boolean
+    providerMessageId?: boolean
+    revokedAt?: boolean
     expiresAt?: boolean
     usedAt?: boolean
     usedByUserId?: boolean
     notes?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     invitedByUser?: boolean | RoleInvitation$invitedByUserArgs<ExtArgs>
     usedByUser?: boolean | RoleInvitation$usedByUserArgs<ExtArgs>
   }, ExtArgs["result"]["roleInvitation"]>
@@ -8365,11 +8565,17 @@ export namespace Prisma {
     tokenHash?: boolean
     invitedBy?: boolean
     status?: boolean
+    sendStatus?: boolean
+    sentAt?: boolean
+    sendError?: boolean
+    providerMessageId?: boolean
+    revokedAt?: boolean
     expiresAt?: boolean
     usedAt?: boolean
     usedByUserId?: boolean
     notes?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     invitedByUser?: boolean | RoleInvitation$invitedByUserArgs<ExtArgs>
     usedByUser?: boolean | RoleInvitation$usedByUserArgs<ExtArgs>
   }, ExtArgs["result"]["roleInvitation"]>
@@ -8382,11 +8588,17 @@ export namespace Prisma {
     tokenHash?: boolean
     invitedBy?: boolean
     status?: boolean
+    sendStatus?: boolean
+    sentAt?: boolean
+    sendError?: boolean
+    providerMessageId?: boolean
+    revokedAt?: boolean
     expiresAt?: boolean
     usedAt?: boolean
     usedByUserId?: boolean
     notes?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     invitedByUser?: boolean | RoleInvitation$invitedByUserArgs<ExtArgs>
     usedByUser?: boolean | RoleInvitation$usedByUserArgs<ExtArgs>
   }, ExtArgs["result"]["roleInvitation"]>
@@ -8399,14 +8611,20 @@ export namespace Prisma {
     tokenHash?: boolean
     invitedBy?: boolean
     status?: boolean
+    sendStatus?: boolean
+    sentAt?: boolean
+    sendError?: boolean
+    providerMessageId?: boolean
+    revokedAt?: boolean
     expiresAt?: boolean
     usedAt?: boolean
     usedByUserId?: boolean
     notes?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
   }
 
-  export type RoleInvitationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "targetEmail" | "targetPhone" | "targetRole" | "tokenHash" | "invitedBy" | "status" | "expiresAt" | "usedAt" | "usedByUserId" | "notes" | "createdAt", ExtArgs["result"]["roleInvitation"]>
+  export type RoleInvitationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "targetEmail" | "targetPhone" | "targetRole" | "tokenHash" | "invitedBy" | "status" | "sendStatus" | "sentAt" | "sendError" | "providerMessageId" | "revokedAt" | "expiresAt" | "usedAt" | "usedByUserId" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["roleInvitation"]>
   export type RoleInvitationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     invitedByUser?: boolean | RoleInvitation$invitedByUserArgs<ExtArgs>
     usedByUser?: boolean | RoleInvitation$usedByUserArgs<ExtArgs>
@@ -8434,11 +8652,17 @@ export namespace Prisma {
       tokenHash: string
       invitedBy: string | null
       status: $Enums.RoleInvitationStatus
+      sendStatus: $Enums.RoleInvitationSendStatus
+      sentAt: Date | null
+      sendError: string | null
+      providerMessageId: string | null
+      revokedAt: Date | null
       expiresAt: Date
       usedAt: Date | null
       usedByUserId: string | null
       notes: string | null
       createdAt: Date
+      updatedAt: Date
     }, ExtArgs["result"]["roleInvitation"]>
     composites: {}
   }
@@ -8871,11 +9095,17 @@ export namespace Prisma {
     readonly tokenHash: FieldRef<"RoleInvitation", 'String'>
     readonly invitedBy: FieldRef<"RoleInvitation", 'String'>
     readonly status: FieldRef<"RoleInvitation", 'RoleInvitationStatus'>
+    readonly sendStatus: FieldRef<"RoleInvitation", 'RoleInvitationSendStatus'>
+    readonly sentAt: FieldRef<"RoleInvitation", 'DateTime'>
+    readonly sendError: FieldRef<"RoleInvitation", 'String'>
+    readonly providerMessageId: FieldRef<"RoleInvitation", 'String'>
+    readonly revokedAt: FieldRef<"RoleInvitation", 'DateTime'>
     readonly expiresAt: FieldRef<"RoleInvitation", 'DateTime'>
     readonly usedAt: FieldRef<"RoleInvitation", 'DateTime'>
     readonly usedByUserId: FieldRef<"RoleInvitation", 'String'>
     readonly notes: FieldRef<"RoleInvitation", 'String'>
     readonly createdAt: FieldRef<"RoleInvitation", 'DateTime'>
+    readonly updatedAt: FieldRef<"RoleInvitation", 'DateTime'>
   }
     
 
@@ -9330,6 +9560,1147 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: RoleInvitationInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model DriverProfile
+   */
+
+  export type AggregateDriverProfile = {
+    _count: DriverProfileCountAggregateOutputType | null
+    _min: DriverProfileMinAggregateOutputType | null
+    _max: DriverProfileMaxAggregateOutputType | null
+  }
+
+  export type DriverProfileMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    phone: string | null
+    city: string | null
+    area: string | null
+    addressLine: string | null
+    transportationType: $Enums.TransportationType | null
+    availabilityNote: string | null
+    status: $Enums.DriverProfileStatus | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DriverProfileMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    phone: string | null
+    city: string | null
+    area: string | null
+    addressLine: string | null
+    transportationType: $Enums.TransportationType | null
+    availabilityNote: string | null
+    status: $Enums.DriverProfileStatus | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DriverProfileCountAggregateOutputType = {
+    id: number
+    userId: number
+    phone: number
+    city: number
+    area: number
+    addressLine: number
+    transportationType: number
+    availabilityNote: number
+    status: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type DriverProfileMinAggregateInputType = {
+    id?: true
+    userId?: true
+    phone?: true
+    city?: true
+    area?: true
+    addressLine?: true
+    transportationType?: true
+    availabilityNote?: true
+    status?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DriverProfileMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    phone?: true
+    city?: true
+    area?: true
+    addressLine?: true
+    transportationType?: true
+    availabilityNote?: true
+    status?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DriverProfileCountAggregateInputType = {
+    id?: true
+    userId?: true
+    phone?: true
+    city?: true
+    area?: true
+    addressLine?: true
+    transportationType?: true
+    availabilityNote?: true
+    status?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type DriverProfileAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DriverProfile to aggregate.
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DriverProfiles to fetch.
+     */
+    orderBy?: DriverProfileOrderByWithRelationInput | DriverProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: DriverProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DriverProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DriverProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned DriverProfiles
+    **/
+    _count?: true | DriverProfileCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: DriverProfileMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: DriverProfileMaxAggregateInputType
+  }
+
+  export type GetDriverProfileAggregateType<T extends DriverProfileAggregateArgs> = {
+        [P in keyof T & keyof AggregateDriverProfile]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDriverProfile[P]>
+      : GetScalarType<T[P], AggregateDriverProfile[P]>
+  }
+
+
+
+
+  export type DriverProfileGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DriverProfileWhereInput
+    orderBy?: DriverProfileOrderByWithAggregationInput | DriverProfileOrderByWithAggregationInput[]
+    by: DriverProfileScalarFieldEnum[] | DriverProfileScalarFieldEnum
+    having?: DriverProfileScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DriverProfileCountAggregateInputType | true
+    _min?: DriverProfileMinAggregateInputType
+    _max?: DriverProfileMaxAggregateInputType
+  }
+
+  export type DriverProfileGroupByOutputType = {
+    id: string
+    userId: string
+    phone: string
+    city: string
+    area: string
+    addressLine: string | null
+    transportationType: $Enums.TransportationType
+    availabilityNote: string | null
+    status: $Enums.DriverProfileStatus
+    createdAt: Date
+    updatedAt: Date
+    _count: DriverProfileCountAggregateOutputType | null
+    _min: DriverProfileMinAggregateOutputType | null
+    _max: DriverProfileMaxAggregateOutputType | null
+  }
+
+  type GetDriverProfileGroupByPayload<T extends DriverProfileGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DriverProfileGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DriverProfileGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DriverProfileGroupByOutputType[P]>
+            : GetScalarType<T[P], DriverProfileGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DriverProfileSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    phone?: boolean
+    city?: boolean
+    area?: boolean
+    addressLine?: boolean
+    transportationType?: boolean
+    availabilityNote?: boolean
+    status?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["driverProfile"]>
+
+  export type DriverProfileSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    phone?: boolean
+    city?: boolean
+    area?: boolean
+    addressLine?: boolean
+    transportationType?: boolean
+    availabilityNote?: boolean
+    status?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["driverProfile"]>
+
+  export type DriverProfileSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    phone?: boolean
+    city?: boolean
+    area?: boolean
+    addressLine?: boolean
+    transportationType?: boolean
+    availabilityNote?: boolean
+    status?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["driverProfile"]>
+
+  export type DriverProfileSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    phone?: boolean
+    city?: boolean
+    area?: boolean
+    addressLine?: boolean
+    transportationType?: boolean
+    availabilityNote?: boolean
+    status?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type DriverProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "phone" | "city" | "area" | "addressLine" | "transportationType" | "availabilityNote" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["driverProfile"]>
+  export type DriverProfileInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type DriverProfileIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type DriverProfileIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $DriverProfilePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DriverProfile"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      phone: string
+      city: string
+      area: string
+      addressLine: string | null
+      transportationType: $Enums.TransportationType
+      availabilityNote: string | null
+      status: $Enums.DriverProfileStatus
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["driverProfile"]>
+    composites: {}
+  }
+
+  type DriverProfileGetPayload<S extends boolean | null | undefined | DriverProfileDefaultArgs> = $Result.GetResult<Prisma.$DriverProfilePayload, S>
+
+  type DriverProfileCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DriverProfileFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DriverProfileCountAggregateInputType | true
+    }
+
+  export interface DriverProfileDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DriverProfile'], meta: { name: 'DriverProfile' } }
+    /**
+     * Find zero or one DriverProfile that matches the filter.
+     * @param {DriverProfileFindUniqueArgs} args - Arguments to find a DriverProfile
+     * @example
+     * // Get one DriverProfile
+     * const driverProfile = await prisma.driverProfile.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DriverProfileFindUniqueArgs>(args: SelectSubset<T, DriverProfileFindUniqueArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one DriverProfile that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DriverProfileFindUniqueOrThrowArgs} args - Arguments to find a DriverProfile
+     * @example
+     * // Get one DriverProfile
+     * const driverProfile = await prisma.driverProfile.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DriverProfileFindUniqueOrThrowArgs>(args: SelectSubset<T, DriverProfileFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DriverProfile that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileFindFirstArgs} args - Arguments to find a DriverProfile
+     * @example
+     * // Get one DriverProfile
+     * const driverProfile = await prisma.driverProfile.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DriverProfileFindFirstArgs>(args?: SelectSubset<T, DriverProfileFindFirstArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DriverProfile that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileFindFirstOrThrowArgs} args - Arguments to find a DriverProfile
+     * @example
+     * // Get one DriverProfile
+     * const driverProfile = await prisma.driverProfile.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DriverProfileFindFirstOrThrowArgs>(args?: SelectSubset<T, DriverProfileFindFirstOrThrowArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more DriverProfiles that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all DriverProfiles
+     * const driverProfiles = await prisma.driverProfile.findMany()
+     * 
+     * // Get first 10 DriverProfiles
+     * const driverProfiles = await prisma.driverProfile.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const driverProfileWithIdOnly = await prisma.driverProfile.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends DriverProfileFindManyArgs>(args?: SelectSubset<T, DriverProfileFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a DriverProfile.
+     * @param {DriverProfileCreateArgs} args - Arguments to create a DriverProfile.
+     * @example
+     * // Create one DriverProfile
+     * const DriverProfile = await prisma.driverProfile.create({
+     *   data: {
+     *     // ... data to create a DriverProfile
+     *   }
+     * })
+     * 
+     */
+    create<T extends DriverProfileCreateArgs>(args: SelectSubset<T, DriverProfileCreateArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many DriverProfiles.
+     * @param {DriverProfileCreateManyArgs} args - Arguments to create many DriverProfiles.
+     * @example
+     * // Create many DriverProfiles
+     * const driverProfile = await prisma.driverProfile.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends DriverProfileCreateManyArgs>(args?: SelectSubset<T, DriverProfileCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many DriverProfiles and returns the data saved in the database.
+     * @param {DriverProfileCreateManyAndReturnArgs} args - Arguments to create many DriverProfiles.
+     * @example
+     * // Create many DriverProfiles
+     * const driverProfile = await prisma.driverProfile.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many DriverProfiles and only return the `id`
+     * const driverProfileWithIdOnly = await prisma.driverProfile.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends DriverProfileCreateManyAndReturnArgs>(args?: SelectSubset<T, DriverProfileCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a DriverProfile.
+     * @param {DriverProfileDeleteArgs} args - Arguments to delete one DriverProfile.
+     * @example
+     * // Delete one DriverProfile
+     * const DriverProfile = await prisma.driverProfile.delete({
+     *   where: {
+     *     // ... filter to delete one DriverProfile
+     *   }
+     * })
+     * 
+     */
+    delete<T extends DriverProfileDeleteArgs>(args: SelectSubset<T, DriverProfileDeleteArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one DriverProfile.
+     * @param {DriverProfileUpdateArgs} args - Arguments to update one DriverProfile.
+     * @example
+     * // Update one DriverProfile
+     * const driverProfile = await prisma.driverProfile.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends DriverProfileUpdateArgs>(args: SelectSubset<T, DriverProfileUpdateArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more DriverProfiles.
+     * @param {DriverProfileDeleteManyArgs} args - Arguments to filter DriverProfiles to delete.
+     * @example
+     * // Delete a few DriverProfiles
+     * const { count } = await prisma.driverProfile.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends DriverProfileDeleteManyArgs>(args?: SelectSubset<T, DriverProfileDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DriverProfiles.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many DriverProfiles
+     * const driverProfile = await prisma.driverProfile.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends DriverProfileUpdateManyArgs>(args: SelectSubset<T, DriverProfileUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DriverProfiles and returns the data updated in the database.
+     * @param {DriverProfileUpdateManyAndReturnArgs} args - Arguments to update many DriverProfiles.
+     * @example
+     * // Update many DriverProfiles
+     * const driverProfile = await prisma.driverProfile.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more DriverProfiles and only return the `id`
+     * const driverProfileWithIdOnly = await prisma.driverProfile.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends DriverProfileUpdateManyAndReturnArgs>(args: SelectSubset<T, DriverProfileUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one DriverProfile.
+     * @param {DriverProfileUpsertArgs} args - Arguments to update or create a DriverProfile.
+     * @example
+     * // Update or create a DriverProfile
+     * const driverProfile = await prisma.driverProfile.upsert({
+     *   create: {
+     *     // ... data to create a DriverProfile
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the DriverProfile we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DriverProfileUpsertArgs>(args: SelectSubset<T, DriverProfileUpsertArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of DriverProfiles.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileCountArgs} args - Arguments to filter DriverProfiles to count.
+     * @example
+     * // Count the number of DriverProfiles
+     * const count = await prisma.driverProfile.count({
+     *   where: {
+     *     // ... the filter for the DriverProfiles we want to count
+     *   }
+     * })
+    **/
+    count<T extends DriverProfileCountArgs>(
+      args?: Subset<T, DriverProfileCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DriverProfileCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a DriverProfile.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DriverProfileAggregateArgs>(args: Subset<T, DriverProfileAggregateArgs>): Prisma.PrismaPromise<GetDriverProfileAggregateType<T>>
+
+    /**
+     * Group by DriverProfile.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends DriverProfileGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DriverProfileGroupByArgs['orderBy'] }
+        : { orderBy?: DriverProfileGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DriverProfileGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDriverProfileGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the DriverProfile model
+   */
+  readonly fields: DriverProfileFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for DriverProfile.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DriverProfileClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the DriverProfile model
+   */
+  interface DriverProfileFieldRefs {
+    readonly id: FieldRef<"DriverProfile", 'String'>
+    readonly userId: FieldRef<"DriverProfile", 'String'>
+    readonly phone: FieldRef<"DriverProfile", 'String'>
+    readonly city: FieldRef<"DriverProfile", 'String'>
+    readonly area: FieldRef<"DriverProfile", 'String'>
+    readonly addressLine: FieldRef<"DriverProfile", 'String'>
+    readonly transportationType: FieldRef<"DriverProfile", 'TransportationType'>
+    readonly availabilityNote: FieldRef<"DriverProfile", 'String'>
+    readonly status: FieldRef<"DriverProfile", 'DriverProfileStatus'>
+    readonly createdAt: FieldRef<"DriverProfile", 'DateTime'>
+    readonly updatedAt: FieldRef<"DriverProfile", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * DriverProfile findUnique
+   */
+  export type DriverProfileFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which DriverProfile to fetch.
+     */
+    where: DriverProfileWhereUniqueInput
+  }
+
+  /**
+   * DriverProfile findUniqueOrThrow
+   */
+  export type DriverProfileFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which DriverProfile to fetch.
+     */
+    where: DriverProfileWhereUniqueInput
+  }
+
+  /**
+   * DriverProfile findFirst
+   */
+  export type DriverProfileFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which DriverProfile to fetch.
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DriverProfiles to fetch.
+     */
+    orderBy?: DriverProfileOrderByWithRelationInput | DriverProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DriverProfiles.
+     */
+    cursor?: DriverProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DriverProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DriverProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DriverProfiles.
+     */
+    distinct?: DriverProfileScalarFieldEnum | DriverProfileScalarFieldEnum[]
+  }
+
+  /**
+   * DriverProfile findFirstOrThrow
+   */
+  export type DriverProfileFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which DriverProfile to fetch.
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DriverProfiles to fetch.
+     */
+    orderBy?: DriverProfileOrderByWithRelationInput | DriverProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DriverProfiles.
+     */
+    cursor?: DriverProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DriverProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DriverProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DriverProfiles.
+     */
+    distinct?: DriverProfileScalarFieldEnum | DriverProfileScalarFieldEnum[]
+  }
+
+  /**
+   * DriverProfile findMany
+   */
+  export type DriverProfileFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which DriverProfiles to fetch.
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DriverProfiles to fetch.
+     */
+    orderBy?: DriverProfileOrderByWithRelationInput | DriverProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing DriverProfiles.
+     */
+    cursor?: DriverProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DriverProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DriverProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DriverProfiles.
+     */
+    distinct?: DriverProfileScalarFieldEnum | DriverProfileScalarFieldEnum[]
+  }
+
+  /**
+   * DriverProfile create
+   */
+  export type DriverProfileCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * The data needed to create a DriverProfile.
+     */
+    data: XOR<DriverProfileCreateInput, DriverProfileUncheckedCreateInput>
+  }
+
+  /**
+   * DriverProfile createMany
+   */
+  export type DriverProfileCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many DriverProfiles.
+     */
+    data: DriverProfileCreateManyInput | DriverProfileCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DriverProfile createManyAndReturn
+   */
+  export type DriverProfileCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * The data used to create many DriverProfiles.
+     */
+    data: DriverProfileCreateManyInput | DriverProfileCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DriverProfile update
+   */
+  export type DriverProfileUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * The data needed to update a DriverProfile.
+     */
+    data: XOR<DriverProfileUpdateInput, DriverProfileUncheckedUpdateInput>
+    /**
+     * Choose, which DriverProfile to update.
+     */
+    where: DriverProfileWhereUniqueInput
+  }
+
+  /**
+   * DriverProfile updateMany
+   */
+  export type DriverProfileUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update DriverProfiles.
+     */
+    data: XOR<DriverProfileUpdateManyMutationInput, DriverProfileUncheckedUpdateManyInput>
+    /**
+     * Filter which DriverProfiles to update
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * Limit how many DriverProfiles to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * DriverProfile updateManyAndReturn
+   */
+  export type DriverProfileUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * The data used to update DriverProfiles.
+     */
+    data: XOR<DriverProfileUpdateManyMutationInput, DriverProfileUncheckedUpdateManyInput>
+    /**
+     * Filter which DriverProfiles to update
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * Limit how many DriverProfiles to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DriverProfile upsert
+   */
+  export type DriverProfileUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * The filter to search for the DriverProfile to update in case it exists.
+     */
+    where: DriverProfileWhereUniqueInput
+    /**
+     * In case the DriverProfile found by the `where` argument doesn't exist, create a new DriverProfile with this data.
+     */
+    create: XOR<DriverProfileCreateInput, DriverProfileUncheckedCreateInput>
+    /**
+     * In case the DriverProfile was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DriverProfileUpdateInput, DriverProfileUncheckedUpdateInput>
+  }
+
+  /**
+   * DriverProfile delete
+   */
+  export type DriverProfileDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * Filter which DriverProfile to delete.
+     */
+    where: DriverProfileWhereUniqueInput
+  }
+
+  /**
+   * DriverProfile deleteMany
+   */
+  export type DriverProfileDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DriverProfiles to delete
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * Limit how many DriverProfiles to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * DriverProfile without action
+   */
+  export type DriverProfileDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
   }
 
 
@@ -38554,14 +39925,37 @@ export namespace Prisma {
     tokenHash: 'tokenHash',
     invitedBy: 'invitedBy',
     status: 'status',
+    sendStatus: 'sendStatus',
+    sentAt: 'sentAt',
+    sendError: 'sendError',
+    providerMessageId: 'providerMessageId',
+    revokedAt: 'revokedAt',
     expiresAt: 'expiresAt',
     usedAt: 'usedAt',
     usedByUserId: 'usedByUserId',
     notes: 'notes',
-    createdAt: 'createdAt'
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
   };
 
   export type RoleInvitationScalarFieldEnum = (typeof RoleInvitationScalarFieldEnum)[keyof typeof RoleInvitationScalarFieldEnum]
+
+
+  export const DriverProfileScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    phone: 'phone',
+    city: 'city',
+    area: 'area',
+    addressLine: 'addressLine',
+    transportationType: 'transportationType',
+    availabilityNote: 'availabilityNote',
+    status: 'status',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type DriverProfileScalarFieldEnum = (typeof DriverProfileScalarFieldEnum)[keyof typeof DriverProfileScalarFieldEnum]
 
 
   export const LearnerProfileScalarFieldEnum: {
@@ -39127,6 +40521,48 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'RoleInvitationSendStatus'
+   */
+  export type EnumRoleInvitationSendStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RoleInvitationSendStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'RoleInvitationSendStatus[]'
+   */
+  export type ListEnumRoleInvitationSendStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RoleInvitationSendStatus[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'TransportationType'
+   */
+  export type EnumTransportationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TransportationType'>
+    
+
+
+  /**
+   * Reference to a field of type 'TransportationType[]'
+   */
+  export type ListEnumTransportationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TransportationType[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'DriverProfileStatus'
+   */
+  export type EnumDriverProfileStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DriverProfileStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'DriverProfileStatus[]'
+   */
+  export type ListEnumDriverProfileStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DriverProfileStatus[]'>
+    
+
+
+  /**
    * Reference to a field of type 'OrganizationType'
    */
   export type EnumOrganizationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'OrganizationType'>
@@ -39485,6 +40921,7 @@ export namespace Prisma {
     authTokens?: AuthTokenListRelationFilter
     learnerProfile?: XOR<LearnerProfileNullableScalarRelationFilter, LearnerProfileWhereInput> | null
     supplierProfile?: XOR<SupplierProfileNullableScalarRelationFilter, SupplierProfileWhereInput> | null
+    driverProfile?: XOR<DriverProfileNullableScalarRelationFilter, DriverProfileWhereInput> | null
     invitedRoles?: RoleInvitationListRelationFilter
     usedInvitations?: RoleInvitationListRelationFilter
     assignedRoles?: UserRoleAssignmentListRelationFilter
@@ -39519,6 +40956,7 @@ export namespace Prisma {
     authTokens?: AuthTokenOrderByRelationAggregateInput
     learnerProfile?: LearnerProfileOrderByWithRelationInput
     supplierProfile?: SupplierProfileOrderByWithRelationInput
+    driverProfile?: DriverProfileOrderByWithRelationInput
     invitedRoles?: RoleInvitationOrderByRelationAggregateInput
     usedInvitations?: RoleInvitationOrderByRelationAggregateInput
     assignedRoles?: UserRoleAssignmentOrderByRelationAggregateInput
@@ -39556,6 +40994,7 @@ export namespace Prisma {
     authTokens?: AuthTokenListRelationFilter
     learnerProfile?: XOR<LearnerProfileNullableScalarRelationFilter, LearnerProfileWhereInput> | null
     supplierProfile?: XOR<SupplierProfileNullableScalarRelationFilter, SupplierProfileWhereInput> | null
+    driverProfile?: XOR<DriverProfileNullableScalarRelationFilter, DriverProfileWhereInput> | null
     invitedRoles?: RoleInvitationListRelationFilter
     usedInvitations?: RoleInvitationListRelationFilter
     assignedRoles?: UserRoleAssignmentListRelationFilter
@@ -39754,11 +41193,17 @@ export namespace Prisma {
     tokenHash?: StringFilter<"RoleInvitation"> | string
     invitedBy?: StringNullableFilter<"RoleInvitation"> | string | null
     status?: EnumRoleInvitationStatusFilter<"RoleInvitation"> | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFilter<"RoleInvitation"> | $Enums.RoleInvitationSendStatus
+    sentAt?: DateTimeNullableFilter<"RoleInvitation"> | Date | string | null
+    sendError?: StringNullableFilter<"RoleInvitation"> | string | null
+    providerMessageId?: StringNullableFilter<"RoleInvitation"> | string | null
+    revokedAt?: DateTimeNullableFilter<"RoleInvitation"> | Date | string | null
     expiresAt?: DateTimeFilter<"RoleInvitation"> | Date | string
     usedAt?: DateTimeNullableFilter<"RoleInvitation"> | Date | string | null
     usedByUserId?: StringNullableFilter<"RoleInvitation"> | string | null
     notes?: StringNullableFilter<"RoleInvitation"> | string | null
     createdAt?: DateTimeFilter<"RoleInvitation"> | Date | string
+    updatedAt?: DateTimeFilter<"RoleInvitation"> | Date | string
     invitedByUser?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
     usedByUser?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
   }
@@ -39771,11 +41216,17 @@ export namespace Prisma {
     tokenHash?: SortOrder
     invitedBy?: SortOrderInput | SortOrder
     status?: SortOrder
+    sendStatus?: SortOrder
+    sentAt?: SortOrderInput | SortOrder
+    sendError?: SortOrderInput | SortOrder
+    providerMessageId?: SortOrderInput | SortOrder
+    revokedAt?: SortOrderInput | SortOrder
     expiresAt?: SortOrder
     usedAt?: SortOrderInput | SortOrder
     usedByUserId?: SortOrderInput | SortOrder
     notes?: SortOrderInput | SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
     invitedByUser?: UserOrderByWithRelationInput
     usedByUser?: UserOrderByWithRelationInput
   }
@@ -39791,11 +41242,17 @@ export namespace Prisma {
     targetRole?: EnumRoleInvitationTargetRoleFilter<"RoleInvitation"> | $Enums.RoleInvitationTargetRole
     invitedBy?: StringNullableFilter<"RoleInvitation"> | string | null
     status?: EnumRoleInvitationStatusFilter<"RoleInvitation"> | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFilter<"RoleInvitation"> | $Enums.RoleInvitationSendStatus
+    sentAt?: DateTimeNullableFilter<"RoleInvitation"> | Date | string | null
+    sendError?: StringNullableFilter<"RoleInvitation"> | string | null
+    providerMessageId?: StringNullableFilter<"RoleInvitation"> | string | null
+    revokedAt?: DateTimeNullableFilter<"RoleInvitation"> | Date | string | null
     expiresAt?: DateTimeFilter<"RoleInvitation"> | Date | string
     usedAt?: DateTimeNullableFilter<"RoleInvitation"> | Date | string | null
     usedByUserId?: StringNullableFilter<"RoleInvitation"> | string | null
     notes?: StringNullableFilter<"RoleInvitation"> | string | null
     createdAt?: DateTimeFilter<"RoleInvitation"> | Date | string
+    updatedAt?: DateTimeFilter<"RoleInvitation"> | Date | string
     invitedByUser?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
     usedByUser?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
   }, "id" | "tokenHash">
@@ -39808,11 +41265,17 @@ export namespace Prisma {
     tokenHash?: SortOrder
     invitedBy?: SortOrderInput | SortOrder
     status?: SortOrder
+    sendStatus?: SortOrder
+    sentAt?: SortOrderInput | SortOrder
+    sendError?: SortOrderInput | SortOrder
+    providerMessageId?: SortOrderInput | SortOrder
+    revokedAt?: SortOrderInput | SortOrder
     expiresAt?: SortOrder
     usedAt?: SortOrderInput | SortOrder
     usedByUserId?: SortOrderInput | SortOrder
     notes?: SortOrderInput | SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
     _count?: RoleInvitationCountOrderByAggregateInput
     _max?: RoleInvitationMaxOrderByAggregateInput
     _min?: RoleInvitationMinOrderByAggregateInput
@@ -39829,11 +41292,102 @@ export namespace Prisma {
     tokenHash?: StringWithAggregatesFilter<"RoleInvitation"> | string
     invitedBy?: StringNullableWithAggregatesFilter<"RoleInvitation"> | string | null
     status?: EnumRoleInvitationStatusWithAggregatesFilter<"RoleInvitation"> | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusWithAggregatesFilter<"RoleInvitation"> | $Enums.RoleInvitationSendStatus
+    sentAt?: DateTimeNullableWithAggregatesFilter<"RoleInvitation"> | Date | string | null
+    sendError?: StringNullableWithAggregatesFilter<"RoleInvitation"> | string | null
+    providerMessageId?: StringNullableWithAggregatesFilter<"RoleInvitation"> | string | null
+    revokedAt?: DateTimeNullableWithAggregatesFilter<"RoleInvitation"> | Date | string | null
     expiresAt?: DateTimeWithAggregatesFilter<"RoleInvitation"> | Date | string
     usedAt?: DateTimeNullableWithAggregatesFilter<"RoleInvitation"> | Date | string | null
     usedByUserId?: StringNullableWithAggregatesFilter<"RoleInvitation"> | string | null
     notes?: StringNullableWithAggregatesFilter<"RoleInvitation"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"RoleInvitation"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"RoleInvitation"> | Date | string
+  }
+
+  export type DriverProfileWhereInput = {
+    AND?: DriverProfileWhereInput | DriverProfileWhereInput[]
+    OR?: DriverProfileWhereInput[]
+    NOT?: DriverProfileWhereInput | DriverProfileWhereInput[]
+    id?: StringFilter<"DriverProfile"> | string
+    userId?: StringFilter<"DriverProfile"> | string
+    phone?: StringFilter<"DriverProfile"> | string
+    city?: StringFilter<"DriverProfile"> | string
+    area?: StringFilter<"DriverProfile"> | string
+    addressLine?: StringNullableFilter<"DriverProfile"> | string | null
+    transportationType?: EnumTransportationTypeFilter<"DriverProfile"> | $Enums.TransportationType
+    availabilityNote?: StringNullableFilter<"DriverProfile"> | string | null
+    status?: EnumDriverProfileStatusFilter<"DriverProfile"> | $Enums.DriverProfileStatus
+    createdAt?: DateTimeFilter<"DriverProfile"> | Date | string
+    updatedAt?: DateTimeFilter<"DriverProfile"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }
+
+  export type DriverProfileOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    phone?: SortOrder
+    city?: SortOrder
+    area?: SortOrder
+    addressLine?: SortOrderInput | SortOrder
+    transportationType?: SortOrder
+    availabilityNote?: SortOrderInput | SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    user?: UserOrderByWithRelationInput
+  }
+
+  export type DriverProfileWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    userId?: string
+    AND?: DriverProfileWhereInput | DriverProfileWhereInput[]
+    OR?: DriverProfileWhereInput[]
+    NOT?: DriverProfileWhereInput | DriverProfileWhereInput[]
+    phone?: StringFilter<"DriverProfile"> | string
+    city?: StringFilter<"DriverProfile"> | string
+    area?: StringFilter<"DriverProfile"> | string
+    addressLine?: StringNullableFilter<"DriverProfile"> | string | null
+    transportationType?: EnumTransportationTypeFilter<"DriverProfile"> | $Enums.TransportationType
+    availabilityNote?: StringNullableFilter<"DriverProfile"> | string | null
+    status?: EnumDriverProfileStatusFilter<"DriverProfile"> | $Enums.DriverProfileStatus
+    createdAt?: DateTimeFilter<"DriverProfile"> | Date | string
+    updatedAt?: DateTimeFilter<"DriverProfile"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }, "id" | "userId">
+
+  export type DriverProfileOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    phone?: SortOrder
+    city?: SortOrder
+    area?: SortOrder
+    addressLine?: SortOrderInput | SortOrder
+    transportationType?: SortOrder
+    availabilityNote?: SortOrderInput | SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: DriverProfileCountOrderByAggregateInput
+    _max?: DriverProfileMaxOrderByAggregateInput
+    _min?: DriverProfileMinOrderByAggregateInput
+  }
+
+  export type DriverProfileScalarWhereWithAggregatesInput = {
+    AND?: DriverProfileScalarWhereWithAggregatesInput | DriverProfileScalarWhereWithAggregatesInput[]
+    OR?: DriverProfileScalarWhereWithAggregatesInput[]
+    NOT?: DriverProfileScalarWhereWithAggregatesInput | DriverProfileScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DriverProfile"> | string
+    userId?: StringWithAggregatesFilter<"DriverProfile"> | string
+    phone?: StringWithAggregatesFilter<"DriverProfile"> | string
+    city?: StringWithAggregatesFilter<"DriverProfile"> | string
+    area?: StringWithAggregatesFilter<"DriverProfile"> | string
+    addressLine?: StringNullableWithAggregatesFilter<"DriverProfile"> | string | null
+    transportationType?: EnumTransportationTypeWithAggregatesFilter<"DriverProfile"> | $Enums.TransportationType
+    availabilityNote?: StringNullableWithAggregatesFilter<"DriverProfile"> | string | null
+    status?: EnumDriverProfileStatusWithAggregatesFilter<"DriverProfile"> | $Enums.DriverProfileStatus
+    createdAt?: DateTimeWithAggregatesFilter<"DriverProfile"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"DriverProfile"> | Date | string
   }
 
   export type LearnerProfileWhereInput = {
@@ -42093,6 +43647,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -42127,6 +43682,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -42161,6 +43717,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -42195,6 +43752,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -42401,10 +43959,16 @@ export namespace Prisma {
     targetRole: $Enums.RoleInvitationTargetRole
     tokenHash: string
     status?: $Enums.RoleInvitationStatus
+    sendStatus?: $Enums.RoleInvitationSendStatus
+    sentAt?: Date | string | null
+    sendError?: string | null
+    providerMessageId?: string | null
+    revokedAt?: Date | string | null
     expiresAt: Date | string
     usedAt?: Date | string | null
     notes?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
     invitedByUser?: UserCreateNestedOneWithoutInvitedRolesInput
     usedByUser?: UserCreateNestedOneWithoutUsedInvitationsInput
   }
@@ -42417,11 +43981,17 @@ export namespace Prisma {
     tokenHash: string
     invitedBy?: string | null
     status?: $Enums.RoleInvitationStatus
+    sendStatus?: $Enums.RoleInvitationSendStatus
+    sentAt?: Date | string | null
+    sendError?: string | null
+    providerMessageId?: string | null
+    revokedAt?: Date | string | null
     expiresAt: Date | string
     usedAt?: Date | string | null
     usedByUserId?: string | null
     notes?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type RoleInvitationUpdateInput = {
@@ -42431,10 +44001,16 @@ export namespace Prisma {
     targetRole?: EnumRoleInvitationTargetRoleFieldUpdateOperationsInput | $Enums.RoleInvitationTargetRole
     tokenHash?: StringFieldUpdateOperationsInput | string
     status?: EnumRoleInvitationStatusFieldUpdateOperationsInput | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFieldUpdateOperationsInput | $Enums.RoleInvitationSendStatus
+    sentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sendError?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     invitedByUser?: UserUpdateOneWithoutInvitedRolesNestedInput
     usedByUser?: UserUpdateOneWithoutUsedInvitationsNestedInput
   }
@@ -42447,11 +44023,17 @@ export namespace Prisma {
     tokenHash?: StringFieldUpdateOperationsInput | string
     invitedBy?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumRoleInvitationStatusFieldUpdateOperationsInput | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFieldUpdateOperationsInput | $Enums.RoleInvitationSendStatus
+    sentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sendError?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     usedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type RoleInvitationCreateManyInput = {
@@ -42462,11 +44044,17 @@ export namespace Prisma {
     tokenHash: string
     invitedBy?: string | null
     status?: $Enums.RoleInvitationStatus
+    sendStatus?: $Enums.RoleInvitationSendStatus
+    sentAt?: Date | string | null
+    sendError?: string | null
+    providerMessageId?: string | null
+    revokedAt?: Date | string | null
     expiresAt: Date | string
     usedAt?: Date | string | null
     usedByUserId?: string | null
     notes?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type RoleInvitationUpdateManyMutationInput = {
@@ -42476,10 +44064,16 @@ export namespace Prisma {
     targetRole?: EnumRoleInvitationTargetRoleFieldUpdateOperationsInput | $Enums.RoleInvitationTargetRole
     tokenHash?: StringFieldUpdateOperationsInput | string
     status?: EnumRoleInvitationStatusFieldUpdateOperationsInput | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFieldUpdateOperationsInput | $Enums.RoleInvitationSendStatus
+    sentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sendError?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type RoleInvitationUncheckedUpdateManyInput = {
@@ -42490,11 +44084,114 @@ export namespace Prisma {
     tokenHash?: StringFieldUpdateOperationsInput | string
     invitedBy?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumRoleInvitationStatusFieldUpdateOperationsInput | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFieldUpdateOperationsInput | $Enums.RoleInvitationSendStatus
+    sentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sendError?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     usedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DriverProfileCreateInput = {
+    id?: string
+    phone: string
+    city: string
+    area: string
+    addressLine?: string | null
+    transportationType: $Enums.TransportationType
+    availabilityNote?: string | null
+    status?: $Enums.DriverProfileStatus
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutDriverProfileInput
+  }
+
+  export type DriverProfileUncheckedCreateInput = {
+    id?: string
+    userId: string
+    phone: string
+    city: string
+    area: string
+    addressLine?: string | null
+    transportationType: $Enums.TransportationType
+    availabilityNote?: string | null
+    status?: $Enums.DriverProfileStatus
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DriverProfileUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    phone?: StringFieldUpdateOperationsInput | string
+    city?: StringFieldUpdateOperationsInput | string
+    area?: StringFieldUpdateOperationsInput | string
+    addressLine?: NullableStringFieldUpdateOperationsInput | string | null
+    transportationType?: EnumTransportationTypeFieldUpdateOperationsInput | $Enums.TransportationType
+    availabilityNote?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutDriverProfileNestedInput
+  }
+
+  export type DriverProfileUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    phone?: StringFieldUpdateOperationsInput | string
+    city?: StringFieldUpdateOperationsInput | string
+    area?: StringFieldUpdateOperationsInput | string
+    addressLine?: NullableStringFieldUpdateOperationsInput | string | null
+    transportationType?: EnumTransportationTypeFieldUpdateOperationsInput | $Enums.TransportationType
+    availabilityNote?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DriverProfileCreateManyInput = {
+    id?: string
+    userId: string
+    phone: string
+    city: string
+    area: string
+    addressLine?: string | null
+    transportationType: $Enums.TransportationType
+    availabilityNote?: string | null
+    status?: $Enums.DriverProfileStatus
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DriverProfileUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    phone?: StringFieldUpdateOperationsInput | string
+    city?: StringFieldUpdateOperationsInput | string
+    area?: StringFieldUpdateOperationsInput | string
+    addressLine?: NullableStringFieldUpdateOperationsInput | string | null
+    transportationType?: EnumTransportationTypeFieldUpdateOperationsInput | $Enums.TransportationType
+    availabilityNote?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DriverProfileUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    phone?: StringFieldUpdateOperationsInput | string
+    city?: StringFieldUpdateOperationsInput | string
+    area?: StringFieldUpdateOperationsInput | string
+    addressLine?: NullableStringFieldUpdateOperationsInput | string | null
+    transportationType?: EnumTransportationTypeFieldUpdateOperationsInput | $Enums.TransportationType
+    availabilityNote?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type LearnerProfileCreateInput = {
@@ -45030,6 +46727,11 @@ export namespace Prisma {
     isNot?: SupplierProfileWhereInput | null
   }
 
+  export type DriverProfileNullableScalarRelationFilter = {
+    is?: DriverProfileWhereInput | null
+    isNot?: DriverProfileWhereInput | null
+  }
+
   export type RoleInvitationListRelationFilter = {
     every?: RoleInvitationWhereInput
     some?: RoleInvitationWhereInput
@@ -45398,6 +47100,13 @@ export namespace Prisma {
     not?: NestedEnumRoleInvitationStatusFilter<$PrismaModel> | $Enums.RoleInvitationStatus
   }
 
+  export type EnumRoleInvitationSendStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.RoleInvitationSendStatus | EnumRoleInvitationSendStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.RoleInvitationSendStatus[] | ListEnumRoleInvitationSendStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.RoleInvitationSendStatus[] | ListEnumRoleInvitationSendStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumRoleInvitationSendStatusFilter<$PrismaModel> | $Enums.RoleInvitationSendStatus
+  }
+
   export type RoleInvitationCountOrderByAggregateInput = {
     id?: SortOrder
     targetEmail?: SortOrder
@@ -45406,11 +47115,17 @@ export namespace Prisma {
     tokenHash?: SortOrder
     invitedBy?: SortOrder
     status?: SortOrder
+    sendStatus?: SortOrder
+    sentAt?: SortOrder
+    sendError?: SortOrder
+    providerMessageId?: SortOrder
+    revokedAt?: SortOrder
     expiresAt?: SortOrder
     usedAt?: SortOrder
     usedByUserId?: SortOrder
     notes?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type RoleInvitationMaxOrderByAggregateInput = {
@@ -45421,11 +47136,17 @@ export namespace Prisma {
     tokenHash?: SortOrder
     invitedBy?: SortOrder
     status?: SortOrder
+    sendStatus?: SortOrder
+    sentAt?: SortOrder
+    sendError?: SortOrder
+    providerMessageId?: SortOrder
+    revokedAt?: SortOrder
     expiresAt?: SortOrder
     usedAt?: SortOrder
     usedByUserId?: SortOrder
     notes?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type RoleInvitationMinOrderByAggregateInput = {
@@ -45436,11 +47157,17 @@ export namespace Prisma {
     tokenHash?: SortOrder
     invitedBy?: SortOrder
     status?: SortOrder
+    sendStatus?: SortOrder
+    sentAt?: SortOrder
+    sendError?: SortOrder
+    providerMessageId?: SortOrder
+    revokedAt?: SortOrder
     expiresAt?: SortOrder
     usedAt?: SortOrder
     usedByUserId?: SortOrder
     notes?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type EnumRoleInvitationTargetRoleWithAggregatesFilter<$PrismaModel = never> = {
@@ -45461,6 +47188,92 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumRoleInvitationStatusFilter<$PrismaModel>
     _max?: NestedEnumRoleInvitationStatusFilter<$PrismaModel>
+  }
+
+  export type EnumRoleInvitationSendStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.RoleInvitationSendStatus | EnumRoleInvitationSendStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.RoleInvitationSendStatus[] | ListEnumRoleInvitationSendStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.RoleInvitationSendStatus[] | ListEnumRoleInvitationSendStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumRoleInvitationSendStatusWithAggregatesFilter<$PrismaModel> | $Enums.RoleInvitationSendStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumRoleInvitationSendStatusFilter<$PrismaModel>
+    _max?: NestedEnumRoleInvitationSendStatusFilter<$PrismaModel>
+  }
+
+  export type EnumTransportationTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.TransportationType | EnumTransportationTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.TransportationType[] | ListEnumTransportationTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TransportationType[] | ListEnumTransportationTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumTransportationTypeFilter<$PrismaModel> | $Enums.TransportationType
+  }
+
+  export type EnumDriverProfileStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.DriverProfileStatus | EnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDriverProfileStatusFilter<$PrismaModel> | $Enums.DriverProfileStatus
+  }
+
+  export type DriverProfileCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    phone?: SortOrder
+    city?: SortOrder
+    area?: SortOrder
+    addressLine?: SortOrder
+    transportationType?: SortOrder
+    availabilityNote?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DriverProfileMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    phone?: SortOrder
+    city?: SortOrder
+    area?: SortOrder
+    addressLine?: SortOrder
+    transportationType?: SortOrder
+    availabilityNote?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DriverProfileMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    phone?: SortOrder
+    city?: SortOrder
+    area?: SortOrder
+    addressLine?: SortOrder
+    transportationType?: SortOrder
+    availabilityNote?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type EnumTransportationTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TransportationType | EnumTransportationTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.TransportationType[] | ListEnumTransportationTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TransportationType[] | ListEnumTransportationTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumTransportationTypeWithAggregatesFilter<$PrismaModel> | $Enums.TransportationType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumTransportationTypeFilter<$PrismaModel>
+    _max?: NestedEnumTransportationTypeFilter<$PrismaModel>
+  }
+
+  export type EnumDriverProfileStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DriverProfileStatus | EnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDriverProfileStatusWithAggregatesFilter<$PrismaModel> | $Enums.DriverProfileStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDriverProfileStatusFilter<$PrismaModel>
+    _max?: NestedEnumDriverProfileStatusFilter<$PrismaModel>
   }
 
   export type StringNullableListFilter<$PrismaModel = never> = {
@@ -47347,6 +49160,12 @@ export namespace Prisma {
     connect?: SupplierProfileWhereUniqueInput
   }
 
+  export type DriverProfileCreateNestedOneWithoutUserInput = {
+    create?: XOR<DriverProfileCreateWithoutUserInput, DriverProfileUncheckedCreateWithoutUserInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutUserInput
+    connect?: DriverProfileWhereUniqueInput
+  }
+
   export type RoleInvitationCreateNestedManyWithoutInvitedByUserInput = {
     create?: XOR<RoleInvitationCreateWithoutInvitedByUserInput, RoleInvitationUncheckedCreateWithoutInvitedByUserInput> | RoleInvitationCreateWithoutInvitedByUserInput[] | RoleInvitationUncheckedCreateWithoutInvitedByUserInput[]
     connectOrCreate?: RoleInvitationCreateOrConnectWithoutInvitedByUserInput | RoleInvitationCreateOrConnectWithoutInvitedByUserInput[]
@@ -47476,6 +49295,12 @@ export namespace Prisma {
     create?: XOR<SupplierProfileCreateWithoutUserInput, SupplierProfileUncheckedCreateWithoutUserInput>
     connectOrCreate?: SupplierProfileCreateOrConnectWithoutUserInput
     connect?: SupplierProfileWhereUniqueInput
+  }
+
+  export type DriverProfileUncheckedCreateNestedOneWithoutUserInput = {
+    create?: XOR<DriverProfileCreateWithoutUserInput, DriverProfileUncheckedCreateWithoutUserInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutUserInput
+    connect?: DriverProfileWhereUniqueInput
   }
 
   export type RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput = {
@@ -47649,6 +49474,16 @@ export namespace Prisma {
     delete?: SupplierProfileWhereInput | boolean
     connect?: SupplierProfileWhereUniqueInput
     update?: XOR<XOR<SupplierProfileUpdateToOneWithWhereWithoutUserInput, SupplierProfileUpdateWithoutUserInput>, SupplierProfileUncheckedUpdateWithoutUserInput>
+  }
+
+  export type DriverProfileUpdateOneWithoutUserNestedInput = {
+    create?: XOR<DriverProfileCreateWithoutUserInput, DriverProfileUncheckedCreateWithoutUserInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutUserInput
+    upsert?: DriverProfileUpsertWithoutUserInput
+    disconnect?: DriverProfileWhereInput | boolean
+    delete?: DriverProfileWhereInput | boolean
+    connect?: DriverProfileWhereUniqueInput
+    update?: XOR<XOR<DriverProfileUpdateToOneWithWhereWithoutUserInput, DriverProfileUpdateWithoutUserInput>, DriverProfileUncheckedUpdateWithoutUserInput>
   }
 
   export type RoleInvitationUpdateManyWithoutInvitedByUserNestedInput = {
@@ -47907,6 +49742,16 @@ export namespace Prisma {
     delete?: SupplierProfileWhereInput | boolean
     connect?: SupplierProfileWhereUniqueInput
     update?: XOR<XOR<SupplierProfileUpdateToOneWithWhereWithoutUserInput, SupplierProfileUpdateWithoutUserInput>, SupplierProfileUncheckedUpdateWithoutUserInput>
+  }
+
+  export type DriverProfileUncheckedUpdateOneWithoutUserNestedInput = {
+    create?: XOR<DriverProfileCreateWithoutUserInput, DriverProfileUncheckedCreateWithoutUserInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutUserInput
+    upsert?: DriverProfileUpsertWithoutUserInput
+    disconnect?: DriverProfileWhereInput | boolean
+    delete?: DriverProfileWhereInput | boolean
+    connect?: DriverProfileWhereUniqueInput
+    update?: XOR<XOR<DriverProfileUpdateToOneWithWhereWithoutUserInput, DriverProfileUpdateWithoutUserInput>, DriverProfileUncheckedUpdateWithoutUserInput>
   }
 
   export type RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput = {
@@ -48195,6 +50040,10 @@ export namespace Prisma {
     set?: $Enums.RoleInvitationStatus
   }
 
+  export type EnumRoleInvitationSendStatusFieldUpdateOperationsInput = {
+    set?: $Enums.RoleInvitationSendStatus
+  }
+
   export type UserUpdateOneWithoutInvitedRolesNestedInput = {
     create?: XOR<UserCreateWithoutInvitedRolesInput, UserUncheckedCreateWithoutInvitedRolesInput>
     connectOrCreate?: UserCreateOrConnectWithoutInvitedRolesInput
@@ -48213,6 +50062,28 @@ export namespace Prisma {
     delete?: UserWhereInput | boolean
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutUsedInvitationsInput, UserUpdateWithoutUsedInvitationsInput>, UserUncheckedUpdateWithoutUsedInvitationsInput>
+  }
+
+  export type UserCreateNestedOneWithoutDriverProfileInput = {
+    create?: XOR<UserCreateWithoutDriverProfileInput, UserUncheckedCreateWithoutDriverProfileInput>
+    connectOrCreate?: UserCreateOrConnectWithoutDriverProfileInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type EnumTransportationTypeFieldUpdateOperationsInput = {
+    set?: $Enums.TransportationType
+  }
+
+  export type EnumDriverProfileStatusFieldUpdateOperationsInput = {
+    set?: $Enums.DriverProfileStatus
+  }
+
+  export type UserUpdateOneRequiredWithoutDriverProfileNestedInput = {
+    create?: XOR<UserCreateWithoutDriverProfileInput, UserUncheckedCreateWithoutDriverProfileInput>
+    connectOrCreate?: UserCreateOrConnectWithoutDriverProfileInput
+    upsert?: UserUpsertWithoutDriverProfileInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutDriverProfileInput, UserUpdateWithoutDriverProfileInput>, UserUncheckedUpdateWithoutDriverProfileInput>
   }
 
   export type LearnerProfileCreateinterestsInput = {
@@ -50482,6 +52353,13 @@ export namespace Prisma {
     not?: NestedEnumRoleInvitationStatusFilter<$PrismaModel> | $Enums.RoleInvitationStatus
   }
 
+  export type NestedEnumRoleInvitationSendStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.RoleInvitationSendStatus | EnumRoleInvitationSendStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.RoleInvitationSendStatus[] | ListEnumRoleInvitationSendStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.RoleInvitationSendStatus[] | ListEnumRoleInvitationSendStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumRoleInvitationSendStatusFilter<$PrismaModel> | $Enums.RoleInvitationSendStatus
+  }
+
   export type NestedEnumRoleInvitationTargetRoleWithAggregatesFilter<$PrismaModel = never> = {
     equals?: $Enums.RoleInvitationTargetRole | EnumRoleInvitationTargetRoleFieldRefInput<$PrismaModel>
     in?: $Enums.RoleInvitationTargetRole[] | ListEnumRoleInvitationTargetRoleFieldRefInput<$PrismaModel>
@@ -50500,6 +52378,50 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumRoleInvitationStatusFilter<$PrismaModel>
     _max?: NestedEnumRoleInvitationStatusFilter<$PrismaModel>
+  }
+
+  export type NestedEnumRoleInvitationSendStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.RoleInvitationSendStatus | EnumRoleInvitationSendStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.RoleInvitationSendStatus[] | ListEnumRoleInvitationSendStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.RoleInvitationSendStatus[] | ListEnumRoleInvitationSendStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumRoleInvitationSendStatusWithAggregatesFilter<$PrismaModel> | $Enums.RoleInvitationSendStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumRoleInvitationSendStatusFilter<$PrismaModel>
+    _max?: NestedEnumRoleInvitationSendStatusFilter<$PrismaModel>
+  }
+
+  export type NestedEnumTransportationTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.TransportationType | EnumTransportationTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.TransportationType[] | ListEnumTransportationTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TransportationType[] | ListEnumTransportationTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumTransportationTypeFilter<$PrismaModel> | $Enums.TransportationType
+  }
+
+  export type NestedEnumDriverProfileStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.DriverProfileStatus | EnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDriverProfileStatusFilter<$PrismaModel> | $Enums.DriverProfileStatus
+  }
+
+  export type NestedEnumTransportationTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TransportationType | EnumTransportationTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.TransportationType[] | ListEnumTransportationTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TransportationType[] | ListEnumTransportationTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumTransportationTypeWithAggregatesFilter<$PrismaModel> | $Enums.TransportationType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumTransportationTypeFilter<$PrismaModel>
+    _max?: NestedEnumTransportationTypeFilter<$PrismaModel>
+  }
+
+  export type NestedEnumDriverProfileStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DriverProfileStatus | EnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDriverProfileStatusWithAggregatesFilter<$PrismaModel> | $Enums.DriverProfileStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDriverProfileStatusFilter<$PrismaModel>
+    _max?: NestedEnumDriverProfileStatusFilter<$PrismaModel>
   }
 
   export type NestedEnumOrganizationTypeFilter<$PrismaModel = never> = {
@@ -51102,6 +53024,37 @@ export namespace Prisma {
     create: XOR<SupplierProfileCreateWithoutUserInput, SupplierProfileUncheckedCreateWithoutUserInput>
   }
 
+  export type DriverProfileCreateWithoutUserInput = {
+    id?: string
+    phone: string
+    city: string
+    area: string
+    addressLine?: string | null
+    transportationType: $Enums.TransportationType
+    availabilityNote?: string | null
+    status?: $Enums.DriverProfileStatus
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DriverProfileUncheckedCreateWithoutUserInput = {
+    id?: string
+    phone: string
+    city: string
+    area: string
+    addressLine?: string | null
+    transportationType: $Enums.TransportationType
+    availabilityNote?: string | null
+    status?: $Enums.DriverProfileStatus
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DriverProfileCreateOrConnectWithoutUserInput = {
+    where: DriverProfileWhereUniqueInput
+    create: XOR<DriverProfileCreateWithoutUserInput, DriverProfileUncheckedCreateWithoutUserInput>
+  }
+
   export type RoleInvitationCreateWithoutInvitedByUserInput = {
     id?: string
     targetEmail?: string | null
@@ -51109,10 +53062,16 @@ export namespace Prisma {
     targetRole: $Enums.RoleInvitationTargetRole
     tokenHash: string
     status?: $Enums.RoleInvitationStatus
+    sendStatus?: $Enums.RoleInvitationSendStatus
+    sentAt?: Date | string | null
+    sendError?: string | null
+    providerMessageId?: string | null
+    revokedAt?: Date | string | null
     expiresAt: Date | string
     usedAt?: Date | string | null
     notes?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
     usedByUser?: UserCreateNestedOneWithoutUsedInvitationsInput
   }
 
@@ -51123,11 +53082,17 @@ export namespace Prisma {
     targetRole: $Enums.RoleInvitationTargetRole
     tokenHash: string
     status?: $Enums.RoleInvitationStatus
+    sendStatus?: $Enums.RoleInvitationSendStatus
+    sentAt?: Date | string | null
+    sendError?: string | null
+    providerMessageId?: string | null
+    revokedAt?: Date | string | null
     expiresAt: Date | string
     usedAt?: Date | string | null
     usedByUserId?: string | null
     notes?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type RoleInvitationCreateOrConnectWithoutInvitedByUserInput = {
@@ -51147,10 +53112,16 @@ export namespace Prisma {
     targetRole: $Enums.RoleInvitationTargetRole
     tokenHash: string
     status?: $Enums.RoleInvitationStatus
+    sendStatus?: $Enums.RoleInvitationSendStatus
+    sentAt?: Date | string | null
+    sendError?: string | null
+    providerMessageId?: string | null
+    revokedAt?: Date | string | null
     expiresAt: Date | string
     usedAt?: Date | string | null
     notes?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
     invitedByUser?: UserCreateNestedOneWithoutInvitedRolesInput
   }
 
@@ -51162,10 +53133,16 @@ export namespace Prisma {
     tokenHash: string
     invitedBy?: string | null
     status?: $Enums.RoleInvitationStatus
+    sendStatus?: $Enums.RoleInvitationSendStatus
+    sentAt?: Date | string | null
+    sendError?: string | null
+    providerMessageId?: string | null
+    revokedAt?: Date | string | null
     expiresAt: Date | string
     usedAt?: Date | string | null
     notes?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type RoleInvitationCreateOrConnectWithoutUsedByUserInput = {
@@ -51912,6 +53889,43 @@ export namespace Prisma {
     materials?: MaterialUncheckedUpdateManyWithoutSupplierProfileNestedInput
   }
 
+  export type DriverProfileUpsertWithoutUserInput = {
+    update: XOR<DriverProfileUpdateWithoutUserInput, DriverProfileUncheckedUpdateWithoutUserInput>
+    create: XOR<DriverProfileCreateWithoutUserInput, DriverProfileUncheckedCreateWithoutUserInput>
+    where?: DriverProfileWhereInput
+  }
+
+  export type DriverProfileUpdateToOneWithWhereWithoutUserInput = {
+    where?: DriverProfileWhereInput
+    data: XOR<DriverProfileUpdateWithoutUserInput, DriverProfileUncheckedUpdateWithoutUserInput>
+  }
+
+  export type DriverProfileUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    phone?: StringFieldUpdateOperationsInput | string
+    city?: StringFieldUpdateOperationsInput | string
+    area?: StringFieldUpdateOperationsInput | string
+    addressLine?: NullableStringFieldUpdateOperationsInput | string | null
+    transportationType?: EnumTransportationTypeFieldUpdateOperationsInput | $Enums.TransportationType
+    availabilityNote?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DriverProfileUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    phone?: StringFieldUpdateOperationsInput | string
+    city?: StringFieldUpdateOperationsInput | string
+    area?: StringFieldUpdateOperationsInput | string
+    addressLine?: NullableStringFieldUpdateOperationsInput | string | null
+    transportationType?: EnumTransportationTypeFieldUpdateOperationsInput | $Enums.TransportationType
+    availabilityNote?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type RoleInvitationUpsertWithWhereUniqueWithoutInvitedByUserInput = {
     where: RoleInvitationWhereUniqueInput
     update: XOR<RoleInvitationUpdateWithoutInvitedByUserInput, RoleInvitationUncheckedUpdateWithoutInvitedByUserInput>
@@ -51939,11 +53953,17 @@ export namespace Prisma {
     tokenHash?: StringFilter<"RoleInvitation"> | string
     invitedBy?: StringNullableFilter<"RoleInvitation"> | string | null
     status?: EnumRoleInvitationStatusFilter<"RoleInvitation"> | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFilter<"RoleInvitation"> | $Enums.RoleInvitationSendStatus
+    sentAt?: DateTimeNullableFilter<"RoleInvitation"> | Date | string | null
+    sendError?: StringNullableFilter<"RoleInvitation"> | string | null
+    providerMessageId?: StringNullableFilter<"RoleInvitation"> | string | null
+    revokedAt?: DateTimeNullableFilter<"RoleInvitation"> | Date | string | null
     expiresAt?: DateTimeFilter<"RoleInvitation"> | Date | string
     usedAt?: DateTimeNullableFilter<"RoleInvitation"> | Date | string | null
     usedByUserId?: StringNullableFilter<"RoleInvitation"> | string | null
     notes?: StringNullableFilter<"RoleInvitation"> | string | null
     createdAt?: DateTimeFilter<"RoleInvitation"> | Date | string
+    updatedAt?: DateTimeFilter<"RoleInvitation"> | Date | string
   }
 
   export type RoleInvitationUpsertWithWhereUniqueWithoutUsedByUserInput = {
@@ -52379,6 +54399,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -52412,6 +54433,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -52451,6 +54473,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
@@ -52484,6 +54507,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
@@ -52532,6 +54556,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -52565,6 +54590,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -52610,6 +54636,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
@@ -52643,6 +54670,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
@@ -52675,6 +54703,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -52708,6 +54737,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -52757,6 +54787,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -52790,6 +54821,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -52824,6 +54856,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
@@ -52857,6 +54890,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
@@ -52895,6 +54929,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
@@ -52928,6 +54963,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
@@ -52977,6 +55013,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
@@ -53010,6 +55047,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
@@ -53054,6 +55092,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
@@ -53087,7 +55126,160 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type UserCreateWithoutDriverProfileInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserUncheckedCreateWithoutDriverProfileInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserCreateOrConnectWithoutDriverProfileInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutDriverProfileInput, UserUncheckedCreateWithoutDriverProfileInput>
+  }
+
+  export type UserUpsertWithoutDriverProfileInput = {
+    update: XOR<UserUpdateWithoutDriverProfileInput, UserUncheckedUpdateWithoutDriverProfileInput>
+    create: XOR<UserCreateWithoutDriverProfileInput, UserUncheckedCreateWithoutDriverProfileInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutDriverProfileInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutDriverProfileInput, UserUncheckedUpdateWithoutDriverProfileInput>
+  }
+
+  export type UserUpdateWithoutDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
@@ -53119,6 +55311,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -53152,6 +55345,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -53201,6 +55395,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -53234,6 +55429,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -53267,6 +55463,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -53300,6 +55497,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -53505,6 +55703,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -53538,6 +55737,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -54804,6 +57004,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -54837,6 +57038,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -54875,6 +57077,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -54908,6 +57111,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -55162,6 +57366,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -55195,6 +57400,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -55239,6 +57445,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -55272,6 +57479,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -55770,6 +57978,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -55803,6 +58012,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -55909,6 +58119,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -55942,6 +58153,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -56191,6 +58403,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -56224,6 +58437,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -56719,6 +58933,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -56752,6 +58967,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -57642,6 +59858,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -57675,6 +59892,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -57713,6 +59931,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -57746,6 +59965,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -58060,6 +60280,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -58093,6 +60314,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -58137,6 +60359,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -58170,6 +60393,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -58428,6 +60652,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -58461,6 +60686,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -58577,6 +60803,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -58610,6 +60837,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -58704,6 +60932,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -58737,6 +60966,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -58775,6 +61005,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -58808,6 +61039,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -58924,6 +61156,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -58957,6 +61190,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -59001,6 +61235,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -59034,6 +61269,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -59067,6 +61303,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -59100,6 +61337,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -59149,6 +61387,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -59182,6 +61421,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -59933,6 +62173,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -59966,6 +62207,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -60180,6 +62422,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -60213,6 +62456,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -60331,6 +62575,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -60364,6 +62609,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -60531,6 +62777,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -60564,6 +62811,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -60735,11 +62983,17 @@ export namespace Prisma {
     targetRole: $Enums.RoleInvitationTargetRole
     tokenHash: string
     status?: $Enums.RoleInvitationStatus
+    sendStatus?: $Enums.RoleInvitationSendStatus
+    sentAt?: Date | string | null
+    sendError?: string | null
+    providerMessageId?: string | null
+    revokedAt?: Date | string | null
     expiresAt: Date | string
     usedAt?: Date | string | null
     usedByUserId?: string | null
     notes?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type RoleInvitationCreateManyUsedByUserInput = {
@@ -60750,10 +63004,16 @@ export namespace Prisma {
     tokenHash: string
     invitedBy?: string | null
     status?: $Enums.RoleInvitationStatus
+    sendStatus?: $Enums.RoleInvitationSendStatus
+    sentAt?: Date | string | null
+    sendError?: string | null
+    providerMessageId?: string | null
+    revokedAt?: Date | string | null
     expiresAt: Date | string
     usedAt?: Date | string | null
     notes?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type UserRoleAssignmentCreateManyAssignedByUserInput = {
@@ -61035,10 +63295,16 @@ export namespace Prisma {
     targetRole?: EnumRoleInvitationTargetRoleFieldUpdateOperationsInput | $Enums.RoleInvitationTargetRole
     tokenHash?: StringFieldUpdateOperationsInput | string
     status?: EnumRoleInvitationStatusFieldUpdateOperationsInput | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFieldUpdateOperationsInput | $Enums.RoleInvitationSendStatus
+    sentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sendError?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usedByUser?: UserUpdateOneWithoutUsedInvitationsNestedInput
   }
 
@@ -61049,11 +63315,17 @@ export namespace Prisma {
     targetRole?: EnumRoleInvitationTargetRoleFieldUpdateOperationsInput | $Enums.RoleInvitationTargetRole
     tokenHash?: StringFieldUpdateOperationsInput | string
     status?: EnumRoleInvitationStatusFieldUpdateOperationsInput | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFieldUpdateOperationsInput | $Enums.RoleInvitationSendStatus
+    sentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sendError?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     usedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type RoleInvitationUncheckedUpdateManyWithoutInvitedByUserInput = {
@@ -61063,11 +63335,17 @@ export namespace Prisma {
     targetRole?: EnumRoleInvitationTargetRoleFieldUpdateOperationsInput | $Enums.RoleInvitationTargetRole
     tokenHash?: StringFieldUpdateOperationsInput | string
     status?: EnumRoleInvitationStatusFieldUpdateOperationsInput | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFieldUpdateOperationsInput | $Enums.RoleInvitationSendStatus
+    sentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sendError?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     usedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type RoleInvitationUpdateWithoutUsedByUserInput = {
@@ -61077,10 +63355,16 @@ export namespace Prisma {
     targetRole?: EnumRoleInvitationTargetRoleFieldUpdateOperationsInput | $Enums.RoleInvitationTargetRole
     tokenHash?: StringFieldUpdateOperationsInput | string
     status?: EnumRoleInvitationStatusFieldUpdateOperationsInput | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFieldUpdateOperationsInput | $Enums.RoleInvitationSendStatus
+    sentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sendError?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     invitedByUser?: UserUpdateOneWithoutInvitedRolesNestedInput
   }
 
@@ -61092,10 +63376,16 @@ export namespace Prisma {
     tokenHash?: StringFieldUpdateOperationsInput | string
     invitedBy?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumRoleInvitationStatusFieldUpdateOperationsInput | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFieldUpdateOperationsInput | $Enums.RoleInvitationSendStatus
+    sentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sendError?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type RoleInvitationUncheckedUpdateManyWithoutUsedByUserInput = {
@@ -61106,10 +63396,16 @@ export namespace Prisma {
     tokenHash?: StringFieldUpdateOperationsInput | string
     invitedBy?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumRoleInvitationStatusFieldUpdateOperationsInput | $Enums.RoleInvitationStatus
+    sendStatus?: EnumRoleInvitationSendStatusFieldUpdateOperationsInput | $Enums.RoleInvitationSendStatus
+    sentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sendError?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMessageId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type UserRoleAssignmentUpdateWithoutAssignedByUserInput = {
