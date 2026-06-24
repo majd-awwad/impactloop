@@ -31,9 +31,11 @@ import '../../features/supplier_portal/presentation/pages/supplier_dashboard_pag
 import '../../features/supplier_portal/presentation/pages/supplier_profile_page.dart';
 import '../../features/supplier_portal/presentation/shell/supplier_shell.dart';
 import '../../features/admin_portal/presentation/pages/admin_access_denied_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_invitations_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_overview_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_placeholder_page.dart';
 import '../../features/admin_portal/presentation/widgets/admin_shell.dart';
+import '../../features/invitations/presentation/pages/invite_accept_page.dart';
 
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
 const _adminAccessDeniedRoute = '/admin/access-denied';
@@ -145,6 +147,10 @@ String? _resolveProtectedRoute(
   String destination,
 ) {
   if (authState.status == AuthStatus.unknown) {
+    if (accessLevel == _RouteAccessLevel.public) {
+      return null;
+    }
+
     return _withFrom(authCheckingRoute, destination);
   }
 
@@ -293,6 +299,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CompleteSupplierProfilePage(),
       ),
       GoRoute(
+        path: '/invite/accept',
+        builder: (context, state) {
+          final token = state.uri.queryParameters['token'] ?? '';
+          return InviteAcceptPage(token: token);
+        },
+      ),
+      GoRoute(
         path: _supplierAccessDeniedRoute,
         builder: (context, state) => const SupplierAccessDeniedPage(),
       ),
@@ -396,8 +409,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/invitations',
-            builder: (context, state) =>
-                const AdminPlaceholderPage(title: 'Invitations'),
+            builder: (context, state) => const AdminInvitationsPage(),
           ),
           GoRoute(
             path: '/admin/impact',

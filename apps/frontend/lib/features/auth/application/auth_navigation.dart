@@ -6,6 +6,7 @@ const registerRoute = '/register';
 const authCheckingRoute = '/auth/checking';
 const supplierPortalRoute = '/supplier';
 const adminPortalRoute = '/admin';
+const inviteAcceptRoute = '/invite/accept';
 const homeRoute = '/home';
 
 bool userHasRole(User? user, String role) {

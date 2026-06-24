@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_session_refresh.dart';
 import '../../../core/errors/api_exception.dart';
 import '../data/auth_repository.dart';
+import '../data/models/auth_tokens.dart';
 import '../data/models/register_request.dart';
 import '../data/models/user.dart';
 import 'auth_providers.dart';
@@ -163,6 +164,34 @@ class AuthController extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false, error: apiError);
       throw apiError;
     }
+  }
+
+  Future<User> establishAuthenticatedSession({
+    required AuthTokens tokens,
+    required User user,
+  }) async {
+    final establishedUser = await _repository.establishSession(
+      tokens: tokens,
+      user: user,
+    );
+
+    state = AuthState(
+      user: establishedUser,
+      accessToken: _repository.accessToken,
+      isLoading: false,
+      hasBootstrapped: true,
+    );
+
+    return establishedUser;
+  }
+
+  void syncAuthenticatedUser(User user) {
+    state = AuthState(
+      user: user,
+      accessToken: _repository.accessToken,
+      isLoading: false,
+      hasBootstrapped: true,
+    );
   }
 
   Future<String> refresh() async {
