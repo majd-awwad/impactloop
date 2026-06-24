@@ -17,11 +17,11 @@ Requires login (router guard).
 | Quick actions | **Partial** | Browse materials (**API-backed** route); Learning Hub route is available, but the catalog/cards are mock-only until frontend API integration is completed; supplier onboarding + my activity **disabled** (“Coming soon”) |
 | Suggested materials | **Implemented** | **API-backed** — `GET /api/materials` via `ApiMaterialDiscoveryRepository`, first 4 items |
 | Learning spotlight | **Mock-only** | `learning_hub_mock_data.dart` — **not** `GET /api/learning-projects` |
-| Future activity (reservations, saved projects, delivery) | **Frontend-only** | Placeholder cards; snackbar “connected later” |
+| Future activity (reservation list, saved projects, delivery) | **Frontend-only** | Placeholder cards; snackbar “connected later” |
 | Impact snapshot | **Frontend-only** | Empty placeholder copy |
 | AI material helper | **Not implemented** | Coming soon card only |
 
-**Not documented as implemented:** learner reservation creation, delivery tracking, saved projects, AI agent, impact analytics.
+**Not documented as implemented:** learner reservation list/cancel, delivery tracking, saved projects, AI agent, impact analytics.
 
 ## Main user flow
 
@@ -61,7 +61,7 @@ No dedicated `/api/home` or learner dashboard endpoint.
 |--------|------|---------|
 | GET | `/api/materials` | Suggested materials (**Implemented**) |
 | GET | `/api/learning-projects` | **Not wired** to learning spotlight |
-| POST | `/api/reservations` | **Not implemented** — future activity placeholders |
+| POST | `/api/reservations` | **Implemented MVP** — used from material detail, not home |
 
 ## Database tables
 

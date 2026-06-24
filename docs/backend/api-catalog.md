@@ -59,6 +59,14 @@ Query validation: `categoriesQuerySchema`
 
 **Note:** Material **creation** is not on this router. Suppliers create via `POST /api/supplier/materials`.
 
+## Reservations — `/api/reservations`
+
+| Method | Path | Auth | Roles | Source file |
+|--------|------|------|-------|-------------|
+| POST | `/api/reservations` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
+
+`POST /api/reservations` creates an exclusive learner reservation request for an `AVAILABLE` material. The request body is `{ materialId, quantityRequested, message? }`. The transaction creates a `PENDING` reservation, writes reservation status history, and moves the material to `PENDING_RESERVATION`. Duplicate active reservations and unavailable material states return `409 CONFLICT`.
+
 ## Price rule requests — `/api/price-rule-requests`
 
 | Method | Path | Auth | Source file |
@@ -149,6 +157,8 @@ All routes below require Bearer JWT + `SUPPLIER` role unless noted. Source: `sup
 | PATCH | `/api/supplier/reservations/:id/decline` | `supplier-reservations/supplier-reservations.routes.ts` |
 | PATCH | `/api/supplier/reservations/:id/complete` | `supplier-reservations/supplier-reservations.routes.ts` |
 
+Accept moves a pending reservation to `ACCEPTED` and the material to `RESERVED`. Decline moves the reservation to `REJECTED` and returns the material to `AVAILABLE` when no other active reservation exists. Complete moves the reservation to `COMPLETED` and the material to `REUSED`.
+
 ## Endpoints documented elsewhere but **not mounted**
 
 These appear in `docs/04-api-conventions.md` or `docs/02-architecture.md` examples but have **no route file** in the current codebase:
@@ -156,7 +166,6 @@ These appear in `docs/04-api-conventions.md` or `docs/02-architecture.md` exampl
 | Example | Status |
 |---------|--------|
 | `POST /api/materials` | **Not implemented** — use `POST /api/supplier/materials` |
-| `POST /api/reservations` | **Not implemented** |
 | `GET /api/reservations/my` | **Not implemented** |
 | `PATCH /api/reservations/:id/accept` | **Not implemented** — supplier path is `/api/supplier/reservations/:id/accept` |
 | `POST /api/ai/requests` | **Not implemented** |
@@ -175,6 +184,7 @@ From `apps/backend/src/app.ts`:
 /api/invitations                 → invitationsRouter
 /api/learning-projects           → learningProjectsRouter
 /api/materials                   → materialsRouter
+/api/reservations                → reservationsRouter
 /api/uploads                     → uploadsRouter
 /api/locations                   → locationsRouter
 /api/supplier                    → supplierRouter

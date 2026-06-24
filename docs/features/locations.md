@@ -99,7 +99,7 @@ Public material discovery:
 ## Known gaps / Needs verification
 
 - **Public redaction:** Public materials API omits coordinates/address on list/detail (`mapMaterial`). `visibility` / `ORDER_ONLY` is stored but not enforced on public reads — **Needs verification** beyond create-time copy behavior.
-- No learner-facing precise location reveal after reservation (reservation create **not implemented**).
+- No learner-facing precise location reveal after reservation (reservation create is implemented, reveal is not).
 - No dedicated locations list/manage API for learners or drivers.
 - Reverse geocode requires external Nominatim — env/network dependent (`reverse-geocoding.service.ts`).
 - Delivery pickup/dropoff location fields on `reservations` — schema only; **not implemented** in API/UI.

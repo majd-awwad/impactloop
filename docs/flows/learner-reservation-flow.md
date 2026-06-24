@@ -1,77 +1,89 @@
-# Learner Reservation Flow (Planned — Not Implemented)
+# Learner Reservation Flow
 
-**Gap / stub flow.** Documents **intended** learner path vs **current code**. Do not treat as shipped behavior.
+Documents the implemented MVP learner reservation request path.
 
-**Sources inspected:** `docs/01-requirements.md`, `docs/features/reservations.md`, `docs/flows/supplier-reservation-flow.md`, `apps/backend/src/app.ts`, `apps/frontend/lib/features/material_discovery/**`, `apps/frontend/lib/features/home/**`, `apps/backend/prisma/schema.prisma`
+**Out of scope:** delivery, learner reservation list/cancel, expiry jobs, reviews, multi-reservation queues, partial stock allocation, and precise pickup-location reveal.
 
-## Trigger (planned)
+## Trigger
 
-Authenticated **LEARNER** reserves quantity of an available material from discovery detail (or project component link — **not implemented**).
+Authenticated **LEARNER** reserves an available material from public material detail (`/materials/:id`).
 
 ---
 
-## Current reality
+## Current Reality
 
 | Step | Status |
 |------|--------|
-| Learner reserve UI | **Not implemented** |
-| `POST /api/reservations` (or equivalent) | **Not implemented** |
+| Learner reserve UI | **Implemented MVP** — detail CTA only |
+| `POST /api/reservations` | **Implemented MVP** |
 | Learner status list UI | **Frontend-only** placeholders on `/home` |
-| Supplier accept/decline/complete | **Partial** — see [supplier-reservation-flow](supplier-reservation-flow.md) |
-| Test data | **Partial** — `prisma/seeds/seed-supplier-reservations.ts` |
+| Supplier accept/decline/complete | **Partial** — accept/reject/complete implemented; no delivery |
+| Test data | **Partial** — seed data still exists for supplier portal demos |
 
 ---
 
-## Planned user path (requirements — not built)
+## User Path
 
 1. Learner opens material detail (`/materials/:id`).
-2. Chooses quantity, optional message, pickup preference.
-3. Submits → reservation `PENDING`.
-4. Tracks status on “My reservations” (`/home` or dedicated route).
-5. After supplier accept → sees pickup window; optional delivery request (see [delivery-flow](delivery-flow.md)).
+2. Taps **Reserve Material**.
+3. If unauthenticated, the app redirects to login with `from=/materials/:id`.
+4. If authenticated as a non-learner, the UI blocks the action.
+5. The app submits `POST /api/reservations` with the material id and full listed quantity.
+6. Success creates a `PENDING` reservation and reloads material detail so the status becomes `PENDING_RESERVATION`.
+7. Supplier handles the request through the existing incoming requests page.
 
-### Frontend path (planned)
+### Frontend Path
 
-- New `features/reservations` or extend `material_discovery` detail CTA.
-- Repository → learner reservation API.
-- Home “My reservations” replaces `ComingSoonCard`.
+- `material_discovery` detail CTA calls `reservationCreateControllerProvider`.
+- `features/reservations/data` contains the API/repository and request/response models.
+- Home “My reservations” remains a placeholder.
 
-### Backend path (planned)
+### Backend Path
 
-- New `modules/reservations` or learner routes under `/api/reservations`.
-- Create: validate material `AVAILABLE`, quantity, requester auth.
-- On supplier accept (existing): optionally set `materials.status = RESERVED` per requirements.
+- `modules/reservations` mounts `POST /api/reservations`.
+- Create validates `LEARNER` role, material `AVAILABLE`, quantity, and self-reservation.
+- Create enforces one active reservation per material and uses `updateMany` with `status = AVAILABLE` as the race-safe guard.
+- Supplier accept sets material `RESERVED`; reject returns material `AVAILABLE`; complete sets material `REUSED`.
 
-### Database changes (planned)
+### Database Changes Per Flow
 
 - Insert `reservations` (`PENDING`), `reservation_status_history`.
-- Update `materials.status` on accept — **Needs verification** vs current supplier-only code.
+- `materials.status`: `AVAILABLE` → `PENDING_RESERVATION` on create.
+- `materials.status`: `PENDING_RESERVATION` → `RESERVED` on supplier accept.
+- `materials.status`: `PENDING_RESERVATION` → `AVAILABLE` on supplier reject.
+- `materials.status`: `RESERVED` → `REUSED` on supplier complete.
 
-### Success state (planned)
+### Success State
 
-Learner sees confirmation + reservation id; supplier sees pending inbox.
+Learner sees a success snack bar and refreshed material detail; supplier sees the pending request in incoming requests and derived reservation notification inbox.
 
-### Error states (planned)
+### Error States
 
-- Material unavailable / insufficient quantity → 409
+- Material unavailable or duplicate active reservation → 409
+- Insufficient quantity / self reservation → 400
 - Unauthenticated → 401
+- Non-learner → 403
 - Validation errors → 400
 
-### Files involved today (partial only)
+### Files Involved
 
-`material_discovery` pages (no reserve CTA wired), `learner_home_page.dart` (placeholder), `supplier-reservations.*`, `seed-supplier-reservations.ts`
-
----
-
-## Not implemented
-
-Entire learner create + track loop. No invented endpoint paths or request bodies.
+`material_discovery` detail page, `features/reservations/*`, `modules/reservations/*`, `supplier-reservations.*`, `learner_home_page.dart` placeholders.
 
 ---
 
-## Open questions
+## Still Not Implemented
 
-- Reserve from discovery detail only or also learning hub components?
-- Should create be idempotent per user+material?
-- Cancel learner-side before supplier accept?
+- Learner reservation list/detail/cancel.
+- Delivery selection and driver workflow.
+- Expiry jobs.
+- Reviews.
+- Multi-reservation queues and partial stock allocation.
+- Precise pickup-location reveal.
+
+---
+
+## Open Questions
+
+- Whether later reservations should start from learning hub components too.
+- Whether learner cancellation is allowed before supplier acceptance.
 - See [09-open-questions.md](../09-open-questions.md) § Reservations.

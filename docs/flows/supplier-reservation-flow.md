@@ -6,7 +6,7 @@
 
 Supplier opens **Incoming requests** (`/supplier/reservations`) or arrives via notification deep link (`?tab=&focus=`).
 
-**Prerequisite:** `reservations` rows must already exist. **Learner create reservation API is not implemented** — current data typically from **database seed** (`seed-supplier-reservations.ts`).
+**Prerequisite:** `reservations` rows can come from the learner `POST /api/reservations` MVP flow or database seed data.
 
 ---
 
@@ -58,13 +58,12 @@ Confirm pickup start/end → reservation accepted → moves to accepted tab / pi
 
 - `reservations.status`: `PENDING` → `ACCEPTED`
 - Set `pickupWindowStart`, `pickupWindowEnd`, `supplierNote`, `acceptedAt`
+- `materials.status`: `PENDING_RESERVATION` → `RESERVED`
 - Insert `reservation_status_history` (RESERVATION group)
-
-**Note:** Does **not** update `materials.status` in this transaction (only **complete** sets `REUSED`).
 
 ### Database changes
 
-Update `reservations`; insert `reservation_status_history`.
+Update `reservations`; update `materials`; insert `reservation_status_history`.
 
 ### Success state
 
@@ -90,11 +89,11 @@ Supplier taps **Decline** → optional reason.
 
 ### Backend path
 
-`reservations.status` → `REJECTED`; `rejectionReason`, `rejectedAt`; history row.
+`reservations.status` → `REJECTED`; `rejectionReason`, `rejectedAt`; history row. The material returns to `AVAILABLE` when no other active reservation exists for that material.
 
 ### Database changes
 
-Update `reservations`; insert history.
+Update `reservations`; update `materials`; insert history.
 
 ### Error states
 
@@ -144,17 +143,15 @@ Reservation completed; material marked reused.
 
 ## Not implemented
 
-- Learner `POST /api/reservations`
+- Learner reservation list/cancel
 - Delivery request / driver assignment (`deliveryRequested`, `deliveryStatus` on schema)
 - Cancel/expiry flows in UI
-- Material status `RESERVED` on accept — **Needs verification**
+- Multi-reservation queues / partial inventory allocation
 
 ---
 
 ## Open questions
 
-- How are new PENDING reservations created in production without learner API?
-- Should accept also set `materials.status` to `RESERVED`?
 - Notification generation when reservation state changes?
 
 ### Files involved

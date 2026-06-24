@@ -19,14 +19,14 @@ impactloop/
       src/
         app.ts, server.ts
         config/, database/, middlewares/, utils/, constants/
-        modules/               # 14 modules — see modules-map.md
+        modules/               # 15 modules — see modules-map.md
         services/              # cross-cutting services
     frontend/
       lib/
         app/                   # shell, router, theme, widgets
         core/                  # network, auth, config, errors
         shared/                # shared models, widgets
-        features/              # 9 features — see project-map.md
+        features/              # 10 features — see project-map.md
   docs/
   .cursor/
 ```
@@ -64,6 +64,7 @@ From `apps/backend/src/app.ts`:
 | `/api/invitations` | invitations |
 | `/api/learning-projects` | learning-projects |
 | `/api/materials` | materials |
+| `/api/reservations` | reservations |
 | `/api/uploads` | uploads |
 | `/api/locations` | locations |
 | `/api/supplier` | supplier (+ nested category-requests, price-rule-requests, notifications, reservations) |
@@ -71,15 +72,15 @@ From `apps/backend/src/app.ts`:
 Full endpoint list: [backend/api-catalog.md](backend/api-catalog.md)  
 Module responsibilities: [backend/modules-map.md](backend/modules-map.md)
 
-### Backend modules present (14)
+### Backend modules present (15)
 
-`auth`, `categories`, `category-requests`, `health`, `invitations`, `learning-projects`, `locations`, `material-types`, `materials`, `price-rule-requests`, `supplier`, `supplier-notifications`, `supplier-reservations`, `uploads`
+`auth`, `categories`, `category-requests`, `health`, `invitations`, `learning-projects`, `locations`, `material-types`, `materials`, `price-rule-requests`, `reservations`, `supplier`, `supplier-notifications`, `supplier-reservations`, `uploads`
 
 ### Backend modules **not present**
 
 These names appear in roadmap/requirements but **have no folder** under `modules/`:
 
-`users`, `roles`, `reservations` (learner API), `ai-agent`, `notifications`, `admin`, `moderator`, `reports`, `reviews`, `delivery`, `driver`
+`users`, `roles`, `ai-agent`, `notifications`, `admin`, `moderator`, `reports`, `reviews`, `delivery`, `driver`
 
 ### Cross-cutting services (`src/services/`)
 
@@ -104,13 +105,13 @@ These names appear in roadmap/requirements but **have no folder** under `modules
 - Widgets do not call APIs directly — repositories/providers in data/application layers
 - Adaptive layouts per feature (mobile/web views where implemented)
 
-### Features present (9)
+### Features present (10)
 
-`auth`, `health`, `home`, `landing`, `learning_hub`, `material_discovery`, `materials`, `supplier_portal`
+`auth`, `health`, `home`, `landing`, `learning_hub`, `material_discovery`, `materials`, `reservations`, `supplier_portal`
 
 ### Features **not present**
 
-`reservations`, `delivery`, `ai_agent`, `admin`, `moderator`, `reports`, `reviews`, `driver`
+`delivery`, `ai_agent`, `admin`, `moderator`, `reports`, `reviews`, `driver`
 
 Routes: [frontend/routes-map.md](frontend/routes-map.md)  
 Shared widgets: [frontend/reusable-widgets.md](frontend/reusable-widgets.md)
@@ -144,6 +145,7 @@ These exist in route files today:
 - `GET /api/auth/me`
 - `GET /api/materials`
 - `GET /api/materials/:id`
+- `POST /api/reservations`
 - `POST /api/supplier/materials`
 - `GET /api/supplier/reservations`
 - `PATCH /api/supplier/reservations/:id/accept`
@@ -152,7 +154,7 @@ These exist in route files today:
 **Not mounted** (aspirational examples from older docs):
 
 - `POST /api/materials` — use `POST /api/supplier/materials`
-- `POST /api/reservations`, `GET /api/reservations/my`
+- `GET /api/reservations/my`
 - `POST /api/ai/requests`
 
 ## Security rules (unchanged intent)

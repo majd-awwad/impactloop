@@ -57,7 +57,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 |----------|--------|--------|
 | Are all public API paths consistent on omitting lat/lng/address? | **Needs verification** | [locations](features/locations.md), `materials.service.ts` |
 | Is `visibility` / `ORDER_ONLY` enforced beyond storage? | **Needs verification** | [locations](features/locations.md), `supplier.validation.ts` |
-| When should precise location reveal to learner (post-reservation)? | Open — learner reserve **not implemented** | [locations](features/locations.md), [reservations](features/reservations.md) |
+| When should precise location reveal to learner after accepted reservation? | Open — precise pickup reveal **not implemented** | [locations](features/locations.md), [reservations](features/reservations.md) |
 
 ---
 
@@ -65,8 +65,8 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 | Question | Status | Source |
 |----------|--------|--------|
-| How are PENDING reservations created without learner `POST /api/reservations`? | Open (seed/dev only today) | [supplier-reservation-flow](flows/supplier-reservation-flow.md), `seed-supplier-reservations.ts` |
-| Should accept set `materials.status` to `RESERVED` (requirements say yes)? | **Needs verification** / gap vs `01-requirements.md` | [supplier-reservation-flow](flows/supplier-reservation-flow.md), `supplier-reservations.repository.ts` |
+| Should learner reservation create be idempotent for same learner/material after rejected/cancelled/expired history? | Open — MVP rejects active duplicates only | [learner-reservation-flow](flows/learner-reservation-flow.md) |
+| Should future inventory support partial allocation instead of whole-material hold? | Open — MVP exclusive reservation only | [learner-reservation-flow](flows/learner-reservation-flow.md) |
 | Notification generation on reservation state changes? | Open | [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
 | Pickup window validation schema — exact rules? | **Needs verification** | [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
 | Cancel/expiry flows for reservations? | **Not implemented** | [supplier-reservation-flow](flows/supplier-reservation-flow.md) |

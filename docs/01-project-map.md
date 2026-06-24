@@ -20,7 +20,7 @@ impactloop/
         config/
         database/
         middlewares/
-        modules/            # 14 feature modules (see below)
+        modules/            # 15 feature modules (see below)
         services/           # cross-module services (AI price, geocoding)
         utils/
         constants/
@@ -29,14 +29,14 @@ impactloop/
         app/                # app shell, router, theme, widgets
         core/               # network, auth, config, errors
         shared/             # shared models and widgets
-        features/           # 9 feature folders (see below)
+        features/           # 10 feature folders (see below)
   docs/
   .cursor/                  # rules and skills
 ```
 
 **Note:** `docs/02-architecture.md` previously listed a root `database/` folder and many unbuilt modules. That structure is **aspirational** — see [08-implementation-status.md](08-implementation-status.md).
 
-## Backend modules (14)
+## Backend modules (15)
 
 Derived **only** from `apps/backend/src/modules/`:
 
@@ -52,6 +52,7 @@ Derived **only** from `apps/backend/src/modules/`:
 | `material-types` | `/api/material-types` | Search types + price rules |
 | `materials` | `/api/materials` | Public discovery read + listing policy + price check |
 | `price-rule-requests` | `/api/price-rule-requests`, `/api/supplier/price-rule-requests` | Create + supplier list/draft |
+| `reservations` | `/api/reservations` | Learner material reservation create |
 | `supplier` | `/api/supplier` | Dashboard, profile, supplier materials |
 | `supplier-notifications` | `/api/supplier/notifications` | Supplier action notifications list |
 | `supplier-reservations` | `/api/supplier/reservations` | Supplier reservation list/accept/decline/complete |
@@ -63,11 +64,11 @@ Detail: [backend/modules-map.md](backend/modules-map.md), [backend/api-catalog.m
 
 These names appear in older docs or roadmap but **do not exist** under `apps/backend/src/modules/`:
 
-`users`, `roles`, `reservations` (learner API), `ai-agent`, `notifications` (general), `admin`, `moderator`, `reports`, `reviews`, `delivery`, `driver`
+`users`, `roles`, `ai-agent`, `notifications` (general), `admin`, `moderator`, `reports`, `reviews`, `delivery`, `driver`
 
-Some concerns are partially covered (e.g. reservations via `supplier-reservations`; notifications via `supplier-notifications`).
+Some concerns are partially covered (e.g. reservations via learner create + `supplier-reservations`; notifications via `supplier-notifications`).
 
-## Flutter features (9)
+## Flutter features (10)
 
 Derived **only** from `apps/frontend/lib/features/`:
 
@@ -78,15 +79,16 @@ Derived **only** from `apps/frontend/lib/features/`:
 | `home` | `/home` | Mixed — materials via API; learning spotlight mock |
 | `landing` | `/` | Static UI |
 | `learning_hub` | `/learning`, `/learning/:id`, `/learning/add-draft` | **Partial** — backend read API exists; UI uses mock data only |
-| `material_discovery` | `/materials`, `/materials/:id` | API default (`ApiMaterialDiscoveryRepository`) |
+| `material_discovery` | `/materials`, `/materials/:id` | API default (`ApiMaterialDiscoveryRepository`); detail reserve CTA calls reservations data layer |
 | `materials` | (no dedicated routes) | Shared data layer for listing/taxonomy — used by supplier add material |
-| `supplier_portal` | `/supplier/*` shell routes | **Partial** — API-backed; material read/create (no update/delete API) |
+| `reservations` | (no dedicated routes) | Learner create API/repository/controller consumed by material detail |
+| `supplier_portal` | `/supplier/*` shell routes | **Partial** — API-backed; material read/create/update/delete and supplier reservations |
 
 Detail: [frontend/routes-map.md](frontend/routes-map.md), [08-implementation-status.md](08-implementation-status.md)
 
 ### Flutter features **not** present as folders
 
-`reservations`, `delivery`, `ai_agent`, `admin`, `moderator`, `reports`, `reviews`, `driver`
+`delivery`, `ai_agent`, `admin`, `moderator`, `reports`, `reviews`, `driver`
 
 ## Cross-cutting backend services
 
@@ -136,4 +138,5 @@ Index with status summaries: [00-ai-docs-router.md](00-ai-docs-router.md#feature
 - `locations/locations.test.ts`
 - `supplier/supplier.materials.test.ts`
 - `materials/materials.price.test.ts`
+- `reservations/reservations.create.test.ts`
 - `supplier-reservations/supplier-reservations.complete.test.ts`

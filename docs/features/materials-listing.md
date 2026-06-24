@@ -21,7 +21,7 @@ The `materials` feature folder has **no routes** — it is consumed by `supplier
 | Category requests | **Implemented** | Create + list + draft under `/api/supplier/category-requests` |
 | Price rule requests | **Partial** | Create (`/api/price-rule-requests`) + supplier drafts; AI suggestion internal to backend |
 | Material create (`POST /api/supplier/materials`) | **Implemented** | Via `supplier_materials_repository.dart`, not in this feature folder |
-| Material update/delete | **Implemented** | `PATCH` / `DELETE` `/api/supplier/materials/:id` via `supplier_my_materials_api.dart`; lifecycle-gated |
+| Material update/delete | **Implemented** | `PATCH` / `DELETE` `/api/supplier/materials/:id` via `supplier_my_materials_api.dart`; lifecycle-gated by material status and active reservation history |
 
 ## Relation to supplier material create
 
@@ -93,6 +93,12 @@ AddMaterialPage
 | POST | `/api/supplier/materials` | Bearer JWT + **SUPPLIER** | Final create (supplier module) |
 
 Static: `GET /uploads/materials/*`
+
+## Reservation Lifecycle Interaction
+
+Learner reservation creation (`POST /api/reservations`) moves a material from `AVAILABLE` to `PENDING_RESERVATION`. Supplier accept moves it to `RESERVED`; supplier reject returns it to `AVAILABLE` when no other active reservation exists; supplier complete moves it to `REUSED`.
+
+Supplier edit/delete eligibility blocks `PENDING_RESERVATION`, `RESERVED`, and `REUSED` materials, and also blocks materials with `PENDING`, `ACCEPTED`, or `COMPLETED` reservations.
 
 ## Database tables
 

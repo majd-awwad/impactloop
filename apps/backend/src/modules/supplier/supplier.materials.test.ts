@@ -519,6 +519,7 @@ describe('createSupplierMaterial', () => {
       pickupAllowed: true,
       deliveryAllowed: false,
       imageUrls: ['/uploads/materials/test-create-source.jpg'],
+      useDefaultPickupLocation: true,
     });
     ctx.createdMaterialIds.push(material.id);
 
@@ -561,7 +562,8 @@ describe('createSupplierMaterial', () => {
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 400);
-        assert.equal(error.details?.reason, 'ORG_PICKUP_OVERRIDE_NOT_ALLOWED');
+        const details = error.details as { reason?: string };
+        assert.equal(details.reason, 'ORG_PICKUP_OVERRIDE_NOT_ALLOWED');
         return true;
       },
     );
@@ -825,6 +827,7 @@ describe('createSupplierMaterial public location redaction', () => {
       pickupAllowed: true,
       deliveryAllowed: false,
       imageUrls: ['/uploads/materials/test-public-redaction.jpg'],
+      useDefaultPickupLocation: true,
     });
     ctx.createdMaterialIds.push(material.id);
 

@@ -90,6 +90,13 @@ export const acceptSupplierReservation = async (input: {
       include: reservationInclude,
     });
 
+    await tx.material.update({
+      where: { id: existing.materialId },
+      data: {
+        status: 'RESERVED',
+      },
+    });
+
     await tx.reservationStatusHistory.create({
       data: {
         reservationId: reservation.id,
@@ -137,6 +144,22 @@ export const declineSupplierReservation = async (input: {
       },
       include: reservationInclude,
     });
+
+    const activeReservationCount = await tx.reservation.count({
+      where: {
+        materialId: existing.materialId,
+        status: { in: ['PENDING', 'ACCEPTED', 'COMPLETED'] },
+      },
+    });
+
+    if (activeReservationCount === 0) {
+      await tx.material.update({
+        where: { id: existing.materialId },
+        data: {
+          status: 'AVAILABLE',
+        },
+      });
+    }
 
     await tx.reservationStatusHistory.create({
       data: {

@@ -47,6 +47,8 @@ class MaterialDiscoveryApiMapper {
 
     return DiscoveryMaterial(
       id: _stringOrFallback(json['id'], fallback: ''),
+      status: status,
+      quantity: quantity ?? 0,
       // TODO: replace duplicated EN/AR title text when backend exposes bilingual fields.
       title: LocalizedText(en: title, ar: title),
       description: LocalizedText(en: description, ar: description),

@@ -19,6 +19,7 @@ Maps each folder under `apps/backend/src/modules/` to its responsibility and key
 | `material-types` | `/api/material-types` | No |
 | `materials` | `/api/materials` | No |
 | `price-rule-requests` | `/api/price-rule-requests`, `/api/supplier/price-rule-requests` | Partial |
+| `reservations` | `/api/reservations` | No |
 | `supplier` | `/api/supplier` | — (parent) |
 | `supplier-notifications` | `/api/supplier/notifications` | Yes |
 | `supplier-reservations` | `/api/supplier/reservations` | Yes |
@@ -142,6 +143,22 @@ Mount order: `apps/backend/src/app.ts`
 
 ---
 
+## `reservations`
+
+**Purpose:** Learner-side material reservation creation.
+
+**Mounted at:** `/api/reservations`
+
+**Key files:** `reservations.routes.ts`, `reservations.controller.ts`, `reservations.service.ts`, `reservations.repository.ts`, `reservations.validation.ts`, `reservations.create.test.ts`
+
+**Prisma:** `Reservation`, `ReservationStatusHistory`, `Material`
+
+**Behavior:** `POST /api/reservations` requires a `LEARNER`, validates the material and quantity, prevents own-material reservations, enforces one active reservation per material for MVP, creates a `PENDING` reservation, and moves the material from `AVAILABLE` to `PENDING_RESERVATION` transactionally.
+
+**Not implemented:** Learner list/cancel, delivery request, expiry jobs, reviews, multi-reservation queues.
+
+---
+
 ## `supplier`
 
 **Purpose:** Supplier dashboard, profile CRUD, list/create own materials; mounts nested supplier routers.
@@ -172,7 +189,7 @@ Mount order: `apps/backend/src/app.ts`
 
 **Prisma:** `Reservation`, `ReservationStatusHistory`
 
-**Not implemented:** Learner-side reservation creation API.
+**Status behavior:** Accept sets reservation `ACCEPTED` and material `RESERVED`; decline sets reservation `REJECTED` and safely returns material to `AVAILABLE`; complete sets reservation `COMPLETED` and material `REUSED`.
 
 ---
 

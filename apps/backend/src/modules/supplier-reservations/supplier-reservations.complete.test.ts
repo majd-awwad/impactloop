@@ -6,6 +6,10 @@ import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
 
 import { completeSupplierReservation } from './supplier-reservations.service.js';
+import {
+  acceptSupplierReservation,
+  declineSupplierReservation,
+} from './supplier-reservations.service.js';
 
 const TEST_MARKER = '[test-complete-pickup]';
 
@@ -196,6 +200,102 @@ describe('completeSupplierReservation', () => {
     });
     assert.ok(history);
     assert.equal(history?.changedBy, ctx.supplierId);
+  });
+
+  test('supplier accept sets material reserved', async () => {
+    const { reservation, material } = await createReservation(ctx, 'PENDING');
+    const now = new Date();
+
+    const result = await acceptSupplierReservation(
+      ctx.supplierId,
+      reservation.id,
+      {
+        pickupWindowStart: now.toISOString(),
+        pickupWindowEnd: new Date(now.getTime() + 3_600_000).toISOString(),
+      },
+    );
+
+    assert.equal(result.status, 'ACCEPTED');
+
+    const updatedReservation = await prisma.reservation.findUnique({
+      where: { id: reservation.id },
+      select: { status: true },
+    });
+    assert.equal(updatedReservation?.status, 'ACCEPTED');
+
+    const updatedMaterial = await prisma.material.findUnique({
+      where: { id: material.id },
+      select: { status: true },
+    });
+    assert.equal(updatedMaterial?.status, 'RESERVED');
+  });
+
+  test('supplier accept requires pending reservation', async () => {
+    for (const status of ['ACCEPTED', 'REJECTED', 'COMPLETED'] as const) {
+      const { reservation } = await createReservation(ctx, status);
+      const now = new Date();
+
+      await assert.rejects(
+        () =>
+          acceptSupplierReservation(ctx.supplierId, reservation.id, {
+            pickupWindowStart: now.toISOString(),
+            pickupWindowEnd: new Date(now.getTime() + 3_600_000).toISOString(),
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.statusCode, 409);
+          return true;
+        },
+      );
+    }
+  });
+
+  test('supplier decline returns material to available', async () => {
+    const { reservation, material } = await createReservation(ctx, 'PENDING');
+    await prisma.material.update({
+      where: { id: material.id },
+      data: { status: 'PENDING_RESERVATION' },
+    });
+
+    const result = await declineSupplierReservation(
+      ctx.supplierId,
+      reservation.id,
+      {
+        reason: 'Not available this week',
+      },
+    );
+
+    assert.equal(result.status, 'REJECTED');
+
+    const updatedReservation = await prisma.reservation.findUnique({
+      where: { id: reservation.id },
+      select: { status: true },
+    });
+    assert.equal(updatedReservation?.status, 'REJECTED');
+
+    const updatedMaterial = await prisma.material.findUnique({
+      where: { id: material.id },
+      select: { status: true },
+    });
+    assert.equal(updatedMaterial?.status, 'AVAILABLE');
+  });
+
+  test('supplier decline requires pending reservation', async () => {
+    for (const status of ['ACCEPTED', 'REJECTED', 'COMPLETED'] as const) {
+      const { reservation } = await createReservation(ctx, status);
+
+      await assert.rejects(
+        () =>
+          declineSupplierReservation(ctx.supplierId, reservation.id, {
+            reason: 'Cannot fulfill',
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.statusCode, 409);
+          return true;
+        },
+      );
+    }
   });
 
   test('supplier cannot complete another supplier reservation', async () => {

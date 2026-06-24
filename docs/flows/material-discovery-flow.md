@@ -55,11 +55,11 @@ User opens `/materials/:id` or lands from home suggested materials.
 
 ### User path
 
-View images, description, condition, price, status, supplier area summary → back to list.
+View images, description, condition, price, status, supplier area summary, and reserve CTA.
 
 ### Frontend path
 
-`MaterialDetailsPage` → `getMaterialById(id)` → `GET /api/materials/:id` → mapper → detail layout.
+`MaterialDetailsPage` → `getMaterialById(id)` → `GET /api/materials/:id` → mapper → detail layout. The reserve CTA calls `reservationCreateControllerProvider` → `POST /api/reservations`.
 
 ### Backend path
 
@@ -67,11 +67,11 @@ View images, description, condition, price, status, supplier area summary → ba
 
 ### Database changes
 
-Read-only.
+Read-only until reserve. Successful reserve creates a `PENDING` reservation and moves material status to `PENDING_RESERVATION`.
 
 ### Success state
 
-Detail renders; 404 → null material handling in page.
+Detail renders; 404 → null material handling in page. Successful reserve shows a snack bar and refreshes detail/home suggestions.
 
 ### Error states
 
@@ -79,7 +79,7 @@ Detail renders; 404 → null material handling in page.
 
 ### Files involved
 
-`material_details_page.dart`, `api_material_discovery_repository.dart`, `materials.controller.ts`
+`material_details_page.dart`, `features/reservations/*`, `api_material_discovery_repository.dart`, `materials.controller.ts`, `reservations.controller.ts`
 
 ---
 
@@ -97,7 +97,7 @@ Pass `repository:` override into `MaterialsDiscoveryPage` / `MaterialDetailsPage
 
 ## Not implemented
 
-- **Learner reservation** from detail screen — no `POST /api/reservations`.
+- Learner reservation list/cancel.
 - **Server-side search** from discovery filters.
 - **Live map** distance browse.
 

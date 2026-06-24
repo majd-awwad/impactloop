@@ -7,12 +7,17 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../auth/application/auth_controller.dart';
+import '../../../home/application/home_suggested_materials_provider.dart';
+import '../../../reservations/application/reservation_create_controller.dart';
+import '../../../reservations/data/models/create_reservation_request.dart';
 import '../../data/api_material_discovery_repository.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_repository.dart';
@@ -139,12 +144,22 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
                                 child: LayoutBuilder(
                                   builder: (context, constraints) {
                                     final wide = constraints.maxWidth >= 980;
+                                    final authState = ref.watch(
+                                      authControllerProvider,
+                                    );
+                                    final reserveState = ref.watch(
+                                      reservationCreateControllerProvider,
+                                    );
 
                                     final mainColumn = _DetailsMainColumn(
                                       material: material,
                                     );
                                     final sideColumn = _DetailsSideColumn(
                                       material: material,
+                                      authState: authState,
+                                      isSubmitting: reserveState.isLoading,
+                                      onReserve: () =>
+                                          _handleReserve(material),
                                     );
 
                                     if (!wide) {
@@ -184,6 +199,66 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleReserve(DiscoveryMaterial material) async {
+    final authState = ref.read(authControllerProvider);
+
+    if (authState.status != AuthStatus.authenticated) {
+      final from = Uri.encodeQueryComponent('/materials/${material.id}');
+      context.go('/login?from=$from');
+      return;
+    }
+
+    if (authState.user?.hasRole('LEARNER') != true) {
+      showInfoSnackBar(
+        context,
+        'Use a learner account to reserve materials.',
+      );
+      return;
+    }
+
+    try {
+      await ref.read(reservationCreateControllerProvider.notifier).create(
+            CreateReservationRequest(
+              materialId: material.id,
+              quantityRequested: material.quantity,
+            ),
+          );
+
+      if (!mounted) {
+        return;
+      }
+
+      showInfoSnackBar(context, 'Reservation request sent to the supplier.');
+      ref.invalidate(homeSuggestedMaterialsProvider);
+      setState(() {
+        _materialFuture = _activeRepository.getMaterialById(widget.materialId);
+      });
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      showInfoSnackBar(
+        context,
+        error.statusCode == 409
+            ? 'This material is no longer available.'
+            : error.displayMessage,
+      );
+      setState(() {
+        _materialFuture = _activeRepository.getMaterialById(widget.materialId);
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      showInfoSnackBar(
+        context,
+        'Could not request this reservation. Please try again.',
+      );
+    }
   }
 }
 
@@ -423,13 +498,49 @@ class _DetailsMainColumn extends StatelessWidget {
 }
 
 class _DetailsSideColumn extends StatelessWidget {
-  const _DetailsSideColumn({required this.material});
+  const _DetailsSideColumn({
+    required this.material,
+    required this.authState,
+    required this.isSubmitting,
+    required this.onReserve,
+  });
 
   final DiscoveryMaterial material;
+  final AuthState authState;
+  final bool isSubmitting;
+  final VoidCallback onReserve;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final isAvailable = material.status == 'AVAILABLE' && material.quantity > 0;
+    final isAuthenticatedLearner =
+        authState.status == AuthStatus.authenticated &&
+        authState.user?.hasRole('LEARNER') == true;
+    final isAuthenticatedNonLearner =
+        authState.status == AuthStatus.authenticated &&
+        authState.user?.hasRole('LEARNER') != true;
+    final canTapReserve =
+        isAvailable && !isAuthenticatedNonLearner && !isSubmitting;
+    final reservationHelperText = !isAvailable
+        ? const LocalizedText(
+            en: 'This material is not available for new reservations.',
+            ar: 'هذه المادة غير متاحة لحجوزات جديدة.',
+          )
+        : isAuthenticatedNonLearner
+            ? const LocalizedText(
+                en: 'Use a learner account to reserve materials.',
+                ar: 'استخدم حساب متعلم لحجز المواد.',
+              )
+            : authState.status == AuthStatus.unauthenticated
+                ? const LocalizedText(
+                    en: 'Sign in as a learner to request this material.',
+                    ar: 'سجل الدخول كمتعلم لطلب هذه المادة.',
+                  )
+                : const LocalizedText(
+                    en: 'Send a reservation request for the full listed material.',
+                    ar: 'أرسل طلب حجز لكامل المادة المعروضة.',
+                  );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -521,10 +632,7 @@ class _DetailsSideColumn extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                const LocalizedText(
-                  en: 'The button is visual only in this UI mock.',
-                  ar: 'هذا الزر بصري فقط ضمن هذا النموذج.',
-                ).resolve(context),
+                reservationHelperText.resolve(context),
                 style: AppTextStyles.body(
                   context,
                 ).copyWith(color: palette.textSecondary),
@@ -532,24 +640,36 @@ class _DetailsSideColumn extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               FilledButton.icon(
-                onPressed: () {
-                  showInfoSnackBar(
-                    context,
-                    'Reservation flow will be connected later.',
-                  );
-                },
+                onPressed: canTapReserve ? onReserve : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: materialMint,
                   foregroundColor: palette.ctaForeground,
                   minimumSize: const Size.fromHeight(54),
                   shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
                 ),
-                icon: const Icon(Icons.shopping_bag_outlined),
+                icon: isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.shopping_bag_outlined),
                 label: Text(
-                  const LocalizedText(
-                    en: 'Reserve Material',
-                    ar: 'احجز المادة',
-                  ).resolve(context),
+                  (isSubmitting
+                          ? const LocalizedText(
+                              en: 'Requesting...',
+                              ar: 'جارٍ الطلب...',
+                            )
+                          : isAuthenticatedLearner || !isAvailable
+                              ? const LocalizedText(
+                                  en: 'Reserve Material',
+                                  ar: 'احجز المادة',
+                                )
+                              : const LocalizedText(
+                                  en: 'Sign in to Reserve',
+                                  ar: 'سجل الدخول للحجز',
+                                ))
+                      .resolve(context),
                 ),
               ),
             ],

@@ -7,6 +7,8 @@ import '../../../shared/widgets/materials/material_status_badge.dart';
 class DiscoveryMaterial {
   const DiscoveryMaterial({
     required this.id,
+    this.status = 'AVAILABLE',
+    this.quantity = 1,
     required this.title,
     required this.description,
     required this.category,
@@ -29,6 +31,8 @@ class DiscoveryMaterial {
   });
 
   final String id;
+  final String status;
+  final double quantity;
   final LocalizedText title;
   final LocalizedText description;
   final LocalizedText category;

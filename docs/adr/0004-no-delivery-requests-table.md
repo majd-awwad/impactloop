@@ -5,13 +5,13 @@ Accepted
 
 ## Context
 
-The current schema has reservations and delivery columns on reservations. It does not have a `delivery_requests` table. Supplier reservation endpoints exist, but learner reservation creation is not implemented.
+The current schema has reservations and delivery columns on reservations. It does not have a `delivery_requests` table. Learner reservation creation and supplier reservation endpoints exist, but delivery is not implemented.
 
 ## Decision
 
 Do not introduce a `delivery_requests` table for the MVP.
 
-Delivery request state should live on reservations through the existing reservation delivery fields when delivery is implemented. The current supplier reservation workflow remains separate from learner reservation creation, which is not implemented.
+Delivery request state should live on reservations through the existing reservation delivery fields when delivery is implemented. The current reservation workflow stops at learner create plus supplier accept/decline/complete.
 
 ## Consequences
 
@@ -25,10 +25,10 @@ Delivery request state should live on reservations through the existing reservat
 - [AGENTS.md](../../AGENTS.md) states there is no `delivery_requests` table and delivery fields live inside reservations.
 - [docs/database/schema-overview.md](../database/schema-overview.md) documents no `delivery_requests` table and delivery columns on `reservations`.
 - [docs/database/tables-catalog.md](../database/tables-catalog.md) documents the `reservations` table and delivery fields.
-- [docs/features/reservations.md](../features/reservations.md) marks supplier list/accept/decline/complete as partial and learner create reservation as not implemented.
+- [docs/features/reservations.md](../features/reservations.md) marks learner create and supplier list/accept/decline/complete as partial, with delivery still out of scope.
 - [docs/features/delivery.md](../features/delivery.md) marks delivery API/UI as not implemented.
-- [docs/08-implementation-status.md](../08-implementation-status.md) marks supplier reservations as partial, learner create reservation as not implemented, and delivery workflow as not implemented.
-- [apps/backend/src/app.ts](../../apps/backend/src/app.ts) mounts `/api/supplier` but no `/api/delivery` or learner `/api/reservations` router.
+- [docs/08-implementation-status.md](../08-implementation-status.md) marks learner create and supplier reservations as partial, and delivery workflow as not implemented.
+- [apps/backend/src/app.ts](../../apps/backend/src/app.ts) mounts `/api/supplier` and learner `/api/reservations`, but no `/api/delivery` router.
 - [apps/backend/prisma/schema.prisma](../../apps/backend/prisma/schema.prisma) defines `Reservation` delivery fields and no `DeliveryRequest` model.
 
 ## Related docs

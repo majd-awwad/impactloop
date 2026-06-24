@@ -31,7 +31,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 
 ---
 
-## Backend modules (14 folders)
+## Backend modules (15 folders)
 
 | Module | Status | Notes |
 |--------|--------|-------|
@@ -44,19 +44,20 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `locations` | **Partial** | Reverse geocode only — no CRUD locations API |
 | `learning-projects` | **Implemented** | Read list + detail |
 | `invitations` | **Partial** | Admin create + accept API; no admin UI |
+| `reservations` | **Partial** | Learner create only; no learner list/cancel/delivery |
 | `supplier` | **Implemented** | Dashboard, profile, materials |
 | `category-requests` | **Implemented** | Under `/api/supplier` |
 | `price-rule-requests` | **Implemented** | Create + supplier drafts |
-| `supplier-reservations` | **Partial** | Supplier accept/decline/complete — no learner create |
+| `supplier-reservations` | **Partial** | Supplier accept/decline/complete; no delivery |
 | `supplier-notifications` | **Implemented** | Derived supplier inbox |
 
 ### Backend **not implemented** as modules
 
-`users`, `roles`, `reservations` (learner), `ai-agent`, `notifications` (general API), `admin`, `moderator`, `reports`, `reviews`, `delivery`, `driver`
+`users`, `roles`, `ai-agent`, `notifications` (general API), `admin`, `moderator`, `reports`, `reviews`, `delivery`, `driver`
 
 ---
 
-## Flutter features (9 folders)
+## Flutter features (10 folders)
 
 | Feature | Status | Backend | Frontend data | Feature doc |
 |---------|--------|---------|---------------|-------------|
@@ -64,8 +65,9 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `health` | **Implemented** | `/health` | API | — |
 | `landing` | **Implemented** | — | Static UI | [landing.md](features/landing.md) |
 | `home` | **Partial** | — | Suggested materials: API; learning spotlight: **mock** | [home-learner.md](features/home-learner.md) |
-| `material_discovery` | **Implemented** | `GET /api/materials` | `ApiMaterialDiscoveryRepository` default | — |
+| `material_discovery` | **Implemented** | `GET /api/materials`, `POST /api/reservations` | API discovery + reservation CTA | — |
 | `materials` | **Partial** | taxonomy/upload APIs | Data layer for supplier add-material; no routes | [materials-listing.md](features/materials-listing.md) |
+| `reservations` | **Partial** | `POST /api/reservations` | Learner create data layer/controller; no route/page | [reservations.md](features/reservations.md) |
 | `learning_hub` | **Partial** | `GET /api/learning-projects` implemented | **Frontend mock-only** — `learning_hub_mock_data.dart`, not wired to API | — |
 | `supplier_portal` | **Partial** | `/api/supplier/*` | API repositories; material **read/create/update/delete** with lifecycle gating | — |
 | `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH | `supplier_portal` profile/map | [locations.md](features/locations.md) |
@@ -73,7 +75,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 
 ### Flutter **not implemented** as features
 
-`reservations` (learner), `delivery`, `ai_agent`, `admin`, `moderator`, `reports`, `reviews`, `driver` — gap docs: [reservations.md](features/reservations.md), [delivery.md](features/delivery.md), [ai-agent.md](features/ai-agent.md), [admin.md](features/admin.md), [moderator.md](features/moderator.md); see [09-open-questions.md](09-open-questions.md).
+`delivery`, `ai_agent`, `admin`, `moderator`, `reports`, `reviews`, `driver` — gap docs: [delivery.md](features/delivery.md), [ai-agent.md](features/ai-agent.md), [admin.md](features/admin.md), [moderator.md](features/moderator.md); see [09-open-questions.md](09-open-questions.md). Learner reservations are partial: create only.
 
 ---
 
@@ -88,8 +90,8 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Role invitations (DRIVER/MODERATOR/ADMIN) | **Backend-only** | `invitations` module; no Flutter accept UI found |
 | Material discovery (public) | **Implemented** | Backend + Flutter |
 | Supplier list/create/update/delete materials | **Implemented** | Edit/delete gated by status + reservation history |
-| Supplier reservations workflow | **Partial** | Supplier side only; seeded data may exist — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
-| Learner create reservation | **Not implemented** | No `/api/reservations` router — [reservations.md](features/reservations.md), [learner-reservation-flow](flows/learner-reservation-flow.md) |
+| Supplier reservations workflow | **Partial** | Supplier list/accept/decline/complete; no delivery — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
+| Learner create reservation | **Partial** | `POST /api/reservations` + material detail CTA; no learner list/cancel — [reservations.md](features/reservations.md), [learner-reservation-flow](flows/learner-reservation-flow.md) |
 | Delivery workflow | **Not implemented** | `Reservation` delivery columns **schema-only** — [delivery.md](features/delivery.md) |
 | Driver portal | **Not implemented** | [delivery.md](features/delivery.md) |
 | AI material matching agent | **Not implemented** | No `ai-agent` module; no `ai_requests` table — [ai-agent.md](features/ai-agent.md) |
@@ -110,7 +112,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Learner/supplier profiles | Yes | Partial (register + supplier profile) | Yes (onboarding) |
 | Locations | Yes | Partial (reverse geocode) | Yes (supplier profile/map) |
 | Materials discovery | Yes | Yes | Yes |
-| Reservations | Yes | Partial (supplier) | Partial (supplier portal) |
+| Reservations | Yes | Partial (learner create + supplier workflow) | Partial (learner detail CTA + supplier portal) |
 | Delivery fields on reservation | Yes | No | No |
 | Learning projects | Yes | Yes | **Mock-only** |
 | Reviews | Yes | No | No |
@@ -129,7 +131,7 @@ Mapped from [05-roadmap.md](05-roadmap.md) to **code reality** — roadmap text 
 | 1 Auth | Register/login/me | **Partial** — core flows yes; forgot-password UI **not implemented** |
 | 2 Profiles/locations | Profile + location screens | **Partial** — profiles yes; saved locations API **not implemented** |
 | 3 Materials | Supply + discovery | **Implemented** (supplier create + public browse) |
-| 4 Reservations | Learner reserve, supplier accept | **Partial** — supplier side only |
+| 4 Reservations | Learner reserve, supplier accept | **Partial** — learner create + supplier accept/reject/complete; no delivery/list/cancel |
 | 5 Learning hub + AI | Projects + AI matching | **Partial** — projects read API; hub UI mock; AI agent **not implemented** |
 | 6 Delivery | Internal delivery | **Not implemented** (schema fields only) |
 | 7 Admin/moderator | Dashboards, moderation | **Not implemented** (invitation API fragment only) |
@@ -167,7 +169,7 @@ Unresolved risks and **Needs verification** items: [09-open-questions.md](09-ope
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** |
 | Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — UI **mock-only**; API **backend-only** |
 
-**Not covered as implemented:** learner reservations, delivery, AI agent, admin portal, moderator portal.
+**Not covered as implemented:** delivery, AI agent, admin portal, moderator portal. Learner reservations are create-only.
 
 ### Phase 2B supporting docs (code-derived)
 
@@ -184,7 +186,7 @@ Unresolved risks and **Needs verification** items: [09-open-questions.md](09-ope
 | Area | Feature doc | Flow doc(s) | Code status (unchanged) |
 |------|-------------|-------------|-------------------------|
 | Open questions | [09-open-questions.md](09-open-questions.md) | — | Unresolved / **Needs verification** index |
-| Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner **not implemented**; supplier **Partial** |
+| Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner create **Partial**; supplier **Partial** |
 | Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Schema-only** / **not implemented** |
 | AI material matching | [features/ai-agent.md](features/ai-agent.md) | [flows/ai-material-matching-flow.md](flows/ai-material-matching-flow.md) | **Not implemented** (price AI **Partial**, separate) |
 | Admin portal | [features/admin.md](features/admin.md) | — | **Not implemented** |
