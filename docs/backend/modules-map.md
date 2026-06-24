@@ -10,6 +10,7 @@ Maps each folder under `apps/backend/src/modules/` to its responsibility and key
 | Module folder | API prefix | Nested under supplier? |
 |---------------|------------|-------------------------|
 | `auth` | `/api/auth` | No |
+| `admin` | `/api/admin` | No |
 | `categories` | `/api/categories` | No |
 | `category-requests` | `/api/supplier/category-requests` | Yes |
 | `health` | `/health` | No |
@@ -77,6 +78,20 @@ Mount order: `apps/backend/src/app.ts`
 **Prisma:** `RoleInvitation`
 
 **Frontend:** No invitation acceptance UI found — **backend-only** for accept flow.
+
+---
+
+## `admin`
+
+**Purpose:** Admin portal read-only dashboard aggregates (overview metrics, impact snapshot, charts data).
+
+**Key files:** `admin.routes.ts`, `admin.controller.ts`, `admin.service.ts`, `admin.repository.ts`, `admin.dashboard.test.ts`
+
+**Auth:** `authMiddleware` + `requireRoles('ADMIN')` on all `/api/admin/*` routes.
+
+**Prisma:** Aggregates from existing tables (`users`, `user_roles`, `materials`, `reservations`, `categories`, `role_invitations`, `category_requests`, `price_rule_requests`). No new tables.
+
+**Frontend:** `features/admin_portal` — `/admin` overview + placeholders inside `AdminShell`.
 
 ---
 

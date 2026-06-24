@@ -96,6 +96,14 @@ Multipart middleware: `uploads/uploads.middleware.ts`
 | GET | `/api/invitations/validate/:token` | Public | — | `invitations/invitations.routes.ts` |
 | POST | `/api/invitations/accept` | Public | — | `invitations/invitations.routes.ts` |
 
+## Admin — `/api/admin`
+
+| Method | Path | Auth | Roles | Source file |
+|--------|------|------|-------|-------------|
+| GET | `/api/admin/dashboard` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+
+**Response (`data`):** read-only dashboard aggregates: `summary`, `pendingActions`, `impact` (includes `estimatedCo2Kg`, `estimatedCo2Label`, `estimatedCo2Method`, `reuseCompletionRate` — conservative MVP estimates from reused materials), `materialsByCategory`, `reservationStatusBreakdown`, `recentInvitations`, `supplierVerificationPreview` (empty until verification workflow), `recentActivity` (empty; no audit log table).
+
 ## Supplier — `/api/supplier`
 
 All routes below require Bearer JWT + `SUPPLIER` role unless noted. Source: `supplier/supplier.routes.ts` and nested routers.
@@ -178,4 +186,5 @@ From `apps/backend/src/app.ts`:
 /api/uploads                     → uploadsRouter
 /api/locations                   → locationsRouter
 /api/supplier                    → supplierRouter
+/api/admin                       → adminRouter
 ```
