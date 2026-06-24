@@ -89,6 +89,10 @@ Relations: roles, authTokens, learnerProfile, supplierProfile, materials, reserv
 | userId | String | unique FK → users |
 | supplierType, publicName, description | String? | |
 | verificationStatus | String | default `UNVERIFIED` |
+| verificationSubmittedAt | DateTime? | |
+| verificationReviewedAt | DateTime? | |
+| verificationReviewedById | String? | FK → users |
+| verificationAdminNote | String? | |
 | defaultPickupLocationId | String? | FK → locations |
 
 Relations: organizationProfile, materials.
@@ -107,6 +111,8 @@ Relations: organizationProfile, materials.
 | workingDays, workingHours | Json? | |
 | businessLocationId | String? | FK → locations |
 | verificationDocumentStatus | VerificationDocumentStatus? | |
+| verificationDocumentUrl | String? | |
+| verificationDocumentName | String? | |
 
 ---
 

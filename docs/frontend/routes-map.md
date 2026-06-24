@@ -75,11 +75,13 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/supplier/pickup-schedule` | `SupplierPickupSchedulePage` | supplier | |
 | `/supplier/notifications` | `SupplierNotificationsPage` | supplier | |
 | `/supplier/profile` | `SupplierProfilePage` | supplier | |
+| `/supplier/verification-pending` | `SupplierVerificationPendingPage` | supplier | Org supplier awaiting admin approval |
+| `/supplier/verification-status` | `SupplierVerificationStatusPage` | supplier | Rejected / changes requested + resubmit |
 | `/admin/access-denied` | `AdminAccessDeniedPage` | authenticated | |
 | `/admin` | `AdminOverviewPage` | admin | Inside `AdminShell` |
 | `/admin/users` | `AdminPlaceholderPage` | admin | Placeholder |
 | `/admin/suppliers` | `AdminPlaceholderPage` | admin | Placeholder |
-| `/admin/supplier-verification` | `AdminPlaceholderPage` | admin | Placeholder |
+| `/admin/supplier-verification` | `AdminSupplierVerificationPage` | admin | Review org supplier documents |
 | `/admin/materials` | `AdminPlaceholderPage` | admin | Placeholder |
 | `/admin/approvals` | `AdminPlaceholderPage` | admin | Placeholder |
 | `/admin/invitations` | `AdminPlaceholderPage` | admin | Placeholder |

@@ -90,7 +90,7 @@ Used by: `OrganizationProfile.organizationType`
 
 ## `VerificationDocumentStatus`
 
-`PENDING`, `VERIFIED`, `REJECTED`
+`PENDING`, `VERIFIED`, `REJECTED`, `CHANGES_REQUESTED`
 
 Used by: `OrganizationProfile.verificationDocumentStatus`
 

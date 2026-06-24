@@ -79,8 +79,11 @@ Query validation: `categoriesQuerySchema`
 | Method | Path | Auth | Roles | Source file |
 |--------|------|------|-------|-------------|
 | POST | `/api/uploads/material-images` | Bearer JWT | `SUPPLIER` | `uploads/uploads.routes.ts` |
+| POST | `/api/uploads/supplier-verification-document` | Bearer JWT | authenticated (org supplier registration) | `uploads/uploads.routes.ts` |
 
-Multipart middleware: `uploads/uploads.middleware.ts`
+Static files: `GET /uploads/materials/*`, `GET /uploads/supplier-verification/*` (`app.ts`).
+
+Verification document upload: PDF/JPG/JPEG/PNG, max 5MB. Returns `{ url, fileName }`.
 
 ## Locations — `/api/locations`
 
@@ -101,8 +104,23 @@ Multipart middleware: `uploads/uploads.middleware.ts`
 | Method | Path | Auth | Roles | Source file |
 |--------|------|------|-------|-------------|
 | GET | `/api/admin/dashboard` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/invitations` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| POST | `/api/admin/invitations` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| POST | `/api/admin/invitations/:id/resend` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/invitations/:id/revoke` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/supplier-verifications` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/supplier-verifications/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/supplier-verifications/:id/approve` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/supplier-verifications/:id/reject` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/supplier-verifications/:id/request-changes` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 
-**Response (`data`):** read-only dashboard aggregates: `summary`, `pendingActions`, `impact` (includes `estimatedCo2Kg`, `estimatedCo2Label`, `estimatedCo2Method`, `reuseCompletionRate` — conservative MVP estimates from reused materials), `materialsByCategory`, `reservationStatusBreakdown`, `recentInvitations`, `supplierVerificationPreview` (empty until verification workflow), `recentActivity` (empty; no audit log table).
+**`GET /api/admin/supplier-verifications` query:** `status` (`PENDING` \| `APPROVED` \| `REJECTED` \| `CHANGES_REQUESTED`), `search`, `supplierType` (`WORKSHOP` \| `FACTORY` \| `EDUCATIONAL_INSTITUTION`), `city`, `page`, `limit`.
+
+**`PATCH .../reject` and `.../request-changes` body:** `{ adminNote: string }` (required, min 3 chars). **`PATCH .../approve` body:** `{ adminNote?: string }`.
+
+**Response (`data`) for list:** `{ items, summary: { pending, approved, rejected, changesRequested }, pagination }`. Detail includes supplier profile, organization profile, owner, location, document info, review metadata.
+
+**Supplier notification:** each approve/reject/request-changes creates a `notifications` row (`notificationType=SUPPLIER_VERIFICATION_UPDATE`, `relatedEntityType=SUPPLIER_PROFILE`).
 
 ## Supplier — `/api/supplier`
 
@@ -120,6 +138,20 @@ All routes below require Bearer JWT + `SUPPLIER` role unless noted. Source: `sup
 | PATCH | `/api/supplier/materials/:id` | `supplier/supplier.routes.ts` |
 | POST | `/api/supplier/materials` | `supplier/supplier.routes.ts` |
 | DELETE | `/api/supplier/materials/:id` | `supplier/supplier.routes.ts` |
+
+### Supplier verification — `/api/supplier/verification`
+
+Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must submit a verification document before publishing materials. Individual/student suppliers use `verificationStatus=NOT_REQUIRED`.
+
+| Method | Path | Source file |
+|--------|------|-------------|
+| GET | `/api/supplier/verification/status` | `supplier-verification/supplier-verification.routes.ts` |
+| POST | `/api/supplier/verification/submit` | `supplier-verification/supplier-verification.routes.ts` |
+| POST | `/api/supplier/verification/resubmit` | `supplier-verification/supplier-verification.routes.ts` |
+
+`POST .../submit` body: organization fields + `verificationDocumentUrl`, `verificationDocumentName`. Sets `verificationStatus=PENDING`. `POST .../resubmit` allowed when status is `REJECTED` or `CHANGES_REQUESTED`.
+
+`POST /api/supplier/materials` returns **403** when organization supplier is not `APPROVED` (`SUPPLIER_VERIFICATION_REQUIRED`).
 
 `POST /api/supplier/materials` body (pickup-related): `useDefaultPickupLocation` (boolean, default `true`); `pickupLocation` (location object, required when `useDefaultPickupLocation` is `false`). Organization suppliers must use profile default; override is rejected with `ORG_PICKUP_OVERRIDE_NOT_ALLOWED`. Each create stores a **new** `locations` row on the material (copy or override), not the profile row id.
 
