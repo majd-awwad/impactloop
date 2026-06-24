@@ -13,6 +13,7 @@ import { learningProjectsRouter } from './modules/learning-projects/learning-pro
 import { materialTypesRouter } from './modules/material-types/material-types.routes.js';
 import { materialsRouter } from './modules/materials/materials.routes.js';
 import { priceRuleRequestsRouter } from './modules/price-rule-requests/price-rule-requests.routes.js';
+import { adminRouter } from './modules/admin/admin.routes.js';
 import { supplierRouter } from './modules/supplier/supplier.routes.js';
 import { locationsRouter } from './modules/locations/locations.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
@@ -57,6 +58,7 @@ app.use('/api/materials', materialsRouter);
 app.use('/api/uploads', uploadsRouter);
 app.use('/api/locations', locationsRouter);
 app.use('/api/supplier', supplierRouter);
+app.use('/api/admin', adminRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
