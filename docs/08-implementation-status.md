@@ -43,8 +43,8 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `uploads` | **Implemented** | Supplier material images |
 | `locations` | **Partial** | Reverse geocode only — no CRUD locations API |
 | `learning-projects` | **Implemented** | Read list + detail |
-| `invitations` | **Partial** | Admin create + accept API; no invitation management UI |
-| `admin` | **Partial** | `GET /api/admin/dashboard` read-only aggregates |
+| `invitations` | **Implemented** | Admin email invitations (mock/SMTP), validate/accept API, `driver_profiles` |
+| `admin` | **Partial** | Dashboard + admin invitations management; other admin pages placeholder |
 | `supplier` | **Implemented** | Dashboard, profile, materials |
 | `category-requests` | **Implemented** | Under `/api/supplier` |
 | `price-rule-requests` | **Implemented** | Create + supplier drafts |
@@ -69,11 +69,11 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `materials` | **Partial** | taxonomy/upload APIs | Data layer for supplier add-material; no routes | [materials-listing.md](features/materials-listing.md) |
 | `learning_hub` | **Partial** | `GET /api/learning-projects` implemented | **Frontend mock-only** — `learning_hub_mock_data.dart`, not wired to API | — |
 | `supplier_portal` | **Partial** | `/api/supplier/*` | API repositories; material **read/create/update/delete** with lifecycle gating | — |
-| `admin_portal` | **Partial** | `GET /api/admin/dashboard` | Overview dashboard + placeholders; read-only | [admin.md](features/admin.md) |
+| `admin_portal` | **Partial** | Dashboard + `/admin/invitations`; other pages placeholder | [admin.md](features/admin.md) |
 
 **Dev seed admin (local testing):** `admin@impactloop.test` / `AdminPassword123!` — created idempotently by `prisma/seeds/seed-admin.ts`. After login, `postAuthRouteForUser` routes ADMIN users to `/admin`.
 | `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH | `supplier_portal` profile/map | [locations.md](features/locations.md) |
-| `invitations` *(no Flutter feature folder)* | **Backend-only** | `/api/invitations` | No Flutter UI | [invitations.md](features/invitations.md) |
+| `invitations` | **Implemented** | `/api/invitations` validate/accept; admin `/api/admin/invitations` | `/invite/accept` public page + admin invitations UI | [invitations.md](features/invitations.md) |
 
 ### Flutter **not implemented** as features
 
@@ -89,7 +89,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Role middleware | **Implemented** | `role.middleware.ts`, supplier routes |
 | Public LEARNER/SUPPLIER registration | **Implemented** | `auth.validation.ts`, `UnifiedRegisterForm` with `RegistrationIntent.both` |
 | Forgot / reset password | **Partial** | Backend: `auth.routes.ts`; Flutter: login shows “coming soon” (`login_form.dart`) |
-| Role invitations (DRIVER/MODERATOR/ADMIN) | **Backend-only** | `invitations` module; no Flutter accept UI found |
+| Role invitations (DRIVER/MODERATOR/ADMIN) | **Implemented** | Admin email invitations + `/invite/accept` registration; `EMAIL_PROVIDER=mock` or SMTP |
 | Material discovery (public) | **Implemented** | Backend + Flutter |
 | Supplier list/create/update/delete materials | **Implemented** | Edit/delete gated by status + reservation history |
 | Supplier reservations workflow | **Partial** | Supplier side only; seeded data may exist — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
