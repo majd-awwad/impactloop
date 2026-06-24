@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/application/auth_controller.dart';
+import '../../application/supplier_verification_access.dart';
 import '../../data/models/supplier_dashboard.dart';
 import '../controllers/supplier_dashboard_providers.dart';
 import '../theme/supplier_theme_extension.dart';
@@ -32,30 +34,78 @@ class SupplierDashboardPage extends ConsumerWidget {
   }
 }
 
-class _DashboardContent extends StatelessWidget {
+class _DashboardContent extends ConsumerStatefulWidget {
   const _DashboardContent({required this.dashboard});
 
   final SupplierDashboard dashboard;
 
   @override
+  ConsumerState<_DashboardContent> createState() => _DashboardContentState();
+}
+
+class _DashboardContentState extends ConsumerState<_DashboardContent> {
+  bool _approvalBannerDismissed = false;
+
+  @override
   Widget build(BuildContext context) {
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
-    final stats = dashboard.stats;
-    final scheduledPickups = dashboard.upcomingPickups.isNotEmpty
-        ? dashboard.upcomingPickups.length
+    final stats = widget.dashboard.stats;
+    final scheduledPickups = widget.dashboard.upcomingPickups.isNotEmpty
+        ? widget.dashboard.upcomingPickups.length
         : stats.reservations.accepted;
+    final supplierProfile = ref.watch(authControllerProvider).user?.supplierProfile;
+    final showApprovedBanner = !_approvalBannerDismissed &&
+        isOrganizationSupplierType(supplierProfile?.supplierType) &&
+        normalizeVerificationStatus(supplierProfile?.verificationStatus) ==
+            'APPROVED';
 
     return SingleChildScrollView(
       padding: context.supplierDecorations.pagePadding(compact: compact),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!dashboard.hasSupplierProfile)
+          if (showApprovedBanner) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.verified_outlined,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Your supplier account has been approved. You can now publish materials.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Dismiss',
+                    onPressed: () =>
+                        setState(() => _approvalBannerDismissed = true),
+                    icon: const Icon(Icons.close, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          if (!widget.dashboard.hasSupplierProfile)
             const SupplierMissingProfileCard()
-          else if (dashboard.supplier != null)
+          else if (widget.dashboard.supplier != null)
             SupplierDashboardHero(
-              supplier: dashboard.supplier!,
+              supplier: widget.dashboard.supplier!,
               compact: compact,
             ),
           const SizedBox(height: AppSpacing.lg),
@@ -118,7 +168,7 @@ class _DashboardContent extends StatelessWidget {
             },
           ),
           const SizedBox(height: AppSpacing.md),
-          SupplierPerformanceSummary(dashboard: dashboard),
+          SupplierPerformanceSummary(dashboard: widget.dashboard),
           const SizedBox(height: AppSpacing.xl),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -136,8 +186,8 @@ class _DashboardContent extends StatelessWidget {
                     Expanded(
                       flex: 3,
                       child: SupplierDashboardRecentActivityPanel(
-                        activity: dashboard.recentActivity,
-                        upcomingPickups: dashboard.upcomingPickups,
+                        activity: widget.dashboard.recentActivity,
+                        upcomingPickups: widget.dashboard.upcomingPickups,
                         stats: stats,
                       ),
                     ),
@@ -150,17 +200,17 @@ class _DashboardContent extends StatelessWidget {
                   const SupplierDashboardQuickActionsPanel(),
                   const SizedBox(height: AppSpacing.md),
                   SupplierDashboardRecentActivityPanel(
-                    activity: dashboard.recentActivity,
-                    upcomingPickups: dashboard.upcomingPickups,
+                    activity: widget.dashboard.recentActivity,
+                    upcomingPickups: widget.dashboard.upcomingPickups,
                     stats: stats,
                   ),
                 ],
               );
             },
           ),
-          if (dashboard.hasSupplierProfile &&
+          if (widget.dashboard.hasSupplierProfile &&
               stats.materials.total == 0 &&
-              dashboard.recentMaterials.isEmpty) ...[
+              widget.dashboard.recentMaterials.isEmpty) ...[
             const SizedBox(height: AppSpacing.lg),
             const SupplierEmptyDashboardState(),
           ],

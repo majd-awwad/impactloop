@@ -1181,9 +1181,13 @@ class SupplierL10n {
         'VERIFIED' => t('Verified', 'موثّق'),
         'PENDING' => t('Pending verification', 'بانتظار التحقق'),
         'REJECTED' => t('Rejected', 'مرفوض'),
+        'CHANGES_REQUESTED' => t('Changes requested', 'طلب تعديلات'),
         'NOT_REQUIRED' => t('Not required', 'غير مطلوب'),
         _ => value,
       };
+
+  String get verificationAdminNoteLabel =>
+      t('Admin note', 'ملاحظة المسؤول');
 
   // —— Shared widgets ——
   String get close => t('Close', 'إغلاق');

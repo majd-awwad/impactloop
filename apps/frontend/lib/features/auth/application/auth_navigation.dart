@@ -1,4 +1,5 @@
 import '../data/models/user.dart';
+import '../../supplier_portal/application/supplier_verification_access.dart';
 
 const rootRoute = '/';
 const loginRoute = '/login';
@@ -28,6 +29,13 @@ String postAuthRouteForUser(User user) {
   }
 
   if (userHasSupplierRole(user)) {
+    final gate = supplierVerificationGateRoute(
+      supplierType: user.supplierProfile?.supplierType,
+      verificationStatus: user.supplierProfile?.verificationStatus,
+    );
+    if (gate != null) {
+      return gate;
+    }
     return supplierPortalRoute;
   }
 

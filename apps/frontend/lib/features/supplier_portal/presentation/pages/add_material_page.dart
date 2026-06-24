@@ -19,6 +19,8 @@ import '../../../materials/data/models/material_draft_image.dart';
 import '../../../materials/data/models/material_price_check_result.dart';
 import '../../../materials/data/models/material_type.dart' as material_models;
 import '../../../materials/data/models/price_rule_request.dart';
+import '../../../auth/application/auth_controller.dart';
+import '../../application/supplier_verification_access.dart';
 import '../../data/supplier_materials_repository.dart';
 import '../controllers/supplier_dashboard_providers.dart';
 import '../controllers/supplier_notifications_providers.dart';
@@ -275,6 +277,34 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authControllerProvider).user;
+    final supplierProfile = user?.supplierProfile;
+    if (!canSupplierPublishMaterials(
+      supplierType: supplierProfile?.supplierType,
+      verificationStatus: supplierProfile?.verificationStatus,
+    )) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.verified_user_outlined, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  'Your supplier account is waiting for admin approval. You can publish materials after approval.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final l = context.s;
     final colors = context.supplierColors;
     final decorations = context.supplierDecorations;

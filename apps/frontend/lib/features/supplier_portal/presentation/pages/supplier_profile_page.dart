@@ -468,6 +468,7 @@ class _SupplierProfileContentState
         const SizedBox(height: AppSpacing.lg),
         SupplierVerificationCard(
           status: supplier?.verificationStatus ?? 'UNVERIFIED',
+          adminNote: supplier?.verificationAdminNote,
         ),
         const SizedBox(height: AppSpacing.lg),
         SupplierLocationPrivacyCard(

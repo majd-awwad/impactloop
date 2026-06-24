@@ -20,6 +20,9 @@ import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
+import '../../features/supplier_portal/application/supplier_verification_access.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_verification_pending_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_verification_status_page.dart';
 import '../../features/supplier_portal/presentation/pages/add_material_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_edit_material_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_my_materials_page.dart';
@@ -34,6 +37,7 @@ import '../../features/admin_portal/presentation/pages/admin_access_denied_page.
 import '../../features/admin_portal/presentation/pages/admin_invitations_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_overview_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_placeholder_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_supplier_verification_page.dart';
 import '../../features/admin_portal/presentation/widgets/admin_shell.dart';
 import '../../features/invitations/presentation/pages/invite_accept_page.dart';
 
@@ -93,6 +97,11 @@ bool _isSupplierPortalPath(String path) {
     return false;
   }
 
+  if (isSupplierVerificationStatusRoute(path) ||
+      path == supplierVerificationPendingRoute) {
+    return false;
+  }
+
   return path == '/supplier' || path.startsWith('/supplier/');
 }
 
@@ -109,6 +118,11 @@ bool _isCheckingPath(String path) => path == authCheckingRoute;
 bool _isAuthPage(String path) => path == loginRoute || path == registerRoute;
 
 _RouteAccessLevel _routeAccessForPath(String path) {
+  if (isSupplierVerificationStatusRoute(path) ||
+      path == supplierVerificationPendingRoute) {
+    return _RouteAccessLevel.supplier;
+  }
+
   if (_isSupplierPortalPath(path)) {
     return _RouteAccessLevel.supplier;
   }
@@ -202,6 +216,45 @@ String? _resolveAuthPageRedirect(AuthState authState, GoRouterState state) {
   return _resolveProtectedRoute(authState, accessLevel, target) ?? target;
 }
 
+String? _resolveSupplierVerificationRedirect(
+  AuthState authState,
+  String path,
+) {
+  if (_isAuthPage(path) ||
+      path == '/complete-supplier-profile' ||
+      path == '/complete-learner-profile' ||
+      path == registerRoute) {
+    return null;
+  }
+
+  if (!authState.isAuthenticated || authState.user == null) {
+    return null;
+  }
+
+  if (!userHasSupplierRole(authState.user)) {
+    return null;
+  }
+
+  final profile = authState.user!.supplierProfile;
+  final gate = supplierVerificationGateRoute(
+    supplierType: profile?.supplierType,
+    verificationStatus: profile?.verificationStatus,
+  );
+
+  final onVerificationPage = isSupplierVerificationStatusRoute(path) ||
+      path == supplierVerificationPendingRoute;
+
+  if (gate != null && _isSupplierPortalPath(path) && !onVerificationPage) {
+    return gate;
+  }
+
+  if (gate == null && onVerificationPage) {
+    return supplierPortalRoute;
+  }
+
+  return null;
+}
+
 String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
   final authState = ref.read(authControllerProvider);
   final path = state.matchedLocation;
@@ -222,6 +275,14 @@ String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
   );
   if (protectedRedirect != null) {
     return protectedRedirect;
+  }
+
+  final verificationRedirect = _resolveSupplierVerificationRedirect(
+    authState,
+    path,
+  );
+  if (verificationRedirect != null) {
+    return verificationRedirect;
   }
 
   if (authState.status == AuthStatus.unknown) {
@@ -304,6 +365,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final token = state.uri.queryParameters['token'] ?? '';
           return InviteAcceptPage(token: token);
         },
+      ),
+      GoRoute(
+        path: supplierVerificationPendingRoute,
+        builder: (context, state) => const SupplierVerificationPendingPage(),
+      ),
+      GoRoute(
+        path: supplierVerificationStatusRoute,
+        builder: (context, state) => const SupplierVerificationStatusPage(),
       ),
       GoRoute(
         path: _supplierAccessDeniedRoute,
@@ -395,7 +464,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/supplier-verification',
             builder: (context, state) =>
-                const AdminPlaceholderPage(title: 'Supplier Verification'),
+                const AdminSupplierVerificationPage(),
           ),
           GoRoute(
             path: '/admin/materials',
