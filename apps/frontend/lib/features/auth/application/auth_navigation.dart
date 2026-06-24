@@ -5,6 +5,7 @@ const loginRoute = '/login';
 const registerRoute = '/register';
 const authCheckingRoute = '/auth/checking';
 const supplierPortalRoute = '/supplier';
+const adminPortalRoute = '/admin';
 const homeRoute = '/home';
 
 bool userHasRole(User? user, String role) {
@@ -18,8 +19,26 @@ bool userHasRole(User? user, String role) {
 
 bool userHasSupplierRole(User? user) => userHasRole(user, 'SUPPLIER');
 
+bool userHasAdminRole(User? user) => userHasRole(user, 'ADMIN');
+
 String postAuthRouteForUser(User user) {
-  return userHasSupplierRole(user) ? supplierPortalRoute : homeRoute;
+  if (userHasAdminRole(user)) {
+    return adminPortalRoute;
+  }
+
+  if (userHasSupplierRole(user)) {
+    return supplierPortalRoute;
+  }
+
+  if (userHasRole(user, 'DRIVER')) {
+    return homeRoute;
+  }
+
+  if (userHasRole(user, 'MODERATOR')) {
+    return homeRoute;
+  }
+
+  return homeRoute;
 }
 
 String sanitizeRedirectTarget(String? from, {String fallback = rootRoute}) {
