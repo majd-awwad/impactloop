@@ -30,6 +30,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.11.0",
     "multer": "^2.0.2",
+    "nodemailer": "^9.0.1",
     "pg": "^8.21.0",
     "zod": "^4.1.11"
   },
@@ -41,6 +42,7 @@
     "@types/morgan": "^1.9.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^25.9.3",
+    "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.15.5",
     "prisma": "^7.8.0",
     "tsx": "^4.22.4",
