@@ -146,7 +146,8 @@ class AuthController extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final user = await _repository.login(email: email, password: password);
+      await _repository.login(email: email, password: password);
+      final user = await _repository.me();
 
       state = AuthState(
         user: user,
@@ -183,6 +184,11 @@ class AuthController extends Notifier<AuthState> {
     );
 
     return establishedUser;
+  }
+
+  Future<void> refreshCurrentUser() async {
+    final user = await _repository.me();
+    state = state.copyWith(user: user);
   }
 
   void syncAuthenticatedUser(User user) {
