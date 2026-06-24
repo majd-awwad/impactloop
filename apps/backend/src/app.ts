@@ -21,8 +21,13 @@ import {
   ensureMaterialUploadsDir,
   MATERIAL_UPLOADS_DIR,
 } from './modules/uploads/uploads.storage.js';
+import {
+  ensureSupplierVerificationUploadsDir,
+  SUPPLIER_VERIFICATION_UPLOADS_DIR,
+} from './modules/uploads/verification-uploads.storage.js';
 
 ensureMaterialUploadsDir();
+ensureSupplierVerificationUploadsDir();
 
 export const app = express();
 
@@ -45,6 +50,10 @@ app.use(
 );
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.use('/uploads/materials', express.static(MATERIAL_UPLOADS_DIR));
+app.use(
+  '/uploads/supplier-verification',
+  express.static(SUPPLIER_VERIFICATION_UPLOADS_DIR),
+);
 app.use(express.json());
 
 app.use('/health', healthRouter);
