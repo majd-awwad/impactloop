@@ -30,10 +30,15 @@ import '../../features/supplier_portal/presentation/pages/supplier_pickup_schedu
 import '../../features/supplier_portal/presentation/pages/supplier_dashboard_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_profile_page.dart';
 import '../../features/supplier_portal/presentation/shell/supplier_shell.dart';
+import '../../features/admin_portal/presentation/pages/admin_access_denied_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_overview_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_placeholder_page.dart';
+import '../../features/admin_portal/presentation/widgets/admin_shell.dart';
 
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
+const _adminAccessDeniedRoute = '/admin/access-denied';
 
-enum _RouteAccessLevel { public, authenticated, supplier }
+enum _RouteAccessLevel { public, authenticated, supplier, admin }
 
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   final path = state.matchedLocation;
@@ -89,6 +94,14 @@ bool _isSupplierPortalPath(String path) {
   return path == '/supplier' || path.startsWith('/supplier/');
 }
 
+bool _isAdminPortalPath(String path) {
+  if (path == _adminAccessDeniedRoute) {
+    return false;
+  }
+
+  return path == '/admin' || path.startsWith('/admin/');
+}
+
 bool _isCheckingPath(String path) => path == authCheckingRoute;
 
 bool _isAuthPage(String path) => path == loginRoute || path == registerRoute;
@@ -96,6 +109,10 @@ bool _isAuthPage(String path) => path == loginRoute || path == registerRoute;
 _RouteAccessLevel _routeAccessForPath(String path) {
   if (_isSupplierPortalPath(path)) {
     return _RouteAccessLevel.supplier;
+  }
+
+  if (_isAdminPortalPath(path)) {
+    return _RouteAccessLevel.admin;
   }
 
   if (path == '/home' || path == _supplierAccessDeniedRoute) {
@@ -107,6 +124,10 @@ _RouteAccessLevel _routeAccessForPath(String path) {
 
 bool _userHasSupplierRole(AuthState authState) {
   return userHasSupplierRole(authState.user);
+}
+
+bool _userHasAdminRole(AuthState authState) {
+  return userHasRole(authState.user, 'ADMIN');
 }
 
 String _withFrom(String path, String from) {
@@ -138,6 +159,10 @@ String? _resolveProtectedRoute(
   if (accessLevel == _RouteAccessLevel.supplier &&
       !_userHasSupplierRole(authState)) {
     return _supplierAccessDeniedRoute;
+  }
+
+  if (accessLevel == _RouteAccessLevel.admin && !_userHasAdminRole(authState)) {
+    return _adminAccessDeniedRoute;
   }
 
   return null;
@@ -271,6 +296,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: _supplierAccessDeniedRoute,
         builder: (context, state) => const SupplierAccessDeniedPage(),
       ),
+      GoRoute(
+        path: _adminAccessDeniedRoute,
+        builder: (context, state) => const AdminAccessDeniedPage(),
+      ),
       ShellRoute(
         builder: (context, state, child) => SupplierShell(child: child),
         routes: [
@@ -330,6 +359,55 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/supplier/profile',
             builder: (context, state) => const SupplierProfilePage(),
+          ),
+        ],
+      ),
+      ShellRoute(
+        builder: (context, state, child) => AdminShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/admin',
+            builder: (context, state) => const AdminOverviewPage(),
+          ),
+          GoRoute(
+            path: '/admin/users',
+            builder: (context, state) =>
+                const AdminPlaceholderPage(title: 'Users'),
+          ),
+          GoRoute(
+            path: '/admin/suppliers',
+            builder: (context, state) =>
+                const AdminPlaceholderPage(title: 'Suppliers'),
+          ),
+          GoRoute(
+            path: '/admin/supplier-verification',
+            builder: (context, state) =>
+                const AdminPlaceholderPage(title: 'Supplier Verification'),
+          ),
+          GoRoute(
+            path: '/admin/materials',
+            builder: (context, state) =>
+                const AdminPlaceholderPage(title: 'Materials'),
+          ),
+          GoRoute(
+            path: '/admin/approvals',
+            builder: (context, state) =>
+                const AdminPlaceholderPage(title: 'Approvals'),
+          ),
+          GoRoute(
+            path: '/admin/invitations',
+            builder: (context, state) =>
+                const AdminPlaceholderPage(title: 'Invitations'),
+          ),
+          GoRoute(
+            path: '/admin/impact',
+            builder: (context, state) =>
+                const AdminPlaceholderPage(title: 'Impact Analytics'),
+          ),
+          GoRoute(
+            path: '/admin/audit-logs',
+            builder: (context, state) =>
+                const AdminPlaceholderPage(title: 'Audit Logs'),
           ),
         ],
       ),
