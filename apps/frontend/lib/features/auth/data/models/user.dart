@@ -29,12 +29,20 @@ class SupplierProfile {
     required this.publicName,
     this.description,
     this.pickupAreaLabel,
+    this.verificationStatus = 'NOT_REQUIRED',
+    this.verificationAdminNote,
+    this.verificationSubmittedAt,
+    this.verificationDocumentName,
   });
 
   final String supplierType;
   final String publicName;
   final String? description;
   final String? pickupAreaLabel;
+  final String verificationStatus;
+  final String? verificationAdminNote;
+  final DateTime? verificationSubmittedAt;
+  final String? verificationDocumentName;
 
   factory SupplierProfile.fromJson(Map<String, dynamic> json) {
     return SupplierProfile(
@@ -42,6 +50,12 @@ class SupplierProfile {
       publicName: json['publicName'] as String? ?? '',
       description: json['description'] as String?,
       pickupAreaLabel: json['pickupAreaLabel'] as String?,
+      verificationStatus: json['verificationStatus'] as String? ?? 'NOT_REQUIRED',
+      verificationAdminNote: json['verificationAdminNote'] as String?,
+      verificationSubmittedAt: json['verificationSubmittedAt'] == null
+          ? null
+          : DateTime.tryParse(json['verificationSubmittedAt'] as String),
+      verificationDocumentName: json['verificationDocumentName'] as String?,
     );
   }
 }
