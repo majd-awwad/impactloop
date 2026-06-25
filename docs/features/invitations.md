@@ -14,7 +14,7 @@ This is a **backend API fragment** — there is **no** admin portal, **no** Flut
 |------|--------|-------|
 | Admin create invitation | **Backend-only** | `POST /api/invitations` — ADMIN JWT |
 | Validate token | **Backend-only** | `GET /api/invitations/validate/:token` — public |
-| Accept invitation | **Backend-only** | `POST /api/invitations/accept` — creates user + session |
+| Accept invitation | **Backend-only** | `POST /api/invitations/accept` — creates user + session; creates `DriverProfile` for DRIVER |
 | Email / SMS delivery | **Not implemented** | Dev-only `inviteToken` in create response |
 | Admin UI | **Not implemented** | No `admin` Flutter feature |
 | Accept UI | **Not implemented** | No `invitation` references in `apps/frontend` |
@@ -25,7 +25,7 @@ This is a **backend API fragment** — there is **no** admin portal, **no** Flut
 1. **ADMIN** calls create with `targetRole`, optional `targetEmail` / `targetPhone`, `notes`.
 2. System stores `role_invitations` with hashed token; in development, raw token returned once.
 3. Invitee (external client) validates token → receives role + expiry metadata.
-4. Invitee accepts with account details → user created with target role → auth session returned (same shape as login).
+4. Invitee accepts with account details → user created with target role → auth session returned (same shape as login). DRIVER invitations also create a default active `DriverProfile`.
 
 See [invitation-flow](../flows/invitation-flow.md).
 
@@ -68,6 +68,7 @@ Mounted at `/api/invitations` (`app.ts`).
 |-------|------|
 | `role_invitations` | Pending/used invitations (`token_hash`, `target_role`, `expires_at`, `status`, etc.) |
 | `users`, `user_roles` | Created on accept |
+| `driver_profiles` | Created on accept for DRIVER invitations |
 | `auth_tokens` | Refresh session on accept |
 
 Enums: `RoleInvitationTargetRole`, `RoleInvitationStatus` — see [enums](../database/enums.md).

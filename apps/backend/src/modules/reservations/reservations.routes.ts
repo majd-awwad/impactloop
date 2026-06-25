@@ -10,6 +10,11 @@ import {
   listMyReservationsHandler,
 } from './reservations.controller.js';
 import { createReservationSchema } from './reservations.validation.js';
+import { requestDeliveryForReservationHandler } from '../deliveries/deliveries.controller.js';
+import {
+  requestDeliverySchema,
+  reservationIdParamsSchema,
+} from '../deliveries/deliveries.validation.js';
 
 export const reservationsRouter = Router();
 
@@ -26,4 +31,13 @@ reservationsRouter.post(
   requireRoles('LEARNER'),
   validate(createReservationSchema),
   asyncHandler(createReservationHandler),
+);
+
+reservationsRouter.post(
+  '/:id/delivery',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(requestDeliverySchema),
+  asyncHandler(requestDeliveryForReservationHandler),
 );

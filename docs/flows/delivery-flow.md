@@ -1,78 +1,65 @@
-# Delivery Flow (Planned — Not Implemented)
+# Delivery Flow
 
-**Gap / stub flow.** Delivery fields exist on `reservations`; **no delivery API or driver UI** in code.
+Backend Stage 1 is implemented. Flutter UI and live tracking UI are not implemented.
 
-**Sources inspected:** `docs/01-requirements.md`, `docs/features/delivery.md`, `docs/features/reservations.md`, `apps/backend/prisma/schema.prisma`, `apps/backend/src/modules/supplier-reservations/supplier-reservations.service.ts`, `apps/frontend/lib/features/home/presentation/pages/learner_home_page.dart`, `docs/08-implementation-status.md`
+## Trigger
 
-## Trigger (planned)
+Learner requests internal delivery after a supplier accepts a reservation.
 
-Learner requests **internal delivery** after reservation is **ACCEPTED**; driver fulfills delivery; reservation completes and material becomes `REUSED`.
+## Flow
 
----
+1. Learner owns an `ACCEPTED` reservation.
+2. Learner submits dropoff location to `POST /api/reservations/:id/delivery`.
+3. Backend verifies reservation ownership, accepted status, `material.deliveryAllowed = true`, and no active delivery for the reservation.
+4. Backend creates:
+   - copied delivery pickup `Location`
+   - learner dropoff `Location`
+   - `Delivery(status = WAITING_FOR_DRIVER)`
+   - `DeliveryStatusHistory`
+5. Driver lists waiting jobs through `GET /api/driver/deliveries/available`.
+6. Driver accepts a job through `POST /api/driver/deliveries/:id/accept`.
+7. Backend assigns driver transactionally, creates `DeliveryAssignment`, moves driver availability to `ON_DELIVERY`, and writes status history.
+8. Assigned driver progresses status:
+   - `DRIVER_ASSIGNED -> ARRIVED_PICKUP`
+   - `ARRIVED_PICKUP -> PICKED_UP`
+   - `PICKED_UP -> ON_THE_WAY`
+   - `ON_THE_WAY -> ARRIVED_DROPOFF`
+   - `ARRIVED_DROPOFF -> DELIVERED`
+9. Driver may post location pings while assigned to an active delivery.
+10. `DELIVERED` completes the reservation and marks material `REUSED`.
 
-## Current reality
+## Active Delivery Rule
 
-| Step | Status |
-|------|--------|
-| `delivery_requested`, `delivery_status`, etc. on schema | **Schema-only** |
-| Learner request delivery API/UI | **Not implemented** |
-| Driver available jobs / accept / status updates | **Not implemented** |
-| `DRIVER` role portal | **Not implemented** (invitation API only — [invitations](../features/invitations.md)) |
-| Home delivery tracking card | **Frontend-only** placeholder |
-| Supplier complete (self-pickup) | **Partial** — `PATCH .../complete` sets `REUSED` without delivery statuses |
+Active statuses:
 
----
+- `WAITING_FOR_DRIVER`
+- `DRIVER_ASSIGNED`
+- `ARRIVED_PICKUP`
+- `PICKED_UP`
+- `ON_THE_WAY`
+- `ARRIVED_DROPOFF`
 
-## Planned user path (requirements — not built)
+Only one active delivery is allowed per reservation. The database allows many delivery attempts, but partial unique indexes and service transactions enforce only one active attempt per reservation and one active assigned delivery per driver.
 
-1. Learner has `ACCEPTED` reservation.
-2. Learner opts into delivery, provides dropoff location.
-3. `delivery_requested = true`, `delivery_status = WAITING_FOR_DRIVER`.
-4. Driver accepts → `DRIVER_ASSIGNED` → pickup → `ON_THE_WAY` → `DELIVERED`.
-5. Reservation `COMPLETED`; material `REUSED`.
+## Completion Rules
 
-### Frontend path (planned)
+- Self-pickup: supplier complete remains valid when no active/delivered delivery exists.
+- Delivery: supplier complete is blocked; driver `DELIVERED` completes the reservation and reused material.
 
-- Learner: delivery request on reservation detail; tracking on home.
-- Driver: new portal routes (not in `app_router.dart` today).
-- No invented screen names beyond roadmap intent.
+## Error States
 
-### Backend path (planned)
+- Reservation not owned by learner -> 404
+- Reservation not accepted -> 409
+- Material delivery disabled -> 400
+- Active delivery already exists -> 409
+- Driver unavailable or already on delivery -> 409
+- Second driver accepts same job -> 409
+- Unassigned driver status update -> 404
+- Invalid status transition -> 409
 
-- PATCH learner reservation for delivery request + `dropoff_location_id`.
-- Driver-scoped PATCH for status transitions on `delivery_status`.
-- History rows in `reservation_status_history` (delivery group — **Needs verification** if enum supports).
+## Still Missing
 
-### Database changes (planned)
-
-- Update `reservations` delivery columns; possibly `locations` for dropoff.
-- `driver_profile_id` assignment — **Needs verification** (no `DriverProfile` model in schema).
-
-### Success state (planned)
-
-`delivery_status = DELIVERED`, reservation completed, material reused.
-
-### Error states (planned)
-
-- Delivery not allowed on material → 400
-- Invalid state transition → 409
-- No driver available — product rule TBD
-
-### Files involved today (schema / display only)
-
-`schema.prisma`, `supplier-reservations.service.ts` (label mapping), `learner_home_page.dart` (placeholder)
-
----
-
-## Not implemented
-
-No `POST`/`PATCH` delivery endpoints. No driver module. Do not document `delivery_requests` table (explicitly out of scope per AGENTS.md).
-
----
-
-## Open questions
-
-- Driver identity model vs `driver_profile_id` column?
-- Delivery cost: who calculates `delivery_cost`?
-- Same `complete` endpoint for pickup vs delivery?
-- See [09-open-questions.md](../09-open-questions.md) § Delivery.
+- Learner delivery UI.
+- Driver portal UI.
+- Admin reassignment and cancellation operations.
+- Live map/streaming tracking.

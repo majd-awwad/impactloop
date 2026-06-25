@@ -44,6 +44,11 @@ export type LearnerProfile = $Result.DefaultSelection<Prisma.$LearnerProfilePayl
  */
 export type SupplierProfile = $Result.DefaultSelection<Prisma.$SupplierProfilePayload>
 /**
+ * Model DriverProfile
+ * 
+ */
+export type DriverProfile = $Result.DefaultSelection<Prisma.$DriverProfilePayload>
+/**
  * Model OrganizationProfile
  * 
  */
@@ -108,6 +113,26 @@ export type MaterialTag = $Result.DefaultSelection<Prisma.$MaterialTagPayload>
  * 
  */
 export type Reservation = $Result.DefaultSelection<Prisma.$ReservationPayload>
+/**
+ * Model Delivery
+ * 
+ */
+export type Delivery = $Result.DefaultSelection<Prisma.$DeliveryPayload>
+/**
+ * Model DeliveryAssignment
+ * 
+ */
+export type DeliveryAssignment = $Result.DefaultSelection<Prisma.$DeliveryAssignmentPayload>
+/**
+ * Model DeliveryStatusHistory
+ * 
+ */
+export type DeliveryStatusHistory = $Result.DefaultSelection<Prisma.$DeliveryStatusHistoryPayload>
+/**
+ * Model DeliveryLocationPing
+ * 
+ */
+export type DeliveryLocationPing = $Result.DefaultSelection<Prisma.$DeliveryLocationPingPayload>
 /**
  * Model ReservationStatusHistory
  * 
@@ -298,14 +323,44 @@ export type PickupType = (typeof PickupType)[keyof typeof PickupType]
 export const DeliveryStatus: {
   WAITING_FOR_DRIVER: 'WAITING_FOR_DRIVER',
   DRIVER_ASSIGNED: 'DRIVER_ASSIGNED',
+  ARRIVED_PICKUP: 'ARRIVED_PICKUP',
   PICKED_UP: 'PICKED_UP',
   ON_THE_WAY: 'ON_THE_WAY',
+  ARRIVED_DROPOFF: 'ARRIVED_DROPOFF',
   DELIVERED: 'DELIVERED',
   CANCELLED: 'CANCELLED',
-  FAILED_PICKUP: 'FAILED_PICKUP'
+  FAILED_PICKUP: 'FAILED_PICKUP',
+  FAILED_DELIVERY: 'FAILED_DELIVERY'
 };
 
 export type DeliveryStatus = (typeof DeliveryStatus)[keyof typeof DeliveryStatus]
+
+
+export const DriverProfileStatus: {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  SUSPENDED: 'SUSPENDED'
+};
+
+export type DriverProfileStatus = (typeof DriverProfileStatus)[keyof typeof DriverProfileStatus]
+
+
+export const DriverAvailabilityStatus: {
+  OFFLINE: 'OFFLINE',
+  AVAILABLE: 'AVAILABLE',
+  ON_DELIVERY: 'ON_DELIVERY'
+};
+
+export type DriverAvailabilityStatus = (typeof DriverAvailabilityStatus)[keyof typeof DriverAvailabilityStatus]
+
+
+export const DeliveryAssignmentStatus: {
+  ACTIVE: 'ACTIVE',
+  RELEASED: 'RELEASED',
+  CANCELLED: 'CANCELLED'
+};
+
+export type DeliveryAssignmentStatus = (typeof DeliveryAssignmentStatus)[keyof typeof DeliveryAssignmentStatus]
 
 
 export const ReviewTargetType: {
@@ -465,6 +520,18 @@ export const PickupType: typeof $Enums.PickupType
 export type DeliveryStatus = $Enums.DeliveryStatus
 
 export const DeliveryStatus: typeof $Enums.DeliveryStatus
+
+export type DriverProfileStatus = $Enums.DriverProfileStatus
+
+export const DriverProfileStatus: typeof $Enums.DriverProfileStatus
+
+export type DriverAvailabilityStatus = $Enums.DriverAvailabilityStatus
+
+export const DriverAvailabilityStatus: typeof $Enums.DriverAvailabilityStatus
+
+export type DeliveryAssignmentStatus = $Enums.DeliveryAssignmentStatus
+
+export const DeliveryAssignmentStatus: typeof $Enums.DeliveryAssignmentStatus
 
 export type ReviewTargetType = $Enums.ReviewTargetType
 
@@ -688,6 +755,16 @@ export class PrismaClient<
   get supplierProfile(): Prisma.SupplierProfileDelegate<ExtArgs, ClientOptions>;
 
   /**
+   * `prisma.driverProfile`: Exposes CRUD operations for the **DriverProfile** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DriverProfiles
+    * const driverProfiles = await prisma.driverProfile.findMany()
+    * ```
+    */
+  get driverProfile(): Prisma.DriverProfileDelegate<ExtArgs, ClientOptions>;
+
+  /**
    * `prisma.organizationProfile`: Exposes CRUD operations for the **OrganizationProfile** model.
     * Example usage:
     * ```ts
@@ -816,6 +893,46 @@ export class PrismaClient<
     * ```
     */
   get reservation(): Prisma.ReservationDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.delivery`: Exposes CRUD operations for the **Delivery** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Deliveries
+    * const deliveries = await prisma.delivery.findMany()
+    * ```
+    */
+  get delivery(): Prisma.DeliveryDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.deliveryAssignment`: Exposes CRUD operations for the **DeliveryAssignment** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DeliveryAssignments
+    * const deliveryAssignments = await prisma.deliveryAssignment.findMany()
+    * ```
+    */
+  get deliveryAssignment(): Prisma.DeliveryAssignmentDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.deliveryStatusHistory`: Exposes CRUD operations for the **DeliveryStatusHistory** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DeliveryStatusHistories
+    * const deliveryStatusHistories = await prisma.deliveryStatusHistory.findMany()
+    * ```
+    */
+  get deliveryStatusHistory(): Prisma.DeliveryStatusHistoryDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.deliveryLocationPing`: Exposes CRUD operations for the **DeliveryLocationPing** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DeliveryLocationPings
+    * const deliveryLocationPings = await prisma.deliveryLocationPing.findMany()
+    * ```
+    */
+  get deliveryLocationPing(): Prisma.DeliveryLocationPingDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.reservationStatusHistory`: Exposes CRUD operations for the **ReservationStatusHistory** model.
@@ -1346,6 +1463,7 @@ export namespace Prisma {
     RoleInvitation: 'RoleInvitation',
     LearnerProfile: 'LearnerProfile',
     SupplierProfile: 'SupplierProfile',
+    DriverProfile: 'DriverProfile',
     OrganizationProfile: 'OrganizationProfile',
     Location: 'Location',
     Category: 'Category',
@@ -1359,6 +1477,10 @@ export namespace Prisma {
     MaterialImage: 'MaterialImage',
     MaterialTag: 'MaterialTag',
     Reservation: 'Reservation',
+    Delivery: 'Delivery',
+    DeliveryAssignment: 'DeliveryAssignment',
+    DeliveryStatusHistory: 'DeliveryStatusHistory',
+    DeliveryLocationPing: 'DeliveryLocationPing',
     ReservationStatusHistory: 'ReservationStatusHistory',
     Review: 'Review',
     Notification: 'Notification',
@@ -1383,7 +1505,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "userRoleAssignment" | "authToken" | "roleInvitation" | "learnerProfile" | "supplierProfile" | "organizationProfile" | "location" | "category" | "learningProject" | "projectImage" | "projectRequiredComponent" | "projectStep" | "projectLink" | "projectTag" | "material" | "materialImage" | "materialTag" | "reservation" | "reservationStatusHistory" | "review" | "notification" | "materialType" | "materialTypeAlias" | "materialPriceRule" | "priceRuleRequest" | "categoryRequest" | "aiPriceLookupLog"
+      modelProps: "user" | "userRoleAssignment" | "authToken" | "roleInvitation" | "learnerProfile" | "supplierProfile" | "driverProfile" | "organizationProfile" | "location" | "category" | "learningProject" | "projectImage" | "projectRequiredComponent" | "projectStep" | "projectLink" | "projectTag" | "material" | "materialImage" | "materialTag" | "reservation" | "delivery" | "deliveryAssignment" | "deliveryStatusHistory" | "deliveryLocationPing" | "reservationStatusHistory" | "review" | "notification" | "materialType" | "materialTypeAlias" | "materialPriceRule" | "priceRuleRequest" | "categoryRequest" | "aiPriceLookupLog"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1828,6 +1950,80 @@ export namespace Prisma {
           count: {
             args: Prisma.SupplierProfileCountArgs<ExtArgs>
             result: $Utils.Optional<SupplierProfileCountAggregateOutputType> | number
+          }
+        }
+      }
+      DriverProfile: {
+        payload: Prisma.$DriverProfilePayload<ExtArgs>
+        fields: Prisma.DriverProfileFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DriverProfileFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DriverProfileFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>
+          }
+          findFirst: {
+            args: Prisma.DriverProfileFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DriverProfileFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>
+          }
+          findMany: {
+            args: Prisma.DriverProfileFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>[]
+          }
+          create: {
+            args: Prisma.DriverProfileCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>
+          }
+          createMany: {
+            args: Prisma.DriverProfileCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.DriverProfileCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>[]
+          }
+          delete: {
+            args: Prisma.DriverProfileDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>
+          }
+          update: {
+            args: Prisma.DriverProfileUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>
+          }
+          deleteMany: {
+            args: Prisma.DriverProfileDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DriverProfileUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.DriverProfileUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>[]
+          }
+          upsert: {
+            args: Prisma.DriverProfileUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DriverProfilePayload>
+          }
+          aggregate: {
+            args: Prisma.DriverProfileAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDriverProfile>
+          }
+          groupBy: {
+            args: Prisma.DriverProfileGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DriverProfileGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DriverProfileCountArgs<ExtArgs>
+            result: $Utils.Optional<DriverProfileCountAggregateOutputType> | number
           }
         }
       }
@@ -2793,6 +2989,302 @@ export namespace Prisma {
           }
         }
       }
+      Delivery: {
+        payload: Prisma.$DeliveryPayload<ExtArgs>
+        fields: Prisma.DeliveryFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DeliveryFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DeliveryFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryPayload>
+          }
+          findFirst: {
+            args: Prisma.DeliveryFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DeliveryFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryPayload>
+          }
+          findMany: {
+            args: Prisma.DeliveryFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryPayload>[]
+          }
+          create: {
+            args: Prisma.DeliveryCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryPayload>
+          }
+          createMany: {
+            args: Prisma.DeliveryCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.DeliveryCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryPayload>[]
+          }
+          delete: {
+            args: Prisma.DeliveryDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryPayload>
+          }
+          update: {
+            args: Prisma.DeliveryUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryPayload>
+          }
+          deleteMany: {
+            args: Prisma.DeliveryDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DeliveryUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.DeliveryUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryPayload>[]
+          }
+          upsert: {
+            args: Prisma.DeliveryUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryPayload>
+          }
+          aggregate: {
+            args: Prisma.DeliveryAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDelivery>
+          }
+          groupBy: {
+            args: Prisma.DeliveryGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DeliveryGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DeliveryCountArgs<ExtArgs>
+            result: $Utils.Optional<DeliveryCountAggregateOutputType> | number
+          }
+        }
+      }
+      DeliveryAssignment: {
+        payload: Prisma.$DeliveryAssignmentPayload<ExtArgs>
+        fields: Prisma.DeliveryAssignmentFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DeliveryAssignmentFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryAssignmentPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DeliveryAssignmentFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryAssignmentPayload>
+          }
+          findFirst: {
+            args: Prisma.DeliveryAssignmentFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryAssignmentPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DeliveryAssignmentFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryAssignmentPayload>
+          }
+          findMany: {
+            args: Prisma.DeliveryAssignmentFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryAssignmentPayload>[]
+          }
+          create: {
+            args: Prisma.DeliveryAssignmentCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryAssignmentPayload>
+          }
+          createMany: {
+            args: Prisma.DeliveryAssignmentCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.DeliveryAssignmentCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryAssignmentPayload>[]
+          }
+          delete: {
+            args: Prisma.DeliveryAssignmentDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryAssignmentPayload>
+          }
+          update: {
+            args: Prisma.DeliveryAssignmentUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryAssignmentPayload>
+          }
+          deleteMany: {
+            args: Prisma.DeliveryAssignmentDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DeliveryAssignmentUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.DeliveryAssignmentUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryAssignmentPayload>[]
+          }
+          upsert: {
+            args: Prisma.DeliveryAssignmentUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryAssignmentPayload>
+          }
+          aggregate: {
+            args: Prisma.DeliveryAssignmentAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDeliveryAssignment>
+          }
+          groupBy: {
+            args: Prisma.DeliveryAssignmentGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DeliveryAssignmentGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DeliveryAssignmentCountArgs<ExtArgs>
+            result: $Utils.Optional<DeliveryAssignmentCountAggregateOutputType> | number
+          }
+        }
+      }
+      DeliveryStatusHistory: {
+        payload: Prisma.$DeliveryStatusHistoryPayload<ExtArgs>
+        fields: Prisma.DeliveryStatusHistoryFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DeliveryStatusHistoryFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryStatusHistoryPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DeliveryStatusHistoryFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryStatusHistoryPayload>
+          }
+          findFirst: {
+            args: Prisma.DeliveryStatusHistoryFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryStatusHistoryPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DeliveryStatusHistoryFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryStatusHistoryPayload>
+          }
+          findMany: {
+            args: Prisma.DeliveryStatusHistoryFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryStatusHistoryPayload>[]
+          }
+          create: {
+            args: Prisma.DeliveryStatusHistoryCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryStatusHistoryPayload>
+          }
+          createMany: {
+            args: Prisma.DeliveryStatusHistoryCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.DeliveryStatusHistoryCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryStatusHistoryPayload>[]
+          }
+          delete: {
+            args: Prisma.DeliveryStatusHistoryDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryStatusHistoryPayload>
+          }
+          update: {
+            args: Prisma.DeliveryStatusHistoryUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryStatusHistoryPayload>
+          }
+          deleteMany: {
+            args: Prisma.DeliveryStatusHistoryDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DeliveryStatusHistoryUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.DeliveryStatusHistoryUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryStatusHistoryPayload>[]
+          }
+          upsert: {
+            args: Prisma.DeliveryStatusHistoryUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryStatusHistoryPayload>
+          }
+          aggregate: {
+            args: Prisma.DeliveryStatusHistoryAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDeliveryStatusHistory>
+          }
+          groupBy: {
+            args: Prisma.DeliveryStatusHistoryGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DeliveryStatusHistoryGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DeliveryStatusHistoryCountArgs<ExtArgs>
+            result: $Utils.Optional<DeliveryStatusHistoryCountAggregateOutputType> | number
+          }
+        }
+      }
+      DeliveryLocationPing: {
+        payload: Prisma.$DeliveryLocationPingPayload<ExtArgs>
+        fields: Prisma.DeliveryLocationPingFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DeliveryLocationPingFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryLocationPingPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DeliveryLocationPingFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryLocationPingPayload>
+          }
+          findFirst: {
+            args: Prisma.DeliveryLocationPingFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryLocationPingPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DeliveryLocationPingFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryLocationPingPayload>
+          }
+          findMany: {
+            args: Prisma.DeliveryLocationPingFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryLocationPingPayload>[]
+          }
+          create: {
+            args: Prisma.DeliveryLocationPingCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryLocationPingPayload>
+          }
+          createMany: {
+            args: Prisma.DeliveryLocationPingCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.DeliveryLocationPingCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryLocationPingPayload>[]
+          }
+          delete: {
+            args: Prisma.DeliveryLocationPingDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryLocationPingPayload>
+          }
+          update: {
+            args: Prisma.DeliveryLocationPingUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryLocationPingPayload>
+          }
+          deleteMany: {
+            args: Prisma.DeliveryLocationPingDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DeliveryLocationPingUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.DeliveryLocationPingUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryLocationPingPayload>[]
+          }
+          upsert: {
+            args: Prisma.DeliveryLocationPingUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DeliveryLocationPingPayload>
+          }
+          aggregate: {
+            args: Prisma.DeliveryLocationPingAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDeliveryLocationPing>
+          }
+          groupBy: {
+            args: Prisma.DeliveryLocationPingGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DeliveryLocationPingGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DeliveryLocationPingCountArgs<ExtArgs>
+            result: $Utils.Optional<DeliveryLocationPingCountAggregateOutputType> | number
+          }
+        }
+      }
       ReservationStatusHistory: {
         payload: Prisma.$ReservationStatusHistoryPayload<ExtArgs>
         fields: Prisma.ReservationStatusHistoryFieldRefs
@@ -3573,6 +4065,7 @@ export namespace Prisma {
     roleInvitation?: RoleInvitationOmit
     learnerProfile?: LearnerProfileOmit
     supplierProfile?: SupplierProfileOmit
+    driverProfile?: DriverProfileOmit
     organizationProfile?: OrganizationProfileOmit
     location?: LocationOmit
     category?: CategoryOmit
@@ -3586,6 +4079,10 @@ export namespace Prisma {
     materialImage?: MaterialImageOmit
     materialTag?: MaterialTagOmit
     reservation?: ReservationOmit
+    delivery?: DeliveryOmit
+    deliveryAssignment?: DeliveryAssignmentOmit
+    deliveryStatusHistory?: DeliveryStatusHistoryOmit
+    deliveryLocationPing?: DeliveryLocationPingOmit
     reservationStatusHistory?: ReservationStatusHistoryOmit
     review?: ReviewOmit
     notification?: NotificationOmit
@@ -3684,6 +4181,9 @@ export namespace Prisma {
     ownedReservationsAsOwner: number
     ownedReservationsAsRequester: number
     reservationStatusChanges: number
+    requestedDeliveries: number
+    deliveryAssignmentsMade: number
+    deliveryStatusChanges: number
     notifications: number
     reviewsGiven: number
     reviewsReceived: number
@@ -3704,6 +4204,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: boolean | UserCountOutputTypeCountOwnedReservationsAsOwnerArgs
     ownedReservationsAsRequester?: boolean | UserCountOutputTypeCountOwnedReservationsAsRequesterArgs
     reservationStatusChanges?: boolean | UserCountOutputTypeCountReservationStatusChangesArgs
+    requestedDeliveries?: boolean | UserCountOutputTypeCountRequestedDeliveriesArgs
+    deliveryAssignmentsMade?: boolean | UserCountOutputTypeCountDeliveryAssignmentsMadeArgs
+    deliveryStatusChanges?: boolean | UserCountOutputTypeCountDeliveryStatusChangesArgs
     notifications?: boolean | UserCountOutputTypeCountNotificationsArgs
     reviewsGiven?: boolean | UserCountOutputTypeCountReviewsGivenArgs
     reviewsReceived?: boolean | UserCountOutputTypeCountReviewsReceivedArgs
@@ -3786,6 +4289,27 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountReservationStatusChangesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ReservationStatusHistoryWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountRequestedDeliveriesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountDeliveryAssignmentsMadeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryAssignmentWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountDeliveryStatusChangesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryStatusHistoryWhereInput
   }
 
   /**
@@ -3877,6 +4401,55 @@ export namespace Prisma {
 
 
   /**
+   * Count Type DriverProfileCountOutputType
+   */
+
+  export type DriverProfileCountOutputType = {
+    deliveries: number
+    assignments: number
+    locationPings: number
+  }
+
+  export type DriverProfileCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    deliveries?: boolean | DriverProfileCountOutputTypeCountDeliveriesArgs
+    assignments?: boolean | DriverProfileCountOutputTypeCountAssignmentsArgs
+    locationPings?: boolean | DriverProfileCountOutputTypeCountLocationPingsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * DriverProfileCountOutputType without action
+   */
+  export type DriverProfileCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfileCountOutputType
+     */
+    select?: DriverProfileCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * DriverProfileCountOutputType without action
+   */
+  export type DriverProfileCountOutputTypeCountDeliveriesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryWhereInput
+  }
+
+  /**
+   * DriverProfileCountOutputType without action
+   */
+  export type DriverProfileCountOutputTypeCountAssignmentsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryAssignmentWhereInput
+  }
+
+  /**
+   * DriverProfileCountOutputType without action
+   */
+  export type DriverProfileCountOutputTypeCountLocationPingsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryLocationPingWhereInput
+  }
+
+
+  /**
    * Count Type LocationCountOutputType
    */
 
@@ -3885,6 +4458,8 @@ export namespace Prisma {
     organizationBusinessFor: number
     materials: number
     reservationDropoffs: number
+    deliveryPickups: number
+    deliveryDropoffs: number
   }
 
   export type LocationCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -3892,6 +4467,8 @@ export namespace Prisma {
     organizationBusinessFor?: boolean | LocationCountOutputTypeCountOrganizationBusinessForArgs
     materials?: boolean | LocationCountOutputTypeCountMaterialsArgs
     reservationDropoffs?: boolean | LocationCountOutputTypeCountReservationDropoffsArgs
+    deliveryPickups?: boolean | LocationCountOutputTypeCountDeliveryPickupsArgs
+    deliveryDropoffs?: boolean | LocationCountOutputTypeCountDeliveryDropoffsArgs
   }
 
   // Custom InputTypes
@@ -3931,6 +4508,20 @@ export namespace Prisma {
    */
   export type LocationCountOutputTypeCountReservationDropoffsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ReservationWhereInput
+  }
+
+  /**
+   * LocationCountOutputType without action
+   */
+  export type LocationCountOutputTypeCountDeliveryPickupsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryWhereInput
+  }
+
+  /**
+   * LocationCountOutputType without action
+   */
+  export type LocationCountOutputTypeCountDeliveryDropoffsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryWhereInput
   }
 
 
@@ -4140,11 +4731,13 @@ export namespace Prisma {
    */
 
   export type ReservationCountOutputType = {
+    deliveries: number
     reviews: number
     statusHistory: number
   }
 
   export type ReservationCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    deliveries?: boolean | ReservationCountOutputTypeCountDeliveriesArgs
     reviews?: boolean | ReservationCountOutputTypeCountReviewsArgs
     statusHistory?: boolean | ReservationCountOutputTypeCountStatusHistoryArgs
   }
@@ -4163,6 +4756,13 @@ export namespace Prisma {
   /**
    * ReservationCountOutputType without action
    */
+  export type ReservationCountOutputTypeCountDeliveriesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryWhereInput
+  }
+
+  /**
+   * ReservationCountOutputType without action
+   */
   export type ReservationCountOutputTypeCountReviewsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ReviewWhereInput
   }
@@ -4172,6 +4772,55 @@ export namespace Prisma {
    */
   export type ReservationCountOutputTypeCountStatusHistoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ReservationStatusHistoryWhereInput
+  }
+
+
+  /**
+   * Count Type DeliveryCountOutputType
+   */
+
+  export type DeliveryCountOutputType = {
+    assignments: number
+    statusHistory: number
+    locationPings: number
+  }
+
+  export type DeliveryCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    assignments?: boolean | DeliveryCountOutputTypeCountAssignmentsArgs
+    statusHistory?: boolean | DeliveryCountOutputTypeCountStatusHistoryArgs
+    locationPings?: boolean | DeliveryCountOutputTypeCountLocationPingsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * DeliveryCountOutputType without action
+   */
+  export type DeliveryCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryCountOutputType
+     */
+    select?: DeliveryCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * DeliveryCountOutputType without action
+   */
+  export type DeliveryCountOutputTypeCountAssignmentsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryAssignmentWhereInput
+  }
+
+  /**
+   * DeliveryCountOutputType without action
+   */
+  export type DeliveryCountOutputTypeCountStatusHistoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryStatusHistoryWhereInput
+  }
+
+  /**
+   * DeliveryCountOutputType without action
+   */
+  export type DeliveryCountOutputTypeCountLocationPingsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryLocationPingWhereInput
   }
 
 
@@ -4492,6 +5141,7 @@ export namespace Prisma {
     authTokens?: boolean | User$authTokensArgs<ExtArgs>
     learnerProfile?: boolean | User$learnerProfileArgs<ExtArgs>
     supplierProfile?: boolean | User$supplierProfileArgs<ExtArgs>
+    driverProfile?: boolean | User$driverProfileArgs<ExtArgs>
     invitedRoles?: boolean | User$invitedRolesArgs<ExtArgs>
     usedInvitations?: boolean | User$usedInvitationsArgs<ExtArgs>
     assignedRoles?: boolean | User$assignedRolesArgs<ExtArgs>
@@ -4499,6 +5149,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: boolean | User$ownedReservationsAsOwnerArgs<ExtArgs>
     ownedReservationsAsRequester?: boolean | User$ownedReservationsAsRequesterArgs<ExtArgs>
     reservationStatusChanges?: boolean | User$reservationStatusChangesArgs<ExtArgs>
+    requestedDeliveries?: boolean | User$requestedDeliveriesArgs<ExtArgs>
+    deliveryAssignmentsMade?: boolean | User$deliveryAssignmentsMadeArgs<ExtArgs>
+    deliveryStatusChanges?: boolean | User$deliveryStatusChangesArgs<ExtArgs>
     notifications?: boolean | User$notificationsArgs<ExtArgs>
     reviewsGiven?: boolean | User$reviewsGivenArgs<ExtArgs>
     reviewsReceived?: boolean | User$reviewsReceivedArgs<ExtArgs>
@@ -4561,6 +5214,7 @@ export namespace Prisma {
     authTokens?: boolean | User$authTokensArgs<ExtArgs>
     learnerProfile?: boolean | User$learnerProfileArgs<ExtArgs>
     supplierProfile?: boolean | User$supplierProfileArgs<ExtArgs>
+    driverProfile?: boolean | User$driverProfileArgs<ExtArgs>
     invitedRoles?: boolean | User$invitedRolesArgs<ExtArgs>
     usedInvitations?: boolean | User$usedInvitationsArgs<ExtArgs>
     assignedRoles?: boolean | User$assignedRolesArgs<ExtArgs>
@@ -4568,6 +5222,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: boolean | User$ownedReservationsAsOwnerArgs<ExtArgs>
     ownedReservationsAsRequester?: boolean | User$ownedReservationsAsRequesterArgs<ExtArgs>
     reservationStatusChanges?: boolean | User$reservationStatusChangesArgs<ExtArgs>
+    requestedDeliveries?: boolean | User$requestedDeliveriesArgs<ExtArgs>
+    deliveryAssignmentsMade?: boolean | User$deliveryAssignmentsMadeArgs<ExtArgs>
+    deliveryStatusChanges?: boolean | User$deliveryStatusChangesArgs<ExtArgs>
     notifications?: boolean | User$notificationsArgs<ExtArgs>
     reviewsGiven?: boolean | User$reviewsGivenArgs<ExtArgs>
     reviewsReceived?: boolean | User$reviewsReceivedArgs<ExtArgs>
@@ -4588,6 +5245,7 @@ export namespace Prisma {
       authTokens: Prisma.$AuthTokenPayload<ExtArgs>[]
       learnerProfile: Prisma.$LearnerProfilePayload<ExtArgs> | null
       supplierProfile: Prisma.$SupplierProfilePayload<ExtArgs> | null
+      driverProfile: Prisma.$DriverProfilePayload<ExtArgs> | null
       invitedRoles: Prisma.$RoleInvitationPayload<ExtArgs>[]
       usedInvitations: Prisma.$RoleInvitationPayload<ExtArgs>[]
       assignedRoles: Prisma.$UserRoleAssignmentPayload<ExtArgs>[]
@@ -4595,6 +5253,9 @@ export namespace Prisma {
       ownedReservationsAsOwner: Prisma.$ReservationPayload<ExtArgs>[]
       ownedReservationsAsRequester: Prisma.$ReservationPayload<ExtArgs>[]
       reservationStatusChanges: Prisma.$ReservationStatusHistoryPayload<ExtArgs>[]
+      requestedDeliveries: Prisma.$DeliveryPayload<ExtArgs>[]
+      deliveryAssignmentsMade: Prisma.$DeliveryAssignmentPayload<ExtArgs>[]
+      deliveryStatusChanges: Prisma.$DeliveryStatusHistoryPayload<ExtArgs>[]
       notifications: Prisma.$NotificationPayload<ExtArgs>[]
       reviewsGiven: Prisma.$ReviewPayload<ExtArgs>[]
       reviewsReceived: Prisma.$ReviewPayload<ExtArgs>[]
@@ -5015,6 +5676,7 @@ export namespace Prisma {
     authTokens<T extends User$authTokensArgs<ExtArgs> = {}>(args?: Subset<T, User$authTokensArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuthTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     learnerProfile<T extends User$learnerProfileArgs<ExtArgs> = {}>(args?: Subset<T, User$learnerProfileArgs<ExtArgs>>): Prisma__LearnerProfileClient<$Result.GetResult<Prisma.$LearnerProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     supplierProfile<T extends User$supplierProfileArgs<ExtArgs> = {}>(args?: Subset<T, User$supplierProfileArgs<ExtArgs>>): Prisma__SupplierProfileClient<$Result.GetResult<Prisma.$SupplierProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    driverProfile<T extends User$driverProfileArgs<ExtArgs> = {}>(args?: Subset<T, User$driverProfileArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     invitedRoles<T extends User$invitedRolesArgs<ExtArgs> = {}>(args?: Subset<T, User$invitedRolesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RoleInvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     usedInvitations<T extends User$usedInvitationsArgs<ExtArgs> = {}>(args?: Subset<T, User$usedInvitationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RoleInvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     assignedRoles<T extends User$assignedRolesArgs<ExtArgs> = {}>(args?: Subset<T, User$assignedRolesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserRoleAssignmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -5022,6 +5684,9 @@ export namespace Prisma {
     ownedReservationsAsOwner<T extends User$ownedReservationsAsOwnerArgs<ExtArgs> = {}>(args?: Subset<T, User$ownedReservationsAsOwnerArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     ownedReservationsAsRequester<T extends User$ownedReservationsAsRequesterArgs<ExtArgs> = {}>(args?: Subset<T, User$ownedReservationsAsRequesterArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     reservationStatusChanges<T extends User$reservationStatusChangesArgs<ExtArgs> = {}>(args?: Subset<T, User$reservationStatusChangesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    requestedDeliveries<T extends User$requestedDeliveriesArgs<ExtArgs> = {}>(args?: Subset<T, User$requestedDeliveriesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    deliveryAssignmentsMade<T extends User$deliveryAssignmentsMadeArgs<ExtArgs> = {}>(args?: Subset<T, User$deliveryAssignmentsMadeArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    deliveryStatusChanges<T extends User$deliveryStatusChangesArgs<ExtArgs> = {}>(args?: Subset<T, User$deliveryStatusChangesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     notifications<T extends User$notificationsArgs<ExtArgs> = {}>(args?: Subset<T, User$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     reviewsGiven<T extends User$reviewsGivenArgs<ExtArgs> = {}>(args?: Subset<T, User$reviewsGivenArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     reviewsReceived<T extends User$reviewsReceivedArgs<ExtArgs> = {}>(args?: Subset<T, User$reviewsReceivedArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -5550,6 +6215,25 @@ export namespace Prisma {
   }
 
   /**
+   * User.driverProfile
+   */
+  export type User$driverProfileArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    where?: DriverProfileWhereInput
+  }
+
+  /**
    * User.invitedRoles
    */
   export type User$invitedRolesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -5715,6 +6399,78 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: ReservationStatusHistoryScalarFieldEnum | ReservationStatusHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * User.requestedDeliveries
+   */
+  export type User$requestedDeliveriesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    where?: DeliveryWhereInput
+    orderBy?: DeliveryOrderByWithRelationInput | DeliveryOrderByWithRelationInput[]
+    cursor?: DeliveryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DeliveryScalarFieldEnum | DeliveryScalarFieldEnum[]
+  }
+
+  /**
+   * User.deliveryAssignmentsMade
+   */
+  export type User$deliveryAssignmentsMadeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+    where?: DeliveryAssignmentWhereInput
+    orderBy?: DeliveryAssignmentOrderByWithRelationInput | DeliveryAssignmentOrderByWithRelationInput[]
+    cursor?: DeliveryAssignmentWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DeliveryAssignmentScalarFieldEnum | DeliveryAssignmentScalarFieldEnum[]
+  }
+
+  /**
+   * User.deliveryStatusChanges
+   */
+  export type User$deliveryStatusChangesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryInclude<ExtArgs> | null
+    where?: DeliveryStatusHistoryWhereInput
+    orderBy?: DeliveryStatusHistoryOrderByWithRelationInput | DeliveryStatusHistoryOrderByWithRelationInput[]
+    cursor?: DeliveryStatusHistoryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DeliveryStatusHistoryScalarFieldEnum | DeliveryStatusHistoryScalarFieldEnum[]
   }
 
   /**
@@ -11627,6 +12383,1246 @@ export namespace Prisma {
 
 
   /**
+   * Model DriverProfile
+   */
+
+  export type AggregateDriverProfile = {
+    _count: DriverProfileCountAggregateOutputType | null
+    _min: DriverProfileMinAggregateOutputType | null
+    _max: DriverProfileMaxAggregateOutputType | null
+  }
+
+  export type DriverProfileMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    status: $Enums.DriverProfileStatus | null
+    availability: $Enums.DriverAvailabilityStatus | null
+    displayName: string | null
+    phone: string | null
+    vehicleType: string | null
+    vehicleLabel: string | null
+    vehiclePlate: string | null
+    capacityNotes: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DriverProfileMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    status: $Enums.DriverProfileStatus | null
+    availability: $Enums.DriverAvailabilityStatus | null
+    displayName: string | null
+    phone: string | null
+    vehicleType: string | null
+    vehicleLabel: string | null
+    vehiclePlate: string | null
+    capacityNotes: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DriverProfileCountAggregateOutputType = {
+    id: number
+    userId: number
+    status: number
+    availability: number
+    displayName: number
+    phone: number
+    vehicleType: number
+    vehicleLabel: number
+    vehiclePlate: number
+    capacityNotes: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type DriverProfileMinAggregateInputType = {
+    id?: true
+    userId?: true
+    status?: true
+    availability?: true
+    displayName?: true
+    phone?: true
+    vehicleType?: true
+    vehicleLabel?: true
+    vehiclePlate?: true
+    capacityNotes?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DriverProfileMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    status?: true
+    availability?: true
+    displayName?: true
+    phone?: true
+    vehicleType?: true
+    vehicleLabel?: true
+    vehiclePlate?: true
+    capacityNotes?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DriverProfileCountAggregateInputType = {
+    id?: true
+    userId?: true
+    status?: true
+    availability?: true
+    displayName?: true
+    phone?: true
+    vehicleType?: true
+    vehicleLabel?: true
+    vehiclePlate?: true
+    capacityNotes?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type DriverProfileAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DriverProfile to aggregate.
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DriverProfiles to fetch.
+     */
+    orderBy?: DriverProfileOrderByWithRelationInput | DriverProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: DriverProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DriverProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DriverProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned DriverProfiles
+    **/
+    _count?: true | DriverProfileCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: DriverProfileMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: DriverProfileMaxAggregateInputType
+  }
+
+  export type GetDriverProfileAggregateType<T extends DriverProfileAggregateArgs> = {
+        [P in keyof T & keyof AggregateDriverProfile]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDriverProfile[P]>
+      : GetScalarType<T[P], AggregateDriverProfile[P]>
+  }
+
+
+
+
+  export type DriverProfileGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DriverProfileWhereInput
+    orderBy?: DriverProfileOrderByWithAggregationInput | DriverProfileOrderByWithAggregationInput[]
+    by: DriverProfileScalarFieldEnum[] | DriverProfileScalarFieldEnum
+    having?: DriverProfileScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DriverProfileCountAggregateInputType | true
+    _min?: DriverProfileMinAggregateInputType
+    _max?: DriverProfileMaxAggregateInputType
+  }
+
+  export type DriverProfileGroupByOutputType = {
+    id: string
+    userId: string
+    status: $Enums.DriverProfileStatus
+    availability: $Enums.DriverAvailabilityStatus
+    displayName: string
+    phone: string | null
+    vehicleType: string
+    vehicleLabel: string | null
+    vehiclePlate: string | null
+    capacityNotes: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: DriverProfileCountAggregateOutputType | null
+    _min: DriverProfileMinAggregateOutputType | null
+    _max: DriverProfileMaxAggregateOutputType | null
+  }
+
+  type GetDriverProfileGroupByPayload<T extends DriverProfileGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DriverProfileGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DriverProfileGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DriverProfileGroupByOutputType[P]>
+            : GetScalarType<T[P], DriverProfileGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DriverProfileSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    status?: boolean
+    availability?: boolean
+    displayName?: boolean
+    phone?: boolean
+    vehicleType?: boolean
+    vehicleLabel?: boolean
+    vehiclePlate?: boolean
+    capacityNotes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    deliveries?: boolean | DriverProfile$deliveriesArgs<ExtArgs>
+    assignments?: boolean | DriverProfile$assignmentsArgs<ExtArgs>
+    locationPings?: boolean | DriverProfile$locationPingsArgs<ExtArgs>
+    _count?: boolean | DriverProfileCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["driverProfile"]>
+
+  export type DriverProfileSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    status?: boolean
+    availability?: boolean
+    displayName?: boolean
+    phone?: boolean
+    vehicleType?: boolean
+    vehicleLabel?: boolean
+    vehiclePlate?: boolean
+    capacityNotes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["driverProfile"]>
+
+  export type DriverProfileSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    status?: boolean
+    availability?: boolean
+    displayName?: boolean
+    phone?: boolean
+    vehicleType?: boolean
+    vehicleLabel?: boolean
+    vehiclePlate?: boolean
+    capacityNotes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["driverProfile"]>
+
+  export type DriverProfileSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    status?: boolean
+    availability?: boolean
+    displayName?: boolean
+    phone?: boolean
+    vehicleType?: boolean
+    vehicleLabel?: boolean
+    vehiclePlate?: boolean
+    capacityNotes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type DriverProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "status" | "availability" | "displayName" | "phone" | "vehicleType" | "vehicleLabel" | "vehiclePlate" | "capacityNotes" | "createdAt" | "updatedAt", ExtArgs["result"]["driverProfile"]>
+  export type DriverProfileInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    deliveries?: boolean | DriverProfile$deliveriesArgs<ExtArgs>
+    assignments?: boolean | DriverProfile$assignmentsArgs<ExtArgs>
+    locationPings?: boolean | DriverProfile$locationPingsArgs<ExtArgs>
+    _count?: boolean | DriverProfileCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type DriverProfileIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type DriverProfileIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $DriverProfilePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DriverProfile"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+      deliveries: Prisma.$DeliveryPayload<ExtArgs>[]
+      assignments: Prisma.$DeliveryAssignmentPayload<ExtArgs>[]
+      locationPings: Prisma.$DeliveryLocationPingPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      status: $Enums.DriverProfileStatus
+      availability: $Enums.DriverAvailabilityStatus
+      displayName: string
+      phone: string | null
+      vehicleType: string
+      vehicleLabel: string | null
+      vehiclePlate: string | null
+      capacityNotes: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["driverProfile"]>
+    composites: {}
+  }
+
+  type DriverProfileGetPayload<S extends boolean | null | undefined | DriverProfileDefaultArgs> = $Result.GetResult<Prisma.$DriverProfilePayload, S>
+
+  type DriverProfileCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DriverProfileFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DriverProfileCountAggregateInputType | true
+    }
+
+  export interface DriverProfileDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DriverProfile'], meta: { name: 'DriverProfile' } }
+    /**
+     * Find zero or one DriverProfile that matches the filter.
+     * @param {DriverProfileFindUniqueArgs} args - Arguments to find a DriverProfile
+     * @example
+     * // Get one DriverProfile
+     * const driverProfile = await prisma.driverProfile.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DriverProfileFindUniqueArgs>(args: SelectSubset<T, DriverProfileFindUniqueArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one DriverProfile that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DriverProfileFindUniqueOrThrowArgs} args - Arguments to find a DriverProfile
+     * @example
+     * // Get one DriverProfile
+     * const driverProfile = await prisma.driverProfile.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DriverProfileFindUniqueOrThrowArgs>(args: SelectSubset<T, DriverProfileFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DriverProfile that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileFindFirstArgs} args - Arguments to find a DriverProfile
+     * @example
+     * // Get one DriverProfile
+     * const driverProfile = await prisma.driverProfile.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DriverProfileFindFirstArgs>(args?: SelectSubset<T, DriverProfileFindFirstArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DriverProfile that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileFindFirstOrThrowArgs} args - Arguments to find a DriverProfile
+     * @example
+     * // Get one DriverProfile
+     * const driverProfile = await prisma.driverProfile.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DriverProfileFindFirstOrThrowArgs>(args?: SelectSubset<T, DriverProfileFindFirstOrThrowArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more DriverProfiles that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all DriverProfiles
+     * const driverProfiles = await prisma.driverProfile.findMany()
+     * 
+     * // Get first 10 DriverProfiles
+     * const driverProfiles = await prisma.driverProfile.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const driverProfileWithIdOnly = await prisma.driverProfile.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends DriverProfileFindManyArgs>(args?: SelectSubset<T, DriverProfileFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a DriverProfile.
+     * @param {DriverProfileCreateArgs} args - Arguments to create a DriverProfile.
+     * @example
+     * // Create one DriverProfile
+     * const DriverProfile = await prisma.driverProfile.create({
+     *   data: {
+     *     // ... data to create a DriverProfile
+     *   }
+     * })
+     * 
+     */
+    create<T extends DriverProfileCreateArgs>(args: SelectSubset<T, DriverProfileCreateArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many DriverProfiles.
+     * @param {DriverProfileCreateManyArgs} args - Arguments to create many DriverProfiles.
+     * @example
+     * // Create many DriverProfiles
+     * const driverProfile = await prisma.driverProfile.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends DriverProfileCreateManyArgs>(args?: SelectSubset<T, DriverProfileCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many DriverProfiles and returns the data saved in the database.
+     * @param {DriverProfileCreateManyAndReturnArgs} args - Arguments to create many DriverProfiles.
+     * @example
+     * // Create many DriverProfiles
+     * const driverProfile = await prisma.driverProfile.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many DriverProfiles and only return the `id`
+     * const driverProfileWithIdOnly = await prisma.driverProfile.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends DriverProfileCreateManyAndReturnArgs>(args?: SelectSubset<T, DriverProfileCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a DriverProfile.
+     * @param {DriverProfileDeleteArgs} args - Arguments to delete one DriverProfile.
+     * @example
+     * // Delete one DriverProfile
+     * const DriverProfile = await prisma.driverProfile.delete({
+     *   where: {
+     *     // ... filter to delete one DriverProfile
+     *   }
+     * })
+     * 
+     */
+    delete<T extends DriverProfileDeleteArgs>(args: SelectSubset<T, DriverProfileDeleteArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one DriverProfile.
+     * @param {DriverProfileUpdateArgs} args - Arguments to update one DriverProfile.
+     * @example
+     * // Update one DriverProfile
+     * const driverProfile = await prisma.driverProfile.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends DriverProfileUpdateArgs>(args: SelectSubset<T, DriverProfileUpdateArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more DriverProfiles.
+     * @param {DriverProfileDeleteManyArgs} args - Arguments to filter DriverProfiles to delete.
+     * @example
+     * // Delete a few DriverProfiles
+     * const { count } = await prisma.driverProfile.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends DriverProfileDeleteManyArgs>(args?: SelectSubset<T, DriverProfileDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DriverProfiles.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many DriverProfiles
+     * const driverProfile = await prisma.driverProfile.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends DriverProfileUpdateManyArgs>(args: SelectSubset<T, DriverProfileUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DriverProfiles and returns the data updated in the database.
+     * @param {DriverProfileUpdateManyAndReturnArgs} args - Arguments to update many DriverProfiles.
+     * @example
+     * // Update many DriverProfiles
+     * const driverProfile = await prisma.driverProfile.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more DriverProfiles and only return the `id`
+     * const driverProfileWithIdOnly = await prisma.driverProfile.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends DriverProfileUpdateManyAndReturnArgs>(args: SelectSubset<T, DriverProfileUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one DriverProfile.
+     * @param {DriverProfileUpsertArgs} args - Arguments to update or create a DriverProfile.
+     * @example
+     * // Update or create a DriverProfile
+     * const driverProfile = await prisma.driverProfile.upsert({
+     *   create: {
+     *     // ... data to create a DriverProfile
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the DriverProfile we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DriverProfileUpsertArgs>(args: SelectSubset<T, DriverProfileUpsertArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of DriverProfiles.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileCountArgs} args - Arguments to filter DriverProfiles to count.
+     * @example
+     * // Count the number of DriverProfiles
+     * const count = await prisma.driverProfile.count({
+     *   where: {
+     *     // ... the filter for the DriverProfiles we want to count
+     *   }
+     * })
+    **/
+    count<T extends DriverProfileCountArgs>(
+      args?: Subset<T, DriverProfileCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DriverProfileCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a DriverProfile.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DriverProfileAggregateArgs>(args: Subset<T, DriverProfileAggregateArgs>): Prisma.PrismaPromise<GetDriverProfileAggregateType<T>>
+
+    /**
+     * Group by DriverProfile.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DriverProfileGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends DriverProfileGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DriverProfileGroupByArgs['orderBy'] }
+        : { orderBy?: DriverProfileGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DriverProfileGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDriverProfileGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the DriverProfile model
+   */
+  readonly fields: DriverProfileFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for DriverProfile.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DriverProfileClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    deliveries<T extends DriverProfile$deliveriesArgs<ExtArgs> = {}>(args?: Subset<T, DriverProfile$deliveriesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    assignments<T extends DriverProfile$assignmentsArgs<ExtArgs> = {}>(args?: Subset<T, DriverProfile$assignmentsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    locationPings<T extends DriverProfile$locationPingsArgs<ExtArgs> = {}>(args?: Subset<T, DriverProfile$locationPingsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the DriverProfile model
+   */
+  interface DriverProfileFieldRefs {
+    readonly id: FieldRef<"DriverProfile", 'String'>
+    readonly userId: FieldRef<"DriverProfile", 'String'>
+    readonly status: FieldRef<"DriverProfile", 'DriverProfileStatus'>
+    readonly availability: FieldRef<"DriverProfile", 'DriverAvailabilityStatus'>
+    readonly displayName: FieldRef<"DriverProfile", 'String'>
+    readonly phone: FieldRef<"DriverProfile", 'String'>
+    readonly vehicleType: FieldRef<"DriverProfile", 'String'>
+    readonly vehicleLabel: FieldRef<"DriverProfile", 'String'>
+    readonly vehiclePlate: FieldRef<"DriverProfile", 'String'>
+    readonly capacityNotes: FieldRef<"DriverProfile", 'String'>
+    readonly createdAt: FieldRef<"DriverProfile", 'DateTime'>
+    readonly updatedAt: FieldRef<"DriverProfile", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * DriverProfile findUnique
+   */
+  export type DriverProfileFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which DriverProfile to fetch.
+     */
+    where: DriverProfileWhereUniqueInput
+  }
+
+  /**
+   * DriverProfile findUniqueOrThrow
+   */
+  export type DriverProfileFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which DriverProfile to fetch.
+     */
+    where: DriverProfileWhereUniqueInput
+  }
+
+  /**
+   * DriverProfile findFirst
+   */
+  export type DriverProfileFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which DriverProfile to fetch.
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DriverProfiles to fetch.
+     */
+    orderBy?: DriverProfileOrderByWithRelationInput | DriverProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DriverProfiles.
+     */
+    cursor?: DriverProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DriverProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DriverProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DriverProfiles.
+     */
+    distinct?: DriverProfileScalarFieldEnum | DriverProfileScalarFieldEnum[]
+  }
+
+  /**
+   * DriverProfile findFirstOrThrow
+   */
+  export type DriverProfileFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which DriverProfile to fetch.
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DriverProfiles to fetch.
+     */
+    orderBy?: DriverProfileOrderByWithRelationInput | DriverProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DriverProfiles.
+     */
+    cursor?: DriverProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DriverProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DriverProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DriverProfiles.
+     */
+    distinct?: DriverProfileScalarFieldEnum | DriverProfileScalarFieldEnum[]
+  }
+
+  /**
+   * DriverProfile findMany
+   */
+  export type DriverProfileFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which DriverProfiles to fetch.
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DriverProfiles to fetch.
+     */
+    orderBy?: DriverProfileOrderByWithRelationInput | DriverProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing DriverProfiles.
+     */
+    cursor?: DriverProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DriverProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DriverProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DriverProfiles.
+     */
+    distinct?: DriverProfileScalarFieldEnum | DriverProfileScalarFieldEnum[]
+  }
+
+  /**
+   * DriverProfile create
+   */
+  export type DriverProfileCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * The data needed to create a DriverProfile.
+     */
+    data: XOR<DriverProfileCreateInput, DriverProfileUncheckedCreateInput>
+  }
+
+  /**
+   * DriverProfile createMany
+   */
+  export type DriverProfileCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many DriverProfiles.
+     */
+    data: DriverProfileCreateManyInput | DriverProfileCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DriverProfile createManyAndReturn
+   */
+  export type DriverProfileCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * The data used to create many DriverProfiles.
+     */
+    data: DriverProfileCreateManyInput | DriverProfileCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DriverProfile update
+   */
+  export type DriverProfileUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * The data needed to update a DriverProfile.
+     */
+    data: XOR<DriverProfileUpdateInput, DriverProfileUncheckedUpdateInput>
+    /**
+     * Choose, which DriverProfile to update.
+     */
+    where: DriverProfileWhereUniqueInput
+  }
+
+  /**
+   * DriverProfile updateMany
+   */
+  export type DriverProfileUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update DriverProfiles.
+     */
+    data: XOR<DriverProfileUpdateManyMutationInput, DriverProfileUncheckedUpdateManyInput>
+    /**
+     * Filter which DriverProfiles to update
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * Limit how many DriverProfiles to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * DriverProfile updateManyAndReturn
+   */
+  export type DriverProfileUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * The data used to update DriverProfiles.
+     */
+    data: XOR<DriverProfileUpdateManyMutationInput, DriverProfileUncheckedUpdateManyInput>
+    /**
+     * Filter which DriverProfiles to update
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * Limit how many DriverProfiles to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DriverProfile upsert
+   */
+  export type DriverProfileUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * The filter to search for the DriverProfile to update in case it exists.
+     */
+    where: DriverProfileWhereUniqueInput
+    /**
+     * In case the DriverProfile found by the `where` argument doesn't exist, create a new DriverProfile with this data.
+     */
+    create: XOR<DriverProfileCreateInput, DriverProfileUncheckedCreateInput>
+    /**
+     * In case the DriverProfile was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DriverProfileUpdateInput, DriverProfileUncheckedUpdateInput>
+  }
+
+  /**
+   * DriverProfile delete
+   */
+  export type DriverProfileDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    /**
+     * Filter which DriverProfile to delete.
+     */
+    where: DriverProfileWhereUniqueInput
+  }
+
+  /**
+   * DriverProfile deleteMany
+   */
+  export type DriverProfileDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DriverProfiles to delete
+     */
+    where?: DriverProfileWhereInput
+    /**
+     * Limit how many DriverProfiles to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * DriverProfile.deliveries
+   */
+  export type DriverProfile$deliveriesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    where?: DeliveryWhereInput
+    orderBy?: DeliveryOrderByWithRelationInput | DeliveryOrderByWithRelationInput[]
+    cursor?: DeliveryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DeliveryScalarFieldEnum | DeliveryScalarFieldEnum[]
+  }
+
+  /**
+   * DriverProfile.assignments
+   */
+  export type DriverProfile$assignmentsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+    where?: DeliveryAssignmentWhereInput
+    orderBy?: DeliveryAssignmentOrderByWithRelationInput | DeliveryAssignmentOrderByWithRelationInput[]
+    cursor?: DeliveryAssignmentWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DeliveryAssignmentScalarFieldEnum | DeliveryAssignmentScalarFieldEnum[]
+  }
+
+  /**
+   * DriverProfile.locationPings
+   */
+  export type DriverProfile$locationPingsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingInclude<ExtArgs> | null
+    where?: DeliveryLocationPingWhereInput
+    orderBy?: DeliveryLocationPingOrderByWithRelationInput | DeliveryLocationPingOrderByWithRelationInput[]
+    cursor?: DeliveryLocationPingWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DeliveryLocationPingScalarFieldEnum | DeliveryLocationPingScalarFieldEnum[]
+  }
+
+  /**
+   * DriverProfile without action
+   */
+  export type DriverProfileDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Model OrganizationProfile
    */
 
@@ -13048,6 +15044,8 @@ export namespace Prisma {
     organizationBusinessFor?: boolean | Location$organizationBusinessForArgs<ExtArgs>
     materials?: boolean | Location$materialsArgs<ExtArgs>
     reservationDropoffs?: boolean | Location$reservationDropoffsArgs<ExtArgs>
+    deliveryPickups?: boolean | Location$deliveryPickupsArgs<ExtArgs>
+    deliveryDropoffs?: boolean | Location$deliveryDropoffsArgs<ExtArgs>
     _count?: boolean | LocationCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["location"]>
 
@@ -13102,6 +15100,8 @@ export namespace Prisma {
     organizationBusinessFor?: boolean | Location$organizationBusinessForArgs<ExtArgs>
     materials?: boolean | Location$materialsArgs<ExtArgs>
     reservationDropoffs?: boolean | Location$reservationDropoffsArgs<ExtArgs>
+    deliveryPickups?: boolean | Location$deliveryPickupsArgs<ExtArgs>
+    deliveryDropoffs?: boolean | Location$deliveryDropoffsArgs<ExtArgs>
     _count?: boolean | LocationCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type LocationIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -13114,6 +15114,8 @@ export namespace Prisma {
       organizationBusinessFor: Prisma.$OrganizationProfilePayload<ExtArgs>[]
       materials: Prisma.$MaterialPayload<ExtArgs>[]
       reservationDropoffs: Prisma.$ReservationPayload<ExtArgs>[]
+      deliveryPickups: Prisma.$DeliveryPayload<ExtArgs>[]
+      deliveryDropoffs: Prisma.$DeliveryPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -13526,6 +15528,8 @@ export namespace Prisma {
     organizationBusinessFor<T extends Location$organizationBusinessForArgs<ExtArgs> = {}>(args?: Subset<T, Location$organizationBusinessForArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OrganizationProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     materials<T extends Location$materialsArgs<ExtArgs> = {}>(args?: Subset<T, Location$materialsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     reservationDropoffs<T extends Location$reservationDropoffsArgs<ExtArgs> = {}>(args?: Subset<T, Location$reservationDropoffsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    deliveryPickups<T extends Location$deliveryPickupsArgs<ExtArgs> = {}>(args?: Subset<T, Location$deliveryPickupsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    deliveryDropoffs<T extends Location$deliveryDropoffsArgs<ExtArgs> = {}>(args?: Subset<T, Location$deliveryDropoffsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -14053,6 +16057,54 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: ReservationScalarFieldEnum | ReservationScalarFieldEnum[]
+  }
+
+  /**
+   * Location.deliveryPickups
+   */
+  export type Location$deliveryPickupsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    where?: DeliveryWhereInput
+    orderBy?: DeliveryOrderByWithRelationInput | DeliveryOrderByWithRelationInput[]
+    cursor?: DeliveryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DeliveryScalarFieldEnum | DeliveryScalarFieldEnum[]
+  }
+
+  /**
+   * Location.deliveryDropoffs
+   */
+  export type Location$deliveryDropoffsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    where?: DeliveryWhereInput
+    orderBy?: DeliveryOrderByWithRelationInput | DeliveryOrderByWithRelationInput[]
+    cursor?: DeliveryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DeliveryScalarFieldEnum | DeliveryScalarFieldEnum[]
   }
 
   /**
@@ -26734,6 +28786,7 @@ export namespace Prisma {
     owner?: boolean | UserDefaultArgs<ExtArgs>
     dropoffLocation?: boolean | Reservation$dropoffLocationArgs<ExtArgs>
     reusedMaterial?: boolean | Reservation$reusedMaterialArgs<ExtArgs>
+    deliveries?: boolean | Reservation$deliveriesArgs<ExtArgs>
     reviews?: boolean | Reservation$reviewsArgs<ExtArgs>
     statusHistory?: boolean | Reservation$statusHistoryArgs<ExtArgs>
     _count?: boolean | ReservationCountOutputTypeDefaultArgs<ExtArgs>
@@ -26832,6 +28885,7 @@ export namespace Prisma {
     owner?: boolean | UserDefaultArgs<ExtArgs>
     dropoffLocation?: boolean | Reservation$dropoffLocationArgs<ExtArgs>
     reusedMaterial?: boolean | Reservation$reusedMaterialArgs<ExtArgs>
+    deliveries?: boolean | Reservation$deliveriesArgs<ExtArgs>
     reviews?: boolean | Reservation$reviewsArgs<ExtArgs>
     statusHistory?: boolean | Reservation$statusHistoryArgs<ExtArgs>
     _count?: boolean | ReservationCountOutputTypeDefaultArgs<ExtArgs>
@@ -26857,6 +28911,7 @@ export namespace Prisma {
       owner: Prisma.$UserPayload<ExtArgs>
       dropoffLocation: Prisma.$LocationPayload<ExtArgs> | null
       reusedMaterial: Prisma.$MaterialPayload<ExtArgs> | null
+      deliveries: Prisma.$DeliveryPayload<ExtArgs>[]
       reviews: Prisma.$ReviewPayload<ExtArgs>[]
       statusHistory: Prisma.$ReservationStatusHistoryPayload<ExtArgs>[]
     }
@@ -27283,6 +29338,7 @@ export namespace Prisma {
     owner<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     dropoffLocation<T extends Reservation$dropoffLocationArgs<ExtArgs> = {}>(args?: Subset<T, Reservation$dropoffLocationArgs<ExtArgs>>): Prisma__LocationClient<$Result.GetResult<Prisma.$LocationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     reusedMaterial<T extends Reservation$reusedMaterialArgs<ExtArgs> = {}>(args?: Subset<T, Reservation$reusedMaterialArgs<ExtArgs>>): Prisma__MaterialClient<$Result.GetResult<Prisma.$MaterialPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    deliveries<T extends Reservation$deliveriesArgs<ExtArgs> = {}>(args?: Subset<T, Reservation$deliveriesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     reviews<T extends Reservation$reviewsArgs<ExtArgs> = {}>(args?: Subset<T, Reservation$reviewsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     statusHistory<T extends Reservation$statusHistoryArgs<ExtArgs> = {}>(args?: Subset<T, Reservation$statusHistoryArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReservationStatusHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
@@ -27776,6 +29832,30 @@ export namespace Prisma {
   }
 
   /**
+   * Reservation.deliveries
+   */
+  export type Reservation$deliveriesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    where?: DeliveryWhereInput
+    orderBy?: DeliveryOrderByWithRelationInput | DeliveryOrderByWithRelationInput[]
+    cursor?: DeliveryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DeliveryScalarFieldEnum | DeliveryScalarFieldEnum[]
+  }
+
+  /**
    * Reservation.reviews
    */
   export type Reservation$reviewsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -27839,6 +29919,4847 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: ReservationInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model Delivery
+   */
+
+  export type AggregateDelivery = {
+    _count: DeliveryCountAggregateOutputType | null
+    _min: DeliveryMinAggregateOutputType | null
+    _max: DeliveryMaxAggregateOutputType | null
+  }
+
+  export type DeliveryMinAggregateOutputType = {
+    id: string | null
+    reservationId: string | null
+    pickupLocationId: string | null
+    dropoffLocationId: string | null
+    assignedDriverProfileId: string | null
+    requestedByUserId: string | null
+    status: $Enums.DeliveryStatus | null
+    requestedAt: Date | null
+    assignedAt: Date | null
+    arrivedPickupAt: Date | null
+    pickedUpAt: Date | null
+    onTheWayAt: Date | null
+    arrivedDropoffAt: Date | null
+    deliveredAt: Date | null
+    cancelledAt: Date | null
+    failedAt: Date | null
+    learnerNote: string | null
+    driverNote: string | null
+    failureReason: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DeliveryMaxAggregateOutputType = {
+    id: string | null
+    reservationId: string | null
+    pickupLocationId: string | null
+    dropoffLocationId: string | null
+    assignedDriverProfileId: string | null
+    requestedByUserId: string | null
+    status: $Enums.DeliveryStatus | null
+    requestedAt: Date | null
+    assignedAt: Date | null
+    arrivedPickupAt: Date | null
+    pickedUpAt: Date | null
+    onTheWayAt: Date | null
+    arrivedDropoffAt: Date | null
+    deliveredAt: Date | null
+    cancelledAt: Date | null
+    failedAt: Date | null
+    learnerNote: string | null
+    driverNote: string | null
+    failureReason: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DeliveryCountAggregateOutputType = {
+    id: number
+    reservationId: number
+    pickupLocationId: number
+    dropoffLocationId: number
+    assignedDriverProfileId: number
+    requestedByUserId: number
+    status: number
+    requestedAt: number
+    assignedAt: number
+    arrivedPickupAt: number
+    pickedUpAt: number
+    onTheWayAt: number
+    arrivedDropoffAt: number
+    deliveredAt: number
+    cancelledAt: number
+    failedAt: number
+    learnerNote: number
+    driverNote: number
+    failureReason: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type DeliveryMinAggregateInputType = {
+    id?: true
+    reservationId?: true
+    pickupLocationId?: true
+    dropoffLocationId?: true
+    assignedDriverProfileId?: true
+    requestedByUserId?: true
+    status?: true
+    requestedAt?: true
+    assignedAt?: true
+    arrivedPickupAt?: true
+    pickedUpAt?: true
+    onTheWayAt?: true
+    arrivedDropoffAt?: true
+    deliveredAt?: true
+    cancelledAt?: true
+    failedAt?: true
+    learnerNote?: true
+    driverNote?: true
+    failureReason?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DeliveryMaxAggregateInputType = {
+    id?: true
+    reservationId?: true
+    pickupLocationId?: true
+    dropoffLocationId?: true
+    assignedDriverProfileId?: true
+    requestedByUserId?: true
+    status?: true
+    requestedAt?: true
+    assignedAt?: true
+    arrivedPickupAt?: true
+    pickedUpAt?: true
+    onTheWayAt?: true
+    arrivedDropoffAt?: true
+    deliveredAt?: true
+    cancelledAt?: true
+    failedAt?: true
+    learnerNote?: true
+    driverNote?: true
+    failureReason?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DeliveryCountAggregateInputType = {
+    id?: true
+    reservationId?: true
+    pickupLocationId?: true
+    dropoffLocationId?: true
+    assignedDriverProfileId?: true
+    requestedByUserId?: true
+    status?: true
+    requestedAt?: true
+    assignedAt?: true
+    arrivedPickupAt?: true
+    pickedUpAt?: true
+    onTheWayAt?: true
+    arrivedDropoffAt?: true
+    deliveredAt?: true
+    cancelledAt?: true
+    failedAt?: true
+    learnerNote?: true
+    driverNote?: true
+    failureReason?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type DeliveryAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Delivery to aggregate.
+     */
+    where?: DeliveryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Deliveries to fetch.
+     */
+    orderBy?: DeliveryOrderByWithRelationInput | DeliveryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: DeliveryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Deliveries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Deliveries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned Deliveries
+    **/
+    _count?: true | DeliveryCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: DeliveryMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: DeliveryMaxAggregateInputType
+  }
+
+  export type GetDeliveryAggregateType<T extends DeliveryAggregateArgs> = {
+        [P in keyof T & keyof AggregateDelivery]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDelivery[P]>
+      : GetScalarType<T[P], AggregateDelivery[P]>
+  }
+
+
+
+
+  export type DeliveryGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryWhereInput
+    orderBy?: DeliveryOrderByWithAggregationInput | DeliveryOrderByWithAggregationInput[]
+    by: DeliveryScalarFieldEnum[] | DeliveryScalarFieldEnum
+    having?: DeliveryScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DeliveryCountAggregateInputType | true
+    _min?: DeliveryMinAggregateInputType
+    _max?: DeliveryMaxAggregateInputType
+  }
+
+  export type DeliveryGroupByOutputType = {
+    id: string
+    reservationId: string
+    pickupLocationId: string
+    dropoffLocationId: string
+    assignedDriverProfileId: string | null
+    requestedByUserId: string
+    status: $Enums.DeliveryStatus
+    requestedAt: Date
+    assignedAt: Date | null
+    arrivedPickupAt: Date | null
+    pickedUpAt: Date | null
+    onTheWayAt: Date | null
+    arrivedDropoffAt: Date | null
+    deliveredAt: Date | null
+    cancelledAt: Date | null
+    failedAt: Date | null
+    learnerNote: string | null
+    driverNote: string | null
+    failureReason: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: DeliveryCountAggregateOutputType | null
+    _min: DeliveryMinAggregateOutputType | null
+    _max: DeliveryMaxAggregateOutputType | null
+  }
+
+  type GetDeliveryGroupByPayload<T extends DeliveryGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DeliveryGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DeliveryGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DeliveryGroupByOutputType[P]>
+            : GetScalarType<T[P], DeliveryGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DeliverySelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    reservationId?: boolean
+    pickupLocationId?: boolean
+    dropoffLocationId?: boolean
+    assignedDriverProfileId?: boolean
+    requestedByUserId?: boolean
+    status?: boolean
+    requestedAt?: boolean
+    assignedAt?: boolean
+    arrivedPickupAt?: boolean
+    pickedUpAt?: boolean
+    onTheWayAt?: boolean
+    arrivedDropoffAt?: boolean
+    deliveredAt?: boolean
+    cancelledAt?: boolean
+    failedAt?: boolean
+    learnerNote?: boolean
+    driverNote?: boolean
+    failureReason?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    reservation?: boolean | ReservationDefaultArgs<ExtArgs>
+    pickupLocation?: boolean | LocationDefaultArgs<ExtArgs>
+    dropoffLocation?: boolean | LocationDefaultArgs<ExtArgs>
+    assignedDriverProfile?: boolean | Delivery$assignedDriverProfileArgs<ExtArgs>
+    requestedByUser?: boolean | UserDefaultArgs<ExtArgs>
+    assignments?: boolean | Delivery$assignmentsArgs<ExtArgs>
+    statusHistory?: boolean | Delivery$statusHistoryArgs<ExtArgs>
+    locationPings?: boolean | Delivery$locationPingsArgs<ExtArgs>
+    _count?: boolean | DeliveryCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["delivery"]>
+
+  export type DeliverySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    reservationId?: boolean
+    pickupLocationId?: boolean
+    dropoffLocationId?: boolean
+    assignedDriverProfileId?: boolean
+    requestedByUserId?: boolean
+    status?: boolean
+    requestedAt?: boolean
+    assignedAt?: boolean
+    arrivedPickupAt?: boolean
+    pickedUpAt?: boolean
+    onTheWayAt?: boolean
+    arrivedDropoffAt?: boolean
+    deliveredAt?: boolean
+    cancelledAt?: boolean
+    failedAt?: boolean
+    learnerNote?: boolean
+    driverNote?: boolean
+    failureReason?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    reservation?: boolean | ReservationDefaultArgs<ExtArgs>
+    pickupLocation?: boolean | LocationDefaultArgs<ExtArgs>
+    dropoffLocation?: boolean | LocationDefaultArgs<ExtArgs>
+    assignedDriverProfile?: boolean | Delivery$assignedDriverProfileArgs<ExtArgs>
+    requestedByUser?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["delivery"]>
+
+  export type DeliverySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    reservationId?: boolean
+    pickupLocationId?: boolean
+    dropoffLocationId?: boolean
+    assignedDriverProfileId?: boolean
+    requestedByUserId?: boolean
+    status?: boolean
+    requestedAt?: boolean
+    assignedAt?: boolean
+    arrivedPickupAt?: boolean
+    pickedUpAt?: boolean
+    onTheWayAt?: boolean
+    arrivedDropoffAt?: boolean
+    deliveredAt?: boolean
+    cancelledAt?: boolean
+    failedAt?: boolean
+    learnerNote?: boolean
+    driverNote?: boolean
+    failureReason?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    reservation?: boolean | ReservationDefaultArgs<ExtArgs>
+    pickupLocation?: boolean | LocationDefaultArgs<ExtArgs>
+    dropoffLocation?: boolean | LocationDefaultArgs<ExtArgs>
+    assignedDriverProfile?: boolean | Delivery$assignedDriverProfileArgs<ExtArgs>
+    requestedByUser?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["delivery"]>
+
+  export type DeliverySelectScalar = {
+    id?: boolean
+    reservationId?: boolean
+    pickupLocationId?: boolean
+    dropoffLocationId?: boolean
+    assignedDriverProfileId?: boolean
+    requestedByUserId?: boolean
+    status?: boolean
+    requestedAt?: boolean
+    assignedAt?: boolean
+    arrivedPickupAt?: boolean
+    pickedUpAt?: boolean
+    onTheWayAt?: boolean
+    arrivedDropoffAt?: boolean
+    deliveredAt?: boolean
+    cancelledAt?: boolean
+    failedAt?: boolean
+    learnerNote?: boolean
+    driverNote?: boolean
+    failureReason?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type DeliveryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "reservationId" | "pickupLocationId" | "dropoffLocationId" | "assignedDriverProfileId" | "requestedByUserId" | "status" | "requestedAt" | "assignedAt" | "arrivedPickupAt" | "pickedUpAt" | "onTheWayAt" | "arrivedDropoffAt" | "deliveredAt" | "cancelledAt" | "failedAt" | "learnerNote" | "driverNote" | "failureReason" | "createdAt" | "updatedAt", ExtArgs["result"]["delivery"]>
+  export type DeliveryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    reservation?: boolean | ReservationDefaultArgs<ExtArgs>
+    pickupLocation?: boolean | LocationDefaultArgs<ExtArgs>
+    dropoffLocation?: boolean | LocationDefaultArgs<ExtArgs>
+    assignedDriverProfile?: boolean | Delivery$assignedDriverProfileArgs<ExtArgs>
+    requestedByUser?: boolean | UserDefaultArgs<ExtArgs>
+    assignments?: boolean | Delivery$assignmentsArgs<ExtArgs>
+    statusHistory?: boolean | Delivery$statusHistoryArgs<ExtArgs>
+    locationPings?: boolean | Delivery$locationPingsArgs<ExtArgs>
+    _count?: boolean | DeliveryCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type DeliveryIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    reservation?: boolean | ReservationDefaultArgs<ExtArgs>
+    pickupLocation?: boolean | LocationDefaultArgs<ExtArgs>
+    dropoffLocation?: boolean | LocationDefaultArgs<ExtArgs>
+    assignedDriverProfile?: boolean | Delivery$assignedDriverProfileArgs<ExtArgs>
+    requestedByUser?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type DeliveryIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    reservation?: boolean | ReservationDefaultArgs<ExtArgs>
+    pickupLocation?: boolean | LocationDefaultArgs<ExtArgs>
+    dropoffLocation?: boolean | LocationDefaultArgs<ExtArgs>
+    assignedDriverProfile?: boolean | Delivery$assignedDriverProfileArgs<ExtArgs>
+    requestedByUser?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $DeliveryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "Delivery"
+    objects: {
+      reservation: Prisma.$ReservationPayload<ExtArgs>
+      pickupLocation: Prisma.$LocationPayload<ExtArgs>
+      dropoffLocation: Prisma.$LocationPayload<ExtArgs>
+      assignedDriverProfile: Prisma.$DriverProfilePayload<ExtArgs> | null
+      requestedByUser: Prisma.$UserPayload<ExtArgs>
+      assignments: Prisma.$DeliveryAssignmentPayload<ExtArgs>[]
+      statusHistory: Prisma.$DeliveryStatusHistoryPayload<ExtArgs>[]
+      locationPings: Prisma.$DeliveryLocationPingPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      reservationId: string
+      pickupLocationId: string
+      dropoffLocationId: string
+      assignedDriverProfileId: string | null
+      requestedByUserId: string
+      status: $Enums.DeliveryStatus
+      requestedAt: Date
+      assignedAt: Date | null
+      arrivedPickupAt: Date | null
+      pickedUpAt: Date | null
+      onTheWayAt: Date | null
+      arrivedDropoffAt: Date | null
+      deliveredAt: Date | null
+      cancelledAt: Date | null
+      failedAt: Date | null
+      learnerNote: string | null
+      driverNote: string | null
+      failureReason: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["delivery"]>
+    composites: {}
+  }
+
+  type DeliveryGetPayload<S extends boolean | null | undefined | DeliveryDefaultArgs> = $Result.GetResult<Prisma.$DeliveryPayload, S>
+
+  type DeliveryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DeliveryFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DeliveryCountAggregateInputType | true
+    }
+
+  export interface DeliveryDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Delivery'], meta: { name: 'Delivery' } }
+    /**
+     * Find zero or one Delivery that matches the filter.
+     * @param {DeliveryFindUniqueArgs} args - Arguments to find a Delivery
+     * @example
+     * // Get one Delivery
+     * const delivery = await prisma.delivery.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DeliveryFindUniqueArgs>(args: SelectSubset<T, DeliveryFindUniqueArgs<ExtArgs>>): Prisma__DeliveryClient<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one Delivery that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DeliveryFindUniqueOrThrowArgs} args - Arguments to find a Delivery
+     * @example
+     * // Get one Delivery
+     * const delivery = await prisma.delivery.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DeliveryFindUniqueOrThrowArgs>(args: SelectSubset<T, DeliveryFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DeliveryClient<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Delivery that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryFindFirstArgs} args - Arguments to find a Delivery
+     * @example
+     * // Get one Delivery
+     * const delivery = await prisma.delivery.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DeliveryFindFirstArgs>(args?: SelectSubset<T, DeliveryFindFirstArgs<ExtArgs>>): Prisma__DeliveryClient<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Delivery that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryFindFirstOrThrowArgs} args - Arguments to find a Delivery
+     * @example
+     * // Get one Delivery
+     * const delivery = await prisma.delivery.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DeliveryFindFirstOrThrowArgs>(args?: SelectSubset<T, DeliveryFindFirstOrThrowArgs<ExtArgs>>): Prisma__DeliveryClient<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more Deliveries that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Deliveries
+     * const deliveries = await prisma.delivery.findMany()
+     * 
+     * // Get first 10 Deliveries
+     * const deliveries = await prisma.delivery.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const deliveryWithIdOnly = await prisma.delivery.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends DeliveryFindManyArgs>(args?: SelectSubset<T, DeliveryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a Delivery.
+     * @param {DeliveryCreateArgs} args - Arguments to create a Delivery.
+     * @example
+     * // Create one Delivery
+     * const Delivery = await prisma.delivery.create({
+     *   data: {
+     *     // ... data to create a Delivery
+     *   }
+     * })
+     * 
+     */
+    create<T extends DeliveryCreateArgs>(args: SelectSubset<T, DeliveryCreateArgs<ExtArgs>>): Prisma__DeliveryClient<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many Deliveries.
+     * @param {DeliveryCreateManyArgs} args - Arguments to create many Deliveries.
+     * @example
+     * // Create many Deliveries
+     * const delivery = await prisma.delivery.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends DeliveryCreateManyArgs>(args?: SelectSubset<T, DeliveryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many Deliveries and returns the data saved in the database.
+     * @param {DeliveryCreateManyAndReturnArgs} args - Arguments to create many Deliveries.
+     * @example
+     * // Create many Deliveries
+     * const delivery = await prisma.delivery.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many Deliveries and only return the `id`
+     * const deliveryWithIdOnly = await prisma.delivery.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends DeliveryCreateManyAndReturnArgs>(args?: SelectSubset<T, DeliveryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a Delivery.
+     * @param {DeliveryDeleteArgs} args - Arguments to delete one Delivery.
+     * @example
+     * // Delete one Delivery
+     * const Delivery = await prisma.delivery.delete({
+     *   where: {
+     *     // ... filter to delete one Delivery
+     *   }
+     * })
+     * 
+     */
+    delete<T extends DeliveryDeleteArgs>(args: SelectSubset<T, DeliveryDeleteArgs<ExtArgs>>): Prisma__DeliveryClient<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one Delivery.
+     * @param {DeliveryUpdateArgs} args - Arguments to update one Delivery.
+     * @example
+     * // Update one Delivery
+     * const delivery = await prisma.delivery.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends DeliveryUpdateArgs>(args: SelectSubset<T, DeliveryUpdateArgs<ExtArgs>>): Prisma__DeliveryClient<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more Deliveries.
+     * @param {DeliveryDeleteManyArgs} args - Arguments to filter Deliveries to delete.
+     * @example
+     * // Delete a few Deliveries
+     * const { count } = await prisma.delivery.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends DeliveryDeleteManyArgs>(args?: SelectSubset<T, DeliveryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Deliveries.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Deliveries
+     * const delivery = await prisma.delivery.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends DeliveryUpdateManyArgs>(args: SelectSubset<T, DeliveryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Deliveries and returns the data updated in the database.
+     * @param {DeliveryUpdateManyAndReturnArgs} args - Arguments to update many Deliveries.
+     * @example
+     * // Update many Deliveries
+     * const delivery = await prisma.delivery.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more Deliveries and only return the `id`
+     * const deliveryWithIdOnly = await prisma.delivery.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends DeliveryUpdateManyAndReturnArgs>(args: SelectSubset<T, DeliveryUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one Delivery.
+     * @param {DeliveryUpsertArgs} args - Arguments to update or create a Delivery.
+     * @example
+     * // Update or create a Delivery
+     * const delivery = await prisma.delivery.upsert({
+     *   create: {
+     *     // ... data to create a Delivery
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Delivery we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DeliveryUpsertArgs>(args: SelectSubset<T, DeliveryUpsertArgs<ExtArgs>>): Prisma__DeliveryClient<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of Deliveries.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryCountArgs} args - Arguments to filter Deliveries to count.
+     * @example
+     * // Count the number of Deliveries
+     * const count = await prisma.delivery.count({
+     *   where: {
+     *     // ... the filter for the Deliveries we want to count
+     *   }
+     * })
+    **/
+    count<T extends DeliveryCountArgs>(
+      args?: Subset<T, DeliveryCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DeliveryCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Delivery.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DeliveryAggregateArgs>(args: Subset<T, DeliveryAggregateArgs>): Prisma.PrismaPromise<GetDeliveryAggregateType<T>>
+
+    /**
+     * Group by Delivery.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends DeliveryGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DeliveryGroupByArgs['orderBy'] }
+        : { orderBy?: DeliveryGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DeliveryGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDeliveryGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the Delivery model
+   */
+  readonly fields: DeliveryFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for Delivery.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DeliveryClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    reservation<T extends ReservationDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ReservationDefaultArgs<ExtArgs>>): Prisma__ReservationClient<$Result.GetResult<Prisma.$ReservationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    pickupLocation<T extends LocationDefaultArgs<ExtArgs> = {}>(args?: Subset<T, LocationDefaultArgs<ExtArgs>>): Prisma__LocationClient<$Result.GetResult<Prisma.$LocationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    dropoffLocation<T extends LocationDefaultArgs<ExtArgs> = {}>(args?: Subset<T, LocationDefaultArgs<ExtArgs>>): Prisma__LocationClient<$Result.GetResult<Prisma.$LocationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    assignedDriverProfile<T extends Delivery$assignedDriverProfileArgs<ExtArgs> = {}>(args?: Subset<T, Delivery$assignedDriverProfileArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    requestedByUser<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    assignments<T extends Delivery$assignmentsArgs<ExtArgs> = {}>(args?: Subset<T, Delivery$assignmentsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    statusHistory<T extends Delivery$statusHistoryArgs<ExtArgs> = {}>(args?: Subset<T, Delivery$statusHistoryArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    locationPings<T extends Delivery$locationPingsArgs<ExtArgs> = {}>(args?: Subset<T, Delivery$locationPingsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the Delivery model
+   */
+  interface DeliveryFieldRefs {
+    readonly id: FieldRef<"Delivery", 'String'>
+    readonly reservationId: FieldRef<"Delivery", 'String'>
+    readonly pickupLocationId: FieldRef<"Delivery", 'String'>
+    readonly dropoffLocationId: FieldRef<"Delivery", 'String'>
+    readonly assignedDriverProfileId: FieldRef<"Delivery", 'String'>
+    readonly requestedByUserId: FieldRef<"Delivery", 'String'>
+    readonly status: FieldRef<"Delivery", 'DeliveryStatus'>
+    readonly requestedAt: FieldRef<"Delivery", 'DateTime'>
+    readonly assignedAt: FieldRef<"Delivery", 'DateTime'>
+    readonly arrivedPickupAt: FieldRef<"Delivery", 'DateTime'>
+    readonly pickedUpAt: FieldRef<"Delivery", 'DateTime'>
+    readonly onTheWayAt: FieldRef<"Delivery", 'DateTime'>
+    readonly arrivedDropoffAt: FieldRef<"Delivery", 'DateTime'>
+    readonly deliveredAt: FieldRef<"Delivery", 'DateTime'>
+    readonly cancelledAt: FieldRef<"Delivery", 'DateTime'>
+    readonly failedAt: FieldRef<"Delivery", 'DateTime'>
+    readonly learnerNote: FieldRef<"Delivery", 'String'>
+    readonly driverNote: FieldRef<"Delivery", 'String'>
+    readonly failureReason: FieldRef<"Delivery", 'String'>
+    readonly createdAt: FieldRef<"Delivery", 'DateTime'>
+    readonly updatedAt: FieldRef<"Delivery", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * Delivery findUnique
+   */
+  export type DeliveryFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    /**
+     * Filter, which Delivery to fetch.
+     */
+    where: DeliveryWhereUniqueInput
+  }
+
+  /**
+   * Delivery findUniqueOrThrow
+   */
+  export type DeliveryFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    /**
+     * Filter, which Delivery to fetch.
+     */
+    where: DeliveryWhereUniqueInput
+  }
+
+  /**
+   * Delivery findFirst
+   */
+  export type DeliveryFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    /**
+     * Filter, which Delivery to fetch.
+     */
+    where?: DeliveryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Deliveries to fetch.
+     */
+    orderBy?: DeliveryOrderByWithRelationInput | DeliveryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Deliveries.
+     */
+    cursor?: DeliveryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Deliveries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Deliveries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Deliveries.
+     */
+    distinct?: DeliveryScalarFieldEnum | DeliveryScalarFieldEnum[]
+  }
+
+  /**
+   * Delivery findFirstOrThrow
+   */
+  export type DeliveryFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    /**
+     * Filter, which Delivery to fetch.
+     */
+    where?: DeliveryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Deliveries to fetch.
+     */
+    orderBy?: DeliveryOrderByWithRelationInput | DeliveryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Deliveries.
+     */
+    cursor?: DeliveryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Deliveries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Deliveries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Deliveries.
+     */
+    distinct?: DeliveryScalarFieldEnum | DeliveryScalarFieldEnum[]
+  }
+
+  /**
+   * Delivery findMany
+   */
+  export type DeliveryFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    /**
+     * Filter, which Deliveries to fetch.
+     */
+    where?: DeliveryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Deliveries to fetch.
+     */
+    orderBy?: DeliveryOrderByWithRelationInput | DeliveryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing Deliveries.
+     */
+    cursor?: DeliveryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Deliveries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Deliveries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Deliveries.
+     */
+    distinct?: DeliveryScalarFieldEnum | DeliveryScalarFieldEnum[]
+  }
+
+  /**
+   * Delivery create
+   */
+  export type DeliveryCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    /**
+     * The data needed to create a Delivery.
+     */
+    data: XOR<DeliveryCreateInput, DeliveryUncheckedCreateInput>
+  }
+
+  /**
+   * Delivery createMany
+   */
+  export type DeliveryCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many Deliveries.
+     */
+    data: DeliveryCreateManyInput | DeliveryCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Delivery createManyAndReturn
+   */
+  export type DeliveryCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * The data used to create many Deliveries.
+     */
+    data: DeliveryCreateManyInput | DeliveryCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * Delivery update
+   */
+  export type DeliveryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    /**
+     * The data needed to update a Delivery.
+     */
+    data: XOR<DeliveryUpdateInput, DeliveryUncheckedUpdateInput>
+    /**
+     * Choose, which Delivery to update.
+     */
+    where: DeliveryWhereUniqueInput
+  }
+
+  /**
+   * Delivery updateMany
+   */
+  export type DeliveryUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update Deliveries.
+     */
+    data: XOR<DeliveryUpdateManyMutationInput, DeliveryUncheckedUpdateManyInput>
+    /**
+     * Filter which Deliveries to update
+     */
+    where?: DeliveryWhereInput
+    /**
+     * Limit how many Deliveries to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * Delivery updateManyAndReturn
+   */
+  export type DeliveryUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * The data used to update Deliveries.
+     */
+    data: XOR<DeliveryUpdateManyMutationInput, DeliveryUncheckedUpdateManyInput>
+    /**
+     * Filter which Deliveries to update
+     */
+    where?: DeliveryWhereInput
+    /**
+     * Limit how many Deliveries to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * Delivery upsert
+   */
+  export type DeliveryUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    /**
+     * The filter to search for the Delivery to update in case it exists.
+     */
+    where: DeliveryWhereUniqueInput
+    /**
+     * In case the Delivery found by the `where` argument doesn't exist, create a new Delivery with this data.
+     */
+    create: XOR<DeliveryCreateInput, DeliveryUncheckedCreateInput>
+    /**
+     * In case the Delivery was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DeliveryUpdateInput, DeliveryUncheckedUpdateInput>
+  }
+
+  /**
+   * Delivery delete
+   */
+  export type DeliveryDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+    /**
+     * Filter which Delivery to delete.
+     */
+    where: DeliveryWhereUniqueInput
+  }
+
+  /**
+   * Delivery deleteMany
+   */
+  export type DeliveryDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Deliveries to delete
+     */
+    where?: DeliveryWhereInput
+    /**
+     * Limit how many Deliveries to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * Delivery.assignedDriverProfile
+   */
+  export type Delivery$assignedDriverProfileArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DriverProfile
+     */
+    select?: DriverProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DriverProfile
+     */
+    omit?: DriverProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DriverProfileInclude<ExtArgs> | null
+    where?: DriverProfileWhereInput
+  }
+
+  /**
+   * Delivery.assignments
+   */
+  export type Delivery$assignmentsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+    where?: DeliveryAssignmentWhereInput
+    orderBy?: DeliveryAssignmentOrderByWithRelationInput | DeliveryAssignmentOrderByWithRelationInput[]
+    cursor?: DeliveryAssignmentWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DeliveryAssignmentScalarFieldEnum | DeliveryAssignmentScalarFieldEnum[]
+  }
+
+  /**
+   * Delivery.statusHistory
+   */
+  export type Delivery$statusHistoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryInclude<ExtArgs> | null
+    where?: DeliveryStatusHistoryWhereInput
+    orderBy?: DeliveryStatusHistoryOrderByWithRelationInput | DeliveryStatusHistoryOrderByWithRelationInput[]
+    cursor?: DeliveryStatusHistoryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DeliveryStatusHistoryScalarFieldEnum | DeliveryStatusHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * Delivery.locationPings
+   */
+  export type Delivery$locationPingsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingInclude<ExtArgs> | null
+    where?: DeliveryLocationPingWhereInput
+    orderBy?: DeliveryLocationPingOrderByWithRelationInput | DeliveryLocationPingOrderByWithRelationInput[]
+    cursor?: DeliveryLocationPingWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DeliveryLocationPingScalarFieldEnum | DeliveryLocationPingScalarFieldEnum[]
+  }
+
+  /**
+   * Delivery without action
+   */
+  export type DeliveryDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Delivery
+     */
+    select?: DeliverySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Delivery
+     */
+    omit?: DeliveryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model DeliveryAssignment
+   */
+
+  export type AggregateDeliveryAssignment = {
+    _count: DeliveryAssignmentCountAggregateOutputType | null
+    _min: DeliveryAssignmentMinAggregateOutputType | null
+    _max: DeliveryAssignmentMaxAggregateOutputType | null
+  }
+
+  export type DeliveryAssignmentMinAggregateOutputType = {
+    id: string | null
+    deliveryId: string | null
+    driverProfileId: string | null
+    assignedByUserId: string | null
+    status: $Enums.DeliveryAssignmentStatus | null
+    acceptedAt: Date | null
+    releasedAt: Date | null
+    releaseReason: string | null
+    createdAt: Date | null
+  }
+
+  export type DeliveryAssignmentMaxAggregateOutputType = {
+    id: string | null
+    deliveryId: string | null
+    driverProfileId: string | null
+    assignedByUserId: string | null
+    status: $Enums.DeliveryAssignmentStatus | null
+    acceptedAt: Date | null
+    releasedAt: Date | null
+    releaseReason: string | null
+    createdAt: Date | null
+  }
+
+  export type DeliveryAssignmentCountAggregateOutputType = {
+    id: number
+    deliveryId: number
+    driverProfileId: number
+    assignedByUserId: number
+    status: number
+    acceptedAt: number
+    releasedAt: number
+    releaseReason: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type DeliveryAssignmentMinAggregateInputType = {
+    id?: true
+    deliveryId?: true
+    driverProfileId?: true
+    assignedByUserId?: true
+    status?: true
+    acceptedAt?: true
+    releasedAt?: true
+    releaseReason?: true
+    createdAt?: true
+  }
+
+  export type DeliveryAssignmentMaxAggregateInputType = {
+    id?: true
+    deliveryId?: true
+    driverProfileId?: true
+    assignedByUserId?: true
+    status?: true
+    acceptedAt?: true
+    releasedAt?: true
+    releaseReason?: true
+    createdAt?: true
+  }
+
+  export type DeliveryAssignmentCountAggregateInputType = {
+    id?: true
+    deliveryId?: true
+    driverProfileId?: true
+    assignedByUserId?: true
+    status?: true
+    acceptedAt?: true
+    releasedAt?: true
+    releaseReason?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type DeliveryAssignmentAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DeliveryAssignment to aggregate.
+     */
+    where?: DeliveryAssignmentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DeliveryAssignments to fetch.
+     */
+    orderBy?: DeliveryAssignmentOrderByWithRelationInput | DeliveryAssignmentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: DeliveryAssignmentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DeliveryAssignments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DeliveryAssignments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned DeliveryAssignments
+    **/
+    _count?: true | DeliveryAssignmentCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: DeliveryAssignmentMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: DeliveryAssignmentMaxAggregateInputType
+  }
+
+  export type GetDeliveryAssignmentAggregateType<T extends DeliveryAssignmentAggregateArgs> = {
+        [P in keyof T & keyof AggregateDeliveryAssignment]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDeliveryAssignment[P]>
+      : GetScalarType<T[P], AggregateDeliveryAssignment[P]>
+  }
+
+
+
+
+  export type DeliveryAssignmentGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryAssignmentWhereInput
+    orderBy?: DeliveryAssignmentOrderByWithAggregationInput | DeliveryAssignmentOrderByWithAggregationInput[]
+    by: DeliveryAssignmentScalarFieldEnum[] | DeliveryAssignmentScalarFieldEnum
+    having?: DeliveryAssignmentScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DeliveryAssignmentCountAggregateInputType | true
+    _min?: DeliveryAssignmentMinAggregateInputType
+    _max?: DeliveryAssignmentMaxAggregateInputType
+  }
+
+  export type DeliveryAssignmentGroupByOutputType = {
+    id: string
+    deliveryId: string
+    driverProfileId: string
+    assignedByUserId: string | null
+    status: $Enums.DeliveryAssignmentStatus
+    acceptedAt: Date
+    releasedAt: Date | null
+    releaseReason: string | null
+    createdAt: Date
+    _count: DeliveryAssignmentCountAggregateOutputType | null
+    _min: DeliveryAssignmentMinAggregateOutputType | null
+    _max: DeliveryAssignmentMaxAggregateOutputType | null
+  }
+
+  type GetDeliveryAssignmentGroupByPayload<T extends DeliveryAssignmentGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DeliveryAssignmentGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DeliveryAssignmentGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DeliveryAssignmentGroupByOutputType[P]>
+            : GetScalarType<T[P], DeliveryAssignmentGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DeliveryAssignmentSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    deliveryId?: boolean
+    driverProfileId?: boolean
+    assignedByUserId?: boolean
+    status?: boolean
+    acceptedAt?: boolean
+    releasedAt?: boolean
+    releaseReason?: boolean
+    createdAt?: boolean
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    driverProfile?: boolean | DriverProfileDefaultArgs<ExtArgs>
+    assignedByUser?: boolean | DeliveryAssignment$assignedByUserArgs<ExtArgs>
+  }, ExtArgs["result"]["deliveryAssignment"]>
+
+  export type DeliveryAssignmentSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    deliveryId?: boolean
+    driverProfileId?: boolean
+    assignedByUserId?: boolean
+    status?: boolean
+    acceptedAt?: boolean
+    releasedAt?: boolean
+    releaseReason?: boolean
+    createdAt?: boolean
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    driverProfile?: boolean | DriverProfileDefaultArgs<ExtArgs>
+    assignedByUser?: boolean | DeliveryAssignment$assignedByUserArgs<ExtArgs>
+  }, ExtArgs["result"]["deliveryAssignment"]>
+
+  export type DeliveryAssignmentSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    deliveryId?: boolean
+    driverProfileId?: boolean
+    assignedByUserId?: boolean
+    status?: boolean
+    acceptedAt?: boolean
+    releasedAt?: boolean
+    releaseReason?: boolean
+    createdAt?: boolean
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    driverProfile?: boolean | DriverProfileDefaultArgs<ExtArgs>
+    assignedByUser?: boolean | DeliveryAssignment$assignedByUserArgs<ExtArgs>
+  }, ExtArgs["result"]["deliveryAssignment"]>
+
+  export type DeliveryAssignmentSelectScalar = {
+    id?: boolean
+    deliveryId?: boolean
+    driverProfileId?: boolean
+    assignedByUserId?: boolean
+    status?: boolean
+    acceptedAt?: boolean
+    releasedAt?: boolean
+    releaseReason?: boolean
+    createdAt?: boolean
+  }
+
+  export type DeliveryAssignmentOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "deliveryId" | "driverProfileId" | "assignedByUserId" | "status" | "acceptedAt" | "releasedAt" | "releaseReason" | "createdAt", ExtArgs["result"]["deliveryAssignment"]>
+  export type DeliveryAssignmentInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    driverProfile?: boolean | DriverProfileDefaultArgs<ExtArgs>
+    assignedByUser?: boolean | DeliveryAssignment$assignedByUserArgs<ExtArgs>
+  }
+  export type DeliveryAssignmentIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    driverProfile?: boolean | DriverProfileDefaultArgs<ExtArgs>
+    assignedByUser?: boolean | DeliveryAssignment$assignedByUserArgs<ExtArgs>
+  }
+  export type DeliveryAssignmentIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    driverProfile?: boolean | DriverProfileDefaultArgs<ExtArgs>
+    assignedByUser?: boolean | DeliveryAssignment$assignedByUserArgs<ExtArgs>
+  }
+
+  export type $DeliveryAssignmentPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DeliveryAssignment"
+    objects: {
+      delivery: Prisma.$DeliveryPayload<ExtArgs>
+      driverProfile: Prisma.$DriverProfilePayload<ExtArgs>
+      assignedByUser: Prisma.$UserPayload<ExtArgs> | null
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      deliveryId: string
+      driverProfileId: string
+      assignedByUserId: string | null
+      status: $Enums.DeliveryAssignmentStatus
+      acceptedAt: Date
+      releasedAt: Date | null
+      releaseReason: string | null
+      createdAt: Date
+    }, ExtArgs["result"]["deliveryAssignment"]>
+    composites: {}
+  }
+
+  type DeliveryAssignmentGetPayload<S extends boolean | null | undefined | DeliveryAssignmentDefaultArgs> = $Result.GetResult<Prisma.$DeliveryAssignmentPayload, S>
+
+  type DeliveryAssignmentCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DeliveryAssignmentFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DeliveryAssignmentCountAggregateInputType | true
+    }
+
+  export interface DeliveryAssignmentDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DeliveryAssignment'], meta: { name: 'DeliveryAssignment' } }
+    /**
+     * Find zero or one DeliveryAssignment that matches the filter.
+     * @param {DeliveryAssignmentFindUniqueArgs} args - Arguments to find a DeliveryAssignment
+     * @example
+     * // Get one DeliveryAssignment
+     * const deliveryAssignment = await prisma.deliveryAssignment.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DeliveryAssignmentFindUniqueArgs>(args: SelectSubset<T, DeliveryAssignmentFindUniqueArgs<ExtArgs>>): Prisma__DeliveryAssignmentClient<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one DeliveryAssignment that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DeliveryAssignmentFindUniqueOrThrowArgs} args - Arguments to find a DeliveryAssignment
+     * @example
+     * // Get one DeliveryAssignment
+     * const deliveryAssignment = await prisma.deliveryAssignment.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DeliveryAssignmentFindUniqueOrThrowArgs>(args: SelectSubset<T, DeliveryAssignmentFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DeliveryAssignmentClient<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DeliveryAssignment that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryAssignmentFindFirstArgs} args - Arguments to find a DeliveryAssignment
+     * @example
+     * // Get one DeliveryAssignment
+     * const deliveryAssignment = await prisma.deliveryAssignment.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DeliveryAssignmentFindFirstArgs>(args?: SelectSubset<T, DeliveryAssignmentFindFirstArgs<ExtArgs>>): Prisma__DeliveryAssignmentClient<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DeliveryAssignment that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryAssignmentFindFirstOrThrowArgs} args - Arguments to find a DeliveryAssignment
+     * @example
+     * // Get one DeliveryAssignment
+     * const deliveryAssignment = await prisma.deliveryAssignment.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DeliveryAssignmentFindFirstOrThrowArgs>(args?: SelectSubset<T, DeliveryAssignmentFindFirstOrThrowArgs<ExtArgs>>): Prisma__DeliveryAssignmentClient<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more DeliveryAssignments that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryAssignmentFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all DeliveryAssignments
+     * const deliveryAssignments = await prisma.deliveryAssignment.findMany()
+     * 
+     * // Get first 10 DeliveryAssignments
+     * const deliveryAssignments = await prisma.deliveryAssignment.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const deliveryAssignmentWithIdOnly = await prisma.deliveryAssignment.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends DeliveryAssignmentFindManyArgs>(args?: SelectSubset<T, DeliveryAssignmentFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a DeliveryAssignment.
+     * @param {DeliveryAssignmentCreateArgs} args - Arguments to create a DeliveryAssignment.
+     * @example
+     * // Create one DeliveryAssignment
+     * const DeliveryAssignment = await prisma.deliveryAssignment.create({
+     *   data: {
+     *     // ... data to create a DeliveryAssignment
+     *   }
+     * })
+     * 
+     */
+    create<T extends DeliveryAssignmentCreateArgs>(args: SelectSubset<T, DeliveryAssignmentCreateArgs<ExtArgs>>): Prisma__DeliveryAssignmentClient<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many DeliveryAssignments.
+     * @param {DeliveryAssignmentCreateManyArgs} args - Arguments to create many DeliveryAssignments.
+     * @example
+     * // Create many DeliveryAssignments
+     * const deliveryAssignment = await prisma.deliveryAssignment.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends DeliveryAssignmentCreateManyArgs>(args?: SelectSubset<T, DeliveryAssignmentCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many DeliveryAssignments and returns the data saved in the database.
+     * @param {DeliveryAssignmentCreateManyAndReturnArgs} args - Arguments to create many DeliveryAssignments.
+     * @example
+     * // Create many DeliveryAssignments
+     * const deliveryAssignment = await prisma.deliveryAssignment.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many DeliveryAssignments and only return the `id`
+     * const deliveryAssignmentWithIdOnly = await prisma.deliveryAssignment.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends DeliveryAssignmentCreateManyAndReturnArgs>(args?: SelectSubset<T, DeliveryAssignmentCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a DeliveryAssignment.
+     * @param {DeliveryAssignmentDeleteArgs} args - Arguments to delete one DeliveryAssignment.
+     * @example
+     * // Delete one DeliveryAssignment
+     * const DeliveryAssignment = await prisma.deliveryAssignment.delete({
+     *   where: {
+     *     // ... filter to delete one DeliveryAssignment
+     *   }
+     * })
+     * 
+     */
+    delete<T extends DeliveryAssignmentDeleteArgs>(args: SelectSubset<T, DeliveryAssignmentDeleteArgs<ExtArgs>>): Prisma__DeliveryAssignmentClient<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one DeliveryAssignment.
+     * @param {DeliveryAssignmentUpdateArgs} args - Arguments to update one DeliveryAssignment.
+     * @example
+     * // Update one DeliveryAssignment
+     * const deliveryAssignment = await prisma.deliveryAssignment.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends DeliveryAssignmentUpdateArgs>(args: SelectSubset<T, DeliveryAssignmentUpdateArgs<ExtArgs>>): Prisma__DeliveryAssignmentClient<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more DeliveryAssignments.
+     * @param {DeliveryAssignmentDeleteManyArgs} args - Arguments to filter DeliveryAssignments to delete.
+     * @example
+     * // Delete a few DeliveryAssignments
+     * const { count } = await prisma.deliveryAssignment.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends DeliveryAssignmentDeleteManyArgs>(args?: SelectSubset<T, DeliveryAssignmentDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DeliveryAssignments.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryAssignmentUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many DeliveryAssignments
+     * const deliveryAssignment = await prisma.deliveryAssignment.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends DeliveryAssignmentUpdateManyArgs>(args: SelectSubset<T, DeliveryAssignmentUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DeliveryAssignments and returns the data updated in the database.
+     * @param {DeliveryAssignmentUpdateManyAndReturnArgs} args - Arguments to update many DeliveryAssignments.
+     * @example
+     * // Update many DeliveryAssignments
+     * const deliveryAssignment = await prisma.deliveryAssignment.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more DeliveryAssignments and only return the `id`
+     * const deliveryAssignmentWithIdOnly = await prisma.deliveryAssignment.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends DeliveryAssignmentUpdateManyAndReturnArgs>(args: SelectSubset<T, DeliveryAssignmentUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one DeliveryAssignment.
+     * @param {DeliveryAssignmentUpsertArgs} args - Arguments to update or create a DeliveryAssignment.
+     * @example
+     * // Update or create a DeliveryAssignment
+     * const deliveryAssignment = await prisma.deliveryAssignment.upsert({
+     *   create: {
+     *     // ... data to create a DeliveryAssignment
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the DeliveryAssignment we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DeliveryAssignmentUpsertArgs>(args: SelectSubset<T, DeliveryAssignmentUpsertArgs<ExtArgs>>): Prisma__DeliveryAssignmentClient<$Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of DeliveryAssignments.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryAssignmentCountArgs} args - Arguments to filter DeliveryAssignments to count.
+     * @example
+     * // Count the number of DeliveryAssignments
+     * const count = await prisma.deliveryAssignment.count({
+     *   where: {
+     *     // ... the filter for the DeliveryAssignments we want to count
+     *   }
+     * })
+    **/
+    count<T extends DeliveryAssignmentCountArgs>(
+      args?: Subset<T, DeliveryAssignmentCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DeliveryAssignmentCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a DeliveryAssignment.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryAssignmentAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DeliveryAssignmentAggregateArgs>(args: Subset<T, DeliveryAssignmentAggregateArgs>): Prisma.PrismaPromise<GetDeliveryAssignmentAggregateType<T>>
+
+    /**
+     * Group by DeliveryAssignment.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryAssignmentGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends DeliveryAssignmentGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DeliveryAssignmentGroupByArgs['orderBy'] }
+        : { orderBy?: DeliveryAssignmentGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DeliveryAssignmentGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDeliveryAssignmentGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the DeliveryAssignment model
+   */
+  readonly fields: DeliveryAssignmentFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for DeliveryAssignment.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DeliveryAssignmentClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    delivery<T extends DeliveryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DeliveryDefaultArgs<ExtArgs>>): Prisma__DeliveryClient<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    driverProfile<T extends DriverProfileDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DriverProfileDefaultArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    assignedByUser<T extends DeliveryAssignment$assignedByUserArgs<ExtArgs> = {}>(args?: Subset<T, DeliveryAssignment$assignedByUserArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the DeliveryAssignment model
+   */
+  interface DeliveryAssignmentFieldRefs {
+    readonly id: FieldRef<"DeliveryAssignment", 'String'>
+    readonly deliveryId: FieldRef<"DeliveryAssignment", 'String'>
+    readonly driverProfileId: FieldRef<"DeliveryAssignment", 'String'>
+    readonly assignedByUserId: FieldRef<"DeliveryAssignment", 'String'>
+    readonly status: FieldRef<"DeliveryAssignment", 'DeliveryAssignmentStatus'>
+    readonly acceptedAt: FieldRef<"DeliveryAssignment", 'DateTime'>
+    readonly releasedAt: FieldRef<"DeliveryAssignment", 'DateTime'>
+    readonly releaseReason: FieldRef<"DeliveryAssignment", 'String'>
+    readonly createdAt: FieldRef<"DeliveryAssignment", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * DeliveryAssignment findUnique
+   */
+  export type DeliveryAssignmentFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryAssignment to fetch.
+     */
+    where: DeliveryAssignmentWhereUniqueInput
+  }
+
+  /**
+   * DeliveryAssignment findUniqueOrThrow
+   */
+  export type DeliveryAssignmentFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryAssignment to fetch.
+     */
+    where: DeliveryAssignmentWhereUniqueInput
+  }
+
+  /**
+   * DeliveryAssignment findFirst
+   */
+  export type DeliveryAssignmentFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryAssignment to fetch.
+     */
+    where?: DeliveryAssignmentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DeliveryAssignments to fetch.
+     */
+    orderBy?: DeliveryAssignmentOrderByWithRelationInput | DeliveryAssignmentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DeliveryAssignments.
+     */
+    cursor?: DeliveryAssignmentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DeliveryAssignments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DeliveryAssignments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DeliveryAssignments.
+     */
+    distinct?: DeliveryAssignmentScalarFieldEnum | DeliveryAssignmentScalarFieldEnum[]
+  }
+
+  /**
+   * DeliveryAssignment findFirstOrThrow
+   */
+  export type DeliveryAssignmentFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryAssignment to fetch.
+     */
+    where?: DeliveryAssignmentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DeliveryAssignments to fetch.
+     */
+    orderBy?: DeliveryAssignmentOrderByWithRelationInput | DeliveryAssignmentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DeliveryAssignments.
+     */
+    cursor?: DeliveryAssignmentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DeliveryAssignments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DeliveryAssignments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DeliveryAssignments.
+     */
+    distinct?: DeliveryAssignmentScalarFieldEnum | DeliveryAssignmentScalarFieldEnum[]
+  }
+
+  /**
+   * DeliveryAssignment findMany
+   */
+  export type DeliveryAssignmentFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryAssignments to fetch.
+     */
+    where?: DeliveryAssignmentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DeliveryAssignments to fetch.
+     */
+    orderBy?: DeliveryAssignmentOrderByWithRelationInput | DeliveryAssignmentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing DeliveryAssignments.
+     */
+    cursor?: DeliveryAssignmentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DeliveryAssignments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DeliveryAssignments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DeliveryAssignments.
+     */
+    distinct?: DeliveryAssignmentScalarFieldEnum | DeliveryAssignmentScalarFieldEnum[]
+  }
+
+  /**
+   * DeliveryAssignment create
+   */
+  export type DeliveryAssignmentCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+    /**
+     * The data needed to create a DeliveryAssignment.
+     */
+    data: XOR<DeliveryAssignmentCreateInput, DeliveryAssignmentUncheckedCreateInput>
+  }
+
+  /**
+   * DeliveryAssignment createMany
+   */
+  export type DeliveryAssignmentCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many DeliveryAssignments.
+     */
+    data: DeliveryAssignmentCreateManyInput | DeliveryAssignmentCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DeliveryAssignment createManyAndReturn
+   */
+  export type DeliveryAssignmentCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * The data used to create many DeliveryAssignments.
+     */
+    data: DeliveryAssignmentCreateManyInput | DeliveryAssignmentCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DeliveryAssignment update
+   */
+  export type DeliveryAssignmentUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+    /**
+     * The data needed to update a DeliveryAssignment.
+     */
+    data: XOR<DeliveryAssignmentUpdateInput, DeliveryAssignmentUncheckedUpdateInput>
+    /**
+     * Choose, which DeliveryAssignment to update.
+     */
+    where: DeliveryAssignmentWhereUniqueInput
+  }
+
+  /**
+   * DeliveryAssignment updateMany
+   */
+  export type DeliveryAssignmentUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update DeliveryAssignments.
+     */
+    data: XOR<DeliveryAssignmentUpdateManyMutationInput, DeliveryAssignmentUncheckedUpdateManyInput>
+    /**
+     * Filter which DeliveryAssignments to update
+     */
+    where?: DeliveryAssignmentWhereInput
+    /**
+     * Limit how many DeliveryAssignments to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * DeliveryAssignment updateManyAndReturn
+   */
+  export type DeliveryAssignmentUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * The data used to update DeliveryAssignments.
+     */
+    data: XOR<DeliveryAssignmentUpdateManyMutationInput, DeliveryAssignmentUncheckedUpdateManyInput>
+    /**
+     * Filter which DeliveryAssignments to update
+     */
+    where?: DeliveryAssignmentWhereInput
+    /**
+     * Limit how many DeliveryAssignments to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DeliveryAssignment upsert
+   */
+  export type DeliveryAssignmentUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+    /**
+     * The filter to search for the DeliveryAssignment to update in case it exists.
+     */
+    where: DeliveryAssignmentWhereUniqueInput
+    /**
+     * In case the DeliveryAssignment found by the `where` argument doesn't exist, create a new DeliveryAssignment with this data.
+     */
+    create: XOR<DeliveryAssignmentCreateInput, DeliveryAssignmentUncheckedCreateInput>
+    /**
+     * In case the DeliveryAssignment was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DeliveryAssignmentUpdateInput, DeliveryAssignmentUncheckedUpdateInput>
+  }
+
+  /**
+   * DeliveryAssignment delete
+   */
+  export type DeliveryAssignmentDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+    /**
+     * Filter which DeliveryAssignment to delete.
+     */
+    where: DeliveryAssignmentWhereUniqueInput
+  }
+
+  /**
+   * DeliveryAssignment deleteMany
+   */
+  export type DeliveryAssignmentDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DeliveryAssignments to delete
+     */
+    where?: DeliveryAssignmentWhereInput
+    /**
+     * Limit how many DeliveryAssignments to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * DeliveryAssignment.assignedByUser
+   */
+  export type DeliveryAssignment$assignedByUserArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the User
+     */
+    select?: UserSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the User
+     */
+    omit?: UserOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserInclude<ExtArgs> | null
+    where?: UserWhereInput
+  }
+
+  /**
+   * DeliveryAssignment without action
+   */
+  export type DeliveryAssignmentDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryAssignment
+     */
+    select?: DeliveryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryAssignment
+     */
+    omit?: DeliveryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryAssignmentInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model DeliveryStatusHistory
+   */
+
+  export type AggregateDeliveryStatusHistory = {
+    _count: DeliveryStatusHistoryCountAggregateOutputType | null
+    _min: DeliveryStatusHistoryMinAggregateOutputType | null
+    _max: DeliveryStatusHistoryMaxAggregateOutputType | null
+  }
+
+  export type DeliveryStatusHistoryMinAggregateOutputType = {
+    id: string | null
+    deliveryId: string | null
+    oldStatus: $Enums.DeliveryStatus | null
+    newStatus: $Enums.DeliveryStatus | null
+    changedByUserId: string | null
+    note: string | null
+    createdAt: Date | null
+  }
+
+  export type DeliveryStatusHistoryMaxAggregateOutputType = {
+    id: string | null
+    deliveryId: string | null
+    oldStatus: $Enums.DeliveryStatus | null
+    newStatus: $Enums.DeliveryStatus | null
+    changedByUserId: string | null
+    note: string | null
+    createdAt: Date | null
+  }
+
+  export type DeliveryStatusHistoryCountAggregateOutputType = {
+    id: number
+    deliveryId: number
+    oldStatus: number
+    newStatus: number
+    changedByUserId: number
+    note: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type DeliveryStatusHistoryMinAggregateInputType = {
+    id?: true
+    deliveryId?: true
+    oldStatus?: true
+    newStatus?: true
+    changedByUserId?: true
+    note?: true
+    createdAt?: true
+  }
+
+  export type DeliveryStatusHistoryMaxAggregateInputType = {
+    id?: true
+    deliveryId?: true
+    oldStatus?: true
+    newStatus?: true
+    changedByUserId?: true
+    note?: true
+    createdAt?: true
+  }
+
+  export type DeliveryStatusHistoryCountAggregateInputType = {
+    id?: true
+    deliveryId?: true
+    oldStatus?: true
+    newStatus?: true
+    changedByUserId?: true
+    note?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type DeliveryStatusHistoryAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DeliveryStatusHistory to aggregate.
+     */
+    where?: DeliveryStatusHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DeliveryStatusHistories to fetch.
+     */
+    orderBy?: DeliveryStatusHistoryOrderByWithRelationInput | DeliveryStatusHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: DeliveryStatusHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DeliveryStatusHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DeliveryStatusHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned DeliveryStatusHistories
+    **/
+    _count?: true | DeliveryStatusHistoryCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: DeliveryStatusHistoryMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: DeliveryStatusHistoryMaxAggregateInputType
+  }
+
+  export type GetDeliveryStatusHistoryAggregateType<T extends DeliveryStatusHistoryAggregateArgs> = {
+        [P in keyof T & keyof AggregateDeliveryStatusHistory]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDeliveryStatusHistory[P]>
+      : GetScalarType<T[P], AggregateDeliveryStatusHistory[P]>
+  }
+
+
+
+
+  export type DeliveryStatusHistoryGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryStatusHistoryWhereInput
+    orderBy?: DeliveryStatusHistoryOrderByWithAggregationInput | DeliveryStatusHistoryOrderByWithAggregationInput[]
+    by: DeliveryStatusHistoryScalarFieldEnum[] | DeliveryStatusHistoryScalarFieldEnum
+    having?: DeliveryStatusHistoryScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DeliveryStatusHistoryCountAggregateInputType | true
+    _min?: DeliveryStatusHistoryMinAggregateInputType
+    _max?: DeliveryStatusHistoryMaxAggregateInputType
+  }
+
+  export type DeliveryStatusHistoryGroupByOutputType = {
+    id: string
+    deliveryId: string
+    oldStatus: $Enums.DeliveryStatus | null
+    newStatus: $Enums.DeliveryStatus
+    changedByUserId: string
+    note: string | null
+    createdAt: Date
+    _count: DeliveryStatusHistoryCountAggregateOutputType | null
+    _min: DeliveryStatusHistoryMinAggregateOutputType | null
+    _max: DeliveryStatusHistoryMaxAggregateOutputType | null
+  }
+
+  type GetDeliveryStatusHistoryGroupByPayload<T extends DeliveryStatusHistoryGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DeliveryStatusHistoryGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DeliveryStatusHistoryGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DeliveryStatusHistoryGroupByOutputType[P]>
+            : GetScalarType<T[P], DeliveryStatusHistoryGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DeliveryStatusHistorySelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    deliveryId?: boolean
+    oldStatus?: boolean
+    newStatus?: boolean
+    changedByUserId?: boolean
+    note?: boolean
+    createdAt?: boolean
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    changedByUser?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["deliveryStatusHistory"]>
+
+  export type DeliveryStatusHistorySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    deliveryId?: boolean
+    oldStatus?: boolean
+    newStatus?: boolean
+    changedByUserId?: boolean
+    note?: boolean
+    createdAt?: boolean
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    changedByUser?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["deliveryStatusHistory"]>
+
+  export type DeliveryStatusHistorySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    deliveryId?: boolean
+    oldStatus?: boolean
+    newStatus?: boolean
+    changedByUserId?: boolean
+    note?: boolean
+    createdAt?: boolean
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    changedByUser?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["deliveryStatusHistory"]>
+
+  export type DeliveryStatusHistorySelectScalar = {
+    id?: boolean
+    deliveryId?: boolean
+    oldStatus?: boolean
+    newStatus?: boolean
+    changedByUserId?: boolean
+    note?: boolean
+    createdAt?: boolean
+  }
+
+  export type DeliveryStatusHistoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "deliveryId" | "oldStatus" | "newStatus" | "changedByUserId" | "note" | "createdAt", ExtArgs["result"]["deliveryStatusHistory"]>
+  export type DeliveryStatusHistoryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    changedByUser?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type DeliveryStatusHistoryIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    changedByUser?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type DeliveryStatusHistoryIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    changedByUser?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $DeliveryStatusHistoryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DeliveryStatusHistory"
+    objects: {
+      delivery: Prisma.$DeliveryPayload<ExtArgs>
+      changedByUser: Prisma.$UserPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      deliveryId: string
+      oldStatus: $Enums.DeliveryStatus | null
+      newStatus: $Enums.DeliveryStatus
+      changedByUserId: string
+      note: string | null
+      createdAt: Date
+    }, ExtArgs["result"]["deliveryStatusHistory"]>
+    composites: {}
+  }
+
+  type DeliveryStatusHistoryGetPayload<S extends boolean | null | undefined | DeliveryStatusHistoryDefaultArgs> = $Result.GetResult<Prisma.$DeliveryStatusHistoryPayload, S>
+
+  type DeliveryStatusHistoryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DeliveryStatusHistoryFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DeliveryStatusHistoryCountAggregateInputType | true
+    }
+
+  export interface DeliveryStatusHistoryDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DeliveryStatusHistory'], meta: { name: 'DeliveryStatusHistory' } }
+    /**
+     * Find zero or one DeliveryStatusHistory that matches the filter.
+     * @param {DeliveryStatusHistoryFindUniqueArgs} args - Arguments to find a DeliveryStatusHistory
+     * @example
+     * // Get one DeliveryStatusHistory
+     * const deliveryStatusHistory = await prisma.deliveryStatusHistory.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DeliveryStatusHistoryFindUniqueArgs>(args: SelectSubset<T, DeliveryStatusHistoryFindUniqueArgs<ExtArgs>>): Prisma__DeliveryStatusHistoryClient<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one DeliveryStatusHistory that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DeliveryStatusHistoryFindUniqueOrThrowArgs} args - Arguments to find a DeliveryStatusHistory
+     * @example
+     * // Get one DeliveryStatusHistory
+     * const deliveryStatusHistory = await prisma.deliveryStatusHistory.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DeliveryStatusHistoryFindUniqueOrThrowArgs>(args: SelectSubset<T, DeliveryStatusHistoryFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DeliveryStatusHistoryClient<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DeliveryStatusHistory that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryStatusHistoryFindFirstArgs} args - Arguments to find a DeliveryStatusHistory
+     * @example
+     * // Get one DeliveryStatusHistory
+     * const deliveryStatusHistory = await prisma.deliveryStatusHistory.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DeliveryStatusHistoryFindFirstArgs>(args?: SelectSubset<T, DeliveryStatusHistoryFindFirstArgs<ExtArgs>>): Prisma__DeliveryStatusHistoryClient<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DeliveryStatusHistory that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryStatusHistoryFindFirstOrThrowArgs} args - Arguments to find a DeliveryStatusHistory
+     * @example
+     * // Get one DeliveryStatusHistory
+     * const deliveryStatusHistory = await prisma.deliveryStatusHistory.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DeliveryStatusHistoryFindFirstOrThrowArgs>(args?: SelectSubset<T, DeliveryStatusHistoryFindFirstOrThrowArgs<ExtArgs>>): Prisma__DeliveryStatusHistoryClient<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more DeliveryStatusHistories that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryStatusHistoryFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all DeliveryStatusHistories
+     * const deliveryStatusHistories = await prisma.deliveryStatusHistory.findMany()
+     * 
+     * // Get first 10 DeliveryStatusHistories
+     * const deliveryStatusHistories = await prisma.deliveryStatusHistory.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const deliveryStatusHistoryWithIdOnly = await prisma.deliveryStatusHistory.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends DeliveryStatusHistoryFindManyArgs>(args?: SelectSubset<T, DeliveryStatusHistoryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a DeliveryStatusHistory.
+     * @param {DeliveryStatusHistoryCreateArgs} args - Arguments to create a DeliveryStatusHistory.
+     * @example
+     * // Create one DeliveryStatusHistory
+     * const DeliveryStatusHistory = await prisma.deliveryStatusHistory.create({
+     *   data: {
+     *     // ... data to create a DeliveryStatusHistory
+     *   }
+     * })
+     * 
+     */
+    create<T extends DeliveryStatusHistoryCreateArgs>(args: SelectSubset<T, DeliveryStatusHistoryCreateArgs<ExtArgs>>): Prisma__DeliveryStatusHistoryClient<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many DeliveryStatusHistories.
+     * @param {DeliveryStatusHistoryCreateManyArgs} args - Arguments to create many DeliveryStatusHistories.
+     * @example
+     * // Create many DeliveryStatusHistories
+     * const deliveryStatusHistory = await prisma.deliveryStatusHistory.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends DeliveryStatusHistoryCreateManyArgs>(args?: SelectSubset<T, DeliveryStatusHistoryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many DeliveryStatusHistories and returns the data saved in the database.
+     * @param {DeliveryStatusHistoryCreateManyAndReturnArgs} args - Arguments to create many DeliveryStatusHistories.
+     * @example
+     * // Create many DeliveryStatusHistories
+     * const deliveryStatusHistory = await prisma.deliveryStatusHistory.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many DeliveryStatusHistories and only return the `id`
+     * const deliveryStatusHistoryWithIdOnly = await prisma.deliveryStatusHistory.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends DeliveryStatusHistoryCreateManyAndReturnArgs>(args?: SelectSubset<T, DeliveryStatusHistoryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a DeliveryStatusHistory.
+     * @param {DeliveryStatusHistoryDeleteArgs} args - Arguments to delete one DeliveryStatusHistory.
+     * @example
+     * // Delete one DeliveryStatusHistory
+     * const DeliveryStatusHistory = await prisma.deliveryStatusHistory.delete({
+     *   where: {
+     *     // ... filter to delete one DeliveryStatusHistory
+     *   }
+     * })
+     * 
+     */
+    delete<T extends DeliveryStatusHistoryDeleteArgs>(args: SelectSubset<T, DeliveryStatusHistoryDeleteArgs<ExtArgs>>): Prisma__DeliveryStatusHistoryClient<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one DeliveryStatusHistory.
+     * @param {DeliveryStatusHistoryUpdateArgs} args - Arguments to update one DeliveryStatusHistory.
+     * @example
+     * // Update one DeliveryStatusHistory
+     * const deliveryStatusHistory = await prisma.deliveryStatusHistory.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends DeliveryStatusHistoryUpdateArgs>(args: SelectSubset<T, DeliveryStatusHistoryUpdateArgs<ExtArgs>>): Prisma__DeliveryStatusHistoryClient<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more DeliveryStatusHistories.
+     * @param {DeliveryStatusHistoryDeleteManyArgs} args - Arguments to filter DeliveryStatusHistories to delete.
+     * @example
+     * // Delete a few DeliveryStatusHistories
+     * const { count } = await prisma.deliveryStatusHistory.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends DeliveryStatusHistoryDeleteManyArgs>(args?: SelectSubset<T, DeliveryStatusHistoryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DeliveryStatusHistories.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryStatusHistoryUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many DeliveryStatusHistories
+     * const deliveryStatusHistory = await prisma.deliveryStatusHistory.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends DeliveryStatusHistoryUpdateManyArgs>(args: SelectSubset<T, DeliveryStatusHistoryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DeliveryStatusHistories and returns the data updated in the database.
+     * @param {DeliveryStatusHistoryUpdateManyAndReturnArgs} args - Arguments to update many DeliveryStatusHistories.
+     * @example
+     * // Update many DeliveryStatusHistories
+     * const deliveryStatusHistory = await prisma.deliveryStatusHistory.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more DeliveryStatusHistories and only return the `id`
+     * const deliveryStatusHistoryWithIdOnly = await prisma.deliveryStatusHistory.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends DeliveryStatusHistoryUpdateManyAndReturnArgs>(args: SelectSubset<T, DeliveryStatusHistoryUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one DeliveryStatusHistory.
+     * @param {DeliveryStatusHistoryUpsertArgs} args - Arguments to update or create a DeliveryStatusHistory.
+     * @example
+     * // Update or create a DeliveryStatusHistory
+     * const deliveryStatusHistory = await prisma.deliveryStatusHistory.upsert({
+     *   create: {
+     *     // ... data to create a DeliveryStatusHistory
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the DeliveryStatusHistory we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DeliveryStatusHistoryUpsertArgs>(args: SelectSubset<T, DeliveryStatusHistoryUpsertArgs<ExtArgs>>): Prisma__DeliveryStatusHistoryClient<$Result.GetResult<Prisma.$DeliveryStatusHistoryPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of DeliveryStatusHistories.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryStatusHistoryCountArgs} args - Arguments to filter DeliveryStatusHistories to count.
+     * @example
+     * // Count the number of DeliveryStatusHistories
+     * const count = await prisma.deliveryStatusHistory.count({
+     *   where: {
+     *     // ... the filter for the DeliveryStatusHistories we want to count
+     *   }
+     * })
+    **/
+    count<T extends DeliveryStatusHistoryCountArgs>(
+      args?: Subset<T, DeliveryStatusHistoryCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DeliveryStatusHistoryCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a DeliveryStatusHistory.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryStatusHistoryAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DeliveryStatusHistoryAggregateArgs>(args: Subset<T, DeliveryStatusHistoryAggregateArgs>): Prisma.PrismaPromise<GetDeliveryStatusHistoryAggregateType<T>>
+
+    /**
+     * Group by DeliveryStatusHistory.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryStatusHistoryGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends DeliveryStatusHistoryGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DeliveryStatusHistoryGroupByArgs['orderBy'] }
+        : { orderBy?: DeliveryStatusHistoryGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DeliveryStatusHistoryGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDeliveryStatusHistoryGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the DeliveryStatusHistory model
+   */
+  readonly fields: DeliveryStatusHistoryFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for DeliveryStatusHistory.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DeliveryStatusHistoryClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    delivery<T extends DeliveryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DeliveryDefaultArgs<ExtArgs>>): Prisma__DeliveryClient<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    changedByUser<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the DeliveryStatusHistory model
+   */
+  interface DeliveryStatusHistoryFieldRefs {
+    readonly id: FieldRef<"DeliveryStatusHistory", 'String'>
+    readonly deliveryId: FieldRef<"DeliveryStatusHistory", 'String'>
+    readonly oldStatus: FieldRef<"DeliveryStatusHistory", 'DeliveryStatus'>
+    readonly newStatus: FieldRef<"DeliveryStatusHistory", 'DeliveryStatus'>
+    readonly changedByUserId: FieldRef<"DeliveryStatusHistory", 'String'>
+    readonly note: FieldRef<"DeliveryStatusHistory", 'String'>
+    readonly createdAt: FieldRef<"DeliveryStatusHistory", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * DeliveryStatusHistory findUnique
+   */
+  export type DeliveryStatusHistoryFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryStatusHistory to fetch.
+     */
+    where: DeliveryStatusHistoryWhereUniqueInput
+  }
+
+  /**
+   * DeliveryStatusHistory findUniqueOrThrow
+   */
+  export type DeliveryStatusHistoryFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryStatusHistory to fetch.
+     */
+    where: DeliveryStatusHistoryWhereUniqueInput
+  }
+
+  /**
+   * DeliveryStatusHistory findFirst
+   */
+  export type DeliveryStatusHistoryFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryStatusHistory to fetch.
+     */
+    where?: DeliveryStatusHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DeliveryStatusHistories to fetch.
+     */
+    orderBy?: DeliveryStatusHistoryOrderByWithRelationInput | DeliveryStatusHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DeliveryStatusHistories.
+     */
+    cursor?: DeliveryStatusHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DeliveryStatusHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DeliveryStatusHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DeliveryStatusHistories.
+     */
+    distinct?: DeliveryStatusHistoryScalarFieldEnum | DeliveryStatusHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * DeliveryStatusHistory findFirstOrThrow
+   */
+  export type DeliveryStatusHistoryFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryStatusHistory to fetch.
+     */
+    where?: DeliveryStatusHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DeliveryStatusHistories to fetch.
+     */
+    orderBy?: DeliveryStatusHistoryOrderByWithRelationInput | DeliveryStatusHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DeliveryStatusHistories.
+     */
+    cursor?: DeliveryStatusHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DeliveryStatusHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DeliveryStatusHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DeliveryStatusHistories.
+     */
+    distinct?: DeliveryStatusHistoryScalarFieldEnum | DeliveryStatusHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * DeliveryStatusHistory findMany
+   */
+  export type DeliveryStatusHistoryFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryStatusHistories to fetch.
+     */
+    where?: DeliveryStatusHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DeliveryStatusHistories to fetch.
+     */
+    orderBy?: DeliveryStatusHistoryOrderByWithRelationInput | DeliveryStatusHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing DeliveryStatusHistories.
+     */
+    cursor?: DeliveryStatusHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DeliveryStatusHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DeliveryStatusHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DeliveryStatusHistories.
+     */
+    distinct?: DeliveryStatusHistoryScalarFieldEnum | DeliveryStatusHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * DeliveryStatusHistory create
+   */
+  export type DeliveryStatusHistoryCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryInclude<ExtArgs> | null
+    /**
+     * The data needed to create a DeliveryStatusHistory.
+     */
+    data: XOR<DeliveryStatusHistoryCreateInput, DeliveryStatusHistoryUncheckedCreateInput>
+  }
+
+  /**
+   * DeliveryStatusHistory createMany
+   */
+  export type DeliveryStatusHistoryCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many DeliveryStatusHistories.
+     */
+    data: DeliveryStatusHistoryCreateManyInput | DeliveryStatusHistoryCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DeliveryStatusHistory createManyAndReturn
+   */
+  export type DeliveryStatusHistoryCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * The data used to create many DeliveryStatusHistories.
+     */
+    data: DeliveryStatusHistoryCreateManyInput | DeliveryStatusHistoryCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DeliveryStatusHistory update
+   */
+  export type DeliveryStatusHistoryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryInclude<ExtArgs> | null
+    /**
+     * The data needed to update a DeliveryStatusHistory.
+     */
+    data: XOR<DeliveryStatusHistoryUpdateInput, DeliveryStatusHistoryUncheckedUpdateInput>
+    /**
+     * Choose, which DeliveryStatusHistory to update.
+     */
+    where: DeliveryStatusHistoryWhereUniqueInput
+  }
+
+  /**
+   * DeliveryStatusHistory updateMany
+   */
+  export type DeliveryStatusHistoryUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update DeliveryStatusHistories.
+     */
+    data: XOR<DeliveryStatusHistoryUpdateManyMutationInput, DeliveryStatusHistoryUncheckedUpdateManyInput>
+    /**
+     * Filter which DeliveryStatusHistories to update
+     */
+    where?: DeliveryStatusHistoryWhereInput
+    /**
+     * Limit how many DeliveryStatusHistories to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * DeliveryStatusHistory updateManyAndReturn
+   */
+  export type DeliveryStatusHistoryUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * The data used to update DeliveryStatusHistories.
+     */
+    data: XOR<DeliveryStatusHistoryUpdateManyMutationInput, DeliveryStatusHistoryUncheckedUpdateManyInput>
+    /**
+     * Filter which DeliveryStatusHistories to update
+     */
+    where?: DeliveryStatusHistoryWhereInput
+    /**
+     * Limit how many DeliveryStatusHistories to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DeliveryStatusHistory upsert
+   */
+  export type DeliveryStatusHistoryUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryInclude<ExtArgs> | null
+    /**
+     * The filter to search for the DeliveryStatusHistory to update in case it exists.
+     */
+    where: DeliveryStatusHistoryWhereUniqueInput
+    /**
+     * In case the DeliveryStatusHistory found by the `where` argument doesn't exist, create a new DeliveryStatusHistory with this data.
+     */
+    create: XOR<DeliveryStatusHistoryCreateInput, DeliveryStatusHistoryUncheckedCreateInput>
+    /**
+     * In case the DeliveryStatusHistory was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DeliveryStatusHistoryUpdateInput, DeliveryStatusHistoryUncheckedUpdateInput>
+  }
+
+  /**
+   * DeliveryStatusHistory delete
+   */
+  export type DeliveryStatusHistoryDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryInclude<ExtArgs> | null
+    /**
+     * Filter which DeliveryStatusHistory to delete.
+     */
+    where: DeliveryStatusHistoryWhereUniqueInput
+  }
+
+  /**
+   * DeliveryStatusHistory deleteMany
+   */
+  export type DeliveryStatusHistoryDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DeliveryStatusHistories to delete
+     */
+    where?: DeliveryStatusHistoryWhereInput
+    /**
+     * Limit how many DeliveryStatusHistories to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * DeliveryStatusHistory without action
+   */
+  export type DeliveryStatusHistoryDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryStatusHistory
+     */
+    select?: DeliveryStatusHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryStatusHistory
+     */
+    omit?: DeliveryStatusHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryStatusHistoryInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model DeliveryLocationPing
+   */
+
+  export type AggregateDeliveryLocationPing = {
+    _count: DeliveryLocationPingCountAggregateOutputType | null
+    _avg: DeliveryLocationPingAvgAggregateOutputType | null
+    _sum: DeliveryLocationPingSumAggregateOutputType | null
+    _min: DeliveryLocationPingMinAggregateOutputType | null
+    _max: DeliveryLocationPingMaxAggregateOutputType | null
+  }
+
+  export type DeliveryLocationPingAvgAggregateOutputType = {
+    latitude: Decimal | null
+    longitude: Decimal | null
+    accuracyMeters: Decimal | null
+    heading: Decimal | null
+    speed: Decimal | null
+  }
+
+  export type DeliveryLocationPingSumAggregateOutputType = {
+    latitude: Decimal | null
+    longitude: Decimal | null
+    accuracyMeters: Decimal | null
+    heading: Decimal | null
+    speed: Decimal | null
+  }
+
+  export type DeliveryLocationPingMinAggregateOutputType = {
+    id: string | null
+    deliveryId: string | null
+    driverProfileId: string | null
+    latitude: Decimal | null
+    longitude: Decimal | null
+    accuracyMeters: Decimal | null
+    heading: Decimal | null
+    speed: Decimal | null
+    capturedAt: Date | null
+    createdAt: Date | null
+  }
+
+  export type DeliveryLocationPingMaxAggregateOutputType = {
+    id: string | null
+    deliveryId: string | null
+    driverProfileId: string | null
+    latitude: Decimal | null
+    longitude: Decimal | null
+    accuracyMeters: Decimal | null
+    heading: Decimal | null
+    speed: Decimal | null
+    capturedAt: Date | null
+    createdAt: Date | null
+  }
+
+  export type DeliveryLocationPingCountAggregateOutputType = {
+    id: number
+    deliveryId: number
+    driverProfileId: number
+    latitude: number
+    longitude: number
+    accuracyMeters: number
+    heading: number
+    speed: number
+    capturedAt: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type DeliveryLocationPingAvgAggregateInputType = {
+    latitude?: true
+    longitude?: true
+    accuracyMeters?: true
+    heading?: true
+    speed?: true
+  }
+
+  export type DeliveryLocationPingSumAggregateInputType = {
+    latitude?: true
+    longitude?: true
+    accuracyMeters?: true
+    heading?: true
+    speed?: true
+  }
+
+  export type DeliveryLocationPingMinAggregateInputType = {
+    id?: true
+    deliveryId?: true
+    driverProfileId?: true
+    latitude?: true
+    longitude?: true
+    accuracyMeters?: true
+    heading?: true
+    speed?: true
+    capturedAt?: true
+    createdAt?: true
+  }
+
+  export type DeliveryLocationPingMaxAggregateInputType = {
+    id?: true
+    deliveryId?: true
+    driverProfileId?: true
+    latitude?: true
+    longitude?: true
+    accuracyMeters?: true
+    heading?: true
+    speed?: true
+    capturedAt?: true
+    createdAt?: true
+  }
+
+  export type DeliveryLocationPingCountAggregateInputType = {
+    id?: true
+    deliveryId?: true
+    driverProfileId?: true
+    latitude?: true
+    longitude?: true
+    accuracyMeters?: true
+    heading?: true
+    speed?: true
+    capturedAt?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type DeliveryLocationPingAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DeliveryLocationPing to aggregate.
+     */
+    where?: DeliveryLocationPingWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DeliveryLocationPings to fetch.
+     */
+    orderBy?: DeliveryLocationPingOrderByWithRelationInput | DeliveryLocationPingOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: DeliveryLocationPingWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DeliveryLocationPings from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DeliveryLocationPings.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned DeliveryLocationPings
+    **/
+    _count?: true | DeliveryLocationPingCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: DeliveryLocationPingAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: DeliveryLocationPingSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: DeliveryLocationPingMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: DeliveryLocationPingMaxAggregateInputType
+  }
+
+  export type GetDeliveryLocationPingAggregateType<T extends DeliveryLocationPingAggregateArgs> = {
+        [P in keyof T & keyof AggregateDeliveryLocationPing]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDeliveryLocationPing[P]>
+      : GetScalarType<T[P], AggregateDeliveryLocationPing[P]>
+  }
+
+
+
+
+  export type DeliveryLocationPingGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DeliveryLocationPingWhereInput
+    orderBy?: DeliveryLocationPingOrderByWithAggregationInput | DeliveryLocationPingOrderByWithAggregationInput[]
+    by: DeliveryLocationPingScalarFieldEnum[] | DeliveryLocationPingScalarFieldEnum
+    having?: DeliveryLocationPingScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DeliveryLocationPingCountAggregateInputType | true
+    _avg?: DeliveryLocationPingAvgAggregateInputType
+    _sum?: DeliveryLocationPingSumAggregateInputType
+    _min?: DeliveryLocationPingMinAggregateInputType
+    _max?: DeliveryLocationPingMaxAggregateInputType
+  }
+
+  export type DeliveryLocationPingGroupByOutputType = {
+    id: string
+    deliveryId: string
+    driverProfileId: string
+    latitude: Decimal
+    longitude: Decimal
+    accuracyMeters: Decimal | null
+    heading: Decimal | null
+    speed: Decimal | null
+    capturedAt: Date
+    createdAt: Date
+    _count: DeliveryLocationPingCountAggregateOutputType | null
+    _avg: DeliveryLocationPingAvgAggregateOutputType | null
+    _sum: DeliveryLocationPingSumAggregateOutputType | null
+    _min: DeliveryLocationPingMinAggregateOutputType | null
+    _max: DeliveryLocationPingMaxAggregateOutputType | null
+  }
+
+  type GetDeliveryLocationPingGroupByPayload<T extends DeliveryLocationPingGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DeliveryLocationPingGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DeliveryLocationPingGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DeliveryLocationPingGroupByOutputType[P]>
+            : GetScalarType<T[P], DeliveryLocationPingGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DeliveryLocationPingSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    deliveryId?: boolean
+    driverProfileId?: boolean
+    latitude?: boolean
+    longitude?: boolean
+    accuracyMeters?: boolean
+    heading?: boolean
+    speed?: boolean
+    capturedAt?: boolean
+    createdAt?: boolean
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    driverProfile?: boolean | DriverProfileDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["deliveryLocationPing"]>
+
+  export type DeliveryLocationPingSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    deliveryId?: boolean
+    driverProfileId?: boolean
+    latitude?: boolean
+    longitude?: boolean
+    accuracyMeters?: boolean
+    heading?: boolean
+    speed?: boolean
+    capturedAt?: boolean
+    createdAt?: boolean
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    driverProfile?: boolean | DriverProfileDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["deliveryLocationPing"]>
+
+  export type DeliveryLocationPingSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    deliveryId?: boolean
+    driverProfileId?: boolean
+    latitude?: boolean
+    longitude?: boolean
+    accuracyMeters?: boolean
+    heading?: boolean
+    speed?: boolean
+    capturedAt?: boolean
+    createdAt?: boolean
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    driverProfile?: boolean | DriverProfileDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["deliveryLocationPing"]>
+
+  export type DeliveryLocationPingSelectScalar = {
+    id?: boolean
+    deliveryId?: boolean
+    driverProfileId?: boolean
+    latitude?: boolean
+    longitude?: boolean
+    accuracyMeters?: boolean
+    heading?: boolean
+    speed?: boolean
+    capturedAt?: boolean
+    createdAt?: boolean
+  }
+
+  export type DeliveryLocationPingOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "deliveryId" | "driverProfileId" | "latitude" | "longitude" | "accuracyMeters" | "heading" | "speed" | "capturedAt" | "createdAt", ExtArgs["result"]["deliveryLocationPing"]>
+  export type DeliveryLocationPingInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    driverProfile?: boolean | DriverProfileDefaultArgs<ExtArgs>
+  }
+  export type DeliveryLocationPingIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    driverProfile?: boolean | DriverProfileDefaultArgs<ExtArgs>
+  }
+  export type DeliveryLocationPingIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    delivery?: boolean | DeliveryDefaultArgs<ExtArgs>
+    driverProfile?: boolean | DriverProfileDefaultArgs<ExtArgs>
+  }
+
+  export type $DeliveryLocationPingPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DeliveryLocationPing"
+    objects: {
+      delivery: Prisma.$DeliveryPayload<ExtArgs>
+      driverProfile: Prisma.$DriverProfilePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      deliveryId: string
+      driverProfileId: string
+      latitude: Prisma.Decimal
+      longitude: Prisma.Decimal
+      accuracyMeters: Prisma.Decimal | null
+      heading: Prisma.Decimal | null
+      speed: Prisma.Decimal | null
+      capturedAt: Date
+      createdAt: Date
+    }, ExtArgs["result"]["deliveryLocationPing"]>
+    composites: {}
+  }
+
+  type DeliveryLocationPingGetPayload<S extends boolean | null | undefined | DeliveryLocationPingDefaultArgs> = $Result.GetResult<Prisma.$DeliveryLocationPingPayload, S>
+
+  type DeliveryLocationPingCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DeliveryLocationPingFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DeliveryLocationPingCountAggregateInputType | true
+    }
+
+  export interface DeliveryLocationPingDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DeliveryLocationPing'], meta: { name: 'DeliveryLocationPing' } }
+    /**
+     * Find zero or one DeliveryLocationPing that matches the filter.
+     * @param {DeliveryLocationPingFindUniqueArgs} args - Arguments to find a DeliveryLocationPing
+     * @example
+     * // Get one DeliveryLocationPing
+     * const deliveryLocationPing = await prisma.deliveryLocationPing.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DeliveryLocationPingFindUniqueArgs>(args: SelectSubset<T, DeliveryLocationPingFindUniqueArgs<ExtArgs>>): Prisma__DeliveryLocationPingClient<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one DeliveryLocationPing that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DeliveryLocationPingFindUniqueOrThrowArgs} args - Arguments to find a DeliveryLocationPing
+     * @example
+     * // Get one DeliveryLocationPing
+     * const deliveryLocationPing = await prisma.deliveryLocationPing.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DeliveryLocationPingFindUniqueOrThrowArgs>(args: SelectSubset<T, DeliveryLocationPingFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DeliveryLocationPingClient<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DeliveryLocationPing that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryLocationPingFindFirstArgs} args - Arguments to find a DeliveryLocationPing
+     * @example
+     * // Get one DeliveryLocationPing
+     * const deliveryLocationPing = await prisma.deliveryLocationPing.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DeliveryLocationPingFindFirstArgs>(args?: SelectSubset<T, DeliveryLocationPingFindFirstArgs<ExtArgs>>): Prisma__DeliveryLocationPingClient<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DeliveryLocationPing that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryLocationPingFindFirstOrThrowArgs} args - Arguments to find a DeliveryLocationPing
+     * @example
+     * // Get one DeliveryLocationPing
+     * const deliveryLocationPing = await prisma.deliveryLocationPing.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DeliveryLocationPingFindFirstOrThrowArgs>(args?: SelectSubset<T, DeliveryLocationPingFindFirstOrThrowArgs<ExtArgs>>): Prisma__DeliveryLocationPingClient<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more DeliveryLocationPings that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryLocationPingFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all DeliveryLocationPings
+     * const deliveryLocationPings = await prisma.deliveryLocationPing.findMany()
+     * 
+     * // Get first 10 DeliveryLocationPings
+     * const deliveryLocationPings = await prisma.deliveryLocationPing.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const deliveryLocationPingWithIdOnly = await prisma.deliveryLocationPing.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends DeliveryLocationPingFindManyArgs>(args?: SelectSubset<T, DeliveryLocationPingFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a DeliveryLocationPing.
+     * @param {DeliveryLocationPingCreateArgs} args - Arguments to create a DeliveryLocationPing.
+     * @example
+     * // Create one DeliveryLocationPing
+     * const DeliveryLocationPing = await prisma.deliveryLocationPing.create({
+     *   data: {
+     *     // ... data to create a DeliveryLocationPing
+     *   }
+     * })
+     * 
+     */
+    create<T extends DeliveryLocationPingCreateArgs>(args: SelectSubset<T, DeliveryLocationPingCreateArgs<ExtArgs>>): Prisma__DeliveryLocationPingClient<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many DeliveryLocationPings.
+     * @param {DeliveryLocationPingCreateManyArgs} args - Arguments to create many DeliveryLocationPings.
+     * @example
+     * // Create many DeliveryLocationPings
+     * const deliveryLocationPing = await prisma.deliveryLocationPing.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends DeliveryLocationPingCreateManyArgs>(args?: SelectSubset<T, DeliveryLocationPingCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many DeliveryLocationPings and returns the data saved in the database.
+     * @param {DeliveryLocationPingCreateManyAndReturnArgs} args - Arguments to create many DeliveryLocationPings.
+     * @example
+     * // Create many DeliveryLocationPings
+     * const deliveryLocationPing = await prisma.deliveryLocationPing.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many DeliveryLocationPings and only return the `id`
+     * const deliveryLocationPingWithIdOnly = await prisma.deliveryLocationPing.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends DeliveryLocationPingCreateManyAndReturnArgs>(args?: SelectSubset<T, DeliveryLocationPingCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a DeliveryLocationPing.
+     * @param {DeliveryLocationPingDeleteArgs} args - Arguments to delete one DeliveryLocationPing.
+     * @example
+     * // Delete one DeliveryLocationPing
+     * const DeliveryLocationPing = await prisma.deliveryLocationPing.delete({
+     *   where: {
+     *     // ... filter to delete one DeliveryLocationPing
+     *   }
+     * })
+     * 
+     */
+    delete<T extends DeliveryLocationPingDeleteArgs>(args: SelectSubset<T, DeliveryLocationPingDeleteArgs<ExtArgs>>): Prisma__DeliveryLocationPingClient<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one DeliveryLocationPing.
+     * @param {DeliveryLocationPingUpdateArgs} args - Arguments to update one DeliveryLocationPing.
+     * @example
+     * // Update one DeliveryLocationPing
+     * const deliveryLocationPing = await prisma.deliveryLocationPing.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends DeliveryLocationPingUpdateArgs>(args: SelectSubset<T, DeliveryLocationPingUpdateArgs<ExtArgs>>): Prisma__DeliveryLocationPingClient<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more DeliveryLocationPings.
+     * @param {DeliveryLocationPingDeleteManyArgs} args - Arguments to filter DeliveryLocationPings to delete.
+     * @example
+     * // Delete a few DeliveryLocationPings
+     * const { count } = await prisma.deliveryLocationPing.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends DeliveryLocationPingDeleteManyArgs>(args?: SelectSubset<T, DeliveryLocationPingDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DeliveryLocationPings.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryLocationPingUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many DeliveryLocationPings
+     * const deliveryLocationPing = await prisma.deliveryLocationPing.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends DeliveryLocationPingUpdateManyArgs>(args: SelectSubset<T, DeliveryLocationPingUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DeliveryLocationPings and returns the data updated in the database.
+     * @param {DeliveryLocationPingUpdateManyAndReturnArgs} args - Arguments to update many DeliveryLocationPings.
+     * @example
+     * // Update many DeliveryLocationPings
+     * const deliveryLocationPing = await prisma.deliveryLocationPing.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more DeliveryLocationPings and only return the `id`
+     * const deliveryLocationPingWithIdOnly = await prisma.deliveryLocationPing.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends DeliveryLocationPingUpdateManyAndReturnArgs>(args: SelectSubset<T, DeliveryLocationPingUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one DeliveryLocationPing.
+     * @param {DeliveryLocationPingUpsertArgs} args - Arguments to update or create a DeliveryLocationPing.
+     * @example
+     * // Update or create a DeliveryLocationPing
+     * const deliveryLocationPing = await prisma.deliveryLocationPing.upsert({
+     *   create: {
+     *     // ... data to create a DeliveryLocationPing
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the DeliveryLocationPing we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DeliveryLocationPingUpsertArgs>(args: SelectSubset<T, DeliveryLocationPingUpsertArgs<ExtArgs>>): Prisma__DeliveryLocationPingClient<$Result.GetResult<Prisma.$DeliveryLocationPingPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of DeliveryLocationPings.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryLocationPingCountArgs} args - Arguments to filter DeliveryLocationPings to count.
+     * @example
+     * // Count the number of DeliveryLocationPings
+     * const count = await prisma.deliveryLocationPing.count({
+     *   where: {
+     *     // ... the filter for the DeliveryLocationPings we want to count
+     *   }
+     * })
+    **/
+    count<T extends DeliveryLocationPingCountArgs>(
+      args?: Subset<T, DeliveryLocationPingCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DeliveryLocationPingCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a DeliveryLocationPing.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryLocationPingAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DeliveryLocationPingAggregateArgs>(args: Subset<T, DeliveryLocationPingAggregateArgs>): Prisma.PrismaPromise<GetDeliveryLocationPingAggregateType<T>>
+
+    /**
+     * Group by DeliveryLocationPing.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DeliveryLocationPingGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends DeliveryLocationPingGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DeliveryLocationPingGroupByArgs['orderBy'] }
+        : { orderBy?: DeliveryLocationPingGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DeliveryLocationPingGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDeliveryLocationPingGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the DeliveryLocationPing model
+   */
+  readonly fields: DeliveryLocationPingFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for DeliveryLocationPing.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DeliveryLocationPingClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    delivery<T extends DeliveryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DeliveryDefaultArgs<ExtArgs>>): Prisma__DeliveryClient<$Result.GetResult<Prisma.$DeliveryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    driverProfile<T extends DriverProfileDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DriverProfileDefaultArgs<ExtArgs>>): Prisma__DriverProfileClient<$Result.GetResult<Prisma.$DriverProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the DeliveryLocationPing model
+   */
+  interface DeliveryLocationPingFieldRefs {
+    readonly id: FieldRef<"DeliveryLocationPing", 'String'>
+    readonly deliveryId: FieldRef<"DeliveryLocationPing", 'String'>
+    readonly driverProfileId: FieldRef<"DeliveryLocationPing", 'String'>
+    readonly latitude: FieldRef<"DeliveryLocationPing", 'Decimal'>
+    readonly longitude: FieldRef<"DeliveryLocationPing", 'Decimal'>
+    readonly accuracyMeters: FieldRef<"DeliveryLocationPing", 'Decimal'>
+    readonly heading: FieldRef<"DeliveryLocationPing", 'Decimal'>
+    readonly speed: FieldRef<"DeliveryLocationPing", 'Decimal'>
+    readonly capturedAt: FieldRef<"DeliveryLocationPing", 'DateTime'>
+    readonly createdAt: FieldRef<"DeliveryLocationPing", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * DeliveryLocationPing findUnique
+   */
+  export type DeliveryLocationPingFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryLocationPing to fetch.
+     */
+    where: DeliveryLocationPingWhereUniqueInput
+  }
+
+  /**
+   * DeliveryLocationPing findUniqueOrThrow
+   */
+  export type DeliveryLocationPingFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryLocationPing to fetch.
+     */
+    where: DeliveryLocationPingWhereUniqueInput
+  }
+
+  /**
+   * DeliveryLocationPing findFirst
+   */
+  export type DeliveryLocationPingFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryLocationPing to fetch.
+     */
+    where?: DeliveryLocationPingWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DeliveryLocationPings to fetch.
+     */
+    orderBy?: DeliveryLocationPingOrderByWithRelationInput | DeliveryLocationPingOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DeliveryLocationPings.
+     */
+    cursor?: DeliveryLocationPingWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DeliveryLocationPings from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DeliveryLocationPings.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DeliveryLocationPings.
+     */
+    distinct?: DeliveryLocationPingScalarFieldEnum | DeliveryLocationPingScalarFieldEnum[]
+  }
+
+  /**
+   * DeliveryLocationPing findFirstOrThrow
+   */
+  export type DeliveryLocationPingFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryLocationPing to fetch.
+     */
+    where?: DeliveryLocationPingWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DeliveryLocationPings to fetch.
+     */
+    orderBy?: DeliveryLocationPingOrderByWithRelationInput | DeliveryLocationPingOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DeliveryLocationPings.
+     */
+    cursor?: DeliveryLocationPingWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DeliveryLocationPings from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DeliveryLocationPings.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DeliveryLocationPings.
+     */
+    distinct?: DeliveryLocationPingScalarFieldEnum | DeliveryLocationPingScalarFieldEnum[]
+  }
+
+  /**
+   * DeliveryLocationPing findMany
+   */
+  export type DeliveryLocationPingFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingInclude<ExtArgs> | null
+    /**
+     * Filter, which DeliveryLocationPings to fetch.
+     */
+    where?: DeliveryLocationPingWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DeliveryLocationPings to fetch.
+     */
+    orderBy?: DeliveryLocationPingOrderByWithRelationInput | DeliveryLocationPingOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing DeliveryLocationPings.
+     */
+    cursor?: DeliveryLocationPingWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DeliveryLocationPings from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DeliveryLocationPings.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DeliveryLocationPings.
+     */
+    distinct?: DeliveryLocationPingScalarFieldEnum | DeliveryLocationPingScalarFieldEnum[]
+  }
+
+  /**
+   * DeliveryLocationPing create
+   */
+  export type DeliveryLocationPingCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingInclude<ExtArgs> | null
+    /**
+     * The data needed to create a DeliveryLocationPing.
+     */
+    data: XOR<DeliveryLocationPingCreateInput, DeliveryLocationPingUncheckedCreateInput>
+  }
+
+  /**
+   * DeliveryLocationPing createMany
+   */
+  export type DeliveryLocationPingCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many DeliveryLocationPings.
+     */
+    data: DeliveryLocationPingCreateManyInput | DeliveryLocationPingCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DeliveryLocationPing createManyAndReturn
+   */
+  export type DeliveryLocationPingCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * The data used to create many DeliveryLocationPings.
+     */
+    data: DeliveryLocationPingCreateManyInput | DeliveryLocationPingCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DeliveryLocationPing update
+   */
+  export type DeliveryLocationPingUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingInclude<ExtArgs> | null
+    /**
+     * The data needed to update a DeliveryLocationPing.
+     */
+    data: XOR<DeliveryLocationPingUpdateInput, DeliveryLocationPingUncheckedUpdateInput>
+    /**
+     * Choose, which DeliveryLocationPing to update.
+     */
+    where: DeliveryLocationPingWhereUniqueInput
+  }
+
+  /**
+   * DeliveryLocationPing updateMany
+   */
+  export type DeliveryLocationPingUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update DeliveryLocationPings.
+     */
+    data: XOR<DeliveryLocationPingUpdateManyMutationInput, DeliveryLocationPingUncheckedUpdateManyInput>
+    /**
+     * Filter which DeliveryLocationPings to update
+     */
+    where?: DeliveryLocationPingWhereInput
+    /**
+     * Limit how many DeliveryLocationPings to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * DeliveryLocationPing updateManyAndReturn
+   */
+  export type DeliveryLocationPingUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * The data used to update DeliveryLocationPings.
+     */
+    data: XOR<DeliveryLocationPingUpdateManyMutationInput, DeliveryLocationPingUncheckedUpdateManyInput>
+    /**
+     * Filter which DeliveryLocationPings to update
+     */
+    where?: DeliveryLocationPingWhereInput
+    /**
+     * Limit how many DeliveryLocationPings to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DeliveryLocationPing upsert
+   */
+  export type DeliveryLocationPingUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingInclude<ExtArgs> | null
+    /**
+     * The filter to search for the DeliveryLocationPing to update in case it exists.
+     */
+    where: DeliveryLocationPingWhereUniqueInput
+    /**
+     * In case the DeliveryLocationPing found by the `where` argument doesn't exist, create a new DeliveryLocationPing with this data.
+     */
+    create: XOR<DeliveryLocationPingCreateInput, DeliveryLocationPingUncheckedCreateInput>
+    /**
+     * In case the DeliveryLocationPing was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DeliveryLocationPingUpdateInput, DeliveryLocationPingUncheckedUpdateInput>
+  }
+
+  /**
+   * DeliveryLocationPing delete
+   */
+  export type DeliveryLocationPingDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingInclude<ExtArgs> | null
+    /**
+     * Filter which DeliveryLocationPing to delete.
+     */
+    where: DeliveryLocationPingWhereUniqueInput
+  }
+
+  /**
+   * DeliveryLocationPing deleteMany
+   */
+  export type DeliveryLocationPingDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DeliveryLocationPings to delete
+     */
+    where?: DeliveryLocationPingWhereInput
+    /**
+     * Limit how many DeliveryLocationPings to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * DeliveryLocationPing without action
+   */
+  export type DeliveryLocationPingDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DeliveryLocationPing
+     */
+    select?: DeliveryLocationPingSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DeliveryLocationPing
+     */
+    omit?: DeliveryLocationPingOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DeliveryLocationPingInclude<ExtArgs> | null
   }
 
 
@@ -38593,6 +45514,24 @@ export namespace Prisma {
   export type SupplierProfileScalarFieldEnum = (typeof SupplierProfileScalarFieldEnum)[keyof typeof SupplierProfileScalarFieldEnum]
 
 
+  export const DriverProfileScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    status: 'status',
+    availability: 'availability',
+    displayName: 'displayName',
+    phone: 'phone',
+    vehicleType: 'vehicleType',
+    vehicleLabel: 'vehicleLabel',
+    vehiclePlate: 'vehiclePlate',
+    capacityNotes: 'capacityNotes',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type DriverProfileScalarFieldEnum = (typeof DriverProfileScalarFieldEnum)[keyof typeof DriverProfileScalarFieldEnum]
+
+
   export const OrganizationProfileScalarFieldEnum: {
     id: 'id',
     supplierProfileId: 'supplierProfileId',
@@ -38824,6 +45763,77 @@ export namespace Prisma {
   };
 
   export type ReservationScalarFieldEnum = (typeof ReservationScalarFieldEnum)[keyof typeof ReservationScalarFieldEnum]
+
+
+  export const DeliveryScalarFieldEnum: {
+    id: 'id',
+    reservationId: 'reservationId',
+    pickupLocationId: 'pickupLocationId',
+    dropoffLocationId: 'dropoffLocationId',
+    assignedDriverProfileId: 'assignedDriverProfileId',
+    requestedByUserId: 'requestedByUserId',
+    status: 'status',
+    requestedAt: 'requestedAt',
+    assignedAt: 'assignedAt',
+    arrivedPickupAt: 'arrivedPickupAt',
+    pickedUpAt: 'pickedUpAt',
+    onTheWayAt: 'onTheWayAt',
+    arrivedDropoffAt: 'arrivedDropoffAt',
+    deliveredAt: 'deliveredAt',
+    cancelledAt: 'cancelledAt',
+    failedAt: 'failedAt',
+    learnerNote: 'learnerNote',
+    driverNote: 'driverNote',
+    failureReason: 'failureReason',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type DeliveryScalarFieldEnum = (typeof DeliveryScalarFieldEnum)[keyof typeof DeliveryScalarFieldEnum]
+
+
+  export const DeliveryAssignmentScalarFieldEnum: {
+    id: 'id',
+    deliveryId: 'deliveryId',
+    driverProfileId: 'driverProfileId',
+    assignedByUserId: 'assignedByUserId',
+    status: 'status',
+    acceptedAt: 'acceptedAt',
+    releasedAt: 'releasedAt',
+    releaseReason: 'releaseReason',
+    createdAt: 'createdAt'
+  };
+
+  export type DeliveryAssignmentScalarFieldEnum = (typeof DeliveryAssignmentScalarFieldEnum)[keyof typeof DeliveryAssignmentScalarFieldEnum]
+
+
+  export const DeliveryStatusHistoryScalarFieldEnum: {
+    id: 'id',
+    deliveryId: 'deliveryId',
+    oldStatus: 'oldStatus',
+    newStatus: 'newStatus',
+    changedByUserId: 'changedByUserId',
+    note: 'note',
+    createdAt: 'createdAt'
+  };
+
+  export type DeliveryStatusHistoryScalarFieldEnum = (typeof DeliveryStatusHistoryScalarFieldEnum)[keyof typeof DeliveryStatusHistoryScalarFieldEnum]
+
+
+  export const DeliveryLocationPingScalarFieldEnum: {
+    id: 'id',
+    deliveryId: 'deliveryId',
+    driverProfileId: 'driverProfileId',
+    latitude: 'latitude',
+    longitude: 'longitude',
+    accuracyMeters: 'accuracyMeters',
+    heading: 'heading',
+    speed: 'speed',
+    capturedAt: 'capturedAt',
+    createdAt: 'createdAt'
+  };
+
+  export type DeliveryLocationPingScalarFieldEnum = (typeof DeliveryLocationPingScalarFieldEnum)[keyof typeof DeliveryLocationPingScalarFieldEnum]
 
 
   export const ReservationStatusHistoryScalarFieldEnum: {
@@ -39127,6 +46137,34 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'DriverProfileStatus'
+   */
+  export type EnumDriverProfileStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DriverProfileStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'DriverProfileStatus[]'
+   */
+  export type ListEnumDriverProfileStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DriverProfileStatus[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'DriverAvailabilityStatus'
+   */
+  export type EnumDriverAvailabilityStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DriverAvailabilityStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'DriverAvailabilityStatus[]'
+   */
+  export type ListEnumDriverAvailabilityStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DriverAvailabilityStatus[]'>
+    
+
+
+  /**
    * Reference to a field of type 'OrganizationType'
    */
   export type EnumOrganizationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'OrganizationType'>
@@ -39365,6 +46403,20 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'DeliveryAssignmentStatus'
+   */
+  export type EnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DeliveryAssignmentStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'DeliveryAssignmentStatus[]'
+   */
+  export type ListEnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DeliveryAssignmentStatus[]'>
+    
+
+
+  /**
    * Reference to a field of type 'ReservationStatusGroup'
    */
   export type EnumReservationStatusGroupFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReservationStatusGroup'>
@@ -39485,6 +46537,7 @@ export namespace Prisma {
     authTokens?: AuthTokenListRelationFilter
     learnerProfile?: XOR<LearnerProfileNullableScalarRelationFilter, LearnerProfileWhereInput> | null
     supplierProfile?: XOR<SupplierProfileNullableScalarRelationFilter, SupplierProfileWhereInput> | null
+    driverProfile?: XOR<DriverProfileNullableScalarRelationFilter, DriverProfileWhereInput> | null
     invitedRoles?: RoleInvitationListRelationFilter
     usedInvitations?: RoleInvitationListRelationFilter
     assignedRoles?: UserRoleAssignmentListRelationFilter
@@ -39492,6 +46545,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationListRelationFilter
     ownedReservationsAsRequester?: ReservationListRelationFilter
     reservationStatusChanges?: ReservationStatusHistoryListRelationFilter
+    requestedDeliveries?: DeliveryListRelationFilter
+    deliveryAssignmentsMade?: DeliveryAssignmentListRelationFilter
+    deliveryStatusChanges?: DeliveryStatusHistoryListRelationFilter
     notifications?: NotificationListRelationFilter
     reviewsGiven?: ReviewListRelationFilter
     reviewsReceived?: ReviewListRelationFilter
@@ -39519,6 +46575,7 @@ export namespace Prisma {
     authTokens?: AuthTokenOrderByRelationAggregateInput
     learnerProfile?: LearnerProfileOrderByWithRelationInput
     supplierProfile?: SupplierProfileOrderByWithRelationInput
+    driverProfile?: DriverProfileOrderByWithRelationInput
     invitedRoles?: RoleInvitationOrderByRelationAggregateInput
     usedInvitations?: RoleInvitationOrderByRelationAggregateInput
     assignedRoles?: UserRoleAssignmentOrderByRelationAggregateInput
@@ -39526,6 +46583,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationOrderByRelationAggregateInput
     ownedReservationsAsRequester?: ReservationOrderByRelationAggregateInput
     reservationStatusChanges?: ReservationStatusHistoryOrderByRelationAggregateInput
+    requestedDeliveries?: DeliveryOrderByRelationAggregateInput
+    deliveryAssignmentsMade?: DeliveryAssignmentOrderByRelationAggregateInput
+    deliveryStatusChanges?: DeliveryStatusHistoryOrderByRelationAggregateInput
     notifications?: NotificationOrderByRelationAggregateInput
     reviewsGiven?: ReviewOrderByRelationAggregateInput
     reviewsReceived?: ReviewOrderByRelationAggregateInput
@@ -39556,6 +46616,7 @@ export namespace Prisma {
     authTokens?: AuthTokenListRelationFilter
     learnerProfile?: XOR<LearnerProfileNullableScalarRelationFilter, LearnerProfileWhereInput> | null
     supplierProfile?: XOR<SupplierProfileNullableScalarRelationFilter, SupplierProfileWhereInput> | null
+    driverProfile?: XOR<DriverProfileNullableScalarRelationFilter, DriverProfileWhereInput> | null
     invitedRoles?: RoleInvitationListRelationFilter
     usedInvitations?: RoleInvitationListRelationFilter
     assignedRoles?: UserRoleAssignmentListRelationFilter
@@ -39563,6 +46624,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationListRelationFilter
     ownedReservationsAsRequester?: ReservationListRelationFilter
     reservationStatusChanges?: ReservationStatusHistoryListRelationFilter
+    requestedDeliveries?: DeliveryListRelationFilter
+    deliveryAssignmentsMade?: DeliveryAssignmentListRelationFilter
+    deliveryStatusChanges?: DeliveryStatusHistoryListRelationFilter
     notifications?: NotificationListRelationFilter
     reviewsGiven?: ReviewListRelationFilter
     reviewsReceived?: ReviewListRelationFilter
@@ -39990,6 +47054,105 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"SupplierProfile"> | Date | string
   }
 
+  export type DriverProfileWhereInput = {
+    AND?: DriverProfileWhereInput | DriverProfileWhereInput[]
+    OR?: DriverProfileWhereInput[]
+    NOT?: DriverProfileWhereInput | DriverProfileWhereInput[]
+    id?: StringFilter<"DriverProfile"> | string
+    userId?: StringFilter<"DriverProfile"> | string
+    status?: EnumDriverProfileStatusFilter<"DriverProfile"> | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFilter<"DriverProfile"> | $Enums.DriverAvailabilityStatus
+    displayName?: StringFilter<"DriverProfile"> | string
+    phone?: StringNullableFilter<"DriverProfile"> | string | null
+    vehicleType?: StringFilter<"DriverProfile"> | string
+    vehicleLabel?: StringNullableFilter<"DriverProfile"> | string | null
+    vehiclePlate?: StringNullableFilter<"DriverProfile"> | string | null
+    capacityNotes?: StringNullableFilter<"DriverProfile"> | string | null
+    createdAt?: DateTimeFilter<"DriverProfile"> | Date | string
+    updatedAt?: DateTimeFilter<"DriverProfile"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    deliveries?: DeliveryListRelationFilter
+    assignments?: DeliveryAssignmentListRelationFilter
+    locationPings?: DeliveryLocationPingListRelationFilter
+  }
+
+  export type DriverProfileOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    status?: SortOrder
+    availability?: SortOrder
+    displayName?: SortOrder
+    phone?: SortOrderInput | SortOrder
+    vehicleType?: SortOrder
+    vehicleLabel?: SortOrderInput | SortOrder
+    vehiclePlate?: SortOrderInput | SortOrder
+    capacityNotes?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    user?: UserOrderByWithRelationInput
+    deliveries?: DeliveryOrderByRelationAggregateInput
+    assignments?: DeliveryAssignmentOrderByRelationAggregateInput
+    locationPings?: DeliveryLocationPingOrderByRelationAggregateInput
+  }
+
+  export type DriverProfileWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    userId?: string
+    AND?: DriverProfileWhereInput | DriverProfileWhereInput[]
+    OR?: DriverProfileWhereInput[]
+    NOT?: DriverProfileWhereInput | DriverProfileWhereInput[]
+    status?: EnumDriverProfileStatusFilter<"DriverProfile"> | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFilter<"DriverProfile"> | $Enums.DriverAvailabilityStatus
+    displayName?: StringFilter<"DriverProfile"> | string
+    phone?: StringNullableFilter<"DriverProfile"> | string | null
+    vehicleType?: StringFilter<"DriverProfile"> | string
+    vehicleLabel?: StringNullableFilter<"DriverProfile"> | string | null
+    vehiclePlate?: StringNullableFilter<"DriverProfile"> | string | null
+    capacityNotes?: StringNullableFilter<"DriverProfile"> | string | null
+    createdAt?: DateTimeFilter<"DriverProfile"> | Date | string
+    updatedAt?: DateTimeFilter<"DriverProfile"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    deliveries?: DeliveryListRelationFilter
+    assignments?: DeliveryAssignmentListRelationFilter
+    locationPings?: DeliveryLocationPingListRelationFilter
+  }, "id" | "userId">
+
+  export type DriverProfileOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    status?: SortOrder
+    availability?: SortOrder
+    displayName?: SortOrder
+    phone?: SortOrderInput | SortOrder
+    vehicleType?: SortOrder
+    vehicleLabel?: SortOrderInput | SortOrder
+    vehiclePlate?: SortOrderInput | SortOrder
+    capacityNotes?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: DriverProfileCountOrderByAggregateInput
+    _max?: DriverProfileMaxOrderByAggregateInput
+    _min?: DriverProfileMinOrderByAggregateInput
+  }
+
+  export type DriverProfileScalarWhereWithAggregatesInput = {
+    AND?: DriverProfileScalarWhereWithAggregatesInput | DriverProfileScalarWhereWithAggregatesInput[]
+    OR?: DriverProfileScalarWhereWithAggregatesInput[]
+    NOT?: DriverProfileScalarWhereWithAggregatesInput | DriverProfileScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DriverProfile"> | string
+    userId?: StringWithAggregatesFilter<"DriverProfile"> | string
+    status?: EnumDriverProfileStatusWithAggregatesFilter<"DriverProfile"> | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusWithAggregatesFilter<"DriverProfile"> | $Enums.DriverAvailabilityStatus
+    displayName?: StringWithAggregatesFilter<"DriverProfile"> | string
+    phone?: StringNullableWithAggregatesFilter<"DriverProfile"> | string | null
+    vehicleType?: StringWithAggregatesFilter<"DriverProfile"> | string
+    vehicleLabel?: StringNullableWithAggregatesFilter<"DriverProfile"> | string | null
+    vehiclePlate?: StringNullableWithAggregatesFilter<"DriverProfile"> | string | null
+    capacityNotes?: StringNullableWithAggregatesFilter<"DriverProfile"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"DriverProfile"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"DriverProfile"> | Date | string
+  }
+
   export type OrganizationProfileWhereInput = {
     AND?: OrganizationProfileWhereInput | OrganizationProfileWhereInput[]
     OR?: OrganizationProfileWhereInput[]
@@ -40098,6 +47261,8 @@ export namespace Prisma {
     organizationBusinessFor?: OrganizationProfileListRelationFilter
     materials?: MaterialListRelationFilter
     reservationDropoffs?: ReservationListRelationFilter
+    deliveryPickups?: DeliveryListRelationFilter
+    deliveryDropoffs?: DeliveryListRelationFilter
   }
 
   export type LocationOrderByWithRelationInput = {
@@ -40117,6 +47282,8 @@ export namespace Prisma {
     organizationBusinessFor?: OrganizationProfileOrderByRelationAggregateInput
     materials?: MaterialOrderByRelationAggregateInput
     reservationDropoffs?: ReservationOrderByRelationAggregateInput
+    deliveryPickups?: DeliveryOrderByRelationAggregateInput
+    deliveryDropoffs?: DeliveryOrderByRelationAggregateInput
   }
 
   export type LocationWhereUniqueInput = Prisma.AtLeast<{
@@ -40139,6 +47306,8 @@ export namespace Prisma {
     organizationBusinessFor?: OrganizationProfileListRelationFilter
     materials?: MaterialListRelationFilter
     reservationDropoffs?: ReservationListRelationFilter
+    deliveryPickups?: DeliveryListRelationFilter
+    deliveryDropoffs?: DeliveryListRelationFilter
   }, "id">
 
   export type LocationOrderByWithAggregationInput = {
@@ -41152,6 +48321,7 @@ export namespace Prisma {
     owner?: XOR<UserScalarRelationFilter, UserWhereInput>
     dropoffLocation?: XOR<LocationNullableScalarRelationFilter, LocationWhereInput> | null
     reusedMaterial?: XOR<MaterialNullableScalarRelationFilter, MaterialWhereInput> | null
+    deliveries?: DeliveryListRelationFilter
     reviews?: ReviewListRelationFilter
     statusHistory?: ReservationStatusHistoryListRelationFilter
   }
@@ -41185,6 +48355,7 @@ export namespace Prisma {
     owner?: UserOrderByWithRelationInput
     dropoffLocation?: LocationOrderByWithRelationInput
     reusedMaterial?: MaterialOrderByWithRelationInput
+    deliveries?: DeliveryOrderByRelationAggregateInput
     reviews?: ReviewOrderByRelationAggregateInput
     statusHistory?: ReservationStatusHistoryOrderByRelationAggregateInput
   }
@@ -41221,6 +48392,7 @@ export namespace Prisma {
     owner?: XOR<UserScalarRelationFilter, UserWhereInput>
     dropoffLocation?: XOR<LocationNullableScalarRelationFilter, LocationWhereInput> | null
     reusedMaterial?: XOR<MaterialNullableScalarRelationFilter, MaterialWhereInput> | null
+    deliveries?: DeliveryListRelationFilter
     reviews?: ReviewListRelationFilter
     statusHistory?: ReservationStatusHistoryListRelationFilter
   }, "id">
@@ -41283,6 +48455,396 @@ export namespace Prisma {
     completedAt?: DateTimeNullableWithAggregatesFilter<"Reservation"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Reservation"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Reservation"> | Date | string
+  }
+
+  export type DeliveryWhereInput = {
+    AND?: DeliveryWhereInput | DeliveryWhereInput[]
+    OR?: DeliveryWhereInput[]
+    NOT?: DeliveryWhereInput | DeliveryWhereInput[]
+    id?: StringFilter<"Delivery"> | string
+    reservationId?: StringFilter<"Delivery"> | string
+    pickupLocationId?: StringFilter<"Delivery"> | string
+    dropoffLocationId?: StringFilter<"Delivery"> | string
+    assignedDriverProfileId?: StringNullableFilter<"Delivery"> | string | null
+    requestedByUserId?: StringFilter<"Delivery"> | string
+    status?: EnumDeliveryStatusFilter<"Delivery"> | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFilter<"Delivery"> | Date | string
+    assignedAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    arrivedPickupAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    pickedUpAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    onTheWayAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    arrivedDropoffAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    deliveredAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    cancelledAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    failedAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    learnerNote?: StringNullableFilter<"Delivery"> | string | null
+    driverNote?: StringNullableFilter<"Delivery"> | string | null
+    failureReason?: StringNullableFilter<"Delivery"> | string | null
+    createdAt?: DateTimeFilter<"Delivery"> | Date | string
+    updatedAt?: DateTimeFilter<"Delivery"> | Date | string
+    reservation?: XOR<ReservationScalarRelationFilter, ReservationWhereInput>
+    pickupLocation?: XOR<LocationScalarRelationFilter, LocationWhereInput>
+    dropoffLocation?: XOR<LocationScalarRelationFilter, LocationWhereInput>
+    assignedDriverProfile?: XOR<DriverProfileNullableScalarRelationFilter, DriverProfileWhereInput> | null
+    requestedByUser?: XOR<UserScalarRelationFilter, UserWhereInput>
+    assignments?: DeliveryAssignmentListRelationFilter
+    statusHistory?: DeliveryStatusHistoryListRelationFilter
+    locationPings?: DeliveryLocationPingListRelationFilter
+  }
+
+  export type DeliveryOrderByWithRelationInput = {
+    id?: SortOrder
+    reservationId?: SortOrder
+    pickupLocationId?: SortOrder
+    dropoffLocationId?: SortOrder
+    assignedDriverProfileId?: SortOrderInput | SortOrder
+    requestedByUserId?: SortOrder
+    status?: SortOrder
+    requestedAt?: SortOrder
+    assignedAt?: SortOrderInput | SortOrder
+    arrivedPickupAt?: SortOrderInput | SortOrder
+    pickedUpAt?: SortOrderInput | SortOrder
+    onTheWayAt?: SortOrderInput | SortOrder
+    arrivedDropoffAt?: SortOrderInput | SortOrder
+    deliveredAt?: SortOrderInput | SortOrder
+    cancelledAt?: SortOrderInput | SortOrder
+    failedAt?: SortOrderInput | SortOrder
+    learnerNote?: SortOrderInput | SortOrder
+    driverNote?: SortOrderInput | SortOrder
+    failureReason?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    reservation?: ReservationOrderByWithRelationInput
+    pickupLocation?: LocationOrderByWithRelationInput
+    dropoffLocation?: LocationOrderByWithRelationInput
+    assignedDriverProfile?: DriverProfileOrderByWithRelationInput
+    requestedByUser?: UserOrderByWithRelationInput
+    assignments?: DeliveryAssignmentOrderByRelationAggregateInput
+    statusHistory?: DeliveryStatusHistoryOrderByRelationAggregateInput
+    locationPings?: DeliveryLocationPingOrderByRelationAggregateInput
+  }
+
+  export type DeliveryWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: DeliveryWhereInput | DeliveryWhereInput[]
+    OR?: DeliveryWhereInput[]
+    NOT?: DeliveryWhereInput | DeliveryWhereInput[]
+    reservationId?: StringFilter<"Delivery"> | string
+    pickupLocationId?: StringFilter<"Delivery"> | string
+    dropoffLocationId?: StringFilter<"Delivery"> | string
+    assignedDriverProfileId?: StringNullableFilter<"Delivery"> | string | null
+    requestedByUserId?: StringFilter<"Delivery"> | string
+    status?: EnumDeliveryStatusFilter<"Delivery"> | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFilter<"Delivery"> | Date | string
+    assignedAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    arrivedPickupAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    pickedUpAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    onTheWayAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    arrivedDropoffAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    deliveredAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    cancelledAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    failedAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    learnerNote?: StringNullableFilter<"Delivery"> | string | null
+    driverNote?: StringNullableFilter<"Delivery"> | string | null
+    failureReason?: StringNullableFilter<"Delivery"> | string | null
+    createdAt?: DateTimeFilter<"Delivery"> | Date | string
+    updatedAt?: DateTimeFilter<"Delivery"> | Date | string
+    reservation?: XOR<ReservationScalarRelationFilter, ReservationWhereInput>
+    pickupLocation?: XOR<LocationScalarRelationFilter, LocationWhereInput>
+    dropoffLocation?: XOR<LocationScalarRelationFilter, LocationWhereInput>
+    assignedDriverProfile?: XOR<DriverProfileNullableScalarRelationFilter, DriverProfileWhereInput> | null
+    requestedByUser?: XOR<UserScalarRelationFilter, UserWhereInput>
+    assignments?: DeliveryAssignmentListRelationFilter
+    statusHistory?: DeliveryStatusHistoryListRelationFilter
+    locationPings?: DeliveryLocationPingListRelationFilter
+  }, "id">
+
+  export type DeliveryOrderByWithAggregationInput = {
+    id?: SortOrder
+    reservationId?: SortOrder
+    pickupLocationId?: SortOrder
+    dropoffLocationId?: SortOrder
+    assignedDriverProfileId?: SortOrderInput | SortOrder
+    requestedByUserId?: SortOrder
+    status?: SortOrder
+    requestedAt?: SortOrder
+    assignedAt?: SortOrderInput | SortOrder
+    arrivedPickupAt?: SortOrderInput | SortOrder
+    pickedUpAt?: SortOrderInput | SortOrder
+    onTheWayAt?: SortOrderInput | SortOrder
+    arrivedDropoffAt?: SortOrderInput | SortOrder
+    deliveredAt?: SortOrderInput | SortOrder
+    cancelledAt?: SortOrderInput | SortOrder
+    failedAt?: SortOrderInput | SortOrder
+    learnerNote?: SortOrderInput | SortOrder
+    driverNote?: SortOrderInput | SortOrder
+    failureReason?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: DeliveryCountOrderByAggregateInput
+    _max?: DeliveryMaxOrderByAggregateInput
+    _min?: DeliveryMinOrderByAggregateInput
+  }
+
+  export type DeliveryScalarWhereWithAggregatesInput = {
+    AND?: DeliveryScalarWhereWithAggregatesInput | DeliveryScalarWhereWithAggregatesInput[]
+    OR?: DeliveryScalarWhereWithAggregatesInput[]
+    NOT?: DeliveryScalarWhereWithAggregatesInput | DeliveryScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"Delivery"> | string
+    reservationId?: StringWithAggregatesFilter<"Delivery"> | string
+    pickupLocationId?: StringWithAggregatesFilter<"Delivery"> | string
+    dropoffLocationId?: StringWithAggregatesFilter<"Delivery"> | string
+    assignedDriverProfileId?: StringNullableWithAggregatesFilter<"Delivery"> | string | null
+    requestedByUserId?: StringWithAggregatesFilter<"Delivery"> | string
+    status?: EnumDeliveryStatusWithAggregatesFilter<"Delivery"> | $Enums.DeliveryStatus
+    requestedAt?: DateTimeWithAggregatesFilter<"Delivery"> | Date | string
+    assignedAt?: DateTimeNullableWithAggregatesFilter<"Delivery"> | Date | string | null
+    arrivedPickupAt?: DateTimeNullableWithAggregatesFilter<"Delivery"> | Date | string | null
+    pickedUpAt?: DateTimeNullableWithAggregatesFilter<"Delivery"> | Date | string | null
+    onTheWayAt?: DateTimeNullableWithAggregatesFilter<"Delivery"> | Date | string | null
+    arrivedDropoffAt?: DateTimeNullableWithAggregatesFilter<"Delivery"> | Date | string | null
+    deliveredAt?: DateTimeNullableWithAggregatesFilter<"Delivery"> | Date | string | null
+    cancelledAt?: DateTimeNullableWithAggregatesFilter<"Delivery"> | Date | string | null
+    failedAt?: DateTimeNullableWithAggregatesFilter<"Delivery"> | Date | string | null
+    learnerNote?: StringNullableWithAggregatesFilter<"Delivery"> | string | null
+    driverNote?: StringNullableWithAggregatesFilter<"Delivery"> | string | null
+    failureReason?: StringNullableWithAggregatesFilter<"Delivery"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"Delivery"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"Delivery"> | Date | string
+  }
+
+  export type DeliveryAssignmentWhereInput = {
+    AND?: DeliveryAssignmentWhereInput | DeliveryAssignmentWhereInput[]
+    OR?: DeliveryAssignmentWhereInput[]
+    NOT?: DeliveryAssignmentWhereInput | DeliveryAssignmentWhereInput[]
+    id?: StringFilter<"DeliveryAssignment"> | string
+    deliveryId?: StringFilter<"DeliveryAssignment"> | string
+    driverProfileId?: StringFilter<"DeliveryAssignment"> | string
+    assignedByUserId?: StringNullableFilter<"DeliveryAssignment"> | string | null
+    status?: EnumDeliveryAssignmentStatusFilter<"DeliveryAssignment"> | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFilter<"DeliveryAssignment"> | Date | string
+    releasedAt?: DateTimeNullableFilter<"DeliveryAssignment"> | Date | string | null
+    releaseReason?: StringNullableFilter<"DeliveryAssignment"> | string | null
+    createdAt?: DateTimeFilter<"DeliveryAssignment"> | Date | string
+    delivery?: XOR<DeliveryScalarRelationFilter, DeliveryWhereInput>
+    driverProfile?: XOR<DriverProfileScalarRelationFilter, DriverProfileWhereInput>
+    assignedByUser?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
+  }
+
+  export type DeliveryAssignmentOrderByWithRelationInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    driverProfileId?: SortOrder
+    assignedByUserId?: SortOrderInput | SortOrder
+    status?: SortOrder
+    acceptedAt?: SortOrder
+    releasedAt?: SortOrderInput | SortOrder
+    releaseReason?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    delivery?: DeliveryOrderByWithRelationInput
+    driverProfile?: DriverProfileOrderByWithRelationInput
+    assignedByUser?: UserOrderByWithRelationInput
+  }
+
+  export type DeliveryAssignmentWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: DeliveryAssignmentWhereInput | DeliveryAssignmentWhereInput[]
+    OR?: DeliveryAssignmentWhereInput[]
+    NOT?: DeliveryAssignmentWhereInput | DeliveryAssignmentWhereInput[]
+    deliveryId?: StringFilter<"DeliveryAssignment"> | string
+    driverProfileId?: StringFilter<"DeliveryAssignment"> | string
+    assignedByUserId?: StringNullableFilter<"DeliveryAssignment"> | string | null
+    status?: EnumDeliveryAssignmentStatusFilter<"DeliveryAssignment"> | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFilter<"DeliveryAssignment"> | Date | string
+    releasedAt?: DateTimeNullableFilter<"DeliveryAssignment"> | Date | string | null
+    releaseReason?: StringNullableFilter<"DeliveryAssignment"> | string | null
+    createdAt?: DateTimeFilter<"DeliveryAssignment"> | Date | string
+    delivery?: XOR<DeliveryScalarRelationFilter, DeliveryWhereInput>
+    driverProfile?: XOR<DriverProfileScalarRelationFilter, DriverProfileWhereInput>
+    assignedByUser?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
+  }, "id">
+
+  export type DeliveryAssignmentOrderByWithAggregationInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    driverProfileId?: SortOrder
+    assignedByUserId?: SortOrderInput | SortOrder
+    status?: SortOrder
+    acceptedAt?: SortOrder
+    releasedAt?: SortOrderInput | SortOrder
+    releaseReason?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: DeliveryAssignmentCountOrderByAggregateInput
+    _max?: DeliveryAssignmentMaxOrderByAggregateInput
+    _min?: DeliveryAssignmentMinOrderByAggregateInput
+  }
+
+  export type DeliveryAssignmentScalarWhereWithAggregatesInput = {
+    AND?: DeliveryAssignmentScalarWhereWithAggregatesInput | DeliveryAssignmentScalarWhereWithAggregatesInput[]
+    OR?: DeliveryAssignmentScalarWhereWithAggregatesInput[]
+    NOT?: DeliveryAssignmentScalarWhereWithAggregatesInput | DeliveryAssignmentScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DeliveryAssignment"> | string
+    deliveryId?: StringWithAggregatesFilter<"DeliveryAssignment"> | string
+    driverProfileId?: StringWithAggregatesFilter<"DeliveryAssignment"> | string
+    assignedByUserId?: StringNullableWithAggregatesFilter<"DeliveryAssignment"> | string | null
+    status?: EnumDeliveryAssignmentStatusWithAggregatesFilter<"DeliveryAssignment"> | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeWithAggregatesFilter<"DeliveryAssignment"> | Date | string
+    releasedAt?: DateTimeNullableWithAggregatesFilter<"DeliveryAssignment"> | Date | string | null
+    releaseReason?: StringNullableWithAggregatesFilter<"DeliveryAssignment"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"DeliveryAssignment"> | Date | string
+  }
+
+  export type DeliveryStatusHistoryWhereInput = {
+    AND?: DeliveryStatusHistoryWhereInput | DeliveryStatusHistoryWhereInput[]
+    OR?: DeliveryStatusHistoryWhereInput[]
+    NOT?: DeliveryStatusHistoryWhereInput | DeliveryStatusHistoryWhereInput[]
+    id?: StringFilter<"DeliveryStatusHistory"> | string
+    deliveryId?: StringFilter<"DeliveryStatusHistory"> | string
+    oldStatus?: EnumDeliveryStatusNullableFilter<"DeliveryStatusHistory"> | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFilter<"DeliveryStatusHistory"> | $Enums.DeliveryStatus
+    changedByUserId?: StringFilter<"DeliveryStatusHistory"> | string
+    note?: StringNullableFilter<"DeliveryStatusHistory"> | string | null
+    createdAt?: DateTimeFilter<"DeliveryStatusHistory"> | Date | string
+    delivery?: XOR<DeliveryScalarRelationFilter, DeliveryWhereInput>
+    changedByUser?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }
+
+  export type DeliveryStatusHistoryOrderByWithRelationInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    oldStatus?: SortOrderInput | SortOrder
+    newStatus?: SortOrder
+    changedByUserId?: SortOrder
+    note?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    delivery?: DeliveryOrderByWithRelationInput
+    changedByUser?: UserOrderByWithRelationInput
+  }
+
+  export type DeliveryStatusHistoryWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: DeliveryStatusHistoryWhereInput | DeliveryStatusHistoryWhereInput[]
+    OR?: DeliveryStatusHistoryWhereInput[]
+    NOT?: DeliveryStatusHistoryWhereInput | DeliveryStatusHistoryWhereInput[]
+    deliveryId?: StringFilter<"DeliveryStatusHistory"> | string
+    oldStatus?: EnumDeliveryStatusNullableFilter<"DeliveryStatusHistory"> | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFilter<"DeliveryStatusHistory"> | $Enums.DeliveryStatus
+    changedByUserId?: StringFilter<"DeliveryStatusHistory"> | string
+    note?: StringNullableFilter<"DeliveryStatusHistory"> | string | null
+    createdAt?: DateTimeFilter<"DeliveryStatusHistory"> | Date | string
+    delivery?: XOR<DeliveryScalarRelationFilter, DeliveryWhereInput>
+    changedByUser?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }, "id">
+
+  export type DeliveryStatusHistoryOrderByWithAggregationInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    oldStatus?: SortOrderInput | SortOrder
+    newStatus?: SortOrder
+    changedByUserId?: SortOrder
+    note?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: DeliveryStatusHistoryCountOrderByAggregateInput
+    _max?: DeliveryStatusHistoryMaxOrderByAggregateInput
+    _min?: DeliveryStatusHistoryMinOrderByAggregateInput
+  }
+
+  export type DeliveryStatusHistoryScalarWhereWithAggregatesInput = {
+    AND?: DeliveryStatusHistoryScalarWhereWithAggregatesInput | DeliveryStatusHistoryScalarWhereWithAggregatesInput[]
+    OR?: DeliveryStatusHistoryScalarWhereWithAggregatesInput[]
+    NOT?: DeliveryStatusHistoryScalarWhereWithAggregatesInput | DeliveryStatusHistoryScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DeliveryStatusHistory"> | string
+    deliveryId?: StringWithAggregatesFilter<"DeliveryStatusHistory"> | string
+    oldStatus?: EnumDeliveryStatusNullableWithAggregatesFilter<"DeliveryStatusHistory"> | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusWithAggregatesFilter<"DeliveryStatusHistory"> | $Enums.DeliveryStatus
+    changedByUserId?: StringWithAggregatesFilter<"DeliveryStatusHistory"> | string
+    note?: StringNullableWithAggregatesFilter<"DeliveryStatusHistory"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"DeliveryStatusHistory"> | Date | string
+  }
+
+  export type DeliveryLocationPingWhereInput = {
+    AND?: DeliveryLocationPingWhereInput | DeliveryLocationPingWhereInput[]
+    OR?: DeliveryLocationPingWhereInput[]
+    NOT?: DeliveryLocationPingWhereInput | DeliveryLocationPingWhereInput[]
+    id?: StringFilter<"DeliveryLocationPing"> | string
+    deliveryId?: StringFilter<"DeliveryLocationPing"> | string
+    driverProfileId?: StringFilter<"DeliveryLocationPing"> | string
+    latitude?: DecimalFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: DecimalNullableFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string | null
+    heading?: DecimalNullableFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string | null
+    speed?: DecimalNullableFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFilter<"DeliveryLocationPing"> | Date | string
+    createdAt?: DateTimeFilter<"DeliveryLocationPing"> | Date | string
+    delivery?: XOR<DeliveryScalarRelationFilter, DeliveryWhereInput>
+    driverProfile?: XOR<DriverProfileScalarRelationFilter, DriverProfileWhereInput>
+  }
+
+  export type DeliveryLocationPingOrderByWithRelationInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    driverProfileId?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
+    accuracyMeters?: SortOrderInput | SortOrder
+    heading?: SortOrderInput | SortOrder
+    speed?: SortOrderInput | SortOrder
+    capturedAt?: SortOrder
+    createdAt?: SortOrder
+    delivery?: DeliveryOrderByWithRelationInput
+    driverProfile?: DriverProfileOrderByWithRelationInput
+  }
+
+  export type DeliveryLocationPingWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: DeliveryLocationPingWhereInput | DeliveryLocationPingWhereInput[]
+    OR?: DeliveryLocationPingWhereInput[]
+    NOT?: DeliveryLocationPingWhereInput | DeliveryLocationPingWhereInput[]
+    deliveryId?: StringFilter<"DeliveryLocationPing"> | string
+    driverProfileId?: StringFilter<"DeliveryLocationPing"> | string
+    latitude?: DecimalFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: DecimalNullableFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string | null
+    heading?: DecimalNullableFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string | null
+    speed?: DecimalNullableFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFilter<"DeliveryLocationPing"> | Date | string
+    createdAt?: DateTimeFilter<"DeliveryLocationPing"> | Date | string
+    delivery?: XOR<DeliveryScalarRelationFilter, DeliveryWhereInput>
+    driverProfile?: XOR<DriverProfileScalarRelationFilter, DriverProfileWhereInput>
+  }, "id">
+
+  export type DeliveryLocationPingOrderByWithAggregationInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    driverProfileId?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
+    accuracyMeters?: SortOrderInput | SortOrder
+    heading?: SortOrderInput | SortOrder
+    speed?: SortOrderInput | SortOrder
+    capturedAt?: SortOrder
+    createdAt?: SortOrder
+    _count?: DeliveryLocationPingCountOrderByAggregateInput
+    _avg?: DeliveryLocationPingAvgOrderByAggregateInput
+    _max?: DeliveryLocationPingMaxOrderByAggregateInput
+    _min?: DeliveryLocationPingMinOrderByAggregateInput
+    _sum?: DeliveryLocationPingSumOrderByAggregateInput
+  }
+
+  export type DeliveryLocationPingScalarWhereWithAggregatesInput = {
+    AND?: DeliveryLocationPingScalarWhereWithAggregatesInput | DeliveryLocationPingScalarWhereWithAggregatesInput[]
+    OR?: DeliveryLocationPingScalarWhereWithAggregatesInput[]
+    NOT?: DeliveryLocationPingScalarWhereWithAggregatesInput | DeliveryLocationPingScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DeliveryLocationPing"> | string
+    deliveryId?: StringWithAggregatesFilter<"DeliveryLocationPing"> | string
+    driverProfileId?: StringWithAggregatesFilter<"DeliveryLocationPing"> | string
+    latitude?: DecimalWithAggregatesFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalWithAggregatesFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: DecimalNullableWithAggregatesFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string | null
+    heading?: DecimalNullableWithAggregatesFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string | null
+    speed?: DecimalNullableWithAggregatesFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeWithAggregatesFilter<"DeliveryLocationPing"> | Date | string
+    createdAt?: DateTimeWithAggregatesFilter<"DeliveryLocationPing"> | Date | string
   }
 
   export type ReservationStatusHistoryWhereInput = {
@@ -42093,6 +49655,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -42100,6 +49663,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -42127,6 +49693,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -42134,6 +49701,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -42161,6 +49731,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -42168,6 +49739,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -42195,6 +49769,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -42202,6 +49777,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -42663,6 +50241,122 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type DriverProfileCreateInput = {
+    id?: string
+    status?: $Enums.DriverProfileStatus
+    availability?: $Enums.DriverAvailabilityStatus
+    displayName: string
+    phone?: string | null
+    vehicleType?: string
+    vehicleLabel?: string | null
+    vehiclePlate?: string | null
+    capacityNotes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutDriverProfileInput
+    deliveries?: DeliveryCreateNestedManyWithoutAssignedDriverProfileInput
+    assignments?: DeliveryAssignmentCreateNestedManyWithoutDriverProfileInput
+    locationPings?: DeliveryLocationPingCreateNestedManyWithoutDriverProfileInput
+  }
+
+  export type DriverProfileUncheckedCreateInput = {
+    id?: string
+    userId: string
+    status?: $Enums.DriverProfileStatus
+    availability?: $Enums.DriverAvailabilityStatus
+    displayName: string
+    phone?: string | null
+    vehicleType?: string
+    vehicleLabel?: string | null
+    vehiclePlate?: string | null
+    capacityNotes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    deliveries?: DeliveryUncheckedCreateNestedManyWithoutAssignedDriverProfileInput
+    assignments?: DeliveryAssignmentUncheckedCreateNestedManyWithoutDriverProfileInput
+    locationPings?: DeliveryLocationPingUncheckedCreateNestedManyWithoutDriverProfileInput
+  }
+
+  export type DriverProfileUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFieldUpdateOperationsInput | $Enums.DriverAvailabilityStatus
+    displayName?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    vehicleType?: StringFieldUpdateOperationsInput | string
+    vehicleLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    vehiclePlate?: NullableStringFieldUpdateOperationsInput | string | null
+    capacityNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutDriverProfileNestedInput
+    deliveries?: DeliveryUpdateManyWithoutAssignedDriverProfileNestedInput
+    assignments?: DeliveryAssignmentUpdateManyWithoutDriverProfileNestedInput
+    locationPings?: DeliveryLocationPingUpdateManyWithoutDriverProfileNestedInput
+  }
+
+  export type DriverProfileUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFieldUpdateOperationsInput | $Enums.DriverAvailabilityStatus
+    displayName?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    vehicleType?: StringFieldUpdateOperationsInput | string
+    vehicleLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    vehiclePlate?: NullableStringFieldUpdateOperationsInput | string | null
+    capacityNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    deliveries?: DeliveryUncheckedUpdateManyWithoutAssignedDriverProfileNestedInput
+    assignments?: DeliveryAssignmentUncheckedUpdateManyWithoutDriverProfileNestedInput
+    locationPings?: DeliveryLocationPingUncheckedUpdateManyWithoutDriverProfileNestedInput
+  }
+
+  export type DriverProfileCreateManyInput = {
+    id?: string
+    userId: string
+    status?: $Enums.DriverProfileStatus
+    availability?: $Enums.DriverAvailabilityStatus
+    displayName: string
+    phone?: string | null
+    vehicleType?: string
+    vehicleLabel?: string | null
+    vehiclePlate?: string | null
+    capacityNotes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DriverProfileUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFieldUpdateOperationsInput | $Enums.DriverAvailabilityStatus
+    displayName?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    vehicleType?: StringFieldUpdateOperationsInput | string
+    vehicleLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    vehiclePlate?: NullableStringFieldUpdateOperationsInput | string | null
+    capacityNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DriverProfileUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFieldUpdateOperationsInput | $Enums.DriverAvailabilityStatus
+    displayName?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    vehicleType?: StringFieldUpdateOperationsInput | string
+    vehicleLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    vehiclePlate?: NullableStringFieldUpdateOperationsInput | string | null
+    capacityNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type OrganizationProfileCreateInput = {
     id?: string
     organizationName: string
@@ -42776,6 +50470,8 @@ export namespace Prisma {
     organizationBusinessFor?: OrganizationProfileCreateNestedManyWithoutBusinessLocationInput
     materials?: MaterialCreateNestedManyWithoutLocationInput
     reservationDropoffs?: ReservationCreateNestedManyWithoutDropoffLocationInput
+    deliveryPickups?: DeliveryCreateNestedManyWithoutPickupLocationInput
+    deliveryDropoffs?: DeliveryCreateNestedManyWithoutDropoffLocationInput
   }
 
   export type LocationUncheckedCreateInput = {
@@ -42795,6 +50491,8 @@ export namespace Prisma {
     organizationBusinessFor?: OrganizationProfileUncheckedCreateNestedManyWithoutBusinessLocationInput
     materials?: MaterialUncheckedCreateNestedManyWithoutLocationInput
     reservationDropoffs?: ReservationUncheckedCreateNestedManyWithoutDropoffLocationInput
+    deliveryPickups?: DeliveryUncheckedCreateNestedManyWithoutPickupLocationInput
+    deliveryDropoffs?: DeliveryUncheckedCreateNestedManyWithoutDropoffLocationInput
   }
 
   export type LocationUpdateInput = {
@@ -42814,6 +50512,8 @@ export namespace Prisma {
     organizationBusinessFor?: OrganizationProfileUpdateManyWithoutBusinessLocationNestedInput
     materials?: MaterialUpdateManyWithoutLocationNestedInput
     reservationDropoffs?: ReservationUpdateManyWithoutDropoffLocationNestedInput
+    deliveryPickups?: DeliveryUpdateManyWithoutPickupLocationNestedInput
+    deliveryDropoffs?: DeliveryUpdateManyWithoutDropoffLocationNestedInput
   }
 
   export type LocationUncheckedUpdateInput = {
@@ -42833,6 +50533,8 @@ export namespace Prisma {
     organizationBusinessFor?: OrganizationProfileUncheckedUpdateManyWithoutBusinessLocationNestedInput
     materials?: MaterialUncheckedUpdateManyWithoutLocationNestedInput
     reservationDropoffs?: ReservationUncheckedUpdateManyWithoutDropoffLocationNestedInput
+    deliveryPickups?: DeliveryUncheckedUpdateManyWithoutPickupLocationNestedInput
+    deliveryDropoffs?: DeliveryUncheckedUpdateManyWithoutDropoffLocationNestedInput
   }
 
   export type LocationCreateManyInput = {
@@ -43926,6 +51628,7 @@ export namespace Prisma {
     owner: UserCreateNestedOneWithoutOwnedReservationsAsOwnerInput
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryCreateNestedManyWithoutReservationInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
@@ -43955,6 +51658,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryUncheckedCreateNestedManyWithoutReservationInput
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
@@ -43984,6 +51688,7 @@ export namespace Prisma {
     owner?: UserUpdateOneRequiredWithoutOwnedReservationsAsOwnerNestedInput
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
@@ -44013,6 +51718,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUncheckedUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
@@ -44089,6 +51795,419 @@ export namespace Prisma {
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryCreateInput = {
+    id?: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    reservation: ReservationCreateNestedOneWithoutDeliveriesInput
+    pickupLocation: LocationCreateNestedOneWithoutDeliveryPickupsInput
+    dropoffLocation: LocationCreateNestedOneWithoutDeliveryDropoffsInput
+    assignedDriverProfile?: DriverProfileCreateNestedOneWithoutDeliveriesInput
+    requestedByUser: UserCreateNestedOneWithoutRequestedDeliveriesInput
+    assignments?: DeliveryAssignmentCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryUncheckedCreateInput = {
+    id?: string
+    reservationId: string
+    pickupLocationId: string
+    dropoffLocationId: string
+    assignedDriverProfileId?: string | null
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assignments?: DeliveryAssignmentUncheckedCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingUncheckedCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reservation?: ReservationUpdateOneRequiredWithoutDeliveriesNestedInput
+    pickupLocation?: LocationUpdateOneRequiredWithoutDeliveryPickupsNestedInput
+    dropoffLocation?: LocationUpdateOneRequiredWithoutDeliveryDropoffsNestedInput
+    assignedDriverProfile?: DriverProfileUpdateOneWithoutDeliveriesNestedInput
+    requestedByUser?: UserUpdateOneRequiredWithoutRequestedDeliveriesNestedInput
+    assignments?: DeliveryAssignmentUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignments?: DeliveryAssignmentUncheckedUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUncheckedUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUncheckedUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryCreateManyInput = {
+    id?: string
+    reservationId: string
+    pickupLocationId: string
+    dropoffLocationId: string
+    assignedDriverProfileId?: string | null
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DeliveryUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryAssignmentCreateInput = {
+    id?: string
+    status?: $Enums.DeliveryAssignmentStatus
+    acceptedAt?: Date | string
+    releasedAt?: Date | string | null
+    releaseReason?: string | null
+    createdAt?: Date | string
+    delivery: DeliveryCreateNestedOneWithoutAssignmentsInput
+    driverProfile: DriverProfileCreateNestedOneWithoutAssignmentsInput
+    assignedByUser?: UserCreateNestedOneWithoutDeliveryAssignmentsMadeInput
+  }
+
+  export type DeliveryAssignmentUncheckedCreateInput = {
+    id?: string
+    deliveryId: string
+    driverProfileId: string
+    assignedByUserId?: string | null
+    status?: $Enums.DeliveryAssignmentStatus
+    acceptedAt?: Date | string
+    releasedAt?: Date | string | null
+    releaseReason?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryAssignmentUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    delivery?: DeliveryUpdateOneRequiredWithoutAssignmentsNestedInput
+    driverProfile?: DriverProfileUpdateOneRequiredWithoutAssignmentsNestedInput
+    assignedByUser?: UserUpdateOneWithoutDeliveryAssignmentsMadeNestedInput
+  }
+
+  export type DeliveryAssignmentUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    driverProfileId?: StringFieldUpdateOperationsInput | string
+    assignedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryAssignmentCreateManyInput = {
+    id?: string
+    deliveryId: string
+    driverProfileId: string
+    assignedByUserId?: string | null
+    status?: $Enums.DeliveryAssignmentStatus
+    acceptedAt?: Date | string
+    releasedAt?: Date | string | null
+    releaseReason?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryAssignmentUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryAssignmentUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    driverProfileId?: StringFieldUpdateOperationsInput | string
+    assignedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryStatusHistoryCreateInput = {
+    id?: string
+    oldStatus?: $Enums.DeliveryStatus | null
+    newStatus: $Enums.DeliveryStatus
+    note?: string | null
+    createdAt?: Date | string
+    delivery: DeliveryCreateNestedOneWithoutStatusHistoryInput
+    changedByUser: UserCreateNestedOneWithoutDeliveryStatusChangesInput
+  }
+
+  export type DeliveryStatusHistoryUncheckedCreateInput = {
+    id?: string
+    deliveryId: string
+    oldStatus?: $Enums.DeliveryStatus | null
+    newStatus: $Enums.DeliveryStatus
+    changedByUserId: string
+    note?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryStatusHistoryUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    oldStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    delivery?: DeliveryUpdateOneRequiredWithoutStatusHistoryNestedInput
+    changedByUser?: UserUpdateOneRequiredWithoutDeliveryStatusChangesNestedInput
+  }
+
+  export type DeliveryStatusHistoryUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    oldStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    changedByUserId?: StringFieldUpdateOperationsInput | string
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryStatusHistoryCreateManyInput = {
+    id?: string
+    deliveryId: string
+    oldStatus?: $Enums.DeliveryStatus | null
+    newStatus: $Enums.DeliveryStatus
+    changedByUserId: string
+    note?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryStatusHistoryUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    oldStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryStatusHistoryUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    oldStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    changedByUserId?: StringFieldUpdateOperationsInput | string
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryLocationPingCreateInput = {
+    id?: string
+    latitude: Decimal | DecimalJsLike | number | string
+    longitude: Decimal | DecimalJsLike | number | string
+    accuracyMeters?: Decimal | DecimalJsLike | number | string | null
+    heading?: Decimal | DecimalJsLike | number | string | null
+    speed?: Decimal | DecimalJsLike | number | string | null
+    capturedAt: Date | string
+    createdAt?: Date | string
+    delivery: DeliveryCreateNestedOneWithoutLocationPingsInput
+    driverProfile: DriverProfileCreateNestedOneWithoutLocationPingsInput
+  }
+
+  export type DeliveryLocationPingUncheckedCreateInput = {
+    id?: string
+    deliveryId: string
+    driverProfileId: string
+    latitude: Decimal | DecimalJsLike | number | string
+    longitude: Decimal | DecimalJsLike | number | string
+    accuracyMeters?: Decimal | DecimalJsLike | number | string | null
+    heading?: Decimal | DecimalJsLike | number | string | null
+    speed?: Decimal | DecimalJsLike | number | string | null
+    capturedAt: Date | string
+    createdAt?: Date | string
+  }
+
+  export type DeliveryLocationPingUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    latitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    heading?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speed?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    delivery?: DeliveryUpdateOneRequiredWithoutLocationPingsNestedInput
+    driverProfile?: DriverProfileUpdateOneRequiredWithoutLocationPingsNestedInput
+  }
+
+  export type DeliveryLocationPingUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    driverProfileId?: StringFieldUpdateOperationsInput | string
+    latitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    heading?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speed?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryLocationPingCreateManyInput = {
+    id?: string
+    deliveryId: string
+    driverProfileId: string
+    latitude: Decimal | DecimalJsLike | number | string
+    longitude: Decimal | DecimalJsLike | number | string
+    accuracyMeters?: Decimal | DecimalJsLike | number | string | null
+    heading?: Decimal | DecimalJsLike | number | string | null
+    speed?: Decimal | DecimalJsLike | number | string | null
+    capturedAt: Date | string
+    createdAt?: Date | string
+  }
+
+  export type DeliveryLocationPingUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    latitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    heading?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speed?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryLocationPingUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    driverProfileId?: StringFieldUpdateOperationsInput | string
+    latitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    heading?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speed?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ReservationStatusHistoryCreateInput = {
@@ -45030,6 +53149,11 @@ export namespace Prisma {
     isNot?: SupplierProfileWhereInput | null
   }
 
+  export type DriverProfileNullableScalarRelationFilter = {
+    is?: DriverProfileWhereInput | null
+    isNot?: DriverProfileWhereInput | null
+  }
+
   export type RoleInvitationListRelationFilter = {
     every?: RoleInvitationWhereInput
     some?: RoleInvitationWhereInput
@@ -45052,6 +53176,24 @@ export namespace Prisma {
     every?: ReservationStatusHistoryWhereInput
     some?: ReservationStatusHistoryWhereInput
     none?: ReservationStatusHistoryWhereInput
+  }
+
+  export type DeliveryListRelationFilter = {
+    every?: DeliveryWhereInput
+    some?: DeliveryWhereInput
+    none?: DeliveryWhereInput
+  }
+
+  export type DeliveryAssignmentListRelationFilter = {
+    every?: DeliveryAssignmentWhereInput
+    some?: DeliveryAssignmentWhereInput
+    none?: DeliveryAssignmentWhereInput
+  }
+
+  export type DeliveryStatusHistoryListRelationFilter = {
+    every?: DeliveryStatusHistoryWhereInput
+    some?: DeliveryStatusHistoryWhereInput
+    none?: DeliveryStatusHistoryWhereInput
   }
 
   export type NotificationListRelationFilter = {
@@ -45116,6 +53258,18 @@ export namespace Prisma {
   }
 
   export type ReservationStatusHistoryOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type DeliveryOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type DeliveryAssignmentOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type DeliveryStatusHistoryOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -45546,6 +53700,95 @@ export namespace Prisma {
     defaultPickupLocationId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type EnumDriverProfileStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.DriverProfileStatus | EnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDriverProfileStatusFilter<$PrismaModel> | $Enums.DriverProfileStatus
+  }
+
+  export type EnumDriverAvailabilityStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.DriverAvailabilityStatus | EnumDriverAvailabilityStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DriverAvailabilityStatus[] | ListEnumDriverAvailabilityStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DriverAvailabilityStatus[] | ListEnumDriverAvailabilityStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDriverAvailabilityStatusFilter<$PrismaModel> | $Enums.DriverAvailabilityStatus
+  }
+
+  export type DeliveryLocationPingListRelationFilter = {
+    every?: DeliveryLocationPingWhereInput
+    some?: DeliveryLocationPingWhereInput
+    none?: DeliveryLocationPingWhereInput
+  }
+
+  export type DeliveryLocationPingOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type DriverProfileCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    status?: SortOrder
+    availability?: SortOrder
+    displayName?: SortOrder
+    phone?: SortOrder
+    vehicleType?: SortOrder
+    vehicleLabel?: SortOrder
+    vehiclePlate?: SortOrder
+    capacityNotes?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DriverProfileMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    status?: SortOrder
+    availability?: SortOrder
+    displayName?: SortOrder
+    phone?: SortOrder
+    vehicleType?: SortOrder
+    vehicleLabel?: SortOrder
+    vehiclePlate?: SortOrder
+    capacityNotes?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DriverProfileMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    status?: SortOrder
+    availability?: SortOrder
+    displayName?: SortOrder
+    phone?: SortOrder
+    vehicleType?: SortOrder
+    vehicleLabel?: SortOrder
+    vehiclePlate?: SortOrder
+    capacityNotes?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type EnumDriverProfileStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DriverProfileStatus | EnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDriverProfileStatusWithAggregatesFilter<$PrismaModel> | $Enums.DriverProfileStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDriverProfileStatusFilter<$PrismaModel>
+    _max?: NestedEnumDriverProfileStatusFilter<$PrismaModel>
+  }
+
+  export type EnumDriverAvailabilityStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DriverAvailabilityStatus | EnumDriverAvailabilityStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DriverAvailabilityStatus[] | ListEnumDriverAvailabilityStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DriverAvailabilityStatus[] | ListEnumDriverAvailabilityStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDriverAvailabilityStatusWithAggregatesFilter<$PrismaModel> | $Enums.DriverAvailabilityStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDriverAvailabilityStatusFilter<$PrismaModel>
+    _max?: NestedEnumDriverAvailabilityStatusFilter<$PrismaModel>
   }
 
   export type EnumOrganizationTypeFilter<$PrismaModel = never> = {
@@ -46766,16 +55009,253 @@ export namespace Prisma {
     _max?: NestedEnumDeliveryStatusNullableFilter<$PrismaModel>
   }
 
-  export type EnumReservationStatusGroupFilter<$PrismaModel = never> = {
-    equals?: $Enums.ReservationStatusGroup | EnumReservationStatusGroupFieldRefInput<$PrismaModel>
-    in?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
-    notIn?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
-    not?: NestedEnumReservationStatusGroupFilter<$PrismaModel> | $Enums.ReservationStatusGroup
+  export type EnumDeliveryStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.DeliveryStatus | EnumDeliveryStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDeliveryStatusFilter<$PrismaModel> | $Enums.DeliveryStatus
   }
 
   export type ReservationScalarRelationFilter = {
     is?: ReservationWhereInput
     isNot?: ReservationWhereInput
+  }
+
+  export type DeliveryCountOrderByAggregateInput = {
+    id?: SortOrder
+    reservationId?: SortOrder
+    pickupLocationId?: SortOrder
+    dropoffLocationId?: SortOrder
+    assignedDriverProfileId?: SortOrder
+    requestedByUserId?: SortOrder
+    status?: SortOrder
+    requestedAt?: SortOrder
+    assignedAt?: SortOrder
+    arrivedPickupAt?: SortOrder
+    pickedUpAt?: SortOrder
+    onTheWayAt?: SortOrder
+    arrivedDropoffAt?: SortOrder
+    deliveredAt?: SortOrder
+    cancelledAt?: SortOrder
+    failedAt?: SortOrder
+    learnerNote?: SortOrder
+    driverNote?: SortOrder
+    failureReason?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DeliveryMaxOrderByAggregateInput = {
+    id?: SortOrder
+    reservationId?: SortOrder
+    pickupLocationId?: SortOrder
+    dropoffLocationId?: SortOrder
+    assignedDriverProfileId?: SortOrder
+    requestedByUserId?: SortOrder
+    status?: SortOrder
+    requestedAt?: SortOrder
+    assignedAt?: SortOrder
+    arrivedPickupAt?: SortOrder
+    pickedUpAt?: SortOrder
+    onTheWayAt?: SortOrder
+    arrivedDropoffAt?: SortOrder
+    deliveredAt?: SortOrder
+    cancelledAt?: SortOrder
+    failedAt?: SortOrder
+    learnerNote?: SortOrder
+    driverNote?: SortOrder
+    failureReason?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DeliveryMinOrderByAggregateInput = {
+    id?: SortOrder
+    reservationId?: SortOrder
+    pickupLocationId?: SortOrder
+    dropoffLocationId?: SortOrder
+    assignedDriverProfileId?: SortOrder
+    requestedByUserId?: SortOrder
+    status?: SortOrder
+    requestedAt?: SortOrder
+    assignedAt?: SortOrder
+    arrivedPickupAt?: SortOrder
+    pickedUpAt?: SortOrder
+    onTheWayAt?: SortOrder
+    arrivedDropoffAt?: SortOrder
+    deliveredAt?: SortOrder
+    cancelledAt?: SortOrder
+    failedAt?: SortOrder
+    learnerNote?: SortOrder
+    driverNote?: SortOrder
+    failureReason?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type EnumDeliveryStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DeliveryStatus | EnumDeliveryStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDeliveryStatusWithAggregatesFilter<$PrismaModel> | $Enums.DeliveryStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDeliveryStatusFilter<$PrismaModel>
+    _max?: NestedEnumDeliveryStatusFilter<$PrismaModel>
+  }
+
+  export type EnumDeliveryAssignmentStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.DeliveryAssignmentStatus | EnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DeliveryAssignmentStatus[] | ListEnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DeliveryAssignmentStatus[] | ListEnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDeliveryAssignmentStatusFilter<$PrismaModel> | $Enums.DeliveryAssignmentStatus
+  }
+
+  export type DeliveryScalarRelationFilter = {
+    is?: DeliveryWhereInput
+    isNot?: DeliveryWhereInput
+  }
+
+  export type DriverProfileScalarRelationFilter = {
+    is?: DriverProfileWhereInput
+    isNot?: DriverProfileWhereInput
+  }
+
+  export type DeliveryAssignmentCountOrderByAggregateInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    driverProfileId?: SortOrder
+    assignedByUserId?: SortOrder
+    status?: SortOrder
+    acceptedAt?: SortOrder
+    releasedAt?: SortOrder
+    releaseReason?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type DeliveryAssignmentMaxOrderByAggregateInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    driverProfileId?: SortOrder
+    assignedByUserId?: SortOrder
+    status?: SortOrder
+    acceptedAt?: SortOrder
+    releasedAt?: SortOrder
+    releaseReason?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type DeliveryAssignmentMinOrderByAggregateInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    driverProfileId?: SortOrder
+    assignedByUserId?: SortOrder
+    status?: SortOrder
+    acceptedAt?: SortOrder
+    releasedAt?: SortOrder
+    releaseReason?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type EnumDeliveryAssignmentStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DeliveryAssignmentStatus | EnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DeliveryAssignmentStatus[] | ListEnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DeliveryAssignmentStatus[] | ListEnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDeliveryAssignmentStatusWithAggregatesFilter<$PrismaModel> | $Enums.DeliveryAssignmentStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDeliveryAssignmentStatusFilter<$PrismaModel>
+    _max?: NestedEnumDeliveryAssignmentStatusFilter<$PrismaModel>
+  }
+
+  export type DeliveryStatusHistoryCountOrderByAggregateInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    oldStatus?: SortOrder
+    newStatus?: SortOrder
+    changedByUserId?: SortOrder
+    note?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type DeliveryStatusHistoryMaxOrderByAggregateInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    oldStatus?: SortOrder
+    newStatus?: SortOrder
+    changedByUserId?: SortOrder
+    note?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type DeliveryStatusHistoryMinOrderByAggregateInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    oldStatus?: SortOrder
+    newStatus?: SortOrder
+    changedByUserId?: SortOrder
+    note?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type DeliveryLocationPingCountOrderByAggregateInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    driverProfileId?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
+    accuracyMeters?: SortOrder
+    heading?: SortOrder
+    speed?: SortOrder
+    capturedAt?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type DeliveryLocationPingAvgOrderByAggregateInput = {
+    latitude?: SortOrder
+    longitude?: SortOrder
+    accuracyMeters?: SortOrder
+    heading?: SortOrder
+    speed?: SortOrder
+  }
+
+  export type DeliveryLocationPingMaxOrderByAggregateInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    driverProfileId?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
+    accuracyMeters?: SortOrder
+    heading?: SortOrder
+    speed?: SortOrder
+    capturedAt?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type DeliveryLocationPingMinOrderByAggregateInput = {
+    id?: SortOrder
+    deliveryId?: SortOrder
+    driverProfileId?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
+    accuracyMeters?: SortOrder
+    heading?: SortOrder
+    speed?: SortOrder
+    capturedAt?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type DeliveryLocationPingSumOrderByAggregateInput = {
+    latitude?: SortOrder
+    longitude?: SortOrder
+    accuracyMeters?: SortOrder
+    heading?: SortOrder
+    speed?: SortOrder
+  }
+
+  export type EnumReservationStatusGroupFilter<$PrismaModel = never> = {
+    equals?: $Enums.ReservationStatusGroup | EnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    in?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
+    not?: NestedEnumReservationStatusGroupFilter<$PrismaModel> | $Enums.ReservationStatusGroup
   }
 
   export type ReservationStatusHistoryCountOrderByAggregateInput = {
@@ -47347,6 +55827,12 @@ export namespace Prisma {
     connect?: SupplierProfileWhereUniqueInput
   }
 
+  export type DriverProfileCreateNestedOneWithoutUserInput = {
+    create?: XOR<DriverProfileCreateWithoutUserInput, DriverProfileUncheckedCreateWithoutUserInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutUserInput
+    connect?: DriverProfileWhereUniqueInput
+  }
+
   export type RoleInvitationCreateNestedManyWithoutInvitedByUserInput = {
     create?: XOR<RoleInvitationCreateWithoutInvitedByUserInput, RoleInvitationUncheckedCreateWithoutInvitedByUserInput> | RoleInvitationCreateWithoutInvitedByUserInput[] | RoleInvitationUncheckedCreateWithoutInvitedByUserInput[]
     connectOrCreate?: RoleInvitationCreateOrConnectWithoutInvitedByUserInput | RoleInvitationCreateOrConnectWithoutInvitedByUserInput[]
@@ -47394,6 +55880,27 @@ export namespace Prisma {
     connectOrCreate?: ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput | ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput[]
     createMany?: ReservationStatusHistoryCreateManyChangedByUserInputEnvelope
     connect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+  }
+
+  export type DeliveryCreateNestedManyWithoutRequestedByUserInput = {
+    create?: XOR<DeliveryCreateWithoutRequestedByUserInput, DeliveryUncheckedCreateWithoutRequestedByUserInput> | DeliveryCreateWithoutRequestedByUserInput[] | DeliveryUncheckedCreateWithoutRequestedByUserInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutRequestedByUserInput | DeliveryCreateOrConnectWithoutRequestedByUserInput[]
+    createMany?: DeliveryCreateManyRequestedByUserInputEnvelope
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+  }
+
+  export type DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput = {
+    create?: XOR<DeliveryAssignmentCreateWithoutAssignedByUserInput, DeliveryAssignmentUncheckedCreateWithoutAssignedByUserInput> | DeliveryAssignmentCreateWithoutAssignedByUserInput[] | DeliveryAssignmentUncheckedCreateWithoutAssignedByUserInput[]
+    connectOrCreate?: DeliveryAssignmentCreateOrConnectWithoutAssignedByUserInput | DeliveryAssignmentCreateOrConnectWithoutAssignedByUserInput[]
+    createMany?: DeliveryAssignmentCreateManyAssignedByUserInputEnvelope
+    connect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+  }
+
+  export type DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput = {
+    create?: XOR<DeliveryStatusHistoryCreateWithoutChangedByUserInput, DeliveryStatusHistoryUncheckedCreateWithoutChangedByUserInput> | DeliveryStatusHistoryCreateWithoutChangedByUserInput[] | DeliveryStatusHistoryUncheckedCreateWithoutChangedByUserInput[]
+    connectOrCreate?: DeliveryStatusHistoryCreateOrConnectWithoutChangedByUserInput | DeliveryStatusHistoryCreateOrConnectWithoutChangedByUserInput[]
+    createMany?: DeliveryStatusHistoryCreateManyChangedByUserInputEnvelope
+    connect?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
   }
 
   export type NotificationCreateNestedManyWithoutUserInput = {
@@ -47478,6 +55985,12 @@ export namespace Prisma {
     connect?: SupplierProfileWhereUniqueInput
   }
 
+  export type DriverProfileUncheckedCreateNestedOneWithoutUserInput = {
+    create?: XOR<DriverProfileCreateWithoutUserInput, DriverProfileUncheckedCreateWithoutUserInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutUserInput
+    connect?: DriverProfileWhereUniqueInput
+  }
+
   export type RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput = {
     create?: XOR<RoleInvitationCreateWithoutInvitedByUserInput, RoleInvitationUncheckedCreateWithoutInvitedByUserInput> | RoleInvitationCreateWithoutInvitedByUserInput[] | RoleInvitationUncheckedCreateWithoutInvitedByUserInput[]
     connectOrCreate?: RoleInvitationCreateOrConnectWithoutInvitedByUserInput | RoleInvitationCreateOrConnectWithoutInvitedByUserInput[]
@@ -47525,6 +56038,27 @@ export namespace Prisma {
     connectOrCreate?: ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput | ReservationStatusHistoryCreateOrConnectWithoutChangedByUserInput[]
     createMany?: ReservationStatusHistoryCreateManyChangedByUserInputEnvelope
     connect?: ReservationStatusHistoryWhereUniqueInput | ReservationStatusHistoryWhereUniqueInput[]
+  }
+
+  export type DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput = {
+    create?: XOR<DeliveryCreateWithoutRequestedByUserInput, DeliveryUncheckedCreateWithoutRequestedByUserInput> | DeliveryCreateWithoutRequestedByUserInput[] | DeliveryUncheckedCreateWithoutRequestedByUserInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutRequestedByUserInput | DeliveryCreateOrConnectWithoutRequestedByUserInput[]
+    createMany?: DeliveryCreateManyRequestedByUserInputEnvelope
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+  }
+
+  export type DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput = {
+    create?: XOR<DeliveryAssignmentCreateWithoutAssignedByUserInput, DeliveryAssignmentUncheckedCreateWithoutAssignedByUserInput> | DeliveryAssignmentCreateWithoutAssignedByUserInput[] | DeliveryAssignmentUncheckedCreateWithoutAssignedByUserInput[]
+    connectOrCreate?: DeliveryAssignmentCreateOrConnectWithoutAssignedByUserInput | DeliveryAssignmentCreateOrConnectWithoutAssignedByUserInput[]
+    createMany?: DeliveryAssignmentCreateManyAssignedByUserInputEnvelope
+    connect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+  }
+
+  export type DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput = {
+    create?: XOR<DeliveryStatusHistoryCreateWithoutChangedByUserInput, DeliveryStatusHistoryUncheckedCreateWithoutChangedByUserInput> | DeliveryStatusHistoryCreateWithoutChangedByUserInput[] | DeliveryStatusHistoryUncheckedCreateWithoutChangedByUserInput[]
+    connectOrCreate?: DeliveryStatusHistoryCreateOrConnectWithoutChangedByUserInput | DeliveryStatusHistoryCreateOrConnectWithoutChangedByUserInput[]
+    createMany?: DeliveryStatusHistoryCreateManyChangedByUserInputEnvelope
+    connect?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
   }
 
   export type NotificationUncheckedCreateNestedManyWithoutUserInput = {
@@ -47651,6 +56185,16 @@ export namespace Prisma {
     update?: XOR<XOR<SupplierProfileUpdateToOneWithWhereWithoutUserInput, SupplierProfileUpdateWithoutUserInput>, SupplierProfileUncheckedUpdateWithoutUserInput>
   }
 
+  export type DriverProfileUpdateOneWithoutUserNestedInput = {
+    create?: XOR<DriverProfileCreateWithoutUserInput, DriverProfileUncheckedCreateWithoutUserInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutUserInput
+    upsert?: DriverProfileUpsertWithoutUserInput
+    disconnect?: DriverProfileWhereInput | boolean
+    delete?: DriverProfileWhereInput | boolean
+    connect?: DriverProfileWhereUniqueInput
+    update?: XOR<XOR<DriverProfileUpdateToOneWithWhereWithoutUserInput, DriverProfileUpdateWithoutUserInput>, DriverProfileUncheckedUpdateWithoutUserInput>
+  }
+
   export type RoleInvitationUpdateManyWithoutInvitedByUserNestedInput = {
     create?: XOR<RoleInvitationCreateWithoutInvitedByUserInput, RoleInvitationUncheckedCreateWithoutInvitedByUserInput> | RoleInvitationCreateWithoutInvitedByUserInput[] | RoleInvitationUncheckedCreateWithoutInvitedByUserInput[]
     connectOrCreate?: RoleInvitationCreateOrConnectWithoutInvitedByUserInput | RoleInvitationCreateOrConnectWithoutInvitedByUserInput[]
@@ -47747,6 +56291,48 @@ export namespace Prisma {
     update?: ReservationStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput | ReservationStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput[]
     updateMany?: ReservationStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput | ReservationStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput[]
     deleteMany?: ReservationStatusHistoryScalarWhereInput | ReservationStatusHistoryScalarWhereInput[]
+  }
+
+  export type DeliveryUpdateManyWithoutRequestedByUserNestedInput = {
+    create?: XOR<DeliveryCreateWithoutRequestedByUserInput, DeliveryUncheckedCreateWithoutRequestedByUserInput> | DeliveryCreateWithoutRequestedByUserInput[] | DeliveryUncheckedCreateWithoutRequestedByUserInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutRequestedByUserInput | DeliveryCreateOrConnectWithoutRequestedByUserInput[]
+    upsert?: DeliveryUpsertWithWhereUniqueWithoutRequestedByUserInput | DeliveryUpsertWithWhereUniqueWithoutRequestedByUserInput[]
+    createMany?: DeliveryCreateManyRequestedByUserInputEnvelope
+    set?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    disconnect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    delete?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    update?: DeliveryUpdateWithWhereUniqueWithoutRequestedByUserInput | DeliveryUpdateWithWhereUniqueWithoutRequestedByUserInput[]
+    updateMany?: DeliveryUpdateManyWithWhereWithoutRequestedByUserInput | DeliveryUpdateManyWithWhereWithoutRequestedByUserInput[]
+    deleteMany?: DeliveryScalarWhereInput | DeliveryScalarWhereInput[]
+  }
+
+  export type DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput = {
+    create?: XOR<DeliveryAssignmentCreateWithoutAssignedByUserInput, DeliveryAssignmentUncheckedCreateWithoutAssignedByUserInput> | DeliveryAssignmentCreateWithoutAssignedByUserInput[] | DeliveryAssignmentUncheckedCreateWithoutAssignedByUserInput[]
+    connectOrCreate?: DeliveryAssignmentCreateOrConnectWithoutAssignedByUserInput | DeliveryAssignmentCreateOrConnectWithoutAssignedByUserInput[]
+    upsert?: DeliveryAssignmentUpsertWithWhereUniqueWithoutAssignedByUserInput | DeliveryAssignmentUpsertWithWhereUniqueWithoutAssignedByUserInput[]
+    createMany?: DeliveryAssignmentCreateManyAssignedByUserInputEnvelope
+    set?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    disconnect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    delete?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    connect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    update?: DeliveryAssignmentUpdateWithWhereUniqueWithoutAssignedByUserInput | DeliveryAssignmentUpdateWithWhereUniqueWithoutAssignedByUserInput[]
+    updateMany?: DeliveryAssignmentUpdateManyWithWhereWithoutAssignedByUserInput | DeliveryAssignmentUpdateManyWithWhereWithoutAssignedByUserInput[]
+    deleteMany?: DeliveryAssignmentScalarWhereInput | DeliveryAssignmentScalarWhereInput[]
+  }
+
+  export type DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput = {
+    create?: XOR<DeliveryStatusHistoryCreateWithoutChangedByUserInput, DeliveryStatusHistoryUncheckedCreateWithoutChangedByUserInput> | DeliveryStatusHistoryCreateWithoutChangedByUserInput[] | DeliveryStatusHistoryUncheckedCreateWithoutChangedByUserInput[]
+    connectOrCreate?: DeliveryStatusHistoryCreateOrConnectWithoutChangedByUserInput | DeliveryStatusHistoryCreateOrConnectWithoutChangedByUserInput[]
+    upsert?: DeliveryStatusHistoryUpsertWithWhereUniqueWithoutChangedByUserInput | DeliveryStatusHistoryUpsertWithWhereUniqueWithoutChangedByUserInput[]
+    createMany?: DeliveryStatusHistoryCreateManyChangedByUserInputEnvelope
+    set?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    disconnect?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    delete?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    connect?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    update?: DeliveryStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput | DeliveryStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput[]
+    updateMany?: DeliveryStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput | DeliveryStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput[]
+    deleteMany?: DeliveryStatusHistoryScalarWhereInput | DeliveryStatusHistoryScalarWhereInput[]
   }
 
   export type NotificationUpdateManyWithoutUserNestedInput = {
@@ -47909,6 +56495,16 @@ export namespace Prisma {
     update?: XOR<XOR<SupplierProfileUpdateToOneWithWhereWithoutUserInput, SupplierProfileUpdateWithoutUserInput>, SupplierProfileUncheckedUpdateWithoutUserInput>
   }
 
+  export type DriverProfileUncheckedUpdateOneWithoutUserNestedInput = {
+    create?: XOR<DriverProfileCreateWithoutUserInput, DriverProfileUncheckedCreateWithoutUserInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutUserInput
+    upsert?: DriverProfileUpsertWithoutUserInput
+    disconnect?: DriverProfileWhereInput | boolean
+    delete?: DriverProfileWhereInput | boolean
+    connect?: DriverProfileWhereUniqueInput
+    update?: XOR<XOR<DriverProfileUpdateToOneWithWhereWithoutUserInput, DriverProfileUpdateWithoutUserInput>, DriverProfileUncheckedUpdateWithoutUserInput>
+  }
+
   export type RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput = {
     create?: XOR<RoleInvitationCreateWithoutInvitedByUserInput, RoleInvitationUncheckedCreateWithoutInvitedByUserInput> | RoleInvitationCreateWithoutInvitedByUserInput[] | RoleInvitationUncheckedCreateWithoutInvitedByUserInput[]
     connectOrCreate?: RoleInvitationCreateOrConnectWithoutInvitedByUserInput | RoleInvitationCreateOrConnectWithoutInvitedByUserInput[]
@@ -48005,6 +56601,48 @@ export namespace Prisma {
     update?: ReservationStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput | ReservationStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput[]
     updateMany?: ReservationStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput | ReservationStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput[]
     deleteMany?: ReservationStatusHistoryScalarWhereInput | ReservationStatusHistoryScalarWhereInput[]
+  }
+
+  export type DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput = {
+    create?: XOR<DeliveryCreateWithoutRequestedByUserInput, DeliveryUncheckedCreateWithoutRequestedByUserInput> | DeliveryCreateWithoutRequestedByUserInput[] | DeliveryUncheckedCreateWithoutRequestedByUserInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutRequestedByUserInput | DeliveryCreateOrConnectWithoutRequestedByUserInput[]
+    upsert?: DeliveryUpsertWithWhereUniqueWithoutRequestedByUserInput | DeliveryUpsertWithWhereUniqueWithoutRequestedByUserInput[]
+    createMany?: DeliveryCreateManyRequestedByUserInputEnvelope
+    set?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    disconnect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    delete?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    update?: DeliveryUpdateWithWhereUniqueWithoutRequestedByUserInput | DeliveryUpdateWithWhereUniqueWithoutRequestedByUserInput[]
+    updateMany?: DeliveryUpdateManyWithWhereWithoutRequestedByUserInput | DeliveryUpdateManyWithWhereWithoutRequestedByUserInput[]
+    deleteMany?: DeliveryScalarWhereInput | DeliveryScalarWhereInput[]
+  }
+
+  export type DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput = {
+    create?: XOR<DeliveryAssignmentCreateWithoutAssignedByUserInput, DeliveryAssignmentUncheckedCreateWithoutAssignedByUserInput> | DeliveryAssignmentCreateWithoutAssignedByUserInput[] | DeliveryAssignmentUncheckedCreateWithoutAssignedByUserInput[]
+    connectOrCreate?: DeliveryAssignmentCreateOrConnectWithoutAssignedByUserInput | DeliveryAssignmentCreateOrConnectWithoutAssignedByUserInput[]
+    upsert?: DeliveryAssignmentUpsertWithWhereUniqueWithoutAssignedByUserInput | DeliveryAssignmentUpsertWithWhereUniqueWithoutAssignedByUserInput[]
+    createMany?: DeliveryAssignmentCreateManyAssignedByUserInputEnvelope
+    set?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    disconnect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    delete?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    connect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    update?: DeliveryAssignmentUpdateWithWhereUniqueWithoutAssignedByUserInput | DeliveryAssignmentUpdateWithWhereUniqueWithoutAssignedByUserInput[]
+    updateMany?: DeliveryAssignmentUpdateManyWithWhereWithoutAssignedByUserInput | DeliveryAssignmentUpdateManyWithWhereWithoutAssignedByUserInput[]
+    deleteMany?: DeliveryAssignmentScalarWhereInput | DeliveryAssignmentScalarWhereInput[]
+  }
+
+  export type DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput = {
+    create?: XOR<DeliveryStatusHistoryCreateWithoutChangedByUserInput, DeliveryStatusHistoryUncheckedCreateWithoutChangedByUserInput> | DeliveryStatusHistoryCreateWithoutChangedByUserInput[] | DeliveryStatusHistoryUncheckedCreateWithoutChangedByUserInput[]
+    connectOrCreate?: DeliveryStatusHistoryCreateOrConnectWithoutChangedByUserInput | DeliveryStatusHistoryCreateOrConnectWithoutChangedByUserInput[]
+    upsert?: DeliveryStatusHistoryUpsertWithWhereUniqueWithoutChangedByUserInput | DeliveryStatusHistoryUpsertWithWhereUniqueWithoutChangedByUserInput[]
+    createMany?: DeliveryStatusHistoryCreateManyChangedByUserInputEnvelope
+    set?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    disconnect?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    delete?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    connect?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    update?: DeliveryStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput | DeliveryStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput[]
+    updateMany?: DeliveryStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput | DeliveryStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput[]
+    deleteMany?: DeliveryStatusHistoryScalarWhereInput | DeliveryStatusHistoryScalarWhereInput[]
   }
 
   export type NotificationUncheckedUpdateManyWithoutUserNestedInput = {
@@ -48342,6 +56980,154 @@ export namespace Prisma {
     deleteMany?: MaterialScalarWhereInput | MaterialScalarWhereInput[]
   }
 
+  export type UserCreateNestedOneWithoutDriverProfileInput = {
+    create?: XOR<UserCreateWithoutDriverProfileInput, UserUncheckedCreateWithoutDriverProfileInput>
+    connectOrCreate?: UserCreateOrConnectWithoutDriverProfileInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type DeliveryCreateNestedManyWithoutAssignedDriverProfileInput = {
+    create?: XOR<DeliveryCreateWithoutAssignedDriverProfileInput, DeliveryUncheckedCreateWithoutAssignedDriverProfileInput> | DeliveryCreateWithoutAssignedDriverProfileInput[] | DeliveryUncheckedCreateWithoutAssignedDriverProfileInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutAssignedDriverProfileInput | DeliveryCreateOrConnectWithoutAssignedDriverProfileInput[]
+    createMany?: DeliveryCreateManyAssignedDriverProfileInputEnvelope
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+  }
+
+  export type DeliveryAssignmentCreateNestedManyWithoutDriverProfileInput = {
+    create?: XOR<DeliveryAssignmentCreateWithoutDriverProfileInput, DeliveryAssignmentUncheckedCreateWithoutDriverProfileInput> | DeliveryAssignmentCreateWithoutDriverProfileInput[] | DeliveryAssignmentUncheckedCreateWithoutDriverProfileInput[]
+    connectOrCreate?: DeliveryAssignmentCreateOrConnectWithoutDriverProfileInput | DeliveryAssignmentCreateOrConnectWithoutDriverProfileInput[]
+    createMany?: DeliveryAssignmentCreateManyDriverProfileInputEnvelope
+    connect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+  }
+
+  export type DeliveryLocationPingCreateNestedManyWithoutDriverProfileInput = {
+    create?: XOR<DeliveryLocationPingCreateWithoutDriverProfileInput, DeliveryLocationPingUncheckedCreateWithoutDriverProfileInput> | DeliveryLocationPingCreateWithoutDriverProfileInput[] | DeliveryLocationPingUncheckedCreateWithoutDriverProfileInput[]
+    connectOrCreate?: DeliveryLocationPingCreateOrConnectWithoutDriverProfileInput | DeliveryLocationPingCreateOrConnectWithoutDriverProfileInput[]
+    createMany?: DeliveryLocationPingCreateManyDriverProfileInputEnvelope
+    connect?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+  }
+
+  export type DeliveryUncheckedCreateNestedManyWithoutAssignedDriverProfileInput = {
+    create?: XOR<DeliveryCreateWithoutAssignedDriverProfileInput, DeliveryUncheckedCreateWithoutAssignedDriverProfileInput> | DeliveryCreateWithoutAssignedDriverProfileInput[] | DeliveryUncheckedCreateWithoutAssignedDriverProfileInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutAssignedDriverProfileInput | DeliveryCreateOrConnectWithoutAssignedDriverProfileInput[]
+    createMany?: DeliveryCreateManyAssignedDriverProfileInputEnvelope
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+  }
+
+  export type DeliveryAssignmentUncheckedCreateNestedManyWithoutDriverProfileInput = {
+    create?: XOR<DeliveryAssignmentCreateWithoutDriverProfileInput, DeliveryAssignmentUncheckedCreateWithoutDriverProfileInput> | DeliveryAssignmentCreateWithoutDriverProfileInput[] | DeliveryAssignmentUncheckedCreateWithoutDriverProfileInput[]
+    connectOrCreate?: DeliveryAssignmentCreateOrConnectWithoutDriverProfileInput | DeliveryAssignmentCreateOrConnectWithoutDriverProfileInput[]
+    createMany?: DeliveryAssignmentCreateManyDriverProfileInputEnvelope
+    connect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+  }
+
+  export type DeliveryLocationPingUncheckedCreateNestedManyWithoutDriverProfileInput = {
+    create?: XOR<DeliveryLocationPingCreateWithoutDriverProfileInput, DeliveryLocationPingUncheckedCreateWithoutDriverProfileInput> | DeliveryLocationPingCreateWithoutDriverProfileInput[] | DeliveryLocationPingUncheckedCreateWithoutDriverProfileInput[]
+    connectOrCreate?: DeliveryLocationPingCreateOrConnectWithoutDriverProfileInput | DeliveryLocationPingCreateOrConnectWithoutDriverProfileInput[]
+    createMany?: DeliveryLocationPingCreateManyDriverProfileInputEnvelope
+    connect?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+  }
+
+  export type EnumDriverProfileStatusFieldUpdateOperationsInput = {
+    set?: $Enums.DriverProfileStatus
+  }
+
+  export type EnumDriverAvailabilityStatusFieldUpdateOperationsInput = {
+    set?: $Enums.DriverAvailabilityStatus
+  }
+
+  export type UserUpdateOneRequiredWithoutDriverProfileNestedInput = {
+    create?: XOR<UserCreateWithoutDriverProfileInput, UserUncheckedCreateWithoutDriverProfileInput>
+    connectOrCreate?: UserCreateOrConnectWithoutDriverProfileInput
+    upsert?: UserUpsertWithoutDriverProfileInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutDriverProfileInput, UserUpdateWithoutDriverProfileInput>, UserUncheckedUpdateWithoutDriverProfileInput>
+  }
+
+  export type DeliveryUpdateManyWithoutAssignedDriverProfileNestedInput = {
+    create?: XOR<DeliveryCreateWithoutAssignedDriverProfileInput, DeliveryUncheckedCreateWithoutAssignedDriverProfileInput> | DeliveryCreateWithoutAssignedDriverProfileInput[] | DeliveryUncheckedCreateWithoutAssignedDriverProfileInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutAssignedDriverProfileInput | DeliveryCreateOrConnectWithoutAssignedDriverProfileInput[]
+    upsert?: DeliveryUpsertWithWhereUniqueWithoutAssignedDriverProfileInput | DeliveryUpsertWithWhereUniqueWithoutAssignedDriverProfileInput[]
+    createMany?: DeliveryCreateManyAssignedDriverProfileInputEnvelope
+    set?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    disconnect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    delete?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    update?: DeliveryUpdateWithWhereUniqueWithoutAssignedDriverProfileInput | DeliveryUpdateWithWhereUniqueWithoutAssignedDriverProfileInput[]
+    updateMany?: DeliveryUpdateManyWithWhereWithoutAssignedDriverProfileInput | DeliveryUpdateManyWithWhereWithoutAssignedDriverProfileInput[]
+    deleteMany?: DeliveryScalarWhereInput | DeliveryScalarWhereInput[]
+  }
+
+  export type DeliveryAssignmentUpdateManyWithoutDriverProfileNestedInput = {
+    create?: XOR<DeliveryAssignmentCreateWithoutDriverProfileInput, DeliveryAssignmentUncheckedCreateWithoutDriverProfileInput> | DeliveryAssignmentCreateWithoutDriverProfileInput[] | DeliveryAssignmentUncheckedCreateWithoutDriverProfileInput[]
+    connectOrCreate?: DeliveryAssignmentCreateOrConnectWithoutDriverProfileInput | DeliveryAssignmentCreateOrConnectWithoutDriverProfileInput[]
+    upsert?: DeliveryAssignmentUpsertWithWhereUniqueWithoutDriverProfileInput | DeliveryAssignmentUpsertWithWhereUniqueWithoutDriverProfileInput[]
+    createMany?: DeliveryAssignmentCreateManyDriverProfileInputEnvelope
+    set?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    disconnect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    delete?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    connect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    update?: DeliveryAssignmentUpdateWithWhereUniqueWithoutDriverProfileInput | DeliveryAssignmentUpdateWithWhereUniqueWithoutDriverProfileInput[]
+    updateMany?: DeliveryAssignmentUpdateManyWithWhereWithoutDriverProfileInput | DeliveryAssignmentUpdateManyWithWhereWithoutDriverProfileInput[]
+    deleteMany?: DeliveryAssignmentScalarWhereInput | DeliveryAssignmentScalarWhereInput[]
+  }
+
+  export type DeliveryLocationPingUpdateManyWithoutDriverProfileNestedInput = {
+    create?: XOR<DeliveryLocationPingCreateWithoutDriverProfileInput, DeliveryLocationPingUncheckedCreateWithoutDriverProfileInput> | DeliveryLocationPingCreateWithoutDriverProfileInput[] | DeliveryLocationPingUncheckedCreateWithoutDriverProfileInput[]
+    connectOrCreate?: DeliveryLocationPingCreateOrConnectWithoutDriverProfileInput | DeliveryLocationPingCreateOrConnectWithoutDriverProfileInput[]
+    upsert?: DeliveryLocationPingUpsertWithWhereUniqueWithoutDriverProfileInput | DeliveryLocationPingUpsertWithWhereUniqueWithoutDriverProfileInput[]
+    createMany?: DeliveryLocationPingCreateManyDriverProfileInputEnvelope
+    set?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    disconnect?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    delete?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    connect?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    update?: DeliveryLocationPingUpdateWithWhereUniqueWithoutDriverProfileInput | DeliveryLocationPingUpdateWithWhereUniqueWithoutDriverProfileInput[]
+    updateMany?: DeliveryLocationPingUpdateManyWithWhereWithoutDriverProfileInput | DeliveryLocationPingUpdateManyWithWhereWithoutDriverProfileInput[]
+    deleteMany?: DeliveryLocationPingScalarWhereInput | DeliveryLocationPingScalarWhereInput[]
+  }
+
+  export type DeliveryUncheckedUpdateManyWithoutAssignedDriverProfileNestedInput = {
+    create?: XOR<DeliveryCreateWithoutAssignedDriverProfileInput, DeliveryUncheckedCreateWithoutAssignedDriverProfileInput> | DeliveryCreateWithoutAssignedDriverProfileInput[] | DeliveryUncheckedCreateWithoutAssignedDriverProfileInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutAssignedDriverProfileInput | DeliveryCreateOrConnectWithoutAssignedDriverProfileInput[]
+    upsert?: DeliveryUpsertWithWhereUniqueWithoutAssignedDriverProfileInput | DeliveryUpsertWithWhereUniqueWithoutAssignedDriverProfileInput[]
+    createMany?: DeliveryCreateManyAssignedDriverProfileInputEnvelope
+    set?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    disconnect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    delete?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    update?: DeliveryUpdateWithWhereUniqueWithoutAssignedDriverProfileInput | DeliveryUpdateWithWhereUniqueWithoutAssignedDriverProfileInput[]
+    updateMany?: DeliveryUpdateManyWithWhereWithoutAssignedDriverProfileInput | DeliveryUpdateManyWithWhereWithoutAssignedDriverProfileInput[]
+    deleteMany?: DeliveryScalarWhereInput | DeliveryScalarWhereInput[]
+  }
+
+  export type DeliveryAssignmentUncheckedUpdateManyWithoutDriverProfileNestedInput = {
+    create?: XOR<DeliveryAssignmentCreateWithoutDriverProfileInput, DeliveryAssignmentUncheckedCreateWithoutDriverProfileInput> | DeliveryAssignmentCreateWithoutDriverProfileInput[] | DeliveryAssignmentUncheckedCreateWithoutDriverProfileInput[]
+    connectOrCreate?: DeliveryAssignmentCreateOrConnectWithoutDriverProfileInput | DeliveryAssignmentCreateOrConnectWithoutDriverProfileInput[]
+    upsert?: DeliveryAssignmentUpsertWithWhereUniqueWithoutDriverProfileInput | DeliveryAssignmentUpsertWithWhereUniqueWithoutDriverProfileInput[]
+    createMany?: DeliveryAssignmentCreateManyDriverProfileInputEnvelope
+    set?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    disconnect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    delete?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    connect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    update?: DeliveryAssignmentUpdateWithWhereUniqueWithoutDriverProfileInput | DeliveryAssignmentUpdateWithWhereUniqueWithoutDriverProfileInput[]
+    updateMany?: DeliveryAssignmentUpdateManyWithWhereWithoutDriverProfileInput | DeliveryAssignmentUpdateManyWithWhereWithoutDriverProfileInput[]
+    deleteMany?: DeliveryAssignmentScalarWhereInput | DeliveryAssignmentScalarWhereInput[]
+  }
+
+  export type DeliveryLocationPingUncheckedUpdateManyWithoutDriverProfileNestedInput = {
+    create?: XOR<DeliveryLocationPingCreateWithoutDriverProfileInput, DeliveryLocationPingUncheckedCreateWithoutDriverProfileInput> | DeliveryLocationPingCreateWithoutDriverProfileInput[] | DeliveryLocationPingUncheckedCreateWithoutDriverProfileInput[]
+    connectOrCreate?: DeliveryLocationPingCreateOrConnectWithoutDriverProfileInput | DeliveryLocationPingCreateOrConnectWithoutDriverProfileInput[]
+    upsert?: DeliveryLocationPingUpsertWithWhereUniqueWithoutDriverProfileInput | DeliveryLocationPingUpsertWithWhereUniqueWithoutDriverProfileInput[]
+    createMany?: DeliveryLocationPingCreateManyDriverProfileInputEnvelope
+    set?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    disconnect?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    delete?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    connect?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    update?: DeliveryLocationPingUpdateWithWhereUniqueWithoutDriverProfileInput | DeliveryLocationPingUpdateWithWhereUniqueWithoutDriverProfileInput[]
+    updateMany?: DeliveryLocationPingUpdateManyWithWhereWithoutDriverProfileInput | DeliveryLocationPingUpdateManyWithWhereWithoutDriverProfileInput[]
+    deleteMany?: DeliveryLocationPingScalarWhereInput | DeliveryLocationPingScalarWhereInput[]
+  }
+
   export type SupplierProfileCreateNestedOneWithoutOrganizationProfileInput = {
     create?: XOR<SupplierProfileCreateWithoutOrganizationProfileInput, SupplierProfileUncheckedCreateWithoutOrganizationProfileInput>
     connectOrCreate?: SupplierProfileCreateOrConnectWithoutOrganizationProfileInput
@@ -48408,6 +57194,20 @@ export namespace Prisma {
     connect?: ReservationWhereUniqueInput | ReservationWhereUniqueInput[]
   }
 
+  export type DeliveryCreateNestedManyWithoutPickupLocationInput = {
+    create?: XOR<DeliveryCreateWithoutPickupLocationInput, DeliveryUncheckedCreateWithoutPickupLocationInput> | DeliveryCreateWithoutPickupLocationInput[] | DeliveryUncheckedCreateWithoutPickupLocationInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutPickupLocationInput | DeliveryCreateOrConnectWithoutPickupLocationInput[]
+    createMany?: DeliveryCreateManyPickupLocationInputEnvelope
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+  }
+
+  export type DeliveryCreateNestedManyWithoutDropoffLocationInput = {
+    create?: XOR<DeliveryCreateWithoutDropoffLocationInput, DeliveryUncheckedCreateWithoutDropoffLocationInput> | DeliveryCreateWithoutDropoffLocationInput[] | DeliveryUncheckedCreateWithoutDropoffLocationInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutDropoffLocationInput | DeliveryCreateOrConnectWithoutDropoffLocationInput[]
+    createMany?: DeliveryCreateManyDropoffLocationInputEnvelope
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+  }
+
   export type SupplierProfileUncheckedCreateNestedManyWithoutDefaultPickupLocationInput = {
     create?: XOR<SupplierProfileCreateWithoutDefaultPickupLocationInput, SupplierProfileUncheckedCreateWithoutDefaultPickupLocationInput> | SupplierProfileCreateWithoutDefaultPickupLocationInput[] | SupplierProfileUncheckedCreateWithoutDefaultPickupLocationInput[]
     connectOrCreate?: SupplierProfileCreateOrConnectWithoutDefaultPickupLocationInput | SupplierProfileCreateOrConnectWithoutDefaultPickupLocationInput[]
@@ -48434,6 +57234,20 @@ export namespace Prisma {
     connectOrCreate?: ReservationCreateOrConnectWithoutDropoffLocationInput | ReservationCreateOrConnectWithoutDropoffLocationInput[]
     createMany?: ReservationCreateManyDropoffLocationInputEnvelope
     connect?: ReservationWhereUniqueInput | ReservationWhereUniqueInput[]
+  }
+
+  export type DeliveryUncheckedCreateNestedManyWithoutPickupLocationInput = {
+    create?: XOR<DeliveryCreateWithoutPickupLocationInput, DeliveryUncheckedCreateWithoutPickupLocationInput> | DeliveryCreateWithoutPickupLocationInput[] | DeliveryUncheckedCreateWithoutPickupLocationInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutPickupLocationInput | DeliveryCreateOrConnectWithoutPickupLocationInput[]
+    createMany?: DeliveryCreateManyPickupLocationInputEnvelope
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+  }
+
+  export type DeliveryUncheckedCreateNestedManyWithoutDropoffLocationInput = {
+    create?: XOR<DeliveryCreateWithoutDropoffLocationInput, DeliveryUncheckedCreateWithoutDropoffLocationInput> | DeliveryCreateWithoutDropoffLocationInput[] | DeliveryUncheckedCreateWithoutDropoffLocationInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutDropoffLocationInput | DeliveryCreateOrConnectWithoutDropoffLocationInput[]
+    createMany?: DeliveryCreateManyDropoffLocationInputEnvelope
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
   }
 
   export type NullableDecimalFieldUpdateOperationsInput = {
@@ -48500,6 +57314,34 @@ export namespace Prisma {
     deleteMany?: ReservationScalarWhereInput | ReservationScalarWhereInput[]
   }
 
+  export type DeliveryUpdateManyWithoutPickupLocationNestedInput = {
+    create?: XOR<DeliveryCreateWithoutPickupLocationInput, DeliveryUncheckedCreateWithoutPickupLocationInput> | DeliveryCreateWithoutPickupLocationInput[] | DeliveryUncheckedCreateWithoutPickupLocationInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutPickupLocationInput | DeliveryCreateOrConnectWithoutPickupLocationInput[]
+    upsert?: DeliveryUpsertWithWhereUniqueWithoutPickupLocationInput | DeliveryUpsertWithWhereUniqueWithoutPickupLocationInput[]
+    createMany?: DeliveryCreateManyPickupLocationInputEnvelope
+    set?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    disconnect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    delete?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    update?: DeliveryUpdateWithWhereUniqueWithoutPickupLocationInput | DeliveryUpdateWithWhereUniqueWithoutPickupLocationInput[]
+    updateMany?: DeliveryUpdateManyWithWhereWithoutPickupLocationInput | DeliveryUpdateManyWithWhereWithoutPickupLocationInput[]
+    deleteMany?: DeliveryScalarWhereInput | DeliveryScalarWhereInput[]
+  }
+
+  export type DeliveryUpdateManyWithoutDropoffLocationNestedInput = {
+    create?: XOR<DeliveryCreateWithoutDropoffLocationInput, DeliveryUncheckedCreateWithoutDropoffLocationInput> | DeliveryCreateWithoutDropoffLocationInput[] | DeliveryUncheckedCreateWithoutDropoffLocationInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutDropoffLocationInput | DeliveryCreateOrConnectWithoutDropoffLocationInput[]
+    upsert?: DeliveryUpsertWithWhereUniqueWithoutDropoffLocationInput | DeliveryUpsertWithWhereUniqueWithoutDropoffLocationInput[]
+    createMany?: DeliveryCreateManyDropoffLocationInputEnvelope
+    set?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    disconnect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    delete?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    update?: DeliveryUpdateWithWhereUniqueWithoutDropoffLocationInput | DeliveryUpdateWithWhereUniqueWithoutDropoffLocationInput[]
+    updateMany?: DeliveryUpdateManyWithWhereWithoutDropoffLocationInput | DeliveryUpdateManyWithWhereWithoutDropoffLocationInput[]
+    deleteMany?: DeliveryScalarWhereInput | DeliveryScalarWhereInput[]
+  }
+
   export type SupplierProfileUncheckedUpdateManyWithoutDefaultPickupLocationNestedInput = {
     create?: XOR<SupplierProfileCreateWithoutDefaultPickupLocationInput, SupplierProfileUncheckedCreateWithoutDefaultPickupLocationInput> | SupplierProfileCreateWithoutDefaultPickupLocationInput[] | SupplierProfileUncheckedCreateWithoutDefaultPickupLocationInput[]
     connectOrCreate?: SupplierProfileCreateOrConnectWithoutDefaultPickupLocationInput | SupplierProfileCreateOrConnectWithoutDefaultPickupLocationInput[]
@@ -48554,6 +57396,34 @@ export namespace Prisma {
     update?: ReservationUpdateWithWhereUniqueWithoutDropoffLocationInput | ReservationUpdateWithWhereUniqueWithoutDropoffLocationInput[]
     updateMany?: ReservationUpdateManyWithWhereWithoutDropoffLocationInput | ReservationUpdateManyWithWhereWithoutDropoffLocationInput[]
     deleteMany?: ReservationScalarWhereInput | ReservationScalarWhereInput[]
+  }
+
+  export type DeliveryUncheckedUpdateManyWithoutPickupLocationNestedInput = {
+    create?: XOR<DeliveryCreateWithoutPickupLocationInput, DeliveryUncheckedCreateWithoutPickupLocationInput> | DeliveryCreateWithoutPickupLocationInput[] | DeliveryUncheckedCreateWithoutPickupLocationInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutPickupLocationInput | DeliveryCreateOrConnectWithoutPickupLocationInput[]
+    upsert?: DeliveryUpsertWithWhereUniqueWithoutPickupLocationInput | DeliveryUpsertWithWhereUniqueWithoutPickupLocationInput[]
+    createMany?: DeliveryCreateManyPickupLocationInputEnvelope
+    set?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    disconnect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    delete?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    update?: DeliveryUpdateWithWhereUniqueWithoutPickupLocationInput | DeliveryUpdateWithWhereUniqueWithoutPickupLocationInput[]
+    updateMany?: DeliveryUpdateManyWithWhereWithoutPickupLocationInput | DeliveryUpdateManyWithWhereWithoutPickupLocationInput[]
+    deleteMany?: DeliveryScalarWhereInput | DeliveryScalarWhereInput[]
+  }
+
+  export type DeliveryUncheckedUpdateManyWithoutDropoffLocationNestedInput = {
+    create?: XOR<DeliveryCreateWithoutDropoffLocationInput, DeliveryUncheckedCreateWithoutDropoffLocationInput> | DeliveryCreateWithoutDropoffLocationInput[] | DeliveryUncheckedCreateWithoutDropoffLocationInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutDropoffLocationInput | DeliveryCreateOrConnectWithoutDropoffLocationInput[]
+    upsert?: DeliveryUpsertWithWhereUniqueWithoutDropoffLocationInput | DeliveryUpsertWithWhereUniqueWithoutDropoffLocationInput[]
+    createMany?: DeliveryCreateManyDropoffLocationInputEnvelope
+    set?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    disconnect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    delete?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    update?: DeliveryUpdateWithWhereUniqueWithoutDropoffLocationInput | DeliveryUpdateWithWhereUniqueWithoutDropoffLocationInput[]
+    updateMany?: DeliveryUpdateManyWithWhereWithoutDropoffLocationInput | DeliveryUpdateManyWithWhereWithoutDropoffLocationInput[]
+    deleteMany?: DeliveryScalarWhereInput | DeliveryScalarWhereInput[]
   }
 
   export type CategoryCreateNestedOneWithoutChildrenInput = {
@@ -49636,6 +58506,13 @@ export namespace Prisma {
     connect?: MaterialWhereUniqueInput
   }
 
+  export type DeliveryCreateNestedManyWithoutReservationInput = {
+    create?: XOR<DeliveryCreateWithoutReservationInput, DeliveryUncheckedCreateWithoutReservationInput> | DeliveryCreateWithoutReservationInput[] | DeliveryUncheckedCreateWithoutReservationInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutReservationInput | DeliveryCreateOrConnectWithoutReservationInput[]
+    createMany?: DeliveryCreateManyReservationInputEnvelope
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+  }
+
   export type ReviewCreateNestedManyWithoutReservationInput = {
     create?: XOR<ReviewCreateWithoutReservationInput, ReviewUncheckedCreateWithoutReservationInput> | ReviewCreateWithoutReservationInput[] | ReviewUncheckedCreateWithoutReservationInput[]
     connectOrCreate?: ReviewCreateOrConnectWithoutReservationInput | ReviewCreateOrConnectWithoutReservationInput[]
@@ -49654,6 +58531,13 @@ export namespace Prisma {
     create?: XOR<MaterialCreateWithoutReusedByReservationInput, MaterialUncheckedCreateWithoutReusedByReservationInput>
     connectOrCreate?: MaterialCreateOrConnectWithoutReusedByReservationInput
     connect?: MaterialWhereUniqueInput
+  }
+
+  export type DeliveryUncheckedCreateNestedManyWithoutReservationInput = {
+    create?: XOR<DeliveryCreateWithoutReservationInput, DeliveryUncheckedCreateWithoutReservationInput> | DeliveryCreateWithoutReservationInput[] | DeliveryUncheckedCreateWithoutReservationInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutReservationInput | DeliveryCreateOrConnectWithoutReservationInput[]
+    createMany?: DeliveryCreateManyReservationInputEnvelope
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
   }
 
   export type ReviewUncheckedCreateNestedManyWithoutReservationInput = {
@@ -49726,6 +58610,20 @@ export namespace Prisma {
     update?: XOR<XOR<MaterialUpdateToOneWithWhereWithoutReusedByReservationInput, MaterialUpdateWithoutReusedByReservationInput>, MaterialUncheckedUpdateWithoutReusedByReservationInput>
   }
 
+  export type DeliveryUpdateManyWithoutReservationNestedInput = {
+    create?: XOR<DeliveryCreateWithoutReservationInput, DeliveryUncheckedCreateWithoutReservationInput> | DeliveryCreateWithoutReservationInput[] | DeliveryUncheckedCreateWithoutReservationInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutReservationInput | DeliveryCreateOrConnectWithoutReservationInput[]
+    upsert?: DeliveryUpsertWithWhereUniqueWithoutReservationInput | DeliveryUpsertWithWhereUniqueWithoutReservationInput[]
+    createMany?: DeliveryCreateManyReservationInputEnvelope
+    set?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    disconnect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    delete?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    update?: DeliveryUpdateWithWhereUniqueWithoutReservationInput | DeliveryUpdateWithWhereUniqueWithoutReservationInput[]
+    updateMany?: DeliveryUpdateManyWithWhereWithoutReservationInput | DeliveryUpdateManyWithWhereWithoutReservationInput[]
+    deleteMany?: DeliveryScalarWhereInput | DeliveryScalarWhereInput[]
+  }
+
   export type ReviewUpdateManyWithoutReservationNestedInput = {
     create?: XOR<ReviewCreateWithoutReservationInput, ReviewUncheckedCreateWithoutReservationInput> | ReviewCreateWithoutReservationInput[] | ReviewUncheckedCreateWithoutReservationInput[]
     connectOrCreate?: ReviewCreateOrConnectWithoutReservationInput | ReviewCreateOrConnectWithoutReservationInput[]
@@ -49764,6 +58662,20 @@ export namespace Prisma {
     update?: XOR<XOR<MaterialUpdateToOneWithWhereWithoutReusedByReservationInput, MaterialUpdateWithoutReusedByReservationInput>, MaterialUncheckedUpdateWithoutReusedByReservationInput>
   }
 
+  export type DeliveryUncheckedUpdateManyWithoutReservationNestedInput = {
+    create?: XOR<DeliveryCreateWithoutReservationInput, DeliveryUncheckedCreateWithoutReservationInput> | DeliveryCreateWithoutReservationInput[] | DeliveryUncheckedCreateWithoutReservationInput[]
+    connectOrCreate?: DeliveryCreateOrConnectWithoutReservationInput | DeliveryCreateOrConnectWithoutReservationInput[]
+    upsert?: DeliveryUpsertWithWhereUniqueWithoutReservationInput | DeliveryUpsertWithWhereUniqueWithoutReservationInput[]
+    createMany?: DeliveryCreateManyReservationInputEnvelope
+    set?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    disconnect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    delete?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    connect?: DeliveryWhereUniqueInput | DeliveryWhereUniqueInput[]
+    update?: DeliveryUpdateWithWhereUniqueWithoutReservationInput | DeliveryUpdateWithWhereUniqueWithoutReservationInput[]
+    updateMany?: DeliveryUpdateManyWithWhereWithoutReservationInput | DeliveryUpdateManyWithWhereWithoutReservationInput[]
+    deleteMany?: DeliveryScalarWhereInput | DeliveryScalarWhereInput[]
+  }
+
   export type ReviewUncheckedUpdateManyWithoutReservationNestedInput = {
     create?: XOR<ReviewCreateWithoutReservationInput, ReviewUncheckedCreateWithoutReservationInput> | ReviewCreateWithoutReservationInput[] | ReviewUncheckedCreateWithoutReservationInput[]
     connectOrCreate?: ReviewCreateOrConnectWithoutReservationInput | ReviewCreateOrConnectWithoutReservationInput[]
@@ -49790,6 +58702,312 @@ export namespace Prisma {
     update?: ReservationStatusHistoryUpdateWithWhereUniqueWithoutReservationInput | ReservationStatusHistoryUpdateWithWhereUniqueWithoutReservationInput[]
     updateMany?: ReservationStatusHistoryUpdateManyWithWhereWithoutReservationInput | ReservationStatusHistoryUpdateManyWithWhereWithoutReservationInput[]
     deleteMany?: ReservationStatusHistoryScalarWhereInput | ReservationStatusHistoryScalarWhereInput[]
+  }
+
+  export type ReservationCreateNestedOneWithoutDeliveriesInput = {
+    create?: XOR<ReservationCreateWithoutDeliveriesInput, ReservationUncheckedCreateWithoutDeliveriesInput>
+    connectOrCreate?: ReservationCreateOrConnectWithoutDeliveriesInput
+    connect?: ReservationWhereUniqueInput
+  }
+
+  export type LocationCreateNestedOneWithoutDeliveryPickupsInput = {
+    create?: XOR<LocationCreateWithoutDeliveryPickupsInput, LocationUncheckedCreateWithoutDeliveryPickupsInput>
+    connectOrCreate?: LocationCreateOrConnectWithoutDeliveryPickupsInput
+    connect?: LocationWhereUniqueInput
+  }
+
+  export type LocationCreateNestedOneWithoutDeliveryDropoffsInput = {
+    create?: XOR<LocationCreateWithoutDeliveryDropoffsInput, LocationUncheckedCreateWithoutDeliveryDropoffsInput>
+    connectOrCreate?: LocationCreateOrConnectWithoutDeliveryDropoffsInput
+    connect?: LocationWhereUniqueInput
+  }
+
+  export type DriverProfileCreateNestedOneWithoutDeliveriesInput = {
+    create?: XOR<DriverProfileCreateWithoutDeliveriesInput, DriverProfileUncheckedCreateWithoutDeliveriesInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutDeliveriesInput
+    connect?: DriverProfileWhereUniqueInput
+  }
+
+  export type UserCreateNestedOneWithoutRequestedDeliveriesInput = {
+    create?: XOR<UserCreateWithoutRequestedDeliveriesInput, UserUncheckedCreateWithoutRequestedDeliveriesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutRequestedDeliveriesInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type DeliveryAssignmentCreateNestedManyWithoutDeliveryInput = {
+    create?: XOR<DeliveryAssignmentCreateWithoutDeliveryInput, DeliveryAssignmentUncheckedCreateWithoutDeliveryInput> | DeliveryAssignmentCreateWithoutDeliveryInput[] | DeliveryAssignmentUncheckedCreateWithoutDeliveryInput[]
+    connectOrCreate?: DeliveryAssignmentCreateOrConnectWithoutDeliveryInput | DeliveryAssignmentCreateOrConnectWithoutDeliveryInput[]
+    createMany?: DeliveryAssignmentCreateManyDeliveryInputEnvelope
+    connect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+  }
+
+  export type DeliveryStatusHistoryCreateNestedManyWithoutDeliveryInput = {
+    create?: XOR<DeliveryStatusHistoryCreateWithoutDeliveryInput, DeliveryStatusHistoryUncheckedCreateWithoutDeliveryInput> | DeliveryStatusHistoryCreateWithoutDeliveryInput[] | DeliveryStatusHistoryUncheckedCreateWithoutDeliveryInput[]
+    connectOrCreate?: DeliveryStatusHistoryCreateOrConnectWithoutDeliveryInput | DeliveryStatusHistoryCreateOrConnectWithoutDeliveryInput[]
+    createMany?: DeliveryStatusHistoryCreateManyDeliveryInputEnvelope
+    connect?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+  }
+
+  export type DeliveryLocationPingCreateNestedManyWithoutDeliveryInput = {
+    create?: XOR<DeliveryLocationPingCreateWithoutDeliveryInput, DeliveryLocationPingUncheckedCreateWithoutDeliveryInput> | DeliveryLocationPingCreateWithoutDeliveryInput[] | DeliveryLocationPingUncheckedCreateWithoutDeliveryInput[]
+    connectOrCreate?: DeliveryLocationPingCreateOrConnectWithoutDeliveryInput | DeliveryLocationPingCreateOrConnectWithoutDeliveryInput[]
+    createMany?: DeliveryLocationPingCreateManyDeliveryInputEnvelope
+    connect?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+  }
+
+  export type DeliveryAssignmentUncheckedCreateNestedManyWithoutDeliveryInput = {
+    create?: XOR<DeliveryAssignmentCreateWithoutDeliveryInput, DeliveryAssignmentUncheckedCreateWithoutDeliveryInput> | DeliveryAssignmentCreateWithoutDeliveryInput[] | DeliveryAssignmentUncheckedCreateWithoutDeliveryInput[]
+    connectOrCreate?: DeliveryAssignmentCreateOrConnectWithoutDeliveryInput | DeliveryAssignmentCreateOrConnectWithoutDeliveryInput[]
+    createMany?: DeliveryAssignmentCreateManyDeliveryInputEnvelope
+    connect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+  }
+
+  export type DeliveryStatusHistoryUncheckedCreateNestedManyWithoutDeliveryInput = {
+    create?: XOR<DeliveryStatusHistoryCreateWithoutDeliveryInput, DeliveryStatusHistoryUncheckedCreateWithoutDeliveryInput> | DeliveryStatusHistoryCreateWithoutDeliveryInput[] | DeliveryStatusHistoryUncheckedCreateWithoutDeliveryInput[]
+    connectOrCreate?: DeliveryStatusHistoryCreateOrConnectWithoutDeliveryInput | DeliveryStatusHistoryCreateOrConnectWithoutDeliveryInput[]
+    createMany?: DeliveryStatusHistoryCreateManyDeliveryInputEnvelope
+    connect?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+  }
+
+  export type DeliveryLocationPingUncheckedCreateNestedManyWithoutDeliveryInput = {
+    create?: XOR<DeliveryLocationPingCreateWithoutDeliveryInput, DeliveryLocationPingUncheckedCreateWithoutDeliveryInput> | DeliveryLocationPingCreateWithoutDeliveryInput[] | DeliveryLocationPingUncheckedCreateWithoutDeliveryInput[]
+    connectOrCreate?: DeliveryLocationPingCreateOrConnectWithoutDeliveryInput | DeliveryLocationPingCreateOrConnectWithoutDeliveryInput[]
+    createMany?: DeliveryLocationPingCreateManyDeliveryInputEnvelope
+    connect?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+  }
+
+  export type EnumDeliveryStatusFieldUpdateOperationsInput = {
+    set?: $Enums.DeliveryStatus
+  }
+
+  export type ReservationUpdateOneRequiredWithoutDeliveriesNestedInput = {
+    create?: XOR<ReservationCreateWithoutDeliveriesInput, ReservationUncheckedCreateWithoutDeliveriesInput>
+    connectOrCreate?: ReservationCreateOrConnectWithoutDeliveriesInput
+    upsert?: ReservationUpsertWithoutDeliveriesInput
+    connect?: ReservationWhereUniqueInput
+    update?: XOR<XOR<ReservationUpdateToOneWithWhereWithoutDeliveriesInput, ReservationUpdateWithoutDeliveriesInput>, ReservationUncheckedUpdateWithoutDeliveriesInput>
+  }
+
+  export type LocationUpdateOneRequiredWithoutDeliveryPickupsNestedInput = {
+    create?: XOR<LocationCreateWithoutDeliveryPickupsInput, LocationUncheckedCreateWithoutDeliveryPickupsInput>
+    connectOrCreate?: LocationCreateOrConnectWithoutDeliveryPickupsInput
+    upsert?: LocationUpsertWithoutDeliveryPickupsInput
+    connect?: LocationWhereUniqueInput
+    update?: XOR<XOR<LocationUpdateToOneWithWhereWithoutDeliveryPickupsInput, LocationUpdateWithoutDeliveryPickupsInput>, LocationUncheckedUpdateWithoutDeliveryPickupsInput>
+  }
+
+  export type LocationUpdateOneRequiredWithoutDeliveryDropoffsNestedInput = {
+    create?: XOR<LocationCreateWithoutDeliveryDropoffsInput, LocationUncheckedCreateWithoutDeliveryDropoffsInput>
+    connectOrCreate?: LocationCreateOrConnectWithoutDeliveryDropoffsInput
+    upsert?: LocationUpsertWithoutDeliveryDropoffsInput
+    connect?: LocationWhereUniqueInput
+    update?: XOR<XOR<LocationUpdateToOneWithWhereWithoutDeliveryDropoffsInput, LocationUpdateWithoutDeliveryDropoffsInput>, LocationUncheckedUpdateWithoutDeliveryDropoffsInput>
+  }
+
+  export type DriverProfileUpdateOneWithoutDeliveriesNestedInput = {
+    create?: XOR<DriverProfileCreateWithoutDeliveriesInput, DriverProfileUncheckedCreateWithoutDeliveriesInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutDeliveriesInput
+    upsert?: DriverProfileUpsertWithoutDeliveriesInput
+    disconnect?: DriverProfileWhereInput | boolean
+    delete?: DriverProfileWhereInput | boolean
+    connect?: DriverProfileWhereUniqueInput
+    update?: XOR<XOR<DriverProfileUpdateToOneWithWhereWithoutDeliveriesInput, DriverProfileUpdateWithoutDeliveriesInput>, DriverProfileUncheckedUpdateWithoutDeliveriesInput>
+  }
+
+  export type UserUpdateOneRequiredWithoutRequestedDeliveriesNestedInput = {
+    create?: XOR<UserCreateWithoutRequestedDeliveriesInput, UserUncheckedCreateWithoutRequestedDeliveriesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutRequestedDeliveriesInput
+    upsert?: UserUpsertWithoutRequestedDeliveriesInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutRequestedDeliveriesInput, UserUpdateWithoutRequestedDeliveriesInput>, UserUncheckedUpdateWithoutRequestedDeliveriesInput>
+  }
+
+  export type DeliveryAssignmentUpdateManyWithoutDeliveryNestedInput = {
+    create?: XOR<DeliveryAssignmentCreateWithoutDeliveryInput, DeliveryAssignmentUncheckedCreateWithoutDeliveryInput> | DeliveryAssignmentCreateWithoutDeliveryInput[] | DeliveryAssignmentUncheckedCreateWithoutDeliveryInput[]
+    connectOrCreate?: DeliveryAssignmentCreateOrConnectWithoutDeliveryInput | DeliveryAssignmentCreateOrConnectWithoutDeliveryInput[]
+    upsert?: DeliveryAssignmentUpsertWithWhereUniqueWithoutDeliveryInput | DeliveryAssignmentUpsertWithWhereUniqueWithoutDeliveryInput[]
+    createMany?: DeliveryAssignmentCreateManyDeliveryInputEnvelope
+    set?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    disconnect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    delete?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    connect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    update?: DeliveryAssignmentUpdateWithWhereUniqueWithoutDeliveryInput | DeliveryAssignmentUpdateWithWhereUniqueWithoutDeliveryInput[]
+    updateMany?: DeliveryAssignmentUpdateManyWithWhereWithoutDeliveryInput | DeliveryAssignmentUpdateManyWithWhereWithoutDeliveryInput[]
+    deleteMany?: DeliveryAssignmentScalarWhereInput | DeliveryAssignmentScalarWhereInput[]
+  }
+
+  export type DeliveryStatusHistoryUpdateManyWithoutDeliveryNestedInput = {
+    create?: XOR<DeliveryStatusHistoryCreateWithoutDeliveryInput, DeliveryStatusHistoryUncheckedCreateWithoutDeliveryInput> | DeliveryStatusHistoryCreateWithoutDeliveryInput[] | DeliveryStatusHistoryUncheckedCreateWithoutDeliveryInput[]
+    connectOrCreate?: DeliveryStatusHistoryCreateOrConnectWithoutDeliveryInput | DeliveryStatusHistoryCreateOrConnectWithoutDeliveryInput[]
+    upsert?: DeliveryStatusHistoryUpsertWithWhereUniqueWithoutDeliveryInput | DeliveryStatusHistoryUpsertWithWhereUniqueWithoutDeliveryInput[]
+    createMany?: DeliveryStatusHistoryCreateManyDeliveryInputEnvelope
+    set?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    disconnect?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    delete?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    connect?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    update?: DeliveryStatusHistoryUpdateWithWhereUniqueWithoutDeliveryInput | DeliveryStatusHistoryUpdateWithWhereUniqueWithoutDeliveryInput[]
+    updateMany?: DeliveryStatusHistoryUpdateManyWithWhereWithoutDeliveryInput | DeliveryStatusHistoryUpdateManyWithWhereWithoutDeliveryInput[]
+    deleteMany?: DeliveryStatusHistoryScalarWhereInput | DeliveryStatusHistoryScalarWhereInput[]
+  }
+
+  export type DeliveryLocationPingUpdateManyWithoutDeliveryNestedInput = {
+    create?: XOR<DeliveryLocationPingCreateWithoutDeliveryInput, DeliveryLocationPingUncheckedCreateWithoutDeliveryInput> | DeliveryLocationPingCreateWithoutDeliveryInput[] | DeliveryLocationPingUncheckedCreateWithoutDeliveryInput[]
+    connectOrCreate?: DeliveryLocationPingCreateOrConnectWithoutDeliveryInput | DeliveryLocationPingCreateOrConnectWithoutDeliveryInput[]
+    upsert?: DeliveryLocationPingUpsertWithWhereUniqueWithoutDeliveryInput | DeliveryLocationPingUpsertWithWhereUniqueWithoutDeliveryInput[]
+    createMany?: DeliveryLocationPingCreateManyDeliveryInputEnvelope
+    set?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    disconnect?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    delete?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    connect?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    update?: DeliveryLocationPingUpdateWithWhereUniqueWithoutDeliveryInput | DeliveryLocationPingUpdateWithWhereUniqueWithoutDeliveryInput[]
+    updateMany?: DeliveryLocationPingUpdateManyWithWhereWithoutDeliveryInput | DeliveryLocationPingUpdateManyWithWhereWithoutDeliveryInput[]
+    deleteMany?: DeliveryLocationPingScalarWhereInput | DeliveryLocationPingScalarWhereInput[]
+  }
+
+  export type DeliveryAssignmentUncheckedUpdateManyWithoutDeliveryNestedInput = {
+    create?: XOR<DeliveryAssignmentCreateWithoutDeliveryInput, DeliveryAssignmentUncheckedCreateWithoutDeliveryInput> | DeliveryAssignmentCreateWithoutDeliveryInput[] | DeliveryAssignmentUncheckedCreateWithoutDeliveryInput[]
+    connectOrCreate?: DeliveryAssignmentCreateOrConnectWithoutDeliveryInput | DeliveryAssignmentCreateOrConnectWithoutDeliveryInput[]
+    upsert?: DeliveryAssignmentUpsertWithWhereUniqueWithoutDeliveryInput | DeliveryAssignmentUpsertWithWhereUniqueWithoutDeliveryInput[]
+    createMany?: DeliveryAssignmentCreateManyDeliveryInputEnvelope
+    set?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    disconnect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    delete?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    connect?: DeliveryAssignmentWhereUniqueInput | DeliveryAssignmentWhereUniqueInput[]
+    update?: DeliveryAssignmentUpdateWithWhereUniqueWithoutDeliveryInput | DeliveryAssignmentUpdateWithWhereUniqueWithoutDeliveryInput[]
+    updateMany?: DeliveryAssignmentUpdateManyWithWhereWithoutDeliveryInput | DeliveryAssignmentUpdateManyWithWhereWithoutDeliveryInput[]
+    deleteMany?: DeliveryAssignmentScalarWhereInput | DeliveryAssignmentScalarWhereInput[]
+  }
+
+  export type DeliveryStatusHistoryUncheckedUpdateManyWithoutDeliveryNestedInput = {
+    create?: XOR<DeliveryStatusHistoryCreateWithoutDeliveryInput, DeliveryStatusHistoryUncheckedCreateWithoutDeliveryInput> | DeliveryStatusHistoryCreateWithoutDeliveryInput[] | DeliveryStatusHistoryUncheckedCreateWithoutDeliveryInput[]
+    connectOrCreate?: DeliveryStatusHistoryCreateOrConnectWithoutDeliveryInput | DeliveryStatusHistoryCreateOrConnectWithoutDeliveryInput[]
+    upsert?: DeliveryStatusHistoryUpsertWithWhereUniqueWithoutDeliveryInput | DeliveryStatusHistoryUpsertWithWhereUniqueWithoutDeliveryInput[]
+    createMany?: DeliveryStatusHistoryCreateManyDeliveryInputEnvelope
+    set?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    disconnect?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    delete?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    connect?: DeliveryStatusHistoryWhereUniqueInput | DeliveryStatusHistoryWhereUniqueInput[]
+    update?: DeliveryStatusHistoryUpdateWithWhereUniqueWithoutDeliveryInput | DeliveryStatusHistoryUpdateWithWhereUniqueWithoutDeliveryInput[]
+    updateMany?: DeliveryStatusHistoryUpdateManyWithWhereWithoutDeliveryInput | DeliveryStatusHistoryUpdateManyWithWhereWithoutDeliveryInput[]
+    deleteMany?: DeliveryStatusHistoryScalarWhereInput | DeliveryStatusHistoryScalarWhereInput[]
+  }
+
+  export type DeliveryLocationPingUncheckedUpdateManyWithoutDeliveryNestedInput = {
+    create?: XOR<DeliveryLocationPingCreateWithoutDeliveryInput, DeliveryLocationPingUncheckedCreateWithoutDeliveryInput> | DeliveryLocationPingCreateWithoutDeliveryInput[] | DeliveryLocationPingUncheckedCreateWithoutDeliveryInput[]
+    connectOrCreate?: DeliveryLocationPingCreateOrConnectWithoutDeliveryInput | DeliveryLocationPingCreateOrConnectWithoutDeliveryInput[]
+    upsert?: DeliveryLocationPingUpsertWithWhereUniqueWithoutDeliveryInput | DeliveryLocationPingUpsertWithWhereUniqueWithoutDeliveryInput[]
+    createMany?: DeliveryLocationPingCreateManyDeliveryInputEnvelope
+    set?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    disconnect?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    delete?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    connect?: DeliveryLocationPingWhereUniqueInput | DeliveryLocationPingWhereUniqueInput[]
+    update?: DeliveryLocationPingUpdateWithWhereUniqueWithoutDeliveryInput | DeliveryLocationPingUpdateWithWhereUniqueWithoutDeliveryInput[]
+    updateMany?: DeliveryLocationPingUpdateManyWithWhereWithoutDeliveryInput | DeliveryLocationPingUpdateManyWithWhereWithoutDeliveryInput[]
+    deleteMany?: DeliveryLocationPingScalarWhereInput | DeliveryLocationPingScalarWhereInput[]
+  }
+
+  export type DeliveryCreateNestedOneWithoutAssignmentsInput = {
+    create?: XOR<DeliveryCreateWithoutAssignmentsInput, DeliveryUncheckedCreateWithoutAssignmentsInput>
+    connectOrCreate?: DeliveryCreateOrConnectWithoutAssignmentsInput
+    connect?: DeliveryWhereUniqueInput
+  }
+
+  export type DriverProfileCreateNestedOneWithoutAssignmentsInput = {
+    create?: XOR<DriverProfileCreateWithoutAssignmentsInput, DriverProfileUncheckedCreateWithoutAssignmentsInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutAssignmentsInput
+    connect?: DriverProfileWhereUniqueInput
+  }
+
+  export type UserCreateNestedOneWithoutDeliveryAssignmentsMadeInput = {
+    create?: XOR<UserCreateWithoutDeliveryAssignmentsMadeInput, UserUncheckedCreateWithoutDeliveryAssignmentsMadeInput>
+    connectOrCreate?: UserCreateOrConnectWithoutDeliveryAssignmentsMadeInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type EnumDeliveryAssignmentStatusFieldUpdateOperationsInput = {
+    set?: $Enums.DeliveryAssignmentStatus
+  }
+
+  export type DeliveryUpdateOneRequiredWithoutAssignmentsNestedInput = {
+    create?: XOR<DeliveryCreateWithoutAssignmentsInput, DeliveryUncheckedCreateWithoutAssignmentsInput>
+    connectOrCreate?: DeliveryCreateOrConnectWithoutAssignmentsInput
+    upsert?: DeliveryUpsertWithoutAssignmentsInput
+    connect?: DeliveryWhereUniqueInput
+    update?: XOR<XOR<DeliveryUpdateToOneWithWhereWithoutAssignmentsInput, DeliveryUpdateWithoutAssignmentsInput>, DeliveryUncheckedUpdateWithoutAssignmentsInput>
+  }
+
+  export type DriverProfileUpdateOneRequiredWithoutAssignmentsNestedInput = {
+    create?: XOR<DriverProfileCreateWithoutAssignmentsInput, DriverProfileUncheckedCreateWithoutAssignmentsInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutAssignmentsInput
+    upsert?: DriverProfileUpsertWithoutAssignmentsInput
+    connect?: DriverProfileWhereUniqueInput
+    update?: XOR<XOR<DriverProfileUpdateToOneWithWhereWithoutAssignmentsInput, DriverProfileUpdateWithoutAssignmentsInput>, DriverProfileUncheckedUpdateWithoutAssignmentsInput>
+  }
+
+  export type UserUpdateOneWithoutDeliveryAssignmentsMadeNestedInput = {
+    create?: XOR<UserCreateWithoutDeliveryAssignmentsMadeInput, UserUncheckedCreateWithoutDeliveryAssignmentsMadeInput>
+    connectOrCreate?: UserCreateOrConnectWithoutDeliveryAssignmentsMadeInput
+    upsert?: UserUpsertWithoutDeliveryAssignmentsMadeInput
+    disconnect?: UserWhereInput | boolean
+    delete?: UserWhereInput | boolean
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutDeliveryAssignmentsMadeInput, UserUpdateWithoutDeliveryAssignmentsMadeInput>, UserUncheckedUpdateWithoutDeliveryAssignmentsMadeInput>
+  }
+
+  export type DeliveryCreateNestedOneWithoutStatusHistoryInput = {
+    create?: XOR<DeliveryCreateWithoutStatusHistoryInput, DeliveryUncheckedCreateWithoutStatusHistoryInput>
+    connectOrCreate?: DeliveryCreateOrConnectWithoutStatusHistoryInput
+    connect?: DeliveryWhereUniqueInput
+  }
+
+  export type UserCreateNestedOneWithoutDeliveryStatusChangesInput = {
+    create?: XOR<UserCreateWithoutDeliveryStatusChangesInput, UserUncheckedCreateWithoutDeliveryStatusChangesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutDeliveryStatusChangesInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type DeliveryUpdateOneRequiredWithoutStatusHistoryNestedInput = {
+    create?: XOR<DeliveryCreateWithoutStatusHistoryInput, DeliveryUncheckedCreateWithoutStatusHistoryInput>
+    connectOrCreate?: DeliveryCreateOrConnectWithoutStatusHistoryInput
+    upsert?: DeliveryUpsertWithoutStatusHistoryInput
+    connect?: DeliveryWhereUniqueInput
+    update?: XOR<XOR<DeliveryUpdateToOneWithWhereWithoutStatusHistoryInput, DeliveryUpdateWithoutStatusHistoryInput>, DeliveryUncheckedUpdateWithoutStatusHistoryInput>
+  }
+
+  export type UserUpdateOneRequiredWithoutDeliveryStatusChangesNestedInput = {
+    create?: XOR<UserCreateWithoutDeliveryStatusChangesInput, UserUncheckedCreateWithoutDeliveryStatusChangesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutDeliveryStatusChangesInput
+    upsert?: UserUpsertWithoutDeliveryStatusChangesInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutDeliveryStatusChangesInput, UserUpdateWithoutDeliveryStatusChangesInput>, UserUncheckedUpdateWithoutDeliveryStatusChangesInput>
+  }
+
+  export type DeliveryCreateNestedOneWithoutLocationPingsInput = {
+    create?: XOR<DeliveryCreateWithoutLocationPingsInput, DeliveryUncheckedCreateWithoutLocationPingsInput>
+    connectOrCreate?: DeliveryCreateOrConnectWithoutLocationPingsInput
+    connect?: DeliveryWhereUniqueInput
+  }
+
+  export type DriverProfileCreateNestedOneWithoutLocationPingsInput = {
+    create?: XOR<DriverProfileCreateWithoutLocationPingsInput, DriverProfileUncheckedCreateWithoutLocationPingsInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutLocationPingsInput
+    connect?: DriverProfileWhereUniqueInput
+  }
+
+  export type DeliveryUpdateOneRequiredWithoutLocationPingsNestedInput = {
+    create?: XOR<DeliveryCreateWithoutLocationPingsInput, DeliveryUncheckedCreateWithoutLocationPingsInput>
+    connectOrCreate?: DeliveryCreateOrConnectWithoutLocationPingsInput
+    upsert?: DeliveryUpsertWithoutLocationPingsInput
+    connect?: DeliveryWhereUniqueInput
+    update?: XOR<XOR<DeliveryUpdateToOneWithWhereWithoutLocationPingsInput, DeliveryUpdateWithoutLocationPingsInput>, DeliveryUncheckedUpdateWithoutLocationPingsInput>
+  }
+
+  export type DriverProfileUpdateOneRequiredWithoutLocationPingsNestedInput = {
+    create?: XOR<DriverProfileCreateWithoutLocationPingsInput, DriverProfileUncheckedCreateWithoutLocationPingsInput>
+    connectOrCreate?: DriverProfileCreateOrConnectWithoutLocationPingsInput
+    upsert?: DriverProfileUpsertWithoutLocationPingsInput
+    connect?: DriverProfileWhereUniqueInput
+    update?: XOR<XOR<DriverProfileUpdateToOneWithWhereWithoutLocationPingsInput, DriverProfileUpdateWithoutLocationPingsInput>, DriverProfileUncheckedUpdateWithoutLocationPingsInput>
   }
 
   export type ReservationCreateNestedOneWithoutStatusHistoryInput = {
@@ -50502,6 +59720,40 @@ export namespace Prisma {
     _max?: NestedEnumRoleInvitationStatusFilter<$PrismaModel>
   }
 
+  export type NestedEnumDriverProfileStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.DriverProfileStatus | EnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDriverProfileStatusFilter<$PrismaModel> | $Enums.DriverProfileStatus
+  }
+
+  export type NestedEnumDriverAvailabilityStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.DriverAvailabilityStatus | EnumDriverAvailabilityStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DriverAvailabilityStatus[] | ListEnumDriverAvailabilityStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DriverAvailabilityStatus[] | ListEnumDriverAvailabilityStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDriverAvailabilityStatusFilter<$PrismaModel> | $Enums.DriverAvailabilityStatus
+  }
+
+  export type NestedEnumDriverProfileStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DriverProfileStatus | EnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DriverProfileStatus[] | ListEnumDriverProfileStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDriverProfileStatusWithAggregatesFilter<$PrismaModel> | $Enums.DriverProfileStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDriverProfileStatusFilter<$PrismaModel>
+    _max?: NestedEnumDriverProfileStatusFilter<$PrismaModel>
+  }
+
+  export type NestedEnumDriverAvailabilityStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DriverAvailabilityStatus | EnumDriverAvailabilityStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DriverAvailabilityStatus[] | ListEnumDriverAvailabilityStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DriverAvailabilityStatus[] | ListEnumDriverAvailabilityStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDriverAvailabilityStatusWithAggregatesFilter<$PrismaModel> | $Enums.DriverAvailabilityStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDriverAvailabilityStatusFilter<$PrismaModel>
+    _max?: NestedEnumDriverAvailabilityStatusFilter<$PrismaModel>
+  }
+
   export type NestedEnumOrganizationTypeFilter<$PrismaModel = never> = {
     equals?: $Enums.OrganizationType | EnumOrganizationTypeFieldRefInput<$PrismaModel>
     in?: $Enums.OrganizationType[] | ListEnumOrganizationTypeFieldRefInput<$PrismaModel>
@@ -50871,6 +60123,40 @@ export namespace Prisma {
     _max?: NestedEnumDeliveryStatusNullableFilter<$PrismaModel>
   }
 
+  export type NestedEnumDeliveryStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.DeliveryStatus | EnumDeliveryStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDeliveryStatusFilter<$PrismaModel> | $Enums.DeliveryStatus
+  }
+
+  export type NestedEnumDeliveryStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DeliveryStatus | EnumDeliveryStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDeliveryStatusWithAggregatesFilter<$PrismaModel> | $Enums.DeliveryStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDeliveryStatusFilter<$PrismaModel>
+    _max?: NestedEnumDeliveryStatusFilter<$PrismaModel>
+  }
+
+  export type NestedEnumDeliveryAssignmentStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.DeliveryAssignmentStatus | EnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DeliveryAssignmentStatus[] | ListEnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DeliveryAssignmentStatus[] | ListEnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDeliveryAssignmentStatusFilter<$PrismaModel> | $Enums.DeliveryAssignmentStatus
+  }
+
+  export type NestedEnumDeliveryAssignmentStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DeliveryAssignmentStatus | EnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DeliveryAssignmentStatus[] | ListEnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DeliveryAssignmentStatus[] | ListEnumDeliveryAssignmentStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDeliveryAssignmentStatusWithAggregatesFilter<$PrismaModel> | $Enums.DeliveryAssignmentStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDeliveryAssignmentStatusFilter<$PrismaModel>
+    _max?: NestedEnumDeliveryAssignmentStatusFilter<$PrismaModel>
+  }
+
   export type NestedEnumReservationStatusGroupFilter<$PrismaModel = never> = {
     equals?: $Enums.ReservationStatusGroup | EnumReservationStatusGroupFieldRefInput<$PrismaModel>
     in?: $Enums.ReservationStatusGroup[] | ListEnumReservationStatusGroupFieldRefInput<$PrismaModel>
@@ -51102,6 +60388,45 @@ export namespace Prisma {
     create: XOR<SupplierProfileCreateWithoutUserInput, SupplierProfileUncheckedCreateWithoutUserInput>
   }
 
+  export type DriverProfileCreateWithoutUserInput = {
+    id?: string
+    status?: $Enums.DriverProfileStatus
+    availability?: $Enums.DriverAvailabilityStatus
+    displayName: string
+    phone?: string | null
+    vehicleType?: string
+    vehicleLabel?: string | null
+    vehiclePlate?: string | null
+    capacityNotes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    deliveries?: DeliveryCreateNestedManyWithoutAssignedDriverProfileInput
+    assignments?: DeliveryAssignmentCreateNestedManyWithoutDriverProfileInput
+    locationPings?: DeliveryLocationPingCreateNestedManyWithoutDriverProfileInput
+  }
+
+  export type DriverProfileUncheckedCreateWithoutUserInput = {
+    id?: string
+    status?: $Enums.DriverProfileStatus
+    availability?: $Enums.DriverAvailabilityStatus
+    displayName: string
+    phone?: string | null
+    vehicleType?: string
+    vehicleLabel?: string | null
+    vehiclePlate?: string | null
+    capacityNotes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    deliveries?: DeliveryUncheckedCreateNestedManyWithoutAssignedDriverProfileInput
+    assignments?: DeliveryAssignmentUncheckedCreateNestedManyWithoutDriverProfileInput
+    locationPings?: DeliveryLocationPingUncheckedCreateNestedManyWithoutDriverProfileInput
+  }
+
+  export type DriverProfileCreateOrConnectWithoutUserInput = {
+    where: DriverProfileWhereUniqueInput
+    create: XOR<DriverProfileCreateWithoutUserInput, DriverProfileUncheckedCreateWithoutUserInput>
+  }
+
   export type RoleInvitationCreateWithoutInvitedByUserInput = {
     id?: string
     targetEmail?: string | null
@@ -51312,6 +60637,7 @@ export namespace Prisma {
     requester: UserCreateNestedOneWithoutOwnedReservationsAsRequesterInput
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryCreateNestedManyWithoutReservationInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
@@ -51340,6 +60666,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryUncheckedCreateNestedManyWithoutReservationInput
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
@@ -51378,6 +60705,7 @@ export namespace Prisma {
     owner: UserCreateNestedOneWithoutOwnedReservationsAsOwnerInput
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryCreateNestedManyWithoutReservationInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
@@ -51406,6 +60734,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryUncheckedCreateNestedManyWithoutReservationInput
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
@@ -51447,6 +60776,128 @@ export namespace Prisma {
 
   export type ReservationStatusHistoryCreateManyChangedByUserInputEnvelope = {
     data: ReservationStatusHistoryCreateManyChangedByUserInput | ReservationStatusHistoryCreateManyChangedByUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DeliveryCreateWithoutRequestedByUserInput = {
+    id?: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    reservation: ReservationCreateNestedOneWithoutDeliveriesInput
+    pickupLocation: LocationCreateNestedOneWithoutDeliveryPickupsInput
+    dropoffLocation: LocationCreateNestedOneWithoutDeliveryDropoffsInput
+    assignedDriverProfile?: DriverProfileCreateNestedOneWithoutDeliveriesInput
+    assignments?: DeliveryAssignmentCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryUncheckedCreateWithoutRequestedByUserInput = {
+    id?: string
+    reservationId: string
+    pickupLocationId: string
+    dropoffLocationId: string
+    assignedDriverProfileId?: string | null
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assignments?: DeliveryAssignmentUncheckedCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingUncheckedCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryCreateOrConnectWithoutRequestedByUserInput = {
+    where: DeliveryWhereUniqueInput
+    create: XOR<DeliveryCreateWithoutRequestedByUserInput, DeliveryUncheckedCreateWithoutRequestedByUserInput>
+  }
+
+  export type DeliveryCreateManyRequestedByUserInputEnvelope = {
+    data: DeliveryCreateManyRequestedByUserInput | DeliveryCreateManyRequestedByUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DeliveryAssignmentCreateWithoutAssignedByUserInput = {
+    id?: string
+    status?: $Enums.DeliveryAssignmentStatus
+    acceptedAt?: Date | string
+    releasedAt?: Date | string | null
+    releaseReason?: string | null
+    createdAt?: Date | string
+    delivery: DeliveryCreateNestedOneWithoutAssignmentsInput
+    driverProfile: DriverProfileCreateNestedOneWithoutAssignmentsInput
+  }
+
+  export type DeliveryAssignmentUncheckedCreateWithoutAssignedByUserInput = {
+    id?: string
+    deliveryId: string
+    driverProfileId: string
+    status?: $Enums.DeliveryAssignmentStatus
+    acceptedAt?: Date | string
+    releasedAt?: Date | string | null
+    releaseReason?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryAssignmentCreateOrConnectWithoutAssignedByUserInput = {
+    where: DeliveryAssignmentWhereUniqueInput
+    create: XOR<DeliveryAssignmentCreateWithoutAssignedByUserInput, DeliveryAssignmentUncheckedCreateWithoutAssignedByUserInput>
+  }
+
+  export type DeliveryAssignmentCreateManyAssignedByUserInputEnvelope = {
+    data: DeliveryAssignmentCreateManyAssignedByUserInput | DeliveryAssignmentCreateManyAssignedByUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DeliveryStatusHistoryCreateWithoutChangedByUserInput = {
+    id?: string
+    oldStatus?: $Enums.DeliveryStatus | null
+    newStatus: $Enums.DeliveryStatus
+    note?: string | null
+    createdAt?: Date | string
+    delivery: DeliveryCreateNestedOneWithoutStatusHistoryInput
+  }
+
+  export type DeliveryStatusHistoryUncheckedCreateWithoutChangedByUserInput = {
+    id?: string
+    deliveryId: string
+    oldStatus?: $Enums.DeliveryStatus | null
+    newStatus: $Enums.DeliveryStatus
+    note?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryStatusHistoryCreateOrConnectWithoutChangedByUserInput = {
+    where: DeliveryStatusHistoryWhereUniqueInput
+    create: XOR<DeliveryStatusHistoryCreateWithoutChangedByUserInput, DeliveryStatusHistoryUncheckedCreateWithoutChangedByUserInput>
+  }
+
+  export type DeliveryStatusHistoryCreateManyChangedByUserInputEnvelope = {
+    data: DeliveryStatusHistoryCreateManyChangedByUserInput | DeliveryStatusHistoryCreateManyChangedByUserInput[]
     skipDuplicates?: boolean
   }
 
@@ -51912,6 +61363,51 @@ export namespace Prisma {
     materials?: MaterialUncheckedUpdateManyWithoutSupplierProfileNestedInput
   }
 
+  export type DriverProfileUpsertWithoutUserInput = {
+    update: XOR<DriverProfileUpdateWithoutUserInput, DriverProfileUncheckedUpdateWithoutUserInput>
+    create: XOR<DriverProfileCreateWithoutUserInput, DriverProfileUncheckedCreateWithoutUserInput>
+    where?: DriverProfileWhereInput
+  }
+
+  export type DriverProfileUpdateToOneWithWhereWithoutUserInput = {
+    where?: DriverProfileWhereInput
+    data: XOR<DriverProfileUpdateWithoutUserInput, DriverProfileUncheckedUpdateWithoutUserInput>
+  }
+
+  export type DriverProfileUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFieldUpdateOperationsInput | $Enums.DriverAvailabilityStatus
+    displayName?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    vehicleType?: StringFieldUpdateOperationsInput | string
+    vehicleLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    vehiclePlate?: NullableStringFieldUpdateOperationsInput | string | null
+    capacityNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    deliveries?: DeliveryUpdateManyWithoutAssignedDriverProfileNestedInput
+    assignments?: DeliveryAssignmentUpdateManyWithoutDriverProfileNestedInput
+    locationPings?: DeliveryLocationPingUpdateManyWithoutDriverProfileNestedInput
+  }
+
+  export type DriverProfileUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFieldUpdateOperationsInput | $Enums.DriverAvailabilityStatus
+    displayName?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    vehicleType?: StringFieldUpdateOperationsInput | string
+    vehicleLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    vehiclePlate?: NullableStringFieldUpdateOperationsInput | string | null
+    capacityNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    deliveries?: DeliveryUncheckedUpdateManyWithoutAssignedDriverProfileNestedInput
+    assignments?: DeliveryAssignmentUncheckedUpdateManyWithoutDriverProfileNestedInput
+    locationPings?: DeliveryLocationPingUncheckedUpdateManyWithoutDriverProfileNestedInput
+  }
+
   export type RoleInvitationUpsertWithWhereUniqueWithoutInvitedByUserInput = {
     where: RoleInvitationWhereUniqueInput
     update: XOR<RoleInvitationUpdateWithoutInvitedByUserInput, RoleInvitationUncheckedUpdateWithoutInvitedByUserInput>
@@ -52119,6 +61615,109 @@ export namespace Prisma {
     changedBy?: StringNullableFilter<"ReservationStatusHistory"> | string | null
     note?: StringNullableFilter<"ReservationStatusHistory"> | string | null
     createdAt?: DateTimeFilter<"ReservationStatusHistory"> | Date | string
+  }
+
+  export type DeliveryUpsertWithWhereUniqueWithoutRequestedByUserInput = {
+    where: DeliveryWhereUniqueInput
+    update: XOR<DeliveryUpdateWithoutRequestedByUserInput, DeliveryUncheckedUpdateWithoutRequestedByUserInput>
+    create: XOR<DeliveryCreateWithoutRequestedByUserInput, DeliveryUncheckedCreateWithoutRequestedByUserInput>
+  }
+
+  export type DeliveryUpdateWithWhereUniqueWithoutRequestedByUserInput = {
+    where: DeliveryWhereUniqueInput
+    data: XOR<DeliveryUpdateWithoutRequestedByUserInput, DeliveryUncheckedUpdateWithoutRequestedByUserInput>
+  }
+
+  export type DeliveryUpdateManyWithWhereWithoutRequestedByUserInput = {
+    where: DeliveryScalarWhereInput
+    data: XOR<DeliveryUpdateManyMutationInput, DeliveryUncheckedUpdateManyWithoutRequestedByUserInput>
+  }
+
+  export type DeliveryScalarWhereInput = {
+    AND?: DeliveryScalarWhereInput | DeliveryScalarWhereInput[]
+    OR?: DeliveryScalarWhereInput[]
+    NOT?: DeliveryScalarWhereInput | DeliveryScalarWhereInput[]
+    id?: StringFilter<"Delivery"> | string
+    reservationId?: StringFilter<"Delivery"> | string
+    pickupLocationId?: StringFilter<"Delivery"> | string
+    dropoffLocationId?: StringFilter<"Delivery"> | string
+    assignedDriverProfileId?: StringNullableFilter<"Delivery"> | string | null
+    requestedByUserId?: StringFilter<"Delivery"> | string
+    status?: EnumDeliveryStatusFilter<"Delivery"> | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFilter<"Delivery"> | Date | string
+    assignedAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    arrivedPickupAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    pickedUpAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    onTheWayAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    arrivedDropoffAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    deliveredAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    cancelledAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    failedAt?: DateTimeNullableFilter<"Delivery"> | Date | string | null
+    learnerNote?: StringNullableFilter<"Delivery"> | string | null
+    driverNote?: StringNullableFilter<"Delivery"> | string | null
+    failureReason?: StringNullableFilter<"Delivery"> | string | null
+    createdAt?: DateTimeFilter<"Delivery"> | Date | string
+    updatedAt?: DateTimeFilter<"Delivery"> | Date | string
+  }
+
+  export type DeliveryAssignmentUpsertWithWhereUniqueWithoutAssignedByUserInput = {
+    where: DeliveryAssignmentWhereUniqueInput
+    update: XOR<DeliveryAssignmentUpdateWithoutAssignedByUserInput, DeliveryAssignmentUncheckedUpdateWithoutAssignedByUserInput>
+    create: XOR<DeliveryAssignmentCreateWithoutAssignedByUserInput, DeliveryAssignmentUncheckedCreateWithoutAssignedByUserInput>
+  }
+
+  export type DeliveryAssignmentUpdateWithWhereUniqueWithoutAssignedByUserInput = {
+    where: DeliveryAssignmentWhereUniqueInput
+    data: XOR<DeliveryAssignmentUpdateWithoutAssignedByUserInput, DeliveryAssignmentUncheckedUpdateWithoutAssignedByUserInput>
+  }
+
+  export type DeliveryAssignmentUpdateManyWithWhereWithoutAssignedByUserInput = {
+    where: DeliveryAssignmentScalarWhereInput
+    data: XOR<DeliveryAssignmentUpdateManyMutationInput, DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserInput>
+  }
+
+  export type DeliveryAssignmentScalarWhereInput = {
+    AND?: DeliveryAssignmentScalarWhereInput | DeliveryAssignmentScalarWhereInput[]
+    OR?: DeliveryAssignmentScalarWhereInput[]
+    NOT?: DeliveryAssignmentScalarWhereInput | DeliveryAssignmentScalarWhereInput[]
+    id?: StringFilter<"DeliveryAssignment"> | string
+    deliveryId?: StringFilter<"DeliveryAssignment"> | string
+    driverProfileId?: StringFilter<"DeliveryAssignment"> | string
+    assignedByUserId?: StringNullableFilter<"DeliveryAssignment"> | string | null
+    status?: EnumDeliveryAssignmentStatusFilter<"DeliveryAssignment"> | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFilter<"DeliveryAssignment"> | Date | string
+    releasedAt?: DateTimeNullableFilter<"DeliveryAssignment"> | Date | string | null
+    releaseReason?: StringNullableFilter<"DeliveryAssignment"> | string | null
+    createdAt?: DateTimeFilter<"DeliveryAssignment"> | Date | string
+  }
+
+  export type DeliveryStatusHistoryUpsertWithWhereUniqueWithoutChangedByUserInput = {
+    where: DeliveryStatusHistoryWhereUniqueInput
+    update: XOR<DeliveryStatusHistoryUpdateWithoutChangedByUserInput, DeliveryStatusHistoryUncheckedUpdateWithoutChangedByUserInput>
+    create: XOR<DeliveryStatusHistoryCreateWithoutChangedByUserInput, DeliveryStatusHistoryUncheckedCreateWithoutChangedByUserInput>
+  }
+
+  export type DeliveryStatusHistoryUpdateWithWhereUniqueWithoutChangedByUserInput = {
+    where: DeliveryStatusHistoryWhereUniqueInput
+    data: XOR<DeliveryStatusHistoryUpdateWithoutChangedByUserInput, DeliveryStatusHistoryUncheckedUpdateWithoutChangedByUserInput>
+  }
+
+  export type DeliveryStatusHistoryUpdateManyWithWhereWithoutChangedByUserInput = {
+    where: DeliveryStatusHistoryScalarWhereInput
+    data: XOR<DeliveryStatusHistoryUpdateManyMutationInput, DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserInput>
+  }
+
+  export type DeliveryStatusHistoryScalarWhereInput = {
+    AND?: DeliveryStatusHistoryScalarWhereInput | DeliveryStatusHistoryScalarWhereInput[]
+    OR?: DeliveryStatusHistoryScalarWhereInput[]
+    NOT?: DeliveryStatusHistoryScalarWhereInput | DeliveryStatusHistoryScalarWhereInput[]
+    id?: StringFilter<"DeliveryStatusHistory"> | string
+    deliveryId?: StringFilter<"DeliveryStatusHistory"> | string
+    oldStatus?: EnumDeliveryStatusNullableFilter<"DeliveryStatusHistory"> | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFilter<"DeliveryStatusHistory"> | $Enums.DeliveryStatus
+    changedByUserId?: StringFilter<"DeliveryStatusHistory"> | string
+    note?: StringNullableFilter<"DeliveryStatusHistory"> | string | null
+    createdAt?: DateTimeFilter<"DeliveryStatusHistory"> | Date | string
   }
 
   export type NotificationUpsertWithWhereUniqueWithoutUserInput = {
@@ -52379,6 +61978,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -52386,6 +61986,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -52412,6 +62015,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -52419,6 +62023,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -52451,12 +62058,16 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -52484,12 +62095,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -52532,6 +62147,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -52539,6 +62155,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -52565,6 +62184,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -52572,6 +62192,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -52610,12 +62233,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -52643,12 +62270,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -52675,6 +62306,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -52682,6 +62314,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -52708,6 +62343,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -52715,6 +62351,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -52757,6 +62396,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -52764,6 +62404,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -52790,6 +62433,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -52797,6 +62441,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -52824,12 +62471,16 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -52857,12 +62508,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -52895,12 +62550,16 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -52928,12 +62587,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -52977,12 +62640,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -53010,12 +62677,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -53054,12 +62725,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -53087,12 +62762,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -53119,6 +62798,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -53126,6 +62806,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -53152,6 +62835,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -53159,6 +62843,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -53201,6 +62888,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -53208,6 +62896,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -53234,6 +62925,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -53241,6 +62933,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -53267,6 +62962,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -53274,6 +62970,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -53300,6 +62999,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -53307,6 +63007,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -53338,6 +63041,8 @@ export namespace Prisma {
     organizationBusinessFor?: OrganizationProfileCreateNestedManyWithoutBusinessLocationInput
     materials?: MaterialCreateNestedManyWithoutLocationInput
     reservationDropoffs?: ReservationCreateNestedManyWithoutDropoffLocationInput
+    deliveryPickups?: DeliveryCreateNestedManyWithoutPickupLocationInput
+    deliveryDropoffs?: DeliveryCreateNestedManyWithoutDropoffLocationInput
   }
 
   export type LocationUncheckedCreateWithoutSupplierPickupForInput = {
@@ -53356,6 +63061,8 @@ export namespace Prisma {
     organizationBusinessFor?: OrganizationProfileUncheckedCreateNestedManyWithoutBusinessLocationInput
     materials?: MaterialUncheckedCreateNestedManyWithoutLocationInput
     reservationDropoffs?: ReservationUncheckedCreateNestedManyWithoutDropoffLocationInput
+    deliveryPickups?: DeliveryUncheckedCreateNestedManyWithoutPickupLocationInput
+    deliveryDropoffs?: DeliveryUncheckedCreateNestedManyWithoutDropoffLocationInput
   }
 
   export type LocationCreateOrConnectWithoutSupplierPickupForInput = {
@@ -53505,6 +63212,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -53512,6 +63220,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -53538,6 +63249,7 @@ export namespace Prisma {
     roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -53545,6 +63257,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -53582,6 +63297,8 @@ export namespace Prisma {
     organizationBusinessFor?: OrganizationProfileUpdateManyWithoutBusinessLocationNestedInput
     materials?: MaterialUpdateManyWithoutLocationNestedInput
     reservationDropoffs?: ReservationUpdateManyWithoutDropoffLocationNestedInput
+    deliveryPickups?: DeliveryUpdateManyWithoutPickupLocationNestedInput
+    deliveryDropoffs?: DeliveryUpdateManyWithoutDropoffLocationNestedInput
   }
 
   export type LocationUncheckedUpdateWithoutSupplierPickupForInput = {
@@ -53600,6 +63317,8 @@ export namespace Prisma {
     organizationBusinessFor?: OrganizationProfileUncheckedUpdateManyWithoutBusinessLocationNestedInput
     materials?: MaterialUncheckedUpdateManyWithoutLocationNestedInput
     reservationDropoffs?: ReservationUncheckedUpdateManyWithoutDropoffLocationNestedInput
+    deliveryPickups?: DeliveryUncheckedUpdateManyWithoutPickupLocationNestedInput
+    deliveryDropoffs?: DeliveryUncheckedUpdateManyWithoutDropoffLocationNestedInput
   }
 
   export type OrganizationProfileUpsertWithoutSupplierProfileInput = {
@@ -53655,6 +63374,362 @@ export namespace Prisma {
     data: XOR<MaterialUpdateManyMutationInput, MaterialUncheckedUpdateManyWithoutSupplierProfileInput>
   }
 
+  export type UserCreateWithoutDriverProfileInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserUncheckedCreateWithoutDriverProfileInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserCreateOrConnectWithoutDriverProfileInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutDriverProfileInput, UserUncheckedCreateWithoutDriverProfileInput>
+  }
+
+  export type DeliveryCreateWithoutAssignedDriverProfileInput = {
+    id?: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    reservation: ReservationCreateNestedOneWithoutDeliveriesInput
+    pickupLocation: LocationCreateNestedOneWithoutDeliveryPickupsInput
+    dropoffLocation: LocationCreateNestedOneWithoutDeliveryDropoffsInput
+    requestedByUser: UserCreateNestedOneWithoutRequestedDeliveriesInput
+    assignments?: DeliveryAssignmentCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryUncheckedCreateWithoutAssignedDriverProfileInput = {
+    id?: string
+    reservationId: string
+    pickupLocationId: string
+    dropoffLocationId: string
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assignments?: DeliveryAssignmentUncheckedCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingUncheckedCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryCreateOrConnectWithoutAssignedDriverProfileInput = {
+    where: DeliveryWhereUniqueInput
+    create: XOR<DeliveryCreateWithoutAssignedDriverProfileInput, DeliveryUncheckedCreateWithoutAssignedDriverProfileInput>
+  }
+
+  export type DeliveryCreateManyAssignedDriverProfileInputEnvelope = {
+    data: DeliveryCreateManyAssignedDriverProfileInput | DeliveryCreateManyAssignedDriverProfileInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DeliveryAssignmentCreateWithoutDriverProfileInput = {
+    id?: string
+    status?: $Enums.DeliveryAssignmentStatus
+    acceptedAt?: Date | string
+    releasedAt?: Date | string | null
+    releaseReason?: string | null
+    createdAt?: Date | string
+    delivery: DeliveryCreateNestedOneWithoutAssignmentsInput
+    assignedByUser?: UserCreateNestedOneWithoutDeliveryAssignmentsMadeInput
+  }
+
+  export type DeliveryAssignmentUncheckedCreateWithoutDriverProfileInput = {
+    id?: string
+    deliveryId: string
+    assignedByUserId?: string | null
+    status?: $Enums.DeliveryAssignmentStatus
+    acceptedAt?: Date | string
+    releasedAt?: Date | string | null
+    releaseReason?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryAssignmentCreateOrConnectWithoutDriverProfileInput = {
+    where: DeliveryAssignmentWhereUniqueInput
+    create: XOR<DeliveryAssignmentCreateWithoutDriverProfileInput, DeliveryAssignmentUncheckedCreateWithoutDriverProfileInput>
+  }
+
+  export type DeliveryAssignmentCreateManyDriverProfileInputEnvelope = {
+    data: DeliveryAssignmentCreateManyDriverProfileInput | DeliveryAssignmentCreateManyDriverProfileInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DeliveryLocationPingCreateWithoutDriverProfileInput = {
+    id?: string
+    latitude: Decimal | DecimalJsLike | number | string
+    longitude: Decimal | DecimalJsLike | number | string
+    accuracyMeters?: Decimal | DecimalJsLike | number | string | null
+    heading?: Decimal | DecimalJsLike | number | string | null
+    speed?: Decimal | DecimalJsLike | number | string | null
+    capturedAt: Date | string
+    createdAt?: Date | string
+    delivery: DeliveryCreateNestedOneWithoutLocationPingsInput
+  }
+
+  export type DeliveryLocationPingUncheckedCreateWithoutDriverProfileInput = {
+    id?: string
+    deliveryId: string
+    latitude: Decimal | DecimalJsLike | number | string
+    longitude: Decimal | DecimalJsLike | number | string
+    accuracyMeters?: Decimal | DecimalJsLike | number | string | null
+    heading?: Decimal | DecimalJsLike | number | string | null
+    speed?: Decimal | DecimalJsLike | number | string | null
+    capturedAt: Date | string
+    createdAt?: Date | string
+  }
+
+  export type DeliveryLocationPingCreateOrConnectWithoutDriverProfileInput = {
+    where: DeliveryLocationPingWhereUniqueInput
+    create: XOR<DeliveryLocationPingCreateWithoutDriverProfileInput, DeliveryLocationPingUncheckedCreateWithoutDriverProfileInput>
+  }
+
+  export type DeliveryLocationPingCreateManyDriverProfileInputEnvelope = {
+    data: DeliveryLocationPingCreateManyDriverProfileInput | DeliveryLocationPingCreateManyDriverProfileInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type UserUpsertWithoutDriverProfileInput = {
+    update: XOR<UserUpdateWithoutDriverProfileInput, UserUncheckedUpdateWithoutDriverProfileInput>
+    create: XOR<UserCreateWithoutDriverProfileInput, UserUncheckedCreateWithoutDriverProfileInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutDriverProfileInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutDriverProfileInput, UserUncheckedUpdateWithoutDriverProfileInput>
+  }
+
+  export type UserUpdateWithoutDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type DeliveryUpsertWithWhereUniqueWithoutAssignedDriverProfileInput = {
+    where: DeliveryWhereUniqueInput
+    update: XOR<DeliveryUpdateWithoutAssignedDriverProfileInput, DeliveryUncheckedUpdateWithoutAssignedDriverProfileInput>
+    create: XOR<DeliveryCreateWithoutAssignedDriverProfileInput, DeliveryUncheckedCreateWithoutAssignedDriverProfileInput>
+  }
+
+  export type DeliveryUpdateWithWhereUniqueWithoutAssignedDriverProfileInput = {
+    where: DeliveryWhereUniqueInput
+    data: XOR<DeliveryUpdateWithoutAssignedDriverProfileInput, DeliveryUncheckedUpdateWithoutAssignedDriverProfileInput>
+  }
+
+  export type DeliveryUpdateManyWithWhereWithoutAssignedDriverProfileInput = {
+    where: DeliveryScalarWhereInput
+    data: XOR<DeliveryUpdateManyMutationInput, DeliveryUncheckedUpdateManyWithoutAssignedDriverProfileInput>
+  }
+
+  export type DeliveryAssignmentUpsertWithWhereUniqueWithoutDriverProfileInput = {
+    where: DeliveryAssignmentWhereUniqueInput
+    update: XOR<DeliveryAssignmentUpdateWithoutDriverProfileInput, DeliveryAssignmentUncheckedUpdateWithoutDriverProfileInput>
+    create: XOR<DeliveryAssignmentCreateWithoutDriverProfileInput, DeliveryAssignmentUncheckedCreateWithoutDriverProfileInput>
+  }
+
+  export type DeliveryAssignmentUpdateWithWhereUniqueWithoutDriverProfileInput = {
+    where: DeliveryAssignmentWhereUniqueInput
+    data: XOR<DeliveryAssignmentUpdateWithoutDriverProfileInput, DeliveryAssignmentUncheckedUpdateWithoutDriverProfileInput>
+  }
+
+  export type DeliveryAssignmentUpdateManyWithWhereWithoutDriverProfileInput = {
+    where: DeliveryAssignmentScalarWhereInput
+    data: XOR<DeliveryAssignmentUpdateManyMutationInput, DeliveryAssignmentUncheckedUpdateManyWithoutDriverProfileInput>
+  }
+
+  export type DeliveryLocationPingUpsertWithWhereUniqueWithoutDriverProfileInput = {
+    where: DeliveryLocationPingWhereUniqueInput
+    update: XOR<DeliveryLocationPingUpdateWithoutDriverProfileInput, DeliveryLocationPingUncheckedUpdateWithoutDriverProfileInput>
+    create: XOR<DeliveryLocationPingCreateWithoutDriverProfileInput, DeliveryLocationPingUncheckedCreateWithoutDriverProfileInput>
+  }
+
+  export type DeliveryLocationPingUpdateWithWhereUniqueWithoutDriverProfileInput = {
+    where: DeliveryLocationPingWhereUniqueInput
+    data: XOR<DeliveryLocationPingUpdateWithoutDriverProfileInput, DeliveryLocationPingUncheckedUpdateWithoutDriverProfileInput>
+  }
+
+  export type DeliveryLocationPingUpdateManyWithWhereWithoutDriverProfileInput = {
+    where: DeliveryLocationPingScalarWhereInput
+    data: XOR<DeliveryLocationPingUpdateManyMutationInput, DeliveryLocationPingUncheckedUpdateManyWithoutDriverProfileInput>
+  }
+
+  export type DeliveryLocationPingScalarWhereInput = {
+    AND?: DeliveryLocationPingScalarWhereInput | DeliveryLocationPingScalarWhereInput[]
+    OR?: DeliveryLocationPingScalarWhereInput[]
+    NOT?: DeliveryLocationPingScalarWhereInput | DeliveryLocationPingScalarWhereInput[]
+    id?: StringFilter<"DeliveryLocationPing"> | string
+    deliveryId?: StringFilter<"DeliveryLocationPing"> | string
+    driverProfileId?: StringFilter<"DeliveryLocationPing"> | string
+    latitude?: DecimalFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: DecimalNullableFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string | null
+    heading?: DecimalNullableFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string | null
+    speed?: DecimalNullableFilter<"DeliveryLocationPing"> | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFilter<"DeliveryLocationPing"> | Date | string
+    createdAt?: DateTimeFilter<"DeliveryLocationPing"> | Date | string
+  }
+
   export type SupplierProfileCreateWithoutOrganizationProfileInput = {
     id?: string
     supplierType?: string | null
@@ -53702,6 +63777,8 @@ export namespace Prisma {
     supplierPickupFor?: SupplierProfileCreateNestedManyWithoutDefaultPickupLocationInput
     materials?: MaterialCreateNestedManyWithoutLocationInput
     reservationDropoffs?: ReservationCreateNestedManyWithoutDropoffLocationInput
+    deliveryPickups?: DeliveryCreateNestedManyWithoutPickupLocationInput
+    deliveryDropoffs?: DeliveryCreateNestedManyWithoutDropoffLocationInput
   }
 
   export type LocationUncheckedCreateWithoutOrganizationBusinessForInput = {
@@ -53720,6 +63797,8 @@ export namespace Prisma {
     supplierPickupFor?: SupplierProfileUncheckedCreateNestedManyWithoutDefaultPickupLocationInput
     materials?: MaterialUncheckedCreateNestedManyWithoutLocationInput
     reservationDropoffs?: ReservationUncheckedCreateNestedManyWithoutDropoffLocationInput
+    deliveryPickups?: DeliveryUncheckedCreateNestedManyWithoutPickupLocationInput
+    deliveryDropoffs?: DeliveryUncheckedCreateNestedManyWithoutDropoffLocationInput
   }
 
   export type LocationCreateOrConnectWithoutOrganizationBusinessForInput = {
@@ -53791,6 +63870,8 @@ export namespace Prisma {
     supplierPickupFor?: SupplierProfileUpdateManyWithoutDefaultPickupLocationNestedInput
     materials?: MaterialUpdateManyWithoutLocationNestedInput
     reservationDropoffs?: ReservationUpdateManyWithoutDropoffLocationNestedInput
+    deliveryPickups?: DeliveryUpdateManyWithoutPickupLocationNestedInput
+    deliveryDropoffs?: DeliveryUpdateManyWithoutDropoffLocationNestedInput
   }
 
   export type LocationUncheckedUpdateWithoutOrganizationBusinessForInput = {
@@ -53809,6 +63890,8 @@ export namespace Prisma {
     supplierPickupFor?: SupplierProfileUncheckedUpdateManyWithoutDefaultPickupLocationNestedInput
     materials?: MaterialUncheckedUpdateManyWithoutLocationNestedInput
     reservationDropoffs?: ReservationUncheckedUpdateManyWithoutDropoffLocationNestedInput
+    deliveryPickups?: DeliveryUncheckedUpdateManyWithoutPickupLocationNestedInput
+    deliveryDropoffs?: DeliveryUncheckedUpdateManyWithoutDropoffLocationNestedInput
   }
 
   export type SupplierProfileCreateWithoutDefaultPickupLocationInput = {
@@ -53991,6 +64074,7 @@ export namespace Prisma {
     requester: UserCreateNestedOneWithoutOwnedReservationsAsRequesterInput
     owner: UserCreateNestedOneWithoutOwnedReservationsAsOwnerInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryCreateNestedManyWithoutReservationInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
@@ -54019,6 +64103,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryUncheckedCreateNestedManyWithoutReservationInput
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
@@ -54030,6 +64115,130 @@ export namespace Prisma {
 
   export type ReservationCreateManyDropoffLocationInputEnvelope = {
     data: ReservationCreateManyDropoffLocationInput | ReservationCreateManyDropoffLocationInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DeliveryCreateWithoutPickupLocationInput = {
+    id?: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    reservation: ReservationCreateNestedOneWithoutDeliveriesInput
+    dropoffLocation: LocationCreateNestedOneWithoutDeliveryDropoffsInput
+    assignedDriverProfile?: DriverProfileCreateNestedOneWithoutDeliveriesInput
+    requestedByUser: UserCreateNestedOneWithoutRequestedDeliveriesInput
+    assignments?: DeliveryAssignmentCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryUncheckedCreateWithoutPickupLocationInput = {
+    id?: string
+    reservationId: string
+    dropoffLocationId: string
+    assignedDriverProfileId?: string | null
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assignments?: DeliveryAssignmentUncheckedCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingUncheckedCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryCreateOrConnectWithoutPickupLocationInput = {
+    where: DeliveryWhereUniqueInput
+    create: XOR<DeliveryCreateWithoutPickupLocationInput, DeliveryUncheckedCreateWithoutPickupLocationInput>
+  }
+
+  export type DeliveryCreateManyPickupLocationInputEnvelope = {
+    data: DeliveryCreateManyPickupLocationInput | DeliveryCreateManyPickupLocationInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DeliveryCreateWithoutDropoffLocationInput = {
+    id?: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    reservation: ReservationCreateNestedOneWithoutDeliveriesInput
+    pickupLocation: LocationCreateNestedOneWithoutDeliveryPickupsInput
+    assignedDriverProfile?: DriverProfileCreateNestedOneWithoutDeliveriesInput
+    requestedByUser: UserCreateNestedOneWithoutRequestedDeliveriesInput
+    assignments?: DeliveryAssignmentCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryUncheckedCreateWithoutDropoffLocationInput = {
+    id?: string
+    reservationId: string
+    pickupLocationId: string
+    assignedDriverProfileId?: string | null
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assignments?: DeliveryAssignmentUncheckedCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingUncheckedCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryCreateOrConnectWithoutDropoffLocationInput = {
+    where: DeliveryWhereUniqueInput
+    create: XOR<DeliveryCreateWithoutDropoffLocationInput, DeliveryUncheckedCreateWithoutDropoffLocationInput>
+  }
+
+  export type DeliveryCreateManyDropoffLocationInputEnvelope = {
+    data: DeliveryCreateManyDropoffLocationInput | DeliveryCreateManyDropoffLocationInput[]
     skipDuplicates?: boolean
   }
 
@@ -54127,6 +64336,38 @@ export namespace Prisma {
   export type ReservationUpdateManyWithWhereWithoutDropoffLocationInput = {
     where: ReservationScalarWhereInput
     data: XOR<ReservationUpdateManyMutationInput, ReservationUncheckedUpdateManyWithoutDropoffLocationInput>
+  }
+
+  export type DeliveryUpsertWithWhereUniqueWithoutPickupLocationInput = {
+    where: DeliveryWhereUniqueInput
+    update: XOR<DeliveryUpdateWithoutPickupLocationInput, DeliveryUncheckedUpdateWithoutPickupLocationInput>
+    create: XOR<DeliveryCreateWithoutPickupLocationInput, DeliveryUncheckedCreateWithoutPickupLocationInput>
+  }
+
+  export type DeliveryUpdateWithWhereUniqueWithoutPickupLocationInput = {
+    where: DeliveryWhereUniqueInput
+    data: XOR<DeliveryUpdateWithoutPickupLocationInput, DeliveryUncheckedUpdateWithoutPickupLocationInput>
+  }
+
+  export type DeliveryUpdateManyWithWhereWithoutPickupLocationInput = {
+    where: DeliveryScalarWhereInput
+    data: XOR<DeliveryUpdateManyMutationInput, DeliveryUncheckedUpdateManyWithoutPickupLocationInput>
+  }
+
+  export type DeliveryUpsertWithWhereUniqueWithoutDropoffLocationInput = {
+    where: DeliveryWhereUniqueInput
+    update: XOR<DeliveryUpdateWithoutDropoffLocationInput, DeliveryUncheckedUpdateWithoutDropoffLocationInput>
+    create: XOR<DeliveryCreateWithoutDropoffLocationInput, DeliveryUncheckedCreateWithoutDropoffLocationInput>
+  }
+
+  export type DeliveryUpdateWithWhereUniqueWithoutDropoffLocationInput = {
+    where: DeliveryWhereUniqueInput
+    data: XOR<DeliveryUpdateWithoutDropoffLocationInput, DeliveryUncheckedUpdateWithoutDropoffLocationInput>
+  }
+
+  export type DeliveryUpdateManyWithWhereWithoutDropoffLocationInput = {
+    where: DeliveryScalarWhereInput
+    data: XOR<DeliveryUpdateManyMutationInput, DeliveryUncheckedUpdateManyWithoutDropoffLocationInput>
   }
 
   export type CategoryCreateWithoutChildrenInput = {
@@ -54804,6 +65045,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -54811,6 +65053,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -54837,6 +65082,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -54844,6 +65090,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -54875,6 +65124,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -54882,6 +65132,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -54908,6 +65161,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -54915,6 +65169,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -55162,6 +65419,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -55169,6 +65427,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -55195,6 +65456,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -55202,6 +65464,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -55239,6 +65504,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -55246,6 +65512,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -55272,6 +65541,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -55279,6 +65549,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -55770,6 +66043,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -55777,6 +66051,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -55803,6 +66080,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -55810,6 +66088,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -55909,6 +66190,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -55916,6 +66198,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -55942,6 +66227,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -55949,6 +66235,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -56191,12 +66480,16 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -56224,12 +66517,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -56405,6 +66702,8 @@ export namespace Prisma {
     supplierPickupFor?: SupplierProfileCreateNestedManyWithoutDefaultPickupLocationInput
     organizationBusinessFor?: OrganizationProfileCreateNestedManyWithoutBusinessLocationInput
     reservationDropoffs?: ReservationCreateNestedManyWithoutDropoffLocationInput
+    deliveryPickups?: DeliveryCreateNestedManyWithoutPickupLocationInput
+    deliveryDropoffs?: DeliveryCreateNestedManyWithoutDropoffLocationInput
   }
 
   export type LocationUncheckedCreateWithoutMaterialsInput = {
@@ -56423,6 +66722,8 @@ export namespace Prisma {
     supplierPickupFor?: SupplierProfileUncheckedCreateNestedManyWithoutDefaultPickupLocationInput
     organizationBusinessFor?: OrganizationProfileUncheckedCreateNestedManyWithoutBusinessLocationInput
     reservationDropoffs?: ReservationUncheckedCreateNestedManyWithoutDropoffLocationInput
+    deliveryPickups?: DeliveryUncheckedCreateNestedManyWithoutPickupLocationInput
+    deliveryDropoffs?: DeliveryUncheckedCreateNestedManyWithoutDropoffLocationInput
   }
 
   export type LocationCreateOrConnectWithoutMaterialsInput = {
@@ -56502,6 +66803,7 @@ export namespace Prisma {
     owner: UserCreateNestedOneWithoutOwnedReservationsAsOwnerInput
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryCreateNestedManyWithoutReservationInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
@@ -56530,6 +66832,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryUncheckedCreateNestedManyWithoutReservationInput
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
@@ -56568,6 +66871,7 @@ export namespace Prisma {
     requester: UserCreateNestedOneWithoutOwnedReservationsAsRequesterInput
     owner: UserCreateNestedOneWithoutOwnedReservationsAsOwnerInput
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
+    deliveries?: DeliveryCreateNestedManyWithoutReservationInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
@@ -56596,6 +66900,7 @@ export namespace Prisma {
     completedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    deliveries?: DeliveryUncheckedCreateNestedManyWithoutReservationInput
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
@@ -56719,12 +67024,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -56752,12 +67061,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -56963,6 +67276,8 @@ export namespace Prisma {
     supplierPickupFor?: SupplierProfileUpdateManyWithoutDefaultPickupLocationNestedInput
     organizationBusinessFor?: OrganizationProfileUpdateManyWithoutBusinessLocationNestedInput
     reservationDropoffs?: ReservationUpdateManyWithoutDropoffLocationNestedInput
+    deliveryPickups?: DeliveryUpdateManyWithoutPickupLocationNestedInput
+    deliveryDropoffs?: DeliveryUpdateManyWithoutDropoffLocationNestedInput
   }
 
   export type LocationUncheckedUpdateWithoutMaterialsInput = {
@@ -56981,6 +67296,8 @@ export namespace Prisma {
     supplierPickupFor?: SupplierProfileUncheckedUpdateManyWithoutDefaultPickupLocationNestedInput
     organizationBusinessFor?: OrganizationProfileUncheckedUpdateManyWithoutBusinessLocationNestedInput
     reservationDropoffs?: ReservationUncheckedUpdateManyWithoutDropoffLocationNestedInput
+    deliveryPickups?: DeliveryUncheckedUpdateManyWithoutPickupLocationNestedInput
+    deliveryDropoffs?: DeliveryUncheckedUpdateManyWithoutDropoffLocationNestedInput
   }
 
   export type MaterialImageUpsertWithWhereUniqueWithoutMaterialInput = {
@@ -57088,6 +67405,7 @@ export namespace Prisma {
     requester?: UserUpdateOneRequiredWithoutOwnedReservationsAsRequesterNestedInput
     owner?: UserUpdateOneRequiredWithoutOwnedReservationsAsOwnerNestedInput
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
+    deliveries?: DeliveryUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
@@ -57116,6 +67434,7 @@ export namespace Prisma {
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    deliveries?: DeliveryUncheckedUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
@@ -57642,12 +67961,16 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -57675,12 +67998,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -57713,12 +68040,16 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -57746,12 +68077,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -57783,6 +68118,8 @@ export namespace Prisma {
     supplierPickupFor?: SupplierProfileCreateNestedManyWithoutDefaultPickupLocationInput
     organizationBusinessFor?: OrganizationProfileCreateNestedManyWithoutBusinessLocationInput
     materials?: MaterialCreateNestedManyWithoutLocationInput
+    deliveryPickups?: DeliveryCreateNestedManyWithoutPickupLocationInput
+    deliveryDropoffs?: DeliveryCreateNestedManyWithoutDropoffLocationInput
   }
 
   export type LocationUncheckedCreateWithoutReservationDropoffsInput = {
@@ -57801,6 +68138,8 @@ export namespace Prisma {
     supplierPickupFor?: SupplierProfileUncheckedCreateNestedManyWithoutDefaultPickupLocationInput
     organizationBusinessFor?: OrganizationProfileUncheckedCreateNestedManyWithoutBusinessLocationInput
     materials?: MaterialUncheckedCreateNestedManyWithoutLocationInput
+    deliveryPickups?: DeliveryUncheckedCreateNestedManyWithoutPickupLocationInput
+    deliveryDropoffs?: DeliveryUncheckedCreateNestedManyWithoutDropoffLocationInput
   }
 
   export type LocationCreateOrConnectWithoutReservationDropoffsInput = {
@@ -57885,6 +68224,68 @@ export namespace Prisma {
   export type MaterialCreateOrConnectWithoutReusedByReservationInput = {
     where: MaterialWhereUniqueInput
     create: XOR<MaterialCreateWithoutReusedByReservationInput, MaterialUncheckedCreateWithoutReusedByReservationInput>
+  }
+
+  export type DeliveryCreateWithoutReservationInput = {
+    id?: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    pickupLocation: LocationCreateNestedOneWithoutDeliveryPickupsInput
+    dropoffLocation: LocationCreateNestedOneWithoutDeliveryDropoffsInput
+    assignedDriverProfile?: DriverProfileCreateNestedOneWithoutDeliveriesInput
+    requestedByUser: UserCreateNestedOneWithoutRequestedDeliveriesInput
+    assignments?: DeliveryAssignmentCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryUncheckedCreateWithoutReservationInput = {
+    id?: string
+    pickupLocationId: string
+    dropoffLocationId: string
+    assignedDriverProfileId?: string | null
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assignments?: DeliveryAssignmentUncheckedCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingUncheckedCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryCreateOrConnectWithoutReservationInput = {
+    where: DeliveryWhereUniqueInput
+    create: XOR<DeliveryCreateWithoutReservationInput, DeliveryUncheckedCreateWithoutReservationInput>
+  }
+
+  export type DeliveryCreateManyReservationInputEnvelope = {
+    data: DeliveryCreateManyReservationInput | DeliveryCreateManyReservationInput[]
+    skipDuplicates?: boolean
   }
 
   export type ReviewCreateWithoutReservationInput = {
@@ -58060,12 +68461,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -58093,12 +68498,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -58137,12 +68546,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -58170,12 +68583,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -58213,6 +68630,8 @@ export namespace Prisma {
     supplierPickupFor?: SupplierProfileUpdateManyWithoutDefaultPickupLocationNestedInput
     organizationBusinessFor?: OrganizationProfileUpdateManyWithoutBusinessLocationNestedInput
     materials?: MaterialUpdateManyWithoutLocationNestedInput
+    deliveryPickups?: DeliveryUpdateManyWithoutPickupLocationNestedInput
+    deliveryDropoffs?: DeliveryUpdateManyWithoutDropoffLocationNestedInput
   }
 
   export type LocationUncheckedUpdateWithoutReservationDropoffsInput = {
@@ -58231,6 +68650,8 @@ export namespace Prisma {
     supplierPickupFor?: SupplierProfileUncheckedUpdateManyWithoutDefaultPickupLocationNestedInput
     organizationBusinessFor?: OrganizationProfileUncheckedUpdateManyWithoutBusinessLocationNestedInput
     materials?: MaterialUncheckedUpdateManyWithoutLocationNestedInput
+    deliveryPickups?: DeliveryUncheckedUpdateManyWithoutPickupLocationNestedInput
+    deliveryDropoffs?: DeliveryUncheckedUpdateManyWithoutDropoffLocationNestedInput
   }
 
   export type MaterialUpsertWithoutReusedByReservationInput = {
@@ -58318,6 +68739,22 @@ export namespace Prisma {
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
   }
 
+  export type DeliveryUpsertWithWhereUniqueWithoutReservationInput = {
+    where: DeliveryWhereUniqueInput
+    update: XOR<DeliveryUpdateWithoutReservationInput, DeliveryUncheckedUpdateWithoutReservationInput>
+    create: XOR<DeliveryCreateWithoutReservationInput, DeliveryUncheckedCreateWithoutReservationInput>
+  }
+
+  export type DeliveryUpdateWithWhereUniqueWithoutReservationInput = {
+    where: DeliveryWhereUniqueInput
+    data: XOR<DeliveryUpdateWithoutReservationInput, DeliveryUncheckedUpdateWithoutReservationInput>
+  }
+
+  export type DeliveryUpdateManyWithWhereWithoutReservationInput = {
+    where: DeliveryScalarWhereInput
+    data: XOR<DeliveryUpdateManyMutationInput, DeliveryUncheckedUpdateManyWithoutReservationInput>
+  }
+
   export type ReviewUpsertWithWhereUniqueWithoutReservationInput = {
     where: ReviewWhereUniqueInput
     update: XOR<ReviewUpdateWithoutReservationInput, ReviewUncheckedUpdateWithoutReservationInput>
@@ -58350,6 +68787,1576 @@ export namespace Prisma {
     data: XOR<ReservationStatusHistoryUpdateManyMutationInput, ReservationStatusHistoryUncheckedUpdateManyWithoutReservationInput>
   }
 
+  export type ReservationCreateWithoutDeliveriesInput = {
+    id?: string
+    quantityRequested: Decimal | DecimalJsLike | number | string
+    message?: string | null
+    status?: $Enums.ReservationStatus
+    pickupWindowStart?: Date | string | null
+    pickupWindowEnd?: Date | string | null
+    pickupType?: $Enums.PickupType
+    supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    deliveryRequested?: boolean
+    deliveryStatus?: $Enums.DeliveryStatus | null
+    deliveryCost?: Decimal | DecimalJsLike | number | string | null
+    driverProfileId?: string | null
+    completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    material: MaterialCreateNestedOneWithoutReservationsInput
+    requester: UserCreateNestedOneWithoutOwnedReservationsAsRequesterInput
+    owner: UserCreateNestedOneWithoutOwnedReservationsAsOwnerInput
+    dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
+    reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
+    reviews?: ReviewCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
+  }
+
+  export type ReservationUncheckedCreateWithoutDeliveriesInput = {
+    id?: string
+    materialId: string
+    requesterId: string
+    ownerId: string
+    quantityRequested: Decimal | DecimalJsLike | number | string
+    message?: string | null
+    status?: $Enums.ReservationStatus
+    pickupWindowStart?: Date | string | null
+    pickupWindowEnd?: Date | string | null
+    pickupType?: $Enums.PickupType
+    supplierNote?: string | null
+    rejectionReason?: string | null
+    acceptedAt?: Date | string | null
+    rejectedAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    deliveryRequested?: boolean
+    deliveryStatus?: $Enums.DeliveryStatus | null
+    deliveryCost?: Decimal | DecimalJsLike | number | string | null
+    dropoffLocationId?: string | null
+    driverProfileId?: string | null
+    completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
+    reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
+    statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
+  }
+
+  export type ReservationCreateOrConnectWithoutDeliveriesInput = {
+    where: ReservationWhereUniqueInput
+    create: XOR<ReservationCreateWithoutDeliveriesInput, ReservationUncheckedCreateWithoutDeliveriesInput>
+  }
+
+  export type LocationCreateWithoutDeliveryPickupsInput = {
+    id?: string
+    country: string
+    city: string
+    area?: string | null
+    addressLine?: string | null
+    latitude?: Decimal | DecimalJsLike | number | string | null
+    longitude?: Decimal | DecimalJsLike | number | string | null
+    locationType?: string | null
+    visibility?: string | null
+    isApproximate?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    supplierPickupFor?: SupplierProfileCreateNestedManyWithoutDefaultPickupLocationInput
+    organizationBusinessFor?: OrganizationProfileCreateNestedManyWithoutBusinessLocationInput
+    materials?: MaterialCreateNestedManyWithoutLocationInput
+    reservationDropoffs?: ReservationCreateNestedManyWithoutDropoffLocationInput
+    deliveryDropoffs?: DeliveryCreateNestedManyWithoutDropoffLocationInput
+  }
+
+  export type LocationUncheckedCreateWithoutDeliveryPickupsInput = {
+    id?: string
+    country: string
+    city: string
+    area?: string | null
+    addressLine?: string | null
+    latitude?: Decimal | DecimalJsLike | number | string | null
+    longitude?: Decimal | DecimalJsLike | number | string | null
+    locationType?: string | null
+    visibility?: string | null
+    isApproximate?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    supplierPickupFor?: SupplierProfileUncheckedCreateNestedManyWithoutDefaultPickupLocationInput
+    organizationBusinessFor?: OrganizationProfileUncheckedCreateNestedManyWithoutBusinessLocationInput
+    materials?: MaterialUncheckedCreateNestedManyWithoutLocationInput
+    reservationDropoffs?: ReservationUncheckedCreateNestedManyWithoutDropoffLocationInput
+    deliveryDropoffs?: DeliveryUncheckedCreateNestedManyWithoutDropoffLocationInput
+  }
+
+  export type LocationCreateOrConnectWithoutDeliveryPickupsInput = {
+    where: LocationWhereUniqueInput
+    create: XOR<LocationCreateWithoutDeliveryPickupsInput, LocationUncheckedCreateWithoutDeliveryPickupsInput>
+  }
+
+  export type LocationCreateWithoutDeliveryDropoffsInput = {
+    id?: string
+    country: string
+    city: string
+    area?: string | null
+    addressLine?: string | null
+    latitude?: Decimal | DecimalJsLike | number | string | null
+    longitude?: Decimal | DecimalJsLike | number | string | null
+    locationType?: string | null
+    visibility?: string | null
+    isApproximate?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    supplierPickupFor?: SupplierProfileCreateNestedManyWithoutDefaultPickupLocationInput
+    organizationBusinessFor?: OrganizationProfileCreateNestedManyWithoutBusinessLocationInput
+    materials?: MaterialCreateNestedManyWithoutLocationInput
+    reservationDropoffs?: ReservationCreateNestedManyWithoutDropoffLocationInput
+    deliveryPickups?: DeliveryCreateNestedManyWithoutPickupLocationInput
+  }
+
+  export type LocationUncheckedCreateWithoutDeliveryDropoffsInput = {
+    id?: string
+    country: string
+    city: string
+    area?: string | null
+    addressLine?: string | null
+    latitude?: Decimal | DecimalJsLike | number | string | null
+    longitude?: Decimal | DecimalJsLike | number | string | null
+    locationType?: string | null
+    visibility?: string | null
+    isApproximate?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    supplierPickupFor?: SupplierProfileUncheckedCreateNestedManyWithoutDefaultPickupLocationInput
+    organizationBusinessFor?: OrganizationProfileUncheckedCreateNestedManyWithoutBusinessLocationInput
+    materials?: MaterialUncheckedCreateNestedManyWithoutLocationInput
+    reservationDropoffs?: ReservationUncheckedCreateNestedManyWithoutDropoffLocationInput
+    deliveryPickups?: DeliveryUncheckedCreateNestedManyWithoutPickupLocationInput
+  }
+
+  export type LocationCreateOrConnectWithoutDeliveryDropoffsInput = {
+    where: LocationWhereUniqueInput
+    create: XOR<LocationCreateWithoutDeliveryDropoffsInput, LocationUncheckedCreateWithoutDeliveryDropoffsInput>
+  }
+
+  export type DriverProfileCreateWithoutDeliveriesInput = {
+    id?: string
+    status?: $Enums.DriverProfileStatus
+    availability?: $Enums.DriverAvailabilityStatus
+    displayName: string
+    phone?: string | null
+    vehicleType?: string
+    vehicleLabel?: string | null
+    vehiclePlate?: string | null
+    capacityNotes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutDriverProfileInput
+    assignments?: DeliveryAssignmentCreateNestedManyWithoutDriverProfileInput
+    locationPings?: DeliveryLocationPingCreateNestedManyWithoutDriverProfileInput
+  }
+
+  export type DriverProfileUncheckedCreateWithoutDeliveriesInput = {
+    id?: string
+    userId: string
+    status?: $Enums.DriverProfileStatus
+    availability?: $Enums.DriverAvailabilityStatus
+    displayName: string
+    phone?: string | null
+    vehicleType?: string
+    vehicleLabel?: string | null
+    vehiclePlate?: string | null
+    capacityNotes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assignments?: DeliveryAssignmentUncheckedCreateNestedManyWithoutDriverProfileInput
+    locationPings?: DeliveryLocationPingUncheckedCreateNestedManyWithoutDriverProfileInput
+  }
+
+  export type DriverProfileCreateOrConnectWithoutDeliveriesInput = {
+    where: DriverProfileWhereUniqueInput
+    create: XOR<DriverProfileCreateWithoutDeliveriesInput, DriverProfileUncheckedCreateWithoutDeliveriesInput>
+  }
+
+  export type UserCreateWithoutRequestedDeliveriesInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserUncheckedCreateWithoutRequestedDeliveriesInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserCreateOrConnectWithoutRequestedDeliveriesInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutRequestedDeliveriesInput, UserUncheckedCreateWithoutRequestedDeliveriesInput>
+  }
+
+  export type DeliveryAssignmentCreateWithoutDeliveryInput = {
+    id?: string
+    status?: $Enums.DeliveryAssignmentStatus
+    acceptedAt?: Date | string
+    releasedAt?: Date | string | null
+    releaseReason?: string | null
+    createdAt?: Date | string
+    driverProfile: DriverProfileCreateNestedOneWithoutAssignmentsInput
+    assignedByUser?: UserCreateNestedOneWithoutDeliveryAssignmentsMadeInput
+  }
+
+  export type DeliveryAssignmentUncheckedCreateWithoutDeliveryInput = {
+    id?: string
+    driverProfileId: string
+    assignedByUserId?: string | null
+    status?: $Enums.DeliveryAssignmentStatus
+    acceptedAt?: Date | string
+    releasedAt?: Date | string | null
+    releaseReason?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryAssignmentCreateOrConnectWithoutDeliveryInput = {
+    where: DeliveryAssignmentWhereUniqueInput
+    create: XOR<DeliveryAssignmentCreateWithoutDeliveryInput, DeliveryAssignmentUncheckedCreateWithoutDeliveryInput>
+  }
+
+  export type DeliveryAssignmentCreateManyDeliveryInputEnvelope = {
+    data: DeliveryAssignmentCreateManyDeliveryInput | DeliveryAssignmentCreateManyDeliveryInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DeliveryStatusHistoryCreateWithoutDeliveryInput = {
+    id?: string
+    oldStatus?: $Enums.DeliveryStatus | null
+    newStatus: $Enums.DeliveryStatus
+    note?: string | null
+    createdAt?: Date | string
+    changedByUser: UserCreateNestedOneWithoutDeliveryStatusChangesInput
+  }
+
+  export type DeliveryStatusHistoryUncheckedCreateWithoutDeliveryInput = {
+    id?: string
+    oldStatus?: $Enums.DeliveryStatus | null
+    newStatus: $Enums.DeliveryStatus
+    changedByUserId: string
+    note?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryStatusHistoryCreateOrConnectWithoutDeliveryInput = {
+    where: DeliveryStatusHistoryWhereUniqueInput
+    create: XOR<DeliveryStatusHistoryCreateWithoutDeliveryInput, DeliveryStatusHistoryUncheckedCreateWithoutDeliveryInput>
+  }
+
+  export type DeliveryStatusHistoryCreateManyDeliveryInputEnvelope = {
+    data: DeliveryStatusHistoryCreateManyDeliveryInput | DeliveryStatusHistoryCreateManyDeliveryInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DeliveryLocationPingCreateWithoutDeliveryInput = {
+    id?: string
+    latitude: Decimal | DecimalJsLike | number | string
+    longitude: Decimal | DecimalJsLike | number | string
+    accuracyMeters?: Decimal | DecimalJsLike | number | string | null
+    heading?: Decimal | DecimalJsLike | number | string | null
+    speed?: Decimal | DecimalJsLike | number | string | null
+    capturedAt: Date | string
+    createdAt?: Date | string
+    driverProfile: DriverProfileCreateNestedOneWithoutLocationPingsInput
+  }
+
+  export type DeliveryLocationPingUncheckedCreateWithoutDeliveryInput = {
+    id?: string
+    driverProfileId: string
+    latitude: Decimal | DecimalJsLike | number | string
+    longitude: Decimal | DecimalJsLike | number | string
+    accuracyMeters?: Decimal | DecimalJsLike | number | string | null
+    heading?: Decimal | DecimalJsLike | number | string | null
+    speed?: Decimal | DecimalJsLike | number | string | null
+    capturedAt: Date | string
+    createdAt?: Date | string
+  }
+
+  export type DeliveryLocationPingCreateOrConnectWithoutDeliveryInput = {
+    where: DeliveryLocationPingWhereUniqueInput
+    create: XOR<DeliveryLocationPingCreateWithoutDeliveryInput, DeliveryLocationPingUncheckedCreateWithoutDeliveryInput>
+  }
+
+  export type DeliveryLocationPingCreateManyDeliveryInputEnvelope = {
+    data: DeliveryLocationPingCreateManyDeliveryInput | DeliveryLocationPingCreateManyDeliveryInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type ReservationUpsertWithoutDeliveriesInput = {
+    update: XOR<ReservationUpdateWithoutDeliveriesInput, ReservationUncheckedUpdateWithoutDeliveriesInput>
+    create: XOR<ReservationCreateWithoutDeliveriesInput, ReservationUncheckedCreateWithoutDeliveriesInput>
+    where?: ReservationWhereInput
+  }
+
+  export type ReservationUpdateToOneWithWhereWithoutDeliveriesInput = {
+    where?: ReservationWhereInput
+    data: XOR<ReservationUpdateWithoutDeliveriesInput, ReservationUncheckedUpdateWithoutDeliveriesInput>
+  }
+
+  export type ReservationUpdateWithoutDeliveriesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    quantityRequested?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    message?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumReservationStatusFieldUpdateOperationsInput | $Enums.ReservationStatus
+    pickupWindowStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
+    supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
+    deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    driverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    material?: MaterialUpdateOneRequiredWithoutReservationsNestedInput
+    requester?: UserUpdateOneRequiredWithoutOwnedReservationsAsRequesterNestedInput
+    owner?: UserUpdateOneRequiredWithoutOwnedReservationsAsOwnerNestedInput
+    dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
+    reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
+    reviews?: ReviewUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
+  }
+
+  export type ReservationUncheckedUpdateWithoutDeliveriesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    materialId?: StringFieldUpdateOperationsInput | string
+    requesterId?: StringFieldUpdateOperationsInput | string
+    ownerId?: StringFieldUpdateOperationsInput | string
+    quantityRequested?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    message?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumReservationStatusFieldUpdateOperationsInput | $Enums.ReservationStatus
+    pickupWindowStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickupWindowEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickupType?: EnumPickupTypeFieldUpdateOperationsInput | $Enums.PickupType
+    supplierNote?: NullableStringFieldUpdateOperationsInput | string | null
+    rejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    rejectedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveryRequested?: BoolFieldUpdateOperationsInput | boolean
+    deliveryStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dropoffLocationId?: NullableStringFieldUpdateOperationsInput | string | null
+    driverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
+    reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
+    statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
+  }
+
+  export type LocationUpsertWithoutDeliveryPickupsInput = {
+    update: XOR<LocationUpdateWithoutDeliveryPickupsInput, LocationUncheckedUpdateWithoutDeliveryPickupsInput>
+    create: XOR<LocationCreateWithoutDeliveryPickupsInput, LocationUncheckedCreateWithoutDeliveryPickupsInput>
+    where?: LocationWhereInput
+  }
+
+  export type LocationUpdateToOneWithWhereWithoutDeliveryPickupsInput = {
+    where?: LocationWhereInput
+    data: XOR<LocationUpdateWithoutDeliveryPickupsInput, LocationUncheckedUpdateWithoutDeliveryPickupsInput>
+  }
+
+  export type LocationUpdateWithoutDeliveryPickupsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    country?: StringFieldUpdateOperationsInput | string
+    city?: StringFieldUpdateOperationsInput | string
+    area?: NullableStringFieldUpdateOperationsInput | string | null
+    addressLine?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    longitude?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    locationType?: NullableStringFieldUpdateOperationsInput | string | null
+    visibility?: NullableStringFieldUpdateOperationsInput | string | null
+    isApproximate?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    supplierPickupFor?: SupplierProfileUpdateManyWithoutDefaultPickupLocationNestedInput
+    organizationBusinessFor?: OrganizationProfileUpdateManyWithoutBusinessLocationNestedInput
+    materials?: MaterialUpdateManyWithoutLocationNestedInput
+    reservationDropoffs?: ReservationUpdateManyWithoutDropoffLocationNestedInput
+    deliveryDropoffs?: DeliveryUpdateManyWithoutDropoffLocationNestedInput
+  }
+
+  export type LocationUncheckedUpdateWithoutDeliveryPickupsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    country?: StringFieldUpdateOperationsInput | string
+    city?: StringFieldUpdateOperationsInput | string
+    area?: NullableStringFieldUpdateOperationsInput | string | null
+    addressLine?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    longitude?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    locationType?: NullableStringFieldUpdateOperationsInput | string | null
+    visibility?: NullableStringFieldUpdateOperationsInput | string | null
+    isApproximate?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    supplierPickupFor?: SupplierProfileUncheckedUpdateManyWithoutDefaultPickupLocationNestedInput
+    organizationBusinessFor?: OrganizationProfileUncheckedUpdateManyWithoutBusinessLocationNestedInput
+    materials?: MaterialUncheckedUpdateManyWithoutLocationNestedInput
+    reservationDropoffs?: ReservationUncheckedUpdateManyWithoutDropoffLocationNestedInput
+    deliveryDropoffs?: DeliveryUncheckedUpdateManyWithoutDropoffLocationNestedInput
+  }
+
+  export type LocationUpsertWithoutDeliveryDropoffsInput = {
+    update: XOR<LocationUpdateWithoutDeliveryDropoffsInput, LocationUncheckedUpdateWithoutDeliveryDropoffsInput>
+    create: XOR<LocationCreateWithoutDeliveryDropoffsInput, LocationUncheckedCreateWithoutDeliveryDropoffsInput>
+    where?: LocationWhereInput
+  }
+
+  export type LocationUpdateToOneWithWhereWithoutDeliveryDropoffsInput = {
+    where?: LocationWhereInput
+    data: XOR<LocationUpdateWithoutDeliveryDropoffsInput, LocationUncheckedUpdateWithoutDeliveryDropoffsInput>
+  }
+
+  export type LocationUpdateWithoutDeliveryDropoffsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    country?: StringFieldUpdateOperationsInput | string
+    city?: StringFieldUpdateOperationsInput | string
+    area?: NullableStringFieldUpdateOperationsInput | string | null
+    addressLine?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    longitude?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    locationType?: NullableStringFieldUpdateOperationsInput | string | null
+    visibility?: NullableStringFieldUpdateOperationsInput | string | null
+    isApproximate?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    supplierPickupFor?: SupplierProfileUpdateManyWithoutDefaultPickupLocationNestedInput
+    organizationBusinessFor?: OrganizationProfileUpdateManyWithoutBusinessLocationNestedInput
+    materials?: MaterialUpdateManyWithoutLocationNestedInput
+    reservationDropoffs?: ReservationUpdateManyWithoutDropoffLocationNestedInput
+    deliveryPickups?: DeliveryUpdateManyWithoutPickupLocationNestedInput
+  }
+
+  export type LocationUncheckedUpdateWithoutDeliveryDropoffsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    country?: StringFieldUpdateOperationsInput | string
+    city?: StringFieldUpdateOperationsInput | string
+    area?: NullableStringFieldUpdateOperationsInput | string | null
+    addressLine?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    longitude?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    locationType?: NullableStringFieldUpdateOperationsInput | string | null
+    visibility?: NullableStringFieldUpdateOperationsInput | string | null
+    isApproximate?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    supplierPickupFor?: SupplierProfileUncheckedUpdateManyWithoutDefaultPickupLocationNestedInput
+    organizationBusinessFor?: OrganizationProfileUncheckedUpdateManyWithoutBusinessLocationNestedInput
+    materials?: MaterialUncheckedUpdateManyWithoutLocationNestedInput
+    reservationDropoffs?: ReservationUncheckedUpdateManyWithoutDropoffLocationNestedInput
+    deliveryPickups?: DeliveryUncheckedUpdateManyWithoutPickupLocationNestedInput
+  }
+
+  export type DriverProfileUpsertWithoutDeliveriesInput = {
+    update: XOR<DriverProfileUpdateWithoutDeliveriesInput, DriverProfileUncheckedUpdateWithoutDeliveriesInput>
+    create: XOR<DriverProfileCreateWithoutDeliveriesInput, DriverProfileUncheckedCreateWithoutDeliveriesInput>
+    where?: DriverProfileWhereInput
+  }
+
+  export type DriverProfileUpdateToOneWithWhereWithoutDeliveriesInput = {
+    where?: DriverProfileWhereInput
+    data: XOR<DriverProfileUpdateWithoutDeliveriesInput, DriverProfileUncheckedUpdateWithoutDeliveriesInput>
+  }
+
+  export type DriverProfileUpdateWithoutDeliveriesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFieldUpdateOperationsInput | $Enums.DriverAvailabilityStatus
+    displayName?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    vehicleType?: StringFieldUpdateOperationsInput | string
+    vehicleLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    vehiclePlate?: NullableStringFieldUpdateOperationsInput | string | null
+    capacityNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutDriverProfileNestedInput
+    assignments?: DeliveryAssignmentUpdateManyWithoutDriverProfileNestedInput
+    locationPings?: DeliveryLocationPingUpdateManyWithoutDriverProfileNestedInput
+  }
+
+  export type DriverProfileUncheckedUpdateWithoutDeliveriesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFieldUpdateOperationsInput | $Enums.DriverAvailabilityStatus
+    displayName?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    vehicleType?: StringFieldUpdateOperationsInput | string
+    vehicleLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    vehiclePlate?: NullableStringFieldUpdateOperationsInput | string | null
+    capacityNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignments?: DeliveryAssignmentUncheckedUpdateManyWithoutDriverProfileNestedInput
+    locationPings?: DeliveryLocationPingUncheckedUpdateManyWithoutDriverProfileNestedInput
+  }
+
+  export type UserUpsertWithoutRequestedDeliveriesInput = {
+    update: XOR<UserUpdateWithoutRequestedDeliveriesInput, UserUncheckedUpdateWithoutRequestedDeliveriesInput>
+    create: XOR<UserCreateWithoutRequestedDeliveriesInput, UserUncheckedCreateWithoutRequestedDeliveriesInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutRequestedDeliveriesInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutRequestedDeliveriesInput, UserUncheckedUpdateWithoutRequestedDeliveriesInput>
+  }
+
+  export type UserUpdateWithoutRequestedDeliveriesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutRequestedDeliveriesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type DeliveryAssignmentUpsertWithWhereUniqueWithoutDeliveryInput = {
+    where: DeliveryAssignmentWhereUniqueInput
+    update: XOR<DeliveryAssignmentUpdateWithoutDeliveryInput, DeliveryAssignmentUncheckedUpdateWithoutDeliveryInput>
+    create: XOR<DeliveryAssignmentCreateWithoutDeliveryInput, DeliveryAssignmentUncheckedCreateWithoutDeliveryInput>
+  }
+
+  export type DeliveryAssignmentUpdateWithWhereUniqueWithoutDeliveryInput = {
+    where: DeliveryAssignmentWhereUniqueInput
+    data: XOR<DeliveryAssignmentUpdateWithoutDeliveryInput, DeliveryAssignmentUncheckedUpdateWithoutDeliveryInput>
+  }
+
+  export type DeliveryAssignmentUpdateManyWithWhereWithoutDeliveryInput = {
+    where: DeliveryAssignmentScalarWhereInput
+    data: XOR<DeliveryAssignmentUpdateManyMutationInput, DeliveryAssignmentUncheckedUpdateManyWithoutDeliveryInput>
+  }
+
+  export type DeliveryStatusHistoryUpsertWithWhereUniqueWithoutDeliveryInput = {
+    where: DeliveryStatusHistoryWhereUniqueInput
+    update: XOR<DeliveryStatusHistoryUpdateWithoutDeliveryInput, DeliveryStatusHistoryUncheckedUpdateWithoutDeliveryInput>
+    create: XOR<DeliveryStatusHistoryCreateWithoutDeliveryInput, DeliveryStatusHistoryUncheckedCreateWithoutDeliveryInput>
+  }
+
+  export type DeliveryStatusHistoryUpdateWithWhereUniqueWithoutDeliveryInput = {
+    where: DeliveryStatusHistoryWhereUniqueInput
+    data: XOR<DeliveryStatusHistoryUpdateWithoutDeliveryInput, DeliveryStatusHistoryUncheckedUpdateWithoutDeliveryInput>
+  }
+
+  export type DeliveryStatusHistoryUpdateManyWithWhereWithoutDeliveryInput = {
+    where: DeliveryStatusHistoryScalarWhereInput
+    data: XOR<DeliveryStatusHistoryUpdateManyMutationInput, DeliveryStatusHistoryUncheckedUpdateManyWithoutDeliveryInput>
+  }
+
+  export type DeliveryLocationPingUpsertWithWhereUniqueWithoutDeliveryInput = {
+    where: DeliveryLocationPingWhereUniqueInput
+    update: XOR<DeliveryLocationPingUpdateWithoutDeliveryInput, DeliveryLocationPingUncheckedUpdateWithoutDeliveryInput>
+    create: XOR<DeliveryLocationPingCreateWithoutDeliveryInput, DeliveryLocationPingUncheckedCreateWithoutDeliveryInput>
+  }
+
+  export type DeliveryLocationPingUpdateWithWhereUniqueWithoutDeliveryInput = {
+    where: DeliveryLocationPingWhereUniqueInput
+    data: XOR<DeliveryLocationPingUpdateWithoutDeliveryInput, DeliveryLocationPingUncheckedUpdateWithoutDeliveryInput>
+  }
+
+  export type DeliveryLocationPingUpdateManyWithWhereWithoutDeliveryInput = {
+    where: DeliveryLocationPingScalarWhereInput
+    data: XOR<DeliveryLocationPingUpdateManyMutationInput, DeliveryLocationPingUncheckedUpdateManyWithoutDeliveryInput>
+  }
+
+  export type DeliveryCreateWithoutAssignmentsInput = {
+    id?: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    reservation: ReservationCreateNestedOneWithoutDeliveriesInput
+    pickupLocation: LocationCreateNestedOneWithoutDeliveryPickupsInput
+    dropoffLocation: LocationCreateNestedOneWithoutDeliveryDropoffsInput
+    assignedDriverProfile?: DriverProfileCreateNestedOneWithoutDeliveriesInput
+    requestedByUser: UserCreateNestedOneWithoutRequestedDeliveriesInput
+    statusHistory?: DeliveryStatusHistoryCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryUncheckedCreateWithoutAssignmentsInput = {
+    id?: string
+    reservationId: string
+    pickupLocationId: string
+    dropoffLocationId: string
+    assignedDriverProfileId?: string | null
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    statusHistory?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingUncheckedCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryCreateOrConnectWithoutAssignmentsInput = {
+    where: DeliveryWhereUniqueInput
+    create: XOR<DeliveryCreateWithoutAssignmentsInput, DeliveryUncheckedCreateWithoutAssignmentsInput>
+  }
+
+  export type DriverProfileCreateWithoutAssignmentsInput = {
+    id?: string
+    status?: $Enums.DriverProfileStatus
+    availability?: $Enums.DriverAvailabilityStatus
+    displayName: string
+    phone?: string | null
+    vehicleType?: string
+    vehicleLabel?: string | null
+    vehiclePlate?: string | null
+    capacityNotes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutDriverProfileInput
+    deliveries?: DeliveryCreateNestedManyWithoutAssignedDriverProfileInput
+    locationPings?: DeliveryLocationPingCreateNestedManyWithoutDriverProfileInput
+  }
+
+  export type DriverProfileUncheckedCreateWithoutAssignmentsInput = {
+    id?: string
+    userId: string
+    status?: $Enums.DriverProfileStatus
+    availability?: $Enums.DriverAvailabilityStatus
+    displayName: string
+    phone?: string | null
+    vehicleType?: string
+    vehicleLabel?: string | null
+    vehiclePlate?: string | null
+    capacityNotes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    deliveries?: DeliveryUncheckedCreateNestedManyWithoutAssignedDriverProfileInput
+    locationPings?: DeliveryLocationPingUncheckedCreateNestedManyWithoutDriverProfileInput
+  }
+
+  export type DriverProfileCreateOrConnectWithoutAssignmentsInput = {
+    where: DriverProfileWhereUniqueInput
+    create: XOR<DriverProfileCreateWithoutAssignmentsInput, DriverProfileUncheckedCreateWithoutAssignmentsInput>
+  }
+
+  export type UserCreateWithoutDeliveryAssignmentsMadeInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserUncheckedCreateWithoutDeliveryAssignmentsMadeInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserCreateOrConnectWithoutDeliveryAssignmentsMadeInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutDeliveryAssignmentsMadeInput, UserUncheckedCreateWithoutDeliveryAssignmentsMadeInput>
+  }
+
+  export type DeliveryUpsertWithoutAssignmentsInput = {
+    update: XOR<DeliveryUpdateWithoutAssignmentsInput, DeliveryUncheckedUpdateWithoutAssignmentsInput>
+    create: XOR<DeliveryCreateWithoutAssignmentsInput, DeliveryUncheckedCreateWithoutAssignmentsInput>
+    where?: DeliveryWhereInput
+  }
+
+  export type DeliveryUpdateToOneWithWhereWithoutAssignmentsInput = {
+    where?: DeliveryWhereInput
+    data: XOR<DeliveryUpdateWithoutAssignmentsInput, DeliveryUncheckedUpdateWithoutAssignmentsInput>
+  }
+
+  export type DeliveryUpdateWithoutAssignmentsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reservation?: ReservationUpdateOneRequiredWithoutDeliveriesNestedInput
+    pickupLocation?: LocationUpdateOneRequiredWithoutDeliveryPickupsNestedInput
+    dropoffLocation?: LocationUpdateOneRequiredWithoutDeliveryDropoffsNestedInput
+    assignedDriverProfile?: DriverProfileUpdateOneWithoutDeliveriesNestedInput
+    requestedByUser?: UserUpdateOneRequiredWithoutRequestedDeliveriesNestedInput
+    statusHistory?: DeliveryStatusHistoryUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateWithoutAssignmentsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    statusHistory?: DeliveryStatusHistoryUncheckedUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUncheckedUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DriverProfileUpsertWithoutAssignmentsInput = {
+    update: XOR<DriverProfileUpdateWithoutAssignmentsInput, DriverProfileUncheckedUpdateWithoutAssignmentsInput>
+    create: XOR<DriverProfileCreateWithoutAssignmentsInput, DriverProfileUncheckedCreateWithoutAssignmentsInput>
+    where?: DriverProfileWhereInput
+  }
+
+  export type DriverProfileUpdateToOneWithWhereWithoutAssignmentsInput = {
+    where?: DriverProfileWhereInput
+    data: XOR<DriverProfileUpdateWithoutAssignmentsInput, DriverProfileUncheckedUpdateWithoutAssignmentsInput>
+  }
+
+  export type DriverProfileUpdateWithoutAssignmentsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFieldUpdateOperationsInput | $Enums.DriverAvailabilityStatus
+    displayName?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    vehicleType?: StringFieldUpdateOperationsInput | string
+    vehicleLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    vehiclePlate?: NullableStringFieldUpdateOperationsInput | string | null
+    capacityNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutDriverProfileNestedInput
+    deliveries?: DeliveryUpdateManyWithoutAssignedDriverProfileNestedInput
+    locationPings?: DeliveryLocationPingUpdateManyWithoutDriverProfileNestedInput
+  }
+
+  export type DriverProfileUncheckedUpdateWithoutAssignmentsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFieldUpdateOperationsInput | $Enums.DriverAvailabilityStatus
+    displayName?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    vehicleType?: StringFieldUpdateOperationsInput | string
+    vehicleLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    vehiclePlate?: NullableStringFieldUpdateOperationsInput | string | null
+    capacityNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    deliveries?: DeliveryUncheckedUpdateManyWithoutAssignedDriverProfileNestedInput
+    locationPings?: DeliveryLocationPingUncheckedUpdateManyWithoutDriverProfileNestedInput
+  }
+
+  export type UserUpsertWithoutDeliveryAssignmentsMadeInput = {
+    update: XOR<UserUpdateWithoutDeliveryAssignmentsMadeInput, UserUncheckedUpdateWithoutDeliveryAssignmentsMadeInput>
+    create: XOR<UserCreateWithoutDeliveryAssignmentsMadeInput, UserUncheckedCreateWithoutDeliveryAssignmentsMadeInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutDeliveryAssignmentsMadeInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutDeliveryAssignmentsMadeInput, UserUncheckedUpdateWithoutDeliveryAssignmentsMadeInput>
+  }
+
+  export type UserUpdateWithoutDeliveryAssignmentsMadeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutDeliveryAssignmentsMadeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type DeliveryCreateWithoutStatusHistoryInput = {
+    id?: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    reservation: ReservationCreateNestedOneWithoutDeliveriesInput
+    pickupLocation: LocationCreateNestedOneWithoutDeliveryPickupsInput
+    dropoffLocation: LocationCreateNestedOneWithoutDeliveryDropoffsInput
+    assignedDriverProfile?: DriverProfileCreateNestedOneWithoutDeliveriesInput
+    requestedByUser: UserCreateNestedOneWithoutRequestedDeliveriesInput
+    assignments?: DeliveryAssignmentCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryUncheckedCreateWithoutStatusHistoryInput = {
+    id?: string
+    reservationId: string
+    pickupLocationId: string
+    dropoffLocationId: string
+    assignedDriverProfileId?: string | null
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assignments?: DeliveryAssignmentUncheckedCreateNestedManyWithoutDeliveryInput
+    locationPings?: DeliveryLocationPingUncheckedCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryCreateOrConnectWithoutStatusHistoryInput = {
+    where: DeliveryWhereUniqueInput
+    create: XOR<DeliveryCreateWithoutStatusHistoryInput, DeliveryUncheckedCreateWithoutStatusHistoryInput>
+  }
+
+  export type UserCreateWithoutDeliveryStatusChangesInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserUncheckedCreateWithoutDeliveryStatusChangesInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+  }
+
+  export type UserCreateOrConnectWithoutDeliveryStatusChangesInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutDeliveryStatusChangesInput, UserUncheckedCreateWithoutDeliveryStatusChangesInput>
+  }
+
+  export type DeliveryUpsertWithoutStatusHistoryInput = {
+    update: XOR<DeliveryUpdateWithoutStatusHistoryInput, DeliveryUncheckedUpdateWithoutStatusHistoryInput>
+    create: XOR<DeliveryCreateWithoutStatusHistoryInput, DeliveryUncheckedCreateWithoutStatusHistoryInput>
+    where?: DeliveryWhereInput
+  }
+
+  export type DeliveryUpdateToOneWithWhereWithoutStatusHistoryInput = {
+    where?: DeliveryWhereInput
+    data: XOR<DeliveryUpdateWithoutStatusHistoryInput, DeliveryUncheckedUpdateWithoutStatusHistoryInput>
+  }
+
+  export type DeliveryUpdateWithoutStatusHistoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reservation?: ReservationUpdateOneRequiredWithoutDeliveriesNestedInput
+    pickupLocation?: LocationUpdateOneRequiredWithoutDeliveryPickupsNestedInput
+    dropoffLocation?: LocationUpdateOneRequiredWithoutDeliveryDropoffsNestedInput
+    assignedDriverProfile?: DriverProfileUpdateOneWithoutDeliveriesNestedInput
+    requestedByUser?: UserUpdateOneRequiredWithoutRequestedDeliveriesNestedInput
+    assignments?: DeliveryAssignmentUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateWithoutStatusHistoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignments?: DeliveryAssignmentUncheckedUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUncheckedUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type UserUpsertWithoutDeliveryStatusChangesInput = {
+    update: XOR<UserUpdateWithoutDeliveryStatusChangesInput, UserUncheckedUpdateWithoutDeliveryStatusChangesInput>
+    create: XOR<UserCreateWithoutDeliveryStatusChangesInput, UserUncheckedCreateWithoutDeliveryStatusChangesInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutDeliveryStatusChangesInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutDeliveryStatusChangesInput, UserUncheckedUpdateWithoutDeliveryStatusChangesInput>
+  }
+
+  export type UserUpdateWithoutDeliveryStatusChangesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutDeliveryStatusChangesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+  }
+
+  export type DeliveryCreateWithoutLocationPingsInput = {
+    id?: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    reservation: ReservationCreateNestedOneWithoutDeliveriesInput
+    pickupLocation: LocationCreateNestedOneWithoutDeliveryPickupsInput
+    dropoffLocation: LocationCreateNestedOneWithoutDeliveryDropoffsInput
+    assignedDriverProfile?: DriverProfileCreateNestedOneWithoutDeliveriesInput
+    requestedByUser: UserCreateNestedOneWithoutRequestedDeliveriesInput
+    assignments?: DeliveryAssignmentCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryUncheckedCreateWithoutLocationPingsInput = {
+    id?: string
+    reservationId: string
+    pickupLocationId: string
+    dropoffLocationId: string
+    assignedDriverProfileId?: string | null
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assignments?: DeliveryAssignmentUncheckedCreateNestedManyWithoutDeliveryInput
+    statusHistory?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutDeliveryInput
+  }
+
+  export type DeliveryCreateOrConnectWithoutLocationPingsInput = {
+    where: DeliveryWhereUniqueInput
+    create: XOR<DeliveryCreateWithoutLocationPingsInput, DeliveryUncheckedCreateWithoutLocationPingsInput>
+  }
+
+  export type DriverProfileCreateWithoutLocationPingsInput = {
+    id?: string
+    status?: $Enums.DriverProfileStatus
+    availability?: $Enums.DriverAvailabilityStatus
+    displayName: string
+    phone?: string | null
+    vehicleType?: string
+    vehicleLabel?: string | null
+    vehiclePlate?: string | null
+    capacityNotes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutDriverProfileInput
+    deliveries?: DeliveryCreateNestedManyWithoutAssignedDriverProfileInput
+    assignments?: DeliveryAssignmentCreateNestedManyWithoutDriverProfileInput
+  }
+
+  export type DriverProfileUncheckedCreateWithoutLocationPingsInput = {
+    id?: string
+    userId: string
+    status?: $Enums.DriverProfileStatus
+    availability?: $Enums.DriverAvailabilityStatus
+    displayName: string
+    phone?: string | null
+    vehicleType?: string
+    vehicleLabel?: string | null
+    vehiclePlate?: string | null
+    capacityNotes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    deliveries?: DeliveryUncheckedCreateNestedManyWithoutAssignedDriverProfileInput
+    assignments?: DeliveryAssignmentUncheckedCreateNestedManyWithoutDriverProfileInput
+  }
+
+  export type DriverProfileCreateOrConnectWithoutLocationPingsInput = {
+    where: DriverProfileWhereUniqueInput
+    create: XOR<DriverProfileCreateWithoutLocationPingsInput, DriverProfileUncheckedCreateWithoutLocationPingsInput>
+  }
+
+  export type DeliveryUpsertWithoutLocationPingsInput = {
+    update: XOR<DeliveryUpdateWithoutLocationPingsInput, DeliveryUncheckedUpdateWithoutLocationPingsInput>
+    create: XOR<DeliveryCreateWithoutLocationPingsInput, DeliveryUncheckedCreateWithoutLocationPingsInput>
+    where?: DeliveryWhereInput
+  }
+
+  export type DeliveryUpdateToOneWithWhereWithoutLocationPingsInput = {
+    where?: DeliveryWhereInput
+    data: XOR<DeliveryUpdateWithoutLocationPingsInput, DeliveryUncheckedUpdateWithoutLocationPingsInput>
+  }
+
+  export type DeliveryUpdateWithoutLocationPingsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reservation?: ReservationUpdateOneRequiredWithoutDeliveriesNestedInput
+    pickupLocation?: LocationUpdateOneRequiredWithoutDeliveryPickupsNestedInput
+    dropoffLocation?: LocationUpdateOneRequiredWithoutDeliveryDropoffsNestedInput
+    assignedDriverProfile?: DriverProfileUpdateOneWithoutDeliveriesNestedInput
+    requestedByUser?: UserUpdateOneRequiredWithoutRequestedDeliveriesNestedInput
+    assignments?: DeliveryAssignmentUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateWithoutLocationPingsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignments?: DeliveryAssignmentUncheckedUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUncheckedUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DriverProfileUpsertWithoutLocationPingsInput = {
+    update: XOR<DriverProfileUpdateWithoutLocationPingsInput, DriverProfileUncheckedUpdateWithoutLocationPingsInput>
+    create: XOR<DriverProfileCreateWithoutLocationPingsInput, DriverProfileUncheckedCreateWithoutLocationPingsInput>
+    where?: DriverProfileWhereInput
+  }
+
+  export type DriverProfileUpdateToOneWithWhereWithoutLocationPingsInput = {
+    where?: DriverProfileWhereInput
+    data: XOR<DriverProfileUpdateWithoutLocationPingsInput, DriverProfileUncheckedUpdateWithoutLocationPingsInput>
+  }
+
+  export type DriverProfileUpdateWithoutLocationPingsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFieldUpdateOperationsInput | $Enums.DriverAvailabilityStatus
+    displayName?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    vehicleType?: StringFieldUpdateOperationsInput | string
+    vehicleLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    vehiclePlate?: NullableStringFieldUpdateOperationsInput | string | null
+    capacityNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutDriverProfileNestedInput
+    deliveries?: DeliveryUpdateManyWithoutAssignedDriverProfileNestedInput
+    assignments?: DeliveryAssignmentUpdateManyWithoutDriverProfileNestedInput
+  }
+
+  export type DriverProfileUncheckedUpdateWithoutLocationPingsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDriverProfileStatusFieldUpdateOperationsInput | $Enums.DriverProfileStatus
+    availability?: EnumDriverAvailabilityStatusFieldUpdateOperationsInput | $Enums.DriverAvailabilityStatus
+    displayName?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    vehicleType?: StringFieldUpdateOperationsInput | string
+    vehicleLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    vehiclePlate?: NullableStringFieldUpdateOperationsInput | string | null
+    capacityNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    deliveries?: DeliveryUncheckedUpdateManyWithoutAssignedDriverProfileNestedInput
+    assignments?: DeliveryAssignmentUncheckedUpdateManyWithoutDriverProfileNestedInput
+  }
+
   export type ReservationCreateWithoutStatusHistoryInput = {
     id?: string
     quantityRequested: Decimal | DecimalJsLike | number | string
@@ -58375,6 +70382,7 @@ export namespace Prisma {
     owner: UserCreateNestedOneWithoutOwnedReservationsAsOwnerInput
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryCreateNestedManyWithoutReservationInput
     reviews?: ReviewCreateNestedManyWithoutReservationInput
   }
 
@@ -58403,6 +70411,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryUncheckedCreateNestedManyWithoutReservationInput
     reviews?: ReviewUncheckedCreateNestedManyWithoutReservationInput
   }
 
@@ -58428,12 +70437,16 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -58461,12 +70474,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
     ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -58518,6 +70535,7 @@ export namespace Prisma {
     owner?: UserUpdateOneRequiredWithoutOwnedReservationsAsOwnerNestedInput
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
   }
 
@@ -58546,6 +70564,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUncheckedUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
   }
 
@@ -58577,12 +70596,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -58610,12 +70633,16 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
     ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -58651,6 +70678,7 @@ export namespace Prisma {
     owner: UserCreateNestedOneWithoutOwnedReservationsAsOwnerInput
     dropoffLocation?: LocationCreateNestedOneWithoutReservationDropoffsInput
     reusedMaterial?: MaterialCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryCreateNestedManyWithoutReservationInput
   }
 
@@ -58679,6 +70707,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     reusedMaterial?: MaterialUncheckedCreateNestedOneWithoutReusedByReservationInput
+    deliveries?: DeliveryUncheckedCreateNestedManyWithoutReservationInput
     statusHistory?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutReservationInput
   }
 
@@ -58704,6 +70733,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -58711,6 +70741,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
@@ -58737,6 +70770,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -58744,6 +70778,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
@@ -58775,6 +70812,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -58782,6 +70820,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
@@ -58808,6 +70849,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -58815,6 +70857,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
@@ -58865,6 +70910,7 @@ export namespace Prisma {
     owner?: UserUpdateOneRequiredWithoutOwnedReservationsAsOwnerNestedInput
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
 
@@ -58893,6 +70939,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUncheckedUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
 
@@ -58924,6 +70971,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -58931,6 +70979,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
@@ -58957,6 +71008,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -58964,6 +71016,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
@@ -59001,6 +71056,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -59008,6 +71064,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
@@ -59034,6 +71093,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -59041,6 +71101,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
@@ -59067,6 +71130,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -59074,6 +71138,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
@@ -59100,6 +71167,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -59107,6 +71175,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
     createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
@@ -59149,6 +71220,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -59156,6 +71228,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
@@ -59182,6 +71257,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -59189,6 +71265,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
     createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
@@ -59933,6 +72012,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -59940,6 +72020,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -59966,6 +72049,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -59973,6 +72057,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -60180,6 +72267,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -60187,6 +72275,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -60213,6 +72304,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -60220,6 +72312,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -60331,6 +72426,7 @@ export namespace Prisma {
     authTokens?: AuthTokenCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
@@ -60338,6 +72434,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
@@ -60364,6 +72463,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
     learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
     supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
     invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
     usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
     assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
@@ -60371,6 +72471,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
     ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    requestedDeliveries?: DeliveryUncheckedCreateNestedManyWithoutRequestedByUserInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
     reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
@@ -60531,6 +72634,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
@@ -60538,6 +72642,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
@@ -60564,6 +72671,7 @@ export namespace Prisma {
     authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
     learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
     supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
     invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
     usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
     assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
@@ -60571,6 +72679,9 @@ export namespace Prisma {
     ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
     ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
     reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    requestedDeliveries?: DeliveryUncheckedUpdateManyWithoutRequestedByUserNestedInput
+    deliveryAssignmentsMade?: DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    deliveryStatusChanges?: DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
     reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
@@ -60852,6 +72963,49 @@ export namespace Prisma {
     statusGroup?: $Enums.ReservationStatusGroup
     oldStatus?: string | null
     newStatus: string
+    note?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryCreateManyRequestedByUserInput = {
+    id?: string
+    reservationId: string
+    pickupLocationId: string
+    dropoffLocationId: string
+    assignedDriverProfileId?: string | null
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DeliveryAssignmentCreateManyAssignedByUserInput = {
+    id?: string
+    deliveryId: string
+    driverProfileId: string
+    status?: $Enums.DeliveryAssignmentStatus
+    acceptedAt?: Date | string
+    releasedAt?: Date | string | null
+    releaseReason?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryStatusHistoryCreateManyChangedByUserInput = {
+    id?: string
+    deliveryId: string
+    oldStatus?: $Enums.DeliveryStatus | null
+    newStatus: $Enums.DeliveryStatus
     note?: string | null
     createdAt?: Date | string
   }
@@ -61266,6 +73420,7 @@ export namespace Prisma {
     requester?: UserUpdateOneRequiredWithoutOwnedReservationsAsRequesterNestedInput
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
@@ -61294,6 +73449,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUncheckedUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
@@ -61347,6 +73503,7 @@ export namespace Prisma {
     owner?: UserUpdateOneRequiredWithoutOwnedReservationsAsOwnerNestedInput
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
@@ -61375,6 +73532,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUncheckedUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
@@ -61430,6 +73588,141 @@ export namespace Prisma {
     statusGroup?: EnumReservationStatusGroupFieldUpdateOperationsInput | $Enums.ReservationStatusGroup
     oldStatus?: NullableStringFieldUpdateOperationsInput | string | null
     newStatus?: StringFieldUpdateOperationsInput | string
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryUpdateWithoutRequestedByUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reservation?: ReservationUpdateOneRequiredWithoutDeliveriesNestedInput
+    pickupLocation?: LocationUpdateOneRequiredWithoutDeliveryPickupsNestedInput
+    dropoffLocation?: LocationUpdateOneRequiredWithoutDeliveryDropoffsNestedInput
+    assignedDriverProfile?: DriverProfileUpdateOneWithoutDeliveriesNestedInput
+    assignments?: DeliveryAssignmentUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateWithoutRequestedByUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignments?: DeliveryAssignmentUncheckedUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUncheckedUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUncheckedUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateManyWithoutRequestedByUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryAssignmentUpdateWithoutAssignedByUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    delivery?: DeliveryUpdateOneRequiredWithoutAssignmentsNestedInput
+    driverProfile?: DriverProfileUpdateOneRequiredWithoutAssignmentsNestedInput
+  }
+
+  export type DeliveryAssignmentUncheckedUpdateWithoutAssignedByUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    driverProfileId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryAssignmentUncheckedUpdateManyWithoutAssignedByUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    driverProfileId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryStatusHistoryUpdateWithoutChangedByUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    oldStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    delivery?: DeliveryUpdateOneRequiredWithoutStatusHistoryNestedInput
+  }
+
+  export type DeliveryStatusHistoryUncheckedUpdateWithoutChangedByUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    oldStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryStatusHistoryUncheckedUpdateManyWithoutChangedByUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    oldStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
     note?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -61946,6 +74239,196 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type DeliveryCreateManyAssignedDriverProfileInput = {
+    id?: string
+    reservationId: string
+    pickupLocationId: string
+    dropoffLocationId: string
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DeliveryAssignmentCreateManyDriverProfileInput = {
+    id?: string
+    deliveryId: string
+    assignedByUserId?: string | null
+    status?: $Enums.DeliveryAssignmentStatus
+    acceptedAt?: Date | string
+    releasedAt?: Date | string | null
+    releaseReason?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryLocationPingCreateManyDriverProfileInput = {
+    id?: string
+    deliveryId: string
+    latitude: Decimal | DecimalJsLike | number | string
+    longitude: Decimal | DecimalJsLike | number | string
+    accuracyMeters?: Decimal | DecimalJsLike | number | string | null
+    heading?: Decimal | DecimalJsLike | number | string | null
+    speed?: Decimal | DecimalJsLike | number | string | null
+    capturedAt: Date | string
+    createdAt?: Date | string
+  }
+
+  export type DeliveryUpdateWithoutAssignedDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reservation?: ReservationUpdateOneRequiredWithoutDeliveriesNestedInput
+    pickupLocation?: LocationUpdateOneRequiredWithoutDeliveryPickupsNestedInput
+    dropoffLocation?: LocationUpdateOneRequiredWithoutDeliveryDropoffsNestedInput
+    requestedByUser?: UserUpdateOneRequiredWithoutRequestedDeliveriesNestedInput
+    assignments?: DeliveryAssignmentUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateWithoutAssignedDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignments?: DeliveryAssignmentUncheckedUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUncheckedUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUncheckedUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateManyWithoutAssignedDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryAssignmentUpdateWithoutDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    delivery?: DeliveryUpdateOneRequiredWithoutAssignmentsNestedInput
+    assignedByUser?: UserUpdateOneWithoutDeliveryAssignmentsMadeNestedInput
+  }
+
+  export type DeliveryAssignmentUncheckedUpdateWithoutDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    assignedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryAssignmentUncheckedUpdateManyWithoutDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    assignedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryLocationPingUpdateWithoutDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    latitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    heading?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speed?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    delivery?: DeliveryUpdateOneRequiredWithoutLocationPingsNestedInput
+  }
+
+  export type DeliveryLocationPingUncheckedUpdateWithoutDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    latitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    heading?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speed?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryLocationPingUncheckedUpdateManyWithoutDriverProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    deliveryId?: StringFieldUpdateOperationsInput | string
+    latitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    heading?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speed?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type SupplierProfileCreateManyDefaultPickupLocationInput = {
     id?: string
     userId: string
@@ -62023,6 +74506,52 @@ export namespace Prisma {
     deliveryCost?: Decimal | DecimalJsLike | number | string | null
     driverProfileId?: string | null
     completedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DeliveryCreateManyPickupLocationInput = {
+    id?: string
+    reservationId: string
+    dropoffLocationId: string
+    assignedDriverProfileId?: string | null
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DeliveryCreateManyDropoffLocationInput = {
+    id?: string
+    reservationId: string
+    pickupLocationId: string
+    assignedDriverProfileId?: string | null
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -62233,6 +74762,7 @@ export namespace Prisma {
     requester?: UserUpdateOneRequiredWithoutOwnedReservationsAsRequesterNestedInput
     owner?: UserUpdateOneRequiredWithoutOwnedReservationsAsOwnerNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
@@ -62261,6 +74791,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUncheckedUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
@@ -62286,6 +74817,156 @@ export namespace Prisma {
     deliveryCost?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     driverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryUpdateWithoutPickupLocationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reservation?: ReservationUpdateOneRequiredWithoutDeliveriesNestedInput
+    dropoffLocation?: LocationUpdateOneRequiredWithoutDeliveryDropoffsNestedInput
+    assignedDriverProfile?: DriverProfileUpdateOneWithoutDeliveriesNestedInput
+    requestedByUser?: UserUpdateOneRequiredWithoutRequestedDeliveriesNestedInput
+    assignments?: DeliveryAssignmentUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateWithoutPickupLocationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignments?: DeliveryAssignmentUncheckedUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUncheckedUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUncheckedUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateManyWithoutPickupLocationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryUpdateWithoutDropoffLocationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reservation?: ReservationUpdateOneRequiredWithoutDeliveriesNestedInput
+    pickupLocation?: LocationUpdateOneRequiredWithoutDeliveryPickupsNestedInput
+    assignedDriverProfile?: DriverProfileUpdateOneWithoutDeliveriesNestedInput
+    requestedByUser?: UserUpdateOneRequiredWithoutRequestedDeliveriesNestedInput
+    assignments?: DeliveryAssignmentUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateWithoutDropoffLocationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignments?: DeliveryAssignmentUncheckedUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUncheckedUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUncheckedUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateManyWithoutDropoffLocationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reservationId?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -63173,6 +75854,7 @@ export namespace Prisma {
     owner?: UserUpdateOneRequiredWithoutOwnedReservationsAsOwnerNestedInput
     dropoffLocation?: LocationUpdateOneWithoutReservationDropoffsNestedInput
     reusedMaterial?: MaterialUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUpdateManyWithoutReservationNestedInput
   }
@@ -63201,6 +75883,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     reusedMaterial?: MaterialUncheckedUpdateOneWithoutReusedByReservationNestedInput
+    deliveries?: DeliveryUncheckedUpdateManyWithoutReservationNestedInput
     reviews?: ReviewUncheckedUpdateManyWithoutReservationNestedInput
     statusHistory?: ReservationStatusHistoryUncheckedUpdateManyWithoutReservationNestedInput
   }
@@ -63230,6 +75913,29 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type DeliveryCreateManyReservationInput = {
+    id?: string
+    pickupLocationId: string
+    dropoffLocationId: string
+    assignedDriverProfileId?: string | null
+    requestedByUserId: string
+    status?: $Enums.DeliveryStatus
+    requestedAt?: Date | string
+    assignedAt?: Date | string | null
+    arrivedPickupAt?: Date | string | null
+    pickedUpAt?: Date | string | null
+    onTheWayAt?: Date | string | null
+    arrivedDropoffAt?: Date | string | null
+    deliveredAt?: Date | string | null
+    cancelledAt?: Date | string | null
+    failedAt?: Date | string | null
+    learnerNote?: string | null
+    driverNote?: string | null
+    failureReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
   export type ReviewCreateManyReservationInput = {
     id?: string
     reviewerId: string
@@ -63248,6 +75954,81 @@ export namespace Prisma {
     changedBy?: string | null
     note?: string | null
     createdAt?: Date | string
+  }
+
+  export type DeliveryUpdateWithoutReservationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    pickupLocation?: LocationUpdateOneRequiredWithoutDeliveryPickupsNestedInput
+    dropoffLocation?: LocationUpdateOneRequiredWithoutDeliveryDropoffsNestedInput
+    assignedDriverProfile?: DriverProfileUpdateOneWithoutDeliveriesNestedInput
+    requestedByUser?: UserUpdateOneRequiredWithoutRequestedDeliveriesNestedInput
+    assignments?: DeliveryAssignmentUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateWithoutReservationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignments?: DeliveryAssignmentUncheckedUpdateManyWithoutDeliveryNestedInput
+    statusHistory?: DeliveryStatusHistoryUncheckedUpdateManyWithoutDeliveryNestedInput
+    locationPings?: DeliveryLocationPingUncheckedUpdateManyWithoutDeliveryNestedInput
+  }
+
+  export type DeliveryUncheckedUpdateManyWithoutReservationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    pickupLocationId?: StringFieldUpdateOperationsInput | string
+    dropoffLocationId?: StringFieldUpdateOperationsInput | string
+    assignedDriverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    requestedByUserId?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    requestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedPickupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pickedUpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onTheWayAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    arrivedDropoffAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deliveredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    failedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    learnerNote?: NullableStringFieldUpdateOperationsInput | string | null
+    driverNote?: NullableStringFieldUpdateOperationsInput | string | null
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ReviewUpdateWithoutReservationInput = {
@@ -63307,6 +76088,134 @@ export namespace Prisma {
     newStatus?: StringFieldUpdateOperationsInput | string
     changedBy?: NullableStringFieldUpdateOperationsInput | string | null
     note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryAssignmentCreateManyDeliveryInput = {
+    id?: string
+    driverProfileId: string
+    assignedByUserId?: string | null
+    status?: $Enums.DeliveryAssignmentStatus
+    acceptedAt?: Date | string
+    releasedAt?: Date | string | null
+    releaseReason?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryStatusHistoryCreateManyDeliveryInput = {
+    id?: string
+    oldStatus?: $Enums.DeliveryStatus | null
+    newStatus: $Enums.DeliveryStatus
+    changedByUserId: string
+    note?: string | null
+    createdAt?: Date | string
+  }
+
+  export type DeliveryLocationPingCreateManyDeliveryInput = {
+    id?: string
+    driverProfileId: string
+    latitude: Decimal | DecimalJsLike | number | string
+    longitude: Decimal | DecimalJsLike | number | string
+    accuracyMeters?: Decimal | DecimalJsLike | number | string | null
+    heading?: Decimal | DecimalJsLike | number | string | null
+    speed?: Decimal | DecimalJsLike | number | string | null
+    capturedAt: Date | string
+    createdAt?: Date | string
+  }
+
+  export type DeliveryAssignmentUpdateWithoutDeliveryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    driverProfile?: DriverProfileUpdateOneRequiredWithoutAssignmentsNestedInput
+    assignedByUser?: UserUpdateOneWithoutDeliveryAssignmentsMadeNestedInput
+  }
+
+  export type DeliveryAssignmentUncheckedUpdateWithoutDeliveryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    driverProfileId?: StringFieldUpdateOperationsInput | string
+    assignedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryAssignmentUncheckedUpdateManyWithoutDeliveryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    driverProfileId?: StringFieldUpdateOperationsInput | string
+    assignedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumDeliveryAssignmentStatusFieldUpdateOperationsInput | $Enums.DeliveryAssignmentStatus
+    acceptedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    releaseReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryStatusHistoryUpdateWithoutDeliveryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    oldStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    changedByUser?: UserUpdateOneRequiredWithoutDeliveryStatusChangesNestedInput
+  }
+
+  export type DeliveryStatusHistoryUncheckedUpdateWithoutDeliveryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    oldStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    changedByUserId?: StringFieldUpdateOperationsInput | string
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryStatusHistoryUncheckedUpdateManyWithoutDeliveryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    oldStatus?: NullableEnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus | null
+    newStatus?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+    changedByUserId?: StringFieldUpdateOperationsInput | string
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryLocationPingUpdateWithoutDeliveryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    latitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    heading?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speed?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    driverProfile?: DriverProfileUpdateOneRequiredWithoutLocationPingsNestedInput
+  }
+
+  export type DeliveryLocationPingUncheckedUpdateWithoutDeliveryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    driverProfileId?: StringFieldUpdateOperationsInput | string
+    latitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    heading?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speed?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DeliveryLocationPingUncheckedUpdateManyWithoutDeliveryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    driverProfileId?: StringFieldUpdateOperationsInput | string
+    latitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    longitude?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    accuracyMeters?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    heading?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speed?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 

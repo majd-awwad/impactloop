@@ -123,6 +123,8 @@ Transaction:
 - History: ACCEPTED → COMPLETED
 - `materials.status` → `REUSED`; `reusedAt`; `reusedByReservationId`
 
+If the reservation has an active or delivered `Delivery`, supplier complete returns `409 CONFLICT`. Delivery reservations complete only through the assigned driver `DELIVERED` transition.
+
 ### Database changes
 
 Update `reservations` + `materials`; insert history.
@@ -152,7 +154,7 @@ Complete invalidates incoming requests, supplier notifications, supplier dashboa
 ## Not implemented
 
 - Learner reservation cancel
-- Delivery request / driver assignment (`deliveryRequested`, `deliveryStatus` on schema)
+- Flutter delivery request / driver assignment UI
 - Cancel/expiry flows in UI
 - Multi-reservation queues / partial inventory allocation
 

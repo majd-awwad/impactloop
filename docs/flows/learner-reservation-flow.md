@@ -2,7 +2,7 @@
 
 Documents the implemented MVP learner reservation request path.
 
-**Out of scope:** delivery, learner reservation cancel, expiry jobs, reviews, multi-reservation queues, partial stock allocation, and precise pickup-location reveal.
+**Out of scope for Flutter:** delivery UI, learner reservation cancel, expiry jobs, reviews, multi-reservation queues, partial stock allocation, and precise pickup-location reveal.
 
 ## Trigger
 
@@ -17,7 +17,8 @@ Authenticated **LEARNER** reserves an available material from public material de
 | Learner reserve UI | **Implemented MVP** — detail CTA only |
 | `POST /api/reservations` | **Implemented MVP** |
 | Learner status list UI | **Implemented MVP** — `/learner/reservations` |
-| Supplier accept/decline/complete | **Partial** — accept/reject/complete implemented; no delivery |
+| Supplier accept/decline/complete | **Partial** — accept/reject/self-pickup complete implemented |
+| Delivery after accept | **Backend-only** — learner can request delivery through API; no Flutter UI |
 | Test data | **Partial** — seed data still exists for supplier portal demos |
 
 ---
@@ -32,6 +33,7 @@ Authenticated **LEARNER** reserves an available material from public material de
 6. Success creates a `PENDING` reservation, keeps the success snackbar, shows a **View reservation status** CTA, invalidates learner reservations, and reloads material detail so the status becomes `PENDING_RESERVATION`.
 7. Learner can open `/learner/reservations` from home to see pending/accepted/rejected/completed status.
 8. Supplier handles the request through the existing incoming requests page.
+9. If the reservation is accepted and the material allows delivery, backend API `POST /api/reservations/:id/delivery` can create a delivery attempt. Flutter has no entry point yet.
 
 ### Frontend Path
 
@@ -48,7 +50,7 @@ Authenticated **LEARNER** reserves an available material from public material de
 - Create validates `LEARNER` role, material `AVAILABLE`, quantity, and self-reservation.
 - Create enforces one active reservation per material and uses `updateMany` with `status = AVAILABLE` as the race-safe guard.
 - Read returns only reservations where `requesterId` is the authenticated learner, newest first, with safe material/supplier/pickup-window summary fields.
-- Supplier accept sets material `RESERVED`; reject returns material `AVAILABLE`; complete sets material `REUSED`.
+- Supplier accept sets material `RESERVED`; reject returns material `AVAILABLE`; supplier complete sets material `REUSED` only for self-pickup reservations. Delivery reservations complete through driver `DELIVERED`.
 
 ### Database Changes Per Flow
 
@@ -80,7 +82,7 @@ Learner sees a success snack bar, refreshed material detail, and a pending card 
 
 - Learner reservation cancel.
 - Dedicated learner reservation detail page.
-- Delivery selection and driver workflow.
+- Delivery selection and driver workflow in Flutter.
 - Expiry jobs.
 - Reviews.
 - Multi-reservation queues and partial stock allocation.

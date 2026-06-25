@@ -1,69 +1,90 @@
-# Delivery Feature (Gap Doc)
+# Delivery Feature
 
-**Gap / stub — not an implementation guide.**
+Internal delivery is now a backend domain for accepted reservations. Flutter UI is not implemented yet.
 
-**Sources inspected:** `apps/backend/prisma/schema.prisma` (`Reservation` delivery fields, `DeliveryStatus`, `PickupType`, `Material.deliveryAllowed`), `apps/backend/src/modules/supplier-reservations/supplier-reservations.service.ts` (`mapPickupPreference`), `apps/backend/src/app.ts`, `apps/frontend/lib/features/home/presentation/pages/learner_home_page.dart`, `docs/01-requirements.md` (§Delivery), `docs/05-roadmap.md` (Phase 6), `AGENTS.md`, `docs/08-implementation-status.md`
+## Current Status
 
-## Intended purpose (requirements / roadmap — aspirational)
+| Layer | Status | Notes |
+|-------|--------|-------|
+| Prisma delivery domain | **Implemented** | `DriverProfile`, `Delivery`, `DeliveryAssignment`, `DeliveryStatusHistory`, `DeliveryLocationPing` |
+| Learner delivery request API | **Implemented** | `POST /api/reservations/:id/delivery` |
+| Learner delivery read/tracking API | **Implemented** | `GET /api/deliveries/my`, `GET /api/deliveries/:id` |
+| Driver jobs/assignment/status API | **Implemented** | `/api/driver/deliveries/*` |
+| Driver location pings | **Implemented backend-only** | Stored decimal lat/lng; no live streaming |
+| Flutter learner delivery UI | **Not implemented** | No request/tracking screens yet |
+| Flutter driver portal | **Not implemented** | No driver routes/pages yet |
+| External partners/payment/AI | **Out of scope** | Not implemented |
 
-From [01-requirements.md](01-requirements.md) and [05-roadmap.md](05-roadmap.md) Phase 6:
+## Data Model
 
-- No `delivery_requests` table — delivery lives on `reservations`.
-- Learner requests delivery after reservation accepted.
-- Driver sees reservations with `delivery_requested = true` and `delivery_status = WAITING_FOR_DRIVER`.
-- Status flow: `WAITING_FOR_DRIVER` → `DRIVER_ASSIGNED` → `PICKED_UP` → `ON_THE_WAY` → `DELIVERED` (or `CANCELLED` / `FAILED_PICKUP`).
-- Delivered completes reservation and marks material `REUSED`.
+Delivery is separate from reservation lifecycle:
 
-## Current code status
+- `Reservation` owns booking status: `PENDING`, `ACCEPTED`, `COMPLETED`, etc.
+- `Delivery` owns logistics status: `WAITING_FOR_DRIVER`, `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`, `DELIVERED`, terminal failures/cancel.
+- A reservation can have many delivery attempts over time.
+- Service checks and partial unique database indexes enforce one active delivery per reservation and one active delivery per driver.
+- `DriverProfile` is linked to a `User` with `DRIVER` role.
 
-| Layer | Status | Evidence |
-|-------|--------|----------|
-| Schema: `delivery_requested`, `delivery_status`, `delivery_cost`, `dropoff_location_id`, `driver_profile_id` | **Schema-only** | `schema.prisma` — no `DriverProfile` model |
-| `DeliveryStatus` enum | **Schema-only** | Defined; not updated by application code found |
-| `materials.delivery_allowed` | **Partial** | Set on supplier create; no delivery workflow consumes it |
-| Delivery API (learner request, driver assign, status updates) | **Not implemented** | No module in `app.ts` |
-| Driver portal / Flutter `driver` feature | **Not implemented** | No `features/driver` folder |
-| Supplier UI for delivery fields | **Not implemented** | Supplier maps `deliveryRequested` to display string only |
-| Home “Delivery tracking” | **Frontend-only** placeholder | `learner_home_page.dart` |
+Deprecated compatibility fields remain on `Reservation`: `deliveryRequested`, `deliveryStatus`, `deliveryCost`, `dropoffLocationId`, `driverProfileId`. New delivery code does not use them as the source of truth.
 
-**Overall:** **Schema-only** with **Partial** material flag; workflow **not implemented**.
+## Backend Behavior
 
-## Existing related files
+Learner delivery request:
 
-| Path | Role |
-|------|------|
-| `schema.prisma` | `Reservation` delivery columns; `DeliveryStatus` enum |
-| `supplier-reservations.service.ts` | `deliveryRequested` in DTO mapping (“Delivery requested” label) |
-| `supplier.validation.ts` | `deliveryAllowed` on material create input |
-| `docs/database/tables-catalog.md` | Documents `driverProfileId` — **Needs verification** (no `DriverProfile` model) |
+- Requires `LEARNER`.
+- Reservation must belong to learner.
+- Reservation must be `ACCEPTED`.
+- Material must have `deliveryAllowed = true`.
+- No active delivery may already exist for the reservation.
+- Creates dropoff `Location`.
+- Copies material pickup `Location` into a delivery pickup snapshot.
+- Creates `Delivery` with `WAITING_FOR_DRIVER`.
+- Creates `DeliveryStatusHistory`.
 
-No `modules/delivery` or `modules/driver` folder.
+Driver assignment:
 
-## What is missing
+- Requires `DRIVER` role and active `DriverProfile`.
+- Driver must be `AVAILABLE`.
+- Driver cannot already have an active delivery.
+- Accept uses transactional `updateMany` guards: the driver profile must move from `AVAILABLE` to `ON_DELIVERY`, and only `WAITING_FOR_DRIVER` unassigned deliveries can be assigned.
+- Sets driver availability to `ON_DELIVERY`.
 
-- Learner API to set `delivery_requested` + dropoff location after accept.
-- Driver authentication portal and role-gated routes.
-- Driver accept/assign/pickup/deliver API updating `delivery_status` and history.
-- Internal delivery cost rules and `delivery_cost` calculation.
-- Flutter UI for learner tracking and driver workflow.
-- Post-delivery material `REUSED` path distinct from self-pickup complete.
-- Location privacy rules for driver vs public (see [locations](locations.md)).
+Completion:
 
-## Risks
+- Driver status transitions must follow the allowed order.
+- `DELIVERED` completes the reservation and marks the material `REUSED`.
+- Supplier complete is blocked when an active or delivered delivery exists.
+- Self-pickup reservations without delivery still use supplier complete.
 
-- `driver_profile_id` FK target unclear without `DriverProfile` model — migration/schema drift risk.
-- Building delivery before learner reservations leaves no valid entry point.
-- AGENTS.md: internal delivery only — external partners out of scope; still needs clear assignment model.
+## Routes
 
-## Questions before implementation
+Learner:
 
-- Resolve `DriverProfile` vs `users` + `DRIVER` role representation.
-- Can supplier complete pickup and delivery both use same `complete` endpoint?
-- Who can transition each `DeliveryStatus` — driver only or supplier too?
-- See [09-open-questions.md](../09-open-questions.md) § Delivery.
+- `POST /api/reservations/:id/delivery`
+- `GET /api/deliveries/my`
+- `GET /api/deliveries/:id`
 
-## Related docs
+Driver:
 
-- [Delivery flow](../flows/delivery-flow.md) — planned stub
-- [Reservations](reservations.md) — parent entity
-- [Invitations](invitations.md) — DRIVER role via invitation API only
+- `GET /api/driver/deliveries/available`
+- `GET /api/driver/deliveries/active`
+- `POST /api/driver/deliveries/:id/accept`
+- `PATCH /api/driver/deliveries/:id/status`
+- `POST /api/driver/deliveries/:id/location-pings`
+
+## Privacy Rules
+
+- Public material APIs still expose only city/area.
+- Unassigned drivers see approximate/safe job data only; no exact coordinates.
+- Assigned drivers see exact pickup/dropoff snapshots.
+- Learners see their own delivery pickup/dropoff and assigned driver summary.
+- Location pings are stored for assigned active drivers only.
+
+## Not Implemented Yet
+
+- Learner delivery request/tracking UI.
+- Driver portal UI.
+- Admin reassignment/cancellation workflow.
+- Real-time tracking stream.
+- Delivery payment/cost calculation.
+- External delivery partners.

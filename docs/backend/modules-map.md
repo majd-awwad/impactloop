@@ -12,6 +12,8 @@ Maps each folder under `apps/backend/src/modules/` to its responsibility and key
 | `auth` | `/api/auth` | No |
 | `categories` | `/api/categories` | No |
 | `category-requests` | `/api/supplier/category-requests` | Yes |
+| `deliveries` | `/api/deliveries`, `/api/reservations/:id/delivery` | Partial |
+| `driver` | `/api/driver` | No |
 | `health` | `/health` | No |
 | `invitations` | `/api/invitations` | No |
 | `learning-projects` | `/api/learning-projects` | No |
@@ -58,6 +60,33 @@ Mount order: `apps/backend/src/app.ts`
 **Key files:** `category-requests.routes.ts`, `category-requests.controller.ts`, `category-requests.service.ts`, `category-requests.repository.ts`, `category-requests.validation.ts`
 
 **Prisma:** `CategoryRequest` model
+
+---
+
+## `deliveries`
+
+**Purpose:** Learner delivery request/read APIs for accepted reservations. Creates delivery attempts, copied pickup/dropoff locations, and delivery status history.
+
+**Mounts:**
+- `POST /api/reservations/:id/delivery` through `reservations.routes.ts`
+- `GET /api/deliveries/my`
+- `GET /api/deliveries/:id`
+
+**Key files:** `deliveries.routes.ts`, `deliveries.controller.ts`, `deliveries.service.ts`, `deliveries.validation.ts`, `deliveries.service.test.ts`
+
+**Prisma:** `Delivery`, `DeliveryStatusHistory`, `Location`, `Reservation`, `Material`
+
+---
+
+## `driver`
+
+**Purpose:** Internal driver job list, race-safe assignment, status updates, and location pings.
+
+**Mounted at:** `/api/driver`
+
+**Key files:** `driver.routes.ts`, `driver.controller.ts`, `driver.service.ts`, `driver.validation.ts`
+
+**Prisma:** `DriverProfile`, `Delivery`, `DeliveryAssignment`, `DeliveryLocationPing`
 
 ---
 

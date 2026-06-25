@@ -20,7 +20,7 @@ impactloop/
         config/
         database/
         middlewares/
-        modules/            # 15 feature modules (see below)
+        modules/            # 17 feature modules (see below)
         services/           # cross-module services (AI price, geocoding)
         utils/
         constants/
@@ -36,7 +36,7 @@ impactloop/
 
 **Note:** `docs/02-architecture.md` previously listed a root `database/` folder and many unbuilt modules. That structure is **aspirational** — see [08-implementation-status.md](08-implementation-status.md).
 
-## Backend modules (15)
+## Backend modules (17)
 
 Derived **only** from `apps/backend/src/modules/`:
 
@@ -45,6 +45,8 @@ Derived **only** from `apps/backend/src/modules/`:
 | `auth` | `/api/auth` | Register, login, tokens, `/me`, password flows |
 | `categories` | `/api/categories` | List categories |
 | `category-requests` | `/api/supplier/category-requests` | Supplier category requests + listing drafts |
+| `deliveries` | `/api/deliveries` (+ learner request under `/api/reservations/:id/delivery`) | Learner delivery request/read API |
+| `driver` | `/api/driver` | Internal driver jobs, assignment, status updates, location pings |
 | `health` | `/health` | Health check |
 | `invitations` | `/api/invitations` | Admin role invitations + accept |
 | `learning-projects` | `/api/learning-projects` | Public read list/detail |
@@ -64,7 +66,7 @@ Detail: [backend/modules-map.md](backend/modules-map.md), [backend/api-catalog.m
 
 These names appear in older docs or roadmap but **do not exist** under `apps/backend/src/modules/`:
 
-`users`, `roles`, `ai-agent`, `notifications` (general), `admin`, `moderator`, `reports`, `reviews`, `delivery`, `driver`
+`users`, `roles`, `ai-agent`, `notifications` (general), `admin`, `moderator`, `reports`, `reviews`
 
 Some concerns are partially covered (e.g. reservations via learner create + `supplier-reservations`; notifications via `supplier-notifications`).
 
@@ -88,7 +90,7 @@ Detail: [frontend/routes-map.md](frontend/routes-map.md), [08-implementation-sta
 
 ### Flutter features **not** present as folders
 
-`delivery`, `ai_agent`, `admin`, `moderator`, `reports`, `reviews`, `driver`
+`ai_agent`, `admin`, `moderator`, `reports`, `reviews`
 
 ## Cross-cutting backend services
 
@@ -103,8 +105,8 @@ Not Express modules; live in `apps/backend/src/services/`:
 
 ## Database
 
-- **28** Prisma models → **28** PostgreSQL tables (see [database/schema-overview.md](database/schema-overview.md))
-- Migrations: `apps/backend/prisma/migrations/` (14 migration folders)
+- **33** Prisma models → **33** PostgreSQL tables (see [database/schema-overview.md](database/schema-overview.md))
+- Migrations: `apps/backend/prisma/migrations/` (15 migration folders)
 - Seed: `apps/backend/prisma/seed.ts` + `prisma/seeds/*`
 
 **Stale doc:** [03-database.md](03-database.md) claims 34 tables and lists tables not in schema — use `docs/database/*` instead.

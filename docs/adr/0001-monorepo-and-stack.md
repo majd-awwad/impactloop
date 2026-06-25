@@ -31,7 +31,7 @@ Use this project structure and stack for the MVP:
 - [package.json](../../package.json) declares the root npm workspace for `apps/backend`.
 - [apps/backend/package.json](../../apps/backend/package.json) includes Express, TypeScript, Prisma, PostgreSQL driver, and backend scripts.
 - [apps/frontend/pubspec.yaml](../../apps/frontend/pubspec.yaml) defines the Flutter frontend and dependencies including Riverpod, GoRouter, and Dio.
-- [docs/database/schema-overview.md](../database/schema-overview.md) documents 28 Prisma models and PostGIS use.
+- [docs/database/schema-overview.md](../database/schema-overview.md) documents the current Prisma models and PostGIS use.
 
 ## Related docs
 

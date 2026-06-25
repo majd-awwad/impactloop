@@ -95,6 +95,24 @@ Relations: organizationProfile, materials.
 
 ---
 
+## `driver_profiles` — model `DriverProfile`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| userId | String | unique FK → users |
+| status | DriverProfileStatus | default `ACTIVE` |
+| availability | DriverAvailabilityStatus | default `OFFLINE` |
+| displayName | String | |
+| phone | String? | |
+| vehicleType | String | default `UNSPECIFIED` |
+| vehicleLabel, vehiclePlate, capacityNotes | String? | |
+| createdAt, updatedAt | DateTime | |
+
+Relations: assigned deliveries, assignments, location pings.
+
+---
+
 ## `organization_profiles` — model `OrganizationProfile`
 
 | Field | Type | Notes |
@@ -292,10 +310,75 @@ Child tables: project_images, project_required_components, project_steps, projec
 | supplierNote, rejectionReason | String? | |
 | acceptedAt, rejectedAt, cancelledAt, completedAt | DateTime? | |
 | deliveryRequested | Boolean | default false |
-| deliveryStatus | DeliveryStatus? | |
+| deliveryStatus | DeliveryStatus? | legacy compatibility |
 | deliveryCost | Decimal? | |
-| dropoffLocationId | String? | FK → locations |
-| driverProfileId | String? | **No DriverProfile model** — Needs verification |
+| dropoffLocationId | String? | legacy FK → locations |
+| driverProfileId | String? | legacy string-only field; use `deliveries.assignedDriverProfileId` |
+
+---
+
+## `deliveries` — model `Delivery`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| reservationId | String | FK → reservations; many attempts per reservation |
+| pickupLocationId, dropoffLocationId | String | FKs → locations |
+| assignedDriverProfileId | String? | FK → driver_profiles |
+| requestedByUserId | String | FK → users |
+| status | DeliveryStatus | default `WAITING_FOR_DRIVER` |
+| requestedAt | DateTime | default now |
+| assignedAt, arrivedPickupAt, pickedUpAt, onTheWayAt, arrivedDropoffAt, deliveredAt, cancelledAt, failedAt | DateTime? | lifecycle timestamps |
+| learnerNote, driverNote, failureReason | String? | |
+| createdAt, updatedAt | DateTime | |
+
+Partial unique indexes and service logic enforce one active delivery per reservation and one active assigned delivery per driver.
+
+---
+
+## `delivery_assignments` — model `DeliveryAssignment`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| deliveryId | String | FK → deliveries |
+| driverProfileId | String | FK → driver_profiles |
+| assignedByUserId | String? | FK → users |
+| status | DeliveryAssignmentStatus | default `ACTIVE` |
+| acceptedAt | DateTime | default now |
+| releasedAt | DateTime? | |
+| releaseReason | String? | |
+| createdAt | DateTime | |
+
+---
+
+## `delivery_status_history` — model `DeliveryStatusHistory`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| deliveryId | String | FK → deliveries |
+| oldStatus | DeliveryStatus? | |
+| newStatus | DeliveryStatus | |
+| changedByUserId | String | FK → users |
+| note | String? | |
+| createdAt | DateTime | |
+
+---
+
+## `delivery_location_pings` — model `DeliveryLocationPing`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| deliveryId | String | FK → deliveries |
+| driverProfileId | String | FK → driver_profiles |
+| latitude, longitude | Decimal | `Decimal(9,6)` |
+| accuracyMeters, heading, speed | Decimal? | |
+| capturedAt | DateTime | client capture time |
+| createdAt | DateTime | server write time |
+
+No new PostGIS geography column is used for pings in Stage 1.
 
 ---
 

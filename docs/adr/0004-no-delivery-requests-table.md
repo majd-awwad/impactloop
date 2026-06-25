@@ -20,16 +20,20 @@ Delivery request state should live on reservations through the existing reservat
 - The absence of learner reservation creation must remain visible in docs until implemented.
 - Delivery tables or abstractions require a new explicit architecture decision.
 
+## Superseded Scope Note
+
+[ADR 0007](0007-delivery-domain-architecture.md) records the developed delivery architecture. It keeps the **no `delivery_requests` table** decision, but supersedes the MVP assumption that delivery state should live only on `reservations`. New delivery workflow code uses `deliveries` and related delivery tables as the source of truth; old reservation delivery fields remain legacy compatibility fields.
+
 ## Current implementation evidence
 
-- [AGENTS.md](../../AGENTS.md) states there is no `delivery_requests` table and delivery fields live inside reservations.
-- [docs/database/schema-overview.md](../database/schema-overview.md) documents no `delivery_requests` table and delivery columns on `reservations`.
-- [docs/database/tables-catalog.md](../database/tables-catalog.md) documents the `reservations` table and delivery fields.
+- [docs/adr/0007-delivery-domain-architecture.md](0007-delivery-domain-architecture.md) keeps the no `delivery_requests` table decision and moves developed delivery state to `deliveries`.
+- [docs/database/schema-overview.md](../database/schema-overview.md) documents no `delivery_requests` table, delivery domain tables, and legacy reservation delivery columns.
+- [docs/database/tables-catalog.md](../database/tables-catalog.md) documents the `deliveries` table and legacy `reservations` delivery fields.
 - [docs/features/reservations.md](../features/reservations.md) marks learner create and supplier list/accept/decline/complete as partial, with delivery still out of scope.
-- [docs/features/delivery.md](../features/delivery.md) marks delivery API/UI as not implemented.
-- [docs/08-implementation-status.md](../08-implementation-status.md) marks learner create and supplier reservations as partial, and delivery workflow as not implemented.
-- [apps/backend/src/app.ts](../../apps/backend/src/app.ts) mounts `/api/supplier` and learner `/api/reservations`, but no `/api/delivery` router.
-- [apps/backend/prisma/schema.prisma](../../apps/backend/prisma/schema.prisma) defines `Reservation` delivery fields and no `DeliveryRequest` model.
+- [docs/features/delivery.md](../features/delivery.md) marks delivery APIs as backend-only and Flutter UI as not implemented.
+- [docs/08-implementation-status.md](../08-implementation-status.md) marks delivery workflow as backend-only.
+- [apps/backend/src/app.ts](../../apps/backend/src/app.ts) mounts `/api/deliveries` and `/api/driver`, and no `/api/delivery-requests` router.
+- [apps/backend/prisma/schema.prisma](../../apps/backend/prisma/schema.prisma) defines `Delivery` models and no `DeliveryRequest` model.
 
 ## Related docs
 

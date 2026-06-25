@@ -20,9 +20,10 @@ Current MVP status for material reservations.
 | Learner `GET /api/reservations/my` | **Implemented MVP** | Learner-owned reservation list/read model |
 | Learner Flutter feature / reserve UI | **Implemented MVP** | Material detail CTA creates reservation and shows learner reservation state |
 | Learner “My Reservations” UI | **Implemented MVP** | `/learner/reservations`; no cancel/delivery |
-| Supplier list/accept/decline/complete | **Partial** | `GET/PATCH /api/supplier/reservations/*`; no delivery |
+| Supplier list/accept/decline/complete | **Partial** | `GET/PATCH /api/supplier/reservations/*`; supplier complete is self-pickup only when delivery exists |
 | Material `RESERVED` on accept | **Implemented** | Accept updates reservation and material in one transaction |
-**Overall:** **Partial**. Learner create/read UI + supplier accept/reject/complete exist for an exclusive reservation MVP. Learner cancel, delivery, expiry, reviews, queues, partial stock allocation, and pickup-location reveal are not implemented.
+| Delivery backend core | **Backend-only** | Delivery is a separate domain; learner/driver APIs exist; no Flutter UI |
+**Overall:** **Partial**. Learner create/read UI + supplier accept/reject/complete exist for an exclusive reservation MVP. Delivery backend core exists separately, but learner/driver delivery UI, learner cancel, expiry, reviews, queues, partial stock allocation, and pickup-location reveal in Flutter are not implemented.
 
 ## Existing Related Files
 
@@ -57,6 +58,8 @@ Current MVP status for material reservations.
 - `reservations`, `reservation_status_history`
 - Enums: `ReservationStatus`, `ReservationStatusGroup`, `PickupType`
 - Related: `materials.status`, `materials.reused_at`, `materials.reused_by_reservation_id`
+- Delivery domain: `deliveries`, `driver_profiles`, `delivery_assignments`, `delivery_status_history`, `delivery_location_pings`
+- Legacy reservation delivery fields still exist for compatibility, but new code uses `deliveries`.
 
 ## Status Transitions
 
@@ -72,7 +75,7 @@ Active reservation statuses are `PENDING`, `ACCEPTED`, and `COMPLETED`. Rejected
 - Learner cancel reservation API and Flutter feature.
 - Dedicated learner reservation detail page.
 - Cancel/expiry workflows.
-- Delivery request / driver workflow.
+- Flutter delivery request / driver workflow UI.
 - Reviews.
 - Multi-reservation queues and partial stock allocation.
 - Precise pickup-location reveal.
@@ -82,7 +85,7 @@ Active reservation statuses are `PENDING`, `ACCEPTED`, and `COMPLETED`. Rejected
 
 - Public discovery pages own local futures, so the detail page refreshes itself and home suggestions/my reservations are invalidated after reservation; existing open discovery pages refresh only by re-entering/reloading.
 - No database unique constraint enforces one active reservation per material; MVP protection is transactional service logic using material status and active-reservation checks.
-- `REUSED` happens only on supplier complete, matching the impact rule.
+- `REUSED` happens on supplier complete for self-pickup or on driver `DELIVERED` for delivery reservations.
 
 ## Related Docs
 

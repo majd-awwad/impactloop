@@ -98,7 +98,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 | Question | Status | Source |
 |----------|--------|--------|
-| Driver profile model — `reservations.driver_profile_id` has no `DriverProfile` table? | **Needs verification** | [tables-catalog](database/tables-catalog.md), `schema.prisma` |
+| Driver profile model — `reservations.driver_profile_id` has no `DriverProfile` table? | **Resolved** — `DriverProfile` exists; `reservations.driver_profile_id` is legacy compatibility, `deliveries.assigned_driver_profile_id` is the real relation | [tables-catalog](database/tables-catalog.md), `schema.prisma` |
 | Delivery cost calculation and who sets `delivery_cost`? | Open — **not implemented** | [delivery](features/delivery.md) |
 | AI material matching credit model — roadmap tables not in schema | **Not implemented** | [ai-agent](features/ai-agent.md), `05-roadmap.md` |
 

@@ -18,7 +18,7 @@ Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials,
 | Edit material | **Implemented** | `PATCH /api/supplier/materials/:id`; safe fields only; blocked when status/reservations unsafe |
 | Delete material | **Implemented** | `DELETE /api/supplier/materials/:id`; same eligibility as edit |
 | Add material | **Implemented** | Create + required image upload + price check + category/price-rule requests |
-| Incoming reservations | **Partial** | Supplier accept/decline/complete; requests can come from learner `POST /api/reservations` or seed data; no delivery |
+| Incoming reservations | **Partial** | Supplier accept/decline/self-pickup complete; delivery reservations complete through driver backend flow; no delivery UI |
 | Pickup schedule | **Implemented** | API-backed (`supplier_pickup_schedule_api.dart`) |
 | Mock repositories | **Not used** | `MockSupplier*Repository` files exist; providers wire API impl |
 

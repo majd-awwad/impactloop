@@ -105,11 +105,32 @@ enum PickupType {
 enum DeliveryStatus {
   WAITING_FOR_DRIVER
   DRIVER_ASSIGNED
+  ARRIVED_PICKUP
   PICKED_UP
   ON_THE_WAY
+  ARRIVED_DROPOFF
   DELIVERED
   CANCELLED
   FAILED_PICKUP
+  FAILED_DELIVERY
+}
+
+enum DriverProfileStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum DriverAvailabilityStatus {
+  OFFLINE
+  AVAILABLE
+  ON_DELIVERY
+}
+
+enum DeliveryAssignmentStatus {
+  ACTIVE
+  RELEASED
+  CANCELLED
 }
 
 enum ReviewTargetType {
@@ -196,6 +217,7 @@ model User {
   authTokens                   AuthToken[]
   learnerProfile               LearnerProfile?
   supplierProfile              SupplierProfile?
+  driverProfile                DriverProfile?
   invitedRoles                 RoleInvitation[]           @relation("RoleInvitationInvitedBy")
   usedInvitations              RoleInvitation[]           @relation("RoleInvitationUsedByUser")
   assignedRoles                UserRoleAssignment[]       @relation("UserRoleAssignedBy")
@@ -203,6 +225,9 @@ model User {
   ownedReservationsAsOwner     Reservation[]              @relation("ReservationOwner")
   ownedReservationsAsRequester Reservation[]              @relation("ReservationRequester")
   reservationStatusChanges     ReservationStatusHistory[] @relation("ReservationStatusChangedBy")
+  requestedDeliveries          Delivery[]                 @relation("DeliveryRequestedBy")
+  deliveryAssignmentsMade      DeliveryAssignment[]       @relation("DeliveryAssignedBy")
+  deliveryStatusChanges        DeliveryStatusHistory[]    @relation("DeliveryStatusChangedBy")
   notifications                Notification[]
   reviewsGiven                 Review[]                   @relation("ReviewReviewer")
   reviewsReceived              Review[]                   @relation("ReviewReviewedUser")
@@ -303,6 +328,28 @@ model SupplierProfile {
   @@map("supplier_profiles")
 }
 
+model DriverProfile {
+  id            String                   @id @default(cuid())
+  userId        String                   @unique @map("user_id")
+  status        DriverProfileStatus      @default(ACTIVE)
+  availability  DriverAvailabilityStatus @default(OFFLINE)
+  displayName   String                   @map("display_name")
+  phone         String?
+  vehicleType   String                   @default("UNSPECIFIED") @map("vehicle_type")
+  vehicleLabel  String?                  @map("vehicle_label")
+  vehiclePlate  String?                  @map("vehicle_plate")
+  capacityNotes String?                  @map("capacity_notes")
+  createdAt     DateTime                 @default(now()) @map("created_at")
+  updatedAt     DateTime                 @updatedAt @map("updated_at")
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries    Delivery[]               @relation("AssignedDriverDeliveries")
+  assignments   DeliveryAssignment[]
+  locationPings DeliveryLocationPing[]
+
+  @@index([status, availability])
+  @@map("driver_profiles")
+}
+
 model OrganizationProfile {
   id                         String                      @id @default(cuid())
   supplierProfileId          String                      @unique @map("supplier_profile_id")
@@ -340,6 +387,8 @@ model Location {
   organizationBusinessFor OrganizationProfile[]                 @relation("OrganizationBusinessLocation")
   materials               Material[]
   reservationDropoffs     Reservation[]                         @relation("ReservationDropoffLocation")
+  deliveryPickups         Delivery[]                            @relation("DeliveryPickupLocation")
+  deliveryDropoffs        Delivery[]                            @relation("DeliveryDropoffLocation")
 
   @@index([country, city])
   @@map("locations")
@@ -599,6 +648,7 @@ model Reservation {
   owner             User                       @relation("ReservationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   dropoffLocation   Location?                  @relation("ReservationDropoffLocation", fields: [dropoffLocationId], references: [id], onDelete: SetNull)
   reusedMaterial    Material?                  @relation("MaterialReusedByReservation")
+  deliveries        Delivery[]
   reviews           Review[]
   statusHistory     ReservationStatusHistory[]
 
@@ -607,6 +657,102 @@ model Reservation {
   @@index([materialId])
   @@index([status])
   @@map("reservations")
+}
+
+model Delivery {
+  id                      String                  @id @default(cuid())
+  reservationId           String                  @map("reservation_id")
+  pickupLocationId        String                  @map("pickup_location_id")
+  dropoffLocationId       String                  @map("dropoff_location_id")
+  assignedDriverProfileId String?                 @map("assigned_driver_profile_id")
+  requestedByUserId       String                  @map("requested_by_user_id")
+  status                  DeliveryStatus          @default(WAITING_FOR_DRIVER)
+  requestedAt             DateTime                @default(now()) @map("requested_at")
+  assignedAt              DateTime?               @map("assigned_at")
+  arrivedPickupAt         DateTime?               @map("arrived_pickup_at")
+  pickedUpAt              DateTime?               @map("picked_up_at")
+  onTheWayAt              DateTime?               @map("on_the_way_at")
+  arrivedDropoffAt        DateTime?               @map("arrived_dropoff_at")
+  deliveredAt             DateTime?               @map("delivered_at")
+  cancelledAt             DateTime?               @map("cancelled_at")
+  failedAt                DateTime?               @map("failed_at")
+  learnerNote             String?                 @map("learner_note")
+  driverNote              String?                 @map("driver_note")
+  failureReason           String?                 @map("failure_reason")
+  createdAt               DateTime                @default(now()) @map("created_at")
+  updatedAt               DateTime                @updatedAt @map("updated_at")
+  reservation             Reservation             @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  pickupLocation          Location                @relation("DeliveryPickupLocation", fields: [pickupLocationId], references: [id], onDelete: Restrict)
+  dropoffLocation         Location                @relation("DeliveryDropoffLocation", fields: [dropoffLocationId], references: [id], onDelete: Restrict)
+  assignedDriverProfile   DriverProfile?          @relation("AssignedDriverDeliveries", fields: [assignedDriverProfileId], references: [id], onDelete: SetNull)
+  requestedByUser         User                    @relation("DeliveryRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  assignments             DeliveryAssignment[]
+  statusHistory           DeliveryStatusHistory[]
+  locationPings           DeliveryLocationPing[]
+
+  @@index([reservationId])
+  @@index([status])
+  @@index([assignedDriverProfileId, status])
+  @@index([requestedByUserId])
+  @@index([pickupLocationId])
+  @@index([dropoffLocationId])
+  @@map("deliveries")
+}
+
+model DeliveryAssignment {
+  id               String                   @id @default(cuid())
+  deliveryId       String                   @map("delivery_id")
+  driverProfileId  String                   @map("driver_profile_id")
+  assignedByUserId String?                  @map("assigned_by_user_id")
+  status           DeliveryAssignmentStatus @default(ACTIVE)
+  acceptedAt       DateTime                 @default(now()) @map("accepted_at")
+  releasedAt       DateTime?                @map("released_at")
+  releaseReason    String?                  @map("release_reason")
+  createdAt        DateTime                 @default(now()) @map("created_at")
+  delivery         Delivery                 @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  driverProfile    DriverProfile            @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
+  assignedByUser   User?                    @relation("DeliveryAssignedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([deliveryId])
+  @@index([driverProfileId, status])
+  @@index([assignedByUserId])
+  @@map("delivery_assignments")
+}
+
+model DeliveryStatusHistory {
+  id              String          @id @default(cuid())
+  deliveryId      String          @map("delivery_id")
+  oldStatus       DeliveryStatus? @map("old_status")
+  newStatus       DeliveryStatus  @map("new_status")
+  changedByUserId String          @map("changed_by_user_id")
+  note            String?
+  createdAt       DateTime        @default(now()) @map("created_at")
+  delivery        Delivery        @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  changedByUser   User            @relation("DeliveryStatusChangedBy", fields: [changedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([deliveryId])
+  @@index([changedByUserId])
+  @@index([newStatus])
+  @@map("delivery_status_history")
+}
+
+model DeliveryLocationPing {
+  id              String        @id @default(cuid())
+  deliveryId      String        @map("delivery_id")
+  driverProfileId String        @map("driver_profile_id")
+  latitude        Decimal       @db.Decimal(9, 6)
+  longitude       Decimal       @db.Decimal(9, 6)
+  accuracyMeters  Decimal?      @map("accuracy_meters") @db.Decimal(8, 2)
+  heading         Decimal?      @db.Decimal(6, 2)
+  speed           Decimal?      @db.Decimal(8, 2)
+  capturedAt      DateTime      @map("captured_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  delivery        Delivery      @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  driverProfile   DriverProfile @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryId, capturedAt])
+  @@index([driverProfileId, capturedAt])
+  @@map("delivery_location_pings")
 }
 
 model ReservationStatusHistory {

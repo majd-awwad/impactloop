@@ -193,6 +193,21 @@ exports.Prisma.SupplierProfileScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.DriverProfileScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  status: 'status',
+  availability: 'availability',
+  displayName: 'displayName',
+  phone: 'phone',
+  vehicleType: 'vehicleType',
+  vehicleLabel: 'vehicleLabel',
+  vehiclePlate: 'vehiclePlate',
+  capacityNotes: 'capacityNotes',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.OrganizationProfileScalarFieldEnum = {
   id: 'id',
   supplierProfileId: 'supplierProfileId',
@@ -387,6 +402,65 @@ exports.Prisma.ReservationScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.DeliveryScalarFieldEnum = {
+  id: 'id',
+  reservationId: 'reservationId',
+  pickupLocationId: 'pickupLocationId',
+  dropoffLocationId: 'dropoffLocationId',
+  assignedDriverProfileId: 'assignedDriverProfileId',
+  requestedByUserId: 'requestedByUserId',
+  status: 'status',
+  requestedAt: 'requestedAt',
+  assignedAt: 'assignedAt',
+  arrivedPickupAt: 'arrivedPickupAt',
+  pickedUpAt: 'pickedUpAt',
+  onTheWayAt: 'onTheWayAt',
+  arrivedDropoffAt: 'arrivedDropoffAt',
+  deliveredAt: 'deliveredAt',
+  cancelledAt: 'cancelledAt',
+  failedAt: 'failedAt',
+  learnerNote: 'learnerNote',
+  driverNote: 'driverNote',
+  failureReason: 'failureReason',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.DeliveryAssignmentScalarFieldEnum = {
+  id: 'id',
+  deliveryId: 'deliveryId',
+  driverProfileId: 'driverProfileId',
+  assignedByUserId: 'assignedByUserId',
+  status: 'status',
+  acceptedAt: 'acceptedAt',
+  releasedAt: 'releasedAt',
+  releaseReason: 'releaseReason',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.DeliveryStatusHistoryScalarFieldEnum = {
+  id: 'id',
+  deliveryId: 'deliveryId',
+  oldStatus: 'oldStatus',
+  newStatus: 'newStatus',
+  changedByUserId: 'changedByUserId',
+  note: 'note',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.DeliveryLocationPingScalarFieldEnum = {
+  id: 'id',
+  deliveryId: 'deliveryId',
+  driverProfileId: 'driverProfileId',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  accuracyMeters: 'accuracyMeters',
+  heading: 'heading',
+  speed: 'speed',
+  capturedAt: 'capturedAt',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.ReservationStatusHistoryScalarFieldEnum = {
   id: 'id',
   reservationId: 'reservationId',
@@ -569,6 +643,18 @@ exports.RoleInvitationStatus = exports.$Enums.RoleInvitationStatus = {
   REVOKED: 'REVOKED'
 };
 
+exports.DriverProfileStatus = exports.$Enums.DriverProfileStatus = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  SUSPENDED: 'SUSPENDED'
+};
+
+exports.DriverAvailabilityStatus = exports.$Enums.DriverAvailabilityStatus = {
+  OFFLINE: 'OFFLINE',
+  AVAILABLE: 'AVAILABLE',
+  ON_DELIVERY: 'ON_DELIVERY'
+};
+
 exports.OrganizationType = exports.$Enums.OrganizationType = {
   WORKSHOP: 'WORKSHOP',
   FACTORY: 'FACTORY',
@@ -663,11 +749,20 @@ exports.PickupType = exports.$Enums.PickupType = {
 exports.DeliveryStatus = exports.$Enums.DeliveryStatus = {
   WAITING_FOR_DRIVER: 'WAITING_FOR_DRIVER',
   DRIVER_ASSIGNED: 'DRIVER_ASSIGNED',
+  ARRIVED_PICKUP: 'ARRIVED_PICKUP',
   PICKED_UP: 'PICKED_UP',
   ON_THE_WAY: 'ON_THE_WAY',
+  ARRIVED_DROPOFF: 'ARRIVED_DROPOFF',
   DELIVERED: 'DELIVERED',
   CANCELLED: 'CANCELLED',
-  FAILED_PICKUP: 'FAILED_PICKUP'
+  FAILED_PICKUP: 'FAILED_PICKUP',
+  FAILED_DELIVERY: 'FAILED_DELIVERY'
+};
+
+exports.DeliveryAssignmentStatus = exports.$Enums.DeliveryAssignmentStatus = {
+  ACTIVE: 'ACTIVE',
+  RELEASED: 'RELEASED',
+  CANCELLED: 'CANCELLED'
 };
 
 exports.ReservationStatusGroup = exports.$Enums.ReservationStatusGroup = {
@@ -713,6 +808,7 @@ exports.Prisma.ModelName = {
   RoleInvitation: 'RoleInvitation',
   LearnerProfile: 'LearnerProfile',
   SupplierProfile: 'SupplierProfile',
+  DriverProfile: 'DriverProfile',
   OrganizationProfile: 'OrganizationProfile',
   Location: 'Location',
   Category: 'Category',
@@ -726,6 +822,10 @@ exports.Prisma.ModelName = {
   MaterialImage: 'MaterialImage',
   MaterialTag: 'MaterialTag',
   Reservation: 'Reservation',
+  Delivery: 'Delivery',
+  DeliveryAssignment: 'DeliveryAssignment',
+  DeliveryStatusHistory: 'DeliveryStatusHistory',
+  DeliveryLocationPing: 'DeliveryLocationPing',
   ReservationStatusHistory: 'ReservationStatusHistory',
   Review: 'Review',
   Notification: 'Notification',

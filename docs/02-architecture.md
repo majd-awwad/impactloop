@@ -19,7 +19,7 @@ impactloop/
       src/
         app.ts, server.ts
         config/, database/, middlewares/, utils/, constants/
-        modules/               # 15 modules — see modules-map.md
+        modules/               # 17 modules — see modules-map.md
         services/              # cross-cutting services
     frontend/
       lib/
@@ -72,15 +72,15 @@ From `apps/backend/src/app.ts`:
 Full endpoint list: [backend/api-catalog.md](backend/api-catalog.md)  
 Module responsibilities: [backend/modules-map.md](backend/modules-map.md)
 
-### Backend modules present (15)
+### Backend modules present (17)
 
-`auth`, `categories`, `category-requests`, `health`, `invitations`, `learning-projects`, `locations`, `material-types`, `materials`, `price-rule-requests`, `reservations`, `supplier`, `supplier-notifications`, `supplier-reservations`, `uploads`
+`auth`, `categories`, `category-requests`, `deliveries`, `driver`, `health`, `invitations`, `learning-projects`, `locations`, `material-types`, `materials`, `price-rule-requests`, `reservations`, `supplier`, `supplier-notifications`, `supplier-reservations`, `uploads`
 
 ### Backend modules **not present**
 
 These names appear in roadmap/requirements but **have no folder** under `modules/`:
 
-`users`, `roles`, `ai-agent`, `notifications`, `admin`, `moderator`, `reports`, `reviews`, `delivery`, `driver`
+`users`, `roles`, `ai-agent`, `notifications`, `admin`, `moderator`, `reports`, `reviews`
 
 ### Cross-cutting services (`src/services/`)
 
@@ -127,9 +127,9 @@ Shared widgets: [frontend/reusable-widgets.md](frontend/reusable-widgets.md)
 
 ## Database architecture
 
-- 28 Prisma models → 28 PostgreSQL tables
+- 33 Prisma models → 33 PostgreSQL tables
 - PostGIS on `locations.location`
-- No `delivery_requests` table — delivery columns on `reservations`
+- No `delivery_requests` table — delivery attempts live in `deliveries`; legacy reservation delivery columns remain
 - No `impact_logs` / `impact_summaries` tables in schema
 
 Detail: [database/schema-overview.md](database/schema-overview.md)
