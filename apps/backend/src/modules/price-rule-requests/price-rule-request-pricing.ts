@@ -22,3 +22,24 @@ export const resolveApprovedMaxUnitPriceNis = (
 
   return decimalToNumber(request.aiSuggestedMaxUnitPriceNis);
 };
+
+export type ApprovedPriceRuleAcceptance =
+  | { ok: true; maxAllowed: number }
+  | { ok: false; reason: 'NO_APPROVED_MAX' | 'PRICE_TOO_HIGH'; maxAllowed?: number };
+
+/** Shared rule: admin-reviewed price rule request allows publish when price <= max. */
+export const evaluateApprovedPriceRuleRequest = (
+  request: PriceRuleRequestPricingSource | null | undefined,
+  price: number,
+): ApprovedPriceRuleAcceptance => {
+  const maxAllowed = resolveApprovedMaxUnitPriceNis(request);
+  if (maxAllowed == null) {
+    return { ok: false, reason: 'NO_APPROVED_MAX' };
+  }
+
+  if (price > maxAllowed) {
+    return { ok: false, reason: 'PRICE_TOO_HIGH', maxAllowed };
+  }
+
+  return { ok: true, maxAllowed };
+};
