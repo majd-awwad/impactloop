@@ -1,6 +1,6 @@
 # Delivery Feature
 
-Internal delivery is now a backend domain for accepted reservations. Learners can request delivery and view delivery status in Flutter; driver UI is not implemented yet.
+Internal delivery is now a backend domain for accepted reservations. Learners can request delivery and view delivery status in Flutter; internal drivers can accept jobs and advance assigned deliveries through the driver portal.
 
 ## Current Status
 
@@ -12,7 +12,7 @@ Internal delivery is now a backend domain for accepted reservations. Learners ca
 | Driver jobs/assignment/status API | **Implemented** | `/api/driver/deliveries/*` |
 | Driver location pings | **Implemented backend-only** | Stored decimal lat/lng; no live streaming |
 | Flutter learner delivery UI | **Partial** | My Reservations request dialog and `/learner/deliveries/:id` status page; no live map |
-| Flutter driver portal | **Not implemented** | No driver routes/pages yet |
+| Flutter driver portal | **Partial** | `/driver/jobs` job board and `/driver/deliveries/:id` active delivery status updates; no live map or automatic pings |
 | External partners/payment/AI | **Out of scope** | Not implemented |
 
 ## Data Model
@@ -45,9 +45,18 @@ Flutter learner delivery request:
 
 - My Reservations is the primary request surface.
 - Accepted pickup-only reservations show pickup window/supplier-note copy.
-- Accepted delivery-enabled reservations show **Request delivery** when no delivery exists.
+- Accepted delivery-enabled reservations show **Request delivery** when no active delivery exists.
 - Submitted delivery requests invalidate learner reservations and learner deliveries.
 - Existing deliveries show a status badge and link to `/learner/deliveries/:id`.
+
+Flutter driver portal:
+
+- `DRIVER` users are routed to `/driver/jobs` after login unless they also have `SUPPLIER`, which keeps supplier precedence.
+- `/driver/jobs` shows the driver's active delivery first, then available `WAITING_FOR_DRIVER` jobs.
+- Available job cards use only safe pickup/dropoff city/area data.
+- Accepting a job invalidates available and active job providers, then opens `/driver/deliveries/:id`.
+- Active delivery detail shows assigned-driver data, including exact pickup/dropoff snapshots returned by the backend.
+- The status UI exposes only the next valid backend transition.
 
 Driver assignment:
 
@@ -74,6 +83,8 @@ Learner:
 
 Driver:
 
+- `/driver/jobs`
+- `/driver/deliveries/:id`
 - `GET /api/driver/deliveries/available`
 - `GET /api/driver/deliveries/active`
 - `POST /api/driver/deliveries/:id/accept`
@@ -90,9 +101,9 @@ Driver:
 
 ## Not Implemented Yet
 
-- Driver portal UI.
 - Admin reassignment/cancellation workflow.
 - Real-time tracking stream.
 - Live tracking map.
+- Background GPS streaming and automatic location-ping UI.
 - Delivery payment/cost calculation.
 - External delivery partners.

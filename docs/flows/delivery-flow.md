@@ -1,6 +1,6 @@
 # Delivery Flow
 
-Backend Stage 1 is implemented. Flutter learner request/status UI is partially implemented; driver UI and live tracking UI are not implemented.
+Backend Stage 1 is implemented. Flutter learner request/status UI and Stage 3A driver jobs/status UI are partially implemented; live tracking UI is not implemented.
 
 ## Trigger
 
@@ -10,7 +10,7 @@ Learner requests internal delivery after a supplier accepts a reservation.
 
 1. Learner owns an `ACCEPTED` reservation.
 2. Learner opens `/learner/reservations`.
-3. If the accepted material is delivery-enabled and no delivery exists, the card shows **Request delivery**.
+3. If the accepted material is delivery-enabled and no active delivery exists, the card shows **Request delivery**.
 4. Learner submits a manual dropoff location to `POST /api/reservations/:id/delivery`.
 5. Backend verifies reservation ownership, accepted status, `material.deliveryAllowed = true`, and no active delivery for the reservation.
 6. Backend creates:
@@ -22,14 +22,15 @@ Learner requests internal delivery after a supplier accepts a reservation.
 8. Driver lists waiting jobs through `GET /api/driver/deliveries/available`.
 9. Driver accepts a job through `POST /api/driver/deliveries/:id/accept`.
 10. Backend assigns driver transactionally, creates `DeliveryAssignment`, moves driver availability to `ON_DELIVERY`, and writes status history.
-11. Assigned driver progresses status:
+11. Flutter invalidates available/active driver providers and opens `/driver/deliveries/:id`.
+12. Assigned driver progresses status:
    - `DRIVER_ASSIGNED -> ARRIVED_PICKUP`
    - `ARRIVED_PICKUP -> PICKED_UP`
    - `PICKED_UP -> ON_THE_WAY`
    - `ON_THE_WAY -> ARRIVED_DROPOFF`
    - `ARRIVED_DROPOFF -> DELIVERED`
-12. Driver may post location pings while assigned to an active delivery.
-13. `DELIVERED` completes the reservation and marks material `REUSED`.
+13. Driver may post location pings while assigned to an active delivery, but Flutter Stage 3A does not automate or expose pings.
+14. `DELIVERED` completes the reservation and marks material `REUSED`.
 
 ## Active Delivery Rule
 
@@ -60,9 +61,17 @@ Only one active delivery is allowed per reservation. The database allows many de
 - Unassigned driver status update -> 404
 - Invalid status transition -> 409
 
+## Flutter Driver Portal
+
+- `DRIVER` users are protected by `/driver` route guards and land on `/driver/jobs` after login unless they also have `SUPPLIER`.
+- `/driver/jobs` shows active delivery first and available waiting jobs below it.
+- Available jobs show safe city/area pickup and dropoff data only.
+- `/driver/deliveries/:id` is resolved from active assigned deliveries. If the id is not active or not assigned to the driver, the page shows a back-to-jobs state.
+- The detail page exposes one next action at a time, matching the backend transition order.
+
 ## Still Missing
 
-- Driver portal UI.
 - Admin reassignment and cancellation operations.
 - Live map/streaming tracking.
+- Background GPS streaming and automatic location-ping UI.
 - Payment, reviews, external partners, cancellation, retry UI, and ETA.

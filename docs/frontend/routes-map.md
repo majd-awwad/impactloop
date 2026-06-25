@@ -23,6 +23,7 @@ From `auth_navigation.dart`:
 | `registerRoute` | `/register` |
 | `authCheckingRoute` | `/auth/checking` |
 | `supplierPortalRoute` | `/supplier` |
+| `driverPortalRoute` | `/driver/jobs` |
 | `homeRoute` | `/home` |
 
 ## Access levels
@@ -35,6 +36,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | **authenticated** | `/home`, `/supplier/access-denied` | Requires login |
 | **learner** | `/learner/reservations`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
+| **driver** | `/driver`, `/driver/*` | Requires login + `DRIVER` role; non-drivers redirect to `/home` |
 
 ### Redirect rules (summary)
 
@@ -43,10 +45,12 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 1. **Auth unknown** → redirect to `/auth/checking?from=<destination>`
 2. **Protected route + unauthenticated** → `/login?from=<destination>`
 3. **Supplier route without SUPPLIER role** → `/supplier/access-denied`
-4. **Authenticated user on login/register** → redirect to `from` query or `postAuthRouteForUser(user)`:
+4. **Driver route without DRIVER role** → `/home`
+5. **Authenticated user on login/register** → redirect to `from` query or `postAuthRouteForUser(user)`:
    - Supplier role → `/supplier`
+   - Driver role → `/driver/jobs`
    - Otherwise → `/home`
-5. **Profile completion paths** (`/complete-learner-profile`, `/complete-supplier-profile`) → `legacyOnboardingRedirect` validates `registrationDraftProvider` and intent
+6. **Profile completion paths** (`/complete-learner-profile`, `/complete-supplier-profile`) → `legacyOnboardingRedirect` validates `registrationDraftProvider` and intent
 
 ## Route table
 
@@ -68,6 +72,9 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/complete-learner-profile` | `CompleteLearnerProfilePage` | public | Registration draft flow; `?intent=both` supported |
 | `/complete-supplier-profile` | `CompleteSupplierProfilePage` | public | Registration draft flow |
 | `/supplier/access-denied` | `SupplierAccessDeniedPage` | authenticated | |
+| `/driver` | redirect | driver | Redirects to `/driver/jobs` |
+| `/driver/jobs` | `DriverJobsPage` | driver | Driver available jobs + active delivery panel inside `DriverPortalShell` |
+| `/driver/deliveries/:id` | `DriverDeliveryDetailPage` | driver | Active assigned delivery detail/status updates |
 | `/supplier` | `SupplierDashboardPage` | supplier | Inside `SupplierShell` |
 | `/supplier/materials/new` | `AddMaterialPage` | supplier | Query: `categoryRequestId`, `priceRuleRequestId` |
 | `/supplier/materials/:id` | `SupplierOwnedMaterialDetailPage` | supplier | Redirects `id=new` → `/supplier/materials/new` |
@@ -117,6 +124,7 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 `postAuthRouteForUser` (`auth_navigation.dart`):
 
 - User has `SUPPLIER` role → `/supplier`
+- Else user has `DRIVER` role → `/driver/jobs`
 - Else → `/home`
 
-**Needs verification:** users with both LEARNER and SUPPLIER always land on supplier portal when supplier role present.
+Supplier precedence is preserved for multi-role users.
