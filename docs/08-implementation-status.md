@@ -44,7 +44,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `locations` | **Partial** | Reverse geocode only — no CRUD locations API |
 | `learning-projects` | **Implemented** | Read list + detail |
 | `invitations` | **Implemented** | Admin email invitations (mock/SMTP), validate/accept API, `driver_profiles` |
-| `admin` | **Partial** | Dashboard + admin invitations + supplier verification review; other admin pages placeholder |
+| `admin` | **Partial** | Dashboard + invitations + supplier verification review + approvals (category + price); other admin pages placeholder |
 | `supplier` | **Implemented** | Dashboard, profile, materials |
 | `category-requests` | **Implemented** | Under `/api/supplier` |
 | `price-rule-requests` | **Implemented** | Create + supplier drafts |
@@ -69,7 +69,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `materials` | **Partial** | taxonomy/upload APIs | Data layer for supplier add-material; no routes | [materials-listing.md](features/materials-listing.md) |
 | `learning_hub` | **Partial** | `GET /api/learning-projects` implemented | **Frontend mock-only** — `learning_hub_mock_data.dart`, not wired to API | — |
 | `supplier_portal` | **Partial** | `/api/supplier/*` + verification submit/status | API repositories; material CRUD with lifecycle + **org verification gating** (pending/rejected/changes block Add Material) | — |
-| `admin_portal` | **Partial** | Dashboard + `/admin/invitations` + `/admin/supplier-verification` (live review UI) | [admin.md](features/admin.md) |
+| `admin_portal` | **Partial** | Dashboard + invitations + supplier verification + approvals UI | [admin.md](features/admin.md) |
 
 **Dev seed admin (local testing):** `admin@impactloop.test` / `AdminPassword123!` — created idempotently by `prisma/seeds/seed-admin.ts`. After login, `postAuthRouteForUser` routes ADMIN users to `/admin`.
 | `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH | `supplier_portal` profile/map | [locations.md](features/locations.md) |

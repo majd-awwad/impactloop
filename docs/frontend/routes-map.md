@@ -83,8 +83,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/admin/suppliers` | `AdminPlaceholderPage` | admin | Placeholder |
 | `/admin/supplier-verification` | `AdminSupplierVerificationPage` | admin | Review org supplier documents |
 | `/admin/materials` | `AdminPlaceholderPage` | admin | Placeholder |
-| `/admin/approvals` | `AdminPlaceholderPage` | admin | Placeholder |
-| `/admin/invitations` | `AdminPlaceholderPage` | admin | Placeholder |
+| `/admin/approvals` | `AdminApprovalsPage` | admin | Category + price approvals |
+| `/admin/invitations` | `AdminInvitationsPage` | admin | Admin invitation management |
 | `/admin/impact` | `AdminPlaceholderPage` | admin | Placeholder |
 | `/admin/audit-logs` | `AdminPlaceholderPage` | admin | Placeholder |
 
