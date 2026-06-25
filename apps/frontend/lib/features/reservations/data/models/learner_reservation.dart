@@ -4,6 +4,7 @@ class LearnerReservationMaterial {
     required this.title,
     required this.materialType,
     required this.status,
+    required this.deliveryAllowed,
     this.imageUrl,
     this.city,
     this.area,
@@ -13,6 +14,7 @@ class LearnerReservationMaterial {
   final String title;
   final String materialType;
   final String status;
+  final bool deliveryAllowed;
   final String? imageUrl;
   final String? city;
   final String? area;
@@ -23,6 +25,7 @@ class LearnerReservationMaterial {
       title: json['title'] as String? ?? '',
       materialType: json['materialType'] as String? ?? '',
       status: json['status'] as String? ?? '',
+      deliveryAllowed: json['deliveryAllowed'] == true,
       imageUrl: json['imageUrl'] as String?,
       city: json['city'] as String?,
       area: json['area'] as String?,

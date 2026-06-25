@@ -59,6 +59,7 @@ const mapLearnerReservation = (
       reservation.material.customMaterialType ??
       reservation.material.materialType,
     status: reservation.material.status,
+    deliveryAllowed: reservation.material.deliveryAllowed,
     imageUrl: pickMaterialCoverImageUrl(reservation.material.images),
     city: reservation.material.location.city,
     area: reservation.material.location.area,

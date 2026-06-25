@@ -15,6 +15,9 @@ import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../deliveries/application/learner_deliveries_provider.dart';
+import '../../../deliveries/data/models/learner_delivery.dart';
+import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../reservations/application/my_reservations_provider.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
@@ -172,6 +175,19 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
                                               ),
                                           orElse: () => null,
                                         );
+                                    final myDeliveriesState =
+                                        learnerReservation != null
+                                        ? ref.watch(learnerDeliveriesProvider)
+                                        : null;
+                                    final learnerDelivery =
+                                        myDeliveriesState?.maybeWhen(
+                                          data: (deliveries) =>
+                                              _deliveryForReservation(
+                                                deliveries,
+                                                learnerReservation!.id,
+                                              ),
+                                          orElse: () => null,
+                                        );
 
                                     final mainColumn = _DetailsMainColumn(
                                       material: material,
@@ -186,6 +202,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
                                       showReservationStatusCta:
                                           _showReservationStatusCta,
                                       learnerReservation: learnerReservation,
+                                      learnerDelivery: learnerDelivery,
                                       onReserve: () =>
                                           _handleReserve(material),
                                     );
@@ -290,6 +307,25 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       );
     }
   }
+}
+
+LearnerDelivery? _deliveryForReservation(
+  List<LearnerDelivery> deliveries,
+  String reservationId,
+) {
+  LearnerDelivery? latest;
+
+  for (final delivery in deliveries) {
+    if (delivery.reservationId != reservationId) {
+      continue;
+    }
+
+    if (latest == null || delivery.requestedAt.isAfter(latest.requestedAt)) {
+      latest = delivery;
+    }
+  }
+
+  return latest;
 }
 
 LearnerReservation? _reservationForMaterial(
@@ -554,6 +590,7 @@ class _DetailsSideColumn extends StatelessWidget {
     required this.isLoadingReservation,
     required this.showReservationStatusCta,
     required this.learnerReservation,
+    required this.learnerDelivery,
     required this.onReserve,
   });
 
@@ -563,6 +600,7 @@ class _DetailsSideColumn extends StatelessWidget {
   final bool isLoadingReservation;
   final bool showReservationStatusCta;
   final LearnerReservation? learnerReservation;
+  final LearnerDelivery? learnerDelivery;
   final VoidCallback onReserve;
 
   @override
@@ -697,7 +735,11 @@ class _DetailsSideColumn extends StatelessWidget {
               if (isLoadingReservation && isAuthenticatedLearner)
                 const _ReservationLoadingState()
               else if (learnerReservation != null)
-                _LearnerReservationStateCard(reservation: learnerReservation!)
+                _LearnerReservationStateCard(
+                  reservation: learnerReservation!,
+                  delivery: learnerDelivery,
+                  deliveryAvailable: material.deliveryAvailable,
+                )
               else if (showReservationStatusCta)
                 const _PostReservationStatusCta()
               else
@@ -809,14 +851,21 @@ class _PostReservationStatusCta extends StatelessWidget {
 }
 
 class _LearnerReservationStateCard extends StatelessWidget {
-  const _LearnerReservationStateCard({required this.reservation});
+  const _LearnerReservationStateCard({
+    required this.reservation,
+    required this.delivery,
+    required this.deliveryAvailable,
+  });
 
   final LearnerReservation reservation;
+  final LearnerDelivery? delivery;
+  final bool deliveryAvailable;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final detail = _reservationDetailText(reservation);
+    final activeDelivery = delivery?.isActive == true ? delivery : null;
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -832,23 +881,68 @@ class _LearnerReservationStateCard extends StatelessWidget {
             label: _reservationStatusLabel(reservation.status),
             tone: _reservationStatusTone(reservation.status),
           ),
+          if (delivery != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            MaterialStatusBadge(
+              label: deliveryStatusLabel(delivery!.status),
+              tone: deliveryStatusTone(delivery!.status),
+            ),
+          ],
           const SizedBox(height: AppSpacing.sm),
           Text(
-            detail,
+            _materialDetailReservationText(
+              reservation: reservation,
+              delivery: delivery,
+              deliveryAvailable: deliveryAvailable,
+              fallback: detail,
+            ),
             style: AppTextStyles.body(
               context,
             ).copyWith(color: palette.textSecondary),
           ),
           const SizedBox(height: AppSpacing.sm),
-          TextButton.icon(
-            onPressed: () => context.go('/learner/reservations'),
-            icon: const Icon(Icons.assignment_turned_in_outlined),
-            label: Text(_reservationActionLabel(reservation.status)),
-          ),
+          if (activeDelivery != null)
+            TextButton.icon(
+              onPressed: () =>
+                  context.go('/learner/deliveries/${activeDelivery.id}'),
+              icon: const Icon(Icons.local_shipping_outlined),
+              label: const Text('View delivery status'),
+            )
+          else
+            TextButton.icon(
+              onPressed: () => context.go('/learner/reservations'),
+              icon: const Icon(Icons.assignment_turned_in_outlined),
+              label: Text(
+                reservation.isAccepted && deliveryAvailable
+                    ? 'Request delivery in My Reservations'
+                    : _reservationActionLabel(reservation.status),
+              ),
+            ),
         ],
       ),
     );
   }
+}
+
+String _materialDetailReservationText({
+  required LearnerReservation reservation,
+  required LearnerDelivery? delivery,
+  required bool deliveryAvailable,
+  required String fallback,
+}) {
+  if (delivery != null && delivery.isActive) {
+    return 'Delivery status: ${deliveryStatusLabel(delivery.status)}.';
+  }
+
+  if (reservation.isAccepted && deliveryAvailable) {
+    if (delivery != null) {
+      return 'Previous delivery status: ${deliveryStatusLabel(delivery.status)}. Request delivery from My Reservations.';
+    }
+
+    return 'Reservation accepted. Internal delivery is available from My Reservations.';
+  }
+
+  return fallback;
 }
 
 String _reservationActionLabel(String status) {

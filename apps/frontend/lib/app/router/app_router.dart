@@ -13,6 +13,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/deliveries/presentation/pages/learner_delivery_detail_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_add_draft_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
@@ -99,7 +100,8 @@ _RouteAccessLevel _routeAccessForPath(String path) {
     return _RouteAccessLevel.supplier;
   }
 
-  if (path == '/learner/reservations') {
+  if (path == '/learner/reservations' ||
+      path.startsWith('/learner/deliveries/')) {
     return _RouteAccessLevel.learner;
   }
 
@@ -231,6 +233,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/learner/reservations',
         builder: (context, state) => const LearnerReservationsPage(),
+      ),
+      GoRoute(
+        path: '/learner/deliveries/:id',
+        builder: (context, state) =>
+            LearnerDeliveryDetailPage(deliveryId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: authCheckingRoute,

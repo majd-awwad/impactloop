@@ -1,6 +1,6 @@
 # Delivery Feature
 
-Internal delivery is now a backend domain for accepted reservations. Flutter UI is not implemented yet.
+Internal delivery is now a backend domain for accepted reservations. Learners can request delivery and view delivery status in Flutter; driver UI is not implemented yet.
 
 ## Current Status
 
@@ -11,7 +11,7 @@ Internal delivery is now a backend domain for accepted reservations. Flutter UI 
 | Learner delivery read/tracking API | **Implemented** | `GET /api/deliveries/my`, `GET /api/deliveries/:id` |
 | Driver jobs/assignment/status API | **Implemented** | `/api/driver/deliveries/*` |
 | Driver location pings | **Implemented backend-only** | Stored decimal lat/lng; no live streaming |
-| Flutter learner delivery UI | **Not implemented** | No request/tracking screens yet |
+| Flutter learner delivery UI | **Partial** | My Reservations request dialog and `/learner/deliveries/:id` status page; no live map |
 | Flutter driver portal | **Not implemented** | No driver routes/pages yet |
 | External partners/payment/AI | **Out of scope** | Not implemented |
 
@@ -40,6 +40,14 @@ Learner delivery request:
 - Copies material pickup `Location` into a delivery pickup snapshot.
 - Creates `Delivery` with `WAITING_FOR_DRIVER`.
 - Creates `DeliveryStatusHistory`.
+
+Flutter learner delivery request:
+
+- My Reservations is the primary request surface.
+- Accepted pickup-only reservations show pickup window/supplier-note copy.
+- Accepted delivery-enabled reservations show **Request delivery** when no delivery exists.
+- Submitted delivery requests invalidate learner reservations and learner deliveries.
+- Existing deliveries show a status badge and link to `/learner/deliveries/:id`.
 
 Driver assignment:
 
@@ -82,9 +90,9 @@ Driver:
 
 ## Not Implemented Yet
 
-- Learner delivery request/tracking UI.
 - Driver portal UI.
 - Admin reassignment/cancellation workflow.
 - Real-time tracking stream.
+- Live tracking map.
 - Delivery payment/cost calculation.
 - External delivery partners.

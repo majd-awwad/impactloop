@@ -2,7 +2,7 @@
 
 Documents the implemented MVP learner reservation request path.
 
-**Out of scope for Flutter:** delivery UI, learner reservation cancel, expiry jobs, reviews, multi-reservation queues, partial stock allocation, and precise pickup-location reveal.
+**Out of scope for Flutter:** driver delivery UI, live tracking maps, learner reservation cancel, expiry jobs, reviews, multi-reservation queues, partial stock allocation, and public precise pickup-location reveal.
 
 ## Trigger
 
@@ -18,7 +18,7 @@ Authenticated **LEARNER** reserves an available material from public material de
 | `POST /api/reservations` | **Implemented MVP** |
 | Learner status list UI | **Implemented MVP** — `/learner/reservations` |
 | Supplier accept/decline/complete | **Partial** — accept/reject/self-pickup complete implemented |
-| Delivery after accept | **Backend-only** — learner can request delivery through API; no Flutter UI |
+| Delivery after accept | **Partial** — learner request/status UI exists; no driver UI or live map |
 | Test data | **Partial** — seed data still exists for supplier portal demos |
 
 ---
@@ -33,14 +33,17 @@ Authenticated **LEARNER** reserves an available material from public material de
 6. Success creates a `PENDING` reservation, keeps the success snackbar, shows a **View reservation status** CTA, invalidates learner reservations, and reloads material detail so the status becomes `PENDING_RESERVATION`.
 7. Learner can open `/learner/reservations` from home to see pending/accepted/rejected/completed status.
 8. Supplier handles the request through the existing incoming requests page.
-9. If the reservation is accepted and the material allows delivery, backend API `POST /api/reservations/:id/delivery` can create a delivery attempt. Flutter has no entry point yet.
+9. If the reservation is accepted and the material allows delivery, `/learner/reservations` shows **Request delivery**.
+10. Learner enters a manual dropoff location. Success creates a delivery attempt and refreshes reservations/deliveries.
+11. Existing deliveries show status badges and link to `/learner/deliveries/:id`.
 
 ### Frontend Path
 
 - `material_discovery` detail CTA calls `reservationCreateControllerProvider`.
 - `material_discovery` detail reads `myReservationsProvider`; if the learner already has a reservation for the material, it shows reservation status instead of the normal reserve CTA and links to My Reservations with status-specific copy.
 - `features/reservations/data` contains the API/repository and request/response models.
-- `/learner/reservations` lists the learner's reservations with loading, empty, and error states.
+- `/learner/reservations` lists the learner's reservations with loading, empty, and error states. Accepted cards choose pickup-only copy, delivery request, or delivery status from `myReservationsProvider` plus `learnerDeliveriesProvider`.
+- `/learner/deliveries/:id` shows learner-owned delivery status history, material/supplier summary, pickup window, dropoff summary, and assigned driver summary when present.
 - Home links to `/learner/reservations`.
 
 ### Backend Path
@@ -82,7 +85,8 @@ Learner sees a success snack bar, refreshed material detail, and a pending card 
 
 - Learner reservation cancel.
 - Dedicated learner reservation detail page.
-- Delivery selection and driver workflow in Flutter.
+- Driver workflow in Flutter.
+- Live tracking map, ETA, cancellation, retry delivery UI, payment, and reviews.
 - Expiry jobs.
 - Reviews.
 - Multi-reservation queues and partial stock allocation.

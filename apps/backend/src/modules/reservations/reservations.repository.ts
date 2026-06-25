@@ -33,6 +33,7 @@ const learnerReservationListInclude = {
       materialType: true,
       customMaterialType: true,
       status: true,
+      deliveryAllowed: true,
       location: {
         select: {
           city: true,

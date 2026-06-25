@@ -67,7 +67,7 @@ Query validation: `categoriesQuerySchema`
 | POST | `/api/reservations` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
 | POST | `/api/reservations/:id/delivery` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` + `deliveries` |
 
-`GET /api/reservations/my` returns the authenticated learner's reservations newest first. Items include reservation status, requested quantity, message, timestamps, safe material summary, supplier display name, pickup window fields, supplier note, and rejection reason. It does not expose precise pickup coordinates.
+`GET /api/reservations/my` returns the authenticated learner's reservations newest first. Items include reservation status, requested quantity, message, timestamps, safe material summary, `material.deliveryAllowed`, supplier display name, pickup window fields, supplier note, and rejection reason. It does not expose precise pickup coordinates.
 
 `POST /api/reservations` creates an exclusive learner reservation request for an `AVAILABLE` material. The request body is `{ materialId, quantityRequested, message? }`. The transaction creates a `PENDING` reservation, writes reservation status history, and moves the material to `PENDING_RESERVATION`. Duplicate active reservations and unavailable material states return `409 CONFLICT`.
 

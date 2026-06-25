@@ -45,7 +45,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `learning-projects` | **Implemented** | Read list + detail |
 | `invitations` | **Partial** | Admin create + accept API; no admin UI |
 | `reservations` | **Partial** | Learner create + my reservations read; learner delivery request route mounted; no learner cancel |
-| `deliveries` | **Backend-only** | Learner delivery request/read backed by `deliveries`; no Flutter UI |
+| `deliveries` | **Partial** | Learner delivery request/read backed by `deliveries`; Flutter learner request/status UI exists; no driver UI/live map |
 | `driver` | **Backend-only** | Driver available/active jobs, accept, status updates, location pings; no Flutter UI |
 | `supplier` | **Implemented** | Dashboard, profile, materials |
 | `category-requests` | **Implemented** | Under `/api/supplier` |
@@ -69,7 +69,8 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `home` | **Partial** | — | Suggested materials: API; learning spotlight: **mock** | [home-learner.md](features/home-learner.md) |
 | `material_discovery` | **Implemented** | `GET /api/materials`, `POST /api/reservations` | API discovery + reservation CTA | — |
 | `materials` | **Partial** | taxonomy/upload APIs | Data layer for supplier add-material; no routes | [materials-listing.md](features/materials-listing.md) |
-| `reservations` | **Partial** | `POST /api/reservations`, `GET /api/reservations/my`, delivery request route | Learner create + My Reservations page; no cancel; delivery API has no Flutter UI | [reservations.md](features/reservations.md) |
+| `reservations` | **Partial** | `POST /api/reservations`, `GET /api/reservations/my`, delivery request route | Learner create + My Reservations page with delivery request/status; no cancel | [reservations.md](features/reservations.md) |
+| `deliveries` | **Partial** | `/api/deliveries/my`, `/api/deliveries/:id`, `POST /api/reservations/:id/delivery` | Learner delivery request dialog and status page; no driver UI/live map | [delivery.md](features/delivery.md) |
 | `learning_hub` | **Partial** | `GET /api/learning-projects` implemented | **Frontend mock-only** — `learning_hub_mock_data.dart`, not wired to API | — |
 | `supplier_portal` | **Partial** | `/api/supplier/*` | API repositories; material **read/create/update/delete** with lifecycle gating | — |
 | `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH | `supplier_portal` profile/map | [locations.md](features/locations.md) |
@@ -77,7 +78,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 
 ### Flutter **not implemented** as features
 
-`ai_agent`, `admin`, `moderator`, `reports`, `reviews` — gap docs: [ai-agent.md](features/ai-agent.md), [admin.md](features/admin.md), [moderator.md](features/moderator.md); see [09-open-questions.md](09-open-questions.md). Delivery and driver are backend-only; no Flutter features exist yet.
+`ai_agent`, `admin`, `moderator`, `reports`, `reviews` — gap docs: [ai-agent.md](features/ai-agent.md), [admin.md](features/admin.md), [moderator.md](features/moderator.md); see [09-open-questions.md](09-open-questions.md). Driver remains backend-only; learner delivery UI is partial.
 
 ---
 
@@ -93,8 +94,8 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Material discovery (public) | **Implemented** | Backend + Flutter |
 | Supplier list/create/update/delete materials | **Implemented** | Edit/delete gated by status + reservation history |
 | Supplier reservations workflow | **Partial** | Supplier list/accept/decline/self-pickup complete; delivery complete guarded — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
-| Learner reservation status UX | **Partial** | `POST /api/reservations`, `GET /api/reservations/my`, material detail status, `/learner/reservations`; no cancel; delivery API has no UI — [reservations.md](features/reservations.md), [learner-reservation-flow](flows/learner-reservation-flow.md) |
-| Delivery workflow | **Backend-only** | Delivery domain, learner/driver APIs, status history, pings; no Flutter UI — [delivery.md](features/delivery.md) |
+| Learner reservation status UX | **Partial** | `POST /api/reservations`, `GET /api/reservations/my`, material detail status, `/learner/reservations`; no cancel; learner delivery request/status integrated — [reservations.md](features/reservations.md), [learner-reservation-flow](flows/learner-reservation-flow.md) |
+| Delivery workflow | **Partial** | Delivery domain, learner/driver APIs, status history, pings; learner request/status UI exists; no driver UI/live map — [delivery.md](features/delivery.md) |
 | Driver portal | **Backend-only API** | Driver APIs exist; Flutter portal not implemented — [delivery.md](features/delivery.md) |
 | AI material matching agent | **Not implemented** | No `ai-agent` module; no `ai_requests` table — [ai-agent.md](features/ai-agent.md) |
 | AI price suggestions (listing) | **Partial** | `ai-price-suggestion.service.ts`, `AiPriceLookupLog` — internal to price rules; **not** material-matching agent |
@@ -136,7 +137,7 @@ Mapped from [05-roadmap.md](05-roadmap.md) to **code reality** — roadmap text 
 | 3 Materials | Supply + discovery | **Implemented** (supplier create + public browse) |
 | 4 Reservations | Learner reserve, supplier accept | **Partial** — learner create/read + supplier accept/reject/self-pickup complete; no cancel UI |
 | 5 Learning hub + AI | Projects + AI matching | **Partial** — projects read API; hub UI mock; AI agent **not implemented** |
-| 6 Delivery | Internal delivery | **Backend-only** — schema + learner/driver APIs; no Flutter UI |
+| 6 Delivery | Internal delivery | **Partial** — schema + learner/driver APIs; learner request/status UI; no driver UI/live map |
 | 7 Admin/moderator | Dashboards, moderation | **Not implemented** (invitation API fragment only) |
 
 ---
@@ -172,7 +173,7 @@ Unresolved risks and **Needs verification** items: [09-open-questions.md](09-ope
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** |
 | Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — UI **mock-only**; API **backend-only** |
 
-**Not covered as implemented:** AI agent, admin portal, moderator portal. Delivery is backend-only; learner reservations are still missing cancel and delivery UI.
+**Not covered as implemented:** AI agent, admin portal, moderator portal. Driver delivery UI is still missing; learner reservations are still missing cancel.
 
 ### Phase 2B supporting docs (code-derived)
 
@@ -190,7 +191,7 @@ Unresolved risks and **Needs verification** items: [09-open-questions.md](09-ope
 |------|-------------|-------------|-------------------------|
 | Open questions | [09-open-questions.md](09-open-questions.md) | — | Unresolved / **Needs verification** index |
 | Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner create/read **Partial**; supplier **Partial** |
-| Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Backend-only** — no Flutter UI |
+| Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Partial** — learner request/status UI; no driver UI/live map |
 | AI material matching | [features/ai-agent.md](features/ai-agent.md) | [flows/ai-material-matching-flow.md](flows/ai-material-matching-flow.md) | **Not implemented** (price AI **Partial**, separate) |
 | Admin portal | [features/admin.md](features/admin.md) | — | **Not implemented** |
 | Moderator portal | [features/moderator.md](features/moderator.md) | — | **Not implemented** |

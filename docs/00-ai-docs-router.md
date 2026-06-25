@@ -110,14 +110,14 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 |------|-------------|-------------|------------------------|
 | Open questions (index) | [09-open-questions.md](09-open-questions.md) | — | Unresolved / **Needs verification** across features |
 | Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner create/read + material detail status **Partial**; supplier workflow **Partial** |
-| Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Backend-only** — learner/driver APIs; no Flutter UI |
+| Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Partial** — learner request/status UI; driver UI and live tracking UI not implemented |
 | AI material matching agent | [features/ai-agent.md](features/ai-agent.md) | [flows/ai-material-matching-flow.md](flows/ai-material-matching-flow.md) | **Not implemented** (distinct from price suggestion **Partial**) |
 | Admin portal | [features/admin.md](features/admin.md) | — | **Not implemented** — `POST /api/invitations` **Backend-only** only |
 | Moderator portal | [features/moderator.md](features/moderator.md) | — | **Not implemented** |
 
 Gap docs are stubs — see [09-open-questions.md](09-open-questions.md) before implementing.
 
-**Not documented as implemented:** learner reservation cancel, delivery workflow, AI material matching agent, admin portal, moderator portal (unless code changes prove otherwise).
+**Not documented as implemented:** learner reservation cancel, driver delivery UI, live tracking UI, AI material matching agent, admin portal, moderator portal (unless code changes prove otherwise).
 
 ADRs (`docs/adr/`) — accepted architecture decisions.
 

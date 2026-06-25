@@ -120,6 +120,7 @@ Examples:
 - `materialCategoriesProvider`, `materialListingPolicyProvider`, and `categoryRequestsProvider` load add-material support data.
 - `reservationCreateControllerProvider` submits learner reservation requests from material detail and exposes loading/error state for the Reserve button.
 - `myReservationsProvider` loads `GET /api/reservations/my` for the learner reservation page and material-detail reservation state.
+- `learnerDeliveriesProvider` and `learnerDeliveryProvider` load learner delivery status from `/api/deliveries`; `deliveryRequestControllerProvider` submits accepted-reservation delivery requests.
 - `supplierMyMaterialsProvider` checks auth, watches query state, then fetches supplier materials.
 - Supplier dashboard/profile/request/schedule/notification providers load supplier portal data.
 

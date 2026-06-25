@@ -19,11 +19,11 @@ Current MVP status for material reservations.
 | Learner `POST /api/reservations` | **Implemented MVP** | `modules/reservations` router mounted in `app.ts` |
 | Learner `GET /api/reservations/my` | **Implemented MVP** | Learner-owned reservation list/read model |
 | Learner Flutter feature / reserve UI | **Implemented MVP** | Material detail CTA creates reservation and shows learner reservation state |
-| Learner “My Reservations” UI | **Implemented MVP** | `/learner/reservations`; no cancel/delivery |
+| Learner “My Reservations” UI | **Partial** | `/learner/reservations`; delivery request/status integrated; no cancel |
 | Supplier list/accept/decline/complete | **Partial** | `GET/PATCH /api/supplier/reservations/*`; supplier complete is self-pickup only when delivery exists |
 | Material `RESERVED` on accept | **Implemented** | Accept updates reservation and material in one transaction |
-| Delivery backend core | **Backend-only** | Delivery is a separate domain; learner/driver APIs exist; no Flutter UI |
-**Overall:** **Partial**. Learner create/read UI + supplier accept/reject/complete exist for an exclusive reservation MVP. Delivery backend core exists separately, but learner/driver delivery UI, learner cancel, expiry, reviews, queues, partial stock allocation, and pickup-location reveal in Flutter are not implemented.
+| Delivery learner UI | **Partial** | Learner can request delivery from accepted reservations and open `/learner/deliveries/:id`; no driver UI/live map |
+**Overall:** **Partial**. Learner create/read UI + supplier accept/reject/complete exist for an exclusive reservation MVP. Learner delivery request/status UI exists separately, but driver delivery UI, learner cancel, expiry, reviews, queues, partial stock allocation, and public pickup-location reveal in Flutter are not implemented.
 
 ## Existing Related Files
 
@@ -51,7 +51,7 @@ Current MVP status for material reservations.
 | `material_discovery/.../material_details_page.dart` | Reserve button entry point; post-success and existing-reservation links to My Reservations |
 | `supplier_portal/.../supplier_incoming_requests_page.dart` | Supplier inbox |
 | `supplier_portal/data/supplier_requests_api.dart` | Supplier API client |
-| `home/.../learner_home_page.dart` | Placeholder “My reservations” (not wired) |
+| `home/.../learner_home_page.dart` | Links to My Reservations |
 
 ### Database
 
@@ -75,7 +75,8 @@ Active reservation statuses are `PENDING`, `ACCEPTED`, and `COMPLETED`. Rejected
 - Learner cancel reservation API and Flutter feature.
 - Dedicated learner reservation detail page.
 - Cancel/expiry workflows.
-- Flutter delivery request / driver workflow UI.
+- Driver delivery workflow UI.
+- Live delivery map/tracking, ETA, cancellation/retry, payment, and reviews.
 - Reviews.
 - Multi-reservation queues and partial stock allocation.
 - Precise pickup-location reveal.
@@ -91,4 +92,4 @@ Active reservation statuses are `PENDING`, `ACCEPTED`, and `COMPLETED`. Rejected
 
 - [Learner reservation flow](../flows/learner-reservation-flow.md)
 - [Supplier reservation flow](../flows/supplier-reservation-flow.md)
-- [Delivery](delivery.md) — delivery fields on the same table, not implemented
+- [Delivery](delivery.md) — delivery domain and learner request/status UI
