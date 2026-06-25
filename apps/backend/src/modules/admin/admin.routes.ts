@@ -31,6 +31,23 @@ import {
   supplierVerificationIdParamSchema,
 } from '../admin-supplier-verifications/admin-supplier-verifications.validation.js';
 import { getAdminDashboard } from './admin.controller.js';
+import {
+  approveAdminCategoryRequest,
+  approveAdminPriceRequest,
+  getAdminApprovalsSummary,
+  listAdminCategoryRequests,
+  listAdminPriceRequests,
+  rejectAdminCategoryRequest,
+  rejectAdminPriceRequest,
+} from '../admin-approvals/admin-approvals.controller.js';
+import {
+  approvalIdParamSchema,
+  approvalsListQuerySchema,
+  approveCategoryRequestSchema,
+  approvePriceRequestSchema,
+  rejectCategoryRequestSchema,
+  rejectPriceRequestSchema,
+} from '../admin-approvals/admin-approvals.validation.js';
 
 export const adminRouter = Router();
 
@@ -113,5 +130,64 @@ adminRouter.patch(
   validate(supplierVerificationIdParamSchema, 'params'),
   validate(requestChangesSupplierVerificationSchema),
   asyncHandler(requestChangesAdminSupplierVerification),
+);
+
+adminRouter.get(
+  '/approvals/summary',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  asyncHandler(getAdminApprovalsSummary),
+);
+
+adminRouter.get(
+  '/approvals/category-requests',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(approvalsListQuerySchema, 'query'),
+  asyncHandler(listAdminCategoryRequests),
+);
+
+adminRouter.patch(
+  '/approvals/category-requests/:id/approve',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(approvalIdParamSchema, 'params'),
+  validate(approveCategoryRequestSchema),
+  asyncHandler(approveAdminCategoryRequest),
+);
+
+adminRouter.patch(
+  '/approvals/category-requests/:id/reject',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(approvalIdParamSchema, 'params'),
+  validate(rejectCategoryRequestSchema),
+  asyncHandler(rejectAdminCategoryRequest),
+);
+
+adminRouter.get(
+  '/approvals/price-requests',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(approvalsListQuerySchema, 'query'),
+  asyncHandler(listAdminPriceRequests),
+);
+
+adminRouter.patch(
+  '/approvals/price-requests/:id/approve',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(approvalIdParamSchema, 'params'),
+  validate(approvePriceRequestSchema),
+  asyncHandler(approveAdminPriceRequest),
+);
+
+adminRouter.patch(
+  '/approvals/price-requests/:id/reject',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(approvalIdParamSchema, 'params'),
+  validate(rejectPriceRequestSchema),
+  asyncHandler(rejectAdminPriceRequest),
 );
 
