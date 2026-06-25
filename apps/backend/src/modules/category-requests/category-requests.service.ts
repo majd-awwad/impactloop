@@ -1,5 +1,6 @@
 import { AppError } from '../../utils/app-error.js';
 import { normalizeSearchText } from '../../utils/normalize-search-text.js';
+import * as categoriesRepository from '../categories/categories.repository.js';
 
 import * as categoryRequestsRepository from './category-requests.repository.js';
 import type {
@@ -48,17 +49,56 @@ const mapListItem = (
   };
 };
 
+const assertCategoryRequestMaterialContext = (draft: ListingDraftJson) => {
+  const materialLabel = draft.materialName.trim() || draft.title.trim();
+  if (materialLabel.length < 2) {
+    throw new AppError(
+      'Enter the material name before requesting a new category.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if (draft.description.trim().length < 10) {
+    throw new AppError(
+      'Describe the material so admin can review the category request.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const reason = (draft.categoryRequestReason ?? '').trim();
+  if (reason.length < 10) {
+    throw new AppError(
+      'Explain why existing categories do not fit.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if (!draft.requestedCategoryName.trim()) {
+    throw new AppError('Enter the requested category name.', 400, 'VALIDATION_ERROR');
+  }
+};
+
 export const submitCategoryRequest = async (
   userId: string,
   input: CreateCategoryRequestInput,
 ) => {
   const requestedName = input.requestedName.trim();
+  if (!requestedName) {
+    throw new AppError('Enter the requested category name.', 400, 'VALIDATION_ERROR');
+  }
+
   const normalizedRequestedName = normalizeSearchText(requestedName);
 
   const listingDraftJson: ListingDraftJson = {
     ...input.listingDraftJson,
     requestedCategoryName: requestedName,
+    categoryRequestReason: input.listingDraftJson.categoryRequestReason?.trim() ?? '',
   };
+
+  assertCategoryRequestMaterialContext(listingDraftJson);
 
   const existing = await categoryRequestsRepository.findPendingCategoryRequest({
     requestedByUserId: userId,
@@ -91,6 +131,53 @@ export const submitCategoryRequest = async (
     requestedName: created.requestedName,
     status: created.status,
     message: 'Category request submitted. Your listing draft was saved.',
+  };
+};
+
+const SUGGESTED_CATEGORY_PREFIX = 'Suggested category:';
+
+const parseSuggestedCategoryName = (moderatorNote: string | null): string | null => {
+  if (!moderatorNote?.trim()) {
+    return null;
+  }
+
+  const firstLine = moderatorNote.trim().split('\n')[0] ?? '';
+  if (!firstLine.startsWith(SUGGESTED_CATEGORY_PREFIX)) {
+    return null;
+  }
+
+  const name = firstLine.slice(SUGGESTED_CATEGORY_PREFIX.length).trim();
+  if (!name || name === 'Unknown category') {
+    return null;
+  }
+
+  const looksLikeCuid = name.startsWith('c') && name.length >= 18;
+  return looksLikeCuid ? null : name;
+};
+
+const resolveSuggestedCategory = async (moderatorNote: string | null) => {
+  const suggestedName = parseSuggestedCategoryName(moderatorNote);
+  if (!suggestedName) {
+    return null;
+  }
+
+  const category = await categoriesRepository.findPublicCategories({
+    type: 'MATERIAL',
+    rootOnly: false,
+  });
+
+  const match = category.find(
+    (item) => item.nameEn.trim().toLowerCase() === suggestedName.toLowerCase(),
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    id: match.id,
+    nameEn: match.nameEn,
+    nameAr: match.nameAr,
   };
 };
 
@@ -128,6 +215,11 @@ export const getCategoryRequestDraft = async (userId: string, id: string) => {
     normalizeSearchText(request.approvedCategory.nameEn) !==
       request.normalizedRequestedName;
 
+  const suggestedCategory =
+    request.status === 'REJECTED'
+      ? await resolveSuggestedCategory(request.moderatorNote)
+      : null;
+
   return {
     id: request.id,
     status: request.status,
@@ -142,6 +234,8 @@ export const getCategoryRequestDraft = async (userId: string, id: string) => {
           nameAr: request.approvedCategory.nameAr,
         }
       : null,
+    suggestedCategoryId: suggestedCategory?.id ?? null,
+    suggestedCategory,
     listingDraftJson: request.listingDraftJson,
   };
 };
