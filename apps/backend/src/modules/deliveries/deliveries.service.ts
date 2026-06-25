@@ -95,6 +95,10 @@ const deliveryInclude = {
   statusHistory: {
     orderBy: { createdAt: 'asc' as const },
   },
+  locationPings: {
+    orderBy: { capturedAt: 'desc' as const },
+    take: 1,
+  },
 } satisfies Prisma.DeliveryInclude;
 
 export type DeliveryRecord = Prisma.DeliveryGetPayload<{
@@ -130,6 +134,19 @@ const mapLocation = (location: DeliveryRecord['pickupLocation']) => ({
   isApproximate: location.isApproximate,
 });
 
+const mapLatestDriverPing = (delivery: DeliveryRecord) => {
+  const ping = delivery.locationPings[0];
+  if (!ping) {
+    return null;
+  }
+
+  return {
+    capturedAt: ping.capturedAt.toISOString(),
+    accuracyMeters:
+      ping.accuracyMeters == null ? null : Number(ping.accuracyMeters),
+  };
+};
+
 export const mapLearnerDelivery = (delivery: DeliveryRecord) => ({
   id: delivery.id,
   reservationId: delivery.reservationId,
@@ -163,6 +180,7 @@ export const mapLearnerDelivery = (delivery: DeliveryRecord) => ({
   pickupLocation: mapLocation(delivery.pickupLocation),
   dropoffLocation: mapLocation(delivery.dropoffLocation),
   driver: delivery.assignedDriverProfile,
+  latestDriverPing: mapLatestDriverPing(delivery),
   history: delivery.statusHistory.map((item) => ({
     id: item.id,
     oldStatus: item.oldStatus,

@@ -8,12 +8,14 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_text_area.dart';
+import '../../../../shared/location/current_location_service.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../application/driver_deliveries_provider.dart';
 import '../../application/driver_delivery_action_controller.dart';
 import '../../data/models/driver_delivery.dart';
+import '../../data/models/driver_location_ping_request.dart';
 
 class DriverDeliveryDetailPage extends ConsumerWidget {
   const DriverDeliveryDetailPage({super.key, required this.deliveryId});
@@ -261,6 +263,8 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
+          _LocationPingButton(deliveryId: widget.delivery.id),
+          const SizedBox(height: AppSpacing.md),
           TextButton.icon(
             onPressed: () => context.go('/driver/jobs'),
             icon: const Icon(Icons.local_shipping_outlined),
@@ -304,6 +308,82 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       showInfoSnackBar(context, message);
     } catch (error) {
       if (!mounted) {
+        return;
+      }
+
+      showErrorSnackBar(context, error);
+    }
+  }
+}
+
+class _LocationPingButton extends ConsumerWidget {
+  const _LocationPingButton({required this.deliveryId});
+
+  final String deliveryId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final actionState = ref.watch(driverDeliveryActionControllerProvider);
+    final isSubmitting = actionState.isLoading;
+
+    return _InlineNotice(
+      icon: Icons.my_location_outlined,
+      title: 'Share current location',
+      body:
+          'Send one foreground location update to help the learner follow delivery progress.',
+      action: FilledButton.icon(
+        onPressed: isSubmitting ? null : () => _sendLocation(context, ref),
+        icon: isSubmitting
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.my_location_outlined),
+        label: Text(isSubmitting ? 'Sending...' : 'Send my location'),
+      ),
+    );
+  }
+
+  Future<void> _sendLocation(BuildContext context, WidgetRef ref) async {
+    try {
+      final capture = await ref
+          .read(currentLocationServiceProvider)
+          .captureCurrentLocation();
+
+      await ref
+          .read(driverDeliveryActionControllerProvider.notifier)
+          .sendLocationPing(
+            deliveryId: deliveryId,
+            request: DriverLocationPingRequest(
+              latitude: capture.latitude,
+              longitude: capture.longitude,
+              accuracyMeters: capture.accuracyMeters,
+              heading: capture.heading,
+              speed: capture.speed,
+              capturedAt: capture.capturedAt,
+            ),
+          );
+
+      if (!context.mounted) {
+        return;
+      }
+
+      showInfoSnackBar(context, 'Location update sent.');
+    } on CurrentLocationException catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+
+      showInfoSnackBar(context, error.message);
+    } on ApiException catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+
+      showInfoSnackBar(context, error.displayMessage);
+    } catch (error) {
+      if (!context.mounted) {
         return;
       }
 
@@ -489,11 +569,13 @@ class _InlineNotice extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.body,
+    this.action,
   });
 
   final IconData icon;
   final String title;
   final String body;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -518,6 +600,10 @@ class _InlineNotice extends StatelessWidget {
                 Text(title, style: AppTextStyles.label(context)),
                 const SizedBox(height: AppSpacing.xs),
                 Text(body, style: AppTextStyles.body(context)),
+                if (action != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  action!,
+                ],
               ],
             ),
           ),

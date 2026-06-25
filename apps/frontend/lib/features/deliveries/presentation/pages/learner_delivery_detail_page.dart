@@ -206,6 +206,8 @@ class _DeliverySummaryPanel extends StatelessWidget {
               body: _driverSummary(delivery.driver!),
             ),
           ],
+          const SizedBox(height: AppSpacing.md),
+          _TrackingStatusCard(delivery: delivery),
           if (delivery.driverNote?.trim().isNotEmpty == true)
             _InfoRow(label: 'Driver note', value: delivery.driverNote!),
           if (delivery.failureReason?.trim().isNotEmpty == true)
@@ -218,6 +220,32 @@ class _DeliverySummaryPanel extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TrackingStatusCard extends StatelessWidget {
+  const _TrackingStatusCard({required this.delivery});
+
+  final LearnerDelivery delivery;
+
+  @override
+  Widget build(BuildContext context) {
+    final ping = delivery.latestDriverPing;
+    final body = ping == null
+        ? 'Driver has not shared a location yet.'
+        : [
+            'Last update: ${_formatDateTime(ping.capturedAt)}',
+            if (ping.accuracyMeters != null)
+              'Accuracy: about ${ping.accuracyMeters!.round()} m',
+          ].join('\n');
+
+    return _PanelTitle(
+      icon: Icons.my_location_outlined,
+      title: ping == null
+          ? 'Tracking status'
+          : 'Driver location updated recently',
+      body: body,
     );
   }
 }

@@ -1,6 +1,6 @@
 # Delivery Flow
 
-Backend Stage 1 is implemented. Flutter learner request/status UI and Stage 3A driver jobs/status UI are partially implemented; live tracking UI is not implemented.
+Backend Stage 1 is implemented. Flutter learner request/status UI, driver jobs/status UI, and manual driver location pings are partially implemented; live tracking UI is not implemented.
 
 ## Trigger
 
@@ -29,8 +29,9 @@ Learner requests internal delivery after a supplier accepts a reservation.
    - `PICKED_UP -> ON_THE_WAY`
    - `ON_THE_WAY -> ARRIVED_DROPOFF`
    - `ARRIVED_DROPOFF -> DELIVERED`
-13. Driver may post location pings while assigned to an active delivery, but Flutter Stage 3A does not automate or expose pings.
+13. Driver may tap **Send my location** while assigned to an active delivery. Flutter captures one foreground location and posts it through `POST /api/driver/deliveries/:id/location-pings`.
 14. `DELIVERED` completes the reservation and marks material `REUSED`.
+15. Learner delivery detail can show a safe latest-location update summary after refresh; raw driver coordinates are not rendered.
 
 ## Active Delivery Rule
 
@@ -59,6 +60,8 @@ Only one active delivery is allowed per reservation. The database allows many de
 - Driver unavailable or already on delivery -> 409
 - Second driver accepts same job -> 409
 - Unassigned driver status update -> 404
+- Unassigned driver location ping -> 404
+- Terminal delivery location ping -> 404
 - Invalid status transition -> 409
 
 ## Flutter Driver Portal
@@ -68,6 +71,13 @@ Only one active delivery is allowed per reservation. The database allows many de
 - Available jobs show safe city/area pickup and dropoff data only.
 - `/driver/deliveries/:id` is resolved from active assigned deliveries. If the id is not active or not assigned to the driver, the page shows a back-to-jobs state.
 - The detail page exposes one next action at a time, matching the backend transition order.
+- The detail page exposes a manual **Send my location** action only on active assigned deliveries. It does not start automatic tracking.
+
+## Learner Tracking Summary
+
+- `GET /api/deliveries/:id` remains learner-owned.
+- The response includes `latestDriverPing` with `capturedAt` and optional `accuracyMeters` when an assigned driver has shared a location.
+- Flutter learner detail renders only update time/accuracy text. It does not render a map or raw latitude/longitude.
 
 ## Still Missing
 

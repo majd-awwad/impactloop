@@ -60,7 +60,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/health` | `HealthPage` | public | Backend health diagnostic |
 | `/home` | `HomePage` → `LearnerHomePage` | authenticated | |
 | `/learner/reservations` | `LearnerReservationsPage` | learner | Learner reservation status list |
-| `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline |
+| `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline and safe latest driver ping summary |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
 | `/learning` | `LearningHubPage` | public | **Partial** — mock data; backend API exists but not wired |
 | `/learning/add-draft` | `LearningAddDraftPage` | public | **Mock form** — no submit API |
@@ -74,7 +74,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/supplier/access-denied` | `SupplierAccessDeniedPage` | authenticated | |
 | `/driver` | redirect | driver | Redirects to `/driver/jobs` |
 | `/driver/jobs` | `DriverJobsPage` | driver | Driver available jobs + active delivery panel inside `DriverPortalShell` |
-| `/driver/deliveries/:id` | `DriverDeliveryDetailPage` | driver | Active assigned delivery detail/status updates |
+| `/driver/deliveries/:id` | `DriverDeliveryDetailPage` | driver | Active assigned delivery detail/status updates and manual foreground location ping |
 | `/supplier` | `SupplierDashboardPage` | supplier | Inside `SupplierShell` |
 | `/supplier/materials/new` | `AddMaterialPage` | supplier | Query: `categoryRequestId`, `priceRuleRequestId` |
 | `/supplier/materials/:id` | `SupplierOwnedMaterialDetailPage` | supplier | Redirects `id=new` → `/supplier/materials/new` |

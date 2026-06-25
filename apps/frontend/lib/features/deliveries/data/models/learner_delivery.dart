@@ -190,6 +190,25 @@ class LearnerDeliveryHistoryItem {
   }
 }
 
+class LearnerDeliveryDriverPing {
+  const LearnerDeliveryDriverPing({
+    required this.capturedAt,
+    this.accuracyMeters,
+  });
+
+  final DateTime capturedAt;
+  final double? accuracyMeters;
+
+  factory LearnerDeliveryDriverPing.fromJson(Map<String, dynamic> json) {
+    return LearnerDeliveryDriverPing(
+      capturedAt:
+          DateTime.tryParse(json['capturedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      accuracyMeters: (json['accuracyMeters'] as num?)?.toDouble(),
+    );
+  }
+}
+
 class LearnerDelivery {
   const LearnerDelivery({
     required this.id,
@@ -211,6 +230,7 @@ class LearnerDelivery {
     required this.pickupLocation,
     required this.dropoffLocation,
     this.driver,
+    this.latestDriverPing,
     this.history = const [],
   });
 
@@ -233,6 +253,7 @@ class LearnerDelivery {
   final LearnerDeliveryLocation pickupLocation;
   final LearnerDeliveryLocation dropoffLocation;
   final LearnerDeliveryDriver? driver;
+  final LearnerDeliveryDriverPing? latestDriverPing;
   final List<LearnerDeliveryHistoryItem> history;
 
   factory LearnerDelivery.fromJson(Map<String, dynamic> json) {
@@ -240,6 +261,7 @@ class LearnerDelivery {
     final pickupJson = json['pickupLocation'];
     final dropoffJson = json['dropoffLocation'];
     final driverJson = json['driver'];
+    final latestDriverPingJson = json['latestDriverPing'];
     final historyJson = json['history'];
 
     return LearnerDelivery(
@@ -281,6 +303,9 @@ class LearnerDelivery {
       ),
       driver: driverJson is Map<String, dynamic>
           ? LearnerDeliveryDriver.fromJson(driverJson)
+          : null,
+      latestDriverPing: latestDriverPingJson is Map<String, dynamic>
+          ? LearnerDeliveryDriverPing.fromJson(latestDriverPingJson)
           : null,
       history: historyJson is List
           ? historyJson

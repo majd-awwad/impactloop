@@ -12,9 +12,13 @@ import {
   listAvailableDeliveries,
   updateDriverDeliveryStatus,
 } from '../driver/driver.service.js';
+import { createDeliveryLocationPingSchema } from '../driver/driver.validation.js';
 import { completeSupplierReservation } from '../supplier-reservations/supplier-reservations.service.js';
 
-import { requestDeliveryForReservation } from './deliveries.service.js';
+import {
+  getMyDelivery,
+  requestDeliveryForReservation,
+} from './deliveries.service.js';
 
 const TEST_MARKER = '[test-internal-delivery]';
 
@@ -35,6 +39,7 @@ async function createUser(input: {
   displayName: string;
   emailSuffix: string;
   role: 'LEARNER' | 'SUPPLIER' | 'DRIVER';
+  driverStatus?: 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
   driverAvailability?: 'OFFLINE' | 'AVAILABLE' | 'ON_DELIVERY';
 }) {
   const passwordHash = await hashPassword('TestPassword123!');
@@ -79,7 +84,7 @@ async function createUser(input: {
               create: {
                 displayName: `${TEST_MARKER} ${input.displayName}`,
                 vehicleType: 'BIKE',
-                status: 'ACTIVE',
+                status: input.driverStatus ?? 'ACTIVE',
                 availability: input.driverAvailability ?? 'AVAILABLE',
               },
             },
@@ -167,6 +172,25 @@ async function createAvailableDriver(ctx: TestContext, suffix: string) {
     emailSuffix: `driver-${suffix}`,
     role: 'DRIVER',
     driverAvailability: 'AVAILABLE',
+  });
+  ctx.createdUserIds.push(driver.id);
+  return driver.id;
+}
+
+async function createDriver(
+  ctx: TestContext,
+  suffix: string,
+  input: {
+    status?: 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
+    availability?: 'OFFLINE' | 'AVAILABLE' | 'ON_DELIVERY';
+  } = {},
+) {
+  const driver = await createUser({
+    displayName: `driver ${suffix}`,
+    emailSuffix: `driver-${suffix}`,
+    role: 'DRIVER',
+    driverStatus: input.status,
+    driverAvailability: input.availability ?? 'AVAILABLE',
   });
   ctx.createdUserIds.push(driver.id);
   return driver.id;
@@ -647,6 +671,168 @@ describe('internal delivery backend core', () => {
 
     assert.equal(ping.deliveryId, delivery.id);
     assert.equal(ping.latitude, 31.91);
+    assert.equal(typeof ping.latitude, 'number');
+    assert.equal(typeof ping.longitude, 'number');
+    assert.equal(typeof ping.accuracyMeters, 'number');
+  });
+
+  test('learner delivery detail includes latest driver ping summary for owner only', async () => {
+    const driverId = await createAvailableDriver(ctx, 'latest-ping');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+
+    await createDeliveryLocationPing(driverId, delivery.id, {
+      latitude: 31.91,
+      longitude: 35.21,
+      accuracyMeters: 12,
+      capturedAt: new Date(Date.now() - 30_000).toISOString(),
+    });
+    const latest = await createDeliveryLocationPing(driverId, delivery.id, {
+      latitude: 31.92,
+      longitude: 35.22,
+      accuracyMeters: 8,
+      capturedAt: new Date().toISOString(),
+    });
+
+    const learnerDelivery = await getMyDelivery(ctx.learnerId, delivery.id);
+    assert.deepEqual(learnerDelivery.latestDriverPing, {
+      capturedAt: latest.capturedAt,
+      accuracyMeters: 8,
+    });
+    assert.equal('latitude' in learnerDelivery.latestDriverPing!, false);
+    assert.equal('longitude' in learnerDelivery.latestDriverPing!, false);
+
+    await assert.rejects(
+      () => getMyDelivery(ctx.otherLearnerId, delivery.id),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 404);
+        return true;
+      },
+    );
+  });
+
+  test('unassigned driver cannot ping another driver delivery', async () => {
+    const assignedDriverId = await createAvailableDriver(ctx, 'ping-assigned');
+    const unassignedDriverId = await createAvailableDriver(ctx, 'ping-other');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(assignedDriverId, delivery.id);
+
+    await assert.rejects(
+      () =>
+        createDeliveryLocationPing(unassignedDriverId, delivery.id, {
+          latitude: 31.91,
+          longitude: 35.21,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 404);
+        return true;
+      },
+    );
+  });
+
+  test('non-driver cannot create delivery location ping', async () => {
+    const driverId = await createAvailableDriver(ctx, 'ping-driver');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+
+    await assert.rejects(
+      () =>
+        createDeliveryLocationPing(ctx.learnerId, delivery.id, {
+          latitude: 31.91,
+          longitude: 35.21,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 403);
+        return true;
+      },
+    );
+  });
+
+  test('inactive driver profile cannot create delivery location ping', async () => {
+    const inactiveDriverId = await createDriver(ctx, 'ping-inactive', {
+      status: 'SUSPENDED',
+    });
+    const assignedDriverId = await createAvailableDriver(ctx, 'ping-active');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(assignedDriverId, delivery.id);
+
+    await assert.rejects(
+      () =>
+        createDeliveryLocationPing(inactiveDriverId, delivery.id, {
+          latitude: 31.91,
+          longitude: 35.21,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 403);
+        return true;
+      },
+    );
+  });
+
+  test('terminal delivery cannot receive location pings', async () => {
+    const driverId = await createAvailableDriver(ctx, 'ping-terminal');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+    await progressToDelivered(driverId, delivery.id);
+
+    await assert.rejects(
+      () =>
+        createDeliveryLocationPing(driverId, delivery.id, {
+          latitude: 31.91,
+          longitude: 35.21,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 404);
+        return true;
+      },
+    );
+  });
+
+  test('location ping validation rejects latitude and longitude out of bounds', () => {
+    assert.equal(
+      createDeliveryLocationPingSchema.safeParse({
+        latitude: 91,
+        longitude: 35.21,
+      }).success,
+      false,
+    );
+    assert.equal(
+      createDeliveryLocationPingSchema.safeParse({
+        latitude: 31.91,
+        longitude: 181,
+      }).success,
+      false,
+    );
   });
 
   test('delivered transition completes reservation and marks material reused', async () => {
