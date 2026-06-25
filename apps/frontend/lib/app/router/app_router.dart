@@ -37,6 +37,7 @@ import '../../features/admin_portal/presentation/pages/admin_access_denied_page.
 import '../../features/admin_portal/presentation/pages/admin_invitations_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_overview_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_placeholder_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_supplier_verification_page.dart';
 import '../../features/admin_portal/presentation/widgets/admin_shell.dart';
 import '../../features/invitations/presentation/pages/invite_accept_page.dart';
@@ -473,8 +474,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/approvals',
-            builder: (context, state) =>
-                const AdminPlaceholderPage(title: 'Approvals'),
+            builder: (context, state) => const AdminApprovalsPage(),
           ),
           GoRoute(
             path: '/admin/invitations',
