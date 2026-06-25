@@ -40,9 +40,13 @@ export const findCategoryById = async (categoryId: string) => {
       nameEn: true,
       nameAr: true,
       categoryType: true,
+      isActive: true,
     },
   });
 };
+
+export const isMaterialSelectableCategory = (categoryType: string): boolean =>
+  categoryType === 'MATERIAL' || categoryType === 'BOTH';
 
 export const isOtherCategory = (nameEn: string): boolean => {
   return nameEn.trim().toLowerCase() === 'other';
