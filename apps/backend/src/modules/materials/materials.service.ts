@@ -514,7 +514,7 @@ export const resolveMaterialReferenceForCreate = async (input: {
   }
 
   throw new AppError(
-    'We could not verify this paid material yet. Submit it for review.',
+    'This paid material needs admin price review before publishing.',
     400,
     'VALIDATION_ERROR',
     {

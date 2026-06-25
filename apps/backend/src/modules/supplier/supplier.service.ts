@@ -19,8 +19,10 @@ import { decimalToNumber } from '../../utils/decimal.js';
 import * as categoriesRepository from '../categories/categories.repository.js';
 import * as categoryRequestsRepository from '../category-requests/category-requests.repository.js';
 import * as priceRuleRequestsRepository from '../price-rule-requests/price-rule-requests.repository.js';
-import { resolveApprovedMaxUnitPriceNis } from '../price-rule-requests/price-rule-request-pricing.js';
+import { evaluateApprovedPriceRuleRequest } from '../price-rule-requests/price-rule-request-pricing.js';
 import { checkMaterialPrice, resolveMaterialReferenceForCreate } from '../materials/materials.service.js';
+import * as materialTypesRepository from '../material-types/material-types.repository.js';
+import { matchMaterialReference } from '../../services/material-reference-matching.service.js';
 import * as supplierRepository from './supplier.repository.js';
 import { assertSupplierCanPublishMaterials } from '../supplier-verification/supplier-verification.service.js';
 import type {
@@ -148,14 +150,14 @@ const assertSourceRequestPublishable = async (
     }
 
     if (!input.isFree && input.price != null) {
-      const maxAllowed = resolveApprovedMaxUnitPriceNis(request);
-      if (maxAllowed != null && input.price > maxAllowed) {
+      const acceptance = evaluateApprovedPriceRuleRequest(request, input.price);
+      if (acceptance.ok === false && acceptance.reason === 'PRICE_TOO_HIGH') {
         const unit = request.unit ?? request.materialType?.defaultUnit ?? 'unit';
         throw new AppError(
-          `Unit price must be ${maxAllowed} NIS or less.`,
+          `Maximum allowed price is ${acceptance.maxAllowed} NIS per ${unit}.`,
           400,
           'VALIDATION_ERROR',
-          { maxAllowedPrice: maxAllowed, approvedUnit: unit },
+          { maxAllowedPrice: acceptance.maxAllowed, approvedUnit: unit, reason: 'PRICE_TOO_HIGH' },
         );
       }
     }
@@ -475,6 +477,112 @@ export const createSupplierMaterial = async (
     );
   }
 
+  if (input.sourcePriceRuleRequestId && input.price != null) {
+    const priceRuleRequest =
+      await priceRuleRequestsRepository.findPriceRuleRequestByIdForOwner(
+        input.sourcePriceRuleRequestId,
+        userId,
+      );
+
+    if (!priceRuleRequest) {
+      throw new AppError('Price rule request not found', 404, 'NOT_FOUND');
+    }
+
+    const acceptance = evaluateApprovedPriceRuleRequest(
+      priceRuleRequest,
+      input.price,
+    );
+
+    if (acceptance.ok) {
+      const approvedUnit =
+        priceRuleRequest.unit ??
+        priceRuleRequest.materialType?.defaultUnit ??
+        null;
+      if (
+        approvedUnit &&
+        input.unit.trim().toLowerCase() !== approvedUnit.trim().toLowerCase()
+      ) {
+        throw new AppError(
+          `Please use the approved unit (${approvedUnit}) for this material.`,
+          400,
+          'VALIDATION_ERROR',
+          { reason: 'UNIT_MISMATCH', approvedUnit },
+        );
+      }
+
+      let materialType = priceRuleRequest.materialType?.id
+        ? await materialTypesRepository.findMaterialTypeById(
+            priceRuleRequest.materialType.id,
+          )
+        : null;
+      if (!materialType?.isActive) {
+        const matchResult = await matchMaterialReference({
+          materialName,
+          categoryId: input.categoryId,
+        });
+        if (matchResult.status === 'MATCHED') {
+          materialType = await materialTypesRepository.findMaterialTypeById(
+            matchResult.materialType.id,
+          );
+          if (!materialType?.isActive) {
+            materialType = null;
+          }
+        } else {
+          materialType = null;
+        }
+      }
+
+      const displayMaterialType = materialType?.nameEn ?? materialName;
+      const material = await supplierRepository.createSupplierMaterial({
+        ownerId: userId,
+        supplierProfileId: supplierProfile.id,
+        categoryId: materialType?.categoryId ?? input.categoryId,
+        locationId: materialLocationId,
+        title: input.title,
+        description: input.description,
+        materialType: displayMaterialType,
+        materialTypeId: materialType?.id ?? priceRuleRequest.materialTypeId ?? null,
+        customMaterialType: materialType ? null : materialName,
+        quantity: input.quantity,
+        unit: input.unit,
+        condition: input.condition,
+        sourceType,
+        isFree: false,
+        price: input.price,
+        currency: 'NIS',
+        pickupAllowed: input.pickupAllowed,
+        deliveryAllowed: false,
+        pickupNotes: input.pickupNotes ?? null,
+        suggestedUses: input.suggestedUses ?? null,
+        priceRuleId: null,
+        priceCheckedAt: new Date(),
+        maxAllowedPriceAtCheck: acceptance.maxAllowed,
+        imageUrls: input.imageUrls,
+      });
+
+      await markSourceRequestPublished(material.id, input);
+
+      return mapCreatedMaterial(material);
+    }
+
+    if (acceptance.reason === 'PRICE_TOO_HIGH') {
+      const unit =
+        priceRuleRequest.unit ??
+        priceRuleRequest.materialType?.defaultUnit ??
+        'unit';
+      throw new AppError(
+        `Maximum allowed price is ${acceptance.maxAllowed} NIS per ${unit}.`,
+        400,
+        'VALIDATION_ERROR',
+        {
+          maxAllowedPrice: acceptance.maxAllowed,
+          approvedUnit: unit,
+          reason: 'PRICE_TOO_HIGH',
+        },
+      );
+    }
+  }
+
   const resolved = await resolveMaterialReferenceForCreate({
     materialName,
     categoryId: input.categoryId,
@@ -485,7 +593,7 @@ export const createSupplierMaterial = async (
 
   if (!materialType) {
     throw new AppError(
-      'We could not verify this paid material yet. Submit it for review.',
+      'This paid material needs admin price review before publishing.',
       400,
       'VALIDATION_ERROR',
       { reason: 'MATERIAL_REVIEW_REQUIRED' },
