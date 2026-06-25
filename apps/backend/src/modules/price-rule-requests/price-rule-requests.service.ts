@@ -219,6 +219,30 @@ const submitKnownMaterialPriceRuleRequest = async (
   };
 };
 
+const assertSelectableCategory = async (categoryId: string) => {
+  const category = await categoriesRepository.findCategoryById(categoryId);
+  if (
+    !category ||
+    !categoriesRepository.isMaterialSelectableCategory(category.categoryType)
+  ) {
+    throw new AppError(
+      'Selected category is not available. Please refresh categories and choose again.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if (!category.isActive) {
+    throw new AppError(
+      'Selected category is not available. Please refresh categories and choose again.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  return category;
+};
+
 const submitUnknownMaterialPriceRuleRequest = async (
   userId: string,
   input: CreatePriceRuleRequestInput,
@@ -228,10 +252,7 @@ const submitUnknownMaterialPriceRuleRequest = async (
   const unit = input.unit!.trim();
   const normalizedMaterialName = normalizeSearchText(materialName);
 
-  const category = await categoriesRepository.findCategoryById(categoryId);
-  if (!category || category.categoryType !== 'MATERIAL') {
-    throw new AppError('Category not found', 400, 'VALIDATION_ERROR');
-  }
+  const category = await assertSelectableCategory(categoryId);
 
   if (categoriesRepository.isOtherCategory(category.nameEn)) {
     throw new AppError(
@@ -306,6 +327,17 @@ export const submitPriceRuleRequest = async (
   userId: string,
   input: CreatePriceRuleRequestInput,
 ) => {
+  const categoryId = input.categoryId?.trim();
+  if (!categoryId) {
+    throw new AppError(
+      'Please select a valid category before submitting price review.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  await assertSelectableCategory(categoryId);
+
   if (input.materialTypeId?.trim()) {
     return submitKnownMaterialPriceRuleRequest(userId, input);
   }
