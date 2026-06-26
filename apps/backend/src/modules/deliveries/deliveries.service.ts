@@ -20,6 +20,14 @@ export const TERMINAL_DELIVERY_STATUSES = [
   'FAILED_DELIVERY',
 ] as const satisfies readonly DeliveryStatus[];
 
+export const TRACKING_ELIGIBLE_DELIVERY_STATUSES = [
+  'DRIVER_ASSIGNED',
+  'ARRIVED_PICKUP',
+  'PICKED_UP',
+  'ON_THE_WAY',
+  'ARRIVED_DROPOFF',
+] as const satisfies readonly DeliveryStatus[];
+
 const isPrismaCode = (error: unknown, code: string) =>
   typeof error === 'object' &&
   error !== null &&
@@ -134,20 +142,38 @@ const mapLocation = (location: DeliveryRecord['pickupLocation']) => ({
   isApproximate: location.isApproximate,
 });
 
-const mapLatestDriverPing = (delivery: DeliveryRecord) => {
+const mapLatestDriverPing = (
+  delivery: DeliveryRecord,
+  options: { includeCoordinates?: boolean } = {},
+) => {
   const ping = delivery.locationPings[0];
   if (!ping) {
     return null;
   }
 
+  const includeCoordinates =
+    options.includeCoordinates === true &&
+    (TRACKING_ELIGIBLE_DELIVERY_STATUSES as readonly DeliveryStatus[]).includes(
+      delivery.status,
+    );
+
   return {
+    ...(includeCoordinates
+      ? {
+          latitude: Number(ping.latitude),
+          longitude: Number(ping.longitude),
+        }
+      : {}),
     capturedAt: ping.capturedAt.toISOString(),
     accuracyMeters:
       ping.accuracyMeters == null ? null : Number(ping.accuracyMeters),
   };
 };
 
-export const mapLearnerDelivery = (delivery: DeliveryRecord) => ({
+export const mapLearnerDelivery = (
+  delivery: DeliveryRecord,
+  options: { includeTrackingCoordinates?: boolean } = {},
+) => ({
   id: delivery.id,
   reservationId: delivery.reservationId,
   status: delivery.status,
@@ -180,7 +206,9 @@ export const mapLearnerDelivery = (delivery: DeliveryRecord) => ({
   pickupLocation: mapLocation(delivery.pickupLocation),
   dropoffLocation: mapLocation(delivery.dropoffLocation),
   driver: delivery.assignedDriverProfile,
-  latestDriverPing: mapLatestDriverPing(delivery),
+  latestDriverPing: mapLatestDriverPing(delivery, {
+    includeCoordinates: options.includeTrackingCoordinates,
+  }),
   history: delivery.statusHistory.map((item) => ({
     id: item.id,
     oldStatus: item.oldStatus,
@@ -341,7 +369,7 @@ export const listMyDeliveries = async (learnerId: string) => {
     orderBy: { createdAt: 'desc' },
   });
 
-  return deliveries.map(mapLearnerDelivery);
+  return deliveries.map((delivery) => mapLearnerDelivery(delivery));
 };
 
 export const getMyDelivery = async (learnerId: string, deliveryId: string) => {
@@ -357,5 +385,5 @@ export const getMyDelivery = async (learnerId: string, deliveryId: string) => {
     throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
   }
 
-  return mapLearnerDelivery(delivery);
+  return mapLearnerDelivery(delivery, { includeTrackingCoordinates: true });
 };

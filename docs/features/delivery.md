@@ -11,7 +11,7 @@ Internal delivery is now a backend domain for accepted reservations. Learners ca
 | Learner delivery read/tracking API | **Implemented** | `GET /api/deliveries/my`, `GET /api/deliveries/:id` |
 | Driver jobs/assignment/status API | **Implemented** | `/api/driver/deliveries/*` |
 | Driver location pings | **Partial** | Assigned active drivers can manually send foreground location pings; no background tracking |
-| Flutter learner delivery UI | **Partial** | My Reservations request dialog, `/learner/deliveries/:id` status page, and safe latest driver ping summary; no live map |
+| Flutter learner delivery UI | **Partial** | My Reservations request dialog, `/learner/deliveries/:id` status page, safe latest driver ping summary, and polling map marker; no realtime stream |
 | Flutter driver portal | **Partial** | `/driver/jobs` job board, `/driver/deliveries/:id` status updates, and manual location ping; no live map or automatic pings |
 | External partners/payment/AI | **Out of scope** | Not implemented |
 
@@ -58,7 +58,7 @@ Flutter driver portal:
 - Active delivery detail shows assigned-driver data, including exact pickup/dropoff snapshots returned by the backend.
 - The status UI exposes only the next valid backend transition.
 - Assigned active drivers can tap **Send my location** on the active delivery detail page. The app captures one foreground current location and posts it to `POST /api/driver/deliveries/:id/location-pings`.
-- Learner delivery detail shows a safe tracking status card with the latest ping time and optional accuracy. Raw driver coordinates are not rendered.
+- Learner delivery detail shows a safe tracking status card with the latest ping time and optional accuracy. When the backend includes coordinates for an active tracking status, the page renders a simple map marker and polls the detail endpoint while open. Raw driver coordinates are not printed as text.
 
 Driver assignment:
 
@@ -100,14 +100,16 @@ Driver:
 - Assigned drivers see exact pickup/dropoff snapshots.
 - Learners see their own delivery pickup/dropoff and assigned driver summary.
 - Location pings are stored for assigned active drivers only.
-- Learner delivery responses include only the latest driver ping summary (`capturedAt`, `accuracyMeters`) for learner-owned deliveries.
-- The learner Flutter UI does not display raw driver latitude/longitude.
+- Learner delivery responses include only the latest driver ping, never the full ping history.
+- Live driver ping coordinates are included only for learner-owned deliveries in `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, and `ARRIVED_DROPOFF`.
+- `WAITING_FOR_DRIVER` and terminal statuses do not expose live driver coordinates.
+- The learner Flutter UI may render a map marker from allowed coordinates, but does not display raw driver latitude/longitude text.
 
 ## Not Implemented Yet
 
 - Admin reassignment/cancellation workflow.
 - Real-time tracking stream.
-- Live tracking map.
+- Realtime tracking stream and WebSockets.
 - Background GPS streaming and automatic location-ping UI.
 - Delivery payment/cost calculation.
 - External delivery partners.

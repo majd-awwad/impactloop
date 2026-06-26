@@ -45,7 +45,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `learning-projects` | **Implemented** | Read list + detail |
 | `invitations` | **Implemented** | Admin email invitations (mock/SMTP), validate/accept API, unified `driver_profiles` |
 | `reservations` | **Partial** | Learner create + my reservations read; learner delivery request route mounted; no learner cancel |
-| `deliveries` | **Partial** | Learner delivery request/read backed by `deliveries`; Flutter learner request/status UI and latest ping summary exist; driver jobs/status UI exists; no live map |
+| `deliveries` | **Partial** | Learner delivery request/read backed by `deliveries`; Flutter learner request/status UI, latest ping summary, and polling map marker exist; driver jobs/status UI exists; no realtime stream |
 | `driver` | **Partial** | Driver available/active jobs, accept, status updates, location pings; Flutter driver portal covers jobs/status and manual foreground ping only |
 | `admin` | **Partial** | Dashboard + invitations + supplier verification review + approvals + materials moderation; other admin pages placeholder |
 | `supplier` | **Implemented** | Dashboard, profile, materials |
@@ -71,7 +71,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `material_discovery` | **Implemented** | `GET /api/materials`, `POST /api/reservations` | API discovery + reservation CTA | — |
 | `materials` | **Partial** | taxonomy/upload APIs | Data layer for supplier add-material; no routes | [materials-listing.md](features/materials-listing.md) |
 | `reservations` | **Partial** | `POST /api/reservations`, `GET /api/reservations/my`, delivery request route | Learner create + My Reservations page with delivery request/status; no cancel | [reservations.md](features/reservations.md) |
-| `deliveries` | **Partial** | `/api/deliveries/my`, `/api/deliveries/:id`, `POST /api/reservations/:id/delivery` | Learner delivery request dialog/status page/latest ping summary; driver jobs/status portal; no live map | [delivery.md](features/delivery.md) |
+| `deliveries` | **Partial** | `/api/deliveries/my`, `/api/deliveries/:id`, `POST /api/reservations/:id/delivery` | Learner delivery request dialog/status page/latest ping summary/polling map marker; driver jobs/status portal; no realtime stream | [delivery.md](features/delivery.md) |
 | `driver_portal` | **Partial** | `/api/driver/deliveries/*` | Driver job board, accept action, active delivery detail, ordered status updates, manual location ping; no live map/background pings | [delivery.md](features/delivery.md) |
 | `learning_hub` | **Partial** | `GET /api/learning-projects` implemented | **Frontend mock-only** — `learning_hub_mock_data.dart`, not wired to API | — |
 | `supplier_portal` | **Partial** | `/api/supplier/*` + verification submit/status | API repositories; material CRUD with lifecycle + **org verification gating** (pending/rejected/changes block Add Material) | — |
@@ -83,7 +83,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 
 ### Flutter **not implemented** as features
 
-`ai_agent`, `moderator`, `reports`, `reviews` — gap docs: [ai-agent.md](features/ai-agent.md), [moderator.md](features/moderator.md); see [09-open-questions.md](09-open-questions.md). Delivery UI is partial: learner request/status and driver jobs/status exist; live tracking does not.
+`ai_agent`, `moderator`, `reports`, `reviews` — gap docs: [ai-agent.md](features/ai-agent.md), [moderator.md](features/moderator.md); see [09-open-questions.md](09-open-questions.md). Delivery UI is partial: learner request/status/tracking map marker and driver jobs/status exist; realtime tracking does not.
 
 ---
 
@@ -100,7 +100,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Supplier list/create/update/delete materials | **Implemented** | Edit/delete gated by status + reservation history |
 | Supplier reservations workflow | **Partial** | Supplier list/accept/decline/self-pickup complete; delivery complete guarded — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
 | Learner reservation status UX | **Partial** | `POST /api/reservations`, `GET /api/reservations/my`, material detail status, `/learner/reservations`; no cancel; learner delivery request/status integrated — [reservations.md](features/reservations.md), [learner-reservation-flow](flows/learner-reservation-flow.md) |
-| Delivery workflow | **Partial** | Delivery domain, learner/driver APIs, status history, pings; learner request/status/tracking summary and driver jobs/status/manual ping UI exist; no live map — [delivery.md](features/delivery.md) |
+| Delivery workflow | **Partial** | Delivery domain, learner/driver APIs, status history, pings; learner request/status/tracking summary/map marker and driver jobs/status/manual ping UI exist; no realtime stream — [delivery.md](features/delivery.md) |
 | Driver portal | **Partial** | Flutter `/driver/jobs` and `/driver/deliveries/:id` use driver APIs for available jobs, active assignments, accept, status updates, and manual foreground location ping — [delivery.md](features/delivery.md) |
 | AI material matching agent | **Not implemented** | No `ai-agent` module; no `ai_requests` table — [ai-agent.md](features/ai-agent.md) |
 | AI price suggestions (listing) | **Partial** | `ai-price-suggestion.service.ts`, `AiPriceLookupLog` — internal to price rules; **not** material-matching agent |
@@ -142,7 +142,7 @@ Mapped from [05-roadmap.md](05-roadmap.md) to **code reality** — roadmap text 
 | 3 Materials | Supply + discovery | **Implemented** (supplier create + public browse) |
 | 4 Reservations | Learner reserve, supplier accept | **Partial** — learner create/read + supplier accept/reject/self-pickup complete; no cancel UI |
 | 5 Learning hub + AI | Projects + AI matching | **Partial** — projects read API; hub UI mock; AI agent **not implemented** |
-| 6 Delivery | Internal delivery | **Partial** — schema + learner/driver APIs; learner request/status/tracking summary UI; driver jobs/status/manual ping UI; no live map |
+| 6 Delivery | Internal delivery | **Partial** — schema + learner/driver APIs; learner request/status/tracking summary and polling map marker UI; driver jobs/status/manual ping UI; no realtime stream |
 | 7 Admin/moderator | Dashboards, moderation | **Not implemented** (invitation API fragment only) |
 
 ---
@@ -178,7 +178,7 @@ Unresolved risks and **Needs verification** items: [09-open-questions.md](09-ope
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** |
 | Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — UI **mock-only**; API **backend-only** |
 
-**Not covered as implemented:** AI agent, admin portal, moderator portal. Live driver tracking UI is still missing; learner reservations are still missing cancel.
+**Not covered as implemented:** AI agent, admin portal, moderator portal. Realtime driver tracking is still missing; learner reservations are still missing cancel.
 
 ### Phase 2B supporting docs (code-derived)
 
@@ -196,7 +196,7 @@ Unresolved risks and **Needs verification** items: [09-open-questions.md](09-ope
 |------|-------------|-------------|-------------------------|
 | Open questions | [09-open-questions.md](09-open-questions.md) | — | Unresolved / **Needs verification** index |
 | Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner create/read **Partial**; supplier **Partial** |
-| Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Partial** — learner request/status/tracking summary UI and driver jobs/status/manual ping UI; no live map |
+| Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Partial** — learner request/status/tracking summary/map marker UI and driver jobs/status/manual ping UI; no realtime stream |
 | AI material matching | [features/ai-agent.md](features/ai-agent.md) | [flows/ai-material-matching-flow.md](flows/ai-material-matching-flow.md) | **Not implemented** (price AI **Partial**, separate) |
 | Admin portal | [features/admin.md](features/admin.md) | — | **Not implemented** |
 | Moderator portal | [features/moderator.md](features/moderator.md) | — | **Not implemented** |

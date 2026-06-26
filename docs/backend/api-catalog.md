@@ -83,7 +83,7 @@ Query validation: `categoriesQuerySchema`
 | GET | `/api/deliveries/my` | Bearer JWT | `LEARNER` | `deliveries/deliveries.routes.ts` |
 | GET | `/api/deliveries/:id` | Bearer JWT | `LEARNER` | `deliveries/deliveries.routes.ts` |
 
-Learner delivery responses include reservation summary, pickup/dropoff location snapshots, assigned driver summary when present, delivery status history, and `latestDriverPing` for deliveries requested by the authenticated learner. `latestDriverPing` is a latest-only tracking summary with `capturedAt` and optional `accuracyMeters`; it does not include ping history.
+Learner delivery responses include reservation summary, pickup/dropoff location snapshots, assigned driver summary when present, delivery status history, and `latestDriverPing` for deliveries requested by the authenticated learner. `latestDriverPing` is latest-only and does not include ping history. It includes `capturedAt` and optional `accuracyMeters`; `latitude`/`longitude` are included only by `GET /api/deliveries/:id` for learner-owned deliveries in tracking-eligible statuses (`DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`). `GET /api/deliveries/my` remains summary-only and does not include ping coordinates.
 
 ## Driver — `/api/driver`
 
@@ -97,7 +97,7 @@ All routes require Bearer JWT + `DRIVER` role and an active `DriverProfile`.
 | PATCH | `/api/driver/deliveries/:id/status` | `driver/driver.routes.ts` |
 | POST | `/api/driver/deliveries/:id/location-pings` | `driver/driver.routes.ts` |
 
-Available jobs return safe area-level pickup/dropoff data only. Accept is transactional and assigns only `WAITING_FOR_DRIVER` unassigned deliveries. Status updates are assigned-driver-only and must follow `DRIVER_ASSIGNED → ARRIVED_PICKUP → PICKED_UP → ON_THE_WAY → ARRIVED_DROPOFF → DELIVERED`. `DELIVERED` completes the reservation and marks the material `REUSED`. Location pings store decimal latitude/longitude for assigned active deliveries and return numeric coordinates to the driver caller; learner delivery reads expose only the latest ping summary. No realtime stream exists yet.
+Available jobs return safe area-level pickup/dropoff data only. Accept is transactional and assigns only `WAITING_FOR_DRIVER` unassigned deliveries. Status updates are assigned-driver-only and must follow `DRIVER_ASSIGNED → ARRIVED_PICKUP → PICKED_UP → ON_THE_WAY → ARRIVED_DROPOFF → DELIVERED`. `DELIVERED` completes the reservation and marks the material `REUSED`. Location pings store decimal latitude/longitude for assigned active deliveries and return numeric coordinates to the driver caller. Learner delivery reads expose only the latest ping, with coordinates limited to tracking-eligible statuses. No realtime stream exists yet.
 
 ## Price rule requests — `/api/price-rule-requests`
 

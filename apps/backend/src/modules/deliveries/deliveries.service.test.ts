@@ -3,6 +3,7 @@ import { after, before, describe, test } from 'node:test';
 import type { NextFunction, Request, Response } from 'express';
 
 import { prisma } from '../../database/prisma.js';
+import { authMiddleware } from '../../middlewares/auth.middleware.js';
 import { requireRoles } from '../../middlewares/role.middleware.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
@@ -17,6 +18,7 @@ import { completeSupplierReservation } from '../supplier-reservations/supplier-r
 
 import {
   getMyDelivery,
+  listMyDeliveries,
   requestDeliveryForReservation,
 } from './deliveries.service.js';
 
@@ -506,6 +508,41 @@ describe('internal delivery backend core', () => {
     assert.equal((nextCalls[0] as AppError).statusCode, 403);
   });
 
+  test('learner delivery route role guard blocks unauthenticated and supplier users', () => {
+    const authNextCalls: unknown[] = [];
+    authMiddleware(
+      { headers: {} } as Request,
+      {} as Response,
+      ((error?: unknown) => {
+        authNextCalls.push(error);
+      }) as NextFunction,
+    );
+
+    assert.equal(authNextCalls.length, 1);
+    assert.ok(authNextCalls[0] instanceof AppError);
+    assert.equal((authNextCalls[0] as AppError).statusCode, 401);
+
+    const middleware = requireRoles('LEARNER');
+    const unauthenticatedReq = {} as Request;
+    const supplierReq = {
+      auth: { sub: ctx.supplierId, roles: ['SUPPLIER'] },
+    } as Request;
+    const nextCalls: unknown[] = [];
+
+    middleware(unauthenticatedReq, {} as Response, ((error?: unknown) => {
+      nextCalls.push(error);
+    }) as NextFunction);
+    middleware(supplierReq, {} as Response, ((error?: unknown) => {
+      nextCalls.push(error);
+    }) as NextFunction);
+
+    assert.equal(nextCalls.length, 2);
+    assert.ok(nextCalls[0] instanceof AppError);
+    assert.equal((nextCalls[0] as AppError).statusCode, 401);
+    assert.ok(nextCalls[1] instanceof AppError);
+    assert.equal((nextCalls[1] as AppError).statusCode, 403);
+  });
+
   test('driver accept is race-safe and second driver receives conflict', async () => {
     const firstDriverId = await createAvailableDriver(ctx, 'race-one');
     const secondDriverId = await createAvailableDriver(ctx, 'race-two');
@@ -682,7 +719,7 @@ describe('internal delivery backend core', () => {
     assert.equal(typeof ping.accuracyMeters, 'number');
   });
 
-  test('learner delivery detail includes latest driver ping summary for owner only', async () => {
+  test('owning learner gets latest driver ping coordinates for tracking-eligible delivery only', async () => {
     const driverId = await createAvailableDriver(ctx, 'latest-ping');
     const { reservation } = await createAcceptedReservation(ctx);
     const delivery = await requestDeliveryForReservation(
@@ -707,11 +744,18 @@ describe('internal delivery backend core', () => {
 
     const learnerDelivery = await getMyDelivery(ctx.learnerId, delivery.id);
     assert.deepEqual(learnerDelivery.latestDriverPing, {
+      latitude: 31.92,
+      longitude: 35.22,
       capturedAt: latest.capturedAt,
       accuracyMeters: 8,
     });
-    assert.equal('latitude' in learnerDelivery.latestDriverPing!, false);
-    assert.equal('longitude' in learnerDelivery.latestDriverPing!, false);
+    assert.equal('locationPings' in learnerDelivery, false);
+
+    const learnerDeliveries = await listMyDeliveries(ctx.learnerId);
+    const listedDelivery = learnerDeliveries.find((item) => item.id === delivery.id);
+    assert.ok(listedDelivery?.latestDriverPing);
+    assert.equal('latitude' in listedDelivery.latestDriverPing, false);
+    assert.equal('longitude' in listedDelivery.latestDriverPing, false);
 
     await assert.rejects(
       () => getMyDelivery(ctx.otherLearnerId, delivery.id),
@@ -721,6 +765,48 @@ describe('internal delivery backend core', () => {
         return true;
       },
     );
+  });
+
+  test('owning learner gets no latest ping when no driver ping exists', async () => {
+    const driverId = await createAvailableDriver(ctx, 'no-ping');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+
+    const learnerDelivery = await getMyDelivery(ctx.learnerId, delivery.id);
+
+    assert.equal(learnerDelivery.latestDriverPing, null);
+  });
+
+  test('owning learner gets latest ping summary without coordinates for terminal delivery', async () => {
+    const driverId = await createAvailableDriver(ctx, 'terminal-ping');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+    const latest = await createDeliveryLocationPing(driverId, delivery.id, {
+      latitude: 31.92,
+      longitude: 35.22,
+      accuracyMeters: 8,
+      capturedAt: new Date().toISOString(),
+    });
+    await progressToDelivered(driverId, delivery.id);
+
+    const learnerDelivery = await getMyDelivery(ctx.learnerId, delivery.id);
+
+    assert.deepEqual(learnerDelivery.latestDriverPing, {
+      capturedAt: latest.capturedAt,
+      accuracyMeters: 8,
+    });
+    assert.equal('latitude' in learnerDelivery.latestDriverPing!, false);
+    assert.equal('longitude' in learnerDelivery.latestDriverPing!, false);
   });
 
   test('unassigned driver cannot ping another driver delivery', async () => {

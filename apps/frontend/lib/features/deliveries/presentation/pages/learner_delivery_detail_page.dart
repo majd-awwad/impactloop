@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -60,7 +62,12 @@ class LearnerDeliveryDetailPage extends ConsumerWidget {
                         ),
                       ),
                       data: (delivery) =>
-                          _DeliveryDetailContent(delivery: delivery),
+                          _DeliveryDetailContent(
+                            delivery: delivery,
+                            onRefresh: () => ref.invalidate(
+                              learnerDeliveryProvider(deliveryId),
+                            ),
+                          ),
                     ),
                   ),
                 ),
@@ -74,15 +81,22 @@ class LearnerDeliveryDetailPage extends ConsumerWidget {
 }
 
 class _DeliveryDetailContent extends StatelessWidget {
-  const _DeliveryDetailContent({required this.delivery});
+  const _DeliveryDetailContent({
+    required this.delivery,
+    required this.onRefresh,
+  });
 
   final LearnerDelivery delivery;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 860;
 
-    final summary = _DeliverySummaryPanel(delivery: delivery);
+    final summary = _DeliverySummaryPanel(
+      delivery: delivery,
+      onRefresh: onRefresh,
+    );
     final timeline = _DeliveryTimelinePanel(delivery: delivery);
 
     return Column(
@@ -166,9 +180,13 @@ class _Header extends StatelessWidget {
 }
 
 class _DeliverySummaryPanel extends StatelessWidget {
-  const _DeliverySummaryPanel({required this.delivery});
+  const _DeliverySummaryPanel({
+    required this.delivery,
+    required this.onRefresh,
+  });
 
   final LearnerDelivery delivery;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +225,11 @@ class _DeliverySummaryPanel extends StatelessWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          _TrackingStatusCard(delivery: delivery),
+          _TrackingStatusCard(delivery: delivery, onRefresh: onRefresh),
+          if (delivery.latestDriverPing?.hasCoordinates == true) ...[
+            const SizedBox(height: AppSpacing.md),
+            _TrackingMapCard(ping: delivery.latestDriverPing!),
+          ],
           if (delivery.driverNote?.trim().isNotEmpty == true)
             _InfoRow(label: 'Driver note', value: delivery.driverNote!),
           if (delivery.failureReason?.trim().isNotEmpty == true)
@@ -225,27 +247,108 @@ class _DeliverySummaryPanel extends StatelessWidget {
 }
 
 class _TrackingStatusCard extends StatelessWidget {
-  const _TrackingStatusCard({required this.delivery});
+  const _TrackingStatusCard({
+    required this.delivery,
+    required this.onRefresh,
+  });
 
   final LearnerDelivery delivery;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
     final ping = delivery.latestDriverPing;
-    final body = ping == null
-        ? 'Driver has not shared a location yet.'
-        : [
-            'Last update: ${_formatDateTime(ping.capturedAt)}',
-            if (ping.accuracyMeters != null)
-              'Accuracy: about ${ping.accuracyMeters!.round()} m',
-          ].join('\n');
+    final body = _trackingStatusBody(delivery);
 
-    return _PanelTitle(
-      icon: Icons.my_location_outlined,
-      title: ping == null
-          ? 'Tracking status'
-          : 'Driver location updated recently',
-      body: body,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PanelTitle(
+          icon: Icons.my_location_outlined,
+          title: ping?.hasCoordinates == true
+              ? 'Driver location updated recently'
+              : 'Tracking status',
+          body: body,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        TextButton.icon(
+          onPressed: onRefresh,
+          icon: const Icon(Icons.refresh_outlined, size: 18),
+          label: const Text('Refresh tracking'),
+        ),
+      ],
+    );
+  }
+}
+
+class _TrackingMapCard extends StatelessWidget {
+  const _TrackingMapCard({required this.ping});
+
+  final LearnerDeliveryDriverPing ping;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final point = LatLng(ping.latitude!, ping.longitude!);
+
+    return ClipRRect(
+      borderRadius: AppRadius.lgAll,
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).width >= 700 ? 280 : 230,
+        width: double.infinity,
+        child: FlutterMap(
+          options: MapOptions(
+            initialCenter: point,
+            initialZoom: 15,
+            minZoom: 5,
+            maxZoom: 18,
+            interactionOptions: const InteractionOptions(
+              flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+            ),
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.impactloop.frontend',
+            ),
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: point,
+                  width: 48,
+                  height: 48,
+                  alignment: Alignment.topCenter,
+                  child: _DriverMapMarker(color: palette.mint),
+                ),
+              ],
+            ),
+            RichAttributionWidget(
+              alignment: AttributionAlignment.bottomRight,
+              attributions: [
+                TextSourceAttribution(
+                  'OpenStreetMap contributors',
+                  onTap: () {},
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DriverMapMarker extends StatelessWidget {
+  const _DriverMapMarker({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      Icons.location_pin,
+      color: color,
+      size: 42,
     );
   }
 }
@@ -528,6 +631,27 @@ String _driverSummary(LearnerDeliveryDriver driver) {
   ].where((item) => item != null && item.trim().isNotEmpty).join(' • ');
 
   return details.isEmpty ? driver.displayName : '${driver.displayName} • $details';
+}
+
+String _trackingStatusBody(LearnerDelivery delivery) {
+  if (delivery.status == 'WAITING_FOR_DRIVER') {
+    return 'Waiting for a driver to be assigned.';
+  }
+
+  if (delivery.isTerminal) {
+    return 'Tracking is complete for this delivery.';
+  }
+
+  final ping = delivery.latestDriverPing;
+  if (ping == null) {
+    return 'Driver has not shared a location yet.';
+  }
+
+  return [
+    'Last update: ${_formatDateTime(ping.capturedAt)}',
+    if (ping.accuracyMeters != null)
+      'Accuracy: about ${ping.accuracyMeters!.round()} m',
+  ].join('\n');
 }
 
 String _formatDateTime(DateTime value) {

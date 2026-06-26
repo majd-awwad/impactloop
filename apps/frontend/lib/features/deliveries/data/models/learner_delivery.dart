@@ -193,10 +193,14 @@ class LearnerDeliveryHistoryItem {
 class LearnerDeliveryDriverPing {
   const LearnerDeliveryDriverPing({
     required this.capturedAt,
+    this.latitude,
+    this.longitude,
     this.accuracyMeters,
   });
 
   final DateTime capturedAt;
+  final double? latitude;
+  final double? longitude;
   final double? accuracyMeters;
 
   factory LearnerDeliveryDriverPing.fromJson(Map<String, dynamic> json) {
@@ -204,9 +208,13 @@ class LearnerDeliveryDriverPing {
       capturedAt:
           DateTime.tryParse(json['capturedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       accuracyMeters: (json['accuracyMeters'] as num?)?.toDouble(),
     );
   }
+
+  bool get hasCoordinates => latitude != null && longitude != null;
 }
 
 class LearnerDelivery {
@@ -328,6 +336,25 @@ class LearnerDelivery {
       'PICKED_UP',
       'ON_THE_WAY',
       'ARRIVED_DROPOFF',
+    }.contains(status);
+  }
+
+  bool get isTrackingEligible {
+    return const {
+      'DRIVER_ASSIGNED',
+      'ARRIVED_PICKUP',
+      'PICKED_UP',
+      'ON_THE_WAY',
+      'ARRIVED_DROPOFF',
+    }.contains(status);
+  }
+
+  bool get isTerminal {
+    return const {
+      'DELIVERED',
+      'CANCELLED',
+      'FAILED_PICKUP',
+      'FAILED_DELIVERY',
     }.contains(status);
   }
 }

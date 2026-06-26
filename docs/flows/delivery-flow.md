@@ -1,6 +1,6 @@
 # Delivery Flow
 
-Backend Stage 1 is implemented. Flutter learner request/status UI, driver jobs/status UI, and manual driver location pings are partially implemented; live tracking UI is not implemented.
+Backend Stage 1 is implemented. Flutter learner request/status UI, driver jobs/status UI, manual driver location pings, and learner-owned polling map tracking are partially implemented. Realtime streaming/live maps are not implemented.
 
 ## Trigger
 
@@ -31,7 +31,7 @@ Learner requests internal delivery after a supplier accepts a reservation.
    - `ARRIVED_DROPOFF -> DELIVERED`
 13. Driver may tap **Send my location** while assigned to an active delivery. Flutter captures one foreground location and posts it through `POST /api/driver/deliveries/:id/location-pings`.
 14. `DELIVERED` completes the reservation and marks material `REUSED`.
-15. Learner delivery detail can show a safe latest-location update summary after refresh; raw driver coordinates are not rendered.
+15. Learner delivery detail polls `GET /api/deliveries/:id` while the page is open and the delivery is tracking-eligible. When the latest ping includes coordinates, Flutter renders a simple driver marker map plus last update time and accuracy. Raw driver coordinates are not printed as text.
 
 ## Active Delivery Rule
 
@@ -77,11 +77,14 @@ Only one active delivery is allowed per reservation. The database allows many de
 
 - `GET /api/deliveries/:id` remains learner-owned.
 - The response includes `latestDriverPing` with `capturedAt` and optional `accuracyMeters` when an assigned driver has shared a location.
-- Flutter learner detail renders only update time/accuracy text. It does not render a map or raw latitude/longitude.
+- `latitude`/`longitude` are included only for `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, and `ARRIVED_DROPOFF`.
+- `WAITING_FOR_DRIVER`, `DELIVERED`, `CANCELLED`, `FAILED_PICKUP`, and `FAILED_DELIVERY` do not expose live coordinates.
+- Flutter learner detail renders a map marker only when coordinates are present, and never prints raw latitude/longitude as text.
+- Polling is page-scoped to `/learner/deliveries/:id`, uses a 20-second foreground refresh, and stops when the provider is no longer watched or the delivery leaves tracking-eligible status.
 
 ## Still Missing
 
 - Admin reassignment and cancellation operations.
-- Live map/streaming tracking.
+- Realtime streaming tracking and WebSockets.
 - Background GPS streaming and automatic location-ping UI.
 - Payment, reviews, external partners, cancellation, retry UI, and ETA.
