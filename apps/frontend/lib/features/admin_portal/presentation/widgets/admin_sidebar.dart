@@ -36,7 +36,6 @@ class AdminSidebar extends ConsumerWidget {
     final items = [
       _NavDef(l.navOverview, Icons.dashboard_outlined, '/admin'),
       _NavDef(l.navUsers, Icons.people_outline, '/admin/users'),
-      _NavDef(l.navSuppliers, Icons.storefront_outlined, '/admin/suppliers'),
       _NavDef(
         l.navSupplierVerification,
         Icons.verified_outlined,
