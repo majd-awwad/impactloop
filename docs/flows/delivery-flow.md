@@ -57,7 +57,7 @@ Only one active delivery is allowed per reservation. The database allows many de
 - Reservation not accepted -> 409
 - Material delivery disabled -> 400
 - Active delivery already exists -> 409
-- Driver unavailable or already on delivery -> 409
+- Driver already on delivery or otherwise not eligible to accept -> 409
 - Second driver accepts same job -> 409
 - Unassigned driver status update -> 404
 - Unassigned driver location ping -> 404
@@ -69,6 +69,7 @@ Only one active delivery is allowed per reservation. The database allows many de
 - `DRIVER` users are protected by `/driver` route guards and land on `/driver/jobs` after login unless they also have `SUPPLIER`.
 - `/driver/jobs` shows active delivery first and available waiting jobs below it.
 - Available jobs show safe city/area pickup and dropoff data only.
+- The current portal does not expose a separate availability toggle; an active driver profile can accept a waiting job from `OFFLINE` or `AVAILABLE`, and accept moves the profile to `ON_DELIVERY`.
 - `/driver/deliveries/:id` is resolved from active assigned deliveries. If the id is not active or not assigned to the driver, the page shows a back-to-jobs state.
 - The detail page exposes one next action at a time, matching the backend transition order.
 - The detail page exposes a manual **Send my location** action only on active assigned deliveries. It does not start automatic tracking.

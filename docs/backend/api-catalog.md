@@ -97,7 +97,7 @@ All routes require Bearer JWT + `DRIVER` role and an active `DriverProfile`.
 | PATCH | `/api/driver/deliveries/:id/status` | `driver/driver.routes.ts` |
 | POST | `/api/driver/deliveries/:id/location-pings` | `driver/driver.routes.ts` |
 
-Available jobs return safe area-level pickup/dropoff data only. Accept is transactional and assigns only `WAITING_FOR_DRIVER` unassigned deliveries. Status updates are assigned-driver-only and must follow `DRIVER_ASSIGNED → ARRIVED_PICKUP → PICKED_UP → ON_THE_WAY → ARRIVED_DROPOFF → DELIVERED`. `DELIVERED` completes the reservation and marks the material `REUSED`. Location pings store decimal latitude/longitude for assigned active deliveries and return numeric coordinates to the driver caller. Learner delivery reads expose only the latest ping, with coordinates limited to tracking-eligible statuses. No realtime stream exists yet.
+Available jobs return safe area-level pickup/dropoff data only. Accept is transactional and assigns only `WAITING_FOR_DRIVER` unassigned deliveries; active drivers can accept from `OFFLINE` or `AVAILABLE`, and accepting moves the profile to `ON_DELIVERY`. Status updates are assigned-driver-only and must follow `DRIVER_ASSIGNED → ARRIVED_PICKUP → PICKED_UP → ON_THE_WAY → ARRIVED_DROPOFF → DELIVERED`. `DELIVERED` completes the reservation and marks the material `REUSED`. Location pings store decimal latitude/longitude for assigned active deliveries and return numeric coordinates to the driver caller. Learner delivery reads expose only the latest ping, with coordinates limited to tracking-eligible statuses. No realtime stream exists yet.
 
 ## Price rule requests — `/api/price-rule-requests`
 

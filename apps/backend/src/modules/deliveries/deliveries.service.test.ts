@@ -568,6 +568,29 @@ describe('internal delivery backend core', () => {
     assert.equal(rejected.reason.statusCode, 409);
   });
 
+  test('offline active driver can accept a waiting delivery from driver jobs', async () => {
+    const driverId = await createDriver(ctx, 'offline-accept', {
+      availability: 'OFFLINE',
+    });
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+
+    const assigned = await acceptDelivery(driverId, delivery.id);
+
+    assert.equal(assigned.id, delivery.id);
+    assert.equal(assigned.status, 'DRIVER_ASSIGNED');
+
+    const driverProfile = await prisma.driverProfile.findUnique({
+      where: { userId: driverId },
+      select: { availability: true },
+    });
+    assert.equal(driverProfile?.availability, 'ON_DELIVERY');
+  });
+
   test('driver with active delivery cannot accept another delivery', async () => {
     const driverId = await createAvailableDriver(ctx, 'busy');
     const first = await createAcceptedReservation(ctx);

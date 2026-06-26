@@ -202,23 +202,6 @@ export const acceptDelivery = async (
   return prisma.$transaction(async (tx) => {
     const profile = await findActiveDriverProfile(driverUserId, tx);
 
-    const driverAvailabilityUpdate = await tx.driverProfile.updateMany({
-      where: {
-        id: profile.id,
-        status: 'ACTIVE',
-        availability: 'AVAILABLE',
-      },
-      data: { availability: 'ON_DELIVERY' },
-    });
-
-    if (driverAvailabilityUpdate.count !== 1) {
-      throw new AppError(
-        'Driver must be available to accept a delivery.',
-        409,
-        'CONFLICT',
-      );
-    }
-
     const activeDriverDeliveryCount = await tx.delivery.count({
       where: {
         assignedDriverProfileId: profile.id,
@@ -229,6 +212,23 @@ export const acceptDelivery = async (
     if (activeDriverDeliveryCount > 0) {
       throw new AppError(
         'Driver already has an active delivery.',
+        409,
+        'CONFLICT',
+      );
+    }
+
+    const driverAvailabilityUpdate = await tx.driverProfile.updateMany({
+      where: {
+        id: profile.id,
+        status: 'ACTIVE',
+        availability: { in: ['OFFLINE', 'AVAILABLE'] },
+      },
+      data: { availability: 'ON_DELIVERY' },
+    });
+
+    if (driverAvailabilityUpdate.count !== 1) {
+      throw new AppError(
+        'Driver is not available to accept a delivery.',
         409,
         'CONFLICT',
       );

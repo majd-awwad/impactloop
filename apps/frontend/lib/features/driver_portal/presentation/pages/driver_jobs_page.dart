@@ -337,6 +337,9 @@ String _driverConflictMessage(String message) {
   if (lower.contains('active delivery')) {
     return 'You already have an active delivery.';
   }
+  if (lower.contains('not available') || lower.contains('must be available')) {
+    return message;
+  }
 
   return 'This delivery is no longer available.';
 }

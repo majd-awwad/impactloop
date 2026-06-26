@@ -63,9 +63,9 @@ Flutter driver portal:
 Driver assignment:
 
 - Requires `DRIVER` role and active `DriverProfile`.
-- Driver must be `AVAILABLE`.
+- Driver may accept from `OFFLINE` or `AVAILABLE`; accepting moves the profile to `ON_DELIVERY`. This matches the current driver portal, which does not yet expose a separate availability toggle.
 - Driver cannot already have an active delivery.
-- Accept uses transactional `updateMany` guards: the driver profile must move from `AVAILABLE` to `ON_DELIVERY`, and only `WAITING_FOR_DRIVER` unassigned deliveries can be assigned.
+- Accept uses transactional `updateMany` guards: the driver profile must move from `OFFLINE`/`AVAILABLE` to `ON_DELIVERY`, and only `WAITING_FOR_DRIVER` unassigned deliveries can be assigned.
 - Sets driver availability to `ON_DELIVERY`.
 
 Completion:
