@@ -13,7 +13,7 @@ Supplier chooses **Add material** (`/supplier/materials/new`) or resumes from ap
 ### User path
 
 1. Open add material form in supplier shell.
-2. Choose a category, then select or type material type/name, listing title, condition, quantity, price/free, and pickup options.
+2. Choose a category, then select or type material type/name, listing title, condition, quantity, price/free, pickup options, and whether internal delivery is allowed.
 3. Run price check (paid listings).
 4. Upload at least one image.
 5. Review pickup location — organization: read-only profile pickup; individual/student: profile default or optional per-material override.
@@ -36,7 +36,7 @@ Supplier chooses **Add material** (`/supplier/materials/new`) or resumes from ap
 4. `POST /api/uploads/material-images` (SUPPLIER)
 5. `POST /api/supplier/materials` → `supplier.service.createSupplierMaterial` → resolves material pickup location (copy or override) → `supplier.repository.createSupplierMaterial`
 
-Pickup body fields: `useDefaultPickupLocation` (default `true`), optional `pickupLocation` when false (individual/student only; organization override rejected).
+Pickup/body delivery fields: `pickupAllowed`, `deliveryAllowed`, `useDefaultPickupLocation` (default `true`), optional `pickupLocation` when false (individual/student only; organization override rejected).
 
 May link `sourceCategoryRequestId` / `sourcePriceRuleRequestId` to mark request published.
 
@@ -128,7 +128,7 @@ Allowed: `AVAILABLE`, `UNAVAILABLE` with no blocking reservations (`PENDING`, `A
 
 ### Not editable
 
-Price, category, material type/name, images, pickup location, status, `deliveryAllowed` (forced false server-side).
+Price, category, material type/name, images, pickup location, and status.
 
 ---
 

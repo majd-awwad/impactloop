@@ -26,7 +26,7 @@ Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials,
 
 1. Supplier logs in → redirect `/supplier` (dashboard).
 2. Navigate via shell: materials, add material, reservations, pickup schedule, notifications, profile.
-3. **Add material:** choose category → category-scoped material type/name autocomplete → price check → at least one image → `POST /api/supplier/materials`.
+3. **Add material:** choose category → category-scoped material type/name autocomplete → price check → at least one image → pickup/delivery options → `POST /api/supplier/materials`.
 4. **Reservations:** review pending → accept with pickup window / decline / mark complete after pickup.
 5. **Edit material:** `/supplier/materials/:id/edit` → safe fields only when `canEdit`; price/category/images/location read-only.
 6. **Delete material:** from My Materials or detail when `canDelete`.
@@ -36,7 +36,7 @@ Supplier API calls use the shared authenticated Dio client. When the access toke
 
 Add-material uses category-scoped material type/name autocomplete backed by `GET /api/material-types?categoryId=&q=`. Suppliers can still type a custom `materialName`; selecting a reviewed type sends `materialTypeId` to price check only, while create continues to send `materialName` for backend material type/alias matching. `Listing title` remains display-only. The UI no longer asks for source type; backend derives `materials.sourceType` from `supplierProfile.supplierType` (`WORKSHOP` → `WORKSHOP_SURPLUS`, `FACTORY` → `FACTORY_SURPLUS`, `EDUCATIONAL_INSTITUTION` → `EDUCATIONAL_INSTITUTION`, `INDIVIDUAL_SUPPLIER` → `STUDENT_LEFTOVER`). The individual mapping is an MVP fallback and may need a more precise enum later.
 
-**Pickup location on create:** Organization suppliers see a read-only profile pickup map; individual/student suppliers can use profile default or override per material. Backend always requires a profile default pickup, copies it into a dedicated `locations` row per material (or creates override row for individual/student). Organization suppliers cannot send `useDefaultPickupLocation: false` or `pickupLocation`.
+**Pickup and delivery on create:** Organization suppliers see a read-only profile pickup map; individual/student suppliers can use profile default or override per material. Backend always requires a profile default pickup, copies it into a dedicated `locations` row per material (or creates override row for individual/student). Organization suppliers cannot send `useDefaultPickupLocation: false` or `pickupLocation`. Suppliers can also set `deliveryAllowed`; accepted learner reservations for those materials can request internal delivery.
 
 ## Frontend files
 

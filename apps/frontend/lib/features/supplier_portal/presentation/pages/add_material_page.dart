@@ -79,6 +79,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   bool _isFree = true;
   bool _unitEditedByUser = false;
   bool _pickupAllowed = true;
+  bool _deliveryAllowed = false;
   bool _showCategoryRequestField = false;
   bool _isSubmittingCategoryRequest = false;
   String? _categoryRequestMessage;
@@ -764,9 +765,12 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               supplierType: supplierType,
               profilePickupLocation: pickupLocation,
               pickupAllowed: _pickupAllowed,
+              deliveryAllowed: _deliveryAllowed,
               pickupNotesController: _pickupNotesController,
               onPickupAllowedChanged: (value) =>
                   setState(() => _pickupAllowed = value),
+              onDeliveryAllowedChanged: (value) =>
+                  setState(() => _deliveryAllowed = value),
               onChanged: () => setState(() {}),
             ),
           ),
@@ -820,6 +824,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             price: _priceController.text.trim(),
             pickupLabel: _pickupSectionKey.currentState?.buildPreviewPickupLabel() ??
                 pickupLocation.summary,
+            deliveryAllowed: _deliveryAllowed,
             coverImageUrl: _images.isEmpty ? null : _images.first.url,
             priceStatus: _previewPriceStatus(selectedCategory),
           ),
@@ -853,7 +858,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       'isFree': _isFree,
       'currency': 'NIS',
       'pickupAllowed': _pickupAllowed,
-      'deliveryAllowed': false,
+      'deliveryAllowed': _deliveryAllowed,
       if (!_isFree && price != null) 'price': price,
       if (_pickupNotesController.text.trim().isNotEmpty)
         'pickupNotes': _pickupNotesController.text.trim(),
@@ -1149,6 +1154,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     }
 
     _pickupAllowed = json['pickupAllowed'] as bool? ?? true;
+    _deliveryAllowed = json['deliveryAllowed'] as bool? ?? false;
     _setControllerIfEmpty(_pickupNotesController, json['pickupNotes'] as String?);
     _setControllerIfEmpty(
       _suggestedUsesController,
@@ -1685,7 +1691,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               isFree: _isFree,
               price: price,
               pickupAllowed: _pickupAllowed,
-              deliveryAllowed: false,
+              deliveryAllowed: _deliveryAllowed,
               pickupNotes: _pickupNotesController.text.trim().isEmpty
                   ? null
                   : _pickupNotesController.text.trim(),
@@ -1737,6 +1743,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       _priceReviewMessage = null;
       _isFree = true;
       _pickupAllowed = true;
+      _deliveryAllowed = false;
     });
     _pickupSectionKey.currentState?.reset();
   }
