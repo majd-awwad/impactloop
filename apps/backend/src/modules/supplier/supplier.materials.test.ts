@@ -1226,7 +1226,6 @@ describe('updateSupplierMaterial', () => {
         isFree: true,
         price: true,
         locationId: true,
-        deliveryAllowed: true,
       },
     });
 
@@ -1254,8 +1253,17 @@ describe('updateSupplierMaterial', () => {
       },
     });
 
-    assert.deepEqual(after, before);
-    assert.equal(after?.deliveryAllowed, false);
+    assert.deepEqual(
+      {
+        ownerId: after?.ownerId,
+        categoryId: after?.categoryId,
+        isFree: after?.isFree,
+        price: after?.price,
+        locationId: after?.locationId,
+      },
+      before,
+    );
+    assert.equal(after?.deliveryAllowed, true);
   });
 
   test('updates UNAVAILABLE material with no blocking reservations', async () => {

@@ -11,17 +11,17 @@ ADD COLUMN IF NOT EXISTS "vehicle_label" TEXT,
 ADD COLUMN IF NOT EXISTS "vehicle_plate" TEXT,
 ADD COLUMN IF NOT EXISTS "capacity_notes" TEXT;
 
-UPDATE "driver_profiles"
+UPDATE "driver_profiles" AS dp
 SET
-    "display_name" = COALESCE("display_name", "users"."display_name"),
+    "display_name" = COALESCE(dp."display_name", u."display_name"),
     "vehicle_type" = CASE
-        WHEN "vehicle_type" = 'UNSPECIFIED' AND "driver_profiles"."transportation_type" IS NOT NULL
-            THEN "driver_profiles"."transportation_type"::TEXT
-        ELSE "vehicle_type"
+        WHEN dp."vehicle_type" = 'UNSPECIFIED' AND dp."transportation_type" IS NOT NULL
+            THEN dp."transportation_type"::TEXT
+        ELSE dp."vehicle_type"
     END
-FROM "users"
-WHERE "driver_profiles"."user_id" = "users"."id"
-  AND "driver_profiles"."display_name" IS NULL;
+FROM "users" AS u
+WHERE dp."user_id" = u."id"
+  AND dp."display_name" IS NULL;
 
 UPDATE "driver_profiles"
 SET "display_name" = 'Driver'
