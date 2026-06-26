@@ -102,7 +102,7 @@ Public material discovery:
 - No learner-facing precise location reveal after reservation (reservation create is implemented, reveal is not).
 - No dedicated locations list/manage API for learners or drivers.
 - Reverse geocode requires external Nominatim — env/network dependent (`reverse-geocoding.service.ts`).
-- Delivery pickup/dropoff location fields on `reservations` — schema only; **not implemented** in API/UI.
+- Legacy delivery pickup/dropoff fields on `reservations` remain compatibility fields; developed delivery pickup/dropoff locations are copied onto `deliveries` and exposed only through learner-owned or assigned-driver delivery APIs.
 
 ## Related docs
 

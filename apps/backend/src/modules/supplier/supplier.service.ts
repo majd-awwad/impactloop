@@ -551,7 +551,7 @@ export const createSupplierMaterial = async (
         price: input.price,
         currency: 'NIS',
         pickupAllowed: input.pickupAllowed,
-        deliveryAllowed: false,
+        deliveryAllowed: input.deliveryAllowed,
         pickupNotes: input.pickupNotes ?? null,
         suggestedUses: input.suggestedUses ?? null,
         priceRuleId: null,

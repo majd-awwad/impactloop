@@ -22,8 +22,8 @@ Current MVP status for material reservations.
 | Learner “My Reservations” UI | **Partial** | `/learner/reservations`; delivery request/status integrated; no cancel |
 | Supplier list/accept/decline/complete | **Partial** | `GET/PATCH /api/supplier/reservations/*`; supplier complete is self-pickup only when delivery exists |
 | Material `RESERVED` on accept | **Implemented** | Accept updates reservation and material in one transaction |
-| Delivery learner UI | **Partial** | Learner can request delivery from accepted reservations and open `/learner/deliveries/:id`; no driver UI/live map |
-**Overall:** **Partial**. Learner create/read UI + supplier accept/reject/complete exist for an exclusive reservation MVP. Learner delivery request/status UI exists separately, but driver delivery UI, learner cancel, expiry, reviews, queues, partial stock allocation, and public pickup-location reveal in Flutter are not implemented.
+| Delivery learner UI | **Partial** | Learner can request delivery from accepted reservations and open `/learner/deliveries/:id` with tracking summary/map marker when a latest active ping exists |
+**Overall:** **Partial**. Learner create/read UI + supplier accept/reject/complete exist for an exclusive reservation MVP. Delivery request/status/tracking and driver jobs/status/manual ping UI exist separately in the delivery feature; learner cancel, expiry, reviews, queues, partial stock allocation, and public pickup-location reveal in Flutter are not implemented.
 
 ## Existing Related Files
 

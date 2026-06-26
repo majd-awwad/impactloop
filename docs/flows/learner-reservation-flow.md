@@ -2,7 +2,7 @@
 
 Documents the implemented MVP learner reservation request path.
 
-**Out of scope for Flutter:** driver delivery UI, live tracking maps, learner reservation cancel, expiry jobs, reviews, multi-reservation queues, partial stock allocation, and public precise pickup-location reveal.
+**Out of scope for Flutter:** background GPS streaming, WebSockets/realtime tracking, public tracking links, supplier live tracking, learner reservation cancel, expiry jobs, reviews, multi-reservation queues, partial stock allocation, and public precise pickup-location reveal.
 
 ## Trigger
 
@@ -18,7 +18,7 @@ Authenticated **LEARNER** reserves an available material from public material de
 | `POST /api/reservations` | **Implemented MVP** |
 | Learner status list UI | **Implemented MVP** — `/learner/reservations` |
 | Supplier accept/decline/complete | **Partial** — accept/reject/self-pickup complete implemented |
-| Delivery after accept | **Partial** — learner request/status UI exists; no driver UI or live map |
+| Delivery after accept | **Partial** — learner request/status/tracking UI and driver jobs/status/manual ping UI exist; no background GPS, WebSockets, ETA, or public tracking |
 | Test data | **Partial** — seed data still exists for supplier portal demos |
 
 ---

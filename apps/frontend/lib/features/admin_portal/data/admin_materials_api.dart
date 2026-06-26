@@ -181,17 +181,28 @@ class AdminMaterialsApi {
     int page = 1,
     int limit = 50,
   }) async {
+    final normalizedSearch = search?.trim();
+    final queryParameters = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+    };
+    if (normalizedSearch != null && normalizedSearch.isNotEmpty) {
+      queryParameters['search'] = normalizedSearch;
+    }
+    if (status != null && status != 'ALL') {
+      queryParameters['status'] = status;
+    }
+    if (reportStatus != null && reportStatus != 'ALL') {
+      queryParameters['reportStatus'] = reportStatus;
+    }
+    if (isFree != null) {
+      queryParameters['isFree'] = isFree;
+    }
+
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
         '/api/admin/materials',
-        queryParameters: {
-          'page': page,
-          'limit': limit,
-          if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
-          if (status != null && status != 'ALL') 'status': status,
-          if (reportStatus != null && reportStatus != 'ALL') 'reportStatus': reportStatus,
-          if (isFree != null) 'isFree': isFree,
-        },
+        queryParameters: queryParameters,
       ),
       (json) {
         final items = json['items'];
