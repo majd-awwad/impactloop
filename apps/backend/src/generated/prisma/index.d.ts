@@ -99,6 +99,11 @@ export type ProjectTag = $Result.DefaultSelection<Prisma.$ProjectTagPayload>
  */
 export type Material = $Result.DefaultSelection<Prisma.$MaterialPayload>
 /**
+ * Model MaterialReport
+ * 
+ */
+export type MaterialReport = $Result.DefaultSelection<Prisma.$MaterialReportPayload>
+/**
  * Model MaterialImage
  * 
  */
@@ -269,6 +274,28 @@ export const MaterialStatus: {
 };
 
 export type MaterialStatus = (typeof MaterialStatus)[keyof typeof MaterialStatus]
+
+
+export const MaterialReportReason: {
+  MISLEADING_INFORMATION: 'MISLEADING_INFORMATION',
+  WRONG_CATEGORY: 'WRONG_CATEGORY',
+  WRONG_PRICE: 'WRONG_PRICE',
+  INAPPROPRIATE: 'INAPPROPRIATE',
+  ITEM_NOT_AVAILABLE: 'ITEM_NOT_AVAILABLE',
+  SUSPICIOUS_SUPPLIER: 'SUSPICIOUS_SUPPLIER',
+  OTHER: 'OTHER'
+};
+
+export type MaterialReportReason = (typeof MaterialReportReason)[keyof typeof MaterialReportReason]
+
+
+export const MaterialReportStatus: {
+  PENDING: 'PENDING',
+  RESOLVED: 'RESOLVED',
+  REJECTED: 'REJECTED'
+};
+
+export type MaterialReportStatus = (typeof MaterialReportStatus)[keyof typeof MaterialReportStatus]
 
 
 export const CategoryType: {
@@ -481,6 +508,14 @@ export const MaterialSourceType: typeof $Enums.MaterialSourceType
 export type MaterialStatus = $Enums.MaterialStatus
 
 export const MaterialStatus: typeof $Enums.MaterialStatus
+
+export type MaterialReportReason = $Enums.MaterialReportReason
+
+export const MaterialReportReason: typeof $Enums.MaterialReportReason
+
+export type MaterialReportStatus = $Enums.MaterialReportStatus
+
+export const MaterialReportStatus: typeof $Enums.MaterialReportStatus
 
 export type CategoryType = $Enums.CategoryType
 
@@ -840,6 +875,16 @@ export class PrismaClient<
     * ```
     */
   get material(): Prisma.MaterialDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.materialReport`: Exposes CRUD operations for the **MaterialReport** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more MaterialReports
+    * const materialReports = await prisma.materialReport.findMany()
+    * ```
+    */
+  get materialReport(): Prisma.MaterialReportDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.materialImage`: Exposes CRUD operations for the **MaterialImage** model.
@@ -1411,6 +1456,7 @@ export namespace Prisma {
     ProjectLink: 'ProjectLink',
     ProjectTag: 'ProjectTag',
     Material: 'Material',
+    MaterialReport: 'MaterialReport',
     MaterialImage: 'MaterialImage',
     MaterialTag: 'MaterialTag',
     Reservation: 'Reservation',
@@ -1438,7 +1484,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "userRoleAssignment" | "authToken" | "roleInvitation" | "driverProfile" | "learnerProfile" | "supplierProfile" | "organizationProfile" | "location" | "category" | "learningProject" | "projectImage" | "projectRequiredComponent" | "projectStep" | "projectLink" | "projectTag" | "material" | "materialImage" | "materialTag" | "reservation" | "reservationStatusHistory" | "review" | "notification" | "materialType" | "materialTypeAlias" | "materialPriceRule" | "priceRuleRequest" | "categoryRequest" | "aiPriceLookupLog"
+      modelProps: "user" | "userRoleAssignment" | "authToken" | "roleInvitation" | "driverProfile" | "learnerProfile" | "supplierProfile" | "organizationProfile" | "location" | "category" | "learningProject" | "projectImage" | "projectRequiredComponent" | "projectStep" | "projectLink" | "projectTag" | "material" | "materialReport" | "materialImage" | "materialTag" | "reservation" | "reservationStatusHistory" | "review" | "notification" | "materialType" | "materialTypeAlias" | "materialPriceRule" | "priceRuleRequest" | "categoryRequest" | "aiPriceLookupLog"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -2700,6 +2746,80 @@ export namespace Prisma {
           }
         }
       }
+      MaterialReport: {
+        payload: Prisma.$MaterialReportPayload<ExtArgs>
+        fields: Prisma.MaterialReportFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.MaterialReportFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialReportPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.MaterialReportFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialReportPayload>
+          }
+          findFirst: {
+            args: Prisma.MaterialReportFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialReportPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.MaterialReportFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialReportPayload>
+          }
+          findMany: {
+            args: Prisma.MaterialReportFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialReportPayload>[]
+          }
+          create: {
+            args: Prisma.MaterialReportCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialReportPayload>
+          }
+          createMany: {
+            args: Prisma.MaterialReportCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.MaterialReportCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialReportPayload>[]
+          }
+          delete: {
+            args: Prisma.MaterialReportDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialReportPayload>
+          }
+          update: {
+            args: Prisma.MaterialReportUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialReportPayload>
+          }
+          deleteMany: {
+            args: Prisma.MaterialReportDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.MaterialReportUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.MaterialReportUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialReportPayload>[]
+          }
+          upsert: {
+            args: Prisma.MaterialReportUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MaterialReportPayload>
+          }
+          aggregate: {
+            args: Prisma.MaterialReportAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateMaterialReport>
+          }
+          groupBy: {
+            args: Prisma.MaterialReportGroupByArgs<ExtArgs>
+            result: $Utils.Optional<MaterialReportGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.MaterialReportCountArgs<ExtArgs>
+            result: $Utils.Optional<MaterialReportCountAggregateOutputType> | number
+          }
+        }
+      }
       MaterialImage: {
         payload: Prisma.$MaterialImagePayload<ExtArgs>
         fields: Prisma.MaterialImageFieldRefs
@@ -3713,6 +3833,7 @@ export namespace Prisma {
     projectLink?: ProjectLinkOmit
     projectTag?: ProjectTagOmit
     material?: MaterialOmit
+    materialReport?: MaterialReportOmit
     materialImage?: MaterialImageOmit
     materialTag?: MaterialTagOmit
     reservation?: ReservationOmit
@@ -3823,6 +3944,9 @@ export namespace Prisma {
     approvedProjectSteps: number
     priceRuleRequests: number
     categoryRequests: number
+    materialReportsSubmitted: number
+    materialReportsReviewed: number
+    moderatedMaterials: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -3844,6 +3968,9 @@ export namespace Prisma {
     approvedProjectSteps?: boolean | UserCountOutputTypeCountApprovedProjectStepsArgs
     priceRuleRequests?: boolean | UserCountOutputTypeCountPriceRuleRequestsArgs
     categoryRequests?: boolean | UserCountOutputTypeCountCategoryRequestsArgs
+    materialReportsSubmitted?: boolean | UserCountOutputTypeCountMaterialReportsSubmittedArgs
+    materialReportsReviewed?: boolean | UserCountOutputTypeCountMaterialReportsReviewedArgs
+    moderatedMaterials?: boolean | UserCountOutputTypeCountModeratedMaterialsArgs
   }
 
   // Custom InputTypes
@@ -3981,6 +4108,27 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountCategoryRequestsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: CategoryRequestWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountMaterialReportsSubmittedArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: MaterialReportWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountMaterialReportsReviewedArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: MaterialReportWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountModeratedMaterialsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: MaterialWhereInput
   }
 
 
@@ -4233,12 +4381,14 @@ export namespace Prisma {
     images: number
     tags: number
     reservations: number
+    reports: number
   }
 
   export type MaterialCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     images?: boolean | MaterialCountOutputTypeCountImagesArgs
     tags?: boolean | MaterialCountOutputTypeCountTagsArgs
     reservations?: boolean | MaterialCountOutputTypeCountReservationsArgs
+    reports?: boolean | MaterialCountOutputTypeCountReportsArgs
   }
 
   // Custom InputTypes
@@ -4271,6 +4421,13 @@ export namespace Prisma {
    */
   export type MaterialCountOutputTypeCountReservationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ReservationWhereInput
+  }
+
+  /**
+   * MaterialCountOutputType without action
+   */
+  export type MaterialCountOutputTypeCountReportsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: MaterialReportWhereInput
   }
 
 
@@ -4648,6 +4805,9 @@ export namespace Prisma {
     approvedProjectSteps?: boolean | User$approvedProjectStepsArgs<ExtArgs>
     priceRuleRequests?: boolean | User$priceRuleRequestsArgs<ExtArgs>
     categoryRequests?: boolean | User$categoryRequestsArgs<ExtArgs>
+    materialReportsSubmitted?: boolean | User$materialReportsSubmittedArgs<ExtArgs>
+    materialReportsReviewed?: boolean | User$materialReportsReviewedArgs<ExtArgs>
+    moderatedMaterials?: boolean | User$moderatedMaterialsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -4719,6 +4879,9 @@ export namespace Prisma {
     approvedProjectSteps?: boolean | User$approvedProjectStepsArgs<ExtArgs>
     priceRuleRequests?: boolean | User$priceRuleRequestsArgs<ExtArgs>
     categoryRequests?: boolean | User$categoryRequestsArgs<ExtArgs>
+    materialReportsSubmitted?: boolean | User$materialReportsSubmittedArgs<ExtArgs>
+    materialReportsReviewed?: boolean | User$materialReportsReviewedArgs<ExtArgs>
+    moderatedMaterials?: boolean | User$moderatedMaterialsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -4748,6 +4911,9 @@ export namespace Prisma {
       approvedProjectSteps: Prisma.$ProjectStepPayload<ExtArgs>[]
       priceRuleRequests: Prisma.$PriceRuleRequestPayload<ExtArgs>[]
       categoryRequests: Prisma.$CategoryRequestPayload<ExtArgs>[]
+      materialReportsSubmitted: Prisma.$MaterialReportPayload<ExtArgs>[]
+      materialReportsReviewed: Prisma.$MaterialReportPayload<ExtArgs>[]
+      moderatedMaterials: Prisma.$MaterialPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -5177,6 +5343,9 @@ export namespace Prisma {
     approvedProjectSteps<T extends User$approvedProjectStepsArgs<ExtArgs> = {}>(args?: Subset<T, User$approvedProjectStepsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProjectStepPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     priceRuleRequests<T extends User$priceRuleRequestsArgs<ExtArgs> = {}>(args?: Subset<T, User$priceRuleRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PriceRuleRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     categoryRequests<T extends User$categoryRequestsArgs<ExtArgs> = {}>(args?: Subset<T, User$categoryRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CategoryRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    materialReportsSubmitted<T extends User$materialReportsSubmittedArgs<ExtArgs> = {}>(args?: Subset<T, User$materialReportsSubmittedArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    materialReportsReviewed<T extends User$materialReportsReviewedArgs<ExtArgs> = {}>(args?: Subset<T, User$materialReportsReviewedArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    moderatedMaterials<T extends User$moderatedMaterialsArgs<ExtArgs> = {}>(args?: Subset<T, User$moderatedMaterialsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -6097,6 +6266,78 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: CategoryRequestScalarFieldEnum | CategoryRequestScalarFieldEnum[]
+  }
+
+  /**
+   * User.materialReportsSubmitted
+   */
+  export type User$materialReportsSubmittedArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
+    where?: MaterialReportWhereInput
+    orderBy?: MaterialReportOrderByWithRelationInput | MaterialReportOrderByWithRelationInput[]
+    cursor?: MaterialReportWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: MaterialReportScalarFieldEnum | MaterialReportScalarFieldEnum[]
+  }
+
+  /**
+   * User.materialReportsReviewed
+   */
+  export type User$materialReportsReviewedArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
+    where?: MaterialReportWhereInput
+    orderBy?: MaterialReportOrderByWithRelationInput | MaterialReportOrderByWithRelationInput[]
+    cursor?: MaterialReportWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: MaterialReportScalarFieldEnum | MaterialReportScalarFieldEnum[]
+  }
+
+  /**
+   * User.moderatedMaterials
+   */
+  export type User$moderatedMaterialsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Material
+     */
+    select?: MaterialSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Material
+     */
+    omit?: MaterialOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialInclude<ExtArgs> | null
+    where?: MaterialWhereInput
+    orderBy?: MaterialOrderByWithRelationInput | MaterialOrderByWithRelationInput[]
+    cursor?: MaterialWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: MaterialScalarFieldEnum | MaterialScalarFieldEnum[]
   }
 
   /**
@@ -24102,6 +24343,9 @@ export namespace Prisma {
     viewsCount: number | null
     reusedAt: Date | null
     reusedByReservationId: string | null
+    moderationReason: string | null
+    moderatedAt: Date | null
+    moderatedById: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -24135,6 +24379,9 @@ export namespace Prisma {
     viewsCount: number | null
     reusedAt: Date | null
     reusedByReservationId: string | null
+    moderationReason: string | null
+    moderatedAt: Date | null
+    moderatedById: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -24168,6 +24415,9 @@ export namespace Prisma {
     viewsCount: number
     reusedAt: number
     reusedByReservationId: number
+    moderationReason: number
+    moderatedAt: number
+    moderatedById: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -24217,6 +24467,9 @@ export namespace Prisma {
     viewsCount?: true
     reusedAt?: true
     reusedByReservationId?: true
+    moderationReason?: true
+    moderatedAt?: true
+    moderatedById?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -24250,6 +24503,9 @@ export namespace Prisma {
     viewsCount?: true
     reusedAt?: true
     reusedByReservationId?: true
+    moderationReason?: true
+    moderatedAt?: true
+    moderatedById?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -24283,6 +24539,9 @@ export namespace Prisma {
     viewsCount?: true
     reusedAt?: true
     reusedByReservationId?: true
+    moderationReason?: true
+    moderatedAt?: true
+    moderatedById?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -24403,6 +24662,9 @@ export namespace Prisma {
     viewsCount: number
     reusedAt: Date | null
     reusedByReservationId: string | null
+    moderationReason: string | null
+    moderatedAt: Date | null
+    moderatedById: string | null
     createdAt: Date
     updatedAt: Date
     _count: MaterialCountAggregateOutputType | null
@@ -24455,9 +24717,13 @@ export namespace Prisma {
     viewsCount?: boolean
     reusedAt?: boolean
     reusedByReservationId?: boolean
+    moderationReason?: boolean
+    moderatedAt?: boolean
+    moderatedById?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     owner?: boolean | UserDefaultArgs<ExtArgs>
+    moderatedBy?: boolean | Material$moderatedByArgs<ExtArgs>
     supplierProfile?: boolean | Material$supplierProfileArgs<ExtArgs>
     category?: boolean | CategoryDefaultArgs<ExtArgs>
     approvedMaterialType?: boolean | Material$approvedMaterialTypeArgs<ExtArgs>
@@ -24469,6 +24735,7 @@ export namespace Prisma {
     reusedByReservation?: boolean | Material$reusedByReservationArgs<ExtArgs>
     publishedFromCategoryRequest?: boolean | Material$publishedFromCategoryRequestArgs<ExtArgs>
     publishedFromPriceRuleRequest?: boolean | Material$publishedFromPriceRuleRequestArgs<ExtArgs>
+    reports?: boolean | Material$reportsArgs<ExtArgs>
     _count?: boolean | MaterialCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["material"]>
 
@@ -24501,9 +24768,13 @@ export namespace Prisma {
     viewsCount?: boolean
     reusedAt?: boolean
     reusedByReservationId?: boolean
+    moderationReason?: boolean
+    moderatedAt?: boolean
+    moderatedById?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     owner?: boolean | UserDefaultArgs<ExtArgs>
+    moderatedBy?: boolean | Material$moderatedByArgs<ExtArgs>
     supplierProfile?: boolean | Material$supplierProfileArgs<ExtArgs>
     category?: boolean | CategoryDefaultArgs<ExtArgs>
     approvedMaterialType?: boolean | Material$approvedMaterialTypeArgs<ExtArgs>
@@ -24541,9 +24812,13 @@ export namespace Prisma {
     viewsCount?: boolean
     reusedAt?: boolean
     reusedByReservationId?: boolean
+    moderationReason?: boolean
+    moderatedAt?: boolean
+    moderatedById?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     owner?: boolean | UserDefaultArgs<ExtArgs>
+    moderatedBy?: boolean | Material$moderatedByArgs<ExtArgs>
     supplierProfile?: boolean | Material$supplierProfileArgs<ExtArgs>
     category?: boolean | CategoryDefaultArgs<ExtArgs>
     approvedMaterialType?: boolean | Material$approvedMaterialTypeArgs<ExtArgs>
@@ -24581,13 +24856,17 @@ export namespace Prisma {
     viewsCount?: boolean
     reusedAt?: boolean
     reusedByReservationId?: boolean
+    moderationReason?: boolean
+    moderatedAt?: boolean
+    moderatedById?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type MaterialOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "ownerId" | "supplierProfileId" | "categoryId" | "title" | "description" | "materialType" | "materialTypeId" | "customMaterialType" | "priceRuleId" | "priceCheckedAt" | "maxAllowedPriceAtCheck" | "quantity" | "unit" | "condition" | "sourceType" | "status" | "isFree" | "price" | "currency" | "locationId" | "pickupAllowed" | "deliveryAllowed" | "pickupNotes" | "suggestedUses" | "viewsCount" | "reusedAt" | "reusedByReservationId" | "createdAt" | "updatedAt", ExtArgs["result"]["material"]>
+  export type MaterialOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "ownerId" | "supplierProfileId" | "categoryId" | "title" | "description" | "materialType" | "materialTypeId" | "customMaterialType" | "priceRuleId" | "priceCheckedAt" | "maxAllowedPriceAtCheck" | "quantity" | "unit" | "condition" | "sourceType" | "status" | "isFree" | "price" | "currency" | "locationId" | "pickupAllowed" | "deliveryAllowed" | "pickupNotes" | "suggestedUses" | "viewsCount" | "reusedAt" | "reusedByReservationId" | "moderationReason" | "moderatedAt" | "moderatedById" | "createdAt" | "updatedAt", ExtArgs["result"]["material"]>
   export type MaterialInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     owner?: boolean | UserDefaultArgs<ExtArgs>
+    moderatedBy?: boolean | Material$moderatedByArgs<ExtArgs>
     supplierProfile?: boolean | Material$supplierProfileArgs<ExtArgs>
     category?: boolean | CategoryDefaultArgs<ExtArgs>
     approvedMaterialType?: boolean | Material$approvedMaterialTypeArgs<ExtArgs>
@@ -24599,10 +24878,12 @@ export namespace Prisma {
     reusedByReservation?: boolean | Material$reusedByReservationArgs<ExtArgs>
     publishedFromCategoryRequest?: boolean | Material$publishedFromCategoryRequestArgs<ExtArgs>
     publishedFromPriceRuleRequest?: boolean | Material$publishedFromPriceRuleRequestArgs<ExtArgs>
+    reports?: boolean | Material$reportsArgs<ExtArgs>
     _count?: boolean | MaterialCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type MaterialIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     owner?: boolean | UserDefaultArgs<ExtArgs>
+    moderatedBy?: boolean | Material$moderatedByArgs<ExtArgs>
     supplierProfile?: boolean | Material$supplierProfileArgs<ExtArgs>
     category?: boolean | CategoryDefaultArgs<ExtArgs>
     approvedMaterialType?: boolean | Material$approvedMaterialTypeArgs<ExtArgs>
@@ -24612,6 +24893,7 @@ export namespace Prisma {
   }
   export type MaterialIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     owner?: boolean | UserDefaultArgs<ExtArgs>
+    moderatedBy?: boolean | Material$moderatedByArgs<ExtArgs>
     supplierProfile?: boolean | Material$supplierProfileArgs<ExtArgs>
     category?: boolean | CategoryDefaultArgs<ExtArgs>
     approvedMaterialType?: boolean | Material$approvedMaterialTypeArgs<ExtArgs>
@@ -24624,6 +24906,7 @@ export namespace Prisma {
     name: "Material"
     objects: {
       owner: Prisma.$UserPayload<ExtArgs>
+      moderatedBy: Prisma.$UserPayload<ExtArgs> | null
       supplierProfile: Prisma.$SupplierProfilePayload<ExtArgs> | null
       category: Prisma.$CategoryPayload<ExtArgs>
       approvedMaterialType: Prisma.$MaterialTypePayload<ExtArgs> | null
@@ -24635,6 +24918,7 @@ export namespace Prisma {
       reusedByReservation: Prisma.$ReservationPayload<ExtArgs> | null
       publishedFromCategoryRequest: Prisma.$CategoryRequestPayload<ExtArgs> | null
       publishedFromPriceRuleRequest: Prisma.$PriceRuleRequestPayload<ExtArgs> | null
+      reports: Prisma.$MaterialReportPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -24665,6 +24949,9 @@ export namespace Prisma {
       viewsCount: number
       reusedAt: Date | null
       reusedByReservationId: string | null
+      moderationReason: string | null
+      moderatedAt: Date | null
+      moderatedById: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["material"]>
@@ -25062,6 +25349,7 @@ export namespace Prisma {
   export interface Prisma__MaterialClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     owner<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    moderatedBy<T extends Material$moderatedByArgs<ExtArgs> = {}>(args?: Subset<T, Material$moderatedByArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     supplierProfile<T extends Material$supplierProfileArgs<ExtArgs> = {}>(args?: Subset<T, Material$supplierProfileArgs<ExtArgs>>): Prisma__SupplierProfileClient<$Result.GetResult<Prisma.$SupplierProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     category<T extends CategoryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, CategoryDefaultArgs<ExtArgs>>): Prisma__CategoryClient<$Result.GetResult<Prisma.$CategoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     approvedMaterialType<T extends Material$approvedMaterialTypeArgs<ExtArgs> = {}>(args?: Subset<T, Material$approvedMaterialTypeArgs<ExtArgs>>): Prisma__MaterialTypeClient<$Result.GetResult<Prisma.$MaterialTypePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
@@ -25073,6 +25361,7 @@ export namespace Prisma {
     reusedByReservation<T extends Material$reusedByReservationArgs<ExtArgs> = {}>(args?: Subset<T, Material$reusedByReservationArgs<ExtArgs>>): Prisma__ReservationClient<$Result.GetResult<Prisma.$ReservationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     publishedFromCategoryRequest<T extends Material$publishedFromCategoryRequestArgs<ExtArgs> = {}>(args?: Subset<T, Material$publishedFromCategoryRequestArgs<ExtArgs>>): Prisma__CategoryRequestClient<$Result.GetResult<Prisma.$CategoryRequestPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     publishedFromPriceRuleRequest<T extends Material$publishedFromPriceRuleRequestArgs<ExtArgs> = {}>(args?: Subset<T, Material$publishedFromPriceRuleRequestArgs<ExtArgs>>): Prisma__PriceRuleRequestClient<$Result.GetResult<Prisma.$PriceRuleRequestPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    reports<T extends Material$reportsArgs<ExtArgs> = {}>(args?: Subset<T, Material$reportsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -25130,6 +25419,9 @@ export namespace Prisma {
     readonly viewsCount: FieldRef<"Material", 'Int'>
     readonly reusedAt: FieldRef<"Material", 'DateTime'>
     readonly reusedByReservationId: FieldRef<"Material", 'String'>
+    readonly moderationReason: FieldRef<"Material", 'String'>
+    readonly moderatedAt: FieldRef<"Material", 'DateTime'>
+    readonly moderatedById: FieldRef<"Material", 'String'>
     readonly createdAt: FieldRef<"Material", 'DateTime'>
     readonly updatedAt: FieldRef<"Material", 'DateTime'>
   }
@@ -25533,6 +25825,25 @@ export namespace Prisma {
   }
 
   /**
+   * Material.moderatedBy
+   */
+  export type Material$moderatedByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the User
+     */
+    select?: UserSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the User
+     */
+    omit?: UserOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserInclude<ExtArgs> | null
+    where?: UserWhereInput
+  }
+
+  /**
    * Material.supplierProfile
    */
   export type Material$supplierProfileArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -25719,6 +26030,30 @@ export namespace Prisma {
   }
 
   /**
+   * Material.reports
+   */
+  export type Material$reportsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
+    where?: MaterialReportWhereInput
+    orderBy?: MaterialReportOrderByWithRelationInput | MaterialReportOrderByWithRelationInput[]
+    cursor?: MaterialReportWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: MaterialReportScalarFieldEnum | MaterialReportScalarFieldEnum[]
+  }
+
+  /**
    * Material without action
    */
   export type MaterialDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -25734,6 +26069,1182 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: MaterialInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model MaterialReport
+   */
+
+  export type AggregateMaterialReport = {
+    _count: MaterialReportCountAggregateOutputType | null
+    _min: MaterialReportMinAggregateOutputType | null
+    _max: MaterialReportMaxAggregateOutputType | null
+  }
+
+  export type MaterialReportMinAggregateOutputType = {
+    id: string | null
+    materialId: string | null
+    reporterId: string | null
+    reason: $Enums.MaterialReportReason | null
+    note: string | null
+    status: $Enums.MaterialReportStatus | null
+    adminNote: string | null
+    reviewedById: string | null
+    reviewedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type MaterialReportMaxAggregateOutputType = {
+    id: string | null
+    materialId: string | null
+    reporterId: string | null
+    reason: $Enums.MaterialReportReason | null
+    note: string | null
+    status: $Enums.MaterialReportStatus | null
+    adminNote: string | null
+    reviewedById: string | null
+    reviewedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type MaterialReportCountAggregateOutputType = {
+    id: number
+    materialId: number
+    reporterId: number
+    reason: number
+    note: number
+    status: number
+    adminNote: number
+    reviewedById: number
+    reviewedAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type MaterialReportMinAggregateInputType = {
+    id?: true
+    materialId?: true
+    reporterId?: true
+    reason?: true
+    note?: true
+    status?: true
+    adminNote?: true
+    reviewedById?: true
+    reviewedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type MaterialReportMaxAggregateInputType = {
+    id?: true
+    materialId?: true
+    reporterId?: true
+    reason?: true
+    note?: true
+    status?: true
+    adminNote?: true
+    reviewedById?: true
+    reviewedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type MaterialReportCountAggregateInputType = {
+    id?: true
+    materialId?: true
+    reporterId?: true
+    reason?: true
+    note?: true
+    status?: true
+    adminNote?: true
+    reviewedById?: true
+    reviewedAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type MaterialReportAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which MaterialReport to aggregate.
+     */
+    where?: MaterialReportWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MaterialReports to fetch.
+     */
+    orderBy?: MaterialReportOrderByWithRelationInput | MaterialReportOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: MaterialReportWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MaterialReports from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MaterialReports.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned MaterialReports
+    **/
+    _count?: true | MaterialReportCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: MaterialReportMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: MaterialReportMaxAggregateInputType
+  }
+
+  export type GetMaterialReportAggregateType<T extends MaterialReportAggregateArgs> = {
+        [P in keyof T & keyof AggregateMaterialReport]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateMaterialReport[P]>
+      : GetScalarType<T[P], AggregateMaterialReport[P]>
+  }
+
+
+
+
+  export type MaterialReportGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: MaterialReportWhereInput
+    orderBy?: MaterialReportOrderByWithAggregationInput | MaterialReportOrderByWithAggregationInput[]
+    by: MaterialReportScalarFieldEnum[] | MaterialReportScalarFieldEnum
+    having?: MaterialReportScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: MaterialReportCountAggregateInputType | true
+    _min?: MaterialReportMinAggregateInputType
+    _max?: MaterialReportMaxAggregateInputType
+  }
+
+  export type MaterialReportGroupByOutputType = {
+    id: string
+    materialId: string
+    reporterId: string
+    reason: $Enums.MaterialReportReason
+    note: string | null
+    status: $Enums.MaterialReportStatus
+    adminNote: string | null
+    reviewedById: string | null
+    reviewedAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    _count: MaterialReportCountAggregateOutputType | null
+    _min: MaterialReportMinAggregateOutputType | null
+    _max: MaterialReportMaxAggregateOutputType | null
+  }
+
+  type GetMaterialReportGroupByPayload<T extends MaterialReportGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<MaterialReportGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof MaterialReportGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], MaterialReportGroupByOutputType[P]>
+            : GetScalarType<T[P], MaterialReportGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type MaterialReportSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    materialId?: boolean
+    reporterId?: boolean
+    reason?: boolean
+    note?: boolean
+    status?: boolean
+    adminNote?: boolean
+    reviewedById?: boolean
+    reviewedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    material?: boolean | MaterialDefaultArgs<ExtArgs>
+    reporter?: boolean | UserDefaultArgs<ExtArgs>
+    reviewedBy?: boolean | MaterialReport$reviewedByArgs<ExtArgs>
+  }, ExtArgs["result"]["materialReport"]>
+
+  export type MaterialReportSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    materialId?: boolean
+    reporterId?: boolean
+    reason?: boolean
+    note?: boolean
+    status?: boolean
+    adminNote?: boolean
+    reviewedById?: boolean
+    reviewedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    material?: boolean | MaterialDefaultArgs<ExtArgs>
+    reporter?: boolean | UserDefaultArgs<ExtArgs>
+    reviewedBy?: boolean | MaterialReport$reviewedByArgs<ExtArgs>
+  }, ExtArgs["result"]["materialReport"]>
+
+  export type MaterialReportSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    materialId?: boolean
+    reporterId?: boolean
+    reason?: boolean
+    note?: boolean
+    status?: boolean
+    adminNote?: boolean
+    reviewedById?: boolean
+    reviewedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    material?: boolean | MaterialDefaultArgs<ExtArgs>
+    reporter?: boolean | UserDefaultArgs<ExtArgs>
+    reviewedBy?: boolean | MaterialReport$reviewedByArgs<ExtArgs>
+  }, ExtArgs["result"]["materialReport"]>
+
+  export type MaterialReportSelectScalar = {
+    id?: boolean
+    materialId?: boolean
+    reporterId?: boolean
+    reason?: boolean
+    note?: boolean
+    status?: boolean
+    adminNote?: boolean
+    reviewedById?: boolean
+    reviewedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type MaterialReportOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "materialId" | "reporterId" | "reason" | "note" | "status" | "adminNote" | "reviewedById" | "reviewedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["materialReport"]>
+  export type MaterialReportInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    material?: boolean | MaterialDefaultArgs<ExtArgs>
+    reporter?: boolean | UserDefaultArgs<ExtArgs>
+    reviewedBy?: boolean | MaterialReport$reviewedByArgs<ExtArgs>
+  }
+  export type MaterialReportIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    material?: boolean | MaterialDefaultArgs<ExtArgs>
+    reporter?: boolean | UserDefaultArgs<ExtArgs>
+    reviewedBy?: boolean | MaterialReport$reviewedByArgs<ExtArgs>
+  }
+  export type MaterialReportIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    material?: boolean | MaterialDefaultArgs<ExtArgs>
+    reporter?: boolean | UserDefaultArgs<ExtArgs>
+    reviewedBy?: boolean | MaterialReport$reviewedByArgs<ExtArgs>
+  }
+
+  export type $MaterialReportPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "MaterialReport"
+    objects: {
+      material: Prisma.$MaterialPayload<ExtArgs>
+      reporter: Prisma.$UserPayload<ExtArgs>
+      reviewedBy: Prisma.$UserPayload<ExtArgs> | null
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      materialId: string
+      reporterId: string
+      reason: $Enums.MaterialReportReason
+      note: string | null
+      status: $Enums.MaterialReportStatus
+      adminNote: string | null
+      reviewedById: string | null
+      reviewedAt: Date | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["materialReport"]>
+    composites: {}
+  }
+
+  type MaterialReportGetPayload<S extends boolean | null | undefined | MaterialReportDefaultArgs> = $Result.GetResult<Prisma.$MaterialReportPayload, S>
+
+  type MaterialReportCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<MaterialReportFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: MaterialReportCountAggregateInputType | true
+    }
+
+  export interface MaterialReportDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['MaterialReport'], meta: { name: 'MaterialReport' } }
+    /**
+     * Find zero or one MaterialReport that matches the filter.
+     * @param {MaterialReportFindUniqueArgs} args - Arguments to find a MaterialReport
+     * @example
+     * // Get one MaterialReport
+     * const materialReport = await prisma.materialReport.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends MaterialReportFindUniqueArgs>(args: SelectSubset<T, MaterialReportFindUniqueArgs<ExtArgs>>): Prisma__MaterialReportClient<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one MaterialReport that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {MaterialReportFindUniqueOrThrowArgs} args - Arguments to find a MaterialReport
+     * @example
+     * // Get one MaterialReport
+     * const materialReport = await prisma.materialReport.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends MaterialReportFindUniqueOrThrowArgs>(args: SelectSubset<T, MaterialReportFindUniqueOrThrowArgs<ExtArgs>>): Prisma__MaterialReportClient<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first MaterialReport that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialReportFindFirstArgs} args - Arguments to find a MaterialReport
+     * @example
+     * // Get one MaterialReport
+     * const materialReport = await prisma.materialReport.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends MaterialReportFindFirstArgs>(args?: SelectSubset<T, MaterialReportFindFirstArgs<ExtArgs>>): Prisma__MaterialReportClient<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first MaterialReport that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialReportFindFirstOrThrowArgs} args - Arguments to find a MaterialReport
+     * @example
+     * // Get one MaterialReport
+     * const materialReport = await prisma.materialReport.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends MaterialReportFindFirstOrThrowArgs>(args?: SelectSubset<T, MaterialReportFindFirstOrThrowArgs<ExtArgs>>): Prisma__MaterialReportClient<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more MaterialReports that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialReportFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all MaterialReports
+     * const materialReports = await prisma.materialReport.findMany()
+     * 
+     * // Get first 10 MaterialReports
+     * const materialReports = await prisma.materialReport.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const materialReportWithIdOnly = await prisma.materialReport.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends MaterialReportFindManyArgs>(args?: SelectSubset<T, MaterialReportFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a MaterialReport.
+     * @param {MaterialReportCreateArgs} args - Arguments to create a MaterialReport.
+     * @example
+     * // Create one MaterialReport
+     * const MaterialReport = await prisma.materialReport.create({
+     *   data: {
+     *     // ... data to create a MaterialReport
+     *   }
+     * })
+     * 
+     */
+    create<T extends MaterialReportCreateArgs>(args: SelectSubset<T, MaterialReportCreateArgs<ExtArgs>>): Prisma__MaterialReportClient<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many MaterialReports.
+     * @param {MaterialReportCreateManyArgs} args - Arguments to create many MaterialReports.
+     * @example
+     * // Create many MaterialReports
+     * const materialReport = await prisma.materialReport.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends MaterialReportCreateManyArgs>(args?: SelectSubset<T, MaterialReportCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many MaterialReports and returns the data saved in the database.
+     * @param {MaterialReportCreateManyAndReturnArgs} args - Arguments to create many MaterialReports.
+     * @example
+     * // Create many MaterialReports
+     * const materialReport = await prisma.materialReport.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many MaterialReports and only return the `id`
+     * const materialReportWithIdOnly = await prisma.materialReport.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends MaterialReportCreateManyAndReturnArgs>(args?: SelectSubset<T, MaterialReportCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a MaterialReport.
+     * @param {MaterialReportDeleteArgs} args - Arguments to delete one MaterialReport.
+     * @example
+     * // Delete one MaterialReport
+     * const MaterialReport = await prisma.materialReport.delete({
+     *   where: {
+     *     // ... filter to delete one MaterialReport
+     *   }
+     * })
+     * 
+     */
+    delete<T extends MaterialReportDeleteArgs>(args: SelectSubset<T, MaterialReportDeleteArgs<ExtArgs>>): Prisma__MaterialReportClient<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one MaterialReport.
+     * @param {MaterialReportUpdateArgs} args - Arguments to update one MaterialReport.
+     * @example
+     * // Update one MaterialReport
+     * const materialReport = await prisma.materialReport.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends MaterialReportUpdateArgs>(args: SelectSubset<T, MaterialReportUpdateArgs<ExtArgs>>): Prisma__MaterialReportClient<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more MaterialReports.
+     * @param {MaterialReportDeleteManyArgs} args - Arguments to filter MaterialReports to delete.
+     * @example
+     * // Delete a few MaterialReports
+     * const { count } = await prisma.materialReport.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends MaterialReportDeleteManyArgs>(args?: SelectSubset<T, MaterialReportDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more MaterialReports.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialReportUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many MaterialReports
+     * const materialReport = await prisma.materialReport.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends MaterialReportUpdateManyArgs>(args: SelectSubset<T, MaterialReportUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more MaterialReports and returns the data updated in the database.
+     * @param {MaterialReportUpdateManyAndReturnArgs} args - Arguments to update many MaterialReports.
+     * @example
+     * // Update many MaterialReports
+     * const materialReport = await prisma.materialReport.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more MaterialReports and only return the `id`
+     * const materialReportWithIdOnly = await prisma.materialReport.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends MaterialReportUpdateManyAndReturnArgs>(args: SelectSubset<T, MaterialReportUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one MaterialReport.
+     * @param {MaterialReportUpsertArgs} args - Arguments to update or create a MaterialReport.
+     * @example
+     * // Update or create a MaterialReport
+     * const materialReport = await prisma.materialReport.upsert({
+     *   create: {
+     *     // ... data to create a MaterialReport
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the MaterialReport we want to update
+     *   }
+     * })
+     */
+    upsert<T extends MaterialReportUpsertArgs>(args: SelectSubset<T, MaterialReportUpsertArgs<ExtArgs>>): Prisma__MaterialReportClient<$Result.GetResult<Prisma.$MaterialReportPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of MaterialReports.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialReportCountArgs} args - Arguments to filter MaterialReports to count.
+     * @example
+     * // Count the number of MaterialReports
+     * const count = await prisma.materialReport.count({
+     *   where: {
+     *     // ... the filter for the MaterialReports we want to count
+     *   }
+     * })
+    **/
+    count<T extends MaterialReportCountArgs>(
+      args?: Subset<T, MaterialReportCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], MaterialReportCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a MaterialReport.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialReportAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends MaterialReportAggregateArgs>(args: Subset<T, MaterialReportAggregateArgs>): Prisma.PrismaPromise<GetMaterialReportAggregateType<T>>
+
+    /**
+     * Group by MaterialReport.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MaterialReportGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends MaterialReportGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: MaterialReportGroupByArgs['orderBy'] }
+        : { orderBy?: MaterialReportGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, MaterialReportGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetMaterialReportGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the MaterialReport model
+   */
+  readonly fields: MaterialReportFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for MaterialReport.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__MaterialReportClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    material<T extends MaterialDefaultArgs<ExtArgs> = {}>(args?: Subset<T, MaterialDefaultArgs<ExtArgs>>): Prisma__MaterialClient<$Result.GetResult<Prisma.$MaterialPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    reporter<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    reviewedBy<T extends MaterialReport$reviewedByArgs<ExtArgs> = {}>(args?: Subset<T, MaterialReport$reviewedByArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the MaterialReport model
+   */
+  interface MaterialReportFieldRefs {
+    readonly id: FieldRef<"MaterialReport", 'String'>
+    readonly materialId: FieldRef<"MaterialReport", 'String'>
+    readonly reporterId: FieldRef<"MaterialReport", 'String'>
+    readonly reason: FieldRef<"MaterialReport", 'MaterialReportReason'>
+    readonly note: FieldRef<"MaterialReport", 'String'>
+    readonly status: FieldRef<"MaterialReport", 'MaterialReportStatus'>
+    readonly adminNote: FieldRef<"MaterialReport", 'String'>
+    readonly reviewedById: FieldRef<"MaterialReport", 'String'>
+    readonly reviewedAt: FieldRef<"MaterialReport", 'DateTime'>
+    readonly createdAt: FieldRef<"MaterialReport", 'DateTime'>
+    readonly updatedAt: FieldRef<"MaterialReport", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * MaterialReport findUnique
+   */
+  export type MaterialReportFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
+    /**
+     * Filter, which MaterialReport to fetch.
+     */
+    where: MaterialReportWhereUniqueInput
+  }
+
+  /**
+   * MaterialReport findUniqueOrThrow
+   */
+  export type MaterialReportFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
+    /**
+     * Filter, which MaterialReport to fetch.
+     */
+    where: MaterialReportWhereUniqueInput
+  }
+
+  /**
+   * MaterialReport findFirst
+   */
+  export type MaterialReportFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
+    /**
+     * Filter, which MaterialReport to fetch.
+     */
+    where?: MaterialReportWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MaterialReports to fetch.
+     */
+    orderBy?: MaterialReportOrderByWithRelationInput | MaterialReportOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for MaterialReports.
+     */
+    cursor?: MaterialReportWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MaterialReports from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MaterialReports.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MaterialReports.
+     */
+    distinct?: MaterialReportScalarFieldEnum | MaterialReportScalarFieldEnum[]
+  }
+
+  /**
+   * MaterialReport findFirstOrThrow
+   */
+  export type MaterialReportFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
+    /**
+     * Filter, which MaterialReport to fetch.
+     */
+    where?: MaterialReportWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MaterialReports to fetch.
+     */
+    orderBy?: MaterialReportOrderByWithRelationInput | MaterialReportOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for MaterialReports.
+     */
+    cursor?: MaterialReportWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MaterialReports from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MaterialReports.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MaterialReports.
+     */
+    distinct?: MaterialReportScalarFieldEnum | MaterialReportScalarFieldEnum[]
+  }
+
+  /**
+   * MaterialReport findMany
+   */
+  export type MaterialReportFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
+    /**
+     * Filter, which MaterialReports to fetch.
+     */
+    where?: MaterialReportWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MaterialReports to fetch.
+     */
+    orderBy?: MaterialReportOrderByWithRelationInput | MaterialReportOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing MaterialReports.
+     */
+    cursor?: MaterialReportWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MaterialReports from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MaterialReports.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MaterialReports.
+     */
+    distinct?: MaterialReportScalarFieldEnum | MaterialReportScalarFieldEnum[]
+  }
+
+  /**
+   * MaterialReport create
+   */
+  export type MaterialReportCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
+    /**
+     * The data needed to create a MaterialReport.
+     */
+    data: XOR<MaterialReportCreateInput, MaterialReportUncheckedCreateInput>
+  }
+
+  /**
+   * MaterialReport createMany
+   */
+  export type MaterialReportCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many MaterialReports.
+     */
+    data: MaterialReportCreateManyInput | MaterialReportCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * MaterialReport createManyAndReturn
+   */
+  export type MaterialReportCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * The data used to create many MaterialReports.
+     */
+    data: MaterialReportCreateManyInput | MaterialReportCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * MaterialReport update
+   */
+  export type MaterialReportUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
+    /**
+     * The data needed to update a MaterialReport.
+     */
+    data: XOR<MaterialReportUpdateInput, MaterialReportUncheckedUpdateInput>
+    /**
+     * Choose, which MaterialReport to update.
+     */
+    where: MaterialReportWhereUniqueInput
+  }
+
+  /**
+   * MaterialReport updateMany
+   */
+  export type MaterialReportUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update MaterialReports.
+     */
+    data: XOR<MaterialReportUpdateManyMutationInput, MaterialReportUncheckedUpdateManyInput>
+    /**
+     * Filter which MaterialReports to update
+     */
+    where?: MaterialReportWhereInput
+    /**
+     * Limit how many MaterialReports to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * MaterialReport updateManyAndReturn
+   */
+  export type MaterialReportUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * The data used to update MaterialReports.
+     */
+    data: XOR<MaterialReportUpdateManyMutationInput, MaterialReportUncheckedUpdateManyInput>
+    /**
+     * Filter which MaterialReports to update
+     */
+    where?: MaterialReportWhereInput
+    /**
+     * Limit how many MaterialReports to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * MaterialReport upsert
+   */
+  export type MaterialReportUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
+    /**
+     * The filter to search for the MaterialReport to update in case it exists.
+     */
+    where: MaterialReportWhereUniqueInput
+    /**
+     * In case the MaterialReport found by the `where` argument doesn't exist, create a new MaterialReport with this data.
+     */
+    create: XOR<MaterialReportCreateInput, MaterialReportUncheckedCreateInput>
+    /**
+     * In case the MaterialReport was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<MaterialReportUpdateInput, MaterialReportUncheckedUpdateInput>
+  }
+
+  /**
+   * MaterialReport delete
+   */
+  export type MaterialReportDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
+    /**
+     * Filter which MaterialReport to delete.
+     */
+    where: MaterialReportWhereUniqueInput
+  }
+
+  /**
+   * MaterialReport deleteMany
+   */
+  export type MaterialReportDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which MaterialReports to delete
+     */
+    where?: MaterialReportWhereInput
+    /**
+     * Limit how many MaterialReports to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * MaterialReport.reviewedBy
+   */
+  export type MaterialReport$reviewedByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the User
+     */
+    select?: UserSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the User
+     */
+    omit?: UserOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserInclude<ExtArgs> | null
+    where?: UserWhereInput
+  }
+
+  /**
+   * MaterialReport without action
+   */
+  export type MaterialReportDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MaterialReport
+     */
+    select?: MaterialReportSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MaterialReport
+     */
+    omit?: MaterialReportOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: MaterialReportInclude<ExtArgs> | null
   }
 
 
@@ -40311,11 +41822,31 @@ export namespace Prisma {
     viewsCount: 'viewsCount',
     reusedAt: 'reusedAt',
     reusedByReservationId: 'reusedByReservationId',
+    moderationReason: 'moderationReason',
+    moderatedAt: 'moderatedAt',
+    moderatedById: 'moderatedById',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
 
   export type MaterialScalarFieldEnum = (typeof MaterialScalarFieldEnum)[keyof typeof MaterialScalarFieldEnum]
+
+
+  export const MaterialReportScalarFieldEnum: {
+    id: 'id',
+    materialId: 'materialId',
+    reporterId: 'reporterId',
+    reason: 'reason',
+    note: 'note',
+    status: 'status',
+    adminNote: 'adminNote',
+    reviewedById: 'reviewedById',
+    reviewedAt: 'reviewedAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type MaterialReportScalarFieldEnum = (typeof MaterialReportScalarFieldEnum)[keyof typeof MaterialReportScalarFieldEnum]
 
 
   export const MaterialImageScalarFieldEnum: {
@@ -40908,6 +42439,34 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'MaterialReportReason'
+   */
+  export type EnumMaterialReportReasonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MaterialReportReason'>
+    
+
+
+  /**
+   * Reference to a field of type 'MaterialReportReason[]'
+   */
+  export type ListEnumMaterialReportReasonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MaterialReportReason[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'MaterialReportStatus'
+   */
+  export type EnumMaterialReportStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MaterialReportStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'MaterialReportStatus[]'
+   */
+  export type ListEnumMaterialReportStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MaterialReportStatus[]'>
+    
+
+
+  /**
    * Reference to a field of type 'ReservationStatus'
    */
   export type EnumReservationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReservationStatus'>
@@ -41087,6 +42646,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepListRelationFilter
     priceRuleRequests?: PriceRuleRequestListRelationFilter
     categoryRequests?: CategoryRequestListRelationFilter
+    materialReportsSubmitted?: MaterialReportListRelationFilter
+    materialReportsReviewed?: MaterialReportListRelationFilter
+    moderatedMaterials?: MaterialListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
@@ -41123,6 +42685,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepOrderByRelationAggregateInput
     priceRuleRequests?: PriceRuleRequestOrderByRelationAggregateInput
     categoryRequests?: CategoryRequestOrderByRelationAggregateInput
+    materialReportsSubmitted?: MaterialReportOrderByRelationAggregateInput
+    materialReportsReviewed?: MaterialReportOrderByRelationAggregateInput
+    moderatedMaterials?: MaterialOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -41162,6 +42727,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepListRelationFilter
     priceRuleRequests?: PriceRuleRequestListRelationFilter
     categoryRequests?: CategoryRequestListRelationFilter
+    materialReportsSubmitted?: MaterialReportListRelationFilter
+    materialReportsReviewed?: MaterialReportListRelationFilter
+    moderatedMaterials?: MaterialListRelationFilter
   }, "id" | "email" | "phone">
 
   export type UserOrderByWithAggregationInput = {
@@ -42563,9 +44131,13 @@ export namespace Prisma {
     viewsCount?: IntFilter<"Material"> | number
     reusedAt?: DateTimeNullableFilter<"Material"> | Date | string | null
     reusedByReservationId?: StringNullableFilter<"Material"> | string | null
+    moderationReason?: StringNullableFilter<"Material"> | string | null
+    moderatedAt?: DateTimeNullableFilter<"Material"> | Date | string | null
+    moderatedById?: StringNullableFilter<"Material"> | string | null
     createdAt?: DateTimeFilter<"Material"> | Date | string
     updatedAt?: DateTimeFilter<"Material"> | Date | string
     owner?: XOR<UserScalarRelationFilter, UserWhereInput>
+    moderatedBy?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
     supplierProfile?: XOR<SupplierProfileNullableScalarRelationFilter, SupplierProfileWhereInput> | null
     category?: XOR<CategoryScalarRelationFilter, CategoryWhereInput>
     approvedMaterialType?: XOR<MaterialTypeNullableScalarRelationFilter, MaterialTypeWhereInput> | null
@@ -42577,6 +44149,7 @@ export namespace Prisma {
     reusedByReservation?: XOR<ReservationNullableScalarRelationFilter, ReservationWhereInput> | null
     publishedFromCategoryRequest?: XOR<CategoryRequestNullableScalarRelationFilter, CategoryRequestWhereInput> | null
     publishedFromPriceRuleRequest?: XOR<PriceRuleRequestNullableScalarRelationFilter, PriceRuleRequestWhereInput> | null
+    reports?: MaterialReportListRelationFilter
   }
 
   export type MaterialOrderByWithRelationInput = {
@@ -42608,9 +44181,13 @@ export namespace Prisma {
     viewsCount?: SortOrder
     reusedAt?: SortOrderInput | SortOrder
     reusedByReservationId?: SortOrderInput | SortOrder
+    moderationReason?: SortOrderInput | SortOrder
+    moderatedAt?: SortOrderInput | SortOrder
+    moderatedById?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     owner?: UserOrderByWithRelationInput
+    moderatedBy?: UserOrderByWithRelationInput
     supplierProfile?: SupplierProfileOrderByWithRelationInput
     category?: CategoryOrderByWithRelationInput
     approvedMaterialType?: MaterialTypeOrderByWithRelationInput
@@ -42622,6 +44199,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationOrderByWithRelationInput
     publishedFromCategoryRequest?: CategoryRequestOrderByWithRelationInput
     publishedFromPriceRuleRequest?: PriceRuleRequestOrderByWithRelationInput
+    reports?: MaterialReportOrderByRelationAggregateInput
   }
 
   export type MaterialWhereUniqueInput = Prisma.AtLeast<{
@@ -42656,9 +44234,13 @@ export namespace Prisma {
     suggestedUses?: StringNullableFilter<"Material"> | string | null
     viewsCount?: IntFilter<"Material"> | number
     reusedAt?: DateTimeNullableFilter<"Material"> | Date | string | null
+    moderationReason?: StringNullableFilter<"Material"> | string | null
+    moderatedAt?: DateTimeNullableFilter<"Material"> | Date | string | null
+    moderatedById?: StringNullableFilter<"Material"> | string | null
     createdAt?: DateTimeFilter<"Material"> | Date | string
     updatedAt?: DateTimeFilter<"Material"> | Date | string
     owner?: XOR<UserScalarRelationFilter, UserWhereInput>
+    moderatedBy?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
     supplierProfile?: XOR<SupplierProfileNullableScalarRelationFilter, SupplierProfileWhereInput> | null
     category?: XOR<CategoryScalarRelationFilter, CategoryWhereInput>
     approvedMaterialType?: XOR<MaterialTypeNullableScalarRelationFilter, MaterialTypeWhereInput> | null
@@ -42670,6 +44252,7 @@ export namespace Prisma {
     reusedByReservation?: XOR<ReservationNullableScalarRelationFilter, ReservationWhereInput> | null
     publishedFromCategoryRequest?: XOR<CategoryRequestNullableScalarRelationFilter, CategoryRequestWhereInput> | null
     publishedFromPriceRuleRequest?: XOR<PriceRuleRequestNullableScalarRelationFilter, PriceRuleRequestWhereInput> | null
+    reports?: MaterialReportListRelationFilter
   }, "id" | "reusedByReservationId">
 
   export type MaterialOrderByWithAggregationInput = {
@@ -42701,6 +44284,9 @@ export namespace Prisma {
     viewsCount?: SortOrder
     reusedAt?: SortOrderInput | SortOrder
     reusedByReservationId?: SortOrderInput | SortOrder
+    moderationReason?: SortOrderInput | SortOrder
+    moderatedAt?: SortOrderInput | SortOrder
+    moderatedById?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: MaterialCountOrderByAggregateInput
@@ -42742,8 +44328,102 @@ export namespace Prisma {
     viewsCount?: IntWithAggregatesFilter<"Material"> | number
     reusedAt?: DateTimeNullableWithAggregatesFilter<"Material"> | Date | string | null
     reusedByReservationId?: StringNullableWithAggregatesFilter<"Material"> | string | null
+    moderationReason?: StringNullableWithAggregatesFilter<"Material"> | string | null
+    moderatedAt?: DateTimeNullableWithAggregatesFilter<"Material"> | Date | string | null
+    moderatedById?: StringNullableWithAggregatesFilter<"Material"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Material"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Material"> | Date | string
+  }
+
+  export type MaterialReportWhereInput = {
+    AND?: MaterialReportWhereInput | MaterialReportWhereInput[]
+    OR?: MaterialReportWhereInput[]
+    NOT?: MaterialReportWhereInput | MaterialReportWhereInput[]
+    id?: StringFilter<"MaterialReport"> | string
+    materialId?: StringFilter<"MaterialReport"> | string
+    reporterId?: StringFilter<"MaterialReport"> | string
+    reason?: EnumMaterialReportReasonFilter<"MaterialReport"> | $Enums.MaterialReportReason
+    note?: StringNullableFilter<"MaterialReport"> | string | null
+    status?: EnumMaterialReportStatusFilter<"MaterialReport"> | $Enums.MaterialReportStatus
+    adminNote?: StringNullableFilter<"MaterialReport"> | string | null
+    reviewedById?: StringNullableFilter<"MaterialReport"> | string | null
+    reviewedAt?: DateTimeNullableFilter<"MaterialReport"> | Date | string | null
+    createdAt?: DateTimeFilter<"MaterialReport"> | Date | string
+    updatedAt?: DateTimeFilter<"MaterialReport"> | Date | string
+    material?: XOR<MaterialScalarRelationFilter, MaterialWhereInput>
+    reporter?: XOR<UserScalarRelationFilter, UserWhereInput>
+    reviewedBy?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
+  }
+
+  export type MaterialReportOrderByWithRelationInput = {
+    id?: SortOrder
+    materialId?: SortOrder
+    reporterId?: SortOrder
+    reason?: SortOrder
+    note?: SortOrderInput | SortOrder
+    status?: SortOrder
+    adminNote?: SortOrderInput | SortOrder
+    reviewedById?: SortOrderInput | SortOrder
+    reviewedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    material?: MaterialOrderByWithRelationInput
+    reporter?: UserOrderByWithRelationInput
+    reviewedBy?: UserOrderByWithRelationInput
+  }
+
+  export type MaterialReportWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: MaterialReportWhereInput | MaterialReportWhereInput[]
+    OR?: MaterialReportWhereInput[]
+    NOT?: MaterialReportWhereInput | MaterialReportWhereInput[]
+    materialId?: StringFilter<"MaterialReport"> | string
+    reporterId?: StringFilter<"MaterialReport"> | string
+    reason?: EnumMaterialReportReasonFilter<"MaterialReport"> | $Enums.MaterialReportReason
+    note?: StringNullableFilter<"MaterialReport"> | string | null
+    status?: EnumMaterialReportStatusFilter<"MaterialReport"> | $Enums.MaterialReportStatus
+    adminNote?: StringNullableFilter<"MaterialReport"> | string | null
+    reviewedById?: StringNullableFilter<"MaterialReport"> | string | null
+    reviewedAt?: DateTimeNullableFilter<"MaterialReport"> | Date | string | null
+    createdAt?: DateTimeFilter<"MaterialReport"> | Date | string
+    updatedAt?: DateTimeFilter<"MaterialReport"> | Date | string
+    material?: XOR<MaterialScalarRelationFilter, MaterialWhereInput>
+    reporter?: XOR<UserScalarRelationFilter, UserWhereInput>
+    reviewedBy?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
+  }, "id">
+
+  export type MaterialReportOrderByWithAggregationInput = {
+    id?: SortOrder
+    materialId?: SortOrder
+    reporterId?: SortOrder
+    reason?: SortOrder
+    note?: SortOrderInput | SortOrder
+    status?: SortOrder
+    adminNote?: SortOrderInput | SortOrder
+    reviewedById?: SortOrderInput | SortOrder
+    reviewedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: MaterialReportCountOrderByAggregateInput
+    _max?: MaterialReportMaxOrderByAggregateInput
+    _min?: MaterialReportMinOrderByAggregateInput
+  }
+
+  export type MaterialReportScalarWhereWithAggregatesInput = {
+    AND?: MaterialReportScalarWhereWithAggregatesInput | MaterialReportScalarWhereWithAggregatesInput[]
+    OR?: MaterialReportScalarWhereWithAggregatesInput[]
+    NOT?: MaterialReportScalarWhereWithAggregatesInput | MaterialReportScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"MaterialReport"> | string
+    materialId?: StringWithAggregatesFilter<"MaterialReport"> | string
+    reporterId?: StringWithAggregatesFilter<"MaterialReport"> | string
+    reason?: EnumMaterialReportReasonWithAggregatesFilter<"MaterialReport"> | $Enums.MaterialReportReason
+    note?: StringNullableWithAggregatesFilter<"MaterialReport"> | string | null
+    status?: EnumMaterialReportStatusWithAggregatesFilter<"MaterialReport"> | $Enums.MaterialReportStatus
+    adminNote?: StringNullableWithAggregatesFilter<"MaterialReport"> | string | null
+    reviewedById?: StringNullableWithAggregatesFilter<"MaterialReport"> | string | null
+    reviewedAt?: DateTimeNullableWithAggregatesFilter<"MaterialReport"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"MaterialReport"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"MaterialReport"> | Date | string
   }
 
   export type MaterialImageWhereInput = {
@@ -43849,6 +45529,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -43885,6 +45568,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUpdateInput = {
@@ -43921,6 +45607,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -43957,6 +45646,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -45496,9 +47188,12 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
@@ -45510,6 +47205,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
     publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateInput = {
@@ -45541,6 +47237,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
@@ -45548,6 +47247,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUpdateInput = {
@@ -45572,9 +47272,12 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
@@ -45586,6 +47289,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateInput = {
@@ -45617,6 +47321,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
@@ -45624,6 +47331,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialCreateManyInput = {
@@ -45655,6 +47363,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -45681,6 +47392,8 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -45714,6 +47427,104 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialReportCreateInput = {
+    id?: string
+    reason: $Enums.MaterialReportReason
+    note?: string | null
+    status?: $Enums.MaterialReportStatus
+    adminNote?: string | null
+    reviewedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    material: MaterialCreateNestedOneWithoutReportsInput
+    reporter: UserCreateNestedOneWithoutMaterialReportsSubmittedInput
+    reviewedBy?: UserCreateNestedOneWithoutMaterialReportsReviewedInput
+  }
+
+  export type MaterialReportUncheckedCreateInput = {
+    id?: string
+    materialId: string
+    reporterId: string
+    reason: $Enums.MaterialReportReason
+    note?: string | null
+    status?: $Enums.MaterialReportStatus
+    adminNote?: string | null
+    reviewedById?: string | null
+    reviewedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MaterialReportUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    material?: MaterialUpdateOneRequiredWithoutReportsNestedInput
+    reporter?: UserUpdateOneRequiredWithoutMaterialReportsSubmittedNestedInput
+    reviewedBy?: UserUpdateOneWithoutMaterialReportsReviewedNestedInput
+  }
+
+  export type MaterialReportUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    materialId?: StringFieldUpdateOperationsInput | string
+    reporterId?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialReportCreateManyInput = {
+    id?: string
+    materialId: string
+    reporterId: string
+    reason: $Enums.MaterialReportReason
+    note?: string | null
+    status?: $Enums.MaterialReportStatus
+    adminNote?: string | null
+    reviewedById?: string | null
+    reviewedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MaterialReportUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialReportUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    materialId?: StringFieldUpdateOperationsInput | string
+    reporterId?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -47028,6 +48839,12 @@ export namespace Prisma {
     none?: CategoryRequestWhereInput
   }
 
+  export type MaterialReportListRelationFilter = {
+    every?: MaterialReportWhereInput
+    some?: MaterialReportWhereInput
+    none?: MaterialReportWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -47082,6 +48899,10 @@ export namespace Prisma {
   }
 
   export type CategoryRequestOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type MaterialReportOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -48503,6 +50324,9 @@ export namespace Prisma {
     viewsCount?: SortOrder
     reusedAt?: SortOrder
     reusedByReservationId?: SortOrder
+    moderationReason?: SortOrder
+    moderatedAt?: SortOrder
+    moderatedById?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -48543,6 +50367,9 @@ export namespace Prisma {
     viewsCount?: SortOrder
     reusedAt?: SortOrder
     reusedByReservationId?: SortOrder
+    moderationReason?: SortOrder
+    moderatedAt?: SortOrder
+    moderatedById?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -48576,6 +50403,9 @@ export namespace Prisma {
     viewsCount?: SortOrder
     reusedAt?: SortOrder
     reusedByReservationId?: SortOrder
+    moderationReason?: SortOrder
+    moderatedAt?: SortOrder
+    moderatedById?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -48617,9 +50447,85 @@ export namespace Prisma {
     _max?: NestedEnumMaterialStatusFilter<$PrismaModel>
   }
 
+  export type EnumMaterialReportReasonFilter<$PrismaModel = never> = {
+    equals?: $Enums.MaterialReportReason | EnumMaterialReportReasonFieldRefInput<$PrismaModel>
+    in?: $Enums.MaterialReportReason[] | ListEnumMaterialReportReasonFieldRefInput<$PrismaModel>
+    notIn?: $Enums.MaterialReportReason[] | ListEnumMaterialReportReasonFieldRefInput<$PrismaModel>
+    not?: NestedEnumMaterialReportReasonFilter<$PrismaModel> | $Enums.MaterialReportReason
+  }
+
+  export type EnumMaterialReportStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.MaterialReportStatus | EnumMaterialReportStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.MaterialReportStatus[] | ListEnumMaterialReportStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.MaterialReportStatus[] | ListEnumMaterialReportStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumMaterialReportStatusFilter<$PrismaModel> | $Enums.MaterialReportStatus
+  }
+
   export type MaterialScalarRelationFilter = {
     is?: MaterialWhereInput
     isNot?: MaterialWhereInput
+  }
+
+  export type MaterialReportCountOrderByAggregateInput = {
+    id?: SortOrder
+    materialId?: SortOrder
+    reporterId?: SortOrder
+    reason?: SortOrder
+    note?: SortOrder
+    status?: SortOrder
+    adminNote?: SortOrder
+    reviewedById?: SortOrder
+    reviewedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type MaterialReportMaxOrderByAggregateInput = {
+    id?: SortOrder
+    materialId?: SortOrder
+    reporterId?: SortOrder
+    reason?: SortOrder
+    note?: SortOrder
+    status?: SortOrder
+    adminNote?: SortOrder
+    reviewedById?: SortOrder
+    reviewedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type MaterialReportMinOrderByAggregateInput = {
+    id?: SortOrder
+    materialId?: SortOrder
+    reporterId?: SortOrder
+    reason?: SortOrder
+    note?: SortOrder
+    status?: SortOrder
+    adminNote?: SortOrder
+    reviewedById?: SortOrder
+    reviewedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type EnumMaterialReportReasonWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.MaterialReportReason | EnumMaterialReportReasonFieldRefInput<$PrismaModel>
+    in?: $Enums.MaterialReportReason[] | ListEnumMaterialReportReasonFieldRefInput<$PrismaModel>
+    notIn?: $Enums.MaterialReportReason[] | ListEnumMaterialReportReasonFieldRefInput<$PrismaModel>
+    not?: NestedEnumMaterialReportReasonWithAggregatesFilter<$PrismaModel> | $Enums.MaterialReportReason
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumMaterialReportReasonFilter<$PrismaModel>
+    _max?: NestedEnumMaterialReportReasonFilter<$PrismaModel>
+  }
+
+  export type EnumMaterialReportStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.MaterialReportStatus | EnumMaterialReportStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.MaterialReportStatus[] | ListEnumMaterialReportStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.MaterialReportStatus[] | ListEnumMaterialReportStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumMaterialReportStatusWithAggregatesFilter<$PrismaModel> | $Enums.MaterialReportStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumMaterialReportStatusFilter<$PrismaModel>
+    _max?: NestedEnumMaterialReportStatusFilter<$PrismaModel>
   }
 
   export type MaterialImageCountOrderByAggregateInput = {
@@ -49526,6 +51432,27 @@ export namespace Prisma {
     connect?: CategoryRequestWhereUniqueInput | CategoryRequestWhereUniqueInput[]
   }
 
+  export type MaterialReportCreateNestedManyWithoutReporterInput = {
+    create?: XOR<MaterialReportCreateWithoutReporterInput, MaterialReportUncheckedCreateWithoutReporterInput> | MaterialReportCreateWithoutReporterInput[] | MaterialReportUncheckedCreateWithoutReporterInput[]
+    connectOrCreate?: MaterialReportCreateOrConnectWithoutReporterInput | MaterialReportCreateOrConnectWithoutReporterInput[]
+    createMany?: MaterialReportCreateManyReporterInputEnvelope
+    connect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+  }
+
+  export type MaterialReportCreateNestedManyWithoutReviewedByInput = {
+    create?: XOR<MaterialReportCreateWithoutReviewedByInput, MaterialReportUncheckedCreateWithoutReviewedByInput> | MaterialReportCreateWithoutReviewedByInput[] | MaterialReportUncheckedCreateWithoutReviewedByInput[]
+    connectOrCreate?: MaterialReportCreateOrConnectWithoutReviewedByInput | MaterialReportCreateOrConnectWithoutReviewedByInput[]
+    createMany?: MaterialReportCreateManyReviewedByInputEnvelope
+    connect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+  }
+
+  export type MaterialCreateNestedManyWithoutModeratedByInput = {
+    create?: XOR<MaterialCreateWithoutModeratedByInput, MaterialUncheckedCreateWithoutModeratedByInput> | MaterialCreateWithoutModeratedByInput[] | MaterialUncheckedCreateWithoutModeratedByInput[]
+    connectOrCreate?: MaterialCreateOrConnectWithoutModeratedByInput | MaterialCreateOrConnectWithoutModeratedByInput[]
+    createMany?: MaterialCreateManyModeratedByInputEnvelope
+    connect?: MaterialWhereUniqueInput | MaterialWhereUniqueInput[]
+  }
+
   export type UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput = {
     create?: XOR<UserRoleAssignmentCreateWithoutUserInput, UserRoleAssignmentUncheckedCreateWithoutUserInput> | UserRoleAssignmentCreateWithoutUserInput[] | UserRoleAssignmentUncheckedCreateWithoutUserInput[]
     connectOrCreate?: UserRoleAssignmentCreateOrConnectWithoutUserInput | UserRoleAssignmentCreateOrConnectWithoutUserInput[]
@@ -49668,6 +51595,27 @@ export namespace Prisma {
     connectOrCreate?: CategoryRequestCreateOrConnectWithoutRequestedByInput | CategoryRequestCreateOrConnectWithoutRequestedByInput[]
     createMany?: CategoryRequestCreateManyRequestedByInputEnvelope
     connect?: CategoryRequestWhereUniqueInput | CategoryRequestWhereUniqueInput[]
+  }
+
+  export type MaterialReportUncheckedCreateNestedManyWithoutReporterInput = {
+    create?: XOR<MaterialReportCreateWithoutReporterInput, MaterialReportUncheckedCreateWithoutReporterInput> | MaterialReportCreateWithoutReporterInput[] | MaterialReportUncheckedCreateWithoutReporterInput[]
+    connectOrCreate?: MaterialReportCreateOrConnectWithoutReporterInput | MaterialReportCreateOrConnectWithoutReporterInput[]
+    createMany?: MaterialReportCreateManyReporterInputEnvelope
+    connect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+  }
+
+  export type MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput = {
+    create?: XOR<MaterialReportCreateWithoutReviewedByInput, MaterialReportUncheckedCreateWithoutReviewedByInput> | MaterialReportCreateWithoutReviewedByInput[] | MaterialReportUncheckedCreateWithoutReviewedByInput[]
+    connectOrCreate?: MaterialReportCreateOrConnectWithoutReviewedByInput | MaterialReportCreateOrConnectWithoutReviewedByInput[]
+    createMany?: MaterialReportCreateManyReviewedByInputEnvelope
+    connect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+  }
+
+  export type MaterialUncheckedCreateNestedManyWithoutModeratedByInput = {
+    create?: XOR<MaterialCreateWithoutModeratedByInput, MaterialUncheckedCreateWithoutModeratedByInput> | MaterialCreateWithoutModeratedByInput[] | MaterialUncheckedCreateWithoutModeratedByInput[]
+    connectOrCreate?: MaterialCreateOrConnectWithoutModeratedByInput | MaterialCreateOrConnectWithoutModeratedByInput[]
+    createMany?: MaterialCreateManyModeratedByInputEnvelope
+    connect?: MaterialWhereUniqueInput | MaterialWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -49972,6 +51920,48 @@ export namespace Prisma {
     deleteMany?: CategoryRequestScalarWhereInput | CategoryRequestScalarWhereInput[]
   }
 
+  export type MaterialReportUpdateManyWithoutReporterNestedInput = {
+    create?: XOR<MaterialReportCreateWithoutReporterInput, MaterialReportUncheckedCreateWithoutReporterInput> | MaterialReportCreateWithoutReporterInput[] | MaterialReportUncheckedCreateWithoutReporterInput[]
+    connectOrCreate?: MaterialReportCreateOrConnectWithoutReporterInput | MaterialReportCreateOrConnectWithoutReporterInput[]
+    upsert?: MaterialReportUpsertWithWhereUniqueWithoutReporterInput | MaterialReportUpsertWithWhereUniqueWithoutReporterInput[]
+    createMany?: MaterialReportCreateManyReporterInputEnvelope
+    set?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    disconnect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    delete?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    connect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    update?: MaterialReportUpdateWithWhereUniqueWithoutReporterInput | MaterialReportUpdateWithWhereUniqueWithoutReporterInput[]
+    updateMany?: MaterialReportUpdateManyWithWhereWithoutReporterInput | MaterialReportUpdateManyWithWhereWithoutReporterInput[]
+    deleteMany?: MaterialReportScalarWhereInput | MaterialReportScalarWhereInput[]
+  }
+
+  export type MaterialReportUpdateManyWithoutReviewedByNestedInput = {
+    create?: XOR<MaterialReportCreateWithoutReviewedByInput, MaterialReportUncheckedCreateWithoutReviewedByInput> | MaterialReportCreateWithoutReviewedByInput[] | MaterialReportUncheckedCreateWithoutReviewedByInput[]
+    connectOrCreate?: MaterialReportCreateOrConnectWithoutReviewedByInput | MaterialReportCreateOrConnectWithoutReviewedByInput[]
+    upsert?: MaterialReportUpsertWithWhereUniqueWithoutReviewedByInput | MaterialReportUpsertWithWhereUniqueWithoutReviewedByInput[]
+    createMany?: MaterialReportCreateManyReviewedByInputEnvelope
+    set?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    disconnect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    delete?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    connect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    update?: MaterialReportUpdateWithWhereUniqueWithoutReviewedByInput | MaterialReportUpdateWithWhereUniqueWithoutReviewedByInput[]
+    updateMany?: MaterialReportUpdateManyWithWhereWithoutReviewedByInput | MaterialReportUpdateManyWithWhereWithoutReviewedByInput[]
+    deleteMany?: MaterialReportScalarWhereInput | MaterialReportScalarWhereInput[]
+  }
+
+  export type MaterialUpdateManyWithoutModeratedByNestedInput = {
+    create?: XOR<MaterialCreateWithoutModeratedByInput, MaterialUncheckedCreateWithoutModeratedByInput> | MaterialCreateWithoutModeratedByInput[] | MaterialUncheckedCreateWithoutModeratedByInput[]
+    connectOrCreate?: MaterialCreateOrConnectWithoutModeratedByInput | MaterialCreateOrConnectWithoutModeratedByInput[]
+    upsert?: MaterialUpsertWithWhereUniqueWithoutModeratedByInput | MaterialUpsertWithWhereUniqueWithoutModeratedByInput[]
+    createMany?: MaterialCreateManyModeratedByInputEnvelope
+    set?: MaterialWhereUniqueInput | MaterialWhereUniqueInput[]
+    disconnect?: MaterialWhereUniqueInput | MaterialWhereUniqueInput[]
+    delete?: MaterialWhereUniqueInput | MaterialWhereUniqueInput[]
+    connect?: MaterialWhereUniqueInput | MaterialWhereUniqueInput[]
+    update?: MaterialUpdateWithWhereUniqueWithoutModeratedByInput | MaterialUpdateWithWhereUniqueWithoutModeratedByInput[]
+    updateMany?: MaterialUpdateManyWithWhereWithoutModeratedByInput | MaterialUpdateManyWithWhereWithoutModeratedByInput[]
+    deleteMany?: MaterialScalarWhereInput | MaterialScalarWhereInput[]
+  }
+
   export type UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput = {
     create?: XOR<UserRoleAssignmentCreateWithoutUserInput, UserRoleAssignmentUncheckedCreateWithoutUserInput> | UserRoleAssignmentCreateWithoutUserInput[] | UserRoleAssignmentUncheckedCreateWithoutUserInput[]
     connectOrCreate?: UserRoleAssignmentCreateOrConnectWithoutUserInput | UserRoleAssignmentCreateOrConnectWithoutUserInput[]
@@ -50252,6 +52242,48 @@ export namespace Prisma {
     update?: CategoryRequestUpdateWithWhereUniqueWithoutRequestedByInput | CategoryRequestUpdateWithWhereUniqueWithoutRequestedByInput[]
     updateMany?: CategoryRequestUpdateManyWithWhereWithoutRequestedByInput | CategoryRequestUpdateManyWithWhereWithoutRequestedByInput[]
     deleteMany?: CategoryRequestScalarWhereInput | CategoryRequestScalarWhereInput[]
+  }
+
+  export type MaterialReportUncheckedUpdateManyWithoutReporterNestedInput = {
+    create?: XOR<MaterialReportCreateWithoutReporterInput, MaterialReportUncheckedCreateWithoutReporterInput> | MaterialReportCreateWithoutReporterInput[] | MaterialReportUncheckedCreateWithoutReporterInput[]
+    connectOrCreate?: MaterialReportCreateOrConnectWithoutReporterInput | MaterialReportCreateOrConnectWithoutReporterInput[]
+    upsert?: MaterialReportUpsertWithWhereUniqueWithoutReporterInput | MaterialReportUpsertWithWhereUniqueWithoutReporterInput[]
+    createMany?: MaterialReportCreateManyReporterInputEnvelope
+    set?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    disconnect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    delete?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    connect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    update?: MaterialReportUpdateWithWhereUniqueWithoutReporterInput | MaterialReportUpdateWithWhereUniqueWithoutReporterInput[]
+    updateMany?: MaterialReportUpdateManyWithWhereWithoutReporterInput | MaterialReportUpdateManyWithWhereWithoutReporterInput[]
+    deleteMany?: MaterialReportScalarWhereInput | MaterialReportScalarWhereInput[]
+  }
+
+  export type MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput = {
+    create?: XOR<MaterialReportCreateWithoutReviewedByInput, MaterialReportUncheckedCreateWithoutReviewedByInput> | MaterialReportCreateWithoutReviewedByInput[] | MaterialReportUncheckedCreateWithoutReviewedByInput[]
+    connectOrCreate?: MaterialReportCreateOrConnectWithoutReviewedByInput | MaterialReportCreateOrConnectWithoutReviewedByInput[]
+    upsert?: MaterialReportUpsertWithWhereUniqueWithoutReviewedByInput | MaterialReportUpsertWithWhereUniqueWithoutReviewedByInput[]
+    createMany?: MaterialReportCreateManyReviewedByInputEnvelope
+    set?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    disconnect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    delete?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    connect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    update?: MaterialReportUpdateWithWhereUniqueWithoutReviewedByInput | MaterialReportUpdateWithWhereUniqueWithoutReviewedByInput[]
+    updateMany?: MaterialReportUpdateManyWithWhereWithoutReviewedByInput | MaterialReportUpdateManyWithWhereWithoutReviewedByInput[]
+    deleteMany?: MaterialReportScalarWhereInput | MaterialReportScalarWhereInput[]
+  }
+
+  export type MaterialUncheckedUpdateManyWithoutModeratedByNestedInput = {
+    create?: XOR<MaterialCreateWithoutModeratedByInput, MaterialUncheckedCreateWithoutModeratedByInput> | MaterialCreateWithoutModeratedByInput[] | MaterialUncheckedCreateWithoutModeratedByInput[]
+    connectOrCreate?: MaterialCreateOrConnectWithoutModeratedByInput | MaterialCreateOrConnectWithoutModeratedByInput[]
+    upsert?: MaterialUpsertWithWhereUniqueWithoutModeratedByInput | MaterialUpsertWithWhereUniqueWithoutModeratedByInput[]
+    createMany?: MaterialCreateManyModeratedByInputEnvelope
+    set?: MaterialWhereUniqueInput | MaterialWhereUniqueInput[]
+    disconnect?: MaterialWhereUniqueInput | MaterialWhereUniqueInput[]
+    delete?: MaterialWhereUniqueInput | MaterialWhereUniqueInput[]
+    connect?: MaterialWhereUniqueInput | MaterialWhereUniqueInput[]
+    update?: MaterialUpdateWithWhereUniqueWithoutModeratedByInput | MaterialUpdateWithWhereUniqueWithoutModeratedByInput[]
+    updateMany?: MaterialUpdateManyWithWhereWithoutModeratedByInput | MaterialUpdateManyWithWhereWithoutModeratedByInput[]
+    deleteMany?: MaterialScalarWhereInput | MaterialScalarWhereInput[]
   }
 
   export type UserCreateNestedOneWithoutRolesInput = {
@@ -51453,6 +53485,12 @@ export namespace Prisma {
     connect?: UserWhereUniqueInput
   }
 
+  export type UserCreateNestedOneWithoutModeratedMaterialsInput = {
+    create?: XOR<UserCreateWithoutModeratedMaterialsInput, UserUncheckedCreateWithoutModeratedMaterialsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutModeratedMaterialsInput
+    connect?: UserWhereUniqueInput
+  }
+
   export type SupplierProfileCreateNestedOneWithoutMaterialsInput = {
     create?: XOR<SupplierProfileCreateWithoutMaterialsInput, SupplierProfileUncheckedCreateWithoutMaterialsInput>
     connectOrCreate?: SupplierProfileCreateOrConnectWithoutMaterialsInput
@@ -51522,6 +53560,13 @@ export namespace Prisma {
     connect?: PriceRuleRequestWhereUniqueInput
   }
 
+  export type MaterialReportCreateNestedManyWithoutMaterialInput = {
+    create?: XOR<MaterialReportCreateWithoutMaterialInput, MaterialReportUncheckedCreateWithoutMaterialInput> | MaterialReportCreateWithoutMaterialInput[] | MaterialReportUncheckedCreateWithoutMaterialInput[]
+    connectOrCreate?: MaterialReportCreateOrConnectWithoutMaterialInput | MaterialReportCreateOrConnectWithoutMaterialInput[]
+    createMany?: MaterialReportCreateManyMaterialInputEnvelope
+    connect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+  }
+
   export type MaterialImageUncheckedCreateNestedManyWithoutMaterialInput = {
     create?: XOR<MaterialImageCreateWithoutMaterialInput, MaterialImageUncheckedCreateWithoutMaterialInput> | MaterialImageCreateWithoutMaterialInput[] | MaterialImageUncheckedCreateWithoutMaterialInput[]
     connectOrCreate?: MaterialImageCreateOrConnectWithoutMaterialInput | MaterialImageCreateOrConnectWithoutMaterialInput[]
@@ -51555,6 +53600,13 @@ export namespace Prisma {
     connect?: PriceRuleRequestWhereUniqueInput
   }
 
+  export type MaterialReportUncheckedCreateNestedManyWithoutMaterialInput = {
+    create?: XOR<MaterialReportCreateWithoutMaterialInput, MaterialReportUncheckedCreateWithoutMaterialInput> | MaterialReportCreateWithoutMaterialInput[] | MaterialReportUncheckedCreateWithoutMaterialInput[]
+    connectOrCreate?: MaterialReportCreateOrConnectWithoutMaterialInput | MaterialReportCreateOrConnectWithoutMaterialInput[]
+    createMany?: MaterialReportCreateManyMaterialInputEnvelope
+    connect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+  }
+
   export type EnumMaterialConditionFieldUpdateOperationsInput = {
     set?: $Enums.MaterialCondition
   }
@@ -51573,6 +53625,16 @@ export namespace Prisma {
     upsert?: UserUpsertWithoutOwnedMaterialsInput
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutOwnedMaterialsInput, UserUpdateWithoutOwnedMaterialsInput>, UserUncheckedUpdateWithoutOwnedMaterialsInput>
+  }
+
+  export type UserUpdateOneWithoutModeratedMaterialsNestedInput = {
+    create?: XOR<UserCreateWithoutModeratedMaterialsInput, UserUncheckedCreateWithoutModeratedMaterialsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutModeratedMaterialsInput
+    upsert?: UserUpsertWithoutModeratedMaterialsInput
+    disconnect?: UserWhereInput | boolean
+    delete?: UserWhereInput | boolean
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutModeratedMaterialsInput, UserUpdateWithoutModeratedMaterialsInput>, UserUncheckedUpdateWithoutModeratedMaterialsInput>
   }
 
   export type SupplierProfileUpdateOneWithoutMaterialsNestedInput = {
@@ -51693,6 +53755,20 @@ export namespace Prisma {
     update?: XOR<XOR<PriceRuleRequestUpdateToOneWithWhereWithoutPublishedMaterialInput, PriceRuleRequestUpdateWithoutPublishedMaterialInput>, PriceRuleRequestUncheckedUpdateWithoutPublishedMaterialInput>
   }
 
+  export type MaterialReportUpdateManyWithoutMaterialNestedInput = {
+    create?: XOR<MaterialReportCreateWithoutMaterialInput, MaterialReportUncheckedCreateWithoutMaterialInput> | MaterialReportCreateWithoutMaterialInput[] | MaterialReportUncheckedCreateWithoutMaterialInput[]
+    connectOrCreate?: MaterialReportCreateOrConnectWithoutMaterialInput | MaterialReportCreateOrConnectWithoutMaterialInput[]
+    upsert?: MaterialReportUpsertWithWhereUniqueWithoutMaterialInput | MaterialReportUpsertWithWhereUniqueWithoutMaterialInput[]
+    createMany?: MaterialReportCreateManyMaterialInputEnvelope
+    set?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    disconnect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    delete?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    connect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    update?: MaterialReportUpdateWithWhereUniqueWithoutMaterialInput | MaterialReportUpdateWithWhereUniqueWithoutMaterialInput[]
+    updateMany?: MaterialReportUpdateManyWithWhereWithoutMaterialInput | MaterialReportUpdateManyWithWhereWithoutMaterialInput[]
+    deleteMany?: MaterialReportScalarWhereInput | MaterialReportScalarWhereInput[]
+  }
+
   export type MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput = {
     create?: XOR<MaterialImageCreateWithoutMaterialInput, MaterialImageUncheckedCreateWithoutMaterialInput> | MaterialImageCreateWithoutMaterialInput[] | MaterialImageUncheckedCreateWithoutMaterialInput[]
     connectOrCreate?: MaterialImageCreateOrConnectWithoutMaterialInput | MaterialImageCreateOrConnectWithoutMaterialInput[]
@@ -51753,6 +53829,72 @@ export namespace Prisma {
     delete?: PriceRuleRequestWhereInput | boolean
     connect?: PriceRuleRequestWhereUniqueInput
     update?: XOR<XOR<PriceRuleRequestUpdateToOneWithWhereWithoutPublishedMaterialInput, PriceRuleRequestUpdateWithoutPublishedMaterialInput>, PriceRuleRequestUncheckedUpdateWithoutPublishedMaterialInput>
+  }
+
+  export type MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput = {
+    create?: XOR<MaterialReportCreateWithoutMaterialInput, MaterialReportUncheckedCreateWithoutMaterialInput> | MaterialReportCreateWithoutMaterialInput[] | MaterialReportUncheckedCreateWithoutMaterialInput[]
+    connectOrCreate?: MaterialReportCreateOrConnectWithoutMaterialInput | MaterialReportCreateOrConnectWithoutMaterialInput[]
+    upsert?: MaterialReportUpsertWithWhereUniqueWithoutMaterialInput | MaterialReportUpsertWithWhereUniqueWithoutMaterialInput[]
+    createMany?: MaterialReportCreateManyMaterialInputEnvelope
+    set?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    disconnect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    delete?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    connect?: MaterialReportWhereUniqueInput | MaterialReportWhereUniqueInput[]
+    update?: MaterialReportUpdateWithWhereUniqueWithoutMaterialInput | MaterialReportUpdateWithWhereUniqueWithoutMaterialInput[]
+    updateMany?: MaterialReportUpdateManyWithWhereWithoutMaterialInput | MaterialReportUpdateManyWithWhereWithoutMaterialInput[]
+    deleteMany?: MaterialReportScalarWhereInput | MaterialReportScalarWhereInput[]
+  }
+
+  export type MaterialCreateNestedOneWithoutReportsInput = {
+    create?: XOR<MaterialCreateWithoutReportsInput, MaterialUncheckedCreateWithoutReportsInput>
+    connectOrCreate?: MaterialCreateOrConnectWithoutReportsInput
+    connect?: MaterialWhereUniqueInput
+  }
+
+  export type UserCreateNestedOneWithoutMaterialReportsSubmittedInput = {
+    create?: XOR<UserCreateWithoutMaterialReportsSubmittedInput, UserUncheckedCreateWithoutMaterialReportsSubmittedInput>
+    connectOrCreate?: UserCreateOrConnectWithoutMaterialReportsSubmittedInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type UserCreateNestedOneWithoutMaterialReportsReviewedInput = {
+    create?: XOR<UserCreateWithoutMaterialReportsReviewedInput, UserUncheckedCreateWithoutMaterialReportsReviewedInput>
+    connectOrCreate?: UserCreateOrConnectWithoutMaterialReportsReviewedInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type EnumMaterialReportReasonFieldUpdateOperationsInput = {
+    set?: $Enums.MaterialReportReason
+  }
+
+  export type EnumMaterialReportStatusFieldUpdateOperationsInput = {
+    set?: $Enums.MaterialReportStatus
+  }
+
+  export type MaterialUpdateOneRequiredWithoutReportsNestedInput = {
+    create?: XOR<MaterialCreateWithoutReportsInput, MaterialUncheckedCreateWithoutReportsInput>
+    connectOrCreate?: MaterialCreateOrConnectWithoutReportsInput
+    upsert?: MaterialUpsertWithoutReportsInput
+    connect?: MaterialWhereUniqueInput
+    update?: XOR<XOR<MaterialUpdateToOneWithWhereWithoutReportsInput, MaterialUpdateWithoutReportsInput>, MaterialUncheckedUpdateWithoutReportsInput>
+  }
+
+  export type UserUpdateOneRequiredWithoutMaterialReportsSubmittedNestedInput = {
+    create?: XOR<UserCreateWithoutMaterialReportsSubmittedInput, UserUncheckedCreateWithoutMaterialReportsSubmittedInput>
+    connectOrCreate?: UserCreateOrConnectWithoutMaterialReportsSubmittedInput
+    upsert?: UserUpsertWithoutMaterialReportsSubmittedInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutMaterialReportsSubmittedInput, UserUpdateWithoutMaterialReportsSubmittedInput>, UserUncheckedUpdateWithoutMaterialReportsSubmittedInput>
+  }
+
+  export type UserUpdateOneWithoutMaterialReportsReviewedNestedInput = {
+    create?: XOR<UserCreateWithoutMaterialReportsReviewedInput, UserUncheckedCreateWithoutMaterialReportsReviewedInput>
+    connectOrCreate?: UserCreateOrConnectWithoutMaterialReportsReviewedInput
+    upsert?: UserUpsertWithoutMaterialReportsReviewedInput
+    disconnect?: UserWhereInput | boolean
+    delete?: UserWhereInput | boolean
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutMaterialReportsReviewedInput, UserUpdateWithoutMaterialReportsReviewedInput>, UserUncheckedUpdateWithoutMaterialReportsReviewedInput>
   }
 
   export type MaterialCreateNestedOneWithoutImagesInput = {
@@ -53048,6 +55190,40 @@ export namespace Prisma {
     _max?: NestedEnumMaterialStatusFilter<$PrismaModel>
   }
 
+  export type NestedEnumMaterialReportReasonFilter<$PrismaModel = never> = {
+    equals?: $Enums.MaterialReportReason | EnumMaterialReportReasonFieldRefInput<$PrismaModel>
+    in?: $Enums.MaterialReportReason[] | ListEnumMaterialReportReasonFieldRefInput<$PrismaModel>
+    notIn?: $Enums.MaterialReportReason[] | ListEnumMaterialReportReasonFieldRefInput<$PrismaModel>
+    not?: NestedEnumMaterialReportReasonFilter<$PrismaModel> | $Enums.MaterialReportReason
+  }
+
+  export type NestedEnumMaterialReportStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.MaterialReportStatus | EnumMaterialReportStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.MaterialReportStatus[] | ListEnumMaterialReportStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.MaterialReportStatus[] | ListEnumMaterialReportStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumMaterialReportStatusFilter<$PrismaModel> | $Enums.MaterialReportStatus
+  }
+
+  export type NestedEnumMaterialReportReasonWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.MaterialReportReason | EnumMaterialReportReasonFieldRefInput<$PrismaModel>
+    in?: $Enums.MaterialReportReason[] | ListEnumMaterialReportReasonFieldRefInput<$PrismaModel>
+    notIn?: $Enums.MaterialReportReason[] | ListEnumMaterialReportReasonFieldRefInput<$PrismaModel>
+    not?: NestedEnumMaterialReportReasonWithAggregatesFilter<$PrismaModel> | $Enums.MaterialReportReason
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumMaterialReportReasonFilter<$PrismaModel>
+    _max?: NestedEnumMaterialReportReasonFilter<$PrismaModel>
+  }
+
+  export type NestedEnumMaterialReportStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.MaterialReportStatus | EnumMaterialReportStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.MaterialReportStatus[] | ListEnumMaterialReportStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.MaterialReportStatus[] | ListEnumMaterialReportStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumMaterialReportStatusWithAggregatesFilter<$PrismaModel> | $Enums.MaterialReportStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumMaterialReportStatusFilter<$PrismaModel>
+    _max?: NestedEnumMaterialReportStatusFilter<$PrismaModel>
+  }
+
   export type NestedEnumReservationStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.ReservationStatus | EnumReservationStatusFieldRefInput<$PrismaModel>
     in?: $Enums.ReservationStatus[] | ListEnumReservationStatusFieldRefInput<$PrismaModel>
@@ -53517,8 +55693,11 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
@@ -53530,6 +55709,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
     publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateWithoutOwnerInput = {
@@ -53560,6 +55740,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
@@ -53567,6 +55750,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutOwnerInput = {
@@ -54121,6 +56305,170 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type MaterialReportCreateWithoutReporterInput = {
+    id?: string
+    reason: $Enums.MaterialReportReason
+    note?: string | null
+    status?: $Enums.MaterialReportStatus
+    adminNote?: string | null
+    reviewedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    material: MaterialCreateNestedOneWithoutReportsInput
+    reviewedBy?: UserCreateNestedOneWithoutMaterialReportsReviewedInput
+  }
+
+  export type MaterialReportUncheckedCreateWithoutReporterInput = {
+    id?: string
+    materialId: string
+    reason: $Enums.MaterialReportReason
+    note?: string | null
+    status?: $Enums.MaterialReportStatus
+    adminNote?: string | null
+    reviewedById?: string | null
+    reviewedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MaterialReportCreateOrConnectWithoutReporterInput = {
+    where: MaterialReportWhereUniqueInput
+    create: XOR<MaterialReportCreateWithoutReporterInput, MaterialReportUncheckedCreateWithoutReporterInput>
+  }
+
+  export type MaterialReportCreateManyReporterInputEnvelope = {
+    data: MaterialReportCreateManyReporterInput | MaterialReportCreateManyReporterInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type MaterialReportCreateWithoutReviewedByInput = {
+    id?: string
+    reason: $Enums.MaterialReportReason
+    note?: string | null
+    status?: $Enums.MaterialReportStatus
+    adminNote?: string | null
+    reviewedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    material: MaterialCreateNestedOneWithoutReportsInput
+    reporter: UserCreateNestedOneWithoutMaterialReportsSubmittedInput
+  }
+
+  export type MaterialReportUncheckedCreateWithoutReviewedByInput = {
+    id?: string
+    materialId: string
+    reporterId: string
+    reason: $Enums.MaterialReportReason
+    note?: string | null
+    status?: $Enums.MaterialReportStatus
+    adminNote?: string | null
+    reviewedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MaterialReportCreateOrConnectWithoutReviewedByInput = {
+    where: MaterialReportWhereUniqueInput
+    create: XOR<MaterialReportCreateWithoutReviewedByInput, MaterialReportUncheckedCreateWithoutReviewedByInput>
+  }
+
+  export type MaterialReportCreateManyReviewedByInputEnvelope = {
+    data: MaterialReportCreateManyReviewedByInput | MaterialReportCreateManyReviewedByInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type MaterialCreateWithoutModeratedByInput = {
+    id?: string
+    title: string
+    description: string
+    materialType: string
+    customMaterialType?: string | null
+    priceCheckedAt?: Date | string | null
+    maxAllowedPriceAtCheck?: Decimal | DecimalJsLike | number | string | null
+    quantity: Decimal | DecimalJsLike | number | string
+    unit: string
+    condition: $Enums.MaterialCondition
+    sourceType: $Enums.MaterialSourceType
+    status?: $Enums.MaterialStatus
+    isFree?: boolean
+    price?: Decimal | DecimalJsLike | number | string | null
+    currency?: string
+    pickupAllowed?: boolean
+    deliveryAllowed?: boolean
+    pickupNotes?: string | null
+    suggestedUses?: string | null
+    viewsCount?: number
+    reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
+    category: CategoryCreateNestedOneWithoutMaterialsInput
+    approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
+    priceRule?: MaterialPriceRuleCreateNestedOneWithoutMaterialsInput
+    location: LocationCreateNestedOneWithoutMaterialsInput
+    images?: MaterialImageCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagCreateNestedManyWithoutMaterialInput
+    reservations?: ReservationCreateNestedManyWithoutMaterialInput
+    reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
+    publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
+    publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
+  }
+
+  export type MaterialUncheckedCreateWithoutModeratedByInput = {
+    id?: string
+    ownerId: string
+    supplierProfileId?: string | null
+    categoryId: string
+    title: string
+    description: string
+    materialType: string
+    materialTypeId?: string | null
+    customMaterialType?: string | null
+    priceRuleId?: string | null
+    priceCheckedAt?: Date | string | null
+    maxAllowedPriceAtCheck?: Decimal | DecimalJsLike | number | string | null
+    quantity: Decimal | DecimalJsLike | number | string
+    unit: string
+    condition: $Enums.MaterialCondition
+    sourceType: $Enums.MaterialSourceType
+    status?: $Enums.MaterialStatus
+    isFree?: boolean
+    price?: Decimal | DecimalJsLike | number | string | null
+    currency?: string
+    locationId: string
+    pickupAllowed?: boolean
+    deliveryAllowed?: boolean
+    pickupNotes?: string | null
+    suggestedUses?: string | null
+    viewsCount?: number
+    reusedAt?: Date | string | null
+    reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
+    reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
+    publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
+  }
+
+  export type MaterialCreateOrConnectWithoutModeratedByInput = {
+    where: MaterialWhereUniqueInput
+    create: XOR<MaterialCreateWithoutModeratedByInput, MaterialUncheckedCreateWithoutModeratedByInput>
+  }
+
+  export type MaterialCreateManyModeratedByInputEnvelope = {
+    data: MaterialCreateManyModeratedByInput | MaterialCreateManyModeratedByInput[]
+    skipDuplicates?: boolean
+  }
+
   export type UserRoleAssignmentUpsertWithWhereUniqueWithoutUserInput = {
     where: UserRoleAssignmentWhereUniqueInput
     update: XOR<UserRoleAssignmentUpdateWithoutUserInput, UserRoleAssignmentUncheckedUpdateWithoutUserInput>
@@ -54412,6 +56760,9 @@ export namespace Prisma {
     viewsCount?: IntFilter<"Material"> | number
     reusedAt?: DateTimeNullableFilter<"Material"> | Date | string | null
     reusedByReservationId?: StringNullableFilter<"Material"> | string | null
+    moderationReason?: StringNullableFilter<"Material"> | string | null
+    moderatedAt?: DateTimeNullableFilter<"Material"> | Date | string | null
+    moderatedById?: StringNullableFilter<"Material"> | string | null
     createdAt?: DateTimeFilter<"Material"> | Date | string
     updatedAt?: DateTimeFilter<"Material"> | Date | string
   }
@@ -54784,6 +57135,71 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"CategoryRequest"> | Date | string
   }
 
+  export type MaterialReportUpsertWithWhereUniqueWithoutReporterInput = {
+    where: MaterialReportWhereUniqueInput
+    update: XOR<MaterialReportUpdateWithoutReporterInput, MaterialReportUncheckedUpdateWithoutReporterInput>
+    create: XOR<MaterialReportCreateWithoutReporterInput, MaterialReportUncheckedCreateWithoutReporterInput>
+  }
+
+  export type MaterialReportUpdateWithWhereUniqueWithoutReporterInput = {
+    where: MaterialReportWhereUniqueInput
+    data: XOR<MaterialReportUpdateWithoutReporterInput, MaterialReportUncheckedUpdateWithoutReporterInput>
+  }
+
+  export type MaterialReportUpdateManyWithWhereWithoutReporterInput = {
+    where: MaterialReportScalarWhereInput
+    data: XOR<MaterialReportUpdateManyMutationInput, MaterialReportUncheckedUpdateManyWithoutReporterInput>
+  }
+
+  export type MaterialReportScalarWhereInput = {
+    AND?: MaterialReportScalarWhereInput | MaterialReportScalarWhereInput[]
+    OR?: MaterialReportScalarWhereInput[]
+    NOT?: MaterialReportScalarWhereInput | MaterialReportScalarWhereInput[]
+    id?: StringFilter<"MaterialReport"> | string
+    materialId?: StringFilter<"MaterialReport"> | string
+    reporterId?: StringFilter<"MaterialReport"> | string
+    reason?: EnumMaterialReportReasonFilter<"MaterialReport"> | $Enums.MaterialReportReason
+    note?: StringNullableFilter<"MaterialReport"> | string | null
+    status?: EnumMaterialReportStatusFilter<"MaterialReport"> | $Enums.MaterialReportStatus
+    adminNote?: StringNullableFilter<"MaterialReport"> | string | null
+    reviewedById?: StringNullableFilter<"MaterialReport"> | string | null
+    reviewedAt?: DateTimeNullableFilter<"MaterialReport"> | Date | string | null
+    createdAt?: DateTimeFilter<"MaterialReport"> | Date | string
+    updatedAt?: DateTimeFilter<"MaterialReport"> | Date | string
+  }
+
+  export type MaterialReportUpsertWithWhereUniqueWithoutReviewedByInput = {
+    where: MaterialReportWhereUniqueInput
+    update: XOR<MaterialReportUpdateWithoutReviewedByInput, MaterialReportUncheckedUpdateWithoutReviewedByInput>
+    create: XOR<MaterialReportCreateWithoutReviewedByInput, MaterialReportUncheckedCreateWithoutReviewedByInput>
+  }
+
+  export type MaterialReportUpdateWithWhereUniqueWithoutReviewedByInput = {
+    where: MaterialReportWhereUniqueInput
+    data: XOR<MaterialReportUpdateWithoutReviewedByInput, MaterialReportUncheckedUpdateWithoutReviewedByInput>
+  }
+
+  export type MaterialReportUpdateManyWithWhereWithoutReviewedByInput = {
+    where: MaterialReportScalarWhereInput
+    data: XOR<MaterialReportUpdateManyMutationInput, MaterialReportUncheckedUpdateManyWithoutReviewedByInput>
+  }
+
+  export type MaterialUpsertWithWhereUniqueWithoutModeratedByInput = {
+    where: MaterialWhereUniqueInput
+    update: XOR<MaterialUpdateWithoutModeratedByInput, MaterialUncheckedUpdateWithoutModeratedByInput>
+    create: XOR<MaterialCreateWithoutModeratedByInput, MaterialUncheckedCreateWithoutModeratedByInput>
+  }
+
+  export type MaterialUpdateWithWhereUniqueWithoutModeratedByInput = {
+    where: MaterialWhereUniqueInput
+    data: XOR<MaterialUpdateWithoutModeratedByInput, MaterialUncheckedUpdateWithoutModeratedByInput>
+  }
+
+  export type MaterialUpdateManyWithWhereWithoutModeratedByInput = {
+    where: MaterialScalarWhereInput
+    data: XOR<MaterialUpdateManyMutationInput, MaterialUncheckedUpdateManyWithoutModeratedByInput>
+  }
+
   export type UserCreateWithoutRolesInput = {
     id?: string
     displayName: string
@@ -54817,6 +57233,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutRolesInput = {
@@ -54852,6 +57271,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutRolesInput = {
@@ -54892,6 +57314,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutAssignedRolesInput = {
@@ -54927,6 +57352,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutAssignedRolesInput = {
@@ -54978,6 +57406,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutRolesInput = {
@@ -55013,6 +57444,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUpsertWithoutAssignedRolesInput = {
@@ -55059,6 +57493,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAssignedRolesInput = {
@@ -55094,6 +57531,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserCreateWithoutAuthTokensInput = {
@@ -55129,6 +57569,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutAuthTokensInput = {
@@ -55164,6 +57607,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutAuthTokensInput = {
@@ -55215,6 +57661,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAuthTokensInput = {
@@ -55250,6 +57699,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserCreateWithoutInvitedRolesInput = {
@@ -55285,6 +57737,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutInvitedRolesInput = {
@@ -55320,6 +57775,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutInvitedRolesInput = {
@@ -55360,6 +57818,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutUsedInvitationsInput = {
@@ -55395,6 +57856,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutUsedInvitationsInput = {
@@ -55446,6 +57910,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutInvitedRolesInput = {
@@ -55481,6 +57948,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUpsertWithoutUsedInvitationsInput = {
@@ -55527,6 +57997,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutUsedInvitationsInput = {
@@ -55562,6 +58035,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserCreateWithoutDriverProfileInput = {
@@ -55597,6 +58073,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutDriverProfileInput = {
@@ -55632,6 +58111,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutDriverProfileInput = {
@@ -55683,6 +58165,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutDriverProfileInput = {
@@ -55718,6 +58203,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserCreateWithoutLearnerProfileInput = {
@@ -55753,6 +58241,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutLearnerProfileInput = {
@@ -55788,6 +58279,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutLearnerProfileInput = {
@@ -55839,6 +58333,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutLearnerProfileInput = {
@@ -55874,6 +58371,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserCreateWithoutSupplierProfileInput = {
@@ -55909,6 +58409,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutSupplierProfileInput = {
@@ -55944,6 +58447,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutSupplierProfileInput = {
@@ -55984,6 +58490,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutSupplierVerificationsReviewedInput = {
@@ -56019,6 +58528,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutSupplierVerificationsReviewedInput = {
@@ -56124,9 +58636,12 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
     priceRule?: MaterialPriceRuleCreateNestedOneWithoutMaterialsInput
@@ -56137,6 +58652,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
     publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateWithoutSupplierProfileInput = {
@@ -56167,6 +58683,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
@@ -56174,6 +58693,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutSupplierProfileInput = {
@@ -56230,6 +58750,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSupplierProfileInput = {
@@ -56265,6 +58788,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUpsertWithoutSupplierVerificationsReviewedInput = {
@@ -56311,6 +58837,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSupplierVerificationsReviewedInput = {
@@ -56346,6 +58875,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type LocationUpsertWithoutSupplierPickupForInput = {
@@ -56730,9 +59262,12 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
@@ -56743,6 +59278,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
     publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateWithoutLocationInput = {
@@ -56773,6 +59309,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
@@ -56780,6 +59319,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutLocationInput = {
@@ -57046,9 +59586,12 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
     priceRule?: MaterialPriceRuleCreateNestedOneWithoutMaterialsInput
@@ -57059,6 +59602,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
     publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateWithoutCategoryInput = {
@@ -57089,6 +59633,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
@@ -57096,6 +59643,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutCategoryInput = {
@@ -57632,6 +60180,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutCreatedLearningProjectsInput = {
@@ -57667,6 +60218,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutCreatedLearningProjectsInput = {
@@ -57707,6 +60261,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutReviewedLearningProjectsInput = {
@@ -57742,6 +60299,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutReviewedLearningProjectsInput = {
@@ -57998,6 +60558,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutCreatedLearningProjectsInput = {
@@ -58033,6 +60596,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUpsertWithoutReviewedLearningProjectsInput = {
@@ -58079,6 +60645,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutReviewedLearningProjectsInput = {
@@ -58114,6 +60683,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type ProjectImageUpsertWithWhereUniqueWithoutProjectInput = {
@@ -58614,6 +61186,9 @@ export namespace Prisma {
     supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutApprovedProjectStepsInput = {
@@ -58649,6 +61224,9 @@ export namespace Prisma {
     supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutApprovedProjectStepsInput = {
@@ -58757,6 +61335,9 @@ export namespace Prisma {
     supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutApprovedProjectStepsInput = {
@@ -58792,6 +61373,9 @@ export namespace Prisma {
     supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type LearningProjectCreateWithoutLinksInput = {
@@ -59043,6 +61627,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutOwnedMaterialsInput = {
@@ -59078,11 +61665,95 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutOwnedMaterialsInput = {
     where: UserWhereUniqueInput
     create: XOR<UserCreateWithoutOwnedMaterialsInput, UserUncheckedCreateWithoutOwnedMaterialsInput>
+  }
+
+  export type UserCreateWithoutModeratedMaterialsInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
+    approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+  }
+
+  export type UserUncheckedCreateWithoutModeratedMaterialsInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
+    approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+  }
+
+  export type UserCreateOrConnectWithoutModeratedMaterialsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutModeratedMaterialsInput, UserUncheckedCreateWithoutModeratedMaterialsInput>
   }
 
   export type SupplierProfileCreateWithoutMaterialsInput = {
@@ -59539,6 +62210,42 @@ export namespace Prisma {
     create: XOR<PriceRuleRequestCreateWithoutPublishedMaterialInput, PriceRuleRequestUncheckedCreateWithoutPublishedMaterialInput>
   }
 
+  export type MaterialReportCreateWithoutMaterialInput = {
+    id?: string
+    reason: $Enums.MaterialReportReason
+    note?: string | null
+    status?: $Enums.MaterialReportStatus
+    adminNote?: string | null
+    reviewedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    reporter: UserCreateNestedOneWithoutMaterialReportsSubmittedInput
+    reviewedBy?: UserCreateNestedOneWithoutMaterialReportsReviewedInput
+  }
+
+  export type MaterialReportUncheckedCreateWithoutMaterialInput = {
+    id?: string
+    reporterId: string
+    reason: $Enums.MaterialReportReason
+    note?: string | null
+    status?: $Enums.MaterialReportStatus
+    adminNote?: string | null
+    reviewedById?: string | null
+    reviewedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MaterialReportCreateOrConnectWithoutMaterialInput = {
+    where: MaterialReportWhereUniqueInput
+    create: XOR<MaterialReportCreateWithoutMaterialInput, MaterialReportUncheckedCreateWithoutMaterialInput>
+  }
+
+  export type MaterialReportCreateManyMaterialInputEnvelope = {
+    data: MaterialReportCreateManyMaterialInput | MaterialReportCreateManyMaterialInput[]
+    skipDuplicates?: boolean
+  }
+
   export type UserUpsertWithoutOwnedMaterialsInput = {
     update: XOR<UserUpdateWithoutOwnedMaterialsInput, UserUncheckedUpdateWithoutOwnedMaterialsInput>
     create: XOR<UserCreateWithoutOwnedMaterialsInput, UserUncheckedCreateWithoutOwnedMaterialsInput>
@@ -59583,6 +62290,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutOwnedMaterialsInput = {
@@ -59618,6 +62328,96 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
+  }
+
+  export type UserUpsertWithoutModeratedMaterialsInput = {
+    update: XOR<UserUpdateWithoutModeratedMaterialsInput, UserUncheckedUpdateWithoutModeratedMaterialsInput>
+    create: XOR<UserCreateWithoutModeratedMaterialsInput, UserUncheckedCreateWithoutModeratedMaterialsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutModeratedMaterialsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutModeratedMaterialsInput, UserUncheckedUpdateWithoutModeratedMaterialsInput>
+  }
+
+  export type UserUpdateWithoutModeratedMaterialsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
+    approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutModeratedMaterialsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
+    approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
   }
 
   export type SupplierProfileUpsertWithoutMaterialsInput = {
@@ -60078,6 +62878,538 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type MaterialReportUpsertWithWhereUniqueWithoutMaterialInput = {
+    where: MaterialReportWhereUniqueInput
+    update: XOR<MaterialReportUpdateWithoutMaterialInput, MaterialReportUncheckedUpdateWithoutMaterialInput>
+    create: XOR<MaterialReportCreateWithoutMaterialInput, MaterialReportUncheckedCreateWithoutMaterialInput>
+  }
+
+  export type MaterialReportUpdateWithWhereUniqueWithoutMaterialInput = {
+    where: MaterialReportWhereUniqueInput
+    data: XOR<MaterialReportUpdateWithoutMaterialInput, MaterialReportUncheckedUpdateWithoutMaterialInput>
+  }
+
+  export type MaterialReportUpdateManyWithWhereWithoutMaterialInput = {
+    where: MaterialReportScalarWhereInput
+    data: XOR<MaterialReportUpdateManyMutationInput, MaterialReportUncheckedUpdateManyWithoutMaterialInput>
+  }
+
+  export type MaterialCreateWithoutReportsInput = {
+    id?: string
+    title: string
+    description: string
+    materialType: string
+    customMaterialType?: string | null
+    priceCheckedAt?: Date | string | null
+    maxAllowedPriceAtCheck?: Decimal | DecimalJsLike | number | string | null
+    quantity: Decimal | DecimalJsLike | number | string
+    unit: string
+    condition: $Enums.MaterialCondition
+    sourceType: $Enums.MaterialSourceType
+    status?: $Enums.MaterialStatus
+    isFree?: boolean
+    price?: Decimal | DecimalJsLike | number | string | null
+    currency?: string
+    pickupAllowed?: boolean
+    deliveryAllowed?: boolean
+    pickupNotes?: string | null
+    suggestedUses?: string | null
+    viewsCount?: number
+    reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
+    category: CategoryCreateNestedOneWithoutMaterialsInput
+    approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
+    priceRule?: MaterialPriceRuleCreateNestedOneWithoutMaterialsInput
+    location: LocationCreateNestedOneWithoutMaterialsInput
+    images?: MaterialImageCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagCreateNestedManyWithoutMaterialInput
+    reservations?: ReservationCreateNestedManyWithoutMaterialInput
+    reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
+    publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
+    publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+  }
+
+  export type MaterialUncheckedCreateWithoutReportsInput = {
+    id?: string
+    ownerId: string
+    supplierProfileId?: string | null
+    categoryId: string
+    title: string
+    description: string
+    materialType: string
+    materialTypeId?: string | null
+    customMaterialType?: string | null
+    priceRuleId?: string | null
+    priceCheckedAt?: Date | string | null
+    maxAllowedPriceAtCheck?: Decimal | DecimalJsLike | number | string | null
+    quantity: Decimal | DecimalJsLike | number | string
+    unit: string
+    condition: $Enums.MaterialCondition
+    sourceType: $Enums.MaterialSourceType
+    status?: $Enums.MaterialStatus
+    isFree?: boolean
+    price?: Decimal | DecimalJsLike | number | string | null
+    currency?: string
+    locationId: string
+    pickupAllowed?: boolean
+    deliveryAllowed?: boolean
+    pickupNotes?: string | null
+    suggestedUses?: string | null
+    viewsCount?: number
+    reusedAt?: Date | string | null
+    reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
+    tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
+    reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
+    publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+  }
+
+  export type MaterialCreateOrConnectWithoutReportsInput = {
+    where: MaterialWhereUniqueInput
+    create: XOR<MaterialCreateWithoutReportsInput, MaterialUncheckedCreateWithoutReportsInput>
+  }
+
+  export type UserCreateWithoutMaterialReportsSubmittedInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
+    approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
+  }
+
+  export type UserUncheckedCreateWithoutMaterialReportsSubmittedInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
+    approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
+  }
+
+  export type UserCreateOrConnectWithoutMaterialReportsSubmittedInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutMaterialReportsSubmittedInput, UserUncheckedCreateWithoutMaterialReportsSubmittedInput>
+  }
+
+  export type UserCreateWithoutMaterialReportsReviewedInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
+    approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
+  }
+
+  export type UserUncheckedCreateWithoutMaterialReportsReviewedInput = {
+    id?: string
+    displayName: string
+    email: string
+    phone?: string | null
+    passwordHash: string
+    accountStatus?: $Enums.AccountStatus
+    profileImageUrl?: string | null
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    roles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
+    authTokens?: AuthTokenUncheckedCreateNestedManyWithoutUserInput
+    learnerProfile?: LearnerProfileUncheckedCreateNestedOneWithoutUserInput
+    supplierProfile?: SupplierProfileUncheckedCreateNestedOneWithoutUserInput
+    driverProfile?: DriverProfileUncheckedCreateNestedOneWithoutUserInput
+    invitedRoles?: RoleInvitationUncheckedCreateNestedManyWithoutInvitedByUserInput
+    usedInvitations?: RoleInvitationUncheckedCreateNestedManyWithoutUsedByUserInput
+    assignedRoles?: UserRoleAssignmentUncheckedCreateNestedManyWithoutAssignedByUserInput
+    ownedMaterials?: MaterialUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsOwner?: ReservationUncheckedCreateNestedManyWithoutOwnerInput
+    ownedReservationsAsRequester?: ReservationUncheckedCreateNestedManyWithoutRequesterInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedCreateNestedManyWithoutChangedByUserInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    reviewsGiven?: ReviewUncheckedCreateNestedManyWithoutReviewerInput
+    reviewsReceived?: ReviewUncheckedCreateNestedManyWithoutReviewedUserInput
+    createdLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutCreatedByUserInput
+    reviewedLearningProjects?: LearningProjectUncheckedCreateNestedManyWithoutReviewedByUserInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
+    approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
+    priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
+  }
+
+  export type UserCreateOrConnectWithoutMaterialReportsReviewedInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutMaterialReportsReviewedInput, UserUncheckedCreateWithoutMaterialReportsReviewedInput>
+  }
+
+  export type MaterialUpsertWithoutReportsInput = {
+    update: XOR<MaterialUpdateWithoutReportsInput, MaterialUncheckedUpdateWithoutReportsInput>
+    create: XOR<MaterialCreateWithoutReportsInput, MaterialUncheckedCreateWithoutReportsInput>
+    where?: MaterialWhereInput
+  }
+
+  export type MaterialUpdateToOneWithWhereWithoutReportsInput = {
+    where?: MaterialWhereInput
+    data: XOR<MaterialUpdateWithoutReportsInput, MaterialUncheckedUpdateWithoutReportsInput>
+  }
+
+  export type MaterialUpdateWithoutReportsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    customMaterialType?: NullableStringFieldUpdateOperationsInput | string | null
+    priceCheckedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    maxAllowedPriceAtCheck?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    quantity?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    unit?: StringFieldUpdateOperationsInput | string
+    condition?: EnumMaterialConditionFieldUpdateOperationsInput | $Enums.MaterialCondition
+    sourceType?: EnumMaterialSourceTypeFieldUpdateOperationsInput | $Enums.MaterialSourceType
+    status?: EnumMaterialStatusFieldUpdateOperationsInput | $Enums.MaterialStatus
+    isFree?: BoolFieldUpdateOperationsInput | boolean
+    price?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currency?: StringFieldUpdateOperationsInput | string
+    pickupAllowed?: BoolFieldUpdateOperationsInput | boolean
+    deliveryAllowed?: BoolFieldUpdateOperationsInput | boolean
+    pickupNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
+    viewsCount?: IntFieldUpdateOperationsInput | number
+    reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
+    category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
+    approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
+    priceRule?: MaterialPriceRuleUpdateOneWithoutMaterialsNestedInput
+    location?: LocationUpdateOneRequiredWithoutMaterialsNestedInput
+    images?: MaterialImageUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUpdateManyWithoutMaterialNestedInput
+    reservations?: ReservationUpdateManyWithoutMaterialNestedInput
+    reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
+    publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
+    publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+  }
+
+  export type MaterialUncheckedUpdateWithoutReportsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ownerId?: StringFieldUpdateOperationsInput | string
+    supplierProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    categoryId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    materialTypeId?: NullableStringFieldUpdateOperationsInput | string | null
+    customMaterialType?: NullableStringFieldUpdateOperationsInput | string | null
+    priceRuleId?: NullableStringFieldUpdateOperationsInput | string | null
+    priceCheckedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    maxAllowedPriceAtCheck?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    quantity?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    unit?: StringFieldUpdateOperationsInput | string
+    condition?: EnumMaterialConditionFieldUpdateOperationsInput | $Enums.MaterialCondition
+    sourceType?: EnumMaterialSourceTypeFieldUpdateOperationsInput | $Enums.MaterialSourceType
+    status?: EnumMaterialStatusFieldUpdateOperationsInput | $Enums.MaterialStatus
+    isFree?: BoolFieldUpdateOperationsInput | boolean
+    price?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currency?: StringFieldUpdateOperationsInput | string
+    locationId?: StringFieldUpdateOperationsInput | string
+    pickupAllowed?: BoolFieldUpdateOperationsInput | boolean
+    deliveryAllowed?: BoolFieldUpdateOperationsInput | boolean
+    pickupNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
+    viewsCount?: IntFieldUpdateOperationsInput | number
+    reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
+    reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
+    publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+  }
+
+  export type UserUpsertWithoutMaterialReportsSubmittedInput = {
+    update: XOR<UserUpdateWithoutMaterialReportsSubmittedInput, UserUncheckedUpdateWithoutMaterialReportsSubmittedInput>
+    create: XOR<UserCreateWithoutMaterialReportsSubmittedInput, UserUncheckedCreateWithoutMaterialReportsSubmittedInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutMaterialReportsSubmittedInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutMaterialReportsSubmittedInput, UserUncheckedUpdateWithoutMaterialReportsSubmittedInput>
+  }
+
+  export type UserUpdateWithoutMaterialReportsSubmittedInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
+    approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutMaterialReportsSubmittedInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
+    approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
+  }
+
+  export type UserUpsertWithoutMaterialReportsReviewedInput = {
+    update: XOR<UserUpdateWithoutMaterialReportsReviewedInput, UserUncheckedUpdateWithoutMaterialReportsReviewedInput>
+    create: XOR<UserCreateWithoutMaterialReportsReviewedInput, UserUncheckedCreateWithoutMaterialReportsReviewedInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutMaterialReportsReviewedInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutMaterialReportsReviewedInput, UserUncheckedUpdateWithoutMaterialReportsReviewedInput>
+  }
+
+  export type UserUpdateWithoutMaterialReportsReviewedInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
+    approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutMaterialReportsReviewedInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    displayName?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    accountStatus?: EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+    profileImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    roles?: UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
+    authTokens?: AuthTokenUncheckedUpdateManyWithoutUserNestedInput
+    learnerProfile?: LearnerProfileUncheckedUpdateOneWithoutUserNestedInput
+    supplierProfile?: SupplierProfileUncheckedUpdateOneWithoutUserNestedInput
+    driverProfile?: DriverProfileUncheckedUpdateOneWithoutUserNestedInput
+    invitedRoles?: RoleInvitationUncheckedUpdateManyWithoutInvitedByUserNestedInput
+    usedInvitations?: RoleInvitationUncheckedUpdateManyWithoutUsedByUserNestedInput
+    assignedRoles?: UserRoleAssignmentUncheckedUpdateManyWithoutAssignedByUserNestedInput
+    ownedMaterials?: MaterialUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsOwner?: ReservationUncheckedUpdateManyWithoutOwnerNestedInput
+    ownedReservationsAsRequester?: ReservationUncheckedUpdateManyWithoutRequesterNestedInput
+    reservationStatusChanges?: ReservationStatusHistoryUncheckedUpdateManyWithoutChangedByUserNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    reviewsGiven?: ReviewUncheckedUpdateManyWithoutReviewerNestedInput
+    reviewsReceived?: ReviewUncheckedUpdateManyWithoutReviewedUserNestedInput
+    createdLearningProjects?: LearningProjectUncheckedUpdateManyWithoutCreatedByUserNestedInput
+    reviewedLearningProjects?: LearningProjectUncheckedUpdateManyWithoutReviewedByUserNestedInput
+    supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
+    approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
+    priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
+  }
+
   export type MaterialCreateWithoutImagesInput = {
     id?: string
     title: string
@@ -60100,9 +63432,12 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
@@ -60113,6 +63448,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
     publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateWithoutImagesInput = {
@@ -60144,12 +63480,16 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutImagesInput = {
@@ -60190,9 +63530,12 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
@@ -60203,6 +63546,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateWithoutImagesInput = {
@@ -60234,12 +63578,16 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialCreateWithoutTagsInput = {
@@ -60264,9 +63612,12 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
@@ -60277,6 +63628,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
     publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateWithoutTagsInput = {
@@ -60308,12 +63660,16 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutTagsInput = {
@@ -60354,9 +63710,12 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
@@ -60367,6 +63726,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateWithoutTagsInput = {
@@ -60398,12 +63758,16 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialCreateWithoutReservationsInput = {
@@ -60428,9 +63792,12 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
@@ -60441,6 +63808,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
     publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateWithoutReservationsInput = {
@@ -60472,12 +63840,16 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
     tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutReservationsInput = {
@@ -60518,6 +63890,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutOwnedReservationsAsRequesterInput = {
@@ -60553,6 +63928,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutOwnedReservationsAsRequesterInput = {
@@ -60593,6 +63971,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutOwnedReservationsAsOwnerInput = {
@@ -60628,6 +64009,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutOwnedReservationsAsOwnerInput = {
@@ -60698,9 +64082,12 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
@@ -60711,6 +64098,7 @@ export namespace Prisma {
     reservations?: ReservationCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateWithoutReusedByReservationInput = {
@@ -60741,6 +64129,9 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
@@ -60748,6 +64139,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutReusedByReservationInput = {
@@ -60848,9 +64240,12 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
@@ -60861,6 +64256,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateWithoutReservationsInput = {
@@ -60892,12 +64288,16 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
     tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type UserUpsertWithoutOwnedReservationsAsRequesterInput = {
@@ -60944,6 +64344,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutOwnedReservationsAsRequesterInput = {
@@ -60979,6 +64382,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUpsertWithoutOwnedReservationsAsOwnerInput = {
@@ -61025,6 +64431,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutOwnedReservationsAsOwnerInput = {
@@ -61060,6 +64469,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type LocationUpsertWithoutReservationDropoffsInput = {
@@ -61142,9 +64554,12 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
@@ -61155,6 +64570,7 @@ export namespace Prisma {
     reservations?: ReservationUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateWithoutReusedByReservationInput = {
@@ -61185,6 +64601,9 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
@@ -61192,6 +64611,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type ReviewUpsertWithWhereUniqueWithoutReservationInput = {
@@ -61320,6 +64740,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutReservationStatusChangesInput = {
@@ -61355,6 +64778,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutReservationStatusChangesInput = {
@@ -61473,6 +64899,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutReservationStatusChangesInput = {
@@ -61508,6 +64937,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type ReservationCreateWithoutReviewsInput = {
@@ -61604,6 +65036,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutReviewsGivenInput = {
@@ -61639,6 +65074,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutReviewsGivenInput = {
@@ -61679,6 +65117,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutReviewsReceivedInput = {
@@ -61714,6 +65155,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutReviewsReceivedInput = {
@@ -61832,6 +65276,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutReviewsGivenInput = {
@@ -61867,6 +65314,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUpsertWithoutReviewsReceivedInput = {
@@ -61913,6 +65363,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutReviewsReceivedInput = {
@@ -61948,6 +65401,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserCreateWithoutNotificationsInput = {
@@ -61983,6 +65439,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutNotificationsInput = {
@@ -62018,6 +65477,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutNotificationsInput = {
@@ -62069,6 +65531,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutNotificationsInput = {
@@ -62104,6 +65569,9 @@ export namespace Prisma {
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type CategoryCreateWithoutMaterialTypesInput = {
@@ -62237,9 +65705,12 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     priceRule?: MaterialPriceRuleCreateNestedOneWithoutMaterialsInput
@@ -62250,6 +65721,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
     publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateWithoutApprovedMaterialTypeInput = {
@@ -62280,6 +65752,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
@@ -62287,6 +65762,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutApprovedMaterialTypeInput = {
@@ -62631,9 +66107,12 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
@@ -62644,6 +66123,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
     publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateWithoutPriceRuleInput = {
@@ -62674,6 +66154,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
@@ -62681,6 +66164,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutPriceRuleInput = {
@@ -62857,6 +66341,9 @@ export namespace Prisma {
     supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     categoryRequests?: CategoryRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutPriceRuleRequestsInput = {
@@ -62892,6 +66379,9 @@ export namespace Prisma {
     supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     categoryRequests?: CategoryRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutPriceRuleRequestsInput = {
@@ -62921,9 +66411,12 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
@@ -62934,6 +66427,7 @@ export namespace Prisma {
     reservations?: ReservationCreateNestedManyWithoutMaterialInput
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
     publishedFromCategoryRequest?: CategoryRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateWithoutPublishedFromPriceRuleRequestInput = {
@@ -62965,12 +66459,16 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
     tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutPublishedFromPriceRuleRequestInput = {
@@ -63108,6 +66606,9 @@ export namespace Prisma {
     supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     categoryRequests?: CategoryRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutPriceRuleRequestsInput = {
@@ -63143,6 +66644,9 @@ export namespace Prisma {
     supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     categoryRequests?: CategoryRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type MaterialUpsertWithoutPublishedFromPriceRuleRequestInput = {
@@ -63178,9 +66682,12 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
@@ -63191,6 +66698,7 @@ export namespace Prisma {
     reservations?: ReservationUpdateManyWithoutMaterialNestedInput
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateWithoutPublishedFromPriceRuleRequestInput = {
@@ -63222,12 +66730,16 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
     tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type UserCreateWithoutCategoryRequestsInput = {
@@ -63263,6 +66775,9 @@ export namespace Prisma {
     supplierVerificationsReviewed?: SupplierProfileCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserUncheckedCreateWithoutCategoryRequestsInput = {
@@ -63298,6 +66813,9 @@ export namespace Prisma {
     supplierVerificationsReviewed?: SupplierProfileUncheckedCreateNestedManyWithoutVerificationReviewedByInput
     approvedProjectSteps?: ProjectStepUncheckedCreateNestedManyWithoutApprovedByUserInput
     priceRuleRequests?: PriceRuleRequestUncheckedCreateNestedManyWithoutRequestedByInput
+    materialReportsSubmitted?: MaterialReportUncheckedCreateNestedManyWithoutReporterInput
+    materialReportsReviewed?: MaterialReportUncheckedCreateNestedManyWithoutReviewedByInput
+    moderatedMaterials?: MaterialUncheckedCreateNestedManyWithoutModeratedByInput
   }
 
   export type UserCreateOrConnectWithoutCategoryRequestsInput = {
@@ -63366,9 +66884,12 @@ export namespace Prisma {
     suggestedUses?: string | null
     viewsCount?: number
     reusedAt?: Date | string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     owner: UserCreateNestedOneWithoutOwnedMaterialsInput
+    moderatedBy?: UserCreateNestedOneWithoutModeratedMaterialsInput
     supplierProfile?: SupplierProfileCreateNestedOneWithoutMaterialsInput
     category: CategoryCreateNestedOneWithoutMaterialsInput
     approvedMaterialType?: MaterialTypeCreateNestedOneWithoutMaterialsInput
@@ -63379,6 +66900,7 @@ export namespace Prisma {
     reservations?: ReservationCreateNestedManyWithoutMaterialInput
     reusedByReservation?: ReservationCreateNestedOneWithoutReusedMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialUncheckedCreateWithoutPublishedFromCategoryRequestInput = {
@@ -63410,12 +66932,16 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: MaterialImageUncheckedCreateNestedManyWithoutMaterialInput
     tags?: MaterialTagUncheckedCreateNestedManyWithoutMaterialInput
     reservations?: ReservationUncheckedCreateNestedManyWithoutMaterialInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedCreateNestedOneWithoutPublishedMaterialInput
+    reports?: MaterialReportUncheckedCreateNestedManyWithoutMaterialInput
   }
 
   export type MaterialCreateOrConnectWithoutPublishedFromCategoryRequestInput = {
@@ -63467,6 +66993,9 @@ export namespace Prisma {
     supplierVerificationsReviewed?: SupplierProfileUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUpdateManyWithoutModeratedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutCategoryRequestsInput = {
@@ -63502,6 +67031,9 @@ export namespace Prisma {
     supplierVerificationsReviewed?: SupplierProfileUncheckedUpdateManyWithoutVerificationReviewedByNestedInput
     approvedProjectSteps?: ProjectStepUncheckedUpdateManyWithoutApprovedByUserNestedInput
     priceRuleRequests?: PriceRuleRequestUncheckedUpdateManyWithoutRequestedByNestedInput
+    materialReportsSubmitted?: MaterialReportUncheckedUpdateManyWithoutReporterNestedInput
+    materialReportsReviewed?: MaterialReportUncheckedUpdateManyWithoutReviewedByNestedInput
+    moderatedMaterials?: MaterialUncheckedUpdateManyWithoutModeratedByNestedInput
   }
 
   export type CategoryUpsertWithoutApprovedCategoryRequestsInput = {
@@ -63582,9 +67114,12 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
@@ -63595,6 +67130,7 @@ export namespace Prisma {
     reservations?: ReservationUpdateManyWithoutMaterialNestedInput
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateWithoutPublishedFromCategoryRequestInput = {
@@ -63626,12 +67162,16 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
     tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type UserRoleAssignmentCreateManyUserInput = {
@@ -63728,6 +67268,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -63921,6 +67464,67 @@ export namespace Prisma {
     listingDraftJson?: NullableJsonNullValueInput | InputJsonValue
     publishedMaterialId?: string | null
     publishedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MaterialReportCreateManyReporterInput = {
+    id?: string
+    materialId: string
+    reason: $Enums.MaterialReportReason
+    note?: string | null
+    status?: $Enums.MaterialReportStatus
+    adminNote?: string | null
+    reviewedById?: string | null
+    reviewedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MaterialReportCreateManyReviewedByInput = {
+    id?: string
+    materialId: string
+    reporterId: string
+    reason: $Enums.MaterialReportReason
+    note?: string | null
+    status?: $Enums.MaterialReportStatus
+    adminNote?: string | null
+    reviewedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MaterialCreateManyModeratedByInput = {
+    id?: string
+    ownerId: string
+    supplierProfileId?: string | null
+    categoryId: string
+    title: string
+    description: string
+    materialType: string
+    materialTypeId?: string | null
+    customMaterialType?: string | null
+    priceRuleId?: string | null
+    priceCheckedAt?: Date | string | null
+    maxAllowedPriceAtCheck?: Decimal | DecimalJsLike | number | string | null
+    quantity: Decimal | DecimalJsLike | number | string
+    unit: string
+    condition: $Enums.MaterialCondition
+    sourceType: $Enums.MaterialSourceType
+    status?: $Enums.MaterialStatus
+    isFree?: boolean
+    price?: Decimal | DecimalJsLike | number | string | null
+    currency?: string
+    locationId: string
+    pickupAllowed?: boolean
+    deliveryAllowed?: boolean
+    pickupNotes?: string | null
+    suggestedUses?: string | null
+    viewsCount?: number
+    reusedAt?: Date | string | null
+    reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -64145,8 +67749,11 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
@@ -64158,6 +67765,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateWithoutOwnerInput = {
@@ -64188,6 +67796,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
@@ -64195,6 +67806,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateManyWithoutOwnerInput = {
@@ -64225,6 +67837,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -64844,6 +68459,201 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type MaterialReportUpdateWithoutReporterInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    material?: MaterialUpdateOneRequiredWithoutReportsNestedInput
+    reviewedBy?: UserUpdateOneWithoutMaterialReportsReviewedNestedInput
+  }
+
+  export type MaterialReportUncheckedUpdateWithoutReporterInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    materialId?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialReportUncheckedUpdateManyWithoutReporterInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    materialId?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialReportUpdateWithoutReviewedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    material?: MaterialUpdateOneRequiredWithoutReportsNestedInput
+    reporter?: UserUpdateOneRequiredWithoutMaterialReportsSubmittedNestedInput
+  }
+
+  export type MaterialReportUncheckedUpdateWithoutReviewedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    materialId?: StringFieldUpdateOperationsInput | string
+    reporterId?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialReportUncheckedUpdateManyWithoutReviewedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    materialId?: StringFieldUpdateOperationsInput | string
+    reporterId?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialUpdateWithoutModeratedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    customMaterialType?: NullableStringFieldUpdateOperationsInput | string | null
+    priceCheckedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    maxAllowedPriceAtCheck?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    quantity?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    unit?: StringFieldUpdateOperationsInput | string
+    condition?: EnumMaterialConditionFieldUpdateOperationsInput | $Enums.MaterialCondition
+    sourceType?: EnumMaterialSourceTypeFieldUpdateOperationsInput | $Enums.MaterialSourceType
+    status?: EnumMaterialStatusFieldUpdateOperationsInput | $Enums.MaterialStatus
+    isFree?: BoolFieldUpdateOperationsInput | boolean
+    price?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currency?: StringFieldUpdateOperationsInput | string
+    pickupAllowed?: BoolFieldUpdateOperationsInput | boolean
+    deliveryAllowed?: BoolFieldUpdateOperationsInput | boolean
+    pickupNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
+    viewsCount?: IntFieldUpdateOperationsInput | number
+    reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
+    category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
+    approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
+    priceRule?: MaterialPriceRuleUpdateOneWithoutMaterialsNestedInput
+    location?: LocationUpdateOneRequiredWithoutMaterialsNestedInput
+    images?: MaterialImageUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUpdateManyWithoutMaterialNestedInput
+    reservations?: ReservationUpdateManyWithoutMaterialNestedInput
+    reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
+    publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
+    publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
+  }
+
+  export type MaterialUncheckedUpdateWithoutModeratedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ownerId?: StringFieldUpdateOperationsInput | string
+    supplierProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    categoryId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    materialTypeId?: NullableStringFieldUpdateOperationsInput | string | null
+    customMaterialType?: NullableStringFieldUpdateOperationsInput | string | null
+    priceRuleId?: NullableStringFieldUpdateOperationsInput | string | null
+    priceCheckedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    maxAllowedPriceAtCheck?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    quantity?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    unit?: StringFieldUpdateOperationsInput | string
+    condition?: EnumMaterialConditionFieldUpdateOperationsInput | $Enums.MaterialCondition
+    sourceType?: EnumMaterialSourceTypeFieldUpdateOperationsInput | $Enums.MaterialSourceType
+    status?: EnumMaterialStatusFieldUpdateOperationsInput | $Enums.MaterialStatus
+    isFree?: BoolFieldUpdateOperationsInput | boolean
+    price?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currency?: StringFieldUpdateOperationsInput | string
+    locationId?: StringFieldUpdateOperationsInput | string
+    pickupAllowed?: BoolFieldUpdateOperationsInput | boolean
+    deliveryAllowed?: BoolFieldUpdateOperationsInput | boolean
+    pickupNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
+    viewsCount?: IntFieldUpdateOperationsInput | number
+    reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
+    tags?: MaterialTagUncheckedUpdateManyWithoutMaterialNestedInput
+    reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
+    publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
+  }
+
+  export type MaterialUncheckedUpdateManyWithoutModeratedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ownerId?: StringFieldUpdateOperationsInput | string
+    supplierProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    categoryId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    materialTypeId?: NullableStringFieldUpdateOperationsInput | string | null
+    customMaterialType?: NullableStringFieldUpdateOperationsInput | string | null
+    priceRuleId?: NullableStringFieldUpdateOperationsInput | string | null
+    priceCheckedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    maxAllowedPriceAtCheck?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    quantity?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    unit?: StringFieldUpdateOperationsInput | string
+    condition?: EnumMaterialConditionFieldUpdateOperationsInput | $Enums.MaterialCondition
+    sourceType?: EnumMaterialSourceTypeFieldUpdateOperationsInput | $Enums.MaterialSourceType
+    status?: EnumMaterialStatusFieldUpdateOperationsInput | $Enums.MaterialStatus
+    isFree?: BoolFieldUpdateOperationsInput | boolean
+    price?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currency?: StringFieldUpdateOperationsInput | string
+    locationId?: StringFieldUpdateOperationsInput | string
+    pickupAllowed?: BoolFieldUpdateOperationsInput | boolean
+    deliveryAllowed?: BoolFieldUpdateOperationsInput | boolean
+    pickupNotes?: NullableStringFieldUpdateOperationsInput | string | null
+    suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
+    viewsCount?: IntFieldUpdateOperationsInput | number
+    reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type MaterialCreateManySupplierProfileInput = {
     id?: string
     ownerId: string
@@ -64872,6 +68682,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -64898,9 +68711,12 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
     priceRule?: MaterialPriceRuleUpdateOneWithoutMaterialsNestedInput
@@ -64911,6 +68727,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateWithoutSupplierProfileInput = {
@@ -64941,6 +68758,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
@@ -64948,6 +68768,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateManyWithoutSupplierProfileInput = {
@@ -64978,6 +68799,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -65040,6 +68864,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -65185,9 +69012,12 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
@@ -65198,6 +69028,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateWithoutLocationInput = {
@@ -65228,6 +69059,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
@@ -65235,6 +69069,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateManyWithoutLocationInput = {
@@ -65265,6 +69100,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -65388,6 +69226,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -65545,9 +69386,12 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
     priceRule?: MaterialPriceRuleUpdateOneWithoutMaterialsNestedInput
@@ -65558,6 +69402,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateWithoutCategoryInput = {
@@ -65588,6 +69433,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
@@ -65595,6 +69443,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateManyWithoutCategoryInput = {
@@ -65625,6 +69474,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -66167,6 +70019,19 @@ export namespace Prisma {
     updatedAt?: Date | string
   }
 
+  export type MaterialReportCreateManyMaterialInput = {
+    id?: string
+    reporterId: string
+    reason: $Enums.MaterialReportReason
+    note?: string | null
+    status?: $Enums.MaterialReportStatus
+    adminNote?: string | null
+    reviewedById?: string | null
+    reviewedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
   export type MaterialImageUpdateWithoutMaterialInput = {
     id?: StringFieldUpdateOperationsInput | string
     imageUrl?: StringFieldUpdateOperationsInput | string
@@ -66286,6 +70151,45 @@ export namespace Prisma {
     dropoffLocationId?: NullableStringFieldUpdateOperationsInput | string | null
     driverProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialReportUpdateWithoutMaterialInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    reporter?: UserUpdateOneRequiredWithoutMaterialReportsSubmittedNestedInput
+    reviewedBy?: UserUpdateOneWithoutMaterialReportsReviewedNestedInput
+  }
+
+  export type MaterialReportUncheckedUpdateWithoutMaterialInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reporterId?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MaterialReportUncheckedUpdateManyWithoutMaterialInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    reporterId?: StringFieldUpdateOperationsInput | string
+    reason?: EnumMaterialReportReasonFieldUpdateOperationsInput | $Enums.MaterialReportReason
+    note?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumMaterialReportStatusFieldUpdateOperationsInput | $Enums.MaterialReportStatus
+    adminNote?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedById?: NullableStringFieldUpdateOperationsInput | string | null
+    reviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -66422,6 +70326,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -66546,9 +70453,12 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     priceRule?: MaterialPriceRuleUpdateOneWithoutMaterialsNestedInput
@@ -66559,6 +70469,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateWithoutApprovedMaterialTypeInput = {
@@ -66589,6 +70500,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
@@ -66596,6 +70510,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateManyWithoutApprovedMaterialTypeInput = {
@@ -66626,6 +70541,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -66730,6 +70648,9 @@ export namespace Prisma {
     viewsCount?: number
     reusedAt?: Date | string | null
     reusedByReservationId?: string | null
+    moderationReason?: string | null
+    moderatedAt?: Date | string | null
+    moderatedById?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -66756,9 +70677,12 @@ export namespace Prisma {
     suggestedUses?: NullableStringFieldUpdateOperationsInput | string | null
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     owner?: UserUpdateOneRequiredWithoutOwnedMaterialsNestedInput
+    moderatedBy?: UserUpdateOneWithoutModeratedMaterialsNestedInput
     supplierProfile?: SupplierProfileUpdateOneWithoutMaterialsNestedInput
     category?: CategoryUpdateOneRequiredWithoutMaterialsNestedInput
     approvedMaterialType?: MaterialTypeUpdateOneWithoutMaterialsNestedInput
@@ -66769,6 +70693,7 @@ export namespace Prisma {
     reusedByReservation?: ReservationUpdateOneWithoutReusedMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateWithoutPriceRuleInput = {
@@ -66799,6 +70724,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: MaterialImageUncheckedUpdateManyWithoutMaterialNestedInput
@@ -66806,6 +70734,7 @@ export namespace Prisma {
     reservations?: ReservationUncheckedUpdateManyWithoutMaterialNestedInput
     publishedFromCategoryRequest?: CategoryRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
     publishedFromPriceRuleRequest?: PriceRuleRequestUncheckedUpdateOneWithoutPublishedMaterialNestedInput
+    reports?: MaterialReportUncheckedUpdateManyWithoutMaterialNestedInput
   }
 
   export type MaterialUncheckedUpdateManyWithoutPriceRuleInput = {
@@ -66836,6 +70765,9 @@ export namespace Prisma {
     viewsCount?: IntFieldUpdateOperationsInput | number
     reusedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     reusedByReservationId?: NullableStringFieldUpdateOperationsInput | string | null
+    moderationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    moderatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    moderatedById?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

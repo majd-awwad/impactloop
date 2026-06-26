@@ -38,6 +38,7 @@ import '../../features/admin_portal/presentation/pages/admin_invitations_page.da
 import '../../features/admin_portal/presentation/pages/admin_overview_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_placeholder_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_materials_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_supplier_verification_page.dart';
 import '../../features/admin_portal/presentation/widgets/admin_shell.dart';
 import '../../features/invitations/presentation/pages/invite_accept_page.dart';
@@ -469,8 +470,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/materials',
-            builder: (context, state) =>
-                const AdminPlaceholderPage(title: 'Materials'),
+            builder: (context, state) => const AdminMaterialsPage(),
           ),
           GoRoute(
             path: '/admin/approvals',

@@ -10,11 +10,13 @@ import {
   listMaterials,
   priceCheckHandler,
 } from './materials.controller.js';
+import { submitMaterialReport } from '../admin-materials/admin-materials.controller.js';
 import {
   materialIdParamSchema,
   materialsQuerySchema,
   priceCheckSchema,
 } from './materials.validation.js';
+import { submitMaterialReportSchema } from '../admin-materials/admin-materials.validation.js';
 
 export const materialsRouter = Router();
 
@@ -31,6 +33,14 @@ materialsRouter.get(
   '/',
   validate(materialsQuerySchema, 'query'),
   asyncHandler(listMaterials),
+);
+
+materialsRouter.post(
+  '/:id/reports',
+  authMiddleware,
+  validate(materialIdParamSchema, 'params'),
+  validate(submitMaterialReportSchema),
+  asyncHandler(submitMaterialReport),
 );
 
 materialsRouter.get(

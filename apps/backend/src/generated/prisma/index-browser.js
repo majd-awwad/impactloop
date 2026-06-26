@@ -367,6 +367,23 @@ exports.Prisma.MaterialScalarFieldEnum = {
   viewsCount: 'viewsCount',
   reusedAt: 'reusedAt',
   reusedByReservationId: 'reusedByReservationId',
+  moderationReason: 'moderationReason',
+  moderatedAt: 'moderatedAt',
+  moderatedById: 'moderatedById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.MaterialReportScalarFieldEnum = {
+  id: 'id',
+  materialId: 'materialId',
+  reporterId: 'reporterId',
+  reason: 'reason',
+  note: 'note',
+  status: 'status',
+  adminNote: 'adminNote',
+  reviewedById: 'reviewedById',
+  reviewedAt: 'reviewedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -690,6 +707,22 @@ exports.MaterialStatus = exports.$Enums.MaterialStatus = {
   UNAVAILABLE: 'UNAVAILABLE'
 };
 
+exports.MaterialReportReason = exports.$Enums.MaterialReportReason = {
+  MISLEADING_INFORMATION: 'MISLEADING_INFORMATION',
+  WRONG_CATEGORY: 'WRONG_CATEGORY',
+  WRONG_PRICE: 'WRONG_PRICE',
+  INAPPROPRIATE: 'INAPPROPRIATE',
+  ITEM_NOT_AVAILABLE: 'ITEM_NOT_AVAILABLE',
+  SUSPICIOUS_SUPPLIER: 'SUSPICIOUS_SUPPLIER',
+  OTHER: 'OTHER'
+};
+
+exports.MaterialReportStatus = exports.$Enums.MaterialReportStatus = {
+  PENDING: 'PENDING',
+  RESOLVED: 'RESOLVED',
+  REJECTED: 'REJECTED'
+};
+
 exports.ReservationStatus = exports.$Enums.ReservationStatus = {
   PENDING: 'PENDING',
   ACCEPTED: 'ACCEPTED',
@@ -768,6 +801,7 @@ exports.Prisma.ModelName = {
   ProjectLink: 'ProjectLink',
   ProjectTag: 'ProjectTag',
   Material: 'Material',
+  MaterialReport: 'MaterialReport',
   MaterialImage: 'MaterialImage',
   MaterialTag: 'MaterialTag',
   Reservation: 'Reservation',
