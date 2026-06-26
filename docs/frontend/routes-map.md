@@ -24,6 +24,8 @@ From `auth_navigation.dart`:
 | `authCheckingRoute` | `/auth/checking` |
 | `supplierPortalRoute` | `/supplier` |
 | `driverPortalRoute` | `/driver/jobs` |
+| `adminPortalRoute` | `/admin` |
+| `inviteAcceptRoute` | `/invite/accept` |
 | `homeRoute` | `/home` |
 
 ## Access levels
@@ -33,10 +35,11 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | Level | Paths | Guard behavior |
 |-------|-------|----------------|
 | **public** | Most routes (landing, materials, learning, auth pages, profile completion) | No login required |
-| **authenticated** | `/home`, `/supplier/access-denied` | Requires login |
+| **authenticated** | `/home`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
 | **learner** | `/learner/reservations`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
 | **driver** | `/driver`, `/driver/*` | Requires login + `DRIVER` role; non-drivers redirect to `/home` |
+| **admin** | `/admin`, `/admin/*` (except access-denied) | Requires login + `ADMIN` role |
 
 ### Redirect rules (summary)
 
@@ -46,11 +49,13 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 2. **Protected route + unauthenticated** → `/login?from=<destination>`
 3. **Supplier route without SUPPLIER role** → `/supplier/access-denied`
 4. **Driver route without DRIVER role** → `/home`
-5. **Authenticated user on login/register** → redirect to `from` query or `postAuthRouteForUser(user)`:
-   - Supplier role → `/supplier`
+5. **Admin route without ADMIN role** → `/admin/access-denied`
+6. **Authenticated user on login/register** → redirect to `from` query or `postAuthRouteForUser(user)`:
+   - Admin role → `/admin`
+   - Supplier role → `/supplier` (or verification gate when required)
    - Driver role → `/driver/jobs`
    - Otherwise → `/home`
-6. **Profile completion paths** (`/complete-learner-profile`, `/complete-supplier-profile`) → `legacyOnboardingRedirect` validates `registrationDraftProvider` and intent
+7. **Profile completion paths** (`/complete-learner-profile`, `/complete-supplier-profile`) → `legacyOnboardingRedirect` validates `registrationDraftProvider` and intent
 
 ## Route table
 
@@ -83,6 +88,34 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/supplier/pickup-schedule` | `SupplierPickupSchedulePage` | supplier | |
 | `/supplier/notifications` | `SupplierNotificationsPage` | supplier | |
 | `/supplier/profile` | `SupplierProfilePage` | supplier | |
+| `/supplier/verification-pending` | `SupplierVerificationPendingPage` | supplier | Org supplier awaiting admin approval |
+| `/supplier/verification-status` | `SupplierVerificationStatusPage` | supplier | Rejected / changes requested + resubmit |
+| `/admin/access-denied` | `AdminAccessDeniedPage` | authenticated | |
+| `/admin` | `AdminOverviewPage` | admin | Inside `AdminShell` |
+| `/admin/users` | `AdminPlaceholderPage` | admin | Placeholder |
+| `/admin/suppliers` | `AdminPlaceholderPage` | admin | Placeholder |
+| `/admin/supplier-verification` | `AdminSupplierVerificationPage` | admin | Review org supplier documents |
+| `/admin/materials` | `AdminMaterialsPage` | admin | Materials moderation + reports |
+| `/admin/approvals` | `AdminApprovalsPage` | admin | Category + price approvals |
+| `/admin/invitations` | `AdminInvitationsPage` | admin | Admin invitation management |
+| `/admin/impact` | `AdminPlaceholderPage` | admin | Placeholder |
+| `/admin/audit-logs` | `AdminPlaceholderPage` | admin | Placeholder |
+
+## Admin shell navigation
+
+From `admin_sidebar.dart`:
+
+| Nav label | Route |
+|-----------|-------|
+| Overview | `/admin` |
+| Users | `/admin/users` |
+| Suppliers | `/admin/suppliers` |
+| Supplier Verification | `/admin/supplier-verification` |
+| Materials | `/admin/materials` |
+| Approvals | `/admin/approvals` |
+| Invitations | `/admin/invitations` |
+| Impact Analytics | `/admin/impact` |
+| Audit Logs | `/admin/audit-logs` |
 
 ## Supplier shell navigation
 
@@ -121,10 +154,12 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 
 ## Post-auth default destination
 
-`postAuthRouteForUser` (`auth_navigation.dart`):
+`postAuthRouteForUser` (`auth_navigation.dart`) — first matching role wins:
 
-- User has `SUPPLIER` role → `/supplier`
-- Else user has `DRIVER` role → `/driver/jobs`
-- Else → `/home`
+1. `ADMIN` → `/admin`
+2. `SUPPLIER` → `/supplier` (or verification gate when required)
+3. `DRIVER` → `/driver/jobs`
+4. `MODERATOR` → `/home` (no moderator portal route yet)
+5. Else → `/home`
 
-Supplier precedence is preserved for multi-role users.
+Users with both `ADMIN` and `SUPPLIER` land on `/admin`. Admins who open `/home` can use the account menu **Admin Portal** item or the **Open Admin Portal** quick action card.

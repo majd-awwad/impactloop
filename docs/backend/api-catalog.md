@@ -56,8 +56,11 @@ Query validation: `categoriesQuerySchema`
 | POST | `/api/materials/price-check` | Bearer JWT | `materials/materials.routes.ts` |
 | GET | `/api/materials` | Public | `materials/materials.routes.ts` |
 | GET | `/api/materials/:id` | Public | `materials/materials.routes.ts` |
+| POST | `/api/materials/:id/reports` | Bearer JWT | `materials/materials.routes.ts` |
 
 **Note:** Material **creation** is not on this router. Suppliers create via `POST /api/supplier/materials`.
+
+**`POST /api/materials/:id/reports` body:** `{ reason: MaterialReportReason, note?: string }` — `note` required when `reason=OTHER`. Duplicate pending report by same user/material returns 409. Public discovery excludes `UNAVAILABLE` materials (default list status `AVAILABLE`).
 
 ## Reservations — `/api/reservations`
 
@@ -116,8 +119,11 @@ Available jobs return safe area-level pickup/dropoff data only. Accept is transa
 | Method | Path | Auth | Roles | Source file |
 |--------|------|------|-------|-------------|
 | POST | `/api/uploads/material-images` | Bearer JWT | `SUPPLIER` | `uploads/uploads.routes.ts` |
+| POST | `/api/uploads/supplier-verification-document` | Bearer JWT | authenticated (org supplier registration) | `uploads/uploads.routes.ts` |
 
-Multipart middleware: `uploads/uploads.middleware.ts`
+Static files: `GET /uploads/materials/*`, `GET /uploads/supplier-verification/*` (`app.ts`).
+
+Verification document upload: PDF/JPG/JPEG/PNG, max 5MB. Returns `{ url, fileName }`.
 
 ## Locations — `/api/locations`
 
@@ -132,6 +138,65 @@ Multipart middleware: `uploads/uploads.middleware.ts`
 | POST | `/api/invitations` | Bearer JWT | `ADMIN` | `invitations/invitations.routes.ts` |
 | GET | `/api/invitations/validate/:token` | Public | — | `invitations/invitations.routes.ts` |
 | POST | `/api/invitations/accept` | Public | — | `invitations/invitations.routes.ts` |
+
+## Admin — `/api/admin`
+
+| Method | Path | Auth | Roles | Source file |
+|--------|------|------|-------|-------------|
+| GET | `/api/admin/dashboard` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/invitations` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| POST | `/api/admin/invitations` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| POST | `/api/admin/invitations/:id/resend` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/invitations/:id/revoke` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/supplier-verifications` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/supplier-verifications/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/supplier-verifications/:id/approve` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/supplier-verifications/:id/reject` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/supplier-verifications/:id/request-changes` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/approvals/summary` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/approvals/category-requests` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/approvals/category-requests/:id/approve` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/approvals/category-requests/:id/reject` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/approvals/price-requests` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/approvals/price-requests/:id/approve` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/approvals/price-requests/:id/reject` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/materials/summary` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/materials` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/materials/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/materials/:id/hide` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/materials/:id/mark-unavailable` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/materials/:id/restore` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/material-reports` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/material-reports/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/material-reports/:id/resolve` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/material-reports/:id/reject` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/material-reports/:id/hide-material` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+
+**`GET /api/admin/supplier-verifications` query:** `status` (`PENDING` \| `APPROVED` \| `REJECTED` \| `CHANGES_REQUESTED`), `search`, `supplierType` (`WORKSHOP` \| `FACTORY` \| `EDUCATIONAL_INSTITUTION`), `city`, `page`, `limit`.
+
+**`PATCH .../reject` and `.../request-changes` body:** `{ adminNote: string }` (required, min 3 chars). **`PATCH .../approve` body:** `{ adminNote?: string }`.
+
+**Approvals list queries:** `status` (`PENDING` \| `APPROVED` \| `REJECTED`), `search`, `page`, `limit`.
+
+**`PATCH /api/admin/approvals/category-requests/:id/approve` body:** `{ finalName: string, parentCategoryId?: string, adminNote?: string }`
+
+**`PATCH /api/admin/approvals/category-requests/:id/reject` body:** `{ adminNote: string, suggestedCategoryId?: string }` — `suggestedCategoryId` is required when at least one active material category exists.
+
+**Admin category list item fields:** `requestedName`, `status`, supplier fields, `materialTitle`, `materialDescription`, `quantity`, `unit`, `condition`, `locationLabel`, `categoryRequestReason`, `similarCategories`, `adminNote`, `createdAt`.
+
+**`PATCH /api/admin/approvals/price-requests/:id/approve` body:** `{ adminNote?: string }`
+
+**`PATCH /api/admin/approvals/price-requests/:id/reject` body:** `{ adminNote: string, maxAllowedPrice: number }`
+
+**Admin materials list query:** `search`, `status`, `categoryId`, `supplierId`, `city`, `isFree`, `verificationStatus`, `reportStatus` (`PENDING` \| `HAS_REPORTS` \| `NONE`), `page`, `limit`.
+
+**`PATCH /api/admin/materials/:id/hide` body:** `{ reason: string }` (required). Sets material `status=UNAVAILABLE`, stores moderation reason, notifies supplier. Blocked when active reservation exists.
+
+**`PATCH /api/admin/material-reports/:id/hide-material` body:** `{ adminNote: string }` (required). Resolves report and hides material in one transaction.
+
+**Response (`data`) for list:** `{ items, summary: { pending, approved, rejected, changesRequested }, pagination }`. Detail includes supplier profile, organization profile, owner, location, document info, review metadata.
+
+**Supplier notification:** each approve/reject/request-changes creates a `notifications` row (`notificationType=SUPPLIER_VERIFICATION_UPDATE`, `relatedEntityType=SUPPLIER_PROFILE`).
 
 ## Supplier — `/api/supplier`
 
@@ -150,7 +215,22 @@ All routes below require Bearer JWT + `SUPPLIER` role unless noted. Source: `sup
 | POST | `/api/supplier/materials` | `supplier/supplier.routes.ts` |
 | DELETE | `/api/supplier/materials/:id` | `supplier/supplier.routes.ts` |
 
+### Supplier verification — `/api/supplier/verification`
+
+Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must submit a verification document before publishing materials. Individual/student suppliers use `verificationStatus=NOT_REQUIRED`.
+
+| Method | Path | Source file |
+|--------|------|-------------|
+| GET | `/api/supplier/verification/status` | `supplier-verification/supplier-verification.routes.ts` |
+| POST | `/api/supplier/verification/submit` | `supplier-verification/supplier-verification.routes.ts` |
+| POST | `/api/supplier/verification/resubmit` | `supplier-verification/supplier-verification.routes.ts` |
+
+`POST .../submit` body: organization fields + `verificationDocumentUrl`, `verificationDocumentName`. Sets `verificationStatus=PENDING`. `POST .../resubmit` allowed when status is `REJECTED` or `CHANGES_REQUESTED`.
+
+`POST /api/supplier/materials` returns **403** when organization supplier is not `APPROVED` (`SUPPLIER_VERIFICATION_REQUIRED`).
+
 `POST /api/supplier/materials` body (pickup/delivery related): `useDefaultPickupLocation` (boolean, default `true`); `pickupLocation` (location object, required when `useDefaultPickupLocation` is `false`); `deliveryAllowed` (boolean, default `false`). Organization suppliers must use profile default; override is rejected with `ORG_PICKUP_OVERRIDE_NOT_ALLOWED`. Each create stores a **new** `locations` row on the material (copy or override), not the profile row id.
+
 
 `PATCH /api/supplier/materials/:id` updates safe listing fields only (`title`, `description`, `quantity`, `unit`, `condition`, `pickupAllowed`, `deliveryAllowed`, `pickupNotes`, `suggestedUses`). Edit is allowed only when `canEdit` is true (same lifecycle rules as delete). List/detail responses include `canEdit` / `editBlockedReason` and `canDelete` / `deleteBlockedReason`.
 
@@ -163,6 +243,8 @@ All routes below require Bearer JWT + `SUPPLIER` role unless noted. Source: `sup
 | POST | `/api/supplier/category-requests` | `category-requests/category-requests.routes.ts` |
 | GET | `/api/supplier/category-requests` | `category-requests/category-requests.routes.ts` |
 | GET | `/api/supplier/category-requests/:id/draft` | `category-requests/category-requests.routes.ts` |
+
+**`POST /api/supplier/category-requests` body:** `{ requestedName: string, listingDraftJson: { materialName, title, description, categoryRequestReason, condition, quantity, unit, isFree, ... } }`. Server rejects requests missing material name/title, description (min 10 chars), or category request reason (min 10 chars). Material context is stored in `listing_draft_json`.
 
 ### Price rule requests (supplier) — `/api/supplier/price-rule-requests`
 
@@ -218,4 +300,5 @@ From `apps/backend/src/app.ts`:
 /api/uploads                     → uploadsRouter
 /api/locations                   → locationsRouter
 /api/supplier                    → supplierRouter
+/api/admin                       → adminRouter
 ```

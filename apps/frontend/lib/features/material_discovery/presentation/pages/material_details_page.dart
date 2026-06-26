@@ -6,11 +6,14 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../core/errors/api_exception.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
+import '../../../auth/application/auth_controller.dart';
+import '../../../materials/data/material_reports_api.dart';
 import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
@@ -716,6 +719,8 @@ class _DetailsSideColumn extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
+        _ReportMaterialSection(materialId: material.id),
+        const SizedBox(height: AppSpacing.lg),
         _Panel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1145,6 +1150,158 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ReportMaterialSection extends ConsumerWidget {
+  const _ReportMaterialSection({required this.materialId});
+
+  final String materialId;
+
+  static const _reasons = <String, String>{
+    'MISLEADING_INFORMATION': 'Misleading information',
+    'WRONG_CATEGORY': 'Wrong category',
+    'WRONG_PRICE': 'Wrong price',
+    'INAPPROPRIATE': 'Inappropriate material',
+    'ITEM_NOT_AVAILABLE': 'Item not available',
+    'SUSPICIOUS_SUPPLIER': 'Suspicious supplier',
+    'OTHER': 'Other',
+  };
+
+  Future<void> _openReportDialog(BuildContext context, WidgetRef ref) async {
+    final auth = ref.read(authControllerProvider);
+    if (!auth.isAuthenticated) {
+      showInfoSnackBar(
+        context,
+        const LocalizedText(
+          en: 'Please sign in to report this material.',
+          ar: 'يرجى تسجيل الدخول للإبلاغ عن هذه المادة.',
+        ).resolve(context),
+      );
+      return;
+    }
+
+    var selectedReason = _reasons.keys.first;
+    final noteController = TextEditingController();
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(
+                const LocalizedText(
+                  en: 'Report material',
+                  ar: 'الإبلاغ عن المادة',
+                ).resolve(context),
+              ),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: selectedReason,
+                      decoration: const InputDecoration(labelText: 'Reason'),
+                      items: _reasons.entries
+                          .map(
+                            (entry) => DropdownMenuItem(
+                              value: entry.key,
+                              child: Text(entry.value),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() => selectedReason = value);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: noteController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        labelText: selectedReason == 'OTHER'
+                            ? 'Describe the issue (required)'
+                            : 'Additional note (optional)',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    if (selectedReason == 'OTHER' &&
+                        noteController.text.trim().isEmpty) {
+                      return;
+                    }
+                    Navigator.pop(dialogContext, true);
+                  },
+                  child: const Text('Submit report'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (submitted != true) {
+      noteController.dispose();
+      return;
+    }
+
+    try {
+      final message = await ref.read(materialReportsApiProvider).submitReport(
+            materialId: materialId,
+            reason: selectedReason,
+            note: noteController.text.trim(),
+          );
+      noteController.dispose();
+      if (!context.mounted) return;
+      showInfoSnackBar(context, message);
+    } on ApiException catch (error) {
+      noteController.dispose();
+      if (!context.mounted) return;
+      showErrorSnackBar(context, error.displayMessage);
+    } catch (_) {
+      noteController.dispose();
+      if (!context.mounted) return;
+      showErrorSnackBar(
+        context,
+        const LocalizedText(
+          en: 'Could not submit report right now.',
+          ar: 'تعذر إرسال البلاغ حالياً.',
+        ).resolve(context),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = MaterialsUiPalette.of(context);
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: TextButton.icon(
+        onPressed: () => _openReportDialog(context, ref),
+        icon: Icon(Icons.flag_outlined, color: palette.textSecondary, size: 18),
+        label: Text(
+          const LocalizedText(
+            en: 'Report material',
+            ar: 'الإبلاغ عن المادة',
+          ).resolve(context),
+          style: AppTextStyles.label(context).copyWith(
+            color: palette.textSecondary,
+          ),
+        ),
+      ),
     );
   }
 }

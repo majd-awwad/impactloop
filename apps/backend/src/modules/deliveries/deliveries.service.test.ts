@@ -83,7 +83,13 @@ async function createUser(input: {
             driverProfile: {
               create: {
                 displayName: `${TEST_MARKER} ${input.displayName}`,
-                vehicleType: 'BIKE',
+                phone: `+97059${Math.floor(Math.random() * 1000000)
+                  .toString()
+                  .padStart(6, '0')}`,
+                city: 'Ramallah',
+                area: 'Downtown',
+                transportationType: 'BICYCLE',
+                vehicleType: 'BICYCLE',
                 status: input.driverStatus ?? 'ACTIVE',
                 availability: input.driverAvailability ?? 'AVAILABLE',
               },

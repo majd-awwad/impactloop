@@ -31,7 +31,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 
 ---
 
-## Backend modules (17 folders)
+## Backend modules (18 folders)
 
 | Module | Status | Notes |
 |--------|--------|-------|
@@ -43,10 +43,11 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `uploads` | **Implemented** | Supplier material images |
 | `locations` | **Partial** | Reverse geocode only — no CRUD locations API |
 | `learning-projects` | **Implemented** | Read list + detail |
-| `invitations` | **Partial** | Admin create + accept API; no admin UI |
+| `invitations` | **Implemented** | Admin email invitations (mock/SMTP), validate/accept API, unified `driver_profiles` |
 | `reservations` | **Partial** | Learner create + my reservations read; learner delivery request route mounted; no learner cancel |
 | `deliveries` | **Partial** | Learner delivery request/read backed by `deliveries`; Flutter learner request/status UI and latest ping summary exist; driver jobs/status UI exists; no live map |
 | `driver` | **Partial** | Driver available/active jobs, accept, status updates, location pings; Flutter driver portal covers jobs/status and manual foreground ping only |
+| `admin` | **Partial** | Dashboard + invitations + supplier verification review + approvals + materials moderation; other admin pages placeholder |
 | `supplier` | **Implemented** | Dashboard, profile, materials |
 | `category-requests` | **Implemented** | Under `/api/supplier` |
 | `price-rule-requests` | **Implemented** | Create + supplier drafts |
@@ -55,7 +56,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 
 ### Backend **not implemented** as modules
 
-`users`, `roles`, `ai-agent`, `notifications` (general API), `admin`, `moderator`, `reports`, `reviews`
+`users`, `roles`, `ai-agent`, `notifications` (general API), `moderator`, `reports`, `reviews`
 
 ---
 
@@ -73,13 +74,16 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `deliveries` | **Partial** | `/api/deliveries/my`, `/api/deliveries/:id`, `POST /api/reservations/:id/delivery` | Learner delivery request dialog/status page/latest ping summary; driver jobs/status portal; no live map | [delivery.md](features/delivery.md) |
 | `driver_portal` | **Partial** | `/api/driver/deliveries/*` | Driver job board, accept action, active delivery detail, ordered status updates, manual location ping; no live map/background pings | [delivery.md](features/delivery.md) |
 | `learning_hub` | **Partial** | `GET /api/learning-projects` implemented | **Frontend mock-only** — `learning_hub_mock_data.dart`, not wired to API | — |
-| `supplier_portal` | **Partial** | `/api/supplier/*` | API repositories; material **read/create/update/delete** with lifecycle gating | — |
+| `supplier_portal` | **Partial** | `/api/supplier/*` + verification submit/status | API repositories; material CRUD with lifecycle + **org verification gating** (pending/rejected/changes block Add Material) | — |
+| `admin_portal` | **Partial** | Dashboard + invitations + supplier verification + approvals + materials moderation UI | [admin.md](features/admin.md) |
+
+**Dev seed admin (local testing):** `admin@impactloop.test` / `AdminPassword123!` — created idempotently by `prisma/seeds/seed-admin.ts`. After login, `postAuthRouteForUser` routes ADMIN users to `/admin`.
 | `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH | `supplier_portal` profile/map | [locations.md](features/locations.md) |
-| `invitations` *(no Flutter feature folder)* | **Backend-only** | `/api/invitations` | No Flutter UI | [invitations.md](features/invitations.md) |
+| `invitations` | **Implemented** | `/api/invitations` validate/accept; admin `/api/admin/invitations` | `/invite/accept` public page + admin invitations UI | [invitations.md](features/invitations.md) |
 
 ### Flutter **not implemented** as features
 
-`ai_agent`, `admin`, `moderator`, `reports`, `reviews` — gap docs: [ai-agent.md](features/ai-agent.md), [admin.md](features/admin.md), [moderator.md](features/moderator.md); see [09-open-questions.md](09-open-questions.md). Delivery UI is partial: learner request/status and driver jobs/status exist; live tracking does not.
+`ai_agent`, `moderator`, `reports`, `reviews` — gap docs: [ai-agent.md](features/ai-agent.md), [moderator.md](features/moderator.md); see [09-open-questions.md](09-open-questions.md). Delivery UI is partial: learner request/status and driver jobs/status exist; live tracking does not.
 
 ---
 
@@ -91,7 +95,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Role middleware | **Implemented** | `role.middleware.ts`, supplier routes |
 | Public LEARNER/SUPPLIER registration | **Implemented** | `auth.validation.ts`, `UnifiedRegisterForm` with `RegistrationIntent.both` |
 | Forgot / reset password | **Partial** | Backend: `auth.routes.ts`; Flutter: login shows “coming soon” (`login_form.dart`) |
-| Role invitations (DRIVER/MODERATOR/ADMIN) | **Backend-only** | `invitations` module; no Flutter accept UI found |
+| Role invitations (DRIVER/MODERATOR/ADMIN) | **Implemented** | Admin email invitations + `/invite/accept` registration; `EMAIL_PROVIDER=mock` or SMTP |
 | Material discovery (public) | **Implemented** | Backend + Flutter |
 | Supplier list/create/update/delete materials | **Implemented** | Edit/delete gated by status + reservation history |
 | Supplier reservations workflow | **Partial** | Supplier list/accept/decline/self-pickup complete; delivery complete guarded — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
@@ -103,8 +107,8 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Learning hub API → Flutter | **Backend-only** | API mounted; UI mock |
 | Reviews | **Not implemented** | `reviews` table; no API/UI |
 | General notifications API | **Not implemented** | `notifications` table; supplier-derived notifications only |
-| Admin / moderator dashboards | **Not implemented** | [admin.md](features/admin.md), [moderator.md](features/moderator.md); invitations create **Backend-only** |
-| Impact analytics | **Not implemented** | No impact tables in schema |
+| Admin / moderator dashboards | **Partial** | Admin overview dashboard **Partial** ([admin.md](features/admin.md)); moderator **Not implemented** |
+| Impact analytics | **Partial** | Computed from `materials`/`reservations` in admin dashboard; no impact tables |
 
 ---
 

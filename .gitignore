@@ -3,6 +3,8 @@ dist/
 .env
 .env.*
 !.env.example
+apps/backend/config/invitations.env
+!apps/backend/config/invitations.env.example
 apps/backend/uploads/materials/*
 !apps/backend/uploads/materials/.gitkeep
 

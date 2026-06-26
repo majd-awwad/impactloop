@@ -89,6 +89,10 @@ Relations: roles, authTokens, learnerProfile, supplierProfile, materials, reserv
 | userId | String | unique FK → users |
 | supplierType, publicName, description | String? | |
 | verificationStatus | String | default `UNVERIFIED` |
+| verificationSubmittedAt | DateTime? | |
+| verificationReviewedAt | DateTime? | |
+| verificationReviewedById | String? | FK → users |
+| verificationAdminNote | String? | |
 | defaultPickupLocationId | String? | FK → locations |
 
 Relations: organizationProfile, materials.
@@ -97,16 +101,22 @@ Relations: organizationProfile, materials.
 
 ## `driver_profiles` — model `DriverProfile`
 
+Unified invitation signup + internal delivery operations.
+
 | Field | Type | Notes |
 |-------|------|-------|
 | id | String (cuid) | PK |
 | userId | String | unique FK → users |
+| displayName | String | |
+| phone | String | required at invitation accept |
+| city, area | String | signup address |
+| addressLine | String? | |
+| transportationType | TransportationType | signup enum (`CAR`, `MOTORCYCLE`, `BICYCLE`, `WALKING`) |
+| availabilityNote | String? | signup note |
 | status | DriverProfileStatus | default `ACTIVE` |
 | availability | DriverAvailabilityStatus | default `OFFLINE` |
-| displayName | String | |
-| phone | String? | |
-| vehicleType | String | default `UNSPECIFIED` |
-| vehicleLabel, vehiclePlate, capacityNotes | String? | |
+| vehicleType | String | default `UNSPECIFIED`; mapped from `transportationType` at signup |
+| vehicleLabel, vehiclePlate, capacityNotes | String? | operational metadata |
 | createdAt, updatedAt | DateTime | |
 
 Relations: assigned deliveries, assignments, location pings.
@@ -125,6 +135,8 @@ Relations: assigned deliveries, assignments, location pings.
 | workingDays, workingHours | Json? | |
 | businessLocationId | String? | FK → locations |
 | verificationDocumentStatus | VerificationDocumentStatus? | |
+| verificationDocumentUrl | String? | |
+| verificationDocumentName | String? | |
 
 ---
 

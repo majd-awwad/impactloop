@@ -16,6 +16,7 @@ import { materialTypesRouter } from './modules/material-types/material-types.rou
 import { materialsRouter } from './modules/materials/materials.routes.js';
 import { priceRuleRequestsRouter } from './modules/price-rule-requests/price-rule-requests.routes.js';
 import { reservationsRouter } from './modules/reservations/reservations.routes.js';
+import { adminRouter } from './modules/admin/admin.routes.js';
 import { supplierRouter } from './modules/supplier/supplier.routes.js';
 import { locationsRouter } from './modules/locations/locations.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
@@ -23,8 +24,13 @@ import {
   ensureMaterialUploadsDir,
   MATERIAL_UPLOADS_DIR,
 } from './modules/uploads/uploads.storage.js';
+import {
+  ensureSupplierVerificationUploadsDir,
+  SUPPLIER_VERIFICATION_UPLOADS_DIR,
+} from './modules/uploads/verification-uploads.storage.js';
 
 ensureMaterialUploadsDir();
+ensureSupplierVerificationUploadsDir();
 
 export const app = express();
 
@@ -47,6 +53,10 @@ app.use(
 );
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.use('/uploads/materials', express.static(MATERIAL_UPLOADS_DIR));
+app.use(
+  '/uploads/supplier-verification',
+  express.static(SUPPLIER_VERIFICATION_UPLOADS_DIR),
+);
 app.use(express.json());
 
 app.use('/health', healthRouter);
@@ -63,6 +73,7 @@ app.use('/api/driver', driverRouter);
 app.use('/api/uploads', uploadsRouter);
 app.use('/api/locations', locationsRouter);
 app.use('/api/supplier', supplierRouter);
+app.use('/api/admin', adminRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

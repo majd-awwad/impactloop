@@ -25,6 +25,9 @@ import '../../features/material_discovery/presentation/pages/material_details_pa
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
+import '../../features/supplier_portal/application/supplier_verification_access.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_verification_pending_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_verification_status_page.dart';
 import '../../features/supplier_portal/presentation/pages/add_material_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_edit_material_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_my_materials_page.dart';
@@ -35,10 +38,20 @@ import '../../features/supplier_portal/presentation/pages/supplier_pickup_schedu
 import '../../features/supplier_portal/presentation/pages/supplier_dashboard_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_profile_page.dart';
 import '../../features/supplier_portal/presentation/shell/supplier_shell.dart';
+import '../../features/admin_portal/presentation/pages/admin_access_denied_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_invitations_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_overview_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_placeholder_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_materials_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_supplier_verification_page.dart';
+import '../../features/admin_portal/presentation/widgets/admin_shell.dart';
+import '../../features/invitations/presentation/pages/invite_accept_page.dart';
 
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
+const _adminAccessDeniedRoute = '/admin/access-denied';
 
-enum _RouteAccessLevel { public, authenticated, learner, supplier, driver }
+enum _RouteAccessLevel { public, authenticated, learner, supplier, driver, admin }
 
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   final path = state.matchedLocation;
@@ -91,6 +104,11 @@ bool _isSupplierPortalPath(String path) {
     return false;
   }
 
+  if (isSupplierVerificationStatusRoute(path) ||
+      path == supplierVerificationPendingRoute) {
+    return false;
+  }
+
   return path == '/supplier' || path.startsWith('/supplier/');
 }
 
@@ -98,17 +116,34 @@ bool _isDriverPortalPath(String path) {
   return path == '/driver' || path.startsWith('/driver/');
 }
 
+bool _isAdminPortalPath(String path) {
+  if (path == _adminAccessDeniedRoute) {
+    return false;
+  }
+
+  return path == '/admin' || path.startsWith('/admin/');
+}
+
 bool _isCheckingPath(String path) => path == authCheckingRoute;
 
 bool _isAuthPage(String path) => path == loginRoute || path == registerRoute;
 
 _RouteAccessLevel _routeAccessForPath(String path) {
+  if (isSupplierVerificationStatusRoute(path) ||
+      path == supplierVerificationPendingRoute) {
+    return _RouteAccessLevel.supplier;
+  }
+
   if (_isSupplierPortalPath(path)) {
     return _RouteAccessLevel.supplier;
   }
 
   if (_isDriverPortalPath(path)) {
     return _RouteAccessLevel.driver;
+  }
+
+  if (_isAdminPortalPath(path)) {
+    return _RouteAccessLevel.admin;
   }
 
   if (path == '/learner/reservations' ||
@@ -135,6 +170,10 @@ bool _userHasDriverRole(AuthState authState) {
   return userHasDriverRole(authState.user);
 }
 
+bool _userHasAdminRole(AuthState authState) {
+  return userHasRole(authState.user, 'ADMIN');
+}
+
 String _withFrom(String path, String from) {
   final encodedFrom = Uri.encodeQueryComponent(from);
   return '$path?from=$encodedFrom';
@@ -150,6 +189,10 @@ String? _resolveProtectedRoute(
   String destination,
 ) {
   if (authState.status == AuthStatus.unknown) {
+    if (accessLevel == _RouteAccessLevel.public) {
+      return null;
+    }
+
     return _withFrom(authCheckingRoute, destination);
   }
 
@@ -174,6 +217,10 @@ String? _resolveProtectedRoute(
   if (accessLevel == _RouteAccessLevel.driver &&
       !_userHasDriverRole(authState)) {
     return homeRoute;
+  }
+
+  if (accessLevel == _RouteAccessLevel.admin && !_userHasAdminRole(authState)) {
+    return _adminAccessDeniedRoute;
   }
 
   return null;
@@ -207,6 +254,45 @@ String? _resolveAuthPageRedirect(AuthState authState, GoRouterState state) {
   return _resolveProtectedRoute(authState, accessLevel, target) ?? target;
 }
 
+String? _resolveSupplierVerificationRedirect(
+  AuthState authState,
+  String path,
+) {
+  if (_isAuthPage(path) ||
+      path == '/complete-supplier-profile' ||
+      path == '/complete-learner-profile' ||
+      path == registerRoute) {
+    return null;
+  }
+
+  if (!authState.isAuthenticated || authState.user == null) {
+    return null;
+  }
+
+  if (!userHasSupplierRole(authState.user)) {
+    return null;
+  }
+
+  final profile = authState.user!.supplierProfile;
+  final gate = supplierVerificationGateRoute(
+    supplierType: profile?.supplierType,
+    verificationStatus: profile?.verificationStatus,
+  );
+
+  final onVerificationPage = isSupplierVerificationStatusRoute(path) ||
+      path == supplierVerificationPendingRoute;
+
+  if (gate != null && _isSupplierPortalPath(path) && !onVerificationPage) {
+    return gate;
+  }
+
+  if (gate == null && onVerificationPage) {
+    return supplierPortalRoute;
+  }
+
+  return null;
+}
+
 String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
   final authState = ref.read(authControllerProvider);
   final path = state.matchedLocation;
@@ -227,6 +313,14 @@ String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
   );
   if (protectedRedirect != null) {
     return protectedRedirect;
+  }
+
+  final verificationRedirect = _resolveSupplierVerificationRedirect(
+    authState,
+    path,
+  );
+  if (verificationRedirect != null) {
+    return verificationRedirect;
   }
 
   if (authState.status == AuthStatus.unknown) {
@@ -313,8 +407,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CompleteSupplierProfilePage(),
       ),
       GoRoute(
+        path: '/invite/accept',
+        builder: (context, state) {
+          final token = state.uri.queryParameters['token'] ?? '';
+          return InviteAcceptPage(token: token);
+        },
+      ),
+      GoRoute(
+        path: supplierVerificationPendingRoute,
+        builder: (context, state) => const SupplierVerificationPendingPage(),
+      ),
+      GoRoute(
+        path: supplierVerificationStatusRoute,
+        builder: (context, state) => const SupplierVerificationStatusPage(),
+      ),
+      GoRoute(
         path: _supplierAccessDeniedRoute,
         builder: (context, state) => const SupplierAccessDeniedPage(),
+      ),
+      GoRoute(
+        path: _adminAccessDeniedRoute,
+        builder: (context, state) => const AdminAccessDeniedPage(),
       ),
       ShellRoute(
         builder: (context, state, child) => DriverPortalShell(child: child),
@@ -394,6 +507,52 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/supplier/profile',
             builder: (context, state) => const SupplierProfilePage(),
+          ),
+        ],
+      ),
+      ShellRoute(
+        builder: (context, state, child) => AdminShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/admin',
+            builder: (context, state) => const AdminOverviewPage(),
+          ),
+          GoRoute(
+            path: '/admin/users',
+            builder: (context, state) =>
+                const AdminPlaceholderPage(title: 'Users'),
+          ),
+          GoRoute(
+            path: '/admin/suppliers',
+            builder: (context, state) =>
+                const AdminPlaceholderPage(title: 'Suppliers'),
+          ),
+          GoRoute(
+            path: '/admin/supplier-verification',
+            builder: (context, state) =>
+                const AdminSupplierVerificationPage(),
+          ),
+          GoRoute(
+            path: '/admin/materials',
+            builder: (context, state) => const AdminMaterialsPage(),
+          ),
+          GoRoute(
+            path: '/admin/approvals',
+            builder: (context, state) => const AdminApprovalsPage(),
+          ),
+          GoRoute(
+            path: '/admin/invitations',
+            builder: (context, state) => const AdminInvitationsPage(),
+          ),
+          GoRoute(
+            path: '/admin/impact',
+            builder: (context, state) =>
+                const AdminPlaceholderPage(title: 'Impact Analytics'),
+          ),
+          GoRoute(
+            path: '/admin/audit-logs',
+            builder: (context, state) =>
+                const AdminPlaceholderPage(title: 'Audit Logs'),
           ),
         ],
       ),

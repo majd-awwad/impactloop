@@ -1,3 +1,5 @@
+import { normalizeSupplierVerificationStatus } from '../supplier-verification.status.js';
+
 export type SupplierLocationSummaryDto = {
   id: string;
   city: string;
@@ -128,20 +130,6 @@ export const emptyDashboardStats = (): DashboardStatsDto => ({
 });
 
 export const normalizeVerificationStatus = (status: string): string => {
-  const normalized = status.trim().toUpperCase();
-
-  if (
-    normalized === 'NOT_REQUIRED' ||
-    normalized === 'PENDING' ||
-    normalized === 'VERIFIED' ||
-    normalized === 'REJECTED'
-  ) {
-    return normalized;
-  }
-
-  if (normalized === 'UNVERIFIED') {
-    return 'PENDING';
-  }
-
-  return normalized;
+  const normalized = normalizeSupplierVerificationStatus(status);
+  return normalized === 'APPROVED' ? 'VERIFIED' : normalized;
 };

@@ -19,6 +19,8 @@ import '../../../materials/data/models/material_draft_image.dart';
 import '../../../materials/data/models/material_price_check_result.dart';
 import '../../../materials/data/models/material_type.dart' as material_models;
 import '../../../materials/data/models/price_rule_request.dart';
+import '../../../auth/application/auth_controller.dart';
+import '../../application/supplier_verification_access.dart';
 import '../../data/supplier_materials_repository.dart';
 import '../controllers/supplier_dashboard_providers.dart';
 import '../controllers/supplier_notifications_providers.dart';
@@ -68,8 +70,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   final _unitController = TextEditingController(text: 'piece');
   final _priceController = TextEditingController();
   final _requestedCategoryController = TextEditingController();
+  final _categoryRequestReasonController = TextEditingController();
 
   String? _categoryId;
+  bool _categoryManuallySelected = false;
   material_models.MaterialType? _selectedMaterialType;
   String _condition = 'GOOD';
   bool _isFree = true;
@@ -127,6 +131,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     _unitController.dispose();
     _priceController.dispose();
     _requestedCategoryController.dispose();
+    _categoryRequestReasonController.dispose();
     super.dispose();
   }
 
@@ -185,8 +190,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     return category.nameEn.toLowerCase() == 'other';
   }
 
-  /// Paid listings can publish only after a successful price check.
-  /// Backend create always requires `checkMaterialPrice.allowed`.
+  /// Paid listings can publish after a successful price check, including
+  /// admin-reviewed price rule requests resumed on this page.
   bool _paidListingCanPublish(MaterialCategory? category) {
     if (_isFree) {
       return true;
@@ -233,7 +238,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     }
     setState(() {
       _categoryId = value;
-      _materialNameController.clear();
+      _categoryManuallySelected = value != null;
       _selectedMaterialType = null;
       _priceCheck = null;
       _priceReviewMessage = null;
@@ -275,6 +280,34 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authControllerProvider).user;
+    final supplierProfile = user?.supplierProfile;
+    if (!canSupplierPublishMaterials(
+      supplierType: supplierProfile?.supplierType,
+      verificationStatus: supplierProfile?.verificationStatus,
+    )) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.verified_user_outlined, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  'Your supplier account is waiting for admin approval. You can publish materials after approval.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final l = context.s;
     final colors = context.supplierColors;
     final decorations = context.supplierDecorations;
@@ -458,10 +491,30 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                           controller: _requestedCategoryController,
                           label: l.requestedCategoryName,
                           hint: l.requestedCategoryHint,
+                          onChanged: (_) => setState(() {}),
                         ),
                         const SizedBox(height: AppSpacing.sm),
+                        SupplierDarkTextArea(
+                          controller: _categoryRequestReasonController,
+                          label: 'Why existing categories do not fit',
+                          hint:
+                              'Explain what kind of material this is and why none of the current categories work.',
+                          maxLines: 4,
+                          onChanged: (_) => setState(() {}),
+                        ),
+                        if (_categoryRequestValidationMessage() != null) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            _categoryRequestValidationMessage()!,
+                            style: context.supplierBody().copyWith(
+                              color: colors.error,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: AppSpacing.sm),
                         OutlinedButton.icon(
-                          onPressed: _isSubmittingCategoryRequest
+                          onPressed: _isSubmittingCategoryRequest ||
+                                  !_canSubmitCategoryRequest()
                               ? null
                               : _submitCategoryRequest,
                           icon: _isSubmittingCategoryRequest
@@ -781,32 +834,41 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   }) {
     final quantity = double.tryParse(_quantityController.text.trim()) ?? 1;
     final price = double.tryParse(_priceController.text.trim());
+    final reason = _categoryRequestReasonController.text.trim();
+    final categoryLabel = requestedCategoryName.trim().isEmpty
+        ? 'General'
+        : requestedCategoryName.trim();
 
-    return {
+    final draft = <String, dynamic>{
       'materialName': _materialNameController.text.trim(),
       'title': _titleController.text.trim(),
       'description': _descriptionController.text.trim(),
-      'requestedCategoryName': requestedCategoryName,
-      'categoryId': _categoryId,
+      'requestedCategoryName': categoryLabel,
+      if (_categoryId != null) 'categoryId': _categoryId,
       'condition': _condition,
       'quantity': quantity,
       'unit': _unitController.text.trim().isEmpty
           ? 'piece'
           : _unitController.text.trim(),
       'isFree': _isFree,
-      'price': _isFree ? null : price,
       'currency': 'NIS',
       'pickupAllowed': _pickupAllowed,
       'deliveryAllowed': false,
-      'pickupNotes': _pickupNotesController.text.trim().isEmpty
-          ? null
-          : _pickupNotesController.text.trim(),
-      'suggestedUses': _suggestedUsesController.text.trim().isEmpty
-          ? null
-          : _suggestedUsesController.text.trim(),
+      if (!_isFree && price != null) 'price': price,
+      if (_pickupNotesController.text.trim().isNotEmpty)
+        'pickupNotes': _pickupNotesController.text.trim(),
+      if (_suggestedUsesController.text.trim().isNotEmpty)
+        'suggestedUses': _suggestedUsesController.text.trim(),
+      if (reason.isNotEmpty) 'categoryRequestReason': reason,
       'imageUrls': imageUrls ?? _imageUrlValues(),
       ...?_pickupSectionKey.currentState?.buildDraftPickupJson(),
     };
+
+    if (_sourceCategoryRequestId != null) {
+      draft['sourceCategoryRequestId'] = _sourceCategoryRequestId;
+    }
+
+    return draft;
   }
 
   List<String> _imageUrlValues() {
@@ -887,17 +949,48 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     setState(() => _images.addAll(picked));
   }
 
+  bool _canSubmitCategoryRequest() => _categoryRequestValidationMessage() == null;
+
+  String? _categoryRequestValidationMessage() {
+    final materialName = _materialNameController.text.trim();
+    final title = _titleController.text.trim();
+    if (materialName.length < 2 && title.length < 2) {
+      return 'Enter the material name before requesting a new category.';
+    }
+
+    if (_descriptionController.text.trim().length < 10) {
+      return 'Describe the material so admin can review the category request.';
+    }
+
+    if (_requestedCategoryController.text.trim().isEmpty) {
+      return 'Enter the requested category name.';
+    }
+
+    if (_categoryRequestReasonController.text.trim().length < 10) {
+      return 'Explain why existing categories do not fit.';
+    }
+
+    final quantity = double.tryParse(_quantityController.text.trim());
+    if (quantity == null || quantity <= 0) {
+      return 'Enter a valid quantity for this material.';
+    }
+
+    if (_unitController.text.trim().isEmpty) {
+      return 'Enter the unit for this material.';
+    }
+
+    return null;
+  }
+
   Future<void> _submitCategoryRequest() async {
-    final requestedName = _requestedCategoryController.text.trim();
-    if (requestedName.isEmpty) {
+    final validationMessage = _categoryRequestValidationMessage();
+    if (validationMessage != null) {
       setState(() => _showCategoryRequestField = true);
-      showSupplierErrorSnackBar(
-        context,
-        'Enter the category name you want to request.',
-      );
+      showSupplierErrorSnackBar(context, validationMessage);
       return;
     }
 
+    final requestedName = _requestedCategoryController.text.trim();
     setState(() => _isSubmittingCategoryRequest = true);
     try {
       final imageUrls = await _resolveImageUrls();
@@ -979,47 +1072,112 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     _maybeResumeFromRoute();
   }
 
+  void _setControllerIfEmpty(TextEditingController controller, String? value) {
+    if (controller.text.trim().isNotEmpty) {
+      return;
+    }
+    if (value == null || value.trim().isEmpty) {
+      return;
+    }
+    controller.text = value.trim();
+  }
+
+  String? _resolveResumeCategoryId({
+    required CategoryRequestDraftResponse draft,
+    required Map<String, dynamic> json,
+  }) {
+    final approvedId = draft.approvedCategoryId ?? draft.approvedCategory?.id;
+    if (approvedId != null && approvedId.trim().isNotEmpty) {
+      return approvedId;
+    }
+
+    if (draft.status == 'REJECTED') {
+      final suggestedId =
+          draft.suggestedCategoryId ?? draft.suggestedCategory?.id;
+      if (suggestedId != null && suggestedId.trim().isNotEmpty) {
+        return suggestedId;
+      }
+    }
+
+    final draftCategoryId = json['categoryId'] as String?;
+    return draftCategoryId?.trim().isNotEmpty == true ? draftCategoryId : null;
+  }
+
   void _applyListingDraftJson(
     Map<String, dynamic> json, {
     String? categoryId,
     String? resumeMessage,
     double? maxAllowedUnitPrice,
     String? maxAllowedUnitLabel,
+    bool preserveUserInput = false,
   }) {
     final price = json['price'];
     final isFree = json['isFree'] as bool? ?? true;
+    final draftMaterialName = json['materialName'] as String?;
+    final draftTitle = json['title'] as String?;
+    final draftDescription = json['description'] as String?;
 
-    _materialNameController.text = json['materialName'] as String? ?? '';
+    if (!preserveUserInput) {
+      _materialNameController.text = draftMaterialName?.trim() ?? '';
+      _titleController.text = draftTitle?.trim() ?? '';
+      _descriptionController.text = draftDescription?.trim() ?? '';
+    } else {
+      _setControllerIfEmpty(_materialNameController, draftMaterialName);
+      _setControllerIfEmpty(_titleController, draftTitle);
+      _setControllerIfEmpty(_descriptionController, draftDescription);
+    }
+
     _selectedMaterialType = null;
-    _titleController.text = json['title'] as String? ?? '';
-    _descriptionController.text = json['description'] as String? ?? '';
+
+    if (!preserveUserInput || _quantityController.text.trim().isEmpty) {
+      _quantityController.text = (json['quantity'] as num?)?.toString() ?? '1';
+    }
+    if (!preserveUserInput || !_unitEditedByUser) {
+      _unitController.text = json['unit'] as String? ?? 'piece';
+      _unitEditedByUser = _unitController.text.trim().isNotEmpty;
+    }
+
     _condition = _createConditionValue(json['condition'] as String?);
-    _quantityController.text = (json['quantity'] as num?)?.toString() ?? '1';
-    _unitController.text = json['unit'] as String? ?? 'piece';
-    _unitEditedByUser = _unitController.text.trim().isNotEmpty;
     _isFree = isFree;
     if (price is num && !isFree) {
-      _priceController.text =
-          price % 1 == 0 ? price.toInt().toString() : price.toString();
-    } else if (isFree) {
+      if (!preserveUserInput || _priceController.text.trim().isEmpty) {
+        _priceController.text =
+            price % 1 == 0 ? price.toInt().toString() : price.toString();
+      }
+    } else if (isFree && !preserveUserInput) {
       _priceController.clear();
     }
+
     _pickupAllowed = json['pickupAllowed'] as bool? ?? true;
-    _pickupNotesController.text = json['pickupNotes'] as String? ?? '';
-    _suggestedUsesController.text = json['suggestedUses'] as String? ?? '';
-    _images
-      ..clear()
-      ..addAll(
-        (json['imageUrls'] as List?)
-                ?.whereType<String>()
-                .map(MaterialDraftImage.fromUrl)
-                .toList() ??
-            const [],
-      );
-    _requestedCategoryController.clear();
-    _showCategoryRequestField = false;
-    _categoryRequestMessage = null;
-    _categoryId = categoryId ?? json['categoryId'] as String? ?? _categoryId;
+    _setControllerIfEmpty(_pickupNotesController, json['pickupNotes'] as String?);
+    _setControllerIfEmpty(
+      _suggestedUsesController,
+      json['suggestedUses'] as String?,
+    );
+    _setControllerIfEmpty(
+      _categoryRequestReasonController,
+      json['categoryRequestReason'] as String?,
+    );
+
+    if (!preserveUserInput) {
+      _images
+        ..clear()
+        ..addAll(
+          (json['imageUrls'] as List?)
+                  ?.whereType<String>()
+                  .map(MaterialDraftImage.fromUrl)
+                  .toList() ??
+              const [],
+        );
+      _requestedCategoryController.clear();
+      _showCategoryRequestField = false;
+      _categoryRequestMessage = null;
+    }
+
+    if (!_categoryManuallySelected) {
+      _categoryId = categoryId ?? json['categoryId'] as String? ?? _categoryId;
+    }
+
     _priceCheck = null;
     _priceReviewMessage = null;
     _maxAllowedUnitPrice = maxAllowedUnitPrice;
@@ -1034,6 +1192,15 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       final draft = await loadCategoryRequestDraft(ref, requestId);
       if (!mounted) return;
 
+      if (draft.status == 'PENDING') {
+        setState(() {
+          _isResumingDraft = false;
+          _resumeError =
+              'Your category request is still pending admin review.';
+        });
+        return;
+      }
+
       final json = draft.listingDraftJson;
       if (json == null) {
         setState(() {
@@ -1043,29 +1210,39 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         return;
       }
 
-      final approvedCategoryId =
-          draft.approvedCategoryId ?? draft.approvedCategory?.id;
-      if (approvedCategoryId != null) {
+      final resolvedCategoryId = _resolveResumeCategoryId(
+        draft: draft,
+        json: json,
+      );
+
+      if (resolvedCategoryId != null) {
         final categories =
             await ref.read(materialCategoriesProvider.future);
         final categoryExists =
-            categories.any((category) => category.id == approvedCategoryId);
+            categories.any((category) => category.id == resolvedCategoryId);
         if (!categoryExists) {
           setState(() {
             _isResumingDraft = false;
-            _resumeError = 'Approved category could not be loaded.';
+            _resumeError =
+                'The selected category is no longer available. Refresh categories and choose again.';
           });
           return;
         }
       }
 
       final resumeMessage = _categoryResumeMessageForDraft(draft);
+      final hasSavedMaterialContext =
+          (json['materialName'] as String?)?.trim().isNotEmpty == true ||
+          (json['title'] as String?)?.trim().isNotEmpty == true;
 
       setState(() {
         _applyListingDraftJson(
           json,
-          categoryId: approvedCategoryId,
-          resumeMessage: resumeMessage,
+          categoryId: resolvedCategoryId,
+          resumeMessage: hasSavedMaterialContext
+              ? resumeMessage
+              : 'Some material details were not saved. Please complete the missing fields.',
+          preserveUserInput: _categoryManuallySelected,
         );
         _isResumingDraft = false;
         _resumeError = null;
@@ -1091,6 +1268,13 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     final approvedName = draft.approvedCategory?.nameEn;
     if (draft.isSuggestion && approvedName != null) {
       return 'Use $approvedName for this listing.';
+    }
+    if (draft.status == 'REJECTED') {
+      final suggestedName = draft.suggestedCategory?.nameEn;
+      if (suggestedName != null && suggestedName.isNotEmpty) {
+        return 'Your category request was rejected. Use $suggestedName for this listing.';
+      }
+      return 'Your category request was rejected. Choose an existing category and continue.';
     }
     if (draft.canContinue) {
       if (draft.requestedName.isNotEmpty) {
@@ -1128,6 +1312,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
           resumeMessage: resumeMessage,
           maxAllowedUnitPrice: maxPrice,
           maxAllowedUnitLabel: unitLabel,
+          preserveUserInput: _categoryManuallySelected,
         );
         _isFree = false;
         _isResumingDraft = false;
@@ -1172,8 +1357,52 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       );
       return;
     }
-    if (_categoryId == null) {
-      showSupplierErrorSnackBar(context, context.s.chooseCategoryFirst);
+
+    final categoryId = _categoryId?.trim();
+    if (categoryId == null || categoryId.isEmpty) {
+      showSupplierErrorSnackBar(
+        context,
+        'Please select a valid category before submitting price review.',
+      );
+      return;
+    }
+
+    final materialName = _materialNameController.text.trim();
+    final title = _titleController.text.trim();
+    final description = _descriptionController.text.trim();
+    if (materialName.length < 2 && title.length < 2) {
+      showSupplierErrorSnackBar(
+        context,
+        'Enter material name before submitting price review.',
+      );
+      return;
+    }
+    if (description.length < 10) {
+      showSupplierErrorSnackBar(
+        context,
+        'Enter material description before submitting price review.',
+      );
+      return;
+    }
+
+    final unit = _unitController.text.trim().isEmpty
+        ? 'piece'
+        : _unitController.text.trim();
+    final quantity = double.tryParse(_quantityController.text.trim());
+    if (quantity == null || quantity <= 0) {
+      showSupplierErrorSnackBar(
+        context,
+        'Quantity and unit are required before submitting price review.',
+      );
+      return;
+    }
+
+    final price = double.tryParse(_priceController.text.trim());
+    if (price == null || price <= 0) {
+      showSupplierErrorSnackBar(
+        context,
+        'Enter a valid paid price before submitting price review.',
+      );
       return;
     }
 
@@ -1181,12 +1410,6 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         _selectedMaterialType?.id ??
         _priceCheck?.materialTypeId ??
         _priceCheck?.matchedReference?.id;
-    final materialName = _materialNameController.text.trim();
-    final unit = _unitController.text.trim().isEmpty
-        ? 'piece'
-        : _unitController.text.trim();
-    final quantity = double.tryParse(_quantityController.text.trim());
-    final price = double.tryParse(_priceController.text.trim());
 
     if (materialTypeId == null && materialName.isEmpty) {
       showSupplierErrorSnackBar(
@@ -1198,27 +1421,38 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
 
     setState(() => _isRequestingPriceReview = true);
     try {
-      final categories = ref.read(materialCategoriesProvider).value ?? const [];
-      MaterialCategory? selectedCategory;
-      for (final category in categories) {
-        if (category.id == _categoryId) {
-          selectedCategory = category;
-          break;
+      final categories = await ref.read(materialCategoriesProvider.future);
+      final selectedCategory = _findCategoryById(categories, categoryId);
+      if (selectedCategory == null) {
+        if (mounted) {
+          setState(() => _isRequestingPriceReview = false);
+          ref.invalidate(materialCategoriesProvider);
+          showSupplierErrorSnackBar(
+            context,
+            'The selected category is no longer available. Refresh categories and choose again.',
+          );
         }
+        return;
       }
-      final categoryName = selectedCategory?.nameEn ?? 'Other';
+
+      if (kDebugMode) {
+        debugPrint(
+          '[price-review] categoryId=$categoryId categoryName=${selectedCategory.nameEn} '
+          'materialName=$materialName title=$title categoryRequestId=$_sourceCategoryRequestId',
+        );
+      }
 
       final result = await submitPriceReview(
         ref,
         CreatePriceRuleRequest(
           materialTypeId: materialTypeId,
           materialName: materialTypeId == null ? materialName : null,
-          categoryId: materialTypeId == null ? _categoryId : null,
+          categoryId: categoryId,
           condition: _condition,
           quantity: quantity,
           unit: unit,
           supplierPriceNis: price,
-          listingDraftJson: _buildListingDraftJson(categoryName),
+          listingDraftJson: _buildListingDraftJson(selectedCategory.nameEn),
         ),
       );
       if (!mounted) return;
@@ -1266,6 +1500,29 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     final unit = _unitController.text.trim().isEmpty
         ? 'piece'
         : _unitController.text.trim();
+
+    // If we resumed from a reviewed price request, we already have an admin-approved
+    // max allowed unit price. A supplier price <= max is accepted immediately without
+    // requiring a new review submission.
+    if (_sourcePriceRuleRequestId != null && _maxAllowedUnitPrice != null) {
+      final maxAllowed = _maxAllowedUnitPrice!;
+      setState(() {
+        _isCheckingPrice = false;
+        _priceReviewMessage = null;
+        _priceCheck = MaterialPriceCheckResult(
+          allowed: price <= maxAllowed,
+          reason: price <= maxAllowed ? null : 'PRICE_TOO_HIGH',
+          currency: 'NIS',
+          currencySymbol: '₪',
+          maxAllowedPrice: maxAllowed,
+          approvedUnit: _maxAllowedUnitLabel ?? unit,
+          message: price <= maxAllowed
+              ? 'Price accepted. Maximum allowed price is ${maxAllowed.toStringAsFixed(0)} NIS.'
+              : 'The maximum allowed price is ${maxAllowed.toStringAsFixed(0)} NIS. Please enter ${maxAllowed.toStringAsFixed(0)} NIS or less.',
+        );
+      });
+      return;
+    }
 
     setState(() => _isCheckingPrice = true);
     try {
@@ -1319,6 +1576,20 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   }
 
   String _apiErrorMessage(ApiException error) {
+    final details = error.details;
+    if (details is Map<String, dynamic>) {
+      final reason = details['reason']?.toString();
+      final maxAllowed = details['maxAllowedPrice'];
+      final approvedUnit = details['approvedUnit']?.toString() ?? 'piece';
+      if (reason == 'PRICE_TOO_HIGH' && maxAllowed is num) {
+        final max = maxAllowed.toDouble();
+        return 'Maximum allowed price is ${max.toStringAsFixed(0)} NIS per $approvedUnit. Please enter ${max.toStringAsFixed(0)} NIS or less.';
+      }
+      if (reason == 'MATERIAL_REVIEW_REQUIRED') {
+        return 'This paid material needs admin price review before publishing.';
+      }
+    }
+
     final issues = error.fieldIssues;
     if (issues.isNotEmpty) {
       return issues.map((issue) => '${issue.path}: ${issue.message}').join('\n');
@@ -1336,7 +1607,14 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   }
 
   Future<void> _publish() async {
-    if (!(_formKey.currentState?.validate() ?? false) || _categoryId == null) {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    if (_categoryId == null) {
+      showSupplierErrorSnackBar(
+        context,
+        'Please select a valid category before publishing.',
+      );
       return;
     }
     if (_images.isEmpty) {

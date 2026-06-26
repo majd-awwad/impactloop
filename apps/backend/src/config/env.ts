@@ -7,9 +7,34 @@ const backendRoot = path.resolve(
   '../..',
 );
 
-dotenv.config({ path: path.join(backendRoot, '.env') });
+const envFilePath = path.join(backendRoot, '.env');
+const invitationsEnvFilePath = path.join(backendRoot, 'config/invitations.env');
+
+const stripEmptyEnvOverrides = (parsed: dotenv.DotenvParseOutput | undefined): void => {
+  if (!parsed) {
+    return;
+  }
+
+  for (const [key, value] of Object.entries(parsed)) {
+    if (typeof value === 'string' && value.trim() === '') {
+      delete process.env[key];
+    }
+  }
+};
+
+dotenv.config({ path: envFilePath, override: true });
+const invitationsEnvResult = dotenv.config({
+  path: invitationsEnvFilePath,
+  override: true,
+});
+stripEmptyEnvOverrides(invitationsEnvResult.parsed);
+
+export const backendEnvFilePath = envFilePath;
+export const invitationsEnvFilePathExported = invitationsEnvFilePath;
 
 export type AiProviderName = 'gemini' | 'mock' | 'disabled';
+
+export type EmailProviderName = 'mock' | 'smtp';
 
 const parsePort = (value: string | undefined): number => {
   const parsed = Number(value);
@@ -95,6 +120,62 @@ export const resolveAiProvider = (): AiProviderName => {
   return 'disabled';
 };
 
+const readEmailProvider = (): EmailProviderName => {
+  const raw = process.env.EMAIL_PROVIDER?.trim().toLowerCase();
+  return raw === 'smtp' ? 'smtp' : 'mock';
+};
+
+export const getResolvedEmailProvider = (): EmailProviderName => readEmailProvider();
+
+const readAppPublicBaseUrl = (): string => {
+  const explicit = process.env.APP_PUBLIC_BASE_URL?.trim();
+  return explicit ? explicit.replace(/\/$/, '') : '';
+};
+
+export const getAppPublicBaseUrl = (): string => readAppPublicBaseUrl();
+
+export const isAppPublicBaseUrlConfigured = (): boolean =>
+  Boolean(getAppPublicBaseUrl());
+
+export const getSmtpConfigurationErrors = (): string[] => {
+  const errors: string[] = [];
+
+  if (!process.env.SMTP_HOST?.trim()) {
+    errors.push('SMTP_HOST is not configured');
+  }
+
+  if (!process.env.SMTP_USER?.trim()) {
+    errors.push('SMTP_USER is not configured');
+  }
+
+  if (!process.env.SMTP_PASS?.trim()) {
+    errors.push('SMTP_PASS is not configured');
+  }
+
+  if (!process.env.SMTP_FROM?.trim()) {
+    errors.push('SMTP_FROM is not configured');
+  }
+
+  return errors;
+};
+
+export const isSmtpConfigured = (): boolean =>
+  getSmtpConfigurationErrors().length === 0;
+
+const parseBoolean = (value: string | undefined, fallback = false): boolean => {
+  if (value === undefined) {
+    return fallback;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+};
+
+const parseSmtpPort = (value: string | undefined): number => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 587;
+};
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: parsePort(process.env.PORT),
@@ -109,6 +190,15 @@ export const env = {
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   passwordResetExpiresIn: process.env.PASSWORD_RESET_EXPIRES_IN ?? '1h',
   invitationExpiresIn: process.env.INVITATION_EXPIRES_IN ?? '7d',
+  emailProvider: readEmailProvider(),
+  appPublicBaseUrl: readAppPublicBaseUrl(),
+  smtpHost: process.env.SMTP_HOST?.trim() || '',
+  smtpPort: parseSmtpPort(process.env.SMTP_PORT),
+  smtpSecure: parseBoolean(process.env.SMTP_SECURE, false),
+  smtpUser: process.env.SMTP_USER?.trim() || '',
+  smtpPass: process.env.SMTP_PASS?.trim() || '',
+  smtpFrom:
+    process.env.SMTP_FROM?.trim() || '',
   aiProvider: resolveAiProvider(),
   geminiApiKey: readGeminiApiKey(),
   geminiModel: process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash',
@@ -137,7 +227,7 @@ export const getAiPriceSuggestionDebugInfo = () => {
   const explicitProvider = process.env.AI_PROVIDER?.trim() ?? null;
 
   return {
-    envFilePath: path.join(backendRoot, '.env'),
+    envFilePath: backendEnvFilePath,
     aiProvider: env.aiProvider,
     explicitProvider,
     geminiApiKeyConfigured: Boolean(env.geminiApiKey),
@@ -167,4 +257,62 @@ export const logAiPriceSuggestionStartupConfig = (): void => {
   }
   console.log(`  Gemini model: ${debug.geminiModel}`);
   console.log(`  AI operational: ${debug.operational}`);
+};
+
+export const getEmailInvitationDebugInfo = () => ({
+  envFilePath: backendEnvFilePath,
+  invitationsEnvFilePath: invitationsEnvFilePathExported,
+  emailProvider: env.emailProvider,
+  explicitEmailProvider: process.env.EMAIL_PROVIDER?.trim() ?? null,
+  appPublicBaseUrl: env.appPublicBaseUrl,
+  explicitAppPublicBaseUrl: isAppPublicBaseUrlConfigured(),
+  smtpHostConfigured: Boolean(env.smtpHost),
+  smtpPort: env.smtpPort,
+  smtpSecure: env.smtpSecure,
+  smtpUserConfigured: Boolean(env.smtpUser),
+  smtpPassConfigured: Boolean(env.smtpPass),
+  smtpFromConfigured: Boolean(process.env.SMTP_FROM?.trim()),
+});
+
+export const logEmailInvitationStartupConfig = (): void => {
+  if (env.nodeEnv === 'production') {
+    return;
+  }
+
+  const debug = getEmailInvitationDebugInfo();
+  console.log('[Email invitation config]');
+  console.log(`  env file: ${debug.envFilePath}`);
+  console.log(`  invitations env file: ${debug.invitationsEnvFilePath}`);
+  console.log(`  EMAIL provider: ${debug.emailProvider}`);
+  if (debug.explicitEmailProvider) {
+    console.log(`  EMAIL_PROVIDER env: ${debug.explicitEmailProvider}`);
+  } else if (debug.emailProvider === 'mock') {
+    console.log('  EMAIL_PROVIDER env: (unset, defaulting to mock)');
+  }
+  console.log(`  APP_PUBLIC_BASE_URL configured: ${debug.explicitAppPublicBaseUrl}`);
+  if (debug.explicitAppPublicBaseUrl) {
+    console.log(`  APP_PUBLIC_BASE_URL: ${debug.appPublicBaseUrl}`);
+  } else {
+    console.log('  APP_PUBLIC_BASE_URL: (unset)');
+    console.log(
+      '  Invitation links will fail until APP_PUBLIC_BASE_URL matches your Flutter web URL.',
+    );
+  }
+  if (debug.emailProvider === 'smtp') {
+    console.log(`  SMTP host configured: ${debug.smtpHostConfigured}`);
+    console.log(`  SMTP port: ${debug.smtpPort}`);
+    console.log(`  SMTP secure: ${debug.smtpSecure}`);
+    console.log(`  SMTP user configured: ${debug.smtpUserConfigured}`);
+    console.log(`  SMTP pass configured: ${debug.smtpPassConfigured}`);
+    console.log(`  SMTP from configured: ${debug.smtpFromConfigured}`);
+    const smtpErrors = getSmtpConfigurationErrors();
+    if (smtpErrors.length > 0) {
+      console.log('  SMTP configuration errors:');
+      for (const error of smtpErrors) {
+        console.log(`    - ${error}`);
+      }
+    }
+  } else {
+    console.log('  Mock provider: invitation links are logged to this console.');
+  }
 };

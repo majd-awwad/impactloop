@@ -163,11 +163,17 @@ exports.Prisma.RoleInvitationScalarFieldEnum = {
   tokenHash: 'tokenHash',
   invitedBy: 'invitedBy',
   status: 'status',
+  sendStatus: 'sendStatus',
+  sentAt: 'sentAt',
+  sendError: 'sendError',
+  providerMessageId: 'providerMessageId',
+  revokedAt: 'revokedAt',
   expiresAt: 'expiresAt',
   usedAt: 'usedAt',
   usedByUserId: 'usedByUserId',
   notes: 'notes',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.LearnerProfileScalarFieldEnum = {
@@ -188,6 +194,10 @@ exports.Prisma.SupplierProfileScalarFieldEnum = {
   publicName: 'publicName',
   description: 'description',
   verificationStatus: 'verificationStatus',
+  verificationSubmittedAt: 'verificationSubmittedAt',
+  verificationReviewedAt: 'verificationReviewedAt',
+  verificationReviewedById: 'verificationReviewedById',
+  verificationAdminNote: 'verificationAdminNote',
   defaultPickupLocationId: 'defaultPickupLocationId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -196,10 +206,15 @@ exports.Prisma.SupplierProfileScalarFieldEnum = {
 exports.Prisma.DriverProfileScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
-  status: 'status',
-  availability: 'availability',
   displayName: 'displayName',
   phone: 'phone',
+  city: 'city',
+  area: 'area',
+  addressLine: 'addressLine',
+  transportationType: 'transportationType',
+  availabilityNote: 'availabilityNote',
+  status: 'status',
+  availability: 'availability',
   vehicleType: 'vehicleType',
   vehicleLabel: 'vehicleLabel',
   vehiclePlate: 'vehiclePlate',
@@ -218,6 +233,8 @@ exports.Prisma.OrganizationProfileScalarFieldEnum = {
   workingHours: 'workingHours',
   businessLocationId: 'businessLocationId',
   verificationDocumentStatus: 'verificationDocumentStatus',
+  verificationDocumentUrl: 'verificationDocumentUrl',
+  verificationDocumentName: 'verificationDocumentName',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -356,6 +373,23 @@ exports.Prisma.MaterialScalarFieldEnum = {
   viewsCount: 'viewsCount',
   reusedAt: 'reusedAt',
   reusedByReservationId: 'reusedByReservationId',
+  moderationReason: 'moderationReason',
+  moderatedAt: 'moderatedAt',
+  moderatedById: 'moderatedById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.MaterialReportScalarFieldEnum = {
+  id: 'id',
+  materialId: 'materialId',
+  reporterId: 'reporterId',
+  reason: 'reason',
+  note: 'note',
+  status: 'status',
+  adminNote: 'adminNote',
+  reviewedById: 'reviewedById',
+  reviewedAt: 'reviewedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -643,6 +677,19 @@ exports.RoleInvitationStatus = exports.$Enums.RoleInvitationStatus = {
   REVOKED: 'REVOKED'
 };
 
+exports.RoleInvitationSendStatus = exports.$Enums.RoleInvitationSendStatus = {
+  PENDING: 'PENDING',
+  SENT: 'SENT',
+  FAILED: 'FAILED'
+};
+
+exports.TransportationType = exports.$Enums.TransportationType = {
+  CAR: 'CAR',
+  MOTORCYCLE: 'MOTORCYCLE',
+  BICYCLE: 'BICYCLE',
+  WALKING: 'WALKING'
+};
+
 exports.DriverProfileStatus = exports.$Enums.DriverProfileStatus = {
   ACTIVE: 'ACTIVE',
   INACTIVE: 'INACTIVE',
@@ -664,7 +711,8 @@ exports.OrganizationType = exports.$Enums.OrganizationType = {
 exports.VerificationDocumentStatus = exports.$Enums.VerificationDocumentStatus = {
   PENDING: 'PENDING',
   VERIFIED: 'VERIFIED',
-  REJECTED: 'REJECTED'
+  REJECTED: 'REJECTED',
+  CHANGES_REQUESTED: 'CHANGES_REQUESTED'
 };
 
 exports.CategoryType = exports.$Enums.CategoryType = {
@@ -730,6 +778,22 @@ exports.MaterialStatus = exports.$Enums.MaterialStatus = {
   RESERVED: 'RESERVED',
   REUSED: 'REUSED',
   UNAVAILABLE: 'UNAVAILABLE'
+};
+
+exports.MaterialReportReason = exports.$Enums.MaterialReportReason = {
+  MISLEADING_INFORMATION: 'MISLEADING_INFORMATION',
+  WRONG_CATEGORY: 'WRONG_CATEGORY',
+  WRONG_PRICE: 'WRONG_PRICE',
+  INAPPROPRIATE: 'INAPPROPRIATE',
+  ITEM_NOT_AVAILABLE: 'ITEM_NOT_AVAILABLE',
+  SUSPICIOUS_SUPPLIER: 'SUSPICIOUS_SUPPLIER',
+  OTHER: 'OTHER'
+};
+
+exports.MaterialReportStatus = exports.$Enums.MaterialReportStatus = {
+  PENDING: 'PENDING',
+  RESOLVED: 'RESOLVED',
+  REJECTED: 'REJECTED'
 };
 
 exports.ReservationStatus = exports.$Enums.ReservationStatus = {
@@ -819,6 +883,7 @@ exports.Prisma.ModelName = {
   ProjectLink: 'ProjectLink',
   ProjectTag: 'ProjectTag',
   Material: 'Material',
+  MaterialReport: 'MaterialReport',
   MaterialImage: 'MaterialImage',
   MaterialTag: 'MaterialTag',
   Reservation: 'Reservation',

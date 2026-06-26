@@ -562,8 +562,10 @@ describe('createSupplierMaterial', () => {
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 400);
-        const details = error.details as { reason?: string };
-        assert.equal(details.reason, 'ORG_PICKUP_OVERRIDE_NOT_ALLOWED');
+        assert.equal(
+          (error.details as { reason?: string } | undefined)?.reason,
+          'ORG_PICKUP_OVERRIDE_NOT_ALLOWED',
+        );
         return true;
       },
     );
@@ -604,6 +606,138 @@ describe('createSupplierMaterial', () => {
     assert.equal(materialLocation?.city, profileLocation?.city);
     assert.equal(materialLocation?.area, profileLocation?.area);
     assert.equal(materialLocation?.locationType, 'MATERIAL_PICKUP');
+  });
+
+  test('publishes paid material with approved price rule request when price is within max', async () => {
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: `${TEST_MARKER} custom paid widget`,
+        normalizedMaterialName: 'custom-paid-widget',
+        unit: 'piece',
+        supplierPriceNis: 15,
+        categoryId: ctx.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: 'REJECTED',
+        aiSuggestedMaxUnitPriceNis: 21,
+      },
+    });
+
+    const material = await createSupplierMaterial(ctx.supplierId, {
+      materialName: `${TEST_MARKER} custom paid widget`,
+      title: `${TEST_MARKER} approved price rule publish`,
+      description: `${TEST_MARKER} approved price rule publish description`,
+      categoryId: ctx.categoryId,
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      isFree: false,
+      price: 15,
+      currency: 'NIS',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ['/uploads/materials/test-approved-price-rule.jpg'],
+      useDefaultPickupLocation: true,
+      sourcePriceRuleRequestId: priceRuleRequest.id,
+    });
+    ctx.createdMaterialIds.push(material.id);
+
+    assert.equal(material.price, 15);
+    assert.equal(material.maxAllowedPriceAtCheck, 21);
+
+    const updatedRequest = await prisma.priceRuleRequest.findUnique({
+      where: { id: priceRuleRequest.id },
+      select: { publishedMaterialId: true },
+    });
+    assert.equal(updatedRequest?.publishedMaterialId, material.id);
+
+    await prisma.priceRuleRequest.delete({ where: { id: priceRuleRequest.id } });
+  });
+
+  test('publishes paid material at exact approved max price', async () => {
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: `${TEST_MARKER} boundary price widget`,
+        normalizedMaterialName: 'boundary-price-widget',
+        unit: 'piece',
+        supplierPriceNis: 21,
+        categoryId: ctx.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: 'APPROVED',
+        aiSuggestedMaxUnitPriceNis: 21,
+      },
+    });
+
+    const material = await createSupplierMaterial(ctx.supplierId, {
+      materialName: `${TEST_MARKER} boundary price widget`,
+      title: `${TEST_MARKER} boundary price publish`,
+      description: `${TEST_MARKER} boundary price publish description`,
+      categoryId: ctx.categoryId,
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      isFree: false,
+      price: 21,
+      currency: 'NIS',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ['/uploads/materials/test-boundary-price.jpg'],
+      useDefaultPickupLocation: true,
+      sourcePriceRuleRequestId: priceRuleRequest.id,
+    });
+    ctx.createdMaterialIds.push(material.id);
+
+    assert.equal(material.price, 21);
+    assert.equal(material.maxAllowedPriceAtCheck, 21);
+
+    await prisma.priceRuleRequest.delete({ where: { id: priceRuleRequest.id } });
+  });
+
+  test('rejects paid material above approved max price with clear message', async () => {
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: `${TEST_MARKER} over max widget`,
+        normalizedMaterialName: 'over-max-widget',
+        unit: 'piece',
+        supplierPriceNis: 22,
+        categoryId: ctx.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: 'REJECTED',
+        aiSuggestedMaxUnitPriceNis: 21,
+      },
+    });
+
+    await assert.rejects(
+      () =>
+        createSupplierMaterial(ctx.supplierId, {
+          materialName: `${TEST_MARKER} over max widget`,
+          title: `${TEST_MARKER} over max publish`,
+          description: `${TEST_MARKER} over max publish description`,
+          categoryId: ctx.categoryId,
+          quantity: 1,
+          unit: 'piece',
+          condition: 'GOOD',
+          isFree: false,
+          price: 22,
+          currency: 'NIS',
+          pickupAllowed: true,
+          deliveryAllowed: false,
+          imageUrls: ['/uploads/materials/test-over-max.jpg'],
+          useDefaultPickupLocation: true,
+          sourcePriceRuleRequestId: priceRuleRequest.id,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.match(error.message, /Maximum allowed price is 21 NIS per piece/);
+        assert.equal(
+          (error.details as { reason?: string } | undefined)?.reason,
+          'PRICE_TOO_HIGH',
+        );
+        return true;
+      },
+    );
+
+    await prisma.priceRuleRequest.delete({ where: { id: priceRuleRequest.id } });
   });
 });
 

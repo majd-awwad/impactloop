@@ -21,6 +21,7 @@ import { generateOpaqueToken, hashToken } from '../../utils/token.js';
 import * as authRepository from './auth.repository.js';
 
 import { formatPickupAreaLabel } from './pickup-area.js';
+import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
 
 import type { ChangePasswordInput, LoginInput, RegisterInput } from './auth.validation.js';
 
@@ -36,6 +37,10 @@ export type SupplierProfileSummary = {
   publicName: string;
   description: string | null;
   pickupAreaLabel: string | null;
+  verificationStatus: string;
+  verificationAdminNote: string | null;
+  verificationSubmittedAt: string | null;
+  verificationDocumentName: string | null;
 };
 
 export type UserSummary = {
@@ -112,6 +117,23 @@ const toUserSummary = (
               area: user.supplierProfile.defaultPickupLocation.area,
             })
           : null,
+        verificationStatus: normalizeSupplierVerificationStatus(
+          user.supplierProfile.verificationStatus,
+        ),
+        verificationAdminNote:
+          normalizeSupplierVerificationStatus(
+            user.supplierProfile.verificationStatus,
+          ) === 'REJECTED' ||
+          normalizeSupplierVerificationStatus(
+            user.supplierProfile.verificationStatus,
+          ) === 'CHANGES_REQUESTED'
+            ? user.supplierProfile.verificationAdminNote
+            : null,
+        verificationSubmittedAt:
+          user.supplierProfile.verificationSubmittedAt?.toISOString() ?? null,
+        verificationDocumentName:
+          user.supplierProfile.organizationProfile?.verificationDocumentName ??
+          null,
       }
     : null,
   emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,

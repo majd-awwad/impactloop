@@ -31,6 +31,7 @@ class SupplierProfileDetails {
     required this.supplierType,
     this.description,
     required this.verificationStatus,
+    this.verificationAdminNote,
     this.defaultPickupLocation,
     this.organizationProfile,
   });
@@ -40,6 +41,7 @@ class SupplierProfileDetails {
   final String supplierType;
   final String? description;
   final String verificationStatus;
+  final String? verificationAdminNote;
   final SupplierProfileLocation? defaultPickupLocation;
   final SupplierOrganizationProfile? organizationProfile;
 
@@ -53,6 +55,7 @@ class SupplierProfileDetails {
       supplierType: json['supplierType'] as String? ?? '',
       description: json['description'] as String?,
       verificationStatus: json['verificationStatus'] as String? ?? 'UNVERIFIED',
+      verificationAdminNote: json['verificationAdminNote'] as String?,
       defaultPickupLocation: locationJson is Map<String, dynamic>
           ? SupplierProfileLocation.fromJson(locationJson)
           : null,

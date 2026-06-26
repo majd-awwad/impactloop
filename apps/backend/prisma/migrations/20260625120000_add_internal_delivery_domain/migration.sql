@@ -1,7 +1,4 @@
 -- CreateEnum
-CREATE TYPE "DriverProfileStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'SUSPENDED');
-
--- CreateEnum
 CREATE TYPE "DriverAvailabilityStatus" AS ENUM ('OFFLINE', 'AVAILABLE', 'ON_DELIVERY');
 
 -- CreateEnum
@@ -11,24 +8,6 @@ CREATE TYPE "DeliveryAssignmentStatus" AS ENUM ('ACTIVE', 'RELEASED', 'CANCELLED
 ALTER TYPE "DeliveryStatus" ADD VALUE IF NOT EXISTS 'ARRIVED_PICKUP';
 ALTER TYPE "DeliveryStatus" ADD VALUE IF NOT EXISTS 'ARRIVED_DROPOFF';
 ALTER TYPE "DeliveryStatus" ADD VALUE IF NOT EXISTS 'FAILED_DELIVERY';
-
--- CreateTable
-CREATE TABLE "driver_profiles" (
-    "id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
-    "status" "DriverProfileStatus" NOT NULL DEFAULT 'ACTIVE',
-    "availability" "DriverAvailabilityStatus" NOT NULL DEFAULT 'OFFLINE',
-    "display_name" TEXT NOT NULL,
-    "phone" TEXT,
-    "vehicle_type" TEXT NOT NULL DEFAULT 'UNSPECIFIED',
-    "vehicle_label" TEXT,
-    "vehicle_plate" TEXT,
-    "capacity_notes" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "driver_profiles_pkey" PRIMARY KEY ("id")
-);
 
 -- CreateTable
 CREATE TABLE "deliveries" (
@@ -102,12 +81,6 @@ CREATE TABLE "delivery_location_pings" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "driver_profiles_user_id_key" ON "driver_profiles"("user_id");
-
--- CreateIndex
-CREATE INDEX "driver_profiles_status_availability_idx" ON "driver_profiles"("status", "availability");
-
--- CreateIndex
 CREATE INDEX "deliveries_reservation_id_idx" ON "deliveries"("reservation_id");
 
 -- CreateIndex
@@ -150,9 +123,6 @@ CREATE INDEX "delivery_location_pings_delivery_id_captured_at_idx" ON "delivery_
 CREATE INDEX "delivery_location_pings_driver_profile_id_captured_at_idx" ON "delivery_location_pings"("driver_profile_id", "captured_at");
 
 -- AddForeignKey
-ALTER TABLE "driver_profiles" ADD CONSTRAINT "driver_profiles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_reservation_id_fkey" FOREIGN KEY ("reservation_id") REFERENCES "reservations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -187,30 +157,3 @@ ALTER TABLE "delivery_location_pings" ADD CONSTRAINT "delivery_location_pings_de
 
 -- AddForeignKey
 ALTER TABLE "delivery_location_pings" ADD CONSTRAINT "delivery_location_pings_driver_profile_id_fkey" FOREIGN KEY ("driver_profile_id") REFERENCES "driver_profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- Backfill driver profiles for existing invited/internal driver users.
-INSERT INTO "driver_profiles" (
-    "id",
-    "user_id",
-    "status",
-    "availability",
-    "display_name",
-    "phone",
-    "vehicle_type",
-    "created_at",
-    "updated_at"
-)
-SELECT
-    'drv_' || md5("users"."id"),
-    "users"."id",
-    'ACTIVE',
-    'OFFLINE',
-    "users"."display_name",
-    "users"."phone",
-    'UNSPECIFIED',
-    CURRENT_TIMESTAMP,
-    CURRENT_TIMESTAMP
-FROM "users"
-INNER JOIN "user_roles" ON "user_roles"."user_id" = "users"."id"
-WHERE "user_roles"."role" = 'DRIVER'
-ON CONFLICT ("user_id") DO NOTHING;

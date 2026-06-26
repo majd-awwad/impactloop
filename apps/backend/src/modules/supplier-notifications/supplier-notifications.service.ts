@@ -1,6 +1,7 @@
 import { normalizeSearchText } from '../../utils/normalize-search-text.js';
 import { decimalToNumber } from '../../utils/decimal.js';
 
+import * as categoriesRepository from '../categories/categories.repository.js';
 import * as categoryRequestsRepository from '../category-requests/category-requests.repository.js';
 import { resolveApprovedMaxUnitPriceNis } from '../price-rule-requests/price-rule-request-pricing.js';
 import * as priceRuleRequestsRepository from '../price-rule-requests/price-rule-requests.repository.js';
@@ -111,6 +112,33 @@ const sortNotifications = (notifications: SupplierActionNotification[]) => {
   });
 };
 
+const suggestedCategoryPrefix = 'Suggested category:';
+
+const resolveCategoryRejectionBody = async (
+  body: string,
+): Promise<string> => {
+  const trimmed = body.trim();
+  if (!trimmed.startsWith(suggestedCategoryPrefix)) {
+    return body;
+  }
+
+  const firstLine = trimmed.split('\n')[0] ?? '';
+  const raw = firstLine.replace(suggestedCategoryPrefix, '').trim();
+  if (!raw) {
+    return `${suggestedCategoryPrefix} Unknown category\n${trimmed}`;
+  }
+
+  // If it already looks like a name (not a cuid), keep it.
+  const looksLikeCuid = raw.startsWith('c') && raw.length >= 18;
+  if (!looksLikeCuid) {
+    return trimmed;
+  }
+
+  const category = await categoriesRepository.findCategoryById(raw);
+  const readableName = category?.nameEn?.trim() || 'Unknown category';
+  return trimmed.replace(firstLine, `${suggestedCategoryPrefix} ${readableName}`);
+};
+
 const mapCategoryRequestNotification = (
   request: Awaited<
     ReturnType<typeof categoryRequestsRepository.listCategoryRequestsWithDrafts>
@@ -162,7 +190,7 @@ const mapCategoryRequestNotification = (
         ? `Use ${approvedCategoryName} for this listing.`
         : `${request.requestedName} was approved. Continue your listing.`,
       status: 'APPROVED',
-      createdAt: request.createdAt.toISOString(),
+      createdAt: request.updatedAt.toISOString(),
       actionNeeded: hasDraft && approvedCategoryId != null,
       isCompleted: false,
       actionLabel: hasDraft ? 'Continue listing' : null,
@@ -187,9 +215,9 @@ const mapCategoryRequestNotification = (
       title: 'Category rejected',
       body:
         request.moderatorNote?.trim() ||
-        'Your requested category was not approved. Choose an existing category and continue.',
+        'Your category request was rejected. Suggested category: Unknown category\nReason: Not provided.',
       status: 'REJECTED',
-      createdAt: request.createdAt.toISOString(),
+      createdAt: request.updatedAt.toISOString(),
       actionNeeded: hasDraft,
       isCompleted: false,
       actionLabel: hasDraft ? 'Edit listing' : null,
@@ -285,7 +313,7 @@ const mapPriceRuleRequestNotification = (
       title: 'Price limit approved',
       body: maxBody,
       status: 'APPROVED',
-      createdAt: request.createdAt.toISOString(),
+      createdAt: request.updatedAt.toISOString(),
       actionNeeded: hasDraft,
       isCompleted: false,
       actionLabel: hasDraft ? 'Continue listing' : null,
@@ -316,7 +344,7 @@ const mapPriceRuleRequestNotification = (
       title: 'Price needs adjustment',
       body: maxBody,
       status: 'REJECTED',
-      createdAt: request.createdAt.toISOString(),
+      createdAt: request.updatedAt.toISOString(),
       actionNeeded: hasDraft,
       isCompleted: false,
       actionLabel: hasDraft ? 'Edit price' : null,
@@ -411,6 +439,14 @@ export const listSupplierActionNotifications = async (userId: string) => {
       .map(mapSupplierReservation)
       .map(mapReservationNotification),
   ];
+
+  // Ensure rejected category notifications never show raw IDs.
+  await Promise.all(
+    notifications.map(async (notification) => {
+      if (notification.kind !== 'CATEGORY_REJECTED') return;
+      notification.body = await resolveCategoryRejectionBody(notification.body);
+    }),
+  );
 
   sortNotifications(notifications);
 

@@ -588,7 +588,51 @@ void main() {
 
     expect(user.roles, containsAll(['LEARNER', 'SUPPLIER', 'ADMIN']));
     expect(user.hasRole('supplier'), isTrue);
-    expect(postAuthRouteForUser(user), '/supplier');
+    expect(postAuthRouteForUser(user), '/admin');
+  });
+
+  test('postAuthRouteForUser uses role priority', () {
+    expect(
+      postAuthRouteForUser(
+        User.fromJson({
+          'id': 'admin-1',
+          'displayName': 'Admin',
+          'email': 'admin@example.com',
+          'accountStatus': 'ACTIVE',
+          'roles': ['ADMIN'],
+          'createdAt': '2026-01-01T00:00:00.000Z',
+        }),
+      ),
+      '/admin',
+    );
+
+    expect(
+      postAuthRouteForUser(
+        User.fromJson({
+          'id': 'supplier-1',
+          'displayName': 'Supplier',
+          'email': 'supplier@example.com',
+          'accountStatus': 'ACTIVE',
+          'roles': ['SUPPLIER'],
+          'createdAt': '2026-01-01T00:00:00.000Z',
+        }),
+      ),
+      '/supplier',
+    );
+
+    expect(
+      postAuthRouteForUser(
+        User.fromJson({
+          'id': 'learner-1',
+          'displayName': 'Learner',
+          'email': 'learner@example.com',
+          'accountStatus': 'ACTIVE',
+          'roles': ['LEARNER'],
+          'createdAt': '2026-01-01T00:00:00.000Z',
+        }),
+      ),
+      '/home',
+    );
   });
 
   testWidgets('landing page stays stable on mobile width', (tester) async {
