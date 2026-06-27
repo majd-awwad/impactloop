@@ -117,6 +117,7 @@ Examples:
 
 - `healthStatusProvider` fetches backend health.
 - `homeSuggestedMaterialsProvider` loads material discovery results and takes the first four.
+- `learningProjectsProvider`, `learningProjectProvider`, and `projectCategoriesProvider` load Learning Hub list/detail/category data from `/api/learning-projects` and `/api/categories?type=PROJECT`.
 - `materialCategoriesProvider`, `materialListingPolicyProvider`, and `categoryRequestsProvider` load add-material support data.
 - `reservationCreateControllerProvider` submits learner reservation requests from material detail and exposes loading/error state for the Reserve button.
 - `myReservationsProvider` loads `GET /api/reservations/my` for the learner reservation page and material-detail reservation state.
@@ -147,6 +148,8 @@ Current repository providers live mostly in feature `data/` files:
 - Supplier requests: `supplierRequestsRepositoryProvider`
 - Supplier pickup schedule: `supplierPickupScheduleRepositoryProvider`
 - Supplier my materials: `supplierMyMaterialsRepositoryProvider`
+- Learning Hub: `learningHubRepositoryProvider` (overridden in `main.dart`; widget tests use `emptyLearningHubRepository` from `test/support/learning_hub_test_support.dart`)
+- Home suggested materials preview: `homeMaterialDiscoveryRepositoryProvider`
 
 Repository providers should construct API clients and expose feature operations. Widgets should not instantiate API clients directly.
 

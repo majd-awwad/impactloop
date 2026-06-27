@@ -5,7 +5,8 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
-import '../../data/learning_hub_mock_data.dart';
+import '../../presentation/theme/learning_project_visuals.dart';
+import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
 
 class LearningProjectCard extends StatelessWidget {
@@ -76,14 +77,18 @@ class LearningProjectCard extends StatelessWidget {
                                 ),
                                 const SizedBox(width: AppSpacing.sm),
                                 _ProjectMetaChip(
-                                  label: project.componentCountLabel.resolve(
-                                    context,
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                _ProjectMetaChip(
                                   label: project.duration.resolve(context),
                                 ),
+                                if (project.componentCountLabel.en
+                                    .trim()
+                                    .isNotEmpty) ...[
+                                  const SizedBox(width: AppSpacing.sm),
+                                  _ProjectMetaChip(
+                                    label: project.componentCountLabel.resolve(
+                                      context,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -197,30 +202,32 @@ class _ProjectTitleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
-    final ratingPill = Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: palette.darkSurfaceSoft,
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: palette.borderSubtle),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            project.ratingValue.toStringAsFixed(1),
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.textPrimary),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          const Icon(Icons.star_rounded, color: learningLime, size: 18),
-        ],
-      ),
-    );
+    final ratingPill = project.hasRatings
+        ? Container(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
+            ),
+            decoration: BoxDecoration(
+              color: palette.darkSurfaceSoft,
+              borderRadius: AppRadius.pillAll,
+              border: Border.all(color: palette.borderSubtle),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  project.ratingValue.toStringAsFixed(1),
+                  style: AppTextStyles.label(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                const Icon(Icons.star_rounded, color: learningLime, size: 18),
+              ],
+            ),
+          )
+        : null;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -239,8 +246,10 @@ class _ProjectTitleRow extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: AppSpacing.sm),
-              ratingPill,
+              if (ratingPill != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                ratingPill,
+              ],
             ],
           );
         }
@@ -259,8 +268,10 @@ class _ProjectTitleRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            ratingPill,
+            if (ratingPill != null) ...[
+              const SizedBox(width: AppSpacing.sm),
+              ratingPill,
+            ],
           ],
         );
       },

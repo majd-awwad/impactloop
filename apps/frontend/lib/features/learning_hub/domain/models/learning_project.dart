@@ -43,12 +43,15 @@ class LearningProject {
     required this.heroIconData,
     required this.cardGradient,
     required this.isFeatured,
+    this.longDescription,
+    this.hasRatings = false,
   });
 
   final String id;
   final LocalizedText category;
   final LocalizedText title;
   final LocalizedText summary;
+  final LocalizedText? longDescription;
   final LocalizedText difficulty;
   final LocalizedText duration;
   final LocalizedText ratingLabel;
@@ -62,4 +65,5 @@ class LearningProject {
   final IconData heroIconData;
   final List<int> cardGradient;
   final bool isFeatured;
+  final bool hasRatings;
 }
