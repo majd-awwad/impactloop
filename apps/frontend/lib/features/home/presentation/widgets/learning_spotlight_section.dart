@@ -22,7 +22,7 @@ class LearningSpotlightSection extends StatelessWidget {
         HomeSectionHeader(
           title: 'Learning spotlight',
           subtitle:
-              'Browse practical project ideas while the Learning Hub remains UI-only.',
+              'Preview sample Learning Hub projects until the catalog is wired to the API.',
           action: HomeSectionActionButton(
             onPressed: () => context.go('/learning'),
             icon: const Icon(Icons.arrow_forward_rounded),
