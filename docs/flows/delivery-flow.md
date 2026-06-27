@@ -1,6 +1,6 @@
 # Delivery Flow
 
-Backend Stage 1 is implemented. Flutter learner request/status UI, driver jobs/status UI, manual driver location pings, and learner-owned polling map tracking are partially implemented. Realtime streaming/live maps are not implemented.
+Backend Stage 1 is implemented. Flutter learner request/status UI, driver jobs/status UI, foreground auto-location sharing on the active delivery detail page, manual driver location pings, and learner-owned polling map tracking are partially implemented. Realtime streaming/live maps are not implemented.
 
 ## Trigger
 
@@ -29,9 +29,9 @@ Learner requests internal delivery after a supplier accepts a reservation.
    - `PICKED_UP -> ON_THE_WAY`
    - `ON_THE_WAY -> ARRIVED_DROPOFF`
    - `ARRIVED_DROPOFF -> DELIVERED`
-13. Driver may tap **Send my location** while assigned to an active delivery. Flutter captures one foreground location and posts it through `POST /api/driver/deliveries/:id/location-pings`.
-14. `DELIVERED` completes the reservation and marks material `REUSED`.
-15. Learner delivery detail polls `GET /api/deliveries/:id` while the page is open and the delivery is tracking-eligible. When the latest ping includes coordinates, Flutter renders a simple driver marker map plus last update time and accuracy. Raw driver coordinates are not printed as text.
+13. Driver may turn on **Share automatically** on `/driver/deliveries/:id` while assigned to an active delivery. Flutter captures foreground location every 45 seconds while that page stays open and posts it through `POST /api/driver/deliveries/:id/location-pings`. Drivers can still tap **Send my location** for a one-off update. This is not background GPS.
+14. `DELIVERED` completes the reservation, subtracts `quantityRequested`, and marks material `REUSED` only when remaining quantity reaches `0`.
+15. Learner delivery detail polls `GET /api/deliveries/:id` while the page is open and the delivery is tracking-eligible. When the latest ping includes coordinates, Flutter renders a simple driver marker map plus last update time and accuracy. Raw driver coordinates are not printed as text. Learner tracking uses polling, not WebSocket/SSE.
 
 ## Active Delivery Rule
 
@@ -72,7 +72,7 @@ Only one active delivery is allowed per reservation. The database allows many de
 - The current portal does not expose a separate availability toggle; an active driver profile can accept a waiting job from `OFFLINE` or `AVAILABLE`, and accept moves the profile to `ON_DELIVERY`.
 - `/driver/deliveries/:id` is resolved from active assigned deliveries. If the id is not active or not assigned to the driver, the page shows a back-to-jobs state.
 - The detail page exposes one next action at a time, matching the backend transition order.
-- The detail page exposes a manual **Send my location** action only on active assigned deliveries. It does not start automatic tracking.
+- The detail page exposes a manual **Send my location** action and a **Share automatically** toggle on active assigned deliveries. Auto-sharing sends foreground location every 45 seconds while the page stays open. It does not start automatic tracking in the background or on `/driver/jobs`.
 
 ## Learner Tracking Summary
 
@@ -87,5 +87,5 @@ Only one active delivery is allowed per reservation. The database allows many de
 
 - Admin reassignment and cancellation operations.
 - Realtime streaming tracking and WebSockets.
-- Background GPS streaming and automatic location-ping UI.
-- Payment, reviews, external partners, cancellation, retry UI, and ETA.
+- Background GPS streaming.
+- Payment, reviews, external partners, delivery cost, failure retry, learner delivery cancellation, and proof of delivery.

@@ -202,7 +202,9 @@ class _DriverProfileSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final initial = name.trim().isEmpty ? 'D' : name.characters.first.toUpperCase();
+    final initial = name.trim().isEmpty
+        ? 'D'
+        : name.characters.first.toUpperCase();
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -213,9 +215,7 @@ class _DriverProfileSummary extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            child: Text(initial),
-          ),
+          CircleAvatar(child: Text(initial)),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(

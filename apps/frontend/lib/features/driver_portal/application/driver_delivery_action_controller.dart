@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/location/current_location_service.dart';
 import '../data/driver_deliveries_repository.dart';
 import '../data/models/driver_delivery.dart';
 import '../data/models/driver_location_ping_request.dart';
@@ -61,19 +62,29 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
     required String deliveryId,
     required DriverLocationPingRequest request,
   }) async {
-    state = const AsyncLoading();
+    await ref
+        .read(driverDeliveriesRepositoryProvider)
+        .createLocationPing(deliveryId, request);
+    ref.invalidate(activeDriverDeliveriesProvider);
+    ref.invalidate(activeDriverDeliveryProvider(deliveryId));
+  }
 
-    try {
-      await ref
-          .read(driverDeliveriesRepositoryProvider)
-          .createLocationPing(deliveryId, request);
-      ref.invalidate(activeDriverDeliveriesProvider);
-      ref.invalidate(activeDriverDeliveryProvider(deliveryId));
-      state = const AsyncData(null);
-    } catch (error, stackTrace) {
-      state = AsyncError(error, stackTrace);
-      rethrow;
-    }
+  Future<void> captureAndSendLocationPing(String deliveryId) async {
+    final capture = await ref
+        .read(currentLocationServiceProvider)
+        .captureCurrentLocation();
+
+    await sendLocationPing(
+      deliveryId: deliveryId,
+      request: DriverLocationPingRequest(
+        latitude: capture.latitude,
+        longitude: capture.longitude,
+        accuracyMeters: capture.accuracyMeters,
+        heading: capture.heading,
+        speed: capture.speed,
+        capturedAt: capture.capturedAt,
+      ),
+    );
   }
 }
 

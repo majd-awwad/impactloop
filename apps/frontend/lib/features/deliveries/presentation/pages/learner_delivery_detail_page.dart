@@ -57,17 +57,14 @@ class LearnerDeliveryDetailPage extends ConsumerWidget {
                         title: 'Could not load delivery',
                         subtitle: 'Please try again.',
                         actionLabel: 'Try again',
-                        onAction: () => ref.invalidate(
-                          learnerDeliveryProvider(deliveryId),
-                        ),
+                        onAction: () =>
+                            ref.invalidate(learnerDeliveryProvider(deliveryId)),
                       ),
-                      data: (delivery) =>
-                          _DeliveryDetailContent(
-                            delivery: delivery,
-                            onRefresh: () => ref.invalidate(
-                              learnerDeliveryProvider(deliveryId),
-                            ),
-                          ),
+                      data: (delivery) => _DeliveryDetailContent(
+                        delivery: delivery,
+                        onRefresh: () =>
+                            ref.invalidate(learnerDeliveryProvider(deliveryId)),
+                      ),
                     ),
                   ),
                 ),
@@ -212,10 +209,7 @@ class _DeliverySummaryPanel extends StatelessWidget {
             label: 'Pickup area',
             value: delivery.pickupLocation.summary,
           ),
-          _InfoRow(
-            label: 'Dropoff',
-            value: delivery.dropoffLocation.summary,
-          ),
+          _InfoRow(label: 'Dropoff', value: delivery.dropoffLocation.summary),
           if (delivery.driver != null) ...[
             const SizedBox(height: AppSpacing.md),
             _PanelTitle(
@@ -247,10 +241,7 @@ class _DeliverySummaryPanel extends StatelessWidget {
 }
 
 class _TrackingStatusCard extends StatelessWidget {
-  const _TrackingStatusCard({
-    required this.delivery,
-    required this.onRefresh,
-  });
+  const _TrackingStatusCard({required this.delivery, required this.onRefresh});
 
   final LearnerDelivery delivery;
   final VoidCallback onRefresh;
@@ -345,11 +336,7 @@ class _DriverMapMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      Icons.location_pin,
-      color: color,
-      size: 42,
-    );
+    return Icon(Icons.location_pin, color: color, size: 42);
   }
 }
 
@@ -630,12 +617,15 @@ String _driverSummary(LearnerDeliveryDriver driver) {
     driver.phone,
   ].where((item) => item != null && item.trim().isNotEmpty).join(' • ');
 
-  return details.isEmpty ? driver.displayName : '${driver.displayName} • $details';
+  return details.isEmpty
+      ? driver.displayName
+      : '${driver.displayName} • $details';
 }
 
 String _trackingStatusBody(LearnerDelivery delivery) {
   if (delivery.status == 'WAITING_FOR_DRIVER') {
-    return 'Waiting for a driver to be assigned.';
+    return 'Waiting for a driver to be assigned.\n'
+        'Location updates appear when the driver shares their position.';
   }
 
   if (delivery.isTerminal) {
@@ -644,10 +634,12 @@ String _trackingStatusBody(LearnerDelivery delivery) {
 
   final ping = delivery.latestDriverPing;
   if (ping == null) {
-    return 'Driver has not shared a location yet.';
+    return 'Driver has not shared a location yet.\n'
+        'Location updates appear when the driver shares their position.';
   }
 
   return [
+    'Location updates appear when the driver shares their position.',
     'Last update: ${_formatDateTime(ping.capturedAt)}',
     if (ping.accuracyMeters != null)
       'Accuracy: about ${ping.accuracyMeters!.round()} m',

@@ -33,6 +33,10 @@ import {
 } from "../../services/idempotency.service.js";
 import * as supplierRepository from "./supplier.repository.js";
 import { assertSupplierCanPublishMaterials } from "../supplier-verification/supplier-verification.service.js";
+import {
+  getHeldQuantitiesByMaterialIds,
+  toDecimal,
+} from "../reservations/reservations.quantity.js";
 import type {
   CreateSupplierMaterialInput,
   SupplierMaterialsQuery,
@@ -995,20 +999,15 @@ export const resolveSupplierMaterialDeleteEligibility = (
 
 export const resolveSupplierMaterialEditEligibility = (
   status: string,
-  blockingReservationCount: number,
 ): {
   canEdit: boolean;
   editBlockedReason: SupplierMaterialEditBlockedReason | null;
 } => {
-  const eligibility = resolveSupplierMaterialMutationEligibility(
-    status,
-    blockingReservationCount,
-  );
+  if (status === 'REUSED') {
+    return { canEdit: false, editBlockedReason: 'REUSED_HISTORY' };
+  }
 
-  return {
-    canEdit: eligibility.canMutate,
-    editBlockedReason: eligibility.blockedReason,
-  };
+  return { canEdit: true, editBlockedReason: null };
 };
 
 type SupplierOwnedMaterialRecord = Awaited<
@@ -1061,10 +1060,7 @@ const mapSupplierOwnedMaterial = (
     material.status,
     blockingReservationCount,
   ),
-  ...resolveSupplierMaterialEditEligibility(
-    material.status,
-    blockingReservationCount,
-  ),
+  ...resolveSupplierMaterialEditEligibility(material.status),
 });
 
 export const getSupplierMaterials = async (
@@ -1139,18 +1135,21 @@ export const updateSupplierMaterial = async (
 
   const blockingReservationCount =
     await supplierRepository.countBlockingReservationsForMaterial(materialId);
-  const eligibility = resolveSupplierMaterialEditEligibility(
-    material.status,
-    blockingReservationCount,
-  );
+  const eligibility = resolveSupplierMaterialEditEligibility(material.status);
 
   if (!eligibility.canEdit) {
+    throw new AppError(EDIT_REUSED_MATERIAL_MESSAGE, 409, "CONFLICT");
+  }
+
+  const heldByMaterialId = await getHeldQuantitiesByMaterialIds([materialId]);
+  const heldQuantity = heldByMaterialId.get(materialId) ?? toDecimal(0);
+  const nextQuantity = toDecimal(input.quantity);
+
+  if (nextQuantity.lt(heldQuantity)) {
     throw new AppError(
-      eligibility.editBlockedReason === "REUSED_HISTORY"
-        ? EDIT_REUSED_MATERIAL_MESSAGE
-        : EDIT_ACTIVE_REQUESTS_MESSAGE,
-      409,
-      "CONFLICT",
+      "Quantity cannot be less than the amount currently held by active reservations.",
+      400,
+      "VALIDATION_ERROR",
     );
   }
 

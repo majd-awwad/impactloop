@@ -360,6 +360,12 @@ describe('internal delivery backend core', () => {
     assert.equal(delivery.status, 'WAITING_FOR_DRIVER');
     assert.equal(delivery.pickupLocation.city, 'Nablus');
     assert.equal(delivery.dropoffLocation.city, 'Ramallah');
+
+    const updatedReservation = await prisma.reservation.findUnique({
+      where: { id: reservation.id },
+      select: { deliveryRequested: true },
+    });
+    assert.equal(updatedReservation?.deliveryRequested, true);
   });
 
   test('learner cannot request delivery before reservation is accepted', async () => {

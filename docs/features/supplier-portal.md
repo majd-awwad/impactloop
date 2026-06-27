@@ -107,6 +107,7 @@ Static images: `GET /uploads/materials/*`
 ## Known gaps / Needs verification
 
 - **Learner** cannot create reservations via API — test data from `prisma/seeds/seed-supplier-reservations.ts`.
-- Accept reservation does **not** update `materials.status` to `RESERVED` in repository (only **complete** sets `REUSED`) — **Needs verification** if intentional.
+- Accept reservation recomputes material status from holds; material may stay `AVAILABLE` when partial stock remains.
+- Admin impact metrics still count whole `REUSED` materials; partial depletion may need reservation-level impact later.
 - Delivery fields on `reservations` unused in supplier UI/API.
 - `POST /api/price-rule-requests` has auth but no `SUPPLIER` role guard in route file.

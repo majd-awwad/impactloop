@@ -121,7 +121,8 @@ Transaction:
 
 - `reservations.status`: `ACCEPTED` → `COMPLETED`; `completedAt`
 - History: ACCEPTED → COMPLETED
-- `materials.status` → `REUSED`; `reusedAt`; `reusedByReservationId`
+- `material.quantity` decreases by `quantityRequested`
+- `materials.status` → `AVAILABLE` if quantity remains, else `REUSED` with `reusedAt` and `reusedByReservationId`
 
 If the reservation has an active or delivered `Delivery`, supplier complete returns `409 CONFLICT`. Delivery reservations complete only through the assigned driver `DELIVERED` transition.
 
@@ -131,7 +132,7 @@ Update `reservations` + `materials`; insert history.
 
 ### Success state
 
-Reservation completed; material marked reused.
+Reservation completed; material quantity decremented; material marked `REUSED` only when depleted.
 
 ### Frontend invalidation
 

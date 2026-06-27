@@ -24,6 +24,7 @@ import '../../../reservations/application/my_reservations_provider.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
 import '../../../reservations/data/models/learner_reservation.dart';
+import '../../../reservations/presentation/reservation_create_error_message.dart';
 import '../../data/api_material_discovery_repository.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_repository.dart';
@@ -264,12 +265,18 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       return;
     }
 
+    final request = await showDialog<CreateReservationRequest>(
+      context: context,
+      builder: (context) => _ReserveMaterialDialog(material: material),
+    );
+
+    if (request == null || !mounted) {
+      return;
+    }
+
     try {
       await ref.read(reservationCreateControllerProvider.notifier).create(
-            CreateReservationRequest(
-              materialId: material.id,
-              quantityRequested: material.quantity,
-            ),
+            request,
           );
 
       if (!mounted) {
@@ -288,12 +295,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
         return;
       }
 
-      showInfoSnackBar(
-        context,
-        error.statusCode == 409
-            ? 'This material is no longer available.'
-            : error.displayMessage,
-      );
+      showInfoSnackBar(context, reservationCreateErrorMessage(error));
       setState(() {
         _materialFuture = _activeRepository.getMaterialById(widget.materialId);
       });
@@ -338,7 +340,7 @@ LearnerReservation? _reservationForMaterial(
       continue;
     }
 
-    if (reservation.isRejected && material.status == 'AVAILABLE') {
+    if (!reservation.isPending && !reservation.isAccepted) {
       continue;
     }
 
@@ -607,7 +609,10 @@ class _DetailsSideColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final isAvailable = material.status == 'AVAILABLE' && material.quantity > 0;
+    final isAvailable =
+        material.availableQuantity > 0 &&
+        material.status != 'REUSED' &&
+        material.status != 'UNAVAILABLE';
     final isAuthenticatedLearner =
         authState.status == AuthStatus.authenticated &&
         authState.user?.hasRole('LEARNER') == true;
@@ -615,7 +620,10 @@ class _DetailsSideColumn extends StatelessWidget {
         authState.status == AuthStatus.authenticated &&
         authState.user?.hasRole('LEARNER') != true;
     final canTapReserve =
-        isAvailable && !isAuthenticatedNonLearner && !isSubmitting;
+        isAvailable &&
+        learnerReservation == null &&
+        !isAuthenticatedNonLearner &&
+        !isSubmitting;
     final reservationHelperText = !isAvailable
         ? const LocalizedText(
             en: 'This material is not available for new reservations.',
@@ -632,8 +640,8 @@ class _DetailsSideColumn extends StatelessWidget {
                     ar: 'سجل الدخول كمتعلم لطلب هذه المادة.',
                   )
                 : const LocalizedText(
-                    en: 'Send a reservation request for the full listed material.',
-                    ar: 'أرسل طلب حجز لكامل المادة المعروضة.',
+                    en: 'Choose how much to request from the available quantity.',
+                    ar: 'اختر الكمية التي تريد طلبها من المخزون المتاح.',
                   );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1299,6 +1307,161 @@ class _ReportMaterialSection extends ConsumerWidget {
             color: palette.textSecondary,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ReserveMaterialDialog extends StatefulWidget {
+  const _ReserveMaterialDialog({required this.material});
+
+  final DiscoveryMaterial material;
+
+  @override
+  State<_ReserveMaterialDialog> createState() => _ReserveMaterialDialogState();
+}
+
+class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _quantityController;
+  final _messageController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final defaultQuantity = _defaultQuantity(
+      widget.material.availableQuantity,
+      widget.material.unit,
+    );
+    _quantityController = TextEditingController(
+      text: _formatQuantity(defaultQuantity),
+    );
+  }
+
+  @override
+  void dispose() {
+    _quantityController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  double _defaultQuantity(double available, String unit) {
+    if (available <= 0) {
+      return 0;
+    }
+
+    final countLike = {
+      'piece',
+      'pieces',
+      'item',
+      'items',
+      'unit',
+      'units',
+      'sheet',
+      'sheets',
+      'panel',
+      'panels',
+      'crate',
+      'crates',
+    };
+
+    if (countLike.contains(unit.toLowerCase())) {
+      return available >= 1 ? 1 : available;
+    }
+
+    return available;
+  }
+
+  String _formatQuantity(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+    return value.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final material = widget.material;
+    final totalLabel = _formatQuantity(material.quantity);
+    final availableLabel = _formatQuantity(material.availableQuantity);
+
+    return AlertDialog(
+      title: const Text('Request reservation'),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                material.title.resolve(context),
+                style: AppTextStyles.body(context),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Available: $availableLabel of $totalLabel ${material.unit}',
+                style: AppTextStyles.body(context),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _quantityController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Quantity (${material.unit})',
+                ),
+                validator: (value) {
+                  final parsed = double.tryParse(value?.trim() ?? '');
+                  if (parsed == null || parsed <= 0) {
+                    return 'Enter a quantity greater than 0';
+                  }
+                  if (parsed > material.availableQuantity) {
+                    return 'Cannot exceed available quantity';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _messageController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Message to supplier (optional)',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Send request'),
+        ),
+      ],
+    );
+  }
+
+  void _submit() {
+    if (_formKey.currentState?.validate() != true) {
+      return;
+    }
+
+    final quantity = double.parse(_quantityController.text.trim());
+    final message = _messageController.text.trim();
+
+    Navigator.of(context).pop(
+      CreateReservationRequest(
+        materialId: widget.material.id,
+        quantityRequested: quantity,
+        message: message.isEmpty ? null : message,
       ),
     );
   }

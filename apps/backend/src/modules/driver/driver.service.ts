@@ -1,6 +1,7 @@
 import type { DeliveryStatus, Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
+import { applyReservationCompletionToMaterial } from '../reservations/reservations.quantity.js';
 import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
 
 import type {
@@ -345,13 +346,11 @@ export const updateDriverDeliveryStatus = async (
         },
       });
 
-      await tx.material.update({
-        where: { id: delivery.reservation.materialId },
-        data: {
-          status: 'REUSED',
-          reusedAt: now,
-          reusedByReservationId: delivery.reservationId,
-        },
+      await applyReservationCompletionToMaterial(tx, {
+        materialId: delivery.reservation.materialId,
+        reservationId: delivery.reservationId,
+        quantityRequested: delivery.reservation.quantityRequested,
+        completedAt: now,
       });
 
       await tx.driverProfile.update({
