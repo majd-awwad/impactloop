@@ -1,5 +1,7 @@
-import { Prisma } from '../../generated/prisma/index.js';
-import { prisma } from '../../database/prisma.js';
+import { Prisma } from "../../generated/prisma/index.js";
+import { prisma } from "../../database/prisma.js";
+
+type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
 
 export const findPendingCategoryRequest = async (input: {
   requestedByUserId: string;
@@ -9,9 +11,9 @@ export const findPendingCategoryRequest = async (input: {
     where: {
       requestedByUserId: input.requestedByUserId,
       normalizedRequestedName: input.normalizedRequestedName,
-      status: 'PENDING',
+      status: "PENDING",
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 };
 
@@ -27,7 +29,7 @@ export const createCategoryRequest = async (input: {
       normalizedRequestedName: input.normalizedRequestedName,
       requestedByUserId: input.requestedByUserId,
       listingDraftJson: input.listingDraftJson,
-      status: 'PENDING',
+      status: "PENDING",
     },
   });
 };
@@ -51,7 +53,7 @@ export const listCategoryRequestsWithDrafts = async (userId: string) => {
     include: {
       approvedCategory: true,
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 };
 
@@ -73,8 +75,9 @@ export const findCategoryRequestByIdForOwner = async (
 export const markCategoryRequestPublished = async (input: {
   id: string;
   materialId: string;
+  client?: PrismaClientLike;
 }) => {
-  return prisma.categoryRequest.update({
+  return (input.client ?? prisma).categoryRequest.update({
     where: { id: input.id },
     data: {
       publishedMaterialId: input.materialId,

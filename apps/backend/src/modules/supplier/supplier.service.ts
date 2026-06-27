@@ -1,63 +1,73 @@
 import type {
   RecentActivityDto,
   SupplierDashboardDto,
-} from './dto/supplier-dashboard.dto.js';
+} from "./dto/supplier-dashboard.dto.js";
 import type {
   SupplierOrganizationProfileDto,
   SupplierProfileDetailsDto,
   SupplierProfileLocationDto,
   SupplierProfileResponseDto,
-} from './dto/supplier-profile.dto.js';
+} from "./dto/supplier-profile.dto.js";
 
 import {
   emptyDashboardStats,
   normalizeVerificationStatus,
-} from './dto/supplier-dashboard.dto.js';
+} from "./dto/supplier-dashboard.dto.js";
 
-import { AppError } from '../../utils/app-error.js';
-import { decimalToNumber } from '../../utils/decimal.js';
-import * as categoriesRepository from '../categories/categories.repository.js';
-import * as categoryRequestsRepository from '../category-requests/category-requests.repository.js';
-import * as priceRuleRequestsRepository from '../price-rule-requests/price-rule-requests.repository.js';
-import { evaluateApprovedPriceRuleRequest } from '../price-rule-requests/price-rule-request-pricing.js';
-import { checkMaterialPrice, resolveMaterialReferenceForCreate } from '../materials/materials.service.js';
-import * as materialTypesRepository from '../material-types/material-types.repository.js';
-import { matchMaterialReference } from '../../services/material-reference-matching.service.js';
-import * as supplierRepository from './supplier.repository.js';
-import { assertSupplierCanPublishMaterials } from '../supplier-verification/supplier-verification.service.js';
+import { AppError } from "../../utils/app-error.js";
+import { decimalToNumber } from "../../utils/decimal.js";
+import type { Prisma } from "../../generated/prisma/client.js";
+import * as categoriesRepository from "../categories/categories.repository.js";
+import * as categoryRequestsRepository from "../category-requests/category-requests.repository.js";
+import * as priceRuleRequestsRepository from "../price-rule-requests/price-rule-requests.repository.js";
+import { evaluateApprovedPriceRuleRequest } from "../price-rule-requests/price-rule-request-pricing.js";
+import {
+  checkMaterialPrice,
+  resolveMaterialReferenceForCreate,
+} from "../materials/materials.service.js";
+import * as materialTypesRepository from "../material-types/material-types.repository.js";
+import { matchMaterialReference } from "../../services/material-reference-matching.service.js";
+import {
+  runIdempotentOperation,
+  SUPPLIER_CREATE_MATERIAL_SCOPE,
+} from "../../services/idempotency.service.js";
+import * as supplierRepository from "./supplier.repository.js";
+import { assertSupplierCanPublishMaterials } from "../supplier-verification/supplier-verification.service.js";
 import type {
   CreateSupplierMaterialInput,
   SupplierMaterialsQuery,
   UpdateSupplierMaterialInput,
   UpdateSupplierProfileInput,
-} from './supplier.validation.js';
+} from "./supplier.validation.js";
 
 const MISSING_PROFILE_MESSAGE =
-  'Complete your supplier profile to start listing materials.';
+  "Complete your supplier profile to start listing materials.";
 
 const MISSING_PICKUP_LOCATION_MESSAGE =
-  'Add a default pickup location before listing materials.';
+  "Add a default pickup location before listing materials.";
 
 const ORG_PICKUP_OVERRIDE_MESSAGE =
-  'Organization suppliers must use the profile pickup location for all listings.';
+  "Organization suppliers must use the profile pickup location for all listings.";
 
 type SupplierProfileForMaterialCreate = NonNullable<
-  Awaited<ReturnType<typeof supplierRepository.findSupplierProfileForMaterialCreate>>
+  Awaited<
+    ReturnType<typeof supplierRepository.findSupplierProfileForMaterialCreate>
+  >
 >;
 
 const assertOrganizationPickupPolicy = (
   input: CreateSupplierMaterialInput,
   supplierType: string | null,
 ) => {
-  if (!supplierRepository.isOrganizationSupplierType(supplierType ?? '')) {
+  if (!supplierRepository.isOrganizationSupplierType(supplierType ?? "")) {
     return;
   }
 
   const useDefaultPickupLocation = input.useDefaultPickupLocation ?? true;
 
   if (!useDefaultPickupLocation || input.pickupLocation != null) {
-    throw new AppError(ORG_PICKUP_OVERRIDE_MESSAGE, 400, 'VALIDATION_ERROR', {
-      reason: 'ORG_PICKUP_OVERRIDE_NOT_ALLOWED',
+    throw new AppError(ORG_PICKUP_OVERRIDE_MESSAGE, 400, "VALIDATION_ERROR", {
+      reason: "ORG_PICKUP_OVERRIDE_NOT_ALLOWED",
     });
   }
 };
@@ -65,6 +75,7 @@ const assertOrganizationPickupPolicy = (
 const resolveMaterialPickupLocationId = async (
   supplierProfile: SupplierProfileForMaterialCreate,
   input: CreateSupplierMaterialInput,
+  tx?: Prisma.TransactionClient,
 ): Promise<string> => {
   const defaultLocation = supplierProfile.defaultPickupLocation;
   const useDefaultPickupLocation = input.useDefaultPickupLocation ?? true;
@@ -73,37 +84,52 @@ const resolveMaterialPickupLocationId = async (
     throw new AppError(
       MISSING_PICKUP_LOCATION_MESSAGE,
       400,
-      'VALIDATION_ERROR',
+      "VALIDATION_ERROR",
     );
   }
 
   assertOrganizationPickupPolicy(input, supplierProfile.supplierType);
 
-  if (supplierRepository.isOrganizationSupplierType(supplierProfile.supplierType ?? '')) {
-    return supplierRepository.copyLocationRow(defaultLocation, 'MATERIAL_PICKUP');
+  if (
+    supplierRepository.isOrganizationSupplierType(
+      supplierProfile.supplierType ?? "",
+    )
+  ) {
+    return supplierRepository.copyLocationRow(
+      defaultLocation,
+      "MATERIAL_PICKUP",
+      tx,
+    );
   }
 
   if (useDefaultPickupLocation || !input.pickupLocation) {
-    return supplierRepository.copyLocationRow(defaultLocation, 'MATERIAL_PICKUP');
+    return supplierRepository.copyLocationRow(
+      defaultLocation,
+      "MATERIAL_PICKUP",
+      tx,
+    );
   }
 
-  return supplierRepository.createMaterialPickupLocation(input.pickupLocation);
+  return supplierRepository.createMaterialPickupLocation(
+    input.pickupLocation,
+    tx,
+  );
 };
 
 const deriveMaterialSourceType = (supplierType: string | null) => {
   switch (supplierType) {
-    case 'WORKSHOP':
-      return 'WORKSHOP_SURPLUS' as const;
-    case 'FACTORY':
-      return 'FACTORY_SURPLUS' as const;
-    case 'EDUCATIONAL_INSTITUTION':
-      return 'EDUCATIONAL_INSTITUTION' as const;
-    case 'INDIVIDUAL_SUPPLIER':
+    case "WORKSHOP":
+      return "WORKSHOP_SURPLUS" as const;
+    case "FACTORY":
+      return "FACTORY_SURPLUS" as const;
+    case "EDUCATIONAL_INSTITUTION":
+      return "EDUCATIONAL_INSTITUTION" as const;
+    case "INDIVIDUAL_SUPPLIER":
       // TODO: MVP fallback. Revisit when the source enum can distinguish individual suppliers.
-      return 'STUDENT_LEFTOVER' as const;
-    case 'STUDENT_SUPPLIER':
+      return "STUDENT_LEFTOVER" as const;
+    case "STUDENT_SUPPLIER":
     default:
-      return 'STUDENT_LEFTOVER' as const;
+      return "STUDENT_LEFTOVER" as const;
   }
 };
 
@@ -112,20 +138,21 @@ const assertSourceRequestPublishable = async (
   input: CreateSupplierMaterialInput,
 ) => {
   if (input.sourceCategoryRequestId) {
-    const request = await categoryRequestsRepository.findCategoryRequestByIdForOwner(
-      input.sourceCategoryRequestId,
-      userId,
-    );
+    const request =
+      await categoryRequestsRepository.findCategoryRequestByIdForOwner(
+        input.sourceCategoryRequestId,
+        userId,
+      );
 
     if (!request) {
-      throw new AppError('Category request not found', 404, 'NOT_FOUND');
+      throw new AppError("Category request not found", 404, "NOT_FOUND");
     }
 
     if (request.publishedMaterialId) {
       throw new AppError(
-        'This listing was already completed.',
+        "This listing was already completed.",
         409,
-        'CONFLICT',
+        "CONFLICT",
       );
     }
   }
@@ -138,26 +165,31 @@ const assertSourceRequestPublishable = async (
       );
 
     if (!request) {
-      throw new AppError('Price rule request not found', 404, 'NOT_FOUND');
+      throw new AppError("Price rule request not found", 404, "NOT_FOUND");
     }
 
     if (request.publishedMaterialId) {
       throw new AppError(
-        'This listing was already completed.',
+        "This listing was already completed.",
         409,
-        'CONFLICT',
+        "CONFLICT",
       );
     }
 
     if (!input.isFree && input.price != null) {
       const acceptance = evaluateApprovedPriceRuleRequest(request, input.price);
-      if (acceptance.ok === false && acceptance.reason === 'PRICE_TOO_HIGH') {
-        const unit = request.unit ?? request.materialType?.defaultUnit ?? 'unit';
+      if (acceptance.ok === false && acceptance.reason === "PRICE_TOO_HIGH") {
+        const unit =
+          request.unit ?? request.materialType?.defaultUnit ?? "unit";
         throw new AppError(
           `Maximum allowed price is ${acceptance.maxAllowed} NIS per ${unit}.`,
           400,
-          'VALIDATION_ERROR',
-          { maxAllowedPrice: acceptance.maxAllowed, approvedUnit: unit, reason: 'PRICE_TOO_HIGH' },
+          "VALIDATION_ERROR",
+          {
+            maxAllowedPrice: acceptance.maxAllowed,
+            approvedUnit: unit,
+            reason: "PRICE_TOO_HIGH",
+          },
         );
       }
     }
@@ -167,11 +199,13 @@ const assertSourceRequestPublishable = async (
 const markSourceRequestPublished = async (
   materialId: string,
   input: CreateSupplierMaterialInput,
+  tx?: Prisma.TransactionClient,
 ) => {
   if (input.sourceCategoryRequestId) {
     await categoryRequestsRepository.markCategoryRequestPublished({
       id: input.sourceCategoryRequestId,
       materialId,
+      client: tx,
     });
   }
 
@@ -179,13 +213,16 @@ const markSourceRequestPublished = async (
     await priceRuleRequestsRepository.markPriceRuleRequestPublished({
       id: input.sourcePriceRuleRequestId,
       materialId,
+      client: tx,
     });
   }
 };
 
-const mapCreatedMaterial = (material: Awaited<
-  ReturnType<typeof supplierRepository.createSupplierMaterial>
->) => ({
+const mapCreatedMaterial = (
+  material: Awaited<
+    ReturnType<typeof supplierRepository.createSupplierMaterial>
+  >,
+) => ({
   id: material.id,
   title: material.title,
   status: material.status,
@@ -212,6 +249,8 @@ const mapCreatedMaterial = (material: Awaited<
   createdAt: material.createdAt.toISOString(),
 });
 
+type CreatedSupplierMaterialDto = ReturnType<typeof mapCreatedMaterial>;
+
 const buildRecentActivity = (
   notifications: Awaited<
     ReturnType<typeof supplierRepository.findRecentNotifications>
@@ -222,7 +261,7 @@ const buildRecentActivity = (
 ): RecentActivityDto[] => {
   const notificationItems: RecentActivityDto[] = notifications.map((item) => ({
     id: item.id,
-    type: 'NOTIFICATION',
+    type: "NOTIFICATION",
     title: item.title,
     body: item.body,
     createdAt: item.createdAt.toISOString(),
@@ -230,7 +269,7 @@ const buildRecentActivity = (
 
   const reservationItems: RecentActivityDto[] = reservations.map((item) => ({
     id: item.id,
-    type: 'RESERVATION',
+    type: "RESERVATION",
     title: `Reservation ${item.status.toLowerCase()}`,
     body: item.material.title,
     createdAt: item.createdAt.toISOString(),
@@ -239,7 +278,8 @@ const buildRecentActivity = (
   return [...notificationItems, ...reservationItems]
     .sort(
       (left, right) =>
-        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+        new Date(right.createdAt).getTime() -
+        new Date(left.createdAt).getTime(),
     )
     .slice(0, 3);
 };
@@ -298,7 +338,7 @@ export const getSupplierDashboard = async (
     title: material.title,
     status: material.status,
     quantity:
-      typeof material.quantity === 'number'
+      typeof material.quantity === "number"
         ? material.quantity
         : material.quantity.toNumber(),
     unit: material.unit,
@@ -313,7 +353,7 @@ export const getSupplierDashboard = async (
     materialTitle: pickup.material.title,
     requesterName: pickup.requester.displayName,
     quantityRequested:
-      typeof pickup.quantityRequested === 'number'
+      typeof pickup.quantityRequested === "number"
         ? pickup.quantityRequested
         : pickup.quantityRequested.toNumber(),
     pickupWindowStart: pickup.pickupWindowStart?.toISOString() ?? null,
@@ -348,10 +388,8 @@ export const getSupplierDashboard = async (
 
   const organization = supplierProfile.organizationProfile
     ? {
-        organizationName:
-          supplierProfile.organizationProfile.organizationName,
-        organizationType:
-          supplierProfile.organizationProfile.organizationType,
+        organizationName: supplierProfile.organizationProfile.organizationName,
+        organizationType: supplierProfile.organizationProfile.organizationType,
       }
     : null;
 
@@ -360,8 +398,8 @@ export const getSupplierDashboard = async (
     supplier: {
       id: supplierProfile.id,
       userId: supplierProfile.userId,
-      publicName: supplierProfile.publicName ?? '',
-      supplierType: supplierProfile.supplierType ?? '',
+      publicName: supplierProfile.publicName ?? "",
+      supplierType: supplierProfile.supplierType ?? "",
       description: supplierProfile.description,
       verificationStatus: normalizeVerificationStatus(
         supplierProfile.verificationStatus,
@@ -379,12 +417,13 @@ export const getSupplierDashboard = async (
 export const createSupplierMaterial = async (
   userId: string,
   input: CreateSupplierMaterialInput,
+  tx?: Prisma.TransactionClient,
 ) => {
   const supplierProfile =
     await supplierRepository.findSupplierProfileForMaterialCreate(userId);
 
   if (!supplierProfile) {
-    throw new AppError(MISSING_PROFILE_MESSAGE, 400, 'VALIDATION_ERROR');
+    throw new AppError(MISSING_PROFILE_MESSAGE, 400, "VALIDATION_ERROR");
   }
 
   assertSupplierCanPublishMaterials({
@@ -396,13 +435,14 @@ export const createSupplierMaterial = async (
     throw new AppError(
       MISSING_PICKUP_LOCATION_MESSAGE,
       400,
-      'VALIDATION_ERROR',
+      "VALIDATION_ERROR",
     );
   }
 
   const materialLocationId = await resolveMaterialPickupLocationId(
     supplierProfile,
     input,
+    tx,
   );
 
   await assertSourceRequestPublishable(userId, input);
@@ -413,7 +453,7 @@ export const createSupplierMaterial = async (
   );
 
   if (!requestedCategory) {
-    throw new AppError('Category not found', 404, 'NOT_FOUND');
+    throw new AppError("Category not found", 404, "NOT_FOUND");
   }
 
   const requestedOtherCategory = categoriesRepository.isOtherCategory(
@@ -424,9 +464,9 @@ export const createSupplierMaterial = async (
   if (input.isFree) {
     if (input.price != null && input.price > 0) {
       throw new AppError(
-        'Free listings cannot include a price.',
+        "Free listings cannot include a price.",
         400,
-        'VALIDATION_ERROR',
+        "VALIDATION_ERROR",
       );
     }
 
@@ -455,25 +495,26 @@ export const createSupplierMaterial = async (
       sourceType,
       isFree: true,
       price: null,
-      currency: 'NIS',
+      currency: "NIS",
       pickupAllowed: input.pickupAllowed,
       deliveryAllowed: input.deliveryAllowed,
       pickupNotes: input.pickupNotes ?? null,
       suggestedUses: input.suggestedUses ?? null,
       imageUrls: input.imageUrls,
+      client: tx,
     });
 
-    await markSourceRequestPublished(material.id, input);
+    await markSourceRequestPublished(material.id, input, tx);
 
     return mapCreatedMaterial(material);
   }
 
   if (requestedOtherCategory) {
     throw new AppError(
-      'Paid listings need a reviewed category/material. Submit this material for review before publishing.',
+      "Paid listings need a reviewed category/material. Submit this material for review before publishing.",
       400,
-      'VALIDATION_ERROR',
-      { reason: 'PAID_OTHER_NOT_ALLOWED' },
+      "VALIDATION_ERROR",
+      { reason: "PAID_OTHER_NOT_ALLOWED" },
     );
   }
 
@@ -485,7 +526,7 @@ export const createSupplierMaterial = async (
       );
 
     if (!priceRuleRequest) {
-      throw new AppError('Price rule request not found', 404, 'NOT_FOUND');
+      throw new AppError("Price rule request not found", 404, "NOT_FOUND");
     }
 
     const acceptance = evaluateApprovedPriceRuleRequest(
@@ -505,8 +546,8 @@ export const createSupplierMaterial = async (
         throw new AppError(
           `Please use the approved unit (${approvedUnit}) for this material.`,
           400,
-          'VALIDATION_ERROR',
-          { reason: 'UNIT_MISMATCH', approvedUnit },
+          "VALIDATION_ERROR",
+          { reason: "UNIT_MISMATCH", approvedUnit },
         );
       }
 
@@ -520,7 +561,7 @@ export const createSupplierMaterial = async (
           materialName,
           categoryId: input.categoryId,
         });
-        if (matchResult.status === 'MATCHED') {
+        if (matchResult.status === "MATCHED") {
           materialType = await materialTypesRepository.findMaterialTypeById(
             matchResult.materialType.id,
           );
@@ -541,7 +582,8 @@ export const createSupplierMaterial = async (
         title: input.title,
         description: input.description,
         materialType: displayMaterialType,
-        materialTypeId: materialType?.id ?? priceRuleRequest.materialTypeId ?? null,
+        materialTypeId:
+          materialType?.id ?? priceRuleRequest.materialTypeId ?? null,
         customMaterialType: materialType ? null : materialName,
         quantity: input.quantity,
         unit: input.unit,
@@ -549,7 +591,7 @@ export const createSupplierMaterial = async (
         sourceType,
         isFree: false,
         price: input.price,
-        currency: 'NIS',
+        currency: "NIS",
         pickupAllowed: input.pickupAllowed,
         deliveryAllowed: input.deliveryAllowed,
         pickupNotes: input.pickupNotes ?? null,
@@ -558,26 +600,27 @@ export const createSupplierMaterial = async (
         priceCheckedAt: new Date(),
         maxAllowedPriceAtCheck: acceptance.maxAllowed,
         imageUrls: input.imageUrls,
+        client: tx,
       });
 
-      await markSourceRequestPublished(material.id, input);
+      await markSourceRequestPublished(material.id, input, tx);
 
       return mapCreatedMaterial(material);
     }
 
-    if (acceptance.reason === 'PRICE_TOO_HIGH') {
+    if (acceptance.reason === "PRICE_TOO_HIGH") {
       const unit =
         priceRuleRequest.unit ??
         priceRuleRequest.materialType?.defaultUnit ??
-        'unit';
+        "unit";
       throw new AppError(
         `Maximum allowed price is ${acceptance.maxAllowed} NIS per ${unit}.`,
         400,
-        'VALIDATION_ERROR',
+        "VALIDATION_ERROR",
         {
           maxAllowedPrice: acceptance.maxAllowed,
           approvedUnit: unit,
-          reason: 'PRICE_TOO_HIGH',
+          reason: "PRICE_TOO_HIGH",
         },
       );
     }
@@ -593,10 +636,10 @@ export const createSupplierMaterial = async (
 
   if (!materialType) {
     throw new AppError(
-      'This paid material needs admin price review before publishing.',
+      "This paid material needs admin price review before publishing.",
       400,
-      'VALIDATION_ERROR',
-      { reason: 'MATERIAL_REVIEW_REQUIRED' },
+      "VALIDATION_ERROR",
+      { reason: "MATERIAL_REVIEW_REQUIRED" },
     );
   }
 
@@ -612,7 +655,7 @@ export const createSupplierMaterial = async (
   });
 
   if (!priceCheck.allowed) {
-    throw new AppError(priceCheck.message, 400, 'VALIDATION_ERROR', {
+    throw new AppError(priceCheck.message, 400, "VALIDATION_ERROR", {
       reason: priceCheck.reason,
       maxAllowedPrice: priceCheck.maxAllowedPrice,
       matchedReference: priceCheck.matchedReference,
@@ -637,7 +680,7 @@ export const createSupplierMaterial = async (
     sourceType,
     isFree: false,
     price: input.price,
-    currency: 'NIS',
+    currency: "NIS",
     pickupAllowed: input.pickupAllowed,
     deliveryAllowed: input.deliveryAllowed,
     pickupNotes: input.pickupNotes ?? null,
@@ -646,11 +689,28 @@ export const createSupplierMaterial = async (
     priceCheckedAt: new Date(),
     maxAllowedPriceAtCheck: priceCheck.maxAllowedPrice ?? null,
     imageUrls: input.imageUrls,
+    client: tx,
   });
 
-  await markSourceRequestPublished(material.id, input);
+  await markSourceRequestPublished(material.id, input, tx);
 
   return mapCreatedMaterial(material);
+};
+
+export const createSupplierMaterialIdempotent = async (
+  userId: string,
+  input: CreateSupplierMaterialInput,
+  idempotencyKey: string,
+) => {
+  return runIdempotentOperation<CreatedSupplierMaterialDto>({
+    userId,
+    scope: SUPPLIER_CREATE_MATERIAL_SCOPE,
+    key: idempotencyKey,
+    payload: input,
+    resourceType: "MATERIAL",
+    getResourceId: (material) => material.id,
+    handler: (tx) => createSupplierMaterial(userId, input, tx),
+  });
 };
 
 export const getEmptySupplierDashboard = (): SupplierDashboardDto => ({
@@ -662,18 +722,20 @@ export const getEmptySupplierDashboard = (): SupplierDashboardDto => ({
   recentActivity: [],
 });
 
-const mapLocation = (location: {
-  id: string;
-  country: string;
-  city: string;
-  area: string | null;
-  addressLine: string | null;
-  latitude: { toNumber(): number } | number | null;
-  longitude: { toNumber(): number } | number | null;
-  visibility: string | null;
-  isApproximate: boolean;
-  locationType: string | null;
-} | null): SupplierProfileLocationDto | null => {
+const mapLocation = (
+  location: {
+    id: string;
+    country: string;
+    city: string;
+    area: string | null;
+    addressLine: string | null;
+    latitude: { toNumber(): number } | number | null;
+    longitude: { toNumber(): number } | number | null;
+    visibility: string | null;
+    isApproximate: boolean;
+    locationType: string | null;
+  } | null,
+): SupplierProfileLocationDto | null => {
   if (!location) {
     return null;
   }
@@ -687,13 +749,13 @@ const mapLocation = (location: {
     latitude:
       location.latitude == null
         ? null
-        : typeof location.latitude === 'number'
+        : typeof location.latitude === "number"
           ? location.latitude
           : location.latitude.toNumber(),
     longitude:
       location.longitude == null
         ? null
-        : typeof location.longitude === 'number'
+        : typeof location.longitude === "number"
           ? location.longitude
           : location.longitude.toNumber(),
     visibility: location.visibility,
@@ -702,29 +764,31 @@ const mapLocation = (location: {
   };
 };
 
-const mapOrganizationProfile = (organization: {
-  id: string;
-  organizationName: string;
-  organizationType: string;
-  contactPersonName: string | null;
-  workingDays: unknown;
-  workingHours: unknown;
-  verificationDocumentStatus: string | null;
-  verificationDocumentUrl: string | null;
-  verificationDocumentName: string | null;
-  businessLocation: {
+const mapOrganizationProfile = (
+  organization: {
     id: string;
-    country: string;
-    city: string;
-    area: string | null;
-    addressLine: string | null;
-    latitude: { toNumber(): number } | number | null;
-    longitude: { toNumber(): number } | number | null;
-    visibility: string | null;
-    isApproximate: boolean;
-    locationType: string | null;
-  } | null;
-} | null): SupplierOrganizationProfileDto | null => {
+    organizationName: string;
+    organizationType: string;
+    contactPersonName: string | null;
+    workingDays: unknown;
+    workingHours: unknown;
+    verificationDocumentStatus: string | null;
+    verificationDocumentUrl: string | null;
+    verificationDocumentName: string | null;
+    businessLocation: {
+      id: string;
+      country: string;
+      city: string;
+      area: string | null;
+      addressLine: string | null;
+      latitude: { toNumber(): number } | number | null;
+      longitude: { toNumber(): number } | number | null;
+      visibility: string | null;
+      isApproximate: boolean;
+      locationType: string | null;
+    } | null;
+  } | null,
+): SupplierOrganizationProfileDto | null => {
   if (!organization) {
     return null;
   }
@@ -749,7 +813,7 @@ const resolveSupplierVerificationAdminNote = (
 ): string | null => {
   const normalized = normalizeVerificationStatus(verificationStatus);
 
-  if (normalized !== 'REJECTED' && normalized !== 'CHANGES_REQUESTED') {
+  if (normalized !== "REJECTED" && normalized !== "CHANGES_REQUESTED") {
     return null;
   }
 
@@ -802,8 +866,8 @@ const mapSupplierProfile = (supplierProfile: {
 }): SupplierProfileDetailsDto => {
   return {
     id: supplierProfile.id,
-    publicName: supplierProfile.publicName ?? '',
-    supplierType: supplierProfile.supplierType ?? '',
+    publicName: supplierProfile.publicName ?? "",
+    supplierType: supplierProfile.supplierType ?? "",
     description: supplierProfile.description,
     verificationStatus: normalizeVerificationStatus(
       supplierProfile.verificationStatus,
@@ -819,11 +883,13 @@ const mapSupplierProfile = (supplierProfile: {
   };
 };
 
-const mapSupplierProfileResponse = (record: Awaited<
-  ReturnType<typeof supplierRepository.findSupplierProfileDetailsByUserId>
->): SupplierProfileResponseDto => {
+const mapSupplierProfileResponse = (
+  record: Awaited<
+    ReturnType<typeof supplierRepository.findSupplierProfileDetailsByUserId>
+  >,
+): SupplierProfileResponseDto => {
   if (!record) {
-    throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    throw new AppError("User not found", 404, "USER_NOT_FOUND");
   }
 
   return {
@@ -843,9 +909,8 @@ const mapSupplierProfileResponse = (record: Awaited<
 export const getSupplierProfile = async (
   userId: string,
 ): Promise<SupplierProfileResponseDto> => {
-  const record = await supplierRepository.findSupplierProfileDetailsByUserId(
-    userId,
-  );
+  const record =
+    await supplierRepository.findSupplierProfileDetailsByUserId(userId);
 
   return mapSupplierProfileResponse(record);
 };
@@ -863,8 +928,8 @@ export const updateSupplierProfile = async (
 };
 
 export type SupplierMaterialMutationBlockedReason =
-  | 'REUSED_HISTORY'
-  | 'ACTIVE_REQUESTS';
+  | "REUSED_HISTORY"
+  | "ACTIVE_REQUESTS";
 
 export type SupplierMaterialDeleteBlockedReason =
   SupplierMaterialMutationBlockedReason;
@@ -873,16 +938,16 @@ export type SupplierMaterialEditBlockedReason =
   SupplierMaterialMutationBlockedReason;
 
 export const DELETE_REUSED_MATERIAL_MESSAGE =
-  'Cannot delete reused material history.';
+  "Cannot delete reused material history.";
 
 export const DELETE_ACTIVE_REQUESTS_MESSAGE =
-  'Cannot delete a material with active requests.';
+  "Cannot delete a material with active requests.";
 
 export const EDIT_REUSED_MATERIAL_MESSAGE =
-  'Cannot edit reused material history.';
+  "Cannot edit reused material history.";
 
 export const EDIT_ACTIVE_REQUESTS_MESSAGE =
-  'Cannot edit a material with active requests or blocked status.';
+  "Cannot edit a material with active requests or blocked status.";
 
 const resolveSupplierMaterialMutationEligibility = (
   status: string,
@@ -891,20 +956,20 @@ const resolveSupplierMaterialMutationEligibility = (
   canMutate: boolean;
   blockedReason: SupplierMaterialMutationBlockedReason | null;
 } => {
-  if (status === 'REUSED') {
-    return { canMutate: false, blockedReason: 'REUSED_HISTORY' };
+  if (status === "REUSED") {
+    return { canMutate: false, blockedReason: "REUSED_HISTORY" };
   }
 
-  if (status === 'PENDING_RESERVATION' || status === 'RESERVED') {
-    return { canMutate: false, blockedReason: 'ACTIVE_REQUESTS' };
+  if (status === "PENDING_RESERVATION" || status === "RESERVED") {
+    return { canMutate: false, blockedReason: "ACTIVE_REQUESTS" };
   }
 
-  if (status !== 'AVAILABLE' && status !== 'UNAVAILABLE') {
-    return { canMutate: false, blockedReason: 'ACTIVE_REQUESTS' };
+  if (status !== "AVAILABLE" && status !== "UNAVAILABLE") {
+    return { canMutate: false, blockedReason: "ACTIVE_REQUESTS" };
   }
 
   if (blockingReservationCount > 0) {
-    return { canMutate: false, blockedReason: 'ACTIVE_REQUESTS' };
+    return { canMutate: false, blockedReason: "ACTIVE_REQUESTS" };
   }
 
   return { canMutate: true, blockedReason: null };
@@ -948,7 +1013,7 @@ export const resolveSupplierMaterialEditEligibility = (
 
 type SupplierOwnedMaterialRecord = Awaited<
   ReturnType<typeof supplierRepository.findSupplierMaterials>
->['items'][number];
+>["items"][number];
 
 const mapSupplierOwnedMaterial = (
   material: SupplierOwnedMaterialRecord,
@@ -968,7 +1033,7 @@ const mapSupplierOwnedMaterial = (
   status: material.status,
   condition: material.condition,
   quantity:
-    typeof material.quantity === 'number'
+    typeof material.quantity === "number"
       ? material.quantity
       : material.quantity.toNumber(),
   unit: material.unit,
@@ -1039,14 +1104,17 @@ export const getSupplierMaterials = async (
   };
 };
 
-export const getSupplierMaterial = async (userId: string, materialId: string) => {
+export const getSupplierMaterial = async (
+  userId: string,
+  materialId: string,
+) => {
   const material = await supplierRepository.findSupplierOwnedMaterialById(
     userId,
     materialId,
   );
 
   if (!material) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
   const blockingReservationCount =
@@ -1066,7 +1134,7 @@ export const updateSupplierMaterial = async (
   );
 
   if (!material) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
   const blockingReservationCount =
@@ -1078,11 +1146,11 @@ export const updateSupplierMaterial = async (
 
   if (!eligibility.canEdit) {
     throw new AppError(
-      eligibility.editBlockedReason === 'REUSED_HISTORY'
+      eligibility.editBlockedReason === "REUSED_HISTORY"
         ? EDIT_REUSED_MATERIAL_MESSAGE
         : EDIT_ACTIVE_REQUESTS_MESSAGE,
       409,
-      'CONFLICT',
+      "CONFLICT",
     );
   }
 
@@ -1103,7 +1171,7 @@ export const updateSupplierMaterial = async (
   );
 
   if (!updated) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
   return mapSupplierOwnedMaterial(updated, blockingReservationCount);
@@ -1119,7 +1187,7 @@ export const deleteSupplierMaterial = async (
   );
 
   if (!material) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
   const blockingReservationCount =
@@ -1131,11 +1199,11 @@ export const deleteSupplierMaterial = async (
 
   if (!eligibility.canDelete) {
     throw new AppError(
-      eligibility.deleteBlockedReason === 'REUSED_HISTORY'
+      eligibility.deleteBlockedReason === "REUSED_HISTORY"
         ? DELETE_REUSED_MATERIAL_MESSAGE
         : DELETE_ACTIVE_REQUESTS_MESSAGE,
       409,
-      'CONFLICT',
+      "CONFLICT",
     );
   }
 

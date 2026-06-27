@@ -194,6 +194,12 @@ enum AiLookupStatus {
   PENDING_REVIEW
 }
 
+enum IdempotencyStatus {
+  IN_PROGRESS
+  SUCCEEDED
+  FAILED
+}
+
 enum ProjectDifficulty {
   BEGINNER
   INTERMEDIATE
@@ -258,6 +264,7 @@ model User {
   requestedDeliveries          Delivery[]                 @relation("DeliveryRequestedBy")
   deliveryAssignmentsMade      DeliveryAssignment[]       @relation("DeliveryAssignedBy")
   deliveryStatusChanges        DeliveryStatusHistory[]    @relation("DeliveryStatusChangedBy")
+  idempotencyRecords           IdempotencyRecord[]
   notifications                Notification[]
   reviewsGiven                 Review[]                   @relation("ReviewReviewer")
   reviewsReceived              Review[]                   @relation("ReviewReviewedUser")
@@ -1025,4 +1032,26 @@ model AiPriceLookupLog {
   @@index([normalizedQuery])
   @@index([status])
   @@map("ai_price_lookup_logs")
+}
+
+model IdempotencyRecord {
+  id           String            @id @default(cuid())
+  userId       String            @map("user_id")
+  scope        String
+  key          String
+  requestHash  String            @map("request_hash")
+  status       IdempotencyStatus @default(IN_PROGRESS)
+  resourceType String?           @map("resource_type")
+  resourceId   String?           @map("resource_id")
+  responseJson Json?             @map("response_json")
+  expiresAt    DateTime?         @map("expires_at")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scope, key])
+  @@index([userId, scope])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("idempotency_records")
 }

@@ -3,13 +3,15 @@ import type {
   MaterialStatus,
   Prisma,
   ReservationStatus,
-} from '../../generated/prisma/client.js';
+} from "../../generated/prisma/client.js";
 
-import { prisma } from '../../database/prisma.js';
-import type { UpdateSupplierProfileInput } from './supplier.validation.js';
+import { prisma } from "../../database/prisma.js";
+import type { UpdateSupplierProfileInput } from "./supplier.validation.js";
+
+type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
 
 const decimalToNumber = (value: { toNumber(): number } | number): number => {
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     return value;
   }
 
@@ -59,9 +61,9 @@ export const findSupplierProfileDetailsByUserId = async (userId: string) => {
 
 export const isOrganizationSupplierType = (supplierType: string): boolean => {
   return (
-    supplierType === 'WORKSHOP' ||
-    supplierType === 'FACTORY' ||
-    supplierType === 'EDUCATIONAL_INSTITUTION'
+    supplierType === "WORKSHOP" ||
+    supplierType === "FACTORY" ||
+    supplierType === "EDUCATIONAL_INSTITUTION"
   );
 };
 
@@ -78,9 +80,10 @@ type LocationCopySource = {
 
 export const copyLocationRow = async (
   source: LocationCopySource,
-  locationType = 'MATERIAL_PICKUP',
+  locationType = "MATERIAL_PICKUP",
+  client: PrismaClientLike = prisma,
 ): Promise<string> => {
-  const location = await prisma.location.create({
+  const location = await client.location.create({
     data: {
       country: source.country,
       city: source.city,
@@ -98,9 +101,10 @@ export const copyLocationRow = async (
 };
 
 export const createMaterialPickupLocation = async (
-  input: UpdateSupplierProfileInput['defaultPickupLocation'],
+  input: UpdateSupplierProfileInput["defaultPickupLocation"],
+  client: PrismaClientLike = prisma,
 ): Promise<string> => {
-  const location = await prisma.location.create({
+  const location = await client.location.create({
     data: {
       country: input.country,
       city: input.city,
@@ -110,7 +114,7 @@ export const createMaterialPickupLocation = async (
       longitude: input.longitude ?? null,
       visibility: input.visibility,
       isApproximate: input.isApproximate,
-      locationType: input.locationType ?? 'MATERIAL_PICKUP',
+      locationType: input.locationType ?? "MATERIAL_PICKUP",
     },
   });
 
@@ -120,7 +124,7 @@ export const createMaterialPickupLocation = async (
 const upsertLocation = async (
   tx: Prisma.TransactionClient,
   locationId: string | null | undefined,
-  input: UpdateSupplierProfileInput['defaultPickupLocation'],
+  input: UpdateSupplierProfileInput["defaultPickupLocation"],
   fallbackLocationType: string,
 ): Promise<string> => {
   const data = {
@@ -169,7 +173,7 @@ export const upsertSupplierProfileDetails = async (
       tx,
       existingProfile?.defaultPickupLocationId,
       input.defaultPickupLocation,
-      'PICKUP_POINT',
+      "PICKUP_POINT",
     );
 
     const supplierProfile = await tx.supplierProfile.upsert({
@@ -203,9 +207,9 @@ export const upsertSupplierProfileDetails = async (
             tx,
             existingOrganization?.businessLocationId,
             input.organizationProfile.businessLocation,
-            'BUSINESS_LOCATION',
+            "BUSINESS_LOCATION",
           )
-        : existingOrganization?.businessLocationId ?? null;
+        : (existingOrganization?.businessLocationId ?? null);
 
       await tx.organizationProfile.upsert({
         where: { supplierProfileId: supplierProfile.id },
@@ -215,14 +219,12 @@ export const upsertSupplierProfileDetails = async (
           organizationType: input.organizationProfile.organizationType,
           contactPersonName:
             input.organizationProfile.contactPersonName ?? null,
-          workingDays:
-            input.organizationProfile.workingDays as
-              | Prisma.InputJsonValue
-              | undefined,
-          workingHours:
-            input.organizationProfile.workingHours as
-              | Prisma.InputJsonValue
-              | undefined,
+          workingDays: input.organizationProfile.workingDays as
+            | Prisma.InputJsonValue
+            | undefined,
+          workingHours: input.organizationProfile.workingHours as
+            | Prisma.InputJsonValue
+            | undefined,
           businessLocationId,
         },
         update: {
@@ -230,14 +232,12 @@ export const upsertSupplierProfileDetails = async (
           organizationType: input.organizationProfile.organizationType,
           contactPersonName:
             input.organizationProfile.contactPersonName ?? null,
-          workingDays:
-            input.organizationProfile.workingDays as
-              | Prisma.InputJsonValue
-              | undefined,
-          workingHours:
-            input.organizationProfile.workingHours as
-              | Prisma.InputJsonValue
-              | undefined,
+          workingDays: input.organizationProfile.workingDays as
+            | Prisma.InputJsonValue
+            | undefined,
+          workingHours: input.organizationProfile.workingHours as
+            | Prisma.InputJsonValue
+            | undefined,
           businessLocationId,
         },
       });
@@ -267,7 +267,7 @@ export const upsertSupplierProfileDetails = async (
 
 export const countMaterialsByStatus = async (ownerId: string) => {
   return prisma.material.groupBy({
-    by: ['status'],
+    by: ["status"],
     where: { ownerId },
     _count: { _all: true },
   });
@@ -275,7 +275,7 @@ export const countMaterialsByStatus = async (ownerId: string) => {
 
 export const countReservationsByStatus = async (ownerId: string) => {
   return prisma.reservation.groupBy({
-    by: ['status'],
+    by: ["status"],
     where: { ownerId },
     _count: { _all: true },
   });
@@ -283,7 +283,7 @@ export const countReservationsByStatus = async (ownerId: string) => {
 
 export const aggregateReusedMaterials = async (ownerId: string) => {
   return prisma.material.aggregate({
-    where: { ownerId, status: 'REUSED' },
+    where: { ownerId, status: "REUSED" },
     _count: { _all: true },
     _sum: { quantity: true },
   });
@@ -293,7 +293,7 @@ export const aggregateSupplierReviews = async (reviewedUserId: string) => {
   return prisma.review.aggregate({
     where: {
       reviewedUserId,
-      targetType: 'SUPPLIER',
+      targetType: "SUPPLIER",
     },
     _avg: { rating: true },
     _count: { _all: true },
@@ -314,7 +314,7 @@ const supplierMaterialListInclude = {
     select: { city: true, area: true, addressLine: true },
   },
   images: {
-    orderBy: { sortOrder: 'asc' as const },
+    orderBy: { sortOrder: "asc" as const },
   },
 } satisfies Prisma.MaterialInclude;
 
@@ -349,23 +349,23 @@ const buildSupplierMaterialsWhere = (
   if (query.search) {
     const normalized = query.search.trim();
     const searchConditions: Prisma.MaterialWhereInput[] = [
-      { title: { contains: normalized, mode: 'insensitive' } },
-      { description: { contains: normalized, mode: 'insensitive' } },
-      { category: { nameEn: { contains: normalized, mode: 'insensitive' } } },
-      { category: { nameAr: { contains: normalized, mode: 'insensitive' } } },
-      { location: { city: { contains: normalized, mode: 'insensitive' } } },
-      { location: { area: { contains: normalized, mode: 'insensitive' } } },
+      { title: { contains: normalized, mode: "insensitive" } },
+      { description: { contains: normalized, mode: "insensitive" } },
+      { category: { nameEn: { contains: normalized, mode: "insensitive" } } },
+      { category: { nameAr: { contains: normalized, mode: "insensitive" } } },
+      { location: { city: { contains: normalized, mode: "insensitive" } } },
+      { location: { area: { contains: normalized, mode: "insensitive" } } },
     ];
 
     const statusCandidate = normalized
       .toUpperCase()
-      .replace(/[\s-]+/g, '_') as MaterialStatus;
+      .replace(/[\s-]+/g, "_") as MaterialStatus;
     const materialStatuses: MaterialStatus[] = [
-      'AVAILABLE',
-      'PENDING_RESERVATION',
-      'RESERVED',
-      'REUSED',
-      'UNAVAILABLE',
+      "AVAILABLE",
+      "PENDING_RESERVATION",
+      "RESERVED",
+      "REUSED",
+      "UNAVAILABLE",
     ];
 
     if (materialStatuses.includes(statusCandidate)) {
@@ -396,7 +396,7 @@ export const findSupplierMaterials = async (
   const [items, total] = await Promise.all([
     prisma.material.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       skip,
       take: query.limit,
       include: supplierMaterialListInclude,
@@ -422,19 +422,19 @@ export const findSupplierMaterialsSummary = async (ownerId: string) => {
   ] = await Promise.all([
     prisma.material.count({ where: baseWhere }),
     prisma.material.count({
-      where: { ...baseWhere, status: 'AVAILABLE' },
+      where: { ...baseWhere, status: "AVAILABLE" },
     }),
     prisma.material.count({
-      where: { ...baseWhere, status: 'PENDING_RESERVATION' },
+      where: { ...baseWhere, status: "PENDING_RESERVATION" },
     }),
     prisma.material.count({
-      where: { ...baseWhere, status: 'RESERVED' },
+      where: { ...baseWhere, status: "RESERVED" },
     }),
     prisma.material.count({
-      where: { ...baseWhere, status: 'REUSED' },
+      where: { ...baseWhere, status: "REUSED" },
     }),
     prisma.material.count({
-      where: { ...baseWhere, status: 'UNAVAILABLE' },
+      where: { ...baseWhere, status: "UNAVAILABLE" },
     }),
     prisma.material.count({
       where: { ...baseWhere, isFree: true },
@@ -458,7 +458,7 @@ export const findSupplierMaterialsSummary = async (ownerId: string) => {
 
 export const findSupplierMaterialCategories = async (ownerId: string) => {
   const groups = await prisma.material.groupBy({
-    by: ['categoryId'],
+    by: ["categoryId"],
     where: { ownerId },
     _count: { id: true },
   });
@@ -474,7 +474,7 @@ export const findSupplierMaterialCategories = async (ownerId: string) => {
   const categories = await prisma.category.findMany({
     where: { id: { in: categoryIds } },
     select: { id: true, nameEn: true, nameAr: true },
-    orderBy: { nameEn: 'asc' },
+    orderBy: { nameEn: "asc" },
   });
 
   return categories
@@ -511,24 +511,24 @@ export const countBlockingReservationsByMaterialIds = async (
   }
 
   const groups = await prisma.reservation.groupBy({
-    by: ['materialId'],
+    by: ["materialId"],
     where: {
       materialId: { in: materialIds },
-      status: { in: ['PENDING', 'ACCEPTED', 'COMPLETED'] },
+      status: { in: ["PENDING", "ACCEPTED", "COMPLETED"] },
     },
     _count: { _all: true },
   });
 
-  return new Map(
-    groups.map((group) => [group.materialId, group._count._all]),
-  );
+  return new Map(groups.map((group) => [group.materialId, group._count._all]));
 };
 
-export const countBlockingReservationsForMaterial = async (materialId: string) => {
+export const countBlockingReservationsForMaterial = async (
+  materialId: string,
+) => {
   return prisma.reservation.count({
     where: {
       materialId,
-      status: { in: ['PENDING', 'ACCEPTED', 'COMPLETED'] },
+      status: { in: ["PENDING", "ACCEPTED", "COMPLETED"] },
     },
   });
 };
@@ -573,14 +573,14 @@ export const deleteSupplierOwnedMaterial = async (materialId: string) => {
 export const findRecentMaterials = async (ownerId: string, limit = 3) => {
   return prisma.material.findMany({
     where: { ownerId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     take: limit,
     include: {
       category: { select: { nameEn: true } },
       images: {
         where: { isCover: true },
         take: 1,
-        orderBy: { sortOrder: 'asc' },
+        orderBy: { sortOrder: "asc" },
       },
     },
   });
@@ -592,10 +592,10 @@ export const findUpcomingPickups = async (ownerId: string, limit = 3) => {
   return prisma.reservation.findMany({
     where: {
       ownerId,
-      status: 'ACCEPTED',
+      status: "ACCEPTED",
       pickupWindowStart: { gte: now },
     },
-    orderBy: { pickupWindowStart: 'asc' },
+    orderBy: { pickupWindowStart: "asc" },
     take: limit,
     include: {
       material: { select: { title: true } },
@@ -607,7 +607,7 @@ export const findUpcomingPickups = async (ownerId: string, limit = 3) => {
 export const findRecentNotifications = async (userId: string, limit = 3) => {
   return prisma.notification.findMany({
     where: { userId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     take: limit,
   });
 };
@@ -618,7 +618,7 @@ export const findRecentReservationsForActivity = async (
 ) => {
   return prisma.reservation.findMany({
     where: { ownerId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     take: limit,
     include: {
       material: { select: { title: true } },
@@ -643,19 +643,19 @@ export const foldMaterialStatusCounts = (
     stats.total += count;
 
     switch (row.status) {
-      case 'AVAILABLE':
+      case "AVAILABLE":
         stats.available = count;
         break;
-      case 'PENDING_RESERVATION':
+      case "PENDING_RESERVATION":
         stats.pendingReservation = count;
         break;
-      case 'RESERVED':
+      case "RESERVED":
         stats.reserved = count;
         break;
-      case 'REUSED':
+      case "REUSED":
         stats.reused = count;
         break;
-      case 'UNAVAILABLE':
+      case "UNAVAILABLE":
         stats.unavailable = count;
         break;
       default:
@@ -682,22 +682,22 @@ export const foldReservationStatusCounts = (
     const count = row._count._all;
 
     switch (row.status) {
-      case 'PENDING':
+      case "PENDING":
         stats.pending = count;
         break;
-      case 'ACCEPTED':
+      case "ACCEPTED":
         stats.accepted = count;
         break;
-      case 'COMPLETED':
+      case "COMPLETED":
         stats.completed = count;
         break;
-      case 'REJECTED':
+      case "REJECTED":
         stats.rejected = count;
         break;
-      case 'CANCELLED':
+      case "CANCELLED":
         stats.cancelled = count;
         break;
-      case 'EXPIRED':
+      case "EXPIRED":
         stats.expired = count;
         break;
       default:
@@ -730,8 +730,8 @@ export const createSupplierMaterial = async (input: {
   customMaterialType?: string | null;
   quantity: number;
   unit: string;
-  condition: Prisma.MaterialCreateInput['condition'];
-  sourceType: Prisma.MaterialCreateInput['sourceType'];
+  condition: Prisma.MaterialCreateInput["condition"];
+  sourceType: Prisma.MaterialCreateInput["sourceType"];
   isFree: boolean;
   price?: number | null;
   currency: string;
@@ -743,9 +743,10 @@ export const createSupplierMaterial = async (input: {
   priceCheckedAt?: Date | null;
   maxAllowedPriceAtCheck?: number | null;
   imageUrls: string[];
+  client?: PrismaClientLike;
 }) => {
-  return prisma.$transaction(async (tx) => {
-    const material = await tx.material.create({
+  const createMaterial = (client: PrismaClientLike) =>
+    client.material.create({
       data: {
         ownerId: input.ownerId,
         supplierProfileId: input.supplierProfileId,
@@ -760,7 +761,7 @@ export const createSupplierMaterial = async (input: {
         unit: input.unit,
         condition: input.condition,
         sourceType: input.sourceType,
-        status: 'AVAILABLE',
+        status: "AVAILABLE",
         isFree: input.isFree,
         price: input.price ?? null,
         currency: input.currency,
@@ -791,11 +792,14 @@ export const createSupplierMaterial = async (input: {
           },
         },
         images: {
-          orderBy: { sortOrder: 'asc' },
+          orderBy: { sortOrder: "asc" },
         },
       },
     });
 
-    return material;
-  });
+  if (input.client) {
+    return createMaterial(input.client);
+  }
+
+  return prisma.$transaction((tx) => createMaterial(tx));
 };

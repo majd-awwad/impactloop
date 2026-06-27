@@ -194,6 +194,14 @@ Used by: `AiPriceLookupLog.status`
 
 ---
 
+## `IdempotencyStatus`
+
+`IN_PROGRESS`, `SUCCEEDED`, `FAILED`
+
+Used by: `IdempotencyRecord.status`
+
+---
+
 ## `ProjectDifficulty`
 
 `BEGINNER`, `INTERMEDIATE`, `ADVANCED`

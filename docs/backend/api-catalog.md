@@ -229,6 +229,8 @@ Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must s
 
 `POST /api/supplier/materials` returns **403** when organization supplier is not `APPROVED` (`SUPPLIER_VERIFICATION_REQUIRED`).
 
+`POST /api/supplier/materials` requires an `Idempotency-Key` header (safe random string, 16–128 chars). The backend stores the key with scope `SUPPLIER_CREATE_MATERIAL` and the authenticated `userId` in `idempotency_records` (`unique(userId, scope, key)`). The idempotency row, material/location writes, source request publish updates, and stored success response are committed in one transaction. A first successful request creates one material and stores the successful response. A repeat with the same key and identical request body returns the stored material with no new insert. Reusing the same key with a different body returns `409 IDEMPOTENCY_KEY_REUSED`; a simultaneous same-key request still in progress returns `409 IDEMPOTENCY_IN_PROGRESS`. Failed creates roll back the material and idempotency writes, so retrying the same form key is safe.
+
 `POST /api/supplier/materials` body (pickup/delivery related): `useDefaultPickupLocation` (boolean, default `true`); `pickupLocation` (location object, required when `useDefaultPickupLocation` is `false`); `deliveryAllowed` (boolean, default `false`). Organization suppliers must use profile default; override is rejected with `ORG_PICKUP_OVERRIDE_NOT_ALLOWED`. Each create stores a **new** `locations` row on the material (copy or override), not the profile row id.
 
 

@@ -1,10 +1,10 @@
-import type { Request, Response } from 'express';
+import type { Request, Response } from "express";
 
-import { readValidatedQuery } from '../../middlewares/validate.middleware.js';
-import { successResponse } from '../../utils/api-response.js';
+import { readValidatedQuery } from "../../middlewares/validate.middleware.js";
+import { successResponse } from "../../utils/api-response.js";
 
 import {
-  createSupplierMaterial,
+  createSupplierMaterialIdempotent,
   deleteSupplierMaterial,
   getSupplierDashboard,
   getSupplierMaterial,
@@ -12,24 +12,31 @@ import {
   getSupplierProfile,
   updateSupplierMaterial,
   updateSupplierProfile,
-} from './supplier.service.js';
+} from "./supplier.service.js";
+import { validateIdempotencyKey } from "../../services/idempotency.service.js";
 import type {
   CreateSupplierMaterialInput,
   SupplierMaterialsQuery,
   UpdateSupplierMaterialInput,
   UpdateSupplierProfileInput,
-} from './supplier.validation.js';
+} from "./supplier.validation.js";
 
-export const getDashboard = async (req: Request, res: Response): Promise<void> => {
+export const getDashboard = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   const dashboard = await getSupplierDashboard(req.auth!.sub);
 
-  res.json(successResponse('Supplier dashboard loaded', dashboard));
+  res.json(successResponse("Supplier dashboard loaded", dashboard));
 };
 
-export const getProfile = async (req: Request, res: Response): Promise<void> => {
+export const getProfile = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   const profile = await getSupplierProfile(req.auth!.sub);
 
-  res.json(successResponse('Supplier profile loaded', profile));
+  res.json(successResponse("Supplier profile loaded", profile));
 };
 
 export const patchProfile = async (
@@ -41,7 +48,7 @@ export const patchProfile = async (
     req.body as UpdateSupplierProfileInput,
   );
 
-  res.json(successResponse('Supplier profile updated', profile));
+  res.json(successResponse("Supplier profile updated", profile));
 };
 
 export const getMaterials = async (
@@ -53,16 +60,19 @@ export const getMaterials = async (
     readValidatedQuery<SupplierMaterialsQuery>(req),
   );
 
-  res.json(successResponse('Supplier materials loaded', materials));
+  res.json(successResponse("Supplier materials loaded", materials));
 };
 
-export const getMaterial = async (req: Request, res: Response): Promise<void> => {
+export const getMaterial = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   const material = await getSupplierMaterial(
     req.auth!.sub,
     req.params.id as string,
   );
 
-  res.json(successResponse('Supplier material loaded', material));
+  res.json(successResponse("Supplier material loaded", material));
 };
 
 export const patchMaterial = async (
@@ -75,7 +85,7 @@ export const patchMaterial = async (
     req.body as UpdateSupplierMaterialInput,
   );
 
-  res.json(successResponse('Material updated successfully.', material));
+  res.json(successResponse("Material updated successfully.", material));
 };
 
 export const deleteMaterial = async (
@@ -84,17 +94,21 @@ export const deleteMaterial = async (
 ): Promise<void> => {
   await deleteSupplierMaterial(req.auth!.sub, req.params.id as string);
 
-  res.json(successResponse('Material deleted successfully.', null));
+  res.json(successResponse("Material deleted successfully.", null));
 };
 
 export const postMaterial = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const material = await createSupplierMaterial(
+  const idempotencyKey = validateIdempotencyKey(req.get("Idempotency-Key"));
+  const result = await createSupplierMaterialIdempotent(
     req.auth!.sub,
     req.body as CreateSupplierMaterialInput,
+    idempotencyKey,
   );
 
-  res.status(201).json(successResponse('Material listed successfully.', material));
+  res
+    .status(result.replayed ? 200 : 201)
+    .json(successResponse("Material listed successfully.", result.response));
 };

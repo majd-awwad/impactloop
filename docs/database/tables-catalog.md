@@ -21,7 +21,7 @@ Per-table reference from `apps/backend/prisma/schema.prisma`. Column names shown
 | emailVerifiedAt, phoneVerifiedAt, lastLoginAt | DateTime? | |
 | createdAt, updatedAt | DateTime | |
 
-Relations: roles, authTokens, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, learning projects, requests.
+Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, learning projects, requests.
 
 ---
 
@@ -530,3 +530,25 @@ No new PostGIS geography column is used for pings in Stage 1.
 | costEstimate | Decimal? | |
 
 Used by price-rule AI services — not a user-facing AI agent credits system.
+
+---
+
+## `idempotency_records` — model `IdempotencyRecord`
+
+Generic operation idempotency store. Supplier material create uses scope `SUPPLIER_CREATE_MATERIAL`.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| userId | String | FK → users |
+| scope | String | Operation scope, e.g. `SUPPLIER_CREATE_MATERIAL` |
+| key | String | Client-supplied idempotency key |
+| requestHash | String | Hash of the validated create payload |
+| status | IdempotencyStatus | `IN_PROGRESS`, `SUCCEEDED`, or `FAILED` |
+| resourceType | String? | e.g. `MATERIAL` after success |
+| resourceId | String? | Created resource id after success |
+| responseJson | Json? | Stored successful API response |
+| expiresAt | DateTime? | Retention/cleanup marker; no cleanup job documented yet |
+| createdAt, updatedAt | DateTime | |
+
+**Unique:** `(userId, scope, key)`. This prevents duplicate processing for the same operation key without blocking valid similar material listings by title/name/category.

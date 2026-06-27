@@ -21,7 +21,10 @@ class SupplierMaterialsRepository {
 
   final SupplierMaterialsApi _api;
 
-  Future<CreatedMaterial> createMaterial(CreateMaterialRequest request) {
-    return _api.createMaterial(request);
+  Future<CreatedMaterial> createMaterial(
+    CreateMaterialRequest request, {
+    required String idempotencyKey,
+  }) {
+    return _api.createMaterial(request, idempotencyKey: idempotencyKey);
   }
 }

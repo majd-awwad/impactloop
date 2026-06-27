@@ -25,7 +25,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 |------|--------|----------|
 | Monorepo + backend dev scripts | **Implemented** | `package.json`, `apps/backend/package.json` |
 | Flutter app (web/mobile) | **Implemented** | `apps/frontend/pubspec.yaml`, `lib/main.dart` |
-| PostgreSQL + Prisma | **Implemented** | `schema.prisma`, 14 migrations |
+| PostgreSQL + Prisma | **Implemented** | `schema.prisma`, migrations |
 | PostGIS | **Implemented** | Migration `20260614145408_add_auth_schema` |
 | Health check | **Implemented** | `GET /health`, Flutter `/health` |
 
@@ -97,7 +97,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Forgot / reset password | **Partial** | Backend: `auth.routes.ts`; Flutter: login shows “coming soon” (`login_form.dart`) |
 | Role invitations (DRIVER/MODERATOR/ADMIN) | **Implemented** | Admin email invitations + `/invite/accept` registration; `EMAIL_PROVIDER=mock` or SMTP |
 | Material discovery (public) | **Implemented** | Backend + Flutter |
-| Supplier list/create/update/delete materials | **Implemented** | Edit/delete gated by status + reservation history |
+| Supplier list/create/update/delete materials | **Implemented** | Create is idempotent with required `Idempotency-Key`; edit/delete gated by status + reservation history |
 | Supplier reservations workflow | **Partial** | Supplier list/accept/decline/self-pickup complete; delivery complete guarded — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
 | Learner reservation status UX | **Partial** | `POST /api/reservations`, `GET /api/reservations/my`, material detail status, `/learner/reservations`; no cancel; learner delivery request/status integrated — [reservations.md](features/reservations.md), [learner-reservation-flow](flows/learner-reservation-flow.md) |
 | Delivery workflow | **Partial** | Delivery domain, learner/driver APIs, status history, pings; learner request/status/tracking summary/map marker and driver jobs/status/manual ping UI exist; no realtime stream — [delivery.md](features/delivery.md) |
