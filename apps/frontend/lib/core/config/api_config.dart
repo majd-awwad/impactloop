@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import 'package:web/web.dart' as web;
+import 'external_document.dart';
 
 class ApiConfig {
   const ApiConfig._();
@@ -43,7 +43,7 @@ class ApiConfig {
     final resolved = resolveMediaUrl(url);
 
     if (kIsWeb) {
-      web.window.open(resolved, '_blank');
+      openExternalDocumentUrl(resolved);
     }
   }
 }

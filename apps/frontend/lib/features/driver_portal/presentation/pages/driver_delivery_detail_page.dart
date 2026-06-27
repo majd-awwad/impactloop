@@ -14,8 +14,8 @@ import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../application/driver_deliveries_provider.dart';
 import '../../application/driver_delivery_action_controller.dart';
+import '../../application/driver_location_auto_ping_controller.dart';
 import '../../data/models/driver_delivery.dart';
-import '../../data/models/driver_location_ping_request.dart';
 
 class DriverDeliveryDetailPage extends ConsumerWidget {
   const DriverDeliveryDetailPage({super.key, required this.deliveryId});
@@ -168,10 +168,7 @@ class _SummaryPanel extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           _InfoRow(label: 'Pickup window', value: _pickupWindowText(delivery)),
-          _InfoRow(
-            label: 'Supplier',
-            value: _partySummary(delivery.supplier),
-          ),
+          _InfoRow(label: 'Supplier', value: _partySummary(delivery.supplier)),
           _InfoRow(
             label: 'Pickup',
             value: _locationSummary(delivery.pickupLocation),
@@ -263,7 +260,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          _LocationPingButton(deliveryId: widget.delivery.id),
+          _LocationSharingSection(delivery: widget.delivery),
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
             onPressed: () => context.go('/driver/jobs'),
@@ -316,78 +313,186 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
   }
 }
 
-class _LocationPingButton extends ConsumerWidget {
-  const _LocationPingButton({required this.deliveryId});
+class _LocationSharingSection extends ConsumerStatefulWidget {
+  const _LocationSharingSection({required this.delivery});
 
-  final String deliveryId;
+  final DriverDelivery delivery;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final actionState = ref.watch(driverDeliveryActionControllerProvider);
-    final isSubmitting = actionState.isLoading;
+  ConsumerState<_LocationSharingSection> createState() =>
+      _LocationSharingSectionState();
+}
+
+class _LocationSharingSectionState
+    extends ConsumerState<_LocationSharingSection> {
+  DriverLocationAutoPingController? _autoPingController;
+  DriverLocationAutoPingState _autoPingState =
+      const DriverLocationAutoPingState();
+  bool _isManualPinging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bindAutoPingController();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LocationSharingSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.delivery.id != widget.delivery.id) {
+      _autoPingController?.dispose();
+      _bindAutoPingController();
+    } else {
+      _autoPingController?.updateDeliveryStatus(widget.delivery.status);
+    }
+  }
+
+  @override
+  void dispose() {
+    _autoPingController?.dispose();
+    super.dispose();
+  }
+
+  void _bindAutoPingController() {
+    _autoPingController = DriverLocationAutoPingController(
+      sendPing: () => ref
+          .read(driverDeliveryActionControllerProvider.notifier)
+          .captureAndSendLocationPing(widget.delivery.id),
+      onStateChanged: (state) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() => _autoPingState = state);
+      },
+    )..updateDeliveryStatus(widget.delivery.status);
+    _autoPingState = _autoPingController!.state;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final eligible = widget.delivery.isAutoPingEligible;
+    final sharingActive = _autoPingState.enabled && _autoPingState.isSharing;
+    final isBusy = _autoPingState.isPinging || _isManualPinging;
 
     return _InlineNotice(
       icon: Icons.my_location_outlined,
-      title: 'Share current location',
+      title: 'Location sharing',
       body:
-          'Send one foreground location update to help the learner follow delivery progress.',
-      action: FilledButton.icon(
-        onPressed: isSubmitting ? null : () => _sendLocation(context, ref),
-        icon: isSubmitting
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.my_location_outlined),
-        label: Text(isSubmitting ? 'Sending...' : 'Send my location'),
+          'Share your location while this delivery is active so the learner can track progress.',
+      action: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (eligible)
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Share automatically'),
+              subtitle: Text(
+                sharingActive
+                    ? 'Sharing every 45 seconds while this page is open.'
+                    : 'Location sharing paused',
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textSecondary),
+              ),
+              value: _autoPingState.enabled,
+              onChanged: isBusy
+                  ? null
+                  : (value) => _autoPingController?.setEnabled(value),
+            )
+          else
+            Text(
+              'Location sharing paused',
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary),
+            ),
+          if (_autoPingState.lastSharedAt != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Last shared: ${_formatDateTime(_autoPingState.lastSharedAt!)}',
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary),
+            ),
+          ],
+          if (_autoPingState.inlineError != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _autoPingState.inlineError!,
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textMuted),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          FilledButton.icon(
+            onPressed: isBusy ? null : () => _sendManualLocation(context),
+            icon: isBusy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.my_location_outlined),
+            label: Text(isBusy ? 'Sending...' : 'Send my location'),
+          ),
+        ],
       ),
     );
   }
 
-  Future<void> _sendLocation(BuildContext context, WidgetRef ref) async {
-    try {
-      final capture = await ref
-          .read(currentLocationServiceProvider)
-          .captureCurrentLocation();
+  Future<void> _sendManualLocation(BuildContext context) async {
+    setState(() => _isManualPinging = true);
 
+    try {
       await ref
           .read(driverDeliveryActionControllerProvider.notifier)
-          .sendLocationPing(
-            deliveryId: deliveryId,
-            request: DriverLocationPingRequest(
-              latitude: capture.latitude,
-              longitude: capture.longitude,
-              accuracyMeters: capture.accuracyMeters,
-              heading: capture.heading,
-              speed: capture.speed,
-              capturedAt: capture.capturedAt,
-            ),
-          );
+          .captureAndSendLocationPing(widget.delivery.id);
 
-      if (!context.mounted) {
+      if (!mounted) {
         return;
       }
 
+      setState(() {
+        _autoPingState = _autoPingState.copyWith(
+          lastSharedAt: DateTime.now(),
+          clearInlineError: true,
+        );
+      });
+      if (!context.mounted) {
+        return;
+      }
       showInfoSnackBar(context, 'Location update sent.');
     } on CurrentLocationException catch (error) {
-      if (!context.mounted) {
+      if (!mounted) {
         return;
       }
 
-      showInfoSnackBar(context, error.message);
+      setState(() {
+        _autoPingState = _autoPingState.copyWith(inlineError: error.message);
+      });
     } on ApiException catch (error) {
-      if (!context.mounted) {
+      if (!mounted) {
         return;
       }
 
-      showInfoSnackBar(context, error.displayMessage);
+      setState(() {
+        _autoPingState = _autoPingState.copyWith(
+          inlineError: error.displayMessage,
+        );
+      });
     } catch (error) {
-      if (!context.mounted) {
+      if (!mounted) {
         return;
       }
 
       showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) {
+        setState(() => _isManualPinging = false);
+      }
     }
   }
 }
