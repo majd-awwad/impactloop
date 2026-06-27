@@ -1,0 +1,103 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_radius.dart';
+import '../../../auth/application/auth_controller.dart';
+import '../controllers/supplier_dashboard_providers.dart';
+import '../controllers/supplier_notifications_providers.dart';
+import '../theme/supplier_theme_extension.dart';
+import 'supplier_nav_config.dart';
+import 'supplier_profile_popover.dart';
+import 'supplier_settings_controls.dart';
+
+class SupplierTopBar extends ConsumerWidget {
+  const SupplierTopBar({super.key, required this.currentLocation});
+
+  final String currentLocation;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authControllerProvider);
+    final actionNeededCount = ref.watch(supplierActionNeededCountProvider);
+    final dashboardAsync = ref.watch(supplierDashboardProvider);
+    final compact =
+        MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
+    final unreadCount = actionNeededCount;
+    final colors = context.supplierColors;
+    final l = context.s;
+
+    final user = authState.user;
+    final supplier = dashboardAsync.maybeWhen(
+      data: (dashboard) => dashboard.supplier,
+      orElse: () => null,
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      decoration: context.supplierDecorations.topBar,
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    supplierPageTitle(context, currentLocation),
+                    style: context.supplierTitle().copyWith(fontSize: 20),
+                  ),
+                  Text(
+                    supplierPageSubtitle(context, currentLocation),
+                    style: context.supplierBody(),
+                  ),
+                ],
+              ),
+            ),
+            if (!compact) ...[
+              const SupplierSettingsControls(),
+              const SizedBox(width: AppSpacing.sm),
+            ],
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => context.go('/supplier/notifications'),
+                borderRadius: AppRadius.pillAll,
+                child: Ink(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: context.supplierDecorations.topBarPill,
+                  child: Badge(
+                    isLabelVisible: unreadCount > 0,
+                    label: Text('$unreadCount'),
+                    backgroundColor: colors.accent,
+                    textColor: colors.textOnAccent,
+                    child: Icon(
+                      Icons.notifications_none_rounded,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            SupplierProfileButton(
+              displayName: supplier?.publicName.isNotEmpty == true
+                  ? supplier!.publicName
+                  : user?.displayName ?? l.supplierFallbackName,
+              email: user?.email,
+              supplierType:
+                  supplier?.supplierType ?? user?.supplierProfile?.supplierType,
+              verificationStatus: supplier?.verificationStatus ?? 'PENDING',
+              showSettingsControls: compact,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

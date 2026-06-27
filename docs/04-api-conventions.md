@@ -1,5 +1,9 @@
 # API Conventions
 
+> **Conventions only — not an endpoint inventory.** Response shape, naming, auth headers, and error codes below are still valid.  
+> For **mounted routes as of the current codebase**, use [backend/api-catalog.md](backend/api-catalog.md).  
+> The “First Endpoints To Build” section is **aspirational** and may list routes not yet implemented.
+
 ## Base URL
 
 Local:

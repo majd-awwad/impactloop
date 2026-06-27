@@ -1,0 +1,73 @@
+import type {
+  EmailInvitationPayload,
+  EmailInvitationProvider,
+  EmailSendResult,
+} from './email-invitation-provider.js';
+
+const formatRoleLabel = (role: string): string =>
+  role.charAt(0) + role.slice(1).toLowerCase();
+
+const buildPlainText = (payload: EmailInvitationPayload): string => {
+  const roleLabel = formatRoleLabel(payload.role);
+  const expiresAt = payload.expiresAt.toISOString();
+
+  return [
+    'Hello,',
+    '',
+    `You have been invited to join ImpactLoop as a ${roleLabel}.`,
+    '',
+    'Complete your registration using this secure link:',
+    payload.inviteLink,
+    '',
+    'This invitation expires at:',
+    expiresAt,
+    '',
+    'If you were not expecting this invitation, you can ignore this email.',
+    '',
+    'ImpactLoop Team',
+  ].join('\n');
+};
+
+const buildHtml = (payload: EmailInvitationPayload): string => {
+  const roleLabel = formatRoleLabel(payload.role);
+  const expiresAt = payload.expiresAt.toISOString();
+
+  return `<!DOCTYPE html>
+<html>
+  <body style="font-family: Arial, sans-serif; color: #111827; line-height: 1.5;">
+    <p>Hello,</p>
+    <p>You have been invited to join ImpactLoop as a <strong>${roleLabel}</strong>.</p>
+    <p>Complete your registration using this secure link:</p>
+    <p><a href="${payload.inviteLink}">${payload.inviteLink}</a></p>
+    <p>This invitation expires at:<br /><strong>${expiresAt}</strong></p>
+    <p>If you were not expecting this invitation, you can ignore this email.</p>
+    <p>ImpactLoop Team</p>
+  </body>
+</html>`;
+};
+
+export const buildInvitationEmailContent = (payload: EmailInvitationPayload) => {
+  const roleLabel = formatRoleLabel(payload.role);
+  return {
+    subject: `ImpactLoop invitation: complete your ${roleLabel} registration`,
+    text: buildPlainText(payload),
+    html: buildHtml(payload),
+  };
+};
+
+export class MockEmailInvitationProvider implements EmailInvitationProvider {
+  async sendInvitationEmail(payload: EmailInvitationPayload): Promise<EmailSendResult> {
+    const content = buildInvitationEmailContent(payload);
+
+    console.log('[MockEmailInvitationProvider] Invitation email');
+    console.log(`  to: ${payload.recipientEmail}`);
+    console.log(`  subject: ${content.subject}`);
+    console.log(`  link: ${payload.inviteLink}`);
+    console.log(`  expiresAt: ${payload.expiresAt.toISOString()}`);
+
+    return {
+      sendStatus: 'SENT',
+      providerMessageId: `mock-${Date.now()}`,
+    };
+  }
+}

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/errors/api_exception.dart';
 import '../../application/health_controller.dart';
 
 class HealthPage extends ConsumerWidget {
@@ -31,7 +32,7 @@ class HealthPage extends ConsumerWidget {
                     onRefresh: () => ref.invalidate(healthStatusProvider),
                   ),
                   error: (error, stackTrace) => _HealthErrorCard(
-                    message: error.toString(),
+                    message: userFriendlyErrorMessage(error),
                     onRetry: () => ref.invalidate(healthStatusProvider),
                   ),
                   loading: () => const _HealthLoadingCard(),

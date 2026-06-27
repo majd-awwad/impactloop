@@ -1,0 +1,38 @@
+---
+globs: apps/frontend/lib/**/*.dart
+---
+
+# Flutter Rules
+
+Flutter is used for mobile and web.
+
+Rules:
+- Use feature-first structure.
+- Use Riverpod for state management.
+- Use GoRouter for routing.
+- Use Dio for API calls.
+- Widgets must not call APIs directly.
+- Data layer handles API calls.
+- Application layer handles state/controllers.
+- Presentation layer contains UI.
+- Each feature should support mobile and web layouts.
+- Use shared widgets from shared/widgets.
+- Add loading, empty, and error states.
+
+Before creating UI:
+- Search shared widgets first.
+- Read docs/frontend/reusable-widgets.md.
+- Read docs/frontend/state-management.md for providers/controllers/repositories.
+- Read docs/07-theme-system.md for colors/theme.
+- Verify feature status in docs/08-implementation-status.md.
+
+When adding reusable widgets:
+- Update docs/frontend/reusable-widgets.md.
+
+When changing theme, tokens, colors, or palettes:
+- Update docs/07-theme-system.md.
+
+When changing providers/controllers/repositories:
+- Update docs/frontend/state-management.md.
+
+If unsure whether docs are needed, ask explicitly.

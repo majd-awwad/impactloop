@@ -1,0 +1,16 @@
+---
+globs: apps/backend/src/modules/ai-agent/**/*.ts,apps/frontend/lib/features/ai_agent/**/*.dart
+---
+
+# AI Agent Rules
+
+AI material matching is not implemented in the current codebase.
+
+Rules:
+- Read docs/08-implementation-status.md before starting AI work.
+- Read docs/features/ai-agent.md and docs/flows/ai-material-matching-flow.md.
+- Treat ai_requests, ai_material_matches, ai_credit_wallets, and ai_usage_logs as not implemented unless schema/docs change.
+- Do not describe AI material matching, AI credits, admin portal, moderator portal, delivery workflow, or learner reservation creation as implemented.
+- Keep price-suggestion AI separate from the product AI material-matching agent.
+- Update docs when AI behavior, credit rules, logs, API behavior, schema, or flow changes.
+- If unsure whether docs are needed, ask explicitly.

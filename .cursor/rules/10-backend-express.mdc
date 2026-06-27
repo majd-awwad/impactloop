@@ -1,0 +1,29 @@
+---
+globs: apps/backend/src/**/*.ts
+---
+
+# Backend Express Rules
+
+Backend is modular Express.
+
+Rules:
+- Controllers stay thin.
+- Services contain business logic.
+- Validate request bodies with Zod.
+- Use centralized error middleware.
+- Use auth middleware for protected routes.
+- Use role middleware for role-protected routes.
+- Use Prisma for database access.
+- Use raw SQL only for PostGIS queries if needed.
+- Return consistent API responses:
+  { success, message, data }
+- Never store raw passwords or raw tokens.
+- Hash passwords.
+- Store only token hashes for invitations and password reset.
+
+When backend API behavior changes:
+- Update docs/backend/api-catalog.md
+- Update docs/features/<feature>.md
+- Update docs/flows/<flow>.md if the user journey changed
+- Update docs/08-implementation-status.md if ship status changed
+- If unsure whether docs are needed, ask explicitly
