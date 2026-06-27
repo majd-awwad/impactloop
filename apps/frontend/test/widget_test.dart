@@ -23,11 +23,23 @@ import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/auth/application/auth_navigation.dart';
 import 'package:frontend/features/supplier_portal/data/models/supplier_dashboard.dart';
 import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_dashboard_providers.dart';
+import 'package:frontend/features/learning_hub/application/learning_hub_providers.dart';
 import 'package:go_router/go_router.dart';
+
+import 'support/learning_hub_test_support.dart';
+
+final _learningHubTestOverride = learningHubRepositoryProvider.overrideWithValue(
+  emptyLearningHubRepository,
+);
 
 void main() {
   Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: ImpactLoopApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [_learningHubTestOverride],
+        child: const ImpactLoopApp(),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -43,7 +55,12 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await tester.pumpWidget(ProviderScope(child: MaterialApp(home: page)));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [_learningHubTestOverride],
+        child: MaterialApp(home: page),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -247,6 +264,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _learningHubTestOverride,
           healthStatusProvider.overrideWith(
             (ref) async => HealthStatus(
               status: 'ok',
@@ -296,7 +314,10 @@ void main() {
     );
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          _learningHubTestOverride,
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
         child: const ImpactLoopApp(),
       ),
     );
@@ -334,7 +355,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          _learningHubTestOverride,
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
         child: const ImpactLoopApp(),
       ),
     );
@@ -373,7 +397,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          _learningHubTestOverride,
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
         child: const ImpactLoopApp(),
       ),
     );
@@ -394,7 +421,9 @@ void main() {
   testWidgets('supplier users are redirected from /login to /supplier', (
     tester,
   ) async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stored-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -411,6 +440,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _learningHubTestOverride,
           authRepositoryProvider.overrideWithValue(repository),
           supplierDashboardProvider.overrideWith(
             (ref) async => _testSupplierDashboard(),
@@ -437,7 +467,9 @@ void main() {
   testWidgets('supplier users are redirected from /register to /supplier', (
     tester,
   ) async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stored-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -454,6 +486,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _learningHubTestOverride,
           authRepositoryProvider.overrideWithValue(repository),
           supplierDashboardProvider.overrideWith(
             (ref) async => _testSupplierDashboard(),
@@ -480,7 +513,9 @@ void main() {
   testWidgets('logged out users are redirected from /supplier to /login', (
     tester,
   ) async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stale-refresh');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stale-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -495,6 +530,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _learningHubTestOverride,
           authRepositoryProvider.overrideWithValue(repository),
         ],
         child: const ImpactLoopApp(),
@@ -516,7 +552,9 @@ void main() {
   });
 
   testWidgets('non-supplier users see supplier access denied', (tester) async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stored-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -533,6 +571,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _learningHubTestOverride,
           authRepositoryProvider.overrideWithValue(repository),
         ],
         child: const ImpactLoopApp(),
@@ -560,7 +599,9 @@ void main() {
     );
   });
 
-  testWidgets('materials route renders material discovery page', (tester) async {
+  testWidgets('materials route renders material discovery page', (
+    tester,
+  ) async {
     await pumpApp(tester);
 
     GoRouter.of(
@@ -763,17 +804,9 @@ SupplierDashboard _testSupplierDashboard() {
         'cancelled': 0,
         'expired': 0,
       },
-      'impact': {
-        'reusedMaterials': 0,
-        'reusedQuantity': 0,
-      },
-      'reviews': {
-        'averageRating': 0,
-        'totalReviews': 0,
-      },
-      'notifications': {
-        'unread': 0,
-      },
+      'impact': {'reusedMaterials': 0, 'reusedQuantity': 0},
+      'reviews': {'averageRating': 0, 'totalReviews': 0},
+      'notifications': {'unread': 0},
     },
     'recentMaterials': [],
     'upcomingPickups': [],

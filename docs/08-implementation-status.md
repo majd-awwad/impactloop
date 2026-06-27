@@ -67,7 +67,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `auth` | **Partial** | `/api/auth/*` (incl. forgot/reset API) | API for register/login/me/change-password; forgot-password UI **not built** (`login_form.dart`) | — |
 | `health` | **Implemented** | `/health` | API | — |
 | `landing` | **Implemented** | — | Static UI | [landing.md](features/landing.md) |
-| `home` | **Partial** | — | Suggested materials: API; learning spotlight: **mock** | [home-learner.md](features/home-learner.md) |
+| `home` | **Partial** | — | Suggested materials + learning spotlight: API | [home-learner.md](features/home-learner.md) |
 | `material_discovery` | **Implemented** | `GET /api/materials`, `POST /api/reservations` | API discovery + reservation CTA | — |
 | `materials` | **Partial** | taxonomy/upload APIs | Data layer for supplier add-material; no routes | [materials-listing.md](features/materials-listing.md) |
 | `reservations` | **Partial** | `POST /api/reservations`, `GET /api/reservations/my`, delivery request route | Learner create + My Reservations page with delivery request/status; no cancel | [reservations.md](features/reservations.md) |
@@ -188,7 +188,7 @@ Unresolved risks and **Needs verification** items: [09-open-questions.md](09-ope
 | Locations | [features/locations.md](features/locations.md) | — | **Partial** — public redaction **Needs verification** |
 | Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Backend-only** |
 | Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static; no API |
-| Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — materials API; learning spotlight **mock-only** |
+| Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — materials + learning spotlight API-backed |
 
 ### Phase 2C gap docs (stubs — not implemented proof)
 

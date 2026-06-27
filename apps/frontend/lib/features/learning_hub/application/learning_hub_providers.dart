@@ -1,17 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/network/api_client.dart';
 import '../../materials/data/models/category.dart';
-import '../data/api_learning_hub_repository.dart';
 import '../domain/learning_project_repository.dart';
 import '../domain/learning_projects_result.dart';
 import '../domain/models/learning_project.dart';
 
-final learningHubRepositoryProvider = Provider<LearningProjectRepository>((
-  ref,
-) {
-  return ApiLearningHubRepository(ref.watch(apiClientProvider));
-});
+final learningHubRepositoryProvider = Provider<LearningProjectRepository>(
+  (ref) => throw StateError(
+    'learningHubRepositoryProvider is not configured. '
+    'Override it in ProviderScope (see main.dart).',
+  ),
+);
 
 final projectCategoriesProvider =
     FutureProvider.autoDispose<List<MaterialCategory>>((ref) {

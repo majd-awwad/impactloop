@@ -14,9 +14,9 @@ Requires login (router guard).
 |---------|--------|-------------|
 | Route `/home` | **Implemented** | `HomePage` → `LearnerHomePage` |
 | Welcome hero + greeting | **Implemented** | **API-backed** — `authControllerProvider` user `displayName` |
-| Quick actions | **Partial** | Materials and My Reservations use live routes/APIs; Learning Hub catalog is mock-only until frontend API integration; supplier CTA is active but learner self-upgrade API is **not** complete |
+| Quick actions | **Partial** | Materials and My Reservations use live routes/APIs; Learning Hub catalog is API-backed; supplier CTA is active but learner self-upgrade API is **not** complete |
 | Suggested materials | **Implemented** | **API-backed** — `GET /api/materials` via `ApiMaterialDiscoveryRepository`, first 4 items |
-| Learning spotlight | **Mock-only** | Still uses `learning_hub_mock_data.dart`; Phase 2 will reuse `learningProjectsProvider` from Learning Hub |
+| Learning spotlight | **Implemented** | **API-backed** — `GET /api/learning-projects` via `learningProjectsProvider` (limit 2) |
 | Activity updates | **Partial** | Delivery/reservation entry links to `/learner/reservations`; saved projects remain Coming Soon |
 | Coming later (impact + AI) | **Frontend-only** | Empty / Coming Soon placeholders — no learner-facing APIs |
 
@@ -26,9 +26,9 @@ Requires login (router guard).
 
 1. Learner logs in → redirect `/home` (role-dependent routing in `app_router.dart`).
 2. Page loads suggested materials from discovery API.
-3. Learning spotlight shows 2 **mock preview** projects from `learning_hub_mock_data.dart`.
+3. Learning spotlight loads up to 2 published projects from `learningProjectsProvider` (`GET /api/learning-projects`, `page=1`, `limit=2`).
 4. User taps **Browse Materials** → `/materials` (live API discovery).
-5. User taps **Explore Learning Hub** → `/learning` (route live; catalog still mock-only).
+5. User taps **Explore Learning Hub** → `/learning` (API-backed catalog).
 6. User taps **My Reservations** (Quick actions) → `/learner/reservations` (live reservation + delivery request/status).
 7. User taps **Track reservations and delivery** (Activity updates) → `/learner/reservations` (same destination, delivery-focused copy).
 8. User taps **Become a supplier** → `supplierEntryRouteForUser(user)`:
@@ -46,7 +46,7 @@ Requires login (router guard).
 | Providers | `application/home_suggested_materials_provider.dart` |
 | Widgets | `suggested_materials_section.dart`, `learning_spotlight_section.dart`, `home_action_card.dart`, `coming_soon_card.dart`, `empty_activity_card.dart`, `home_section_header.dart` |
 | Shared nav helper | `auth/application/auth_navigation.dart` — `supplierEntryRouteForUser`, `learnerReservationsRoute` |
-| Cross-feature | `material_discovery/data/api_material_discovery_repository.dart`, `learning_hub/data/learning_hub_mock_data.dart` |
+| Cross-feature | `material_discovery/data/api_material_discovery_repository.dart`, `learning_hub/application/learning_hub_providers.dart` |
 | Router | `app/router/app_router.dart` — `/home`, `/learner/reservations` |
 
 ## Backend files
@@ -65,7 +65,7 @@ No dedicated `/api/home` or learner dashboard endpoint.
 | Method | Path | Section |
 |--------|------|---------|
 | GET | `/api/materials` | Suggested materials (**Implemented**) |
-| GET | `/api/learning-projects` | **Not wired** to learning spotlight |
+| GET | `/api/learning-projects` | Learning spotlight (**Implemented**) — first 2 published projects |
 | POST | `/api/reservations` | **Implemented MVP** — used from material detail, not home |
 | GET | `/api/reservations/my` | My Reservations (**Implemented MVP**) — home links only |
 
@@ -83,7 +83,6 @@ No home-specific tables.
 
 ## Known gaps / Needs verification
 
-- Learning spotlight stays mock until Phase 2 reuses `learningProjectsProvider` from [learning-hub](learning-hub.md); Home must not duplicate API logic.
 - Existing learner-to-supplier role upgrade API is **not implemented**. `/supplier/onboarding` is a status/next-action page, not a completed self-upgrade flow.
 - Suggested materials uses unfiltered discovery list (first 4) — no personalization API.
 - Supplier users may land on `/supplier` after login via `postAuthRouteForUser` but can still open `/home` manually.

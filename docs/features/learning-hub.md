@@ -12,13 +12,13 @@ Browse educational project ideas (components, steps, links) for inspiration. **L
 |-------|--------|-------|
 | Backend `learning-projects` | **Implemented** | Public read list + detail (`PUBLISHED` only in repository) |
 | Flutter list/detail pages | **Partial** | `/learning` and `/learning/:id` use `ApiLearningHubRepository` + Riverpod providers |
-| Home learning spotlight | **Mock-only** | Still reads `learning_hub_mock_data.dart` until Phase 2 |
+| Home learning spotlight | **Implemented** | Reuses `learningProjectsProvider` with `limit: 2` on `/home` |
 | Add draft page | **Mock-only** | Interactive form; **no submit API** |
 | AI panel on detail | **Frontend-only** | `disabled_ai_panel.dart` — placeholder |
 | Ratings on cards/detail | **Partial** | Hidden when backend `ratingSummary` is null (current API returns null) |
 | AI material agent | **Not implemented** | No `ai-agent` module |
 
-**Critical:** Learning Hub main pages are API-backed. Do **not** treat Home spotlight or add-draft as API-backed.
+**Critical:** Learning Hub list/detail and Home spotlight are API-backed. Add-draft remains mock-only.
 
 ## Main user flow (as shipped in Flutter)
 
@@ -28,7 +28,7 @@ Browse educational project ideas (components, steps, links) for inspiration. **L
 4. First list item is shown as featured; remaining items render in the grid.
 5. Tap project → `/learning/:id` → `learningProjectProvider(id)` loads detail from `GET /api/learning-projects/:id`.
 6. Optional: `/learning/add-draft` — mock form only; submit does not persist.
-7. Home `/home` learning spotlight still uses mock preview data (Phase 2).
+7. Home `/home` learning spotlight loads up to 2 published projects via `learningProjectsProvider`.
 
 ## Frontend files
 
@@ -36,7 +36,7 @@ Browse educational project ideas (components, steps, links) for inspiration. **L
 |------|------|
 | Repository | `domain/learning_project_repository.dart`, `data/api_learning_hub_repository.dart`, `data/learning_hub_api_mapper.dart` |
 | Providers | `application/learning_hub_providers.dart` |
-| Legacy mock data | `data/learning_hub_mock_data.dart` (Home spotlight + add-draft only) |
+| Legacy mock data | `data/learning_hub_mock_data.dart` (add-draft + disabled AI copy only) |
 | Theme | `presentation/theme/learning_ui_palette.dart`, `learning_project_visuals.dart` |
 | Domain | `domain/models/learning_project.dart`, `domain/learning_projects_result.dart` |
 | Pages | `presentation/pages/learning_hub_page.dart`, `learning_project_details_page.dart`, `learning_add_draft_page.dart` |
@@ -79,7 +79,7 @@ Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`.
 
 ## Known gaps / Needs verification
 
-- Home learning spotlight still mock-only until it reuses `learningProjectsProvider` (Phase 2).
+- Add-draft page remains mock-only (no submit API).
 - Project IDs are backend UUIDs; old mock slug bookmarks will not resolve.
 - `ratingSummary` is currently null in backend responses — rating UI stays hidden.
 - Project links are display-only (`url_launcher` not in dependencies).
