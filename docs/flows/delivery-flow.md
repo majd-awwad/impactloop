@@ -30,7 +30,7 @@ Learner requests internal delivery after a supplier accepts a reservation.
    - `ON_THE_WAY -> ARRIVED_DROPOFF`
    - `ARRIVED_DROPOFF -> DELIVERED`
 13. Driver may tap **Send my location** while assigned to an active delivery. Flutter captures one foreground location and posts it through `POST /api/driver/deliveries/:id/location-pings`.
-14. `DELIVERED` completes the reservation and marks material `REUSED`.
+14. `DELIVERED` completes the reservation, subtracts `quantityRequested`, and marks material `REUSED` only when remaining quantity reaches `0`.
 15. Learner delivery detail polls `GET /api/deliveries/:id` while the page is open and the delivery is tracking-eligible. When the latest ping includes coordinates, Flutter renders a simple driver marker map plus last update time and accuracy. Raw driver coordinates are not printed as text.
 
 ## Active Delivery Rule

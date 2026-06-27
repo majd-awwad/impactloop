@@ -269,7 +269,7 @@ Child tables: project_images, project_required_components, project_steps, projec
 | priceRuleId | String? | FK → material_price_rules |
 | priceCheckedAt | DateTime? | |
 | maxAllowedPriceAtCheck | Decimal? | |
-| quantity | Decimal | |
+| quantity | Decimal | Remaining physical stock (decremented on reservation completion/delivery) |
 | condition | MaterialCondition | |
 | sourceType | MaterialSourceType | |
 | status | MaterialStatus | default `AVAILABLE` |
@@ -314,7 +314,7 @@ Child tables: project_images, project_required_components, project_steps, projec
 | id | String (cuid) | PK |
 | materialId | String | FK → materials |
 | requesterId, ownerId | String | FK → users |
-| quantityRequested | Decimal | |
+| quantityRequested | Decimal | Held/requested amount for this reservation |
 | message | String? | |
 | status | ReservationStatus | default `PENDING` |
 | pickupWindowStart, pickupWindowEnd | DateTime? | |

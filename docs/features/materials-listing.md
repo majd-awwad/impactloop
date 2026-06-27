@@ -98,9 +98,9 @@ Static: `GET /uploads/materials/*`
 
 ## Reservation Lifecycle Interaction
 
-Learner reservation creation (`POST /api/reservations`) moves a material from `AVAILABLE` to `PENDING_RESERVATION`. Supplier accept moves it to `RESERVED`; supplier reject returns it to `AVAILABLE` when no other active reservation exists; supplier complete moves it to `REUSED`.
+Learner reservation creation (`POST /api/reservations`) places a partial-quantity hold. Material status stays `AVAILABLE` while `availableQuantity > 0`; it may become `PENDING_RESERVATION` when all stock is held. Supplier accept keeps the hold without decrementing stock; supplier decline releases the hold; supplier complete subtracts `quantityRequested` and marks `REUSED` only when remaining quantity reaches `0`.
 
-Supplier edit/delete eligibility blocks `PENDING_RESERVATION`, `RESERVED`, and `REUSED` materials, and also blocks materials with `PENDING`, `ACCEPTED`, or `COMPLETED` reservations.
+Supplier edit is blocked only for `REUSED` materials and when the new quantity is below active held amount. Delete still blocks materials with `PENDING` or `ACCEPTED` reservations and materials with `COMPLETED` reservation history.
 
 ## Database tables
 

@@ -68,11 +68,16 @@ Query validation: `categoriesQuerySchema`
 |--------|------|------|-------|-------------|
 | GET | `/api/reservations/my` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
 | POST | `/api/reservations` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
+| PATCH | `/api/reservations/:id/cancel` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
 | POST | `/api/reservations/:id/delivery` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` + `deliveries` |
 
-`GET /api/reservations/my` returns the authenticated learner's reservations newest first. Items include reservation status, requested quantity, message, timestamps, safe material summary, `material.deliveryAllowed`, supplier display name, pickup window fields, supplier note, and rejection reason. It does not expose precise pickup coordinates.
+`GET /api/reservations/my` returns the authenticated learner's reservations newest first. Items include reservation status, `quantityRequested`, message, timestamps, safe material summary (including `unit`), `material.deliveryAllowed`, supplier display name, pickup window fields, supplier note, and rejection reason. It does not expose precise pickup coordinates.
 
-`POST /api/reservations` creates an exclusive learner reservation request for an `AVAILABLE` material. The request body is `{ materialId, quantityRequested, message? }`. The transaction creates a `PENDING` reservation, writes reservation status history, and moves the material to `PENDING_RESERVATION`. Duplicate active reservations and unavailable material states return `409 CONFLICT`.
+`POST /api/reservations` creates a partial-quantity hold for an available material. Body: `{ materialId, quantityRequested, message? }`. The transaction validates `quantityRequested` against computed `availableQuantity`, blocks a second open reservation by the same learner on the same material, creates a `PENDING` reservation, writes status history, and recomputes material status. Material stays `AVAILABLE` while stock remains reservable.
+
+`PATCH /api/reservations/:id/cancel` cancels a learner-owned `PENDING` reservation, sets `CANCELLED`, writes status history, and releases the held quantity. `ACCEPTED` / terminal statuses return `409 CONFLICT`.
+
+Public material list/detail responses include `quantity` (remaining stock), `availableQuantity` (remaining minus active holds), and `unit`.
 
 `POST /api/reservations/:id/delivery` creates an internal delivery attempt for an accepted learner-owned reservation. Body: `{ dropoffLocation, learnerNote? }`, where `dropoffLocation` includes country/city plus optional area/address/latitude/longitude. The route creates copied pickup/dropoff locations, a `Delivery` row with `WAITING_FOR_DRIVER`, and delivery status history. It rejects non-accepted reservations, delivery-disabled materials, and reservations with an active delivery.
 
@@ -97,7 +102,7 @@ All routes require Bearer JWT + `DRIVER` role and an active `DriverProfile`.
 | PATCH | `/api/driver/deliveries/:id/status` | `driver/driver.routes.ts` |
 | POST | `/api/driver/deliveries/:id/location-pings` | `driver/driver.routes.ts` |
 
-Available jobs return safe area-level pickup/dropoff data only. Accept is transactional and assigns only `WAITING_FOR_DRIVER` unassigned deliveries; active drivers can accept from `OFFLINE` or `AVAILABLE`, and accepting moves the profile to `ON_DELIVERY`. Status updates are assigned-driver-only and must follow `DRIVER_ASSIGNED → ARRIVED_PICKUP → PICKED_UP → ON_THE_WAY → ARRIVED_DROPOFF → DELIVERED`. `DELIVERED` completes the reservation and marks the material `REUSED`. Location pings store decimal latitude/longitude for assigned active deliveries and return numeric coordinates to the driver caller. Learner delivery reads expose only the latest ping, with coordinates limited to tracking-eligible statuses. No realtime stream exists yet.
+Available jobs return safe area-level pickup/dropoff data only. Accept is transactional and assigns only `WAITING_FOR_DRIVER` unassigned deliveries; active drivers can accept from `OFFLINE` or `AVAILABLE`, and accepting moves the profile to `ON_DELIVERY`. Status updates are assigned-driver-only and must follow `DRIVER_ASSIGNED → ARRIVED_PICKUP → PICKED_UP → ON_THE_WAY → ARRIVED_DROPOFF → DELIVERED`. `DELIVERED` completes the reservation, subtracts `quantityRequested` from `material.quantity`, and marks the material `REUSED` only when remaining quantity reaches `0`. Location pings store decimal latitude/longitude for assigned active deliveries and return numeric coordinates to the driver caller. Learner delivery reads expose only the latest ping, with coordinates limited to tracking-eligible statuses. No realtime stream exists yet.
 
 ## Price rule requests — `/api/price-rule-requests`
 
@@ -281,7 +286,7 @@ Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must s
 | PATCH | `/api/supplier/reservations/:id/decline` | `supplier-reservations/supplier-reservations.routes.ts` |
 | PATCH | `/api/supplier/reservations/:id/complete` | `supplier-reservations/supplier-reservations.routes.ts` |
 
-Accept moves a pending reservation to `ACCEPTED` and the material to `RESERVED`. Decline moves the reservation to `REJECTED` and returns the material to `AVAILABLE` when no other active reservation exists. Complete moves a self-pickup reservation to `COMPLETED` and the material to `REUSED`; it is blocked when an active or delivered delivery exists.
+Accept keeps the held quantity and recomputes material status. Decline rejects a pending reservation and releases the hold. Complete subtracts `quantityRequested` from `material.quantity` for self-pickup; material becomes `REUSED` only when remaining quantity reaches `0`. Complete is blocked when an active or delivered delivery exists.
 
 ## Endpoints documented elsewhere but **not mounted**
 

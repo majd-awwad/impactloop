@@ -25,6 +25,8 @@ class MaterialDiscoveryApiMapper {
     final condition = _stringOrFallback(json['condition'], fallback: 'GOOD');
     final status = _stringOrFallback(json['status'], fallback: 'AVAILABLE');
     final quantity = _numberFromDynamic(json['quantity']);
+    final availableQuantity =
+        _numberFromDynamic(json['availableQuantity']) ?? quantity;
     final unit = _stringOrFallback(json['unit'], fallback: 'items');
     final isFree = json['isFree'] == true;
     final price = _numberFromDynamic(json['price']);
@@ -34,7 +36,10 @@ class MaterialDiscoveryApiMapper {
     final ratingSummary = _numberFromDynamic(json['ratingSummary']);
 
     final conditionMeta = _conditionMeta(condition);
-    final statusMeta = _statusMeta(status);
+    final statusMeta = _statusMeta(
+      status,
+      availableQuantity: availableQuantity ?? 0,
+    );
     final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
     final title = _stringOrFallback(
       json['title'],
@@ -49,6 +54,8 @@ class MaterialDiscoveryApiMapper {
       id: _stringOrFallback(json['id'], fallback: ''),
       status: status,
       quantity: quantity ?? 0,
+      availableQuantity: availableQuantity ?? 0,
+      unit: unit,
       // TODO: replace duplicated EN/AR title text when backend exposes bilingual fields.
       title: LocalizedText(en: title, ar: title),
       description: LocalizedText(en: description, ar: description),
@@ -57,7 +64,11 @@ class MaterialDiscoveryApiMapper {
       conditionTone: conditionMeta.tone,
       statusLabel: statusMeta.label,
       statusTone: statusMeta.tone,
-      quantityLabel: _quantityLabel(quantity, unit),
+      quantityLabel: _quantityLabel(
+        quantity: quantity,
+        availableQuantity: availableQuantity,
+        unit: unit,
+      ),
       priceLabel: _priceLabel(isFree: isFree, price: price),
       locationLabel: _locationLabel(city: city, area: area),
       availabilityLabel: LocalizedText(
@@ -174,11 +185,26 @@ class MaterialDiscoveryApiMapper {
     return double.tryParse(value.toString());
   }
 
-  static LocalizedText _quantityLabel(double? quantity, String unit) {
-    final quantityText = quantity == null
-        ? '--'
-        : _formatCompactNumber(quantity);
-    return LocalizedText(en: '$quantityText $unit', ar: '$quantityText $unit');
+  static LocalizedText _quantityLabel({
+    required double? quantity,
+    required double? availableQuantity,
+    required String unit,
+  }) {
+    final totalText = quantity == null ? '--' : _formatCompactNumber(quantity);
+    final available = availableQuantity ?? quantity;
+
+    if (available != null &&
+        quantity != null &&
+        available < quantity &&
+        available > 0) {
+      final availableText = _formatCompactNumber(available);
+      return LocalizedText(
+        en: 'Available: $availableText of $totalText $unit',
+        ar: 'المتاح: $availableText من $totalText $unit',
+      );
+    }
+
+    return LocalizedText(en: '$totalText $unit', ar: '$totalText $unit');
   }
 
   static LocalizedText _priceLabel({
@@ -249,8 +275,18 @@ class MaterialDiscoveryApiMapper {
   }
 
   static ({LocalizedText label, MaterialStatusBadgeTone tone}) _statusMeta(
-    String value,
-  ) {
+    String value, {
+    required double availableQuantity,
+  }) {
+    if (availableQuantity > 0 &&
+        value != 'REUSED' &&
+        value != 'UNAVAILABLE') {
+      return (
+        label: const LocalizedText(en: 'Available', ar: 'متاح'),
+        tone: MaterialStatusBadgeTone.available,
+      );
+    }
+
     switch (value) {
       case 'PENDING_RESERVATION':
         return (

@@ -6,24 +6,30 @@ Current MVP status for material reservations.
 
 ## Intended Purpose
 
-- Learner creates reservation → `PENDING`.
+- Learner creates reservation → `PENDING` with `quantityRequested`.
 - Supplier accepts or rejects; on accept sets pickup window.
-- Material becomes `RESERVED` after acceptance; `REUSED` after completed pickup.
-- MVP is exclusive: one active reservation holds the whole material.
+- Multiple learners may hold different quantities from the same listing while stock remains.
+- Same learner may hold only one open (`PENDING` or `ACCEPTED`) reservation per material.
+- `material.quantity` is remaining physical stock; active holds are summed from open reservations.
+- `availableQuantity = material.quantity - sum(quantityRequested for PENDING/ACCEPTED)`.
+- Material stays publicly `AVAILABLE` while `availableQuantity > 0`.
+- Material becomes `REUSED` only when remaining quantity reaches `0` after completion/delivery.
+- Learner may cancel only while reservation is `PENDING`.
 
 ## Current Code Status
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Database `reservations` + `reservation_status_history` | **Implemented for MVP** | Existing schema used; no migration needed |
-| Learner `POST /api/reservations` | **Implemented MVP** | `modules/reservations` router mounted in `app.ts` |
-| Learner `GET /api/reservations/my` | **Implemented MVP** | Learner-owned reservation list/read model |
-| Learner Flutter feature / reserve UI | **Implemented MVP** | Material detail CTA creates reservation and shows learner reservation state |
-| Learner “My Reservations” UI | **Partial** | `/learner/reservations`; delivery request/status integrated; no cancel |
-| Supplier list/accept/decline/complete | **Partial** | `GET/PATCH /api/supplier/reservations/*`; supplier complete is self-pickup only when delivery exists |
-| Material `RESERVED` on accept | **Implemented** | Accept updates reservation and material in one transaction |
-| Delivery learner UI | **Partial** | Learner can request delivery from accepted reservations and open `/learner/deliveries/:id` with tracking summary/map marker when a latest active ping exists |
-**Overall:** **Partial**. Learner create/read UI + supplier accept/reject/complete exist for an exclusive reservation MVP. Delivery request/status/tracking and driver jobs/status/manual ping UI exist separately in the delivery feature; learner cancel, expiry, reviews, queues, partial stock allocation, and public pickup-location reveal in Flutter are not implemented.
+| Database `reservations` + `reservation_status_history` | **Implemented** | Existing schema; `quantityRequested` already present |
+| Learner `POST /api/reservations` | **Implemented** | Partial-quantity holds + per-learner open-reservation guard |
+| Learner `PATCH /api/reservations/:id/cancel` | **Implemented** | PENDING-only cancel releases hold |
+| Learner `GET /api/reservations/my` | **Implemented** | Includes `quantityRequested` and `material.unit` |
+| Material discovery/detail `availableQuantity` | **Implemented** | Public browse/detail DTO field |
+| Learner reserve UI | **Implemented** | Material detail quantity dialog |
+| Learner “My Reservations” UI | **Partial** | Quantity + PENDING cancel; no detail page |
+| Supplier list/accept/decline/complete | **Partial** | Partial-quantity completion subtracts stock; delivery complete guarded |
+| Delivery learner UI | **Partial** | Request/status/tracking summary exists |
+**Overall:** **Partial**. Partial-quantity holds, learner PENDING cancel, and quantity-aware reserve UI are implemented. Expiry, notifications, QR, reservation detail page, pickup map, and precise pickup-location reveal remain pending.
 
 ## Existing Related Files
 
@@ -35,7 +41,8 @@ Current MVP status for material reservations.
 | `modules/reservations/reservations.service.ts` | Learner reservation create/read business logic |
 | `modules/reservations/reservations.repository.ts` | Transactional create + material status update; learner-owned list query |
 | `modules/reservations/reservations.validation.ts` | Request schema |
-| `modules/reservations/reservations.create.test.ts` | Learner create tests |
+| `modules/reservations/reservations.quantity.ts` | Held/available quantity helpers + status recompute |
+| `modules/reservations/reservations.partial.test.ts` | Partial quantity + cancel tests |
 | `modules/supplier-reservations/supplier-reservations.routes.ts` | Supplier endpoints |
 | `modules/supplier-reservations/supplier-reservations.service.ts` | Supplier reservation business logic |
 | `modules/supplier-reservations/supplier-reservations.repository.ts` | Supplier status transition transactions |
@@ -63,30 +70,65 @@ Current MVP status for material reservations.
 
 ## Status Transitions
 
-- Create: `AVAILABLE` → `PENDING_RESERVATION`
-- Accept: `PENDING_RESERVATION` → `RESERVED`
-- Reject: `PENDING_RESERVATION` → `AVAILABLE`
-- Complete: `RESERVED` → `REUSED`
+- `material.quantity` = remaining physical stock (decremented on supplier complete or driver `DELIVERED`).
+- Holds = sum of `quantityRequested` for `PENDING` + `ACCEPTED` reservations.
+- `availableQuantity = material.quantity - holds` (also exposed on material list/detail APIs).
+- Create hold: validates against `availableQuantity`; keeps material `AVAILABLE` when stock remains; may set `PENDING_RESERVATION` / `RESERVED` only when all stock is held.
+- Cancel / decline / reject: releases hold and recomputes material status; does not decrement `material.quantity`.
+- Accept: keeps hold; does not decrement `material.quantity`.
+- Complete / `DELIVERED`: subtract `quantityRequested`, recompute status; `REUSED` only when quantity reaches `0`.
 
-Active reservation statuses are `PENDING`, `ACCEPTED`, and `COMPLETED`. Rejected/cancelled/expired reservations do not block future reservations.
+`COMPLETED` reservations are excluded from holds because quantity was already subtracted.
 
 ## What Is Missing
 
-- Learner cancel reservation API and Flutter feature.
 - Dedicated learner reservation detail page.
-- Cancel/expiry workflows.
-- Driver delivery workflow UI.
-- Live delivery map/tracking, ETA, cancellation/retry, payment, and reviews.
-- Reviews.
-- Multi-reservation queues and partial stock allocation.
-- Precise pickup-location reveal.
+- Expiry workflow for stale `PENDING` reservations.
 - Generic persisted notification table flow.
+- Live delivery map/tracking stream, ETA, delivery cancellation/retry, payment, and reviews.
+- Precise self-pickup location reveal on learner reservation UI.
+- QR polish.
+
+## Legacy data and dev DB cleanup
+
+This branch changes **forward** stock semantics only. It does not backfill historical completions.
+
+| Existing row state | Risk after deploy |
+|--------------------|-------------------|
+| `COMPLETED` reservations where `material.quantity` was never decremented | `availableQuantity` overstates stock; learners may reserve already-delivered quantity |
+| `REUSED` materials with `quantity > 0` (common in old seeds) | Hidden from discovery; admin CO₂ may over-count until cleaned |
+
+**Before manual QA on a shared dev database:** reseed (`SEED_FORCE_*` / fresh migrate) **or** run a one-time backfill. Example SQL (review on a copy first):
+
+```sql
+-- Subtract completed reservation totals from remaining stock.
+UPDATE materials m
+SET quantity = GREATEST(
+  0,
+  m.quantity - COALESCE(c.completed_total, 0)
+)
+FROM (
+  SELECT material_id, SUM(quantity_requested) AS completed_total
+  FROM reservations
+  WHERE status = 'COMPLETED'
+  GROUP BY material_id
+) c
+WHERE m.id = c.material_id;
+
+-- Clamp REUSED rows that still show remaining stock.
+UPDATE materials
+SET quantity = 0
+WHERE status = 'REUSED' AND quantity > 0;
+```
+
+Recompute `materials.status` / `reused_at` manually for affected rows if needed. Do not run silently in production without review.
 
 ## Risks
 
-- Public discovery pages own local futures, so the detail page refreshes itself and home suggestions/my reservations are invalidated after reservation; existing open discovery pages refresh only by re-entering/reloading.
-- No database unique constraint enforces one active reservation per material; MVP protection is transactional service logic using material status and active-reservation checks.
-- `REUSED` happens on supplier complete for self-pickup or on driver `DELIVERED` for delivery reservations.
+- Public discovery pages own local futures, so the detail page refreshes itself and home suggestions/my reservations are invalidated after reservation/cancel; existing open discovery pages refresh only by re-entering/reloading.
+- No database unique constraint enforces stock limits; protection is serializable transactions plus held-quantity math.
+- `REUSED` is set only when remaining `material.quantity` reaches `0`; `reusedByReservationId` points to the completing reservation.
+- Admin impact metrics still count whole `REUSED` materials; partial depletion may need reservation-level impact later.
 
 ## Related Docs
 

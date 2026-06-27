@@ -25,7 +25,7 @@ Delivery is separate from reservation lifecycle:
 - Service checks and partial unique database indexes enforce one active delivery per reservation and one active delivery per driver.
 - `DriverProfile` is linked to a `User` with `DRIVER` role.
 
-Deprecated compatibility fields remain on `Reservation`: `deliveryRequested`, `deliveryStatus`, `deliveryCost`, `dropoffLocationId`, `driverProfileId`. New delivery code does not use them as the source of truth.
+Deprecated compatibility fields remain on `Reservation`: `deliveryRequested`, `deliveryStatus`, `deliveryCost`, `dropoffLocationId`, `driverProfileId`. `deliveryRequested` is set to `true` when the learner creates a delivery via `POST /api/reservations/:id/delivery`; other legacy fields are not the source of truth.
 
 ## Backend Behavior
 
@@ -71,7 +71,7 @@ Driver assignment:
 Completion:
 
 - Driver status transitions must follow the allowed order.
-- `DELIVERED` completes the reservation and marks the material `REUSED`.
+- `DELIVERED` completes the reservation, subtracts `quantityRequested`, and marks the material `REUSED` only when remaining quantity reaches `0`.
 - Supplier complete is blocked when an active or delivered delivery exists.
 - Self-pickup reservations without delivery still use supplier complete.
 

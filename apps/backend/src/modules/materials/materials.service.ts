@@ -15,6 +15,12 @@ import { decimalToNumber, roundCurrency } from '../../utils/decimal.js';
 import { isOtherCategory } from '../categories/categories.repository.js';
 import * as categoriesRepository from '../categories/categories.repository.js';
 import * as materialTypesRepository from '../material-types/material-types.repository.js';
+import {
+  computeAvailableQuantity,
+  decimalToNumber as quantityDecimalToNumber,
+  getHeldQuantitiesByMaterialIds,
+  toDecimal,
+} from '../reservations/reservations.quantity.js';
 
 import * as materialsRepository from './materials.repository.js';
 import type {
@@ -337,35 +343,47 @@ const mapMaterial = (
   material: NonNullable<
     Awaited<ReturnType<typeof materialsRepository.findMaterialById>>
   >,
-) => ({
-  id: material.id,
-  title: material.title,
-  description: material.description,
-  category: {
-    id: material.category.id,
-    nameEn: material.category.nameEn,
-    nameAr: material.category.nameAr,
-  },
-  condition: material.condition,
-  status: material.status,
-  quantity: decimalToNumber(material.quantity),
-  unit: material.unit,
-  isFree: material.isFree,
-  price: material.price == null ? null : decimalToNumber(material.price),
-  city: material.location.city,
-  area: material.location.area,
-  deliveryAvailable: material.deliveryAllowed,
-  imageUrl: material.images[0]?.imageUrl ?? null,
-  supplierName: resolveSupplierName(material),
-  ratingSummary: null,
-  createdAt: material.createdAt.toISOString(),
-});
+  heldQuantity = toDecimal(0),
+) => {
+  const quantity = toDecimal(material.quantity);
+  const availableQuantity = computeAvailableQuantity(quantity, heldQuantity);
+
+  return {
+    id: material.id,
+    title: material.title,
+    description: material.description,
+    category: {
+      id: material.category.id,
+      nameEn: material.category.nameEn,
+      nameAr: material.category.nameAr,
+    },
+    condition: material.condition,
+    status: material.status,
+    quantity: quantityDecimalToNumber(quantity),
+    availableQuantity: quantityDecimalToNumber(availableQuantity),
+    unit: material.unit,
+    isFree: material.isFree,
+    price: material.price == null ? null : decimalToNumber(material.price),
+    city: material.location.city,
+    area: material.location.area,
+    deliveryAvailable: material.deliveryAllowed,
+    imageUrl: material.images[0]?.imageUrl ?? null,
+    supplierName: resolveSupplierName(material),
+    ratingSummary: null,
+    createdAt: material.createdAt.toISOString(),
+  };
+};
 
 export const getMaterials = async (query: MaterialsQuery) => {
   const result = await materialsRepository.findMaterials(query);
+  const heldByMaterialId = await getHeldQuantitiesByMaterialIds(
+    result.items.map((item) => item.id),
+  );
 
   return {
-    items: result.items.map(mapMaterial),
+    items: result.items.map((item) =>
+      mapMaterial(item, heldByMaterialId.get(item.id) ?? toDecimal(0)),
+    ),
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -382,7 +400,12 @@ export const getMaterialById = async (id: string) => {
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
 
-  return mapMaterial(material);
+  const heldByMaterialId = await getHeldQuantitiesByMaterialIds([material.id]);
+
+  return mapMaterial(
+    material,
+    heldByMaterialId.get(material.id) ?? toDecimal(0),
+  );
 };
 
 export const checkMaterialPrice = async (

@@ -1,6 +1,12 @@
 import { Prisma, type ReservationStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 
+import {
+  applyReservationCompletionToMaterial,
+  recomputeAndUpdateMaterialStatus,
+  runSerializableTransaction,
+} from '../reservations/reservations.quantity.js';
+
 const deliveryBlocksSupplierCompleteStatuses = [
   'WAITING_FOR_DRIVER',
   'DRIVER_ASSIGNED',
@@ -10,34 +16,6 @@ const deliveryBlocksSupplierCompleteStatuses = [
   'ARRIVED_DROPOFF',
   'DELIVERED',
 ] as const;
-
-const isPrismaCode = (error: unknown, code: string) =>
-  typeof error === 'object' &&
-  error !== null &&
-  'code' in error &&
-  (error as { code?: unknown }).code === code;
-
-const runSerializableTransaction = async <T>(
-  operation: (tx: Prisma.TransactionClient) => Promise<T>,
-) => {
-  const maxAttempts = 3;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      return await prisma.$transaction(operation, {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      });
-    } catch (error) {
-      if (attempt < maxAttempts && isPrismaCode(error, 'P2034')) {
-        continue;
-      }
-
-      throw error;
-    }
-  }
-
-  throw new Error('Unable to complete transaction.');
-};
 
 const reservationInclude = {
   material: {
@@ -125,13 +103,6 @@ export const acceptSupplierReservation = async (input: {
       include: reservationInclude,
     });
 
-    await tx.material.update({
-      where: { id: existing.materialId },
-      data: {
-        status: 'RESERVED',
-      },
-    });
-
     await tx.reservationStatusHistory.create({
       data: {
         reservationId: reservation.id,
@@ -142,6 +113,8 @@ export const acceptSupplierReservation = async (input: {
         note: supplierNote ?? 'Accepted by supplier',
       },
     });
+
+    await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
     return { conflict: false as const, reservation };
   });
@@ -180,22 +153,6 @@ export const declineSupplierReservation = async (input: {
       include: reservationInclude,
     });
 
-    const activeReservationCount = await tx.reservation.count({
-      where: {
-        materialId: existing.materialId,
-        status: { in: ['PENDING', 'ACCEPTED', 'COMPLETED'] },
-      },
-    });
-
-    if (activeReservationCount === 0) {
-      await tx.material.update({
-        where: { id: existing.materialId },
-        data: {
-          status: 'AVAILABLE',
-        },
-      });
-    }
-
     await tx.reservationStatusHistory.create({
       data: {
         reservationId: reservation.id,
@@ -206,6 +163,8 @@ export const declineSupplierReservation = async (input: {
         note: reason,
       },
     });
+
+    await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
     return { conflict: false as const, reservation };
   });
@@ -264,13 +223,11 @@ export const completeSupplierReservation = async (input: {
       },
     });
 
-    await tx.material.update({
-      where: { id: existing.materialId },
-      data: {
-        status: 'REUSED',
-        reusedAt: now,
-        reusedByReservationId: reservation.id,
-      },
+    await applyReservationCompletionToMaterial(tx, {
+      materialId: existing.materialId,
+      reservationId: reservation.id,
+      quantityRequested: existing.quantityRequested,
+      completedAt: now,
     });
 
     return { conflict: false as const, reservation };

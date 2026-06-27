@@ -9,6 +9,8 @@ class DiscoveryMaterial {
     required this.id,
     this.status = 'AVAILABLE',
     this.quantity = 1,
+    this.availableQuantity = 1,
+    this.unit = 'piece',
     required this.title,
     required this.description,
     required this.category,
@@ -33,6 +35,8 @@ class DiscoveryMaterial {
   final String id;
   final String status;
   final double quantity;
+  final double availableQuantity;
+  final String unit;
   final LocalizedText title;
   final LocalizedText description;
   final LocalizedText category;

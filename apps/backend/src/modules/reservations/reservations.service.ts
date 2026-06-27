@@ -59,6 +59,7 @@ const mapLearnerReservation = (
       reservation.material.customMaterialType ??
       reservation.material.materialType,
     status: reservation.material.status,
+    unit: reservation.material.unit,
     deliveryAllowed: reservation.material.deliveryAllowed,
     imageUrl: pickMaterialCoverImageUrl(reservation.material.images),
     city: reservation.material.location.city,
@@ -67,6 +68,22 @@ const mapLearnerReservation = (
   supplier: {
     id: reservation.owner.id,
     displayName: resolveSupplierDisplayName(reservation.owner),
+  },
+});
+
+const mapCancelledReservation = (
+  reservation: reservationsRepository.LearnerCancelledReservationRecord,
+) => ({
+  id: reservation.id,
+  status: reservation.status,
+  quantityRequested: Number(reservation.quantityRequested),
+  cancelledAt: reservation.cancelledAt?.toISOString() ?? null,
+  material: {
+    id: reservation.material.id,
+    title: reservation.material.title,
+    status: reservation.material.status,
+    quantity: Number(reservation.material.quantity),
+    unit: reservation.material.unit,
   },
 });
 
@@ -106,7 +123,12 @@ export const createReservation = async (
         'VALIDATION_ERROR',
         { availableQuantity: result.availableQuantity },
       );
-    case 'ACTIVE_RESERVATION_EXISTS':
+    case 'OPEN_RESERVATION_EXISTS':
+      throw new AppError(
+        'You already have an open reservation for this material.',
+        409,
+        'CONFLICT',
+      );
     case 'UNAVAILABLE':
       throw new AppError(
         'This material is no longer available.',
@@ -115,5 +137,36 @@ export const createReservation = async (
       );
     default:
       throw new AppError('Unable to create reservation.', 500, 'INTERNAL_ERROR');
+  }
+};
+
+export const cancelReservation = async (
+  requesterId: string,
+  reservationId: string,
+) => {
+  const result = await reservationsRepository.cancelLearnerReservation({
+    requesterId,
+    reservationId,
+  });
+
+  switch (result.outcome) {
+    case 'CANCELLED':
+      return mapCancelledReservation(result.reservation);
+    case 'NOT_FOUND':
+      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    case 'INVALID_STATUS':
+      throw new AppError(
+        'Only pending reservations can be cancelled.',
+        409,
+        'CONFLICT',
+      );
+    case 'DELIVERY_EXISTS':
+      throw new AppError(
+        'This reservation cannot be cancelled because a delivery exists.',
+        409,
+        'CONFLICT',
+      );
+    default:
+      throw new AppError('Unable to cancel reservation.', 500, 'INTERNAL_ERROR');
   }
 };

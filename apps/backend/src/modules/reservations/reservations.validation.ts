@@ -7,3 +7,9 @@ export const createReservationSchema = z.object({
 });
 
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;
+
+export const reservationIdParamsSchema = z.object({
+  id: z.string().trim().min(1),
+});
+
+export type ReservationIdParams = z.infer<typeof reservationIdParamsSchema>;

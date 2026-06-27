@@ -1653,7 +1653,7 @@ describe("updateSupplierMaterial", () => {
     assert.equal(updated.canEdit, true);
   });
 
-  test("rejects edit for PENDING_RESERVATION status", async () => {
+  test("allows edit for PENDING_RESERVATION when quantity is not below held amount", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
@@ -1661,27 +1661,22 @@ describe("updateSupplierMaterial", () => {
       "PENDING_RESERVATION",
     );
 
-    await assert.rejects(
-      () =>
-        updateSupplierMaterial(ctx.supplierId, material.id, {
-          title: "Blocked",
-          description: "Blocked description",
-          quantity: 1,
-          unit: "piece",
-          condition: "GOOD",
-          pickupAllowed: true,
-          deliveryAllowed: false,
-        }),
-      (error: unknown) => {
-        assert.ok(error instanceof AppError);
-        assert.equal(error.statusCode, 409);
-        assert.match(error.message, /cannot edit/i);
-        return true;
-      },
-    );
+    const updated = await updateSupplierMaterial(ctx.supplierId, material.id, {
+      title: `${TEST_MARKER} pending-updated`,
+      description: "Updated while partially held",
+      quantity: 5,
+      unit: "piece",
+      condition: "GOOD",
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    });
+
+    assert.equal(updated.title, `${TEST_MARKER} pending-updated`);
+    assert.equal(updated.status, "PENDING_RESERVATION");
+    assert.equal(updated.canEdit, true);
   });
 
-  test("rejects edit for RESERVED status", async () => {
+  test("allows edit for RESERVED when quantity is not below held amount", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
@@ -1689,12 +1684,46 @@ describe("updateSupplierMaterial", () => {
       "RESERVED",
     );
 
+    const updated = await updateSupplierMaterial(ctx.supplierId, material.id, {
+      title: `${TEST_MARKER} reserved-updated`,
+      description: "Updated while reserved",
+      quantity: 5,
+      unit: "piece",
+      condition: "GOOD",
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    });
+
+    assert.equal(updated.title, `${TEST_MARKER} reserved-updated`);
+    assert.equal(updated.status, "RESERVED");
+    assert.equal(updated.canEdit, true);
+  });
+
+  test("rejects edit when quantity is below active held amount", async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      "edit-below-held",
+      "AVAILABLE",
+    );
+
+    const reservation = await prisma.reservation.create({
+      data: {
+        materialId: material.id,
+        requesterId: ctx.learnerId,
+        ownerId: ctx.supplierId,
+        quantityRequested: 3,
+        status: "PENDING",
+      },
+    });
+    ctx.createdReservationIds.push(reservation.id);
+
     await assert.rejects(
       () =>
         updateSupplierMaterial(ctx.supplierId, material.id, {
           title: "Blocked",
-          description: "Blocked description",
-          quantity: 1,
+          description: "Quantity too low",
+          quantity: 2,
           unit: "piece",
           condition: "GOOD",
           pickupAllowed: true,
@@ -1702,7 +1731,8 @@ describe("updateSupplierMaterial", () => {
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
-        assert.equal(error.statusCode, 409);
+        assert.equal(error.statusCode, 400);
+        assert.match(error.message, /held by active reservations/i);
         return true;
       },
     );
@@ -1736,12 +1766,12 @@ describe("updateSupplierMaterial", () => {
     );
   });
 
-  test("rejects edit when blocking reservation history exists", async () => {
+  test('rejects edit when completed reservation history exists but allows valid quantity', async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
-      "edit-with-completed",
-      "AVAILABLE",
+      'edit-with-completed',
+      'AVAILABLE',
     );
 
     const reservation = await prisma.reservation.create({
@@ -1750,30 +1780,22 @@ describe("updateSupplierMaterial", () => {
         requesterId: ctx.learnerId,
         ownerId: ctx.supplierId,
         quantityRequested: 1,
-        status: "COMPLETED",
+        status: 'COMPLETED',
         completedAt: new Date(),
       },
     });
     ctx.createdReservationIds.push(reservation.id);
 
-    await assert.rejects(
-      () =>
-        updateSupplierMaterial(ctx.supplierId, material.id, {
-          title: "Blocked",
-          description: "Blocked description",
-          quantity: 1,
-          unit: "piece",
-          condition: "GOOD",
-          pickupAllowed: true,
-          deliveryAllowed: false,
-        }),
-      (error: unknown) => {
-        assert.ok(error instanceof AppError);
-        assert.equal(error.statusCode, 409);
-        assert.match(error.message, /cannot edit/i);
-        return true;
-      },
-    );
+    const updated = await updateSupplierMaterial(ctx.supplierId, material.id, {
+      title: 'Updated after completed reservation',
+      description: 'Updated description',
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    });
+    assert.equal(updated.title, 'Updated after completed reservation');
   });
 });
 

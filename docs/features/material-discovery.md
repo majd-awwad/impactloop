@@ -16,7 +16,9 @@ Public browse and detail view of surplus materials available for reuse. Guests a
 | Flutter `material_discovery` | **Implemented** | Default `ApiMaterialDiscoveryRepository` |
 | Client search/filters | **Frontend-only** | Applied in `materials_discovery_view.dart` on loaded list |
 | Nearby map | **Frontend-only** | `nearby_map_placeholder.dart` — not API-backed |
-| Learner reserve from detail | **Not implemented** | No reservation CTA wired to API |
+| Learner reserve from detail | **Partial** | Quantity dialog + `POST /api/reservations`; see [reservations.md](reservations.md) |
+
+List/detail DTOs include `quantity` (remaining physical stock) and `availableQuantity` (remaining minus active `PENDING`/`ACCEPTED` holds). Cards/detail show available stock when `availableQuantity > 0` even if some quantity is held.
 
 ## Main user flow
 
