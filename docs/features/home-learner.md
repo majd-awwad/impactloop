@@ -16,7 +16,7 @@ Requires login (router guard).
 | Welcome hero + greeting | **Implemented** | **API-backed** — `authControllerProvider` user `displayName` |
 | Quick actions | **Partial** | Materials and My Reservations use live routes/APIs; Learning Hub catalog is mock-only until frontend API integration; supplier CTA is active but learner self-upgrade API is **not** complete |
 | Suggested materials | **Implemented** | **API-backed** — `GET /api/materials` via `ApiMaterialDiscoveryRepository`, first 4 items |
-| Learning spotlight | **Mock-only** | `learning_hub_mock_data.dart` — **not** `GET /api/learning-projects`; API wiring belongs in `learning_hub` first |
+| Learning spotlight | **Mock-only** | Still uses `learning_hub_mock_data.dart`; Phase 2 will reuse `learningProjectsProvider` from Learning Hub |
 | Activity updates | **Partial** | Delivery/reservation entry links to `/learner/reservations`; saved projects remain Coming Soon |
 | Coming later (impact + AI) | **Frontend-only** | Empty / Coming Soon placeholders — no learner-facing APIs |
 
@@ -83,7 +83,7 @@ No home-specific tables.
 
 ## Known gaps / Needs verification
 
-- Learning spotlight stays mock until [learning-hub](learning-hub.md) adds a shared repository/provider; Home must not duplicate API logic.
+- Learning spotlight stays mock until Phase 2 reuses `learningProjectsProvider` from [learning-hub](learning-hub.md); Home must not duplicate API logic.
 - Existing learner-to-supplier role upgrade API is **not implemented**. `/supplier/onboarding` is a status/next-action page, not a completed self-upgrade flow.
 - Suggested materials uses unfiltered discovery list (first 4) — no personalization API.
 - Supplier users may land on `/supplier` after login via `postAuthRouteForUser` but can still open `/home` manually.

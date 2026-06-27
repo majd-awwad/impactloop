@@ -5,7 +5,8 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
-import '../../data/learning_hub_mock_data.dart';
+import '../../presentation/theme/learning_project_visuals.dart';
+import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
 
 class FeaturedProjectCard extends StatelessWidget {
@@ -139,12 +140,14 @@ class _FeaturedContent extends StatelessWidget {
           children: [
             _MetaChip(label: project.difficulty.resolve(context)),
             _MetaChip(label: project.duration.resolve(context)),
-            _MetaChip(label: project.componentCountLabel.resolve(context)),
-            _MetaChip(
-              label:
-                  '${project.ratingValue.toStringAsFixed(1)} (${project.ratingCount} ${project.ratingLabel.resolve(context)})',
-              accent: true,
-            ),
+            if (project.componentCountLabel.en.trim().isNotEmpty)
+              _MetaChip(label: project.componentCountLabel.resolve(context)),
+            if (project.hasRatings)
+              _MetaChip(
+                label:
+                    '${project.ratingValue.toStringAsFixed(1)} (${project.ratingCount} ${project.ratingLabel.resolve(context)})',
+                accent: true,
+              ),
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -237,9 +240,7 @@ class _MetaChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.body(
-          context,
-        ).copyWith(
+        style: AppTextStyles.body(context).copyWith(
           color: accent
               ? isDark
                     ? palette.limeSoft
