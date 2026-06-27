@@ -33,16 +33,20 @@ class AddMaterialPickupSection extends ConsumerStatefulWidget {
     required this.supplierType,
     required this.profilePickupLocation,
     required this.pickupAllowed,
+    required this.deliveryAllowed,
     required this.pickupNotesController,
     required this.onPickupAllowedChanged,
+    required this.onDeliveryAllowedChanged,
     this.onChanged,
   });
 
   final String supplierType;
   final SupplierProfileLocation profilePickupLocation;
   final bool pickupAllowed;
+  final bool deliveryAllowed;
   final TextEditingController pickupNotesController;
   final ValueChanged<bool> onPickupAllowedChanged;
+  final ValueChanged<bool> onDeliveryAllowedChanged;
   final VoidCallback? onChanged;
 
   @override
@@ -450,8 +454,8 @@ class AddMaterialPickupSectionState
         SupplierDarkSwitchTile(
           title: l.deliveryAllowed,
           subtitle: l.deliveryAllowedSubtitle,
-          value: false,
-          onChanged: (_) {},
+          value: widget.deliveryAllowed,
+          onChanged: widget.onDeliveryAllowedChanged,
         ),
         const SupplierFieldGap(),
         SupplierDarkTextArea(

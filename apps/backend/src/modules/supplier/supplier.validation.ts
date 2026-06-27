@@ -129,7 +129,7 @@ export const createSupplierMaterialSchema = z
     price: z.number().nonnegative().optional().nullable(),
     currency: z.literal('NIS').default('NIS'),
     pickupAllowed: z.boolean().default(true),
-    deliveryAllowed: z.literal(false).default(false),
+    deliveryAllowed: z.boolean().default(false),
     pickupNotes: z.string().trim().max(500).optional().nullable(),
     suggestedUses: z.string().trim().max(1000).optional().nullable(),
     imageUrls: z.array(materialImageUrlSchema).min(1).max(5),

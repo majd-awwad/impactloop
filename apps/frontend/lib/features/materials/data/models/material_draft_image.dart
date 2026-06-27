@@ -1,13 +1,12 @@
 import 'dart:typed_data';
 
 class MaterialDraftImage {
-  const MaterialDraftImage.pending({
-    required Uint8List bytes,
+  MaterialDraftImage.pending({
+    required this.bytes,
     required this.fileName,
     required this.mimeType,
-  }) : bytes = bytes,
-       url = null,
-       sizeBytes = bytes.length;
+  }) : url = null,
+       sizeBytes = bytes!.length;
 
   const MaterialDraftImage.uploaded({
     required this.url,

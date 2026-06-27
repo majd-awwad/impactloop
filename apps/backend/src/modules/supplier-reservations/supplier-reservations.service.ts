@@ -178,7 +178,7 @@ export const completeSupplierReservation = async (
 
   if (result.conflict) {
     throw new AppError(
-      'Only accepted reservations can be completed.',
+      'Only accepted self-pickup reservations can be completed by the supplier.',
       409,
       'CONFLICT',
     );

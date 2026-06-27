@@ -13,12 +13,17 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/deliveries/presentation/pages/learner_delivery_detail_page.dart';
+import '../../features/driver_portal/presentation/pages/driver_delivery_detail_page.dart';
+import '../../features/driver_portal/presentation/pages/driver_jobs_page.dart';
+import '../../features/driver_portal/presentation/shell/driver_portal_shell.dart';
 import '../../features/learning_hub/presentation/pages/learning_add_draft_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
+import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
 import '../../features/supplier_portal/application/supplier_verification_access.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_verification_pending_page.dart';
@@ -47,7 +52,7 @@ import '../../features/invitations/presentation/pages/invite_accept_page.dart';
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
 const _adminAccessDeniedRoute = '/admin/access-denied';
 
-enum _RouteAccessLevel { public, authenticated, supplier, admin }
+enum _RouteAccessLevel { public, authenticated, learner, supplier, driver, admin }
 
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   final path = state.matchedLocation;
@@ -108,6 +113,10 @@ bool _isSupplierPortalPath(String path) {
   return path == '/supplier' || path.startsWith('/supplier/');
 }
 
+bool _isDriverPortalPath(String path) {
+  return path == '/driver' || path.startsWith('/driver/');
+}
+
 bool _isAdminPortalPath(String path) {
   if (path == _adminAccessDeniedRoute) {
     return false;
@@ -130,8 +139,17 @@ _RouteAccessLevel _routeAccessForPath(String path) {
     return _RouteAccessLevel.supplier;
   }
 
+  if (_isDriverPortalPath(path)) {
+    return _RouteAccessLevel.driver;
+  }
+
   if (_isAdminPortalPath(path)) {
     return _RouteAccessLevel.admin;
+  }
+
+  if (path == '/learner/reservations' ||
+      path.startsWith('/learner/deliveries/')) {
+    return _RouteAccessLevel.learner;
   }
 
   if (path == '/home' || path == _supplierAccessDeniedRoute) {
@@ -143,6 +161,14 @@ _RouteAccessLevel _routeAccessForPath(String path) {
 
 bool _userHasSupplierRole(AuthState authState) {
   return userHasSupplierRole(authState.user);
+}
+
+bool _userHasLearnerRole(AuthState authState) {
+  return userHasRole(authState.user, 'LEARNER');
+}
+
+bool _userHasDriverRole(AuthState authState) {
+  return userHasDriverRole(authState.user);
 }
 
 bool _userHasAdminRole(AuthState authState) {
@@ -182,6 +208,16 @@ String? _resolveProtectedRoute(
   if (accessLevel == _RouteAccessLevel.supplier &&
       !_userHasSupplierRole(authState)) {
     return _supplierAccessDeniedRoute;
+  }
+
+  if (accessLevel == _RouteAccessLevel.learner &&
+      !_userHasLearnerRole(authState)) {
+    return homeRoute;
+  }
+
+  if (accessLevel == _RouteAccessLevel.driver &&
+      !_userHasDriverRole(authState)) {
+    return homeRoute;
   }
 
   if (accessLevel == _RouteAccessLevel.admin && !_userHasAdminRole(authState)) {
@@ -310,6 +346,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/health', builder: (context, state) => const HealthPage()),
       GoRoute(path: '/home', builder: (context, state) => const HomePage()),
       GoRoute(
+        path: '/learner/reservations',
+        builder: (context, state) => const LearnerReservationsPage(),
+      ),
+      GoRoute(
+        path: '/learner/deliveries/:id',
+        builder: (context, state) =>
+            LearnerDeliveryDetailPage(deliveryId: state.pathParameters['id']!),
+      ),
+      GoRoute(
         path: authCheckingRoute,
         builder: (context, state) => const AuthCheckingPage(),
       ),
@@ -384,6 +429,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: _adminAccessDeniedRoute,
         builder: (context, state) => const AdminAccessDeniedPage(),
+      ),
+      ShellRoute(
+        builder: (context, state, child) => DriverPortalShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/driver',
+            redirect: (context, state) => '/driver/jobs',
+          ),
+          GoRoute(
+            path: '/driver/jobs',
+            builder: (context, state) => const DriverJobsPage(),
+          ),
+          GoRoute(
+            path: '/driver/deliveries/:id',
+            builder: (context, state) => DriverDeliveryDetailPage(
+              deliveryId: state.pathParameters['id']!,
+            ),
+          ),
+        ],
       ),
       ShellRoute(
         builder: (context, state, child) => SupplierShell(child: child),

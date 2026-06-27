@@ -327,6 +327,13 @@ class _QuickActionsSection extends ConsumerWidget {
               onPressed: () => context.go('/learning'),
             ),
             HomeActionCard(
+              icon: Icons.assignment_turned_in_outlined,
+              title: 'My Reservations',
+              description:
+                  'Track supplier responses and pickup windows for requested materials.',
+              onPressed: () => context.go('/learner/reservations'),
+            ),
+            HomeActionCard(
               icon: Icons.storefront_outlined,
               title: 'Become a supplier',
               description:
@@ -336,18 +343,6 @@ class _QuickActionsSection extends ConsumerWidget {
               onPressed: () => showInfoSnackBar(
                 context,
                 'Supplier onboarding will be connected later.',
-              ),
-            ),
-            HomeActionCard(
-              icon: Icons.timeline_outlined,
-              title: 'My activity',
-              description:
-                  'Reservations, saved projects, and recent work will appear here later.',
-              badge: 'Coming soon',
-              enabled: false,
-              onPressed: () => showInfoSnackBar(
-                context,
-                'This feature will be connected later.',
               ),
             ),
           ],
@@ -360,29 +355,25 @@ class _QuickActionsSection extends ConsumerWidget {
 class _FutureActivitySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // TODO: Connect learner reservations when the reservations API is available.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const HomeSectionHeader(
           title: 'Future activity',
           subtitle:
-              'These areas are placeholders and do not fetch reservation, saved-project, or delivery data yet.',
+              'Saved projects and delivery are placeholders; reservations are available today.',
         ),
         const SizedBox(height: AppSpacing.md),
         _ResponsiveGrid(
           minItemWidth: 280,
           itemHeight: 216,
           children: [
-            ComingSoonCard(
+            HomeActionCard(
               icon: Icons.assignment_turned_in_outlined,
-              title: 'My reservations',
+              title: 'My Reservations',
               description:
-                  'Your reserved materials and pickup status will appear here once reservations are connected.',
-              onTap: () => showInfoSnackBar(
-                context,
-                'This feature will be connected later.',
-              ),
+                  'View pending, accepted, rejected, and completed material reservations.',
+              onPressed: () => context.go('/learner/reservations'),
             ),
             ComingSoonCard(
               icon: Icons.bookmark_border_rounded,

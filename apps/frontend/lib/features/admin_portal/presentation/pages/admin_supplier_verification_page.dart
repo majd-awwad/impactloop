@@ -1115,7 +1115,7 @@ class _VerificationDocumentCardState extends State<_VerificationDocumentCard> {
                   height: 140,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) {
+                  errorBuilder: (context, error, stackTrace) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted && !_imagePreviewFailed) {
                         setState(() => _imagePreviewFailed = true);

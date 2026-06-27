@@ -62,6 +62,43 @@ Query validation: `categoriesQuerySchema`
 
 **`POST /api/materials/:id/reports` body:** `{ reason: MaterialReportReason, note?: string }` — `note` required when `reason=OTHER`. Duplicate pending report by same user/material returns 409. Public discovery excludes `UNAVAILABLE` materials (default list status `AVAILABLE`).
 
+## Reservations — `/api/reservations`
+
+| Method | Path | Auth | Roles | Source file |
+|--------|------|------|-------|-------------|
+| GET | `/api/reservations/my` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
+| POST | `/api/reservations` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
+| POST | `/api/reservations/:id/delivery` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` + `deliveries` |
+
+`GET /api/reservations/my` returns the authenticated learner's reservations newest first. Items include reservation status, requested quantity, message, timestamps, safe material summary, `material.deliveryAllowed`, supplier display name, pickup window fields, supplier note, and rejection reason. It does not expose precise pickup coordinates.
+
+`POST /api/reservations` creates an exclusive learner reservation request for an `AVAILABLE` material. The request body is `{ materialId, quantityRequested, message? }`. The transaction creates a `PENDING` reservation, writes reservation status history, and moves the material to `PENDING_RESERVATION`. Duplicate active reservations and unavailable material states return `409 CONFLICT`.
+
+`POST /api/reservations/:id/delivery` creates an internal delivery attempt for an accepted learner-owned reservation. Body: `{ dropoffLocation, learnerNote? }`, where `dropoffLocation` includes country/city plus optional area/address/latitude/longitude. The route creates copied pickup/dropoff locations, a `Delivery` row with `WAITING_FOR_DRIVER`, and delivery status history. It rejects non-accepted reservations, delivery-disabled materials, and reservations with an active delivery.
+
+## Deliveries — `/api/deliveries`
+
+| Method | Path | Auth | Roles | Source file |
+|--------|------|------|-------|-------------|
+| GET | `/api/deliveries/my` | Bearer JWT | `LEARNER` | `deliveries/deliveries.routes.ts` |
+| GET | `/api/deliveries/:id` | Bearer JWT | `LEARNER` | `deliveries/deliveries.routes.ts` |
+
+Learner delivery responses include reservation summary, pickup/dropoff location snapshots, assigned driver summary when present, delivery status history, and `latestDriverPing` for deliveries requested by the authenticated learner. `latestDriverPing` is latest-only and does not include ping history. It includes `capturedAt` and optional `accuracyMeters`; `latitude`/`longitude` are included only by `GET /api/deliveries/:id` for learner-owned deliveries in tracking-eligible statuses (`DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`). `GET /api/deliveries/my` remains summary-only and does not include ping coordinates.
+
+## Driver — `/api/driver`
+
+All routes require Bearer JWT + `DRIVER` role and an active `DriverProfile`.
+
+| Method | Path | Source file |
+|--------|------|-------------|
+| GET | `/api/driver/deliveries/available` | `driver/driver.routes.ts` |
+| GET | `/api/driver/deliveries/active` | `driver/driver.routes.ts` |
+| POST | `/api/driver/deliveries/:id/accept` | `driver/driver.routes.ts` |
+| PATCH | `/api/driver/deliveries/:id/status` | `driver/driver.routes.ts` |
+| POST | `/api/driver/deliveries/:id/location-pings` | `driver/driver.routes.ts` |
+
+Available jobs return safe area-level pickup/dropoff data only. Accept is transactional and assigns only `WAITING_FOR_DRIVER` unassigned deliveries; active drivers can accept from `OFFLINE` or `AVAILABLE`, and accepting moves the profile to `ON_DELIVERY`. Status updates are assigned-driver-only and must follow `DRIVER_ASSIGNED → ARRIVED_PICKUP → PICKED_UP → ON_THE_WAY → ARRIVED_DROPOFF → DELIVERED`. `DELIVERED` completes the reservation and marks the material `REUSED`. Location pings store decimal latitude/longitude for assigned active deliveries and return numeric coordinates to the driver caller. Learner delivery reads expose only the latest ping, with coordinates limited to tracking-eligible statuses. No realtime stream exists yet.
+
 ## Price rule requests — `/api/price-rule-requests`
 
 | Method | Path | Auth | Source file |
@@ -203,9 +240,12 @@ Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must s
 
 `POST /api/supplier/materials` returns **403** when organization supplier is not `APPROVED` (`SUPPLIER_VERIFICATION_REQUIRED`).
 
-`POST /api/supplier/materials` body (pickup-related): `useDefaultPickupLocation` (boolean, default `true`); `pickupLocation` (location object, required when `useDefaultPickupLocation` is `false`). Organization suppliers must use profile default; override is rejected with `ORG_PICKUP_OVERRIDE_NOT_ALLOWED`. Each create stores a **new** `locations` row on the material (copy or override), not the profile row id.
+`POST /api/supplier/materials` requires an `Idempotency-Key` header (safe random string, 16–128 chars). The backend stores the key with scope `SUPPLIER_CREATE_MATERIAL` and the authenticated `userId` in `idempotency_records` (`unique(userId, scope, key)`). The idempotency row, material/location writes, source request publish updates, and stored success response are committed in one transaction. A first successful request creates one material and stores the successful response. A repeat with the same key and identical request body returns the stored material with no new insert. Reusing the same key with a different body returns `409 IDEMPOTENCY_KEY_REUSED`; a simultaneous same-key request still in progress returns `409 IDEMPOTENCY_IN_PROGRESS`. Failed creates roll back the material and idempotency writes, so retrying the same form key is safe.
 
-`PATCH /api/supplier/materials/:id` updates safe listing fields only (`title`, `description`, `quantity`, `unit`, `condition`, `pickupAllowed`, `pickupNotes`, `suggestedUses`). `deliveryAllowed` is forced `false` on update. Edit is allowed only when `canEdit` is true (same lifecycle rules as delete). List/detail responses include `canEdit` / `editBlockedReason` and `canDelete` / `deleteBlockedReason`.
+`POST /api/supplier/materials` body (pickup/delivery related): `useDefaultPickupLocation` (boolean, default `true`); `pickupLocation` (location object, required when `useDefaultPickupLocation` is `false`); `deliveryAllowed` (boolean, default `false`). Organization suppliers must use profile default; override is rejected with `ORG_PICKUP_OVERRIDE_NOT_ALLOWED`. Each create stores a **new** `locations` row on the material (copy or override), not the profile row id.
+
+
+`PATCH /api/supplier/materials/:id` updates safe listing fields only (`title`, `description`, `quantity`, `unit`, `condition`, `pickupAllowed`, `deliveryAllowed`, `pickupNotes`, `suggestedUses`). Edit is allowed only when `canEdit` is true (same lifecycle rules as delete). List/detail responses include `canEdit` / `editBlockedReason` and `canDelete` / `deleteBlockedReason`.
 
 `DELETE /api/supplier/materials/:id` removes an owned listing when `canDelete` is true (409 when blocked).
 
@@ -241,6 +281,8 @@ Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must s
 | PATCH | `/api/supplier/reservations/:id/decline` | `supplier-reservations/supplier-reservations.routes.ts` |
 | PATCH | `/api/supplier/reservations/:id/complete` | `supplier-reservations/supplier-reservations.routes.ts` |
 
+Accept moves a pending reservation to `ACCEPTED` and the material to `RESERVED`. Decline moves the reservation to `REJECTED` and returns the material to `AVAILABLE` when no other active reservation exists. Complete moves a self-pickup reservation to `COMPLETED` and the material to `REUSED`; it is blocked when an active or delivered delivery exists.
+
 ## Endpoints documented elsewhere but **not mounted**
 
 These appear in `docs/04-api-conventions.md` or `docs/02-architecture.md` examples but have **no route file** in the current codebase:
@@ -248,8 +290,6 @@ These appear in `docs/04-api-conventions.md` or `docs/02-architecture.md` exampl
 | Example | Status |
 |---------|--------|
 | `POST /api/materials` | **Not implemented** — use `POST /api/supplier/materials` |
-| `POST /api/reservations` | **Not implemented** |
-| `GET /api/reservations/my` | **Not implemented** |
 | `PATCH /api/reservations/:id/accept` | **Not implemented** — supplier path is `/api/supplier/reservations/:id/accept` |
 | `POST /api/ai/requests` | **Not implemented** |
 | `GET /api/ai/credits/me` | **Not implemented** |
@@ -267,6 +307,9 @@ From `apps/backend/src/app.ts`:
 /api/invitations                 → invitationsRouter
 /api/learning-projects           → learningProjectsRouter
 /api/materials                   → materialsRouter
+/api/reservations                → reservationsRouter
+/api/deliveries                  → deliveriesRouter
+/api/driver                      → driverRouter
 /api/uploads                     → uploadsRouter
 /api/locations                   → locationsRouter
 /api/supplier                    → supplierRouter

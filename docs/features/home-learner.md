@@ -14,14 +14,14 @@ Requires login (router guard).
 |---------|--------|-------------|
 | Route `/home` | **Implemented** | `HomePage` → `LearnerHomePage` |
 | Welcome hero + greeting | **Implemented** | **API-backed** — `authControllerProvider` user `displayName` |
-| Quick actions | **Partial** | Browse materials (**API-backed** route); Learning Hub route is available, but the catalog/cards are mock-only until frontend API integration is completed; supplier onboarding + my activity **disabled** (“Coming soon”) |
+| Quick actions | **Partial** | Browse materials and My Reservations are API-backed; Learning Hub route is available, but the catalog/cards are mock-only until frontend API integration is completed; supplier onboarding **disabled** (“Coming soon”) |
 | Suggested materials | **Implemented** | **API-backed** — `GET /api/materials` via `ApiMaterialDiscoveryRepository`, first 4 items |
 | Learning spotlight | **Mock-only** | `learning_hub_mock_data.dart` — **not** `GET /api/learning-projects` |
-| Future activity (reservations, saved projects, delivery) | **Frontend-only** | Placeholder cards; snackbar “connected later” |
+| Future activity | **Partial** | My Reservations links to `/learner/reservations`; saved projects and delivery remain placeholders |
 | Impact snapshot | **Frontend-only** | Empty placeholder copy |
 | AI material helper | **Not implemented** | Coming soon card only |
 
-**Not documented as implemented:** learner reservation creation, delivery tracking, saved projects, AI agent, impact analytics.
+**Not documented as implemented:** learner reservation cancel, delivery tracking, saved projects, AI agent, impact analytics.
 
 ## Main user flow
 
@@ -30,7 +30,8 @@ Requires login (router guard).
 3. Learning spotlight shows 2 mock projects from learning hub mock data.
 4. User taps **Browse Materials** → `/materials` (live API discovery).
 5. User taps **Explore Learning Hub** → `/learning` (Learning Hub route is available, but the catalog/cards are mock-only until frontend API integration is completed).
-6. Disabled cards show info snackbars for future features.
+6. User taps **My Reservations** → `/learner/reservations` (live reservation status list).
+7. Disabled cards show info snackbars for future features.
 
 ## Frontend files
 
@@ -61,7 +62,8 @@ No dedicated `/api/home` or learner dashboard endpoint.
 |--------|------|---------|
 | GET | `/api/materials` | Suggested materials (**Implemented**) |
 | GET | `/api/learning-projects` | **Not wired** to learning spotlight |
-| POST | `/api/reservations` | **Not implemented** — future activity placeholders |
+| POST | `/api/reservations` | **Implemented MVP** — used from material detail, not home |
+| GET | `/api/reservations/my` | My Reservations (**Implemented MVP**) |
 
 ## Database tables
 

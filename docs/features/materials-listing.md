@@ -20,8 +20,8 @@ The `materials` feature folder has **no routes** — it is consumed by `supplier
 | Image upload | **Implemented** | `POST /api/uploads/material-images` (SUPPLIER); create requires 1-5 image URLs |
 | Category requests | **Implemented** | Create + list + draft under `/api/supplier/category-requests` |
 | Price rule requests | **Partial** | Create (`/api/price-rule-requests`) + supplier drafts; AI suggestion internal to backend |
-| Material create (`POST /api/supplier/materials`) | **Implemented** | Via `supplier_materials_repository.dart`, not in this feature folder |
-| Material update/delete | **Implemented** | `PATCH` / `DELETE` `/api/supplier/materials/:id` via `supplier_my_materials_api.dart`; lifecycle-gated |
+| Material create (`POST /api/supplier/materials`) | **Implemented** | Via `supplier_materials_repository.dart`, with required `Idempotency-Key` |
+| Material update/delete | **Implemented** | `PATCH` / `DELETE` `/api/supplier/materials/:id` via `supplier_my_materials_api.dart`; lifecycle-gated by material status and active reservation history |
 
 ## Relation to supplier material create
 
@@ -51,6 +51,8 @@ AddMaterialPage
 4. If taxonomy/price unknown: submit category request and/or price rule request; later resume from draft query params.
 5. Upload at least one draft image (`POST /api/uploads/material-images`).
 6. Submit create via supplier API (uses uploaded `imageUrls` + taxonomy fields).
+
+Add Material generates one idempotency key per form session and sends it as the `Idempotency-Key` header on final create. The key remains stable across failed retries and is regenerated only for a new/reset form session. Backend idempotency stores the request hash and successful material response under scope `SUPPLIER_CREATE_MATERIAL`, so duplicate clicks or repeated same-key POSTs do not create duplicate rows. The protection does not compare title/material name/category and therefore does not block legitimate similar listings.
 
 ## Frontend files
 
@@ -90,9 +92,15 @@ AddMaterialPage
 | POST | `/api/price-rule-requests` | Bearer JWT (no explicit SUPPLIER role in route) | Price review request |
 | GET | `/api/supplier/price-rule-requests` | Bearer JWT + **SUPPLIER** | List drafts |
 | GET | `/api/supplier/price-rule-requests/:id/draft` | Bearer JWT + **SUPPLIER** | Resume draft |
-| POST | `/api/supplier/materials` | Bearer JWT + **SUPPLIER** | Final create (supplier module) |
+| POST | `/api/supplier/materials` | Bearer JWT + **SUPPLIER** + `Idempotency-Key` | Final create (supplier module) |
 
 Static: `GET /uploads/materials/*`
+
+## Reservation Lifecycle Interaction
+
+Learner reservation creation (`POST /api/reservations`) moves a material from `AVAILABLE` to `PENDING_RESERVATION`. Supplier accept moves it to `RESERVED`; supplier reject returns it to `AVAILABLE` when no other active reservation exists; supplier complete moves it to `REUSED`.
+
+Supplier edit/delete eligibility blocks `PENDING_RESERVATION`, `RESERVED`, and `REUSED` materials, and also blocks materials with `PENDING`, `ACCEPTED`, or `COMPLETED` reservations.
 
 ## Database tables
 
@@ -104,6 +112,7 @@ Static: `GET /uploads/materials/*`
 | `price_rule_requests` | Pending price reviews + AI result JSON |
 | `ai_price_lookup_logs` | Internal AI price lookups — **Needs verification** when written |
 | `locations` | Linked via supplier `defaultPickupLocationId` on create |
+| `idempotency_records` | Final create request keys, hashes, statuses, and stored successful responses |
 
 ## Reusable components
 

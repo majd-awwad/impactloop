@@ -7,6 +7,7 @@ import type {
 } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
+import { AppError } from '../../utils/app-error.js';
 
 import type { UserWithRoles } from '../auth/auth.repository.js';
 
@@ -193,17 +194,32 @@ export const acceptInvitationTransaction = async (input: {
             assignedBy: input.assignedBy,
           },
         },
-        ...(input.driverProfile
+        ...(input.targetRole === 'DRIVER'
           ? {
               driverProfile: {
-                create: {
-                  phone: input.driverProfile.phone,
-                  city: input.driverProfile.city,
-                  area: input.driverProfile.area,
-                  addressLine: input.driverProfile.addressLine,
-                  transportationType: input.driverProfile.transportationType,
-                  availabilityNote: input.driverProfile.availabilityNote,
-                },
+                create: input.driverProfile
+                  ? {
+                      displayName: input.displayName,
+                      phone: input.driverProfile.phone,
+                      city: input.driverProfile.city,
+                      area: input.driverProfile.area,
+                      addressLine: input.driverProfile.addressLine,
+                      transportationType: input.driverProfile.transportationType,
+                      availabilityNote: input.driverProfile.availabilityNote,
+                      vehicleType: input.driverProfile.transportationType,
+                      status: 'ACTIVE',
+                      availability: 'OFFLINE',
+                    }
+                  : {
+                      displayName: input.displayName,
+                      phone: input.phone ?? '',
+                      city: 'Unknown',
+                      area: 'Unknown',
+                      transportationType: 'CAR',
+                      vehicleType: 'UNSPECIFIED',
+                      status: 'ACTIVE',
+                      availability: 'OFFLINE',
+                    },
               },
             }
           : {}),
@@ -213,14 +229,27 @@ export const acceptInvitationTransaction = async (input: {
       },
     });
 
-    await tx.roleInvitation.update({
-      where: { id: input.invitationId },
+    const invitationUpdate = await tx.roleInvitation.updateMany({
+      where: {
+        id: input.invitationId,
+        status: 'PENDING',
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
       data: {
         status: 'ACCEPTED',
         usedAt: new Date(),
         usedByUserId: user.id,
       },
     });
+
+    if (invitationUpdate.count !== 1) {
+      throw new AppError(
+        'Invalid or expired invitation token',
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
 
     return user;
   });

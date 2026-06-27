@@ -8,9 +8,9 @@
 
 | Metric | Value | Source |
 |--------|-------|--------|
-| Prisma models | 28 | `schema.prisma` (`^model ` count) |
-| PostgreSQL tables | 28 | `@@map(...)` on each model |
-| Enums | 24 | [enums.md](enums.md) |
+| Prisma models | 34 | `schema.prisma` (`^model ` count) |
+| PostgreSQL tables | 34 | `@@map(...)` on each model |
+| Enums | 28 | [enums.md](enums.md) |
 | PostGIS | Yes | `Location.location` — `Unsupported("geography(Point,4326)")`; enabled in migration `20260614145408_add_auth_schema` |
 
 ## Domain groups
@@ -20,12 +20,14 @@
 ```
 User ──┬── UserRoleAssignment (many roles per user, @@unique [userId, role])
        ├── AuthToken
+       ├── IdempotencyRecord
        ├── LearnerProfile (0..1)
        ├── SupplierProfile (0..1)
+       ├── DriverProfile (0..1)
        └── RoleInvitation (invited / used relations)
 ```
 
-**Inspected:** `User`, `UserRoleAssignment`, `AuthToken`, `RoleInvitation`, `LearnerProfile`, `SupplierProfile`
+**Inspected:** `User`, `UserRoleAssignment`, `AuthToken`, `IdempotencyRecord`, `RoleInvitation`, `LearnerProfile`, `SupplierProfile`, `DriverProfile`
 
 ### Locations
 
@@ -34,6 +36,7 @@ Location ←── SupplierProfile.defaultPickupLocation
          ←── OrganizationProfile.businessLocation
          ←── Material.location
          ←── Reservation.dropoffLocation
+         ←── Delivery.pickupLocation / dropoffLocation
 ```
 
 PostGIS column `locations.location` stores geography point; lat/long also stored as decimals.
@@ -67,20 +70,24 @@ Material ──┬── MaterialImage
 Material.reusedByReservationId → Reservation (material becomes REUSED)
 ```
 
-### Reservations and delivery fields
+### Reservations and delivery
 
 ```
 Reservation ──┬── ReservationStatusHistory
               ├── Review
               ├── Material (FK)
               ├── requester / owner → User
-              └── dropoffLocation → Location
+              ├── legacy dropoffLocation → Location
+              └── Delivery (many attempts)
 
-Delivery fields on Reservation (no separate delivery_requests table):
-  deliveryRequested, deliveryStatus, deliveryCost, dropoffLocationId, driverProfileId
+Delivery ──┬── DeliveryAssignment
+           ├── DeliveryStatusHistory
+           ├── DeliveryLocationPing
+           ├── pickup/dropoff Location snapshots
+           └── assigned DriverProfile
 ```
 
-**Note:** `driverProfileId` is a nullable string on `Reservation` with **no** `DriverProfile` Prisma model in schema.
+Legacy reservation delivery fields still exist for compatibility: `deliveryRequested`, `deliveryStatus`, `deliveryCost`, `dropoffLocationId`, `driverProfileId`. New delivery code uses `deliveries` as the source of truth. `driverProfileId` on `Reservation` remains a nullable string legacy field; `Delivery.assignedDriverProfileId` is the real relation.
 
 ### Learning hub
 
@@ -107,11 +114,19 @@ PriceRuleRequest → User?, MaterialType?, Category?, Material? (published)
 AiPriceLookupLog (standalone audit of price AI lookups)
 ```
 
+### Idempotency
+
+```
+IdempotencyRecord → User
+```
+
+`idempotency_records` stores per-user operation keys, request hashes, status (`IN_PROGRESS`, `SUCCEEDED`, `FAILED`), optional resource metadata, and successful response JSON. The unique `(userId, scope, key)` constraint is used by supplier material create to prevent duplicate inserts for repeated `Idempotency-Key` submissions without comparing material title/name/category.
+
 ## Tables in schema vs older docs
 
 Tables listed in [03-database.md](../03-database.md) but **absent** from current `schema.prisma`:
 
-`student_profiles`, `driver_profiles`, `admin_profiles`, `user_saved_locations`, `material_pickup_windows`, `delivery_status_history`, `delivery_location_updates`, `project_ai_suggestions`, `ai_requests`, `ai_material_matches`, `ai_credit_wallets`, `ai_usage_logs`, `reports`, `impact_logs`, `impact_summaries`, and removed MVP tables (delivery partners, favorites, etc.)
+`student_profiles`, `admin_profiles`, `user_saved_locations`, `material_pickup_windows`, `delivery_location_updates`, `project_ai_suggestions`, `ai_requests`, `ai_material_matches`, `ai_credit_wallets`, `ai_usage_logs`, `reports`, `impact_logs`, `impact_summaries`, and removed MVP tables (delivery partners, favorites, etc.)
 
 ## Migration history (chronological)
 
@@ -133,10 +148,14 @@ Tables listed in [03-database.md](../03-database.md) but **absent** from current
 | `20260619143000_extend_price_rule_requests_drop_material_type_requests` | Price rule request changes |
 | `20260619180000_add_price_rule_request_listing_draft_json` | Price rule listing drafts |
 | `20260619190000_add_request_published_material_tracking` | Published material tracking |
+| `20260625120000_add_internal_delivery_domain` | Driver profiles, deliveries, assignment/history/location pings |
+| `20260625123000_add_delivery_active_invariant_indexes` | Partial unique indexes for active delivery invariants |
+| `20260627120000_add_idempotency_records` | Generic idempotency records for safe create retries |
 
 ## Design rules (still valid from code)
 
-- No `delivery_requests` table — delivery columns on `reservations`.
+- No `delivery_requests` table — delivery attempts live in `deliveries`.
+- Legacy reservation delivery columns remain but are deprecated compatibility fields.
 - No `users.role` column — use `user_roles`.
 - `role_invitations.token_hash` — not raw tokens.
 - `auth_tokens` for OTP, reset, refresh (hashed).

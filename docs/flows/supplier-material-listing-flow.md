@@ -13,11 +13,11 @@ Supplier chooses **Add material** (`/supplier/materials/new`) or resumes from ap
 ### User path
 
 1. Open add material form in supplier shell.
-2. Choose a category, then select or type material type/name, listing title, condition, quantity, price/free, and pickup options.
+2. Choose a category, then select or type material type/name, listing title, condition, quantity, price/free, pickup options, and whether internal delivery is allowed.
 3. Run price check (paid listings).
 4. Upload at least one image.
 5. Review pickup location — organization: read-only profile pickup; individual/student: profile default or optional per-material override.
-6. Submit → material created → navigate to my materials or detail.
+6. Submit → material created idempotently → success message → navigate to My Materials (`/supplier/materials`).
 
 ### Frontend path
 
@@ -34,25 +34,28 @@ Supplier chooses **Add material** (`/supplier/materials/new`) or resumes from ap
 2. `GET /api/material-types?categoryId=&q=` for category-scoped combobox suggestions
 3. `POST /api/materials/price-check` (authenticated; receives `materialName` and selected `materialTypeId` when available)
 4. `POST /api/uploads/material-images` (SUPPLIER)
-5. `POST /api/supplier/materials` → `supplier.service.createSupplierMaterial` → resolves material pickup location (copy or override) → `supplier.repository.createSupplierMaterial`
+5. `POST /api/supplier/materials` with `Idempotency-Key` → `supplier.service.createSupplierMaterialIdempotent` → `supplier.service.createSupplierMaterial` → resolves material pickup location (copy or override) → `supplier.repository.createSupplierMaterial`
 
-Pickup body fields: `useDefaultPickupLocation` (default `true`), optional `pickupLocation` when false (individual/student only; organization override rejected).
+Pickup/body delivery fields: `pickupAllowed`, `deliveryAllowed`, `useDefaultPickupLocation` (default `true`), optional `pickupLocation` when false (individual/student only; organization override rejected).
 
 May link `sourceCategoryRequestId` / `sourcePriceRuleRequestId` to mark request published.
 
 `materialName` remains the create-contract field used for backend material type/alias matching. The Add Material UI now offers category-scoped autocomplete from active material types and aliases; selecting a result passes `materialTypeId` to price check only. `title` is display-only. `sourceType` is derived server-side from the supplier profile and legacy client values are ignored.
+
+Create is idempotent per authenticated supplier, scope `SUPPLIER_CREATE_MATERIAL`, and `Idempotency-Key`. The backend commits the idempotency row, material/location writes, source request publish updates, and stored successful response in one transaction. Same user + same scope + same key + same payload returns the original material response and does not insert another material. Same key with a different payload returns `409 IDEMPOTENCY_KEY_REUSED`; concurrent same-key processing returns `409 IDEMPOTENCY_IN_PROGRESS`. Failed creates roll back the material and idempotency writes. This does not block separate similar listings with different keys.
 
 ### Database changes
 
 Insert/update:
 
 - `materials`, `material_images`, `material_tags`
+- `idempotency_records` — one record per supplier create submission key
 - `locations` — new row per material create (copy of profile default or override payload)
 - `category_requests` / `price_rule_requests` → `publishedMaterialId`, `publishedAt` when sourced from request
 
 ### Success state
 
-`CreatedMaterial` returned; UI shows success feedback; dashboard/materials providers invalidated.
+`CreatedMaterial` returned; UI shows success feedback, invalidates supplier materials/dashboard/notifications providers, and navigates to `/supplier/materials`.
 
 ### Error states
 
@@ -61,6 +64,9 @@ Insert/update:
 - Price above max allowed → price check / create rejection
 - Upload failure → image section error
 - 403 if not SUPPLIER
+- Missing `Idempotency-Key` → 400 validation error
+- Same key with changed payload → 409 `IDEMPOTENCY_KEY_REUSED`
+- Same key while original request is still processing → 409 `IDEMPOTENCY_IN_PROGRESS`
 
 ### Files involved
 
@@ -128,7 +134,7 @@ Allowed: `AVAILABLE`, `UNAVAILABLE` with no blocking reservations (`PENDING`, `A
 
 ### Not editable
 
-Price, category, material type/name, images, pickup location, status, `deliveryAllowed` (forced false server-side).
+Price, category, material type/name, images, pickup location, and status.
 
 ---
 

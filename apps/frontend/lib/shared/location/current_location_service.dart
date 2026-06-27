@@ -1,0 +1,112 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+
+enum CurrentLocationFailure {
+  permissionDenied,
+  permissionDeniedForever,
+  serviceDisabled,
+  unavailable,
+}
+
+class CurrentLocationException implements Exception {
+  const CurrentLocationException(this.failure);
+
+  final CurrentLocationFailure failure;
+
+  String get message {
+    return switch (failure) {
+      CurrentLocationFailure.permissionDenied ||
+      CurrentLocationFailure.permissionDeniedForever =>
+        'Location permission was denied. Enable location permission or try again.',
+      CurrentLocationFailure.serviceDisabled =>
+        'Location services are disabled. Turn on location services and try again.',
+      CurrentLocationFailure.unavailable =>
+        'Could not get your current location. Please try again.',
+    };
+  }
+
+  @override
+  String toString() => message;
+}
+
+class CurrentLocationCapture {
+  const CurrentLocationCapture({
+    required this.latitude,
+    required this.longitude,
+    this.accuracyMeters,
+    this.heading,
+    this.speed,
+    this.capturedAt,
+  });
+
+  final double latitude;
+  final double longitude;
+  final double? accuracyMeters;
+  final double? heading;
+  final double? speed;
+  final DateTime? capturedAt;
+}
+
+class CurrentLocationService {
+  const CurrentLocationService();
+
+  Future<CurrentLocationCapture> captureCurrentLocation() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw const CurrentLocationException(
+          CurrentLocationFailure.serviceDisabled,
+        );
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw const CurrentLocationException(
+          CurrentLocationFailure.permissionDeniedForever,
+        );
+      }
+
+      if (permission == LocationPermission.denied) {
+        throw const CurrentLocationException(
+          CurrentLocationFailure.permissionDenied,
+        );
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.best,
+          timeLimit: Duration(seconds: 20),
+        ),
+      );
+
+      return CurrentLocationCapture(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracyMeters: position.accuracy,
+        heading: position.heading,
+        speed: position.speed,
+        capturedAt: DateTime.now(),
+      );
+    } on CurrentLocationException {
+      rethrow;
+    } on LocationServiceDisabledException {
+      throw const CurrentLocationException(
+        CurrentLocationFailure.serviceDisabled,
+      );
+    } on PermissionDeniedException {
+      throw const CurrentLocationException(
+        CurrentLocationFailure.permissionDenied,
+      );
+    } catch (_) {
+      throw const CurrentLocationException(CurrentLocationFailure.unavailable);
+    }
+  }
+}
+
+final currentLocationServiceProvider = Provider<CurrentLocationService>((ref) {
+  return const CurrentLocationService();
+});

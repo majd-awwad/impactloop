@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +21,7 @@ import '../../../materials/data/models/material_price_check_result.dart';
 import '../../../materials/data/models/material_type.dart' as material_models;
 import '../../../materials/data/models/price_rule_request.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../application/supplier_my_materials_providers.dart';
 import '../../application/supplier_verification_access.dart';
 import '../../data/supplier_materials_repository.dart';
 import '../controllers/supplier_dashboard_providers.dart';
@@ -33,12 +35,18 @@ import '../widgets/material_image_picker_section.dart';
 import '../widgets/supplier_dark_form_field.dart';
 import '../widgets/supplier_feedback.dart';
 
-const _conditions = [
-  'NEW',
-  'LIKE_NEW',
-  'GOOD',
-  'NEEDS_REPAIR',
-];
+const _conditions = ['NEW', 'LIKE_NEW', 'GOOD', 'NEEDS_REPAIR'];
+
+String _generateIdempotencyKey() {
+  const chars =
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  final random = Random.secure();
+  final suffix = List.generate(
+    32,
+    (_) => chars[random.nextInt(chars.length)],
+  ).join();
+  return 'material-${DateTime.now().microsecondsSinceEpoch}-$suffix';
+}
 
 String _createConditionValue(String? value) {
   return value == 'USED' ? 'GOOD' : value ?? 'GOOD';
@@ -79,6 +87,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   bool _isFree = true;
   bool _unitEditedByUser = false;
   bool _pickupAllowed = true;
+  bool _deliveryAllowed = false;
   bool _showCategoryRequestField = false;
   bool _isSubmittingCategoryRequest = false;
   String? _categoryRequestMessage;
@@ -87,6 +96,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   CreatedMaterial? _createdMaterial;
   bool _isCheckingPrice = false;
   bool _isSubmitting = false;
+  bool _submittedSuccessfully = false;
   bool _isRequestingPriceReview = false;
   bool _isUploadingImages = false;
   String? _priceReviewMessage;
@@ -98,13 +108,16 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   String? _resumeError;
   String? _sourceCategoryRequestId;
   String? _sourcePriceRuleRequestId;
+  String _createMaterialIdempotencyKey = _generateIdempotencyKey();
 
   @override
   void initState() {
     super.initState();
     _sourceCategoryRequestId = widget.categoryRequestId?.trim();
     _sourcePriceRuleRequestId = widget.priceRuleRequestId?.trim();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeResumeFromRoute());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _maybeResumeFromRoute(),
+    );
   }
 
   @override
@@ -116,7 +129,11 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       _resumeError = null;
       _sourceCategoryRequestId = widget.categoryRequestId?.trim();
       _sourcePriceRuleRequestId = widget.priceRuleRequestId?.trim();
-      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeResumeFromRoute());
+      _createMaterialIdempotencyKey = _generateIdempotencyKey();
+      _submittedSuccessfully = false;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _maybeResumeFromRoute(),
+      );
     }
   }
 
@@ -214,7 +231,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     return price != null && price > 0 && price <= _maxAllowedUnitPrice!;
   }
 
-  AddMaterialPreviewPriceStatus? _previewPriceStatus(MaterialCategory? category) {
+  AddMaterialPreviewPriceStatus? _previewPriceStatus(
+    MaterialCategory? category,
+  ) {
     if (_isFree) {
       return null;
     }
@@ -314,8 +333,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     final profile = ref.watch(supplierProfileProvider);
     final categories = ref.watch(materialCategoriesProvider);
     final policy = ref.watch(materialListingPolicyProvider);
-    final compact = MediaQuery.sizeOf(context).width <
-        AppSpacing.supplierLayoutBreakpoint;
+    final compact =
+        MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
 
     return SingleChildScrollView(
       padding: decorations.pagePadding(compact: compact),
@@ -373,9 +392,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   profile.supplier!.supplierType,
                 ),
                 loading: () => Center(
-                  child: CircularProgressIndicator(
-                    color: colors.accent,
-                  ),
+                  child: CircularProgressIndicator(color: colors.accent),
                 ),
                 error: (_, _) => _BlockerCard(
                   title: l.categoriesUnavailable,
@@ -385,9 +402,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                 ),
               );
             },
-            loading: () => Center(
-              child: CircularProgressIndicator(color: colors.accent),
-            ),
+            loading: () =>
+                Center(child: CircularProgressIndicator(color: colors.accent)),
             error: (_, _) => _BlockerCard(
               title: l.profileLoadError,
               message: l.profileLoadErrorMessage,
@@ -424,10 +440,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (_createdMaterial != null) ...[
-            _SuccessCard(
-              material: _createdMaterial!,
-              onAddAnother: _resetForm,
-            ),
+            _SuccessCard(material: _createdMaterial!, onAddAnother: _resetForm),
             const SizedBox(height: AppSpacing.xl),
           ],
           _Card(
@@ -513,7 +526,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                         ],
                         const SizedBox(height: AppSpacing.sm),
                         OutlinedButton.icon(
-                          onPressed: _isSubmittingCategoryRequest ||
+                          onPressed:
+                              _isSubmittingCategoryRequest ||
+                                  _isSubmitting ||
+                                  _submittedSuccessfully ||
                                   !_canSubmitCategoryRequest()
                               ? null
                               : _submitCategoryRequest,
@@ -548,15 +564,11 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                     selectedCategory?.nameEn.toLowerCase() == 'other' &&
                     !_showCategoryRequestField) ...[
                   const SizedBox(height: AppSpacing.md),
-                  _InlineInfo(
-                    message: l.freeOtherAllowed,
-                  ),
+                  _InlineInfo(message: l.freeOtherAllowed),
                 ],
                 if (paidOtherBlocked && !_showCategoryRequestField) ...[
                   const SizedBox(height: AppSpacing.md),
-                  _InlineInfo(
-                    message: l.paidOtherBlockedMessage,
-                  ),
+                  _InlineInfo(message: l.paidOtherBlockedMessage),
                 ],
               ],
             ),
@@ -667,8 +679,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                       controller: _quantityController,
                       label: l.quantity,
                       hint: '8',
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: _positiveNumber,
                       onChanged: (_) => _invalidatePriceCheck(),
                     ),
@@ -707,8 +720,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                     controller: _priceController,
                     label: l.pricePerUnit,
                     hint: '25',
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     validator: _unitPriceValidator,
                     onChanged: (_) => _invalidatePriceCheck(),
                   ),
@@ -722,7 +736,11 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   OutlinedButton.icon(
-                    onPressed: _isCheckingPrice || paidOtherBlocked
+                    onPressed:
+                        _isCheckingPrice ||
+                            _isSubmitting ||
+                            _submittedSuccessfully ||
+                            paidOtherBlocked
                         ? null
                         : _verifyPrice,
                     icon: _isCheckingPrice
@@ -739,9 +757,12 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   const SizedBox(height: AppSpacing.md),
                   AddMaterialPriceVerificationCard(
                     result: _priceCheck!,
-                    isRequestingPriceReview: _isRequestingPriceReview,
+                    isRequestingPriceReview:
+                        _isRequestingPriceReview || _isSubmitting,
                     priceReviewMessage: _priceReviewMessage,
-                    onSubmitPriceReview: _requestPriceReview,
+                    onSubmitPriceReview: _isSubmitting || _submittedSuccessfully
+                        ? () {}
+                        : _requestPriceReview,
                     onSelectSuggestion: _applySuggestion,
                   ),
                 ],
@@ -751,10 +772,12 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
           const SizedBox(height: AppSpacing.lg),
           MaterialImagePickerSection(
             images: _images,
-            isUploading: _isUploadingImages,
+            isUploading: _isUploadingImages || _isSubmitting,
             onPickImages: _pickImages,
             onRemoveImage: (index) {
-              setState(() => _images.removeAt(index));
+              if (!_isSubmitting && !_submittedSuccessfully) {
+                setState(() => _images.removeAt(index));
+              }
             },
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -764,9 +787,12 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               supplierType: supplierType,
               profilePickupLocation: pickupLocation,
               pickupAllowed: _pickupAllowed,
+              deliveryAllowed: _deliveryAllowed,
               pickupNotesController: _pickupNotesController,
               onPickupAllowedChanged: (value) =>
                   setState(() => _pickupAllowed = value),
+              onDeliveryAllowedChanged: (value) =>
+                  setState(() => _deliveryAllowed = value),
               onChanged: () => setState(() {}),
             ),
           ),
@@ -774,7 +800,9 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: _isSubmitting || !canPublish ? null : _publish,
+              onPressed: _isSubmitting || _submittedSuccessfully || !canPublish
+                  ? null
+                  : _publish,
               icon: _isSubmitting
                   ? const SizedBox(
                       width: 18,
@@ -788,9 +816,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
           if (!_isFree && !canPublish) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              paidOtherBlocked
-                  ? l.paidCannotUseOther
-                  : l.paidMustVerifyPrice,
+              paidOtherBlocked ? l.paidCannotUseOther : l.paidMustVerifyPrice,
               style: context.supplierBody(),
             ),
           ],
@@ -818,8 +844,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             unit: _unitController.text.trim(),
             isFree: _isFree,
             price: _priceController.text.trim(),
-            pickupLabel: _pickupSectionKey.currentState?.buildPreviewPickupLabel() ??
+            pickupLabel:
+                _pickupSectionKey.currentState?.buildPreviewPickupLabel() ??
                 pickupLocation.summary,
+            deliveryAllowed: _deliveryAllowed,
             coverImageUrl: _images.isEmpty ? null : _images.first.url,
             priceStatus: _previewPriceStatus(selectedCategory),
           ),
@@ -853,7 +881,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       'isFree': _isFree,
       'currency': 'NIS',
       'pickupAllowed': _pickupAllowed,
-      'deliveryAllowed': false,
+      'deliveryAllowed': _deliveryAllowed,
       if (!_isFree && price != null) 'price': price,
       if (_pickupNotesController.text.trim().isNotEmpty)
         'pickupNotes': _pickupNotesController.text.trim(),
@@ -937,6 +965,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   }
 
   Future<void> _pickImages() async {
+    if (_isSubmitting || _submittedSuccessfully) {
+      return;
+    }
+
     final picked = await MaterialImagePickerSection.pickImages(
       currentCount: _images.length,
       onError: (message) => showSupplierErrorSnackBar(context, message),
@@ -949,7 +981,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     setState(() => _images.addAll(picked));
   }
 
-  bool _canSubmitCategoryRequest() => _categoryRequestValidationMessage() == null;
+  bool _canSubmitCategoryRequest() =>
+      _categoryRequestValidationMessage() == null;
 
   String? _categoryRequestValidationMessage() {
     final materialName = _materialNameController.text.trim();
@@ -983,6 +1016,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   }
 
   Future<void> _submitCategoryRequest() async {
+    if (_isSubmitting || _submittedSuccessfully) {
+      return;
+    }
+
     final validationMessage = _categoryRequestValidationMessage();
     if (validationMessage != null) {
       setState(() => _showCategoryRequestField = true);
@@ -1010,12 +1047,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (!mounted) return;
       setState(() {
         _isSubmittingCategoryRequest = false;
-        _categoryRequestMessage = context.s.categoryRequestSubmittedWithApproval;
+        _categoryRequestMessage =
+            context.s.categoryRequestSubmittedWithApproval;
       });
-      showSupplierInfoSnackBar(
-        context,
-        context.s.categoryRequestSubmitted,
-      );
+      showSupplierInfoSnackBar(context, context.s.categoryRequestSubmitted);
       ref.invalidate(categoryRequestsProvider);
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -1141,15 +1176,20 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     _isFree = isFree;
     if (price is num && !isFree) {
       if (!preserveUserInput || _priceController.text.trim().isEmpty) {
-        _priceController.text =
-            price % 1 == 0 ? price.toInt().toString() : price.toString();
+        _priceController.text = price % 1 == 0
+            ? price.toInt().toString()
+            : price.toString();
       }
     } else if (isFree && !preserveUserInput) {
       _priceController.clear();
     }
 
     _pickupAllowed = json['pickupAllowed'] as bool? ?? true;
-    _setControllerIfEmpty(_pickupNotesController, json['pickupNotes'] as String?);
+    _deliveryAllowed = json['deliveryAllowed'] as bool? ?? false;
+    _setControllerIfEmpty(
+      _pickupNotesController,
+      json['pickupNotes'] as String?,
+    );
     _setControllerIfEmpty(
       _suggestedUsesController,
       json['suggestedUses'] as String?,
@@ -1195,8 +1235,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (draft.status == 'PENDING') {
         setState(() {
           _isResumingDraft = false;
-          _resumeError =
-              'Your category request is still pending admin review.';
+          _resumeError = 'Your category request is still pending admin review.';
         });
         return;
       }
@@ -1216,10 +1255,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       );
 
       if (resolvedCategoryId != null) {
-        final categories =
-            await ref.read(materialCategoriesProvider.future);
-        final categoryExists =
-            categories.any((category) => category.id == resolvedCategoryId);
+        final categories = await ref.read(materialCategoriesProvider.future);
+        final categoryExists = categories.any(
+          (category) => category.id == resolvedCategoryId,
+        );
         if (!categoryExists) {
           setState(() {
             _isResumingDraft = false;
@@ -1350,6 +1389,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   }
 
   Future<void> _requestPriceReview() async {
+    if (_isSubmitting || _submittedSuccessfully) {
+      return;
+    }
+
     if (_showCategoryRequestField) {
       showSupplierErrorSnackBar(
         context,
@@ -1458,8 +1501,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (!mounted) return;
       setState(() {
         _isRequestingPriceReview = false;
-        _priceReviewMessage =
-            result.message ?? context.s.priceReviewSubmitted;
+        _priceReviewMessage = result.message ?? context.s.priceReviewSubmitted;
       });
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -1481,6 +1523,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   }
 
   Future<void> _verifyPrice() async {
+    if (_isSubmitting || _submittedSuccessfully) {
+      return;
+    }
+
     if (_categoryId == null) {
       showSupplierErrorSnackBar(context, context.s.chooseCategoryFirst);
       return;
@@ -1568,10 +1614,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (kDebugMode) {
         debugPrint('[price-check failed] unexpected: $error\n$stackTrace');
       }
-      showSupplierErrorSnackBar(
-        context,
-        'Price verification failed: $error',
-      );
+      showSupplierErrorSnackBar(context, 'Price verification failed: $error');
     }
   }
 
@@ -1588,15 +1631,24 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       if (reason == 'MATERIAL_REVIEW_REQUIRED') {
         return 'This paid material needs admin price review before publishing.';
       }
+      if (reason == 'REQUEST_IN_PROGRESS') {
+        return 'This material is already being published. Please wait a moment.';
+      }
+      if (reason == 'IDEMPOTENCY_KEY_REUSED') {
+        return 'This publish attempt no longer matches the saved request. Reset the form or try again from a new Add Material page.';
+      }
     }
 
     final issues = error.fieldIssues;
     if (issues.isNotEmpty) {
-      return issues.map((issue) => '${issue.path}: ${issue.message}').join('\n');
+      return issues
+          .map((issue) => '${issue.path}: ${issue.message}')
+          .join('\n');
     }
 
-    final statusPrefix =
-        error.statusCode != null ? '[${error.statusCode}] ' : '';
+    final statusPrefix = error.statusCode != null
+        ? '[${error.statusCode}] '
+        : '';
     final message = error.displayMessage.trim();
 
     if (message.isNotEmpty) {
@@ -1607,70 +1659,78 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   }
 
   Future<void> _publish() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
+    if (_isSubmitting || _submittedSuccessfully) {
       return;
     }
-    if (_categoryId == null) {
-      showSupplierErrorSnackBar(
-        context,
-        'Please select a valid category before publishing.',
-      );
-      return;
-    }
-    if (_images.isEmpty) {
-      showSupplierErrorSnackBar(context, context.s.addAtLeastOneMaterialPhoto);
-      return;
-    }
-    final quantity = double.tryParse(_quantityController.text.trim());
-    if (quantity == null || quantity <= 0) return;
-    final price = _isFree ? null : double.tryParse(_priceController.text.trim());
-    if (!_isFree) {
-      final categoriesAsync = ref.read(materialCategoriesProvider);
-      final categories = categoriesAsync.hasValue
-          ? categoriesAsync.value!
-          : <MaterialCategory>[];
-      final selectedCategory = _findCategoryById(categories, _categoryId);
-      if (!_paidListingCanPublish(selectedCategory)) {
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      if (!(_formKey.currentState?.validate() ?? false)) {
+        return;
+      }
+      if (_categoryId == null) {
         showSupplierErrorSnackBar(
           context,
-          _isPaidOtherBlockedForCategory(selectedCategory)
-              ? context.s.paidCannotUseOther
-              : context.s.paidMustVerifyPrice,
+          'Please select a valid category before publishing.',
         );
         return;
       }
-    }
+      if (_images.isEmpty) {
+        showSupplierErrorSnackBar(
+          context,
+          context.s.addAtLeastOneMaterialPhoto,
+        );
+        return;
+      }
+      final quantity = double.tryParse(_quantityController.text.trim());
+      if (quantity == null || quantity <= 0) return;
+      final price = _isFree
+          ? null
+          : double.tryParse(_priceController.text.trim());
+      if (!_isFree) {
+        final categoriesAsync = ref.read(materialCategoriesProvider);
+        final categories = categoriesAsync.hasValue
+            ? categoriesAsync.value!
+            : <MaterialCategory>[];
+        final selectedCategory = _findCategoryById(categories, _categoryId);
+        if (!_paidListingCanPublish(selectedCategory)) {
+          showSupplierErrorSnackBar(
+            context,
+            _isPaidOtherBlockedForCategory(selectedCategory)
+                ? context.s.paidCannotUseOther
+                : context.s.paidMustVerifyPrice,
+          );
+          return;
+        }
+      }
 
-    final pickupError =
-        _pickupSectionKey.currentState?.validateOverrideLocation();
-    if (pickupError != null) {
-      showSupplierErrorSnackBar(context, pickupError);
-      return;
-    }
-    final pickupSubmitData =
-        _pickupSectionKey.currentState?.buildSubmitData() ??
-        const MaterialPickupSubmitData(useDefaultPickupLocation: true);
+      final pickupError = _pickupSectionKey.currentState
+          ?.validateOverrideLocation();
+      if (pickupError != null) {
+        showSupplierErrorSnackBar(context, pickupError);
+        return;
+      }
+      final pickupSubmitData =
+          _pickupSectionKey.currentState?.buildSubmitData() ??
+          const MaterialPickupSubmitData(useDefaultPickupLocation: true);
 
-    setState(() => _isSubmitting = true);
-    List<String> imageUrls;
-    try {
-      imageUrls = await _resolveImageUrls();
-    } on ApiException catch (error) {
-      if (!mounted) return;
-      setState(() => _isSubmitting = false);
-      showSupplierErrorSnackBar(context, _apiErrorMessage(error));
-      return;
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _isSubmitting = false);
-      showSupplierErrorSnackBar(
-        context,
-        'We could not upload the images. Please try again.',
-      );
-      return;
-    }
+      final List<String> imageUrls;
+      try {
+        imageUrls = await _resolveImageUrls();
+      } on ApiException catch (error) {
+        if (!mounted) return;
+        showSupplierErrorSnackBar(context, _apiErrorMessage(error));
+        return;
+      } catch (_) {
+        if (!mounted) return;
+        showSupplierErrorSnackBar(
+          context,
+          'We could not upload the images. Please try again.',
+        );
+        return;
+      }
 
-    try {
       final material = await ref
           .read(supplierMaterialsRepositoryProvider)
           .createMaterial(
@@ -1685,7 +1745,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               isFree: _isFree,
               price: price,
               pickupAllowed: _pickupAllowed,
-              deliveryAllowed: false,
+              deliveryAllowed: _deliveryAllowed,
               pickupNotes: _pickupNotesController.text.trim().isEmpty
                   ? null
                   : _pickupNotesController.text.trim(),
@@ -1695,33 +1755,41 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               imageUrls: imageUrls,
               sourceCategoryRequestId: _sourceCategoryRequestId,
               sourcePriceRuleRequestId: _sourcePriceRuleRequestId,
-              useDefaultPickupLocation: pickupSubmitData.useDefaultPickupLocation,
+              useDefaultPickupLocation:
+                  pickupSubmitData.useDefaultPickupLocation,
               pickupLocation: pickupSubmitData.pickupLocation,
             ),
+            idempotencyKey: _createMaterialIdempotencyKey,
           );
 
+      invalidateSupplierMyMaterials(ref);
       ref.invalidate(supplierDashboardProvider);
       ref.invalidate(supplierNotificationsProvider);
       if (!mounted) return;
       setState(() {
         _createdMaterial = material;
-        _isSubmitting = false;
+        _submittedSuccessfully = true;
       });
       showSupplierInfoSnackBar(context, context.s.materialListedSuccess);
+      context.go('/supplier/materials');
     } on ApiException catch (error) {
       if (!mounted) return;
-      setState(() => _isSubmitting = false);
       showSupplierErrorSnackBar(context, _apiErrorMessage(error));
     } catch (_) {
       if (!mounted) return;
-      setState(() => _isSubmitting = false);
       showSupplierErrorSnackBar(context, context.s.materialCouldNotBeListed);
+    } finally {
+      if (mounted && !_submittedSuccessfully) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
   void _resetForm() {
     setState(() {
       _createdMaterial = null;
+      _submittedSuccessfully = false;
+      _createMaterialIdempotencyKey = _generateIdempotencyKey();
       _materialNameController.clear();
       _selectedMaterialType = null;
       _titleController.clear();
@@ -1737,6 +1805,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       _priceReviewMessage = null;
       _isFree = true;
       _pickupAllowed = true;
+      _deliveryAllowed = false;
     });
     _pickupSectionKey.currentState?.reset();
   }
@@ -1854,8 +1923,7 @@ class _MaterialTypeAutocompleteFieldState
     final colors = context.supplierColors;
     final decorations = context.supplierDecorations;
     final trimmedSearch = _debouncedSearch.trim();
-    final canSearch =
-        widget.categoryId != null && trimmedSearch.length >= 2;
+    final canSearch = widget.categoryId != null && trimmedSearch.length >= 2;
     final searchResult = canSearch
         ? ref.watch(
             materialTypesSearchProvider(
@@ -1879,19 +1947,21 @@ class _MaterialTypeAutocompleteFieldState
           validator: widget.validator,
           onChanged: _handleChanged,
           style: TextStyle(color: colors.textPrimary),
-          decoration: decorations.formFieldDecoration(hint: widget.hint).copyWith(
-            suffixIcon: widget.selectedMaterialType == null
-                ? Icon(Icons.search_outlined, color: colors.textMuted)
-                : Tooltip(
-                    message: l.reviewedPriceAvailable,
-                    child: Icon(
-                      Icons.check_circle_outline,
-                      color: widget.selectedMaterialType!.hasActivePriceRule
-                          ? colors.accent
-                          : colors.amberAccent,
-                    ),
-                  ),
-          ),
+          decoration: decorations
+              .formFieldDecoration(hint: widget.hint)
+              .copyWith(
+                suffixIcon: widget.selectedMaterialType == null
+                    ? Icon(Icons.search_outlined, color: colors.textMuted)
+                    : Tooltip(
+                        message: l.reviewedPriceAvailable,
+                        child: Icon(
+                          Icons.check_circle_outline,
+                          color: widget.selectedMaterialType!.hasActivePriceRule
+                              ? colors.accent
+                              : colors.amberAccent,
+                        ),
+                      ),
+              ),
         ),
         if (widget.categoryId == null) ...[
           const SizedBox(height: AppSpacing.xs),
@@ -2060,10 +2130,7 @@ class _MaterialTypePriceRuleBadge extends StatelessWidget {
       decoration: context.supplierDecorations.badge(
         background: color.withValues(alpha: 0.16),
       ),
-      child: Text(
-        label,
-        style: context.supplierChip().copyWith(color: color),
-      ),
+      child: Text(label, style: context.supplierChip().copyWith(color: color)),
     );
   }
 }
@@ -2087,10 +2154,7 @@ class _Header extends StatelessWidget {
         children: [
           Text(l.navAddMaterial, style: context.supplierDisplay()),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            l.subtitleAddMaterial,
-            style: context.supplierBody(),
-          ),
+          Text(l.subtitleAddMaterial, style: context.supplierBody()),
           const SizedBox(height: AppSpacing.lg),
           Wrap(
             spacing: AppSpacing.sm,
@@ -2164,22 +2228,28 @@ class _ResponsiveRow extends StatelessWidget {
     final wide = MediaQuery.sizeOf(context).width >= 760;
     if (!wide) {
       return Column(
-        children: children
-            .expand((child) => [child, const SizedBox(height: AppSpacing.md)])
-            .toList()
-          ..removeLast(),
+        children:
+            children
+                .expand(
+                  (child) => [child, const SizedBox(height: AppSpacing.md)],
+                )
+                .toList()
+              ..removeLast(),
       );
     }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: children
-          .expand((child) => [
-                Expanded(child: child),
-                const SizedBox(width: AppSpacing.md),
-              ])
-          .toList()
-        ..removeLast(),
+      children:
+          children
+              .expand(
+                (child) => [
+                  Expanded(child: child),
+                  const SizedBox(width: AppSpacing.md),
+                ],
+              )
+              .toList()
+            ..removeLast(),
     );
   }
 }
@@ -2282,10 +2352,7 @@ class _InlineInfo extends StatelessWidget {
 }
 
 class _SuccessCard extends StatelessWidget {
-  const _SuccessCard({
-    required this.material,
-    required this.onAddAnother,
-  });
+  const _SuccessCard({required this.material, required this.onAddAnother});
 
   final CreatedMaterial material;
   final VoidCallback onAddAnother;
@@ -2304,9 +2371,7 @@ class _SuccessCard extends StatelessWidget {
         children: [
           Text(
             l.materialListedSuccess,
-            style: context.supplierTitle().copyWith(
-              color: colors.accent,
-            ),
+            style: context.supplierTitle().copyWith(color: colors.accent),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
