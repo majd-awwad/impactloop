@@ -171,6 +171,17 @@ Verification document upload: PDF/JPG/JPEG/PNG, max 5MB. Returns `{ url, fileNam
 | PATCH | `/api/admin/material-reports/:id/resolve` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | PATCH | `/api/admin/material-reports/:id/reject` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | PATCH | `/api/admin/material-reports/:id/hide-material` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/people/summary` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/people` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/people/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/people/:id/suspend` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/people/:id/reactivate` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+
+**Admin people list query:** `tab` (`ALL` \| `LEARNERS` \| `SUPPLIERS` \| `DRIVERS` \| `MODERATORS` \| `ADMINS`), `search`, `status`, `page`, `limit`.
+
+**Summary counts:** unique `users` rows per role filter (`prisma.user.count`); `learners` = users with `LEARNER` role and without `SUPPLIER`/`DRIVER`/`MODERATOR`/`ADMIN`. Invitations are not counted as users.
+
+**People management safety (MVP):** No delete-user or manual role-edit endpoints. `suspend` / `reactivate` are blocked for the acting admin (self), any user with `ADMIN` role, and the last active admin account. Admin tab is view-only in Flutter (no suspend button). Pending admin invitations are still revoked via `/api/admin/invitations/:id/revoke`. Future admin suspension should require `SUPER_ADMIN` (not implemented).
 
 **`GET /api/admin/supplier-verifications` query:** `status` (`PENDING` \| `APPROVED` \| `REJECTED` \| `CHANGES_REQUESTED`), `search`, `supplierType` (`WORKSHOP` \| `FACTORY` \| `EDUCATIONAL_INSTITUTION`), `city`, `page`, `limit`.
 

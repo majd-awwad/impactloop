@@ -47,7 +47,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `reservations` | **Partial** | Learner create + my reservations read; learner delivery request route mounted; no learner cancel |
 | `deliveries` | **Partial** | Learner delivery request/read backed by `deliveries`; Flutter learner request/status UI, latest ping summary, and polling map marker exist; driver jobs/status UI exists; no realtime stream |
 | `driver` | **Partial** | Driver available/active jobs, accept, status updates, location pings; Flutter driver portal covers jobs/status and manual foreground ping only |
-| `admin` | **Partial** | Dashboard + invitations + supplier verification review + approvals + materials moderation; other admin pages placeholder |
+| `admin` | **Partial** | Dashboard + invitations + supplier verification review + approvals + materials moderation + people management; other admin pages placeholder |
 | `supplier` | **Implemented** | Dashboard, profile, materials |
 | `category-requests` | **Implemented** | Under `/api/supplier` |
 | `price-rule-requests` | **Implemented** | Create + supplier drafts |
@@ -75,7 +75,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `driver_portal` | **Partial** | `/api/driver/deliveries/*` | Driver job board, accept action, active delivery detail, ordered status updates, manual location ping; no live map/background pings | [delivery.md](features/delivery.md) |
 | `learning_hub` | **Partial** | `GET /api/learning-projects` implemented | **Frontend mock-only** — `learning_hub_mock_data.dart`, not wired to API | — |
 | `supplier_portal` | **Partial** | `/api/supplier/*` + verification submit/status | API repositories; material CRUD with lifecycle + **org verification gating** (pending/rejected/changes block Add Material) | — |
-| `admin_portal` | **Partial** | Dashboard + invitations + supplier verification + approvals + materials moderation UI | [admin.md](features/admin.md) |
+| `admin_portal` | **Partial** | Dashboard + invitations + supplier verification + approvals + materials moderation + people management UI | [admin.md](features/admin.md) |
 
 **Dev seed admin (local testing):** `admin@impactloop.test` / `AdminPassword123!` — created idempotently by `prisma/seeds/seed-admin.ts`. After login, `postAuthRouteForUser` routes ADMIN users to `/admin`.
 | `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH | `supplier_portal` profile/map | [locations.md](features/locations.md) |

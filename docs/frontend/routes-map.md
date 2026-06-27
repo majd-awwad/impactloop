@@ -92,8 +92,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/supplier/verification-status` | `SupplierVerificationStatusPage` | supplier | Rejected / changes requested + resubmit |
 | `/admin/access-denied` | `AdminAccessDeniedPage` | authenticated | |
 | `/admin` | `AdminOverviewPage` | admin | Inside `AdminShell` |
-| `/admin/users` | `AdminPlaceholderPage` | admin | Placeholder |
-| `/admin/suppliers` | `AdminPlaceholderPage` | admin | Placeholder |
+| `/admin/users` | `AdminPeoplePage` | admin | People management; optional `?tab=SUPPLIERS` etc. |
+| `/admin/suppliers` | redirect → `/admin/users?tab=SUPPLIERS` | admin | Legacy path; no standalone page |
 | `/admin/supplier-verification` | `AdminSupplierVerificationPage` | admin | Review org supplier documents |
 | `/admin/materials` | `AdminMaterialsPage` | admin | Materials moderation + reports |
 | `/admin/approvals` | `AdminApprovalsPage` | admin | Category + price approvals |
@@ -109,7 +109,6 @@ From `admin_sidebar.dart`:
 |-----------|-------|
 | Overview | `/admin` |
 | Users | `/admin/users` |
-| Suppliers | `/admin/suppliers` |
 | Supplier Verification | `/admin/supplier-verification` |
 | Materials | `/admin/materials` |
 | Approvals | `/admin/approvals` |

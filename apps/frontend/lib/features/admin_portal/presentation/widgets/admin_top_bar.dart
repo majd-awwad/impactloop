@@ -97,7 +97,6 @@ class AdminTopBar extends ConsumerWidget {
 String adminPageTitle(AdminL10n l, String location) {
   if (location == '/admin') return l.overviewPageTitle;
   if (location.startsWith('/admin/users')) return l.navUsers;
-  if (location.startsWith('/admin/suppliers')) return l.navSuppliers;
   if (location.startsWith('/admin/supplier-verification')) {
     return l.navSupplierVerification;
   }

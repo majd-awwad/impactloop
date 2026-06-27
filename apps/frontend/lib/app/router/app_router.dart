@@ -44,6 +44,7 @@ import '../../features/admin_portal/presentation/pages/admin_overview_page.dart'
 import '../../features/admin_portal/presentation/pages/admin_placeholder_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_materials_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_people_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_supplier_verification_page.dart';
 import '../../features/admin_portal/presentation/widgets/admin_shell.dart';
 import '../../features/invitations/presentation/pages/invite_accept_page.dart';
@@ -519,13 +520,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/users',
-            builder: (context, state) =>
-                const AdminPlaceholderPage(title: 'Users'),
+            builder: (context, state) => AdminPeoplePage(
+              initialTab: state.uri.queryParameters['tab'],
+            ),
           ),
           GoRoute(
             path: '/admin/suppliers',
-            builder: (context, state) =>
-                const AdminPlaceholderPage(title: 'Suppliers'),
+            redirect: (context, state) => '/admin/users?tab=SUPPLIERS',
           ),
           GoRoute(
             path: '/admin/supplier-verification',

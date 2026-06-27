@@ -75,6 +75,19 @@ import {
   submitMaterialReportSchema,
 } from '../admin-materials/admin-materials.validation.js';
 
+import {
+  getAdminPerson,
+  getAdminPeopleSummary,
+  listAdminPeople,
+  reactivateAdminPerson,
+  suspendAdminPerson,
+} from '../admin-people/admin-people.controller.js';
+import {
+  adminPeopleListQuerySchema,
+  adminPeopleUserIdParamSchema,
+  suspendUserSchema,
+} from '../admin-people/admin-people.validation.js';
+
 export const adminRouter = Router();
 
 adminRouter.get(
@@ -307,5 +320,45 @@ adminRouter.patch(
   validate(adminMaterialReportIdParamSchema, 'params'),
   validate(hideMaterialFromReportSchema),
   asyncHandler(hideMaterialFromAdminReport),
+);
+
+adminRouter.get(
+  '/people/summary',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  asyncHandler(getAdminPeopleSummary),
+);
+
+adminRouter.get(
+  '/people',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminPeopleListQuerySchema, 'query'),
+  asyncHandler(listAdminPeople),
+);
+
+adminRouter.get(
+  '/people/:id',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminPeopleUserIdParamSchema, 'params'),
+  asyncHandler(getAdminPerson),
+);
+
+adminRouter.patch(
+  '/people/:id/suspend',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminPeopleUserIdParamSchema, 'params'),
+  validate(suspendUserSchema),
+  asyncHandler(suspendAdminPerson),
+);
+
+adminRouter.patch(
+  '/people/:id/reactivate',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminPeopleUserIdParamSchema, 'params'),
+  asyncHandler(reactivateAdminPerson),
 );
 
