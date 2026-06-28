@@ -9,15 +9,17 @@ class CategoriesApi {
 
   final Dio _client;
 
-  Future<List<MaterialCategory>> fetchMaterialCategories({
+  Future<List<MaterialCategory>> fetchCategories({
+    String type = 'MATERIAL',
+    bool rootOnly = true,
     bool discoveryOnly = false,
   }) async {
     try {
       final response = await _client.get<Map<String, dynamic>>(
         '/api/categories',
         queryParameters: {
-          'type': 'MATERIAL',
-          'rootOnly': true,
+          'type': type,
+          if (rootOnly) 'rootOnly': true,
           if (discoveryOnly) 'discoveryOnly': true,
         },
       );
@@ -44,5 +46,15 @@ class CategoriesApi {
     } on DioException catch (error) {
       throw mapDioException(error);
     }
+  }
+
+  Future<List<MaterialCategory>> fetchMaterialCategories({
+    bool discoveryOnly = false,
+  }) {
+    return fetchCategories(type: 'MATERIAL', discoveryOnly: discoveryOnly);
+  }
+
+  Future<List<MaterialCategory>> fetchProjectCategories() {
+    return fetchCategories(type: 'PROJECT');
   }
 }

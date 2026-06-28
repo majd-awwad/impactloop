@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/material_listing_repository.dart';
+import '../data/material_listing_data_providers.dart';
 import '../data/models/category_request.dart';
 import '../data/models/material_draft_image.dart';
 import '../data/models/material_listing_policy.dart';

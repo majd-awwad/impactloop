@@ -19,6 +19,7 @@ Current Riverpod and data-flow inventory. This documents existing code organizat
 - `apps/frontend/lib/features/reservations/application/reservation_create_controller.dart`
 - `apps/frontend/lib/features/reservations/application/my_reservations_provider.dart`
 - `apps/frontend/lib/features/materials/application/material_listing_providers.dart`
+- `apps/frontend/lib/features/materials/data/material_listing_data_providers.dart`
 - `apps/frontend/lib/features/materials/data/material_listing_repository.dart`
 - `apps/frontend/lib/features/supplier_portal/application/supplier_my_materials_providers.dart`
 - `apps/frontend/lib/features/supplier_portal/data/supplier_dashboard_repository.dart`
@@ -142,7 +143,7 @@ These providers keep UI selection state separate from the async data providers t
 Current repository providers live mostly in feature `data/` files:
 
 - Auth: `authRepositoryProvider`
-- Materials listing: `materialListingRepositoryProvider` (API client providers are co-located in `material_listing_repository.dart` today)
+- Materials listing: `materialListingRepositoryProvider` in `material_listing_data_providers.dart`
 - Supplier dashboard: `supplierDashboardRepositoryProvider`
 - Supplier profile: `supplierProfileRepositoryProvider`
 - Supplier requests: `supplierRequestsRepositoryProvider`
@@ -195,5 +196,4 @@ Keep invalidation close to the mutation that changes server state.
 - `material_discovery` has repository classes but no central provider for list/detail fetch; it **does** use `discoveryMaterialCategoriesProvider` from `features/materials` for category chips only.
 - `features/materials` is data-only (no routes). Public browse routes `/materials` and `/materials/:id` are registered on `material_discovery` pages; supplier routes `/supplier/materials/*` are on `supplier_portal`.
 - Some form submit flows call repository/helper functions directly from widgets after validation; this is current practice but should remain thin.
-- Learning hub remains mock-data oriented and was not found using application providers in the inspected paths.
-- Optional follow-up: extract Riverpod API providers from `material_listing_repository.dart` into a dedicated providers file without changing behavior.
+- Learning hub uses shared `CategoriesApi` for `PROJECT` categories via `categoriesApiProvider` injected into `ApiLearningHubRepository`.

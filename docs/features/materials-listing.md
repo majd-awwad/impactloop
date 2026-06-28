@@ -67,8 +67,9 @@ Add Material generates one idempotency key per form session and sends it as the 
 | Area | Path |
 |------|------|
 | Repository | `data/material_listing_repository.dart` |
+| Data providers | `data/material_listing_data_providers.dart` — API client + repository Riverpod providers |
 | Providers | `application/material_listing_providers.dart` |
-| APIs | `data/categories_api.dart`, `material_types_api.dart`, `material_listing_policy_api.dart`, `material_price_check_api.dart`, `category_requests_api.dart`, `price_rule_requests_api.dart`, `material_upload_api.dart`, `material_reports_api.dart` (public report endpoint; discovery detail consumer) |
+| APIs | `data/categories_api.dart` (`MATERIAL` and `PROJECT` taxonomy), `material_types_api.dart`, `material_listing_policy_api.dart`, `material_price_check_api.dart`, `category_requests_api.dart`, `price_rule_requests_api.dart`, `material_upload_api.dart`, `material_reports_api.dart` (public report endpoint; discovery detail consumer) |
 | Models | `data/models/*` (`category.dart`, `material_type.dart`, `create_material_request.dart`, `created_material.dart`, `material_listing_policy.dart`, `material_price_check_*`, `category_request.dart`, `price_rule_request*.dart`, `material_draft_image.dart`, `material_price_rule.dart` — model retained; active rule lookup uses price-check in UI) |
 | Primary consumer UI | `features/supplier_portal/presentation/pages/add_material_page.dart` + add-material widgets |
 | Other consumers | `material_discovery` (category provider only), `admin_portal` (approvals categories) |
@@ -146,7 +147,6 @@ Supplier edit is blocked only for `REUSED` materials and when the new quantity i
 - Moderator approval for category/price requests — **backend workflow**; no moderator UI.
 - AI price suggestion operational only when `isAiProviderOperational` — env-dependent.
 - Paid listings in “Other” category blocked server-side (`PAID_OTHER_NOT_ALLOWED`).
-- Riverpod API providers are defined in `material_listing_repository.dart` alongside the repository — acceptable for now; optional follow-up to extract to `application/` or `data/providers.dart`.
 
 ## Related docs
 

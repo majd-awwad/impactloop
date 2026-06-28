@@ -50,7 +50,7 @@ List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, 
 | Area | Path |
 |------|------|
 | Domain | `domain/discovery_material.dart`, `material_discovery_query.dart`, `material_discovery_result.dart`, `material_discovery_repository.dart`, `material_discovery_constants.dart` |
-| Shared data (categories only) | `features/materials/application/material_listing_providers.dart` — `discoveryMaterialCategoriesProvider`; model `features/materials/data/models/category.dart` |
+| Shared data (categories only) | `features/materials/application/material_listing_providers.dart` — `discoveryMaterialCategoriesProvider`; `features/materials/data/categories_api.dart` and `models/category.dart` |
 | Data | `data/api_material_discovery_repository.dart`, `material_discovery_api_mapper.dart`, `mock_material_discovery_repository.dart` |
 | Pages | `presentation/pages/materials_discovery_page.dart`, `material_details_page.dart` |
 | Views / widgets | `presentation/views/materials_discovery_view.dart`, `widgets/material_search_filters.dart`, `widgets/discovery_category_picker.dart`, `widgets/discovery_location_privacy_panel.dart`, `widgets/materials_hero_section.dart` |
