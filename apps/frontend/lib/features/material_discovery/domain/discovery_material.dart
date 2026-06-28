@@ -4,6 +4,8 @@ import '../../../shared/models/localized_text.dart';
 import '../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../shared/widgets/materials/material_status_badge.dart';
 
+import 'material_discovery_constants.dart';
+
 class DiscoveryMaterial {
   const DiscoveryMaterial({
     required this.id,
@@ -23,6 +25,7 @@ class DiscoveryMaterial {
     required this.locationLabel,
     required this.availabilityLabel,
     required this.deliveryAvailable,
+    this.pickupAllowed = true,
     required this.isFree,
     required this.supplierName,
     required this.supplierSubtitle,
@@ -30,6 +33,7 @@ class DiscoveryMaterial {
     required this.cardGradient,
     this.imageUrl,
     this.ratingLabel,
+    this.viewsCount = 0,
   });
 
   final String id;
@@ -49,6 +53,7 @@ class DiscoveryMaterial {
   final LocalizedText locationLabel;
   final LocalizedText availabilityLabel;
   final bool deliveryAvailable;
+  final bool pickupAllowed;
   final bool isFree;
   final LocalizedText supplierName;
   final LocalizedText supplierSubtitle;
@@ -56,4 +61,7 @@ class DiscoveryMaterial {
   final List<int> cardGradient;
   final String? imageUrl;
   final LocalizedText? ratingLabel;
+  final int viewsCount;
+
+  bool get isPopular => viewsCount >= materialPopularViewsThreshold;
 }

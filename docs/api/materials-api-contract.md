@@ -21,7 +21,7 @@ Future backend integration should:
 
 Frontend repository contract:
 
-- `getMaterials()`
+- `fetchMaterials(MaterialDiscoveryQuery query)` → paginated `MaterialDiscoveryResult`
 - `getMaterialById(String id)`
 
 Current implementations:
@@ -40,6 +40,23 @@ API integration notes:
 ## GET /api/materials
 
 Returns a paginated list of materials for discovery.
+
+### Query parameters
+
+| Param | Type | Notes |
+|-------|------|-------|
+| `q` | string | Search title, description, material type, tags, category names |
+| `categoryId` | string | Active material category id |
+| `condition` | enum | `NEW`, `LIKE_NEW`, `GOOD`, `USED`, `NEEDS_REPAIR` |
+| `status` | enum | Default `AVAILABLE` |
+| `priceType` | enum | `FREE`, `PAID`, `ANY` (default) |
+| `deliveryAvailable` | boolean | Filters `deliveryAllowed` |
+| `pickupAllowed` | boolean | Filters pickup availability |
+| `city` | string | Case-insensitive contains on location city |
+| `area` | string | Case-insensitive contains on location area |
+| `sort` | enum | `newest` (default) or `popular` (`viewsCount` desc, then `createdAt` desc) |
+| `page` | number | Default `1` |
+| `limit` | number | Default `20`, max `100` |
 
 Public visibility behavior:
 
@@ -76,9 +93,11 @@ Example response:
         "city": "Nablus",
         "area": "Industrial Area",
         "deliveryAvailable": true,
+        "pickupAllowed": true,
         "imageUrl": "https://example.com/materials/plywood-panels.jpg",
         "supplierName": "Green Workshop Co.",
         "ratingSummary": null,
+        "viewsCount": 18,
         "createdAt": "2026-06-01T10:00:00.000Z"
       }
     ],
@@ -94,7 +113,7 @@ Example response:
 
 ## GET /api/materials/:id
 
-Returns one material record by id.
+Returns one material record by id and increments `viewsCount` on each successful read. Missing or non-public materials return `404` without incrementing. `viewsCount` counts total detail loads, not unique visitors.
 
 Public visibility behavior:
 
@@ -151,11 +170,13 @@ Example response:
 - `price`: nullable price value when `isFree` is true
 - `city`: public city label
 - `area`: public approximate area label
-- `deliveryAvailable`: public fulfillment flag
+- `deliveryAvailable`: public delivery flag (`deliveryAllowed` in DB)
+- `pickupAllowed`: whether pickup is allowed
 - `imageUrl`: nullable public preview image
 - `supplierName`: public supplier display name
 - `ratingSummary`: currently `null`; ratings and reviews are future work
-- `createdAt`: creation timestamp for future sorting/filtering
+- `viewsCount`: public total detail-view counter incremented on each successful detail read (not unique visitors)
+- `createdAt`: creation timestamp
 
 ## Frontend mapping guidance
 

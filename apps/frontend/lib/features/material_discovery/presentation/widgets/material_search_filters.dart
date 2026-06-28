@@ -5,38 +5,68 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../materials/data/models/category.dart';
 
 class MaterialSearchFilters extends StatelessWidget {
   const MaterialSearchFilters({
     super.key,
-    required this.controller,
+    required this.searchController,
+    required this.cityController,
+    required this.areaController,
     required this.searchValue,
     required this.onSearchChanged,
+    required this.onCityChanged,
+    required this.onAreaChanged,
     required this.categories,
-    required this.quickFilters,
     required this.selectedCategoryIndex,
-    required this.selectedQuickFilterIndex,
     required this.onCategorySelected,
+    required this.quickFilters,
+    required this.selectedQuickFilterIndex,
     required this.onQuickFilterSelected,
+    required this.sortOptions,
+    required this.selectedSortIndex,
+    required this.onSortSelected,
+    required this.conditionFilters,
+    required this.selectedConditionIndex,
+    required this.onConditionSelected,
     required this.hasActiveFilters,
     required this.onClearFilters,
   });
 
-  final TextEditingController controller;
+  final TextEditingController searchController;
+  final TextEditingController cityController;
+  final TextEditingController areaController;
   final String searchValue;
   final ValueChanged<String> onSearchChanged;
-  final List<LocalizedText> categories;
-  final List<LocalizedText> quickFilters;
+  final ValueChanged<String> onCityChanged;
+  final ValueChanged<String> onAreaChanged;
+  final List<MaterialCategory> categories;
   final int selectedCategoryIndex;
-  final int selectedQuickFilterIndex;
   final ValueChanged<int> onCategorySelected;
+  final List<LocalizedText> quickFilters;
+  final int selectedQuickFilterIndex;
   final ValueChanged<int> onQuickFilterSelected;
+  final List<LocalizedText> sortOptions;
+  final int selectedSortIndex;
+  final ValueChanged<int> onSortSelected;
+  final List<({String? value, LocalizedText label})> conditionFilters;
+  final int selectedConditionIndex;
+  final ValueChanged<int> onConditionSelected;
   final bool hasActiveFilters;
   final VoidCallback onClearFilters;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final categoryLabels = [
+      const LocalizedText(en: 'All', ar: 'الكل'),
+      ...categories.map(
+        (category) => LocalizedText(
+          en: category.nameEn,
+          ar: category.nameAr.isNotEmpty ? category.nameAr : category.nameEn,
+        ),
+      ),
+    ];
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
@@ -49,7 +79,7 @@ class MaterialSearchFilters extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
-            controller: controller,
+            controller: searchController,
             onChanged: onSearchChanged,
             style: AppTextStyles.body(
               context,
@@ -71,7 +101,7 @@ class MaterialSearchFilters extends StatelessWidget {
                   ? Icon(Icons.grid_view_rounded, color: palette.mint)
                   : IconButton(
                       onPressed: () {
-                        controller.clear();
+                        searchController.clear();
                         onSearchChanged('');
                       },
                       icon: Icon(
@@ -96,35 +126,70 @@ class MaterialSearchFilters extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            LocalizedText(en: 'Categories', ar: 'الفئات').resolve(context),
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.textPrimary),
-            textAlign: TextAlign.start,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: cityController,
+                  onChanged: onCityChanged,
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: LocalizedText(
+                      en: 'City',
+                      ar: 'المدينة',
+                    ).resolve(context),
+                    filled: true,
+                    fillColor: palette.cardSurfaceAlt,
+                    border: OutlineInputBorder(
+                      borderRadius: AppRadius.lgAll,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: TextField(
+                  controller: areaController,
+                  onChanged: onAreaChanged,
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: LocalizedText(
+                      en: 'Area',
+                      ar: 'المنطقة',
+                    ).resolve(context),
+                    filled: true,
+                    fillColor: palette.cardSurfaceAlt,
+                    border: OutlineInputBorder(
+                      borderRadius: AppRadius.lgAll,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _FilterSectionTitle(
+            label: const LocalizedText(en: 'Categories', ar: 'الفئات'),
           ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
-            children: List.generate(categories.length, (index) {
+            children: List.generate(categoryLabels.length, (index) {
               return _FilterChipButton(
-                label: categories[index].resolve(context),
+                label: categoryLabels[index].resolve(context),
                 selected: selectedCategoryIndex == index,
                 onPressed: () => onCategorySelected(index),
               );
             }),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            LocalizedText(
-              en: 'Quick filters',
-              ar: 'فلاتر سريعة',
-            ).resolve(context),
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.textPrimary),
-            textAlign: TextAlign.start,
+          _FilterSectionTitle(
+            label: const LocalizedText(en: 'Quick filters', ar: 'فلاتر سريعة'),
           ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
@@ -135,6 +200,38 @@ class MaterialSearchFilters extends StatelessWidget {
                 label: quickFilters[index].resolve(context),
                 selected: selectedQuickFilterIndex == index,
                 onPressed: () => onQuickFilterSelected(index),
+              );
+            }),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _FilterSectionTitle(
+            label: const LocalizedText(en: 'Sort', ar: 'الترتيب'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: List.generate(sortOptions.length, (index) {
+              return _FilterChipButton(
+                label: sortOptions[index].resolve(context),
+                selected: selectedSortIndex == index,
+                onPressed: () => onSortSelected(index),
+              );
+            }),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _FilterSectionTitle(
+            label: const LocalizedText(en: 'Condition', ar: 'الحالة'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: List.generate(conditionFilters.length, (index) {
+              return _FilterChipButton(
+                label: conditionFilters[index].label.resolve(context),
+                selected: selectedConditionIndex == index,
+                onPressed: () => onConditionSelected(index),
               );
             }),
           ),
@@ -164,6 +261,25 @@ class MaterialSearchFilters extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _FilterSectionTitle extends StatelessWidget {
+  const _FilterSectionTitle({required this.label});
+
+  final LocalizedText label;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Text(
+      label.resolve(context),
+      style: AppTextStyles.label(
+        context,
+      ).copyWith(color: palette.textPrimary),
+      textAlign: TextAlign.start,
     );
   }
 }

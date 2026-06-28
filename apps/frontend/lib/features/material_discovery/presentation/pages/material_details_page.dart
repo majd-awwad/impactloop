@@ -29,7 +29,7 @@ import '../../data/api_material_discovery_repository.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_repository.dart';
 import '../material_discovery_content.dart';
-import '../widgets/nearby_map_placeholder.dart';
+import '../widgets/discovery_location_privacy_panel.dart';
 
 class MaterialDetailsPage extends ConsumerStatefulWidget {
   const MaterialDetailsPage({
@@ -521,8 +521,26 @@ class _DetailsMainColumn extends StatelessWidget {
                     label: material.priceLabel.resolve(context),
                     isFree: material.isFree,
                   ),
+                  if (material.isPopular)
+                    MaterialStatusBadge(
+                      label: 'Popular',
+                      tone: MaterialStatusBadgeTone.available,
+                    ),
                 ],
               ),
+              if (material.viewsCount > 0) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  LocalizedText(
+                    en: '${material.viewsCount} views',
+                    ar: '${material.viewsCount} مشاهدة',
+                  ).resolve(context),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary),
+                  textAlign: TextAlign.start,
+                ),
+              ],
             ],
           ),
         ),
@@ -570,16 +588,7 @@ class _DetailsMainColumn extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        const NearbyMapPlaceholder(
-          title: LocalizedText(
-            en: 'Nearby Map Preview',
-            ar: 'معاينة الخريطة القريبة',
-          ),
-          subtitle: LocalizedText(
-            en: 'Exact public coordinates remain hidden until reservation logic exists.',
-            ar: 'تبقى الإحداثيات العامة الدقيقة مخفية حتى يوجد منطق حجز فعلي.',
-          ),
-        ),
+        const DiscoveryLocationPrivacyPanel(),
       ],
     );
   }

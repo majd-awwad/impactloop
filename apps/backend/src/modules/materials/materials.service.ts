@@ -367,9 +367,11 @@ const mapMaterial = (
     city: material.location.city,
     area: material.location.area,
     deliveryAvailable: material.deliveryAllowed,
+    pickupAllowed: material.pickupAllowed,
     imageUrl: material.images[0]?.imageUrl ?? null,
     supplierName: resolveSupplierName(material),
     ratingSummary: null,
+    viewsCount: material.viewsCount,
     createdAt: material.createdAt.toISOString(),
   };
 };
@@ -400,10 +402,14 @@ export const getMaterialById = async (id: string) => {
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
 
+  const incremented = await materialsRepository.incrementMaterialViewsCount(
+    material.id,
+  );
+
   const heldByMaterialId = await getHeldQuantitiesByMaterialIds([material.id]);
 
   return mapMaterial(
-    material,
+    { ...material, viewsCount: incremented.viewsCount },
     heldByMaterialId.get(material.id) ?? toDecimal(0),
   );
 };

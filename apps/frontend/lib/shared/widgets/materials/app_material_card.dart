@@ -29,6 +29,7 @@ class AppMaterialCard extends StatelessWidget {
     required this.gradientColors,
     this.imageUrl,
     this.ratingLabel,
+    this.showPopularBadge = false,
     this.onTap,
     this.trailing,
     this.variant = AppMaterialCardVariant.standard,
@@ -52,6 +53,7 @@ class AppMaterialCard extends StatelessWidget {
   final List<Color> gradientColors;
   final String? imageUrl;
   final String? ratingLabel;
+  final bool showPopularBadge;
   final VoidCallback? onTap;
   final Widget? trailing;
   final AppMaterialCardVariant variant;
@@ -108,6 +110,7 @@ class AppMaterialCard extends StatelessWidget {
                   category: category,
                   statusLabel: statusLabel,
                   statusTone: statusTone,
+                  showPopularBadge: showPopularBadge,
                   imageUrl: imageUrl,
                   hasImage: hasImage,
                   gradientColors: gradientColors,
@@ -205,6 +208,7 @@ class _MaterialMedia extends StatelessWidget {
     required this.category,
     required this.statusLabel,
     required this.statusTone,
+    required this.showPopularBadge,
     required this.imageUrl,
     required this.hasImage,
     required this.gradientColors,
@@ -216,6 +220,7 @@ class _MaterialMedia extends StatelessWidget {
   final String category;
   final String statusLabel;
   final MaterialStatusBadgeTone statusTone;
+  final bool showPopularBadge;
   final String? imageUrl;
   final bool hasImage;
   final List<Color> gradientColors;
@@ -285,6 +290,10 @@ class _MaterialMedia extends StatelessWidget {
                         ),
                         const Spacer(),
                         const SizedBox(width: AppSpacing.sm),
+                        if (showPopularBadge) ...[
+                          const _PopularBadge(),
+                          const SizedBox(width: AppSpacing.sm),
+                        ],
                         Flexible(
                           child: Align(
                             alignment: AlignmentDirectional.centerEnd,
@@ -548,6 +557,36 @@ class _MetaLine extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PopularBadge extends StatelessWidget {
+  const _PopularBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: palette.mint.withValues(alpha: 0.16),
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: palette.mint.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        'Popular',
+        style: AppTextStyles.label(context).copyWith(
+          color: palette.textPrimary,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+        textAlign: TextAlign.start,
       ),
     );
   }

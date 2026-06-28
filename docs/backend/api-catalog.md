@@ -62,6 +62,10 @@ Query validation: `categoriesQuerySchema`
 
 **`POST /api/materials/:id/reports` body:** `{ reason: MaterialReportReason, note?: string }` — `note` required when `reason=OTHER`. Duplicate pending report by same user/material returns 409. Public discovery excludes `UNAVAILABLE` materials (default list status `AVAILABLE`).
 
+**`GET /api/materials` query:** `q`, `categoryId`, `condition`, `status` (default `AVAILABLE`), `priceType` (`FREE` \| `PAID` \| `ANY`, default `ANY`), `deliveryAvailable`, `pickupAllowed`, `city`, `area`, `sort` (`newest` \| `popular`, default `newest`), `page`, `limit`. Response: `{ items, pagination: { page, limit, total, totalPages } }`. Public item fields include `quantity`, `availableQuantity`, `unit`, `city`, `area`, `pickupAllowed`, `deliveryAvailable`, `viewsCount`; no `addressLine` / `latitude` / `longitude`.
+
+**`GET /api/materials/:id`:** increments `viewsCount` on each successful public detail read (`404` does not increment). `viewsCount` is a total detail-view counter, not unique visitors. Same public field redaction as list items.
+
 ## Reservations — `/api/reservations`
 
 | Method | Path | Auth | Roles | Source file |

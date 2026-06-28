@@ -328,6 +328,7 @@ describe('listMyReservations pickupLocationFull privacy', () => {
       q: TEST_MARKER,
       status: 'AVAILABLE',
       priceType: 'ANY',
+      sort: 'newest',
     });
 
     const listed = publicList.items.find((item) => item.id === material.id);

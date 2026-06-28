@@ -18,6 +18,8 @@ const MATERIAL_STATUSES = [
 
 const PRICE_TYPES = ['FREE', 'PAID', 'ANY'] as const;
 
+const MATERIAL_SORT_OPTIONS = ['newest', 'popular'] as const;
+
 const parseOptionalBoolean = (value: unknown): boolean | undefined => {
   if (value === undefined || value === null || value === '') {
     return undefined;
@@ -64,6 +66,20 @@ export const materialsQuerySchema = paginationQuerySchema.extend({
     }).optional(),
   ),
   city: z.string().trim().min(1).max(120).optional(),
+  area: z.string().trim().min(1).max(120).optional(),
+  pickupAllowed: z.preprocess(
+    (value) => {
+      const parsed = parseOptionalBoolean(value);
+
+      return parsed === undefined ? value : parsed;
+    },
+    z.boolean({
+      error: 'pickupAllowed must be true or false',
+    }).optional(),
+  ),
+  sort: z.enum(MATERIAL_SORT_OPTIONS, {
+    error: 'sort must be newest or popular',
+  }).default('newest'),
 });
 
 export const materialIdParamSchema = z.object({

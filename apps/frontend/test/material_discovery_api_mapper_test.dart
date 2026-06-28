@@ -16,11 +16,15 @@ void main() {
       'condition': 'GOOD',
       'isFree': true,
       'deliveryAvailable': false,
+      'pickupAllowed': true,
+      'viewsCount': 4,
       'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
     });
 
     expect(material.availableQuantity, 3);
     expect(material.quantity, 10);
+    expect(material.viewsCount, 4);
+    expect(material.isPopular, isFalse);
     expect(material.statusTone, MaterialStatusBadgeTone.available);
     expect(
       material.quantityLabel.en,
@@ -44,5 +48,25 @@ void main() {
 
     expect(material.availableQuantity, 5);
     expect(material.quantityLabel.en, '5 piece');
+    expect(material.viewsCount, 0);
+    expect(material.isPopular, isFalse);
+  });
+
+  test('marks material as popular at the views threshold', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-3',
+      'title': 'Popular stock',
+      'description': 'Seen often',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'viewsCount': 10,
+      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+    });
+
+    expect(material.isPopular, isTrue);
   });
 }

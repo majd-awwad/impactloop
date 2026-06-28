@@ -33,7 +33,9 @@ class MaterialDiscoveryApiMapper {
     final city = _nullableString(json['city']);
     final area = _nullableString(json['area']);
     final deliveryAvailable = json['deliveryAvailable'] == true;
+    final pickupAllowed = json['pickupAllowed'] != false;
     final ratingSummary = _numberFromDynamic(json['ratingSummary']);
+    final viewsCount = _intFromDynamic(json['viewsCount']) ?? 0;
 
     final conditionMeta = _conditionMeta(condition);
     final statusMeta = _statusMeta(
@@ -76,6 +78,7 @@ class MaterialDiscoveryApiMapper {
         ar: deliveryAvailable ? 'التوصيل متاح' : 'استلام فقط',
       ),
       deliveryAvailable: deliveryAvailable,
+      pickupAllowed: pickupAllowed,
       isFree: isFree,
       supplierName: LocalizedText(en: supplierName, ar: supplierName),
       supplierSubtitle: LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
@@ -88,6 +91,7 @@ class MaterialDiscoveryApiMapper {
               en: _formatCompactNumber(ratingSummary),
               ar: _formatCompactNumber(ratingSummary),
             ),
+      viewsCount: viewsCount,
     );
   }
 
@@ -171,6 +175,22 @@ class MaterialDiscoveryApiMapper {
     }
 
     return 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80';
+  }
+
+  static int? _intFromDynamic(Object? value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value.toString());
   }
 
   static double? _numberFromDynamic(Object? value) {

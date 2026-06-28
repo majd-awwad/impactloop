@@ -5,121 +5,149 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
-import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../materials/data/models/category.dart';
 import '../../domain/discovery_material.dart';
+import '../../domain/material_discovery_result.dart';
 import '../material_discovery_content.dart';
+import '../widgets/discovery_location_privacy_panel.dart';
 import '../widgets/material_search_filters.dart';
 import '../widgets/materials_hero_section.dart';
-import '../widgets/nearby_map_placeholder.dart';
 
-class MaterialsDiscoveryView extends StatefulWidget {
+class MaterialsDiscoveryView extends StatelessWidget {
   const MaterialsDiscoveryView({
     super.key,
     required this.materials,
+    required this.pagination,
+    required this.categories,
+    required this.searchController,
+    required this.cityController,
+    required this.areaController,
+    required this.searchValue,
+    required this.selectedCategoryIndex,
+    required this.selectedQuickFilterIndex,
+    required this.selectedSortIndex,
+    required this.selectedConditionIndex,
+    required this.hasActiveFilters,
+    required this.isLoadingMore,
+    this.refetchErrorMessage,
+    this.onRetryRefetch,
+    required this.onSearchChanged,
+    required this.onCityChanged,
+    required this.onAreaChanged,
+    required this.onCategorySelected,
+    required this.onQuickFilterSelected,
+    required this.onSortSelected,
+    required this.onConditionSelected,
+    required this.onClearFilters,
+    required this.onLoadMore,
     this.onMaterialTap,
     this.showHeroSection = true,
-    this.showNearbyMap = true,
-    this.showTipPanel = true,
+    this.showLocationPrivacyPanel = true,
     this.cardVariant = AppMaterialCardVariant.standard,
   });
 
   final List<DiscoveryMaterial> materials;
+  final MaterialDiscoveryPagination? pagination;
+  final List<MaterialCategory> categories;
+  final TextEditingController searchController;
+  final TextEditingController cityController;
+  final TextEditingController areaController;
+  final String searchValue;
+  final int selectedCategoryIndex;
+  final int selectedQuickFilterIndex;
+  final int selectedSortIndex;
+  final int selectedConditionIndex;
+  final bool hasActiveFilters;
+  final bool isLoadingMore;
+  final String? refetchErrorMessage;
+  final VoidCallback? onRetryRefetch;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<String> onCityChanged;
+  final ValueChanged<String> onAreaChanged;
+  final ValueChanged<int> onCategorySelected;
+  final ValueChanged<int> onQuickFilterSelected;
+  final ValueChanged<int> onSortSelected;
+  final ValueChanged<int> onConditionSelected;
+  final VoidCallback onClearFilters;
+  final VoidCallback onLoadMore;
   final ValueChanged<DiscoveryMaterial>? onMaterialTap;
   final bool showHeroSection;
-  final bool showNearbyMap;
-  final bool showTipPanel;
+  final bool showLocationPrivacyPanel;
   final AppMaterialCardVariant cardVariant;
 
   @override
-  State<MaterialsDiscoveryView> createState() => _MaterialsDiscoveryViewState();
-}
-
-class _MaterialsDiscoveryViewState extends State<MaterialsDiscoveryView> {
-  static const _apiBackedCategories = <LocalizedText>[
-    LocalizedText(en: 'All', ar: 'الكل'),
-    LocalizedText(en: 'Electronics', ar: 'إلكترونيات'),
-    LocalizedText(en: 'Wood & Panels', ar: 'خشب وألواح'),
-    LocalizedText(en: 'Plastics', ar: 'بلاستيك'),
-    LocalizedText(en: 'Fabric & Textiles', ar: 'أقمشة ومنسوجات'),
-    LocalizedText(en: 'Tools & Hardware', ar: 'أدوات وقطع'),
-  ];
-
-  late final TextEditingController _searchController;
-  String _searchValue = '';
-  int _selectedCategoryIndex = 0;
-  int _selectedQuickFilterIndex = 0;
-
-  bool get _hasActiveFilters =>
-      _searchValue.trim().isNotEmpty ||
-      _selectedCategoryIndex != 0 ||
-      _selectedQuickFilterIndex != 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final filteredMaterials = _filteredMaterials(context);
+    final total = pagination?.total ?? materials.length;
+    final showingCount = materials.length;
+    final hasMore = pagination?.hasMore ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.showHeroSection) ...[
+        if (showHeroSection) ...[
           MaterialsHeroSection(
             title: const LocalizedText(
               en: 'Material Discovery',
               ar: 'اكتشاف المواد',
             ),
             subtitle: const LocalizedText(
-              en: 'Browse reusable materials with a premium public marketplace layout that can later drop into dashboard sections without rewrites.',
-              ar: 'تصفح المواد القابلة لإعادة الاستخدام ضمن واجهة سوق عامة احترافية يمكن نقلها لاحقاً إلى أقسام لوحة التحكم دون إعادة بناء.',
+              en:
+                  'Browse reusable materials from verified suppliers. Search, filter, and reserve what you need.',
+              ar:
+                  'تصفح المواد القابلة لإعادة الاستخدام من موردين موثوقين. ابحث، وفلتر، واحجز ما تحتاجه.',
             ),
-            stats: materialDiscoveryStats,
+            stats: {
+              const LocalizedText(
+                en: 'Results loaded',
+                ar: 'النتائج المحملة',
+              ): '$showingCount',
+              const LocalizedText(
+                en: 'Total matches',
+                ar: 'إجمالي المطابقات',
+              ): '$total',
+            },
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
+        if (refetchErrorMessage != null) ...[
+          _RefetchErrorBanner(
+            message: refetchErrorMessage!,
+            onRetry: onRetryRefetch,
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
         MaterialSearchFilters(
-          controller: _searchController,
-          searchValue: _searchValue,
-          onSearchChanged: (value) {
-            setState(() {
-              _searchValue = value;
-            });
-          },
-          categories: _apiBackedCategories,
+          searchController: searchController,
+          cityController: cityController,
+          areaController: areaController,
+          searchValue: searchValue,
+          onSearchChanged: onSearchChanged,
+          onCityChanged: onCityChanged,
+          onAreaChanged: onAreaChanged,
+          categories: categories,
+          selectedCategoryIndex: selectedCategoryIndex,
+          onCategorySelected: onCategorySelected,
           quickFilters: materialQuickFilters,
-          selectedCategoryIndex: _selectedCategoryIndex,
-          selectedQuickFilterIndex: _selectedQuickFilterIndex,
-          onCategorySelected: (index) {
-            setState(() {
-              _selectedCategoryIndex = index;
-            });
-          },
-          onQuickFilterSelected: (index) {
-            setState(() {
-              _selectedQuickFilterIndex = index;
-            });
-          },
-          hasActiveFilters: _hasActiveFilters,
-          onClearFilters: _clearFilters,
+          selectedQuickFilterIndex: selectedQuickFilterIndex,
+          onQuickFilterSelected: onQuickFilterSelected,
+          sortOptions: materialSortOptions,
+          selectedSortIndex: selectedSortIndex,
+          onSortSelected: onSortSelected,
+          conditionFilters: materialConditionFilters,
+          selectedConditionIndex: selectedConditionIndex,
+          onConditionSelected: onConditionSelected,
+          hasActiveFilters: hasActiveFilters,
+          onClearFilters: onClearFilters,
         ),
         const SizedBox(height: AppSpacing.xl),
         _ResultsHeader(
-          resultCount: filteredMaterials.length,
-          hasActiveFilters: _hasActiveFilters,
+          showingCount: showingCount,
+          total: total,
+          hasActiveFilters: hasActiveFilters,
         ),
         const SizedBox(height: AppSpacing.md),
-        if (filteredMaterials.isEmpty)
+        if (materials.isEmpty)
           const _EmptyStatePanel(
             title: materialDiscoveryEmptyTitle,
             subtitle: materialDiscoveryEmptySubtitle,
@@ -142,7 +170,7 @@ class _MaterialsDiscoveryViewState extends State<MaterialsDiscoveryView> {
               return Wrap(
                 spacing: AppSpacing.md,
                 runSpacing: AppSpacing.md,
-                children: filteredMaterials.map((material) {
+                children: materials.map((material) {
                   return SizedBox(
                     width: itemWidth,
                     child: AppMaterialCard(
@@ -163,175 +191,102 @@ class _MaterialsDiscoveryViewState extends State<MaterialsDiscoveryView> {
                       isFree: material.isFree,
                       gradientColors: materialGradient(material),
                       imageUrl: material.imageUrl,
-                      ratingLabel: material.ratingLabel?.resolve(context),
-                      fallbackIcon: material.heroIconData,
-                      variant: widget.cardVariant,
-                      onTap: widget.onMaterialTap == null
+                      ratingLabel: material.isPopular
                           ? null
-                          : () => widget.onMaterialTap!(material),
+                          : material.ratingLabel?.resolve(context),
+                      showPopularBadge: material.isPopular,
+                      fallbackIcon: material.heroIconData,
+                      variant: cardVariant,
+                      onTap: onMaterialTap == null
+                          ? null
+                          : () => onMaterialTap!(material),
                     ),
                   );
                 }).toList(),
               );
             },
           ),
-        if (widget.showNearbyMap) ...[
-          const SizedBox(height: AppSpacing.xl),
-          const NearbyMapPlaceholder(
-            title: LocalizedText(
-              en: 'Nearby Material Map',
-              ar: 'خريطة المواد القريبة',
-            ),
-            subtitle: LocalizedText(
-              en: 'Public locations stay approximate until reservation or delivery steps are connected.',
-              ar: 'تظل المواقع العامة تقريبية حتى يتم ربط الحجز أو خطوات التوصيل.',
+        if (hasMore) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Center(
+            child: FilledButton.icon(
+              onPressed: isLoadingMore ? null : onLoadMore,
+              icon: isLoadingMore
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.expand_more_rounded),
+              label: Text(
+                isLoadingMore
+                    ? const LocalizedText(
+                        en: 'Loading more...',
+                        ar: 'جارٍ تحميل المزيد...',
+                      ).resolve(context)
+                    : LocalizedText(
+                        en: 'Load more ($showingCount of $total)',
+                        ar: 'تحميل المزيد ($showingCount من $total)',
+                      ).resolve(context),
+              ),
             ),
           ),
         ],
-        if (widget.showTipPanel) ...[
+        if (showLocationPrivacyPanel) ...[
           const SizedBox(height: AppSpacing.xl),
-          const _TipPanel(),
+          const DiscoveryLocationPrivacyPanel(),
         ],
       ],
     );
-  }
-
-  List<DiscoveryMaterial> _filteredMaterials(BuildContext context) {
-    final normalizedSearch = _searchValue.trim().toLowerCase();
-    final selectedCategory = _selectedCategoryIndex == 0
-        ? null
-        : _apiBackedCategories[_selectedCategoryIndex].resolve(context);
-
-    return widget.materials.where((material) {
-      final matchesCategory =
-          selectedCategory == null ||
-          material.category.resolve(context) == selectedCategory;
-
-      final matchesQuickFilter = switch (_selectedQuickFilterIndex) {
-        1 => material.statusTone == MaterialStatusBadgeTone.available,
-        2 => material.isFree,
-        3 => material.deliveryAvailable,
-        _ => true,
-      };
-
-      if (!matchesCategory || !matchesQuickFilter) {
-        return false;
-      }
-
-      if (normalizedSearch.isEmpty) {
-        return true;
-      }
-
-      final searchPool = [
-        material.title.resolve(context),
-        material.description.resolve(context),
-        material.category.resolve(context),
-        material.locationLabel.resolve(context),
-      ].join(' ').toLowerCase();
-
-      return searchPool.contains(normalizedSearch);
-    }).toList();
-  }
-
-  void _clearFilters() {
-    _searchController.clear();
-    setState(() {
-      _searchValue = '';
-      _selectedCategoryIndex = 0;
-      _selectedQuickFilterIndex = 0;
-    });
   }
 }
 
 class _ResultsHeader extends StatelessWidget {
   const _ResultsHeader({
-    required this.resultCount,
+    required this.showingCount,
+    required this.total,
     required this.hasActiveFilters,
   });
 
-  final int resultCount;
+  final int showingCount;
+  final int total;
   final bool hasActiveFilters;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 600;
-
-        final summary = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              LocalizedText(
-                en: 'Reusable Materials',
-                ar: 'المواد القابلة لإعادة الاستخدام',
-              ).resolve(context),
-              style: AppTextStyles.display(
-                context,
-              ).copyWith(color: palette.textPrimary),
-              textAlign: TextAlign.start,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              (hasActiveFilters
-                      ? LocalizedText(
-                          en: '$resultCount matching results',
-                          ar: '$resultCount نتيجة مطابقة',
-                        )
-                      : LocalizedText(
-                          en: '$resultCount public results in this mock',
-                          ar: '$resultCount نتيجة عامة في هذا النموذج',
-                        ))
-                  .resolve(context),
-              style: AppTextStyles.subtitle(
-                context,
-              ).copyWith(color: palette.textSecondary),
-              textAlign: TextAlign.start,
-            ),
-          ],
-        );
-
-        final infoChip = Container(
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: palette.hintSurface,
-            borderRadius: AppRadius.pillAll,
-            border: Border.all(color: palette.borderStrong),
-          ),
-          child: Text(
-            LocalizedText(
-              en: 'Shared card component ready',
-              ar: 'مكون البطاقة المشترك جاهز',
-            ).resolve(context),
-            style: AppTextStyles.label(context).copyWith(color: palette.mint),
-            textAlign: TextAlign.start,
-          ),
-        );
-
-        if (compact) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              summary,
-              const SizedBox(height: AppSpacing.md),
-              infoChip,
-            ],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(child: summary),
-            const SizedBox(width: AppSpacing.md),
-            infoChip,
-          ],
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          LocalizedText(
+            en: 'Reusable Materials',
+            ar: 'المواد القابلة لإعادة الاستخدام',
+          ).resolve(context),
+          style: AppTextStyles.display(
+            context,
+          ).copyWith(color: palette.textPrimary),
+          textAlign: TextAlign.start,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          (hasActiveFilters
+                  ? LocalizedText(
+                      en: 'Showing $showingCount of $total matching results',
+                      ar: 'عرض $showingCount من $total نتيجة مطابقة',
+                    )
+                  : LocalizedText(
+                      en: 'Showing $showingCount of $total public results',
+                      ar: 'عرض $showingCount من $total نتيجة عامة',
+                    ))
+              .resolve(context),
+          style: AppTextStyles.subtitle(
+            context,
+          ).copyWith(color: palette.textSecondary),
+          textAlign: TextAlign.start,
+        ),
+      ],
     );
   }
 }
@@ -392,57 +347,44 @@ class _EmptyStatePanel extends StatelessWidget {
   }
 }
 
-class _TipPanel extends StatelessWidget {
-  const _TipPanel();
+class _RefetchErrorBanner extends StatelessWidget {
+  const _RefetchErrorBanner({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.hintSurface,
-        borderRadius: AppRadius.xlAll,
+        borderRadius: AppRadius.lgAll,
         border: Border.all(color: palette.hintBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: palette.mint.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(Icons.tips_and_updates_outlined, color: palette.mint),
-          ),
-          const SizedBox(width: AppSpacing.md),
+          Icon(Icons.error_outline_rounded, color: palette.mint),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  LocalizedText(
-                    en: 'UI implementation note',
-                    ar: 'ملاحظة تنفيذ الواجهة',
-                  ).resolve(context),
-                  style: AppTextStyles.title(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                  textAlign: TextAlign.start,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  materialDiscoveryTip.resolve(context),
-                  style: AppTextStyles.subtitle(
-                    context,
-                  ).copyWith(color: palette.textSecondary),
-                  textAlign: TextAlign.start,
-                ),
-              ],
+            child: Text(
+              message,
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary),
+              textAlign: TextAlign.start,
             ),
           ),
+          if (onRetry != null) ...[
+            const SizedBox(width: AppSpacing.sm),
+            TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
         ],
       ),
     );
