@@ -172,7 +172,8 @@ Example response:
 - `area`: public approximate area label
 - `deliveryAvailable`: public delivery flag (`deliveryAllowed` in DB)
 - `pickupAllowed`: whether pickup is allowed
-- `imageUrl`: nullable public preview image
+- `imageUrl`: nullable public preview image URL or upload object key (same value as `primaryImageUrl`)
+- `primaryImageUrl`: first ordered material image reference (`material_images.imageUrl`); never binary data in the database
 - `supplierName`: public supplier display name
 - `ratingSummary`: currently `null`; ratings and reviews are future work
 - `viewsCount`: public total detail-view counter incremented on each successful detail read (not unique visitors)

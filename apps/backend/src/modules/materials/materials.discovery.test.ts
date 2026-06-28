@@ -502,4 +502,87 @@ describe('public material discovery', () => {
     assert.equal('addressLine' in detail, false);
     assert.equal(typeof detail.viewsCount, 'number');
   });
+
+  test('public list and detail include primaryImageUrl when image exists', async () => {
+    const unique = `${TEST_MARKER}-image-${Date.now()}`;
+    const material = await createMaterial(ctx, {
+      title: `${unique} photo stock`,
+    });
+    const imageUrl = '/uploads/materials/test-discovery-cover.jpg';
+
+    await prisma.materialImage.create({
+      data: {
+        materialId: material.id,
+        imageUrl,
+        sortOrder: 0,
+        isCover: false,
+      },
+    });
+
+    const listed = (
+      await getMaterials({
+        page: 1,
+        limit: 20,
+        q: unique,
+        status: 'AVAILABLE',
+        priceType: 'ANY',
+        sort: 'newest',
+      })
+    ).items.find((item) => item.id === material.id);
+
+    assert.ok(listed);
+    assert.equal(listed?.primaryImageUrl, imageUrl);
+    assert.equal(listed?.imageUrl, imageUrl);
+
+    const detail = await getMaterialById(material.id);
+    assert.ok(detail);
+    assert.equal(detail.primaryImageUrl, imageUrl);
+    assert.equal(detail.imageUrl, imageUrl);
+    assert.equal('latitude' in detail, false);
+    assert.equal('longitude' in detail, false);
+  });
+
+  test('primaryImageUrl prefers cover image over lower sort order', async () => {
+    const unique = `${TEST_MARKER}-cover-pref-${Date.now()}`;
+    const material = await createMaterial(ctx, {
+      title: `${unique} cover preference stock`,
+    });
+    const secondaryUrl = '/uploads/materials/secondary.jpg';
+    const coverUrl = '/uploads/materials/cover.jpg';
+
+    await prisma.materialImage.create({
+      data: {
+        materialId: material.id,
+        imageUrl: secondaryUrl,
+        sortOrder: 0,
+        isCover: false,
+      },
+    });
+    await prisma.materialImage.create({
+      data: {
+        materialId: material.id,
+        imageUrl: coverUrl,
+        sortOrder: 1,
+        isCover: true,
+      },
+    });
+
+    const listed = (
+      await getMaterials({
+        page: 1,
+        limit: 20,
+        q: unique,
+        status: 'AVAILABLE',
+        priceType: 'ANY',
+        sort: 'newest',
+      })
+    ).items.find((item) => item.id === material.id);
+
+    assert.ok(listed);
+    assert.equal(listed?.primaryImageUrl, coverUrl);
+
+    const detail = await getMaterialById(material.id);
+    assert.ok(detail);
+    assert.equal(detail.primaryImageUrl, coverUrl);
+  });
 });

@@ -92,6 +92,10 @@ class MaterialListingRepository {
     return _categoriesApi.fetchMaterialCategories();
   }
 
+  Future<List<MaterialCategory>> fetchDiscoveryMaterialCategories() {
+    return _categoriesApi.fetchMaterialCategories(discoveryOnly: true);
+  }
+
   Future<MaterialTypeSearchResult> searchMaterialTypes({
     String? categoryId,
     String? query,

@@ -339,6 +339,12 @@ const resolveSupplierName = (material: Awaited<
   );
 };
 
+const resolvePrimaryImageUrl = (
+  material: NonNullable<
+    Awaited<ReturnType<typeof materialsRepository.findMaterialById>>
+  >,
+) => material.images[0]?.imageUrl ?? null;
+
 const mapMaterial = (
   material: NonNullable<
     Awaited<ReturnType<typeof materialsRepository.findMaterialById>>
@@ -347,6 +353,7 @@ const mapMaterial = (
 ) => {
   const quantity = toDecimal(material.quantity);
   const availableQuantity = computeAvailableQuantity(quantity, heldQuantity);
+  const primaryImageUrl = resolvePrimaryImageUrl(material);
 
   return {
     id: material.id,
@@ -368,7 +375,8 @@ const mapMaterial = (
     area: material.location.area,
     deliveryAvailable: material.deliveryAllowed,
     pickupAllowed: material.pickupAllowed,
-    imageUrl: material.images[0]?.imageUrl ?? null,
+    imageUrl: primaryImageUrl,
+    primaryImageUrl,
     supplierName: resolveSupplierName(material),
     ratingSummary: null,
     viewsCount: material.viewsCount,

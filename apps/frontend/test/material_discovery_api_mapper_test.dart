@@ -69,4 +69,39 @@ void main() {
 
     expect(material.isPopular, isTrue);
   });
+
+  test('resolves primaryImageUrl and relative upload paths', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-4',
+      'title': 'With photo',
+      'description': 'Has image',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'primaryImageUrl': '/uploads/materials/cover.jpg',
+      'category': {'nameEn': 'Electronics', 'nameAr': 'إلكترونيات'},
+    });
+
+    expect(material.imageUrl, endsWith('/uploads/materials/cover.jpg'));
+  });
+
+  test('returns null imageUrl when no image metadata exists', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-5',
+      'title': 'No photo',
+      'description': 'Missing image',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+    });
+
+    expect(material.imageUrl, isNull);
+  });
 }

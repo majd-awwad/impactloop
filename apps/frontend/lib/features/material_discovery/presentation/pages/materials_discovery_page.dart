@@ -45,6 +45,7 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
   List<DiscoveryMaterial> _materials = [];
   MaterialDiscoveryPagination? _pagination;
   bool _isLoading = true;
+  bool _isRefetching = false;
   bool _isLoadingMore = false;
   String? _errorMessage;
   int _fetchGeneration = 0;
@@ -173,15 +174,29 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
     });
   }
 
+  void _releaseFetchLoadingIfLatest(int requestGeneration) {
+    if (!mounted || requestGeneration != _fetchGeneration) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = false;
+      _isRefetching = false;
+      _isLoadingMore = false;
+    });
+  }
+
   Future<void> _fetchMaterials({required bool reset}) async {
     final requestGeneration = ++_fetchGeneration;
     final query = _query;
 
     if (reset) {
       setState(() {
-        _isLoading = true;
         if (_materials.isEmpty) {
+          _isLoading = true;
           _errorMessage = null;
+        } else {
+          _isRefetching = true;
         }
       });
     } else {
@@ -209,6 +224,7 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
         );
         _pagination = result.pagination;
         _isLoading = false;
+        _isRefetching = false;
         _isLoadingMore = false;
         _errorMessage = null;
       });
@@ -223,9 +239,12 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
 
       setState(() {
         _isLoading = false;
+        _isRefetching = false;
         _isLoadingMore = false;
         _errorMessage = 'Unable to load materials right now.';
       });
+    } finally {
+      _releaseFetchLoadingIfLatest(requestGeneration);
     }
   }
 
@@ -286,7 +305,7 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final categoriesAsync = ref.watch(materialCategoriesProvider);
+    final categoriesAsync = ref.watch(discoveryMaterialCategoriesProvider);
     final categories = categoriesAsync.maybeWhen(
       data: (value) => value,
       orElse: () => const <MaterialCategory>[],
@@ -357,6 +376,7 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
                         selectedSortIndex: _selectedSortIndex,
                         selectedConditionIndex: _selectedConditionIndex,
                         hasActiveFilters: _hasActiveFilters(categories),
+                        isRefetching: _isRefetching,
                         isLoadingMore: _isLoadingMore,
                         refetchErrorMessage: _materials.isNotEmpty
                             ? _errorMessage

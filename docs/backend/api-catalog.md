@@ -41,6 +41,8 @@ Validation schemas: `auth/auth.validation.ts`
 
 Query validation: `categoriesQuerySchema`
 
+Optional query `discoveryOnly=true` applies discovery name filtering and dedupe (`category-discovery-filter.ts`) for public browse UI only. Without it, supplier/admin category pickers receive the full active category list.
+
 ## Material types — `/api/material-types`
 
 | Method | Path | Auth | Source file |

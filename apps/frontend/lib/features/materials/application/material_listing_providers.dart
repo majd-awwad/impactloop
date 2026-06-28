@@ -14,6 +14,12 @@ final materialCategoriesProvider = FutureProvider((ref) {
   return ref.watch(materialListingRepositoryProvider).fetchMaterialCategories();
 });
 
+final discoveryMaterialCategoriesProvider = FutureProvider((ref) {
+  return ref
+      .watch(materialListingRepositoryProvider)
+      .fetchDiscoveryMaterialCategories();
+});
+
 final materialListingPolicyProvider = FutureProvider<MaterialListingPolicy>((
   ref,
 ) {

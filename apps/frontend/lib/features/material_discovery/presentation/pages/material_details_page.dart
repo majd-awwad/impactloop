@@ -371,20 +371,42 @@ class _SimpleStateScaffold extends StatelessWidget {
   }
 }
 
-class _MaterialDetailsHero extends StatelessWidget {
+class _MaterialDetailsHero extends StatefulWidget {
   const _MaterialDetailsHero({required this.material});
 
   final DiscoveryMaterial material;
 
   @override
+  State<_MaterialDetailsHero> createState() => _MaterialDetailsHeroState();
+}
+
+class _MaterialDetailsHeroState extends State<_MaterialDetailsHero> {
+  bool _imageFailed = false;
+
+  @override
+  void didUpdateWidget(covariant _MaterialDetailsHero oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.material.imageUrl != widget.material.imageUrl) {
+      _imageFailed = false;
+    }
+  }
+
+  bool get _showNetworkImage {
+    final url = widget.material.imageUrl;
+    return url != null && url.trim().isNotEmpty && !_imageFailed;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final material = widget.material;
     final palette = MaterialsUiPalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.sizeOf(context).width;
     final heroHeight = screenWidth >= 1100
-        ? 380.0
-        : screenWidth >= 700
         ? 340.0
-        : 296.0;
+        : screenWidth >= 700
+        ? 300.0
+        : 260.0;
 
     return SizedBox(
       height: heroHeight,
@@ -393,21 +415,39 @@ class _MaterialDetailsHero extends StatelessWidget {
           gradient: LinearGradient(
             begin: AlignmentDirectional.topStart,
             end: AlignmentDirectional.bottomEnd,
-            colors: materialGradient(material),
+            colors: _showNetworkImage
+                ? materialGradient(material)
+                : [
+                    palette.fallbackStart,
+                    palette.fallbackMid,
+                    palette.fallbackEnd,
+                  ],
           ),
         ),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (material.imageUrl != null)
+            if (_showNetworkImage)
               Image.network(
                 material.imageUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    const SizedBox.shrink(),
+                errorBuilder: (context, error, stackTrace) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && !_imageFailed) {
+                      setState(() => _imageFailed = true);
+                    }
+                  });
+                  return const SizedBox.shrink();
+                },
               ),
-            const DecoratedBox(
-              decoration: BoxDecoration(color: materialOverlayDark),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: _showNetworkImage
+                    ? palette.overlayDark.withValues(
+                        alpha: isDark ? 0.42 : 0.24,
+                      )
+                    : palette.overlayDark.withValues(alpha: 0.04),
+              ),
             ),
             PositionedDirectional(
               top: 34,
@@ -442,31 +482,24 @@ class _MaterialDetailsHero extends StatelessWidget {
                 ),
               ),
             ),
-            Align(
-              alignment: AlignmentDirectional.center,
-              child: Container(
-                width: 112,
-                height: 112,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: AlignmentDirectional.topStart,
-                    end: AlignmentDirectional.bottomEnd,
-                    colors: [
-                      materialFallbackStart,
-                      materialFallbackMid,
-                      materialFallbackEnd,
-                    ],
+            if (!_showNetworkImage)
+              Align(
+                alignment: AlignmentDirectional.center,
+                child: Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: palette.cardSurfaceAlt.withValues(alpha: 0.88),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: palette.borderStrong),
                   ),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: palette.borderStrong),
-                ),
-                child: Icon(
-                  material.heroIconData,
-                  size: 52,
-                  color: palette.mint,
+                  child: Icon(
+                    material.heroIconData,
+                    size: 44,
+                    color: palette.mint,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),

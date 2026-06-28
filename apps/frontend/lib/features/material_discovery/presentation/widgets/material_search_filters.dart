@@ -6,8 +6,9 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../materials/data/models/category.dart';
+import 'discovery_category_picker.dart';
 
-class MaterialSearchFilters extends StatelessWidget {
+class MaterialSearchFilters extends StatefulWidget {
   const MaterialSearchFilters({
     super.key,
     required this.searchController,
@@ -56,20 +57,20 @@ class MaterialSearchFilters extends StatelessWidget {
   final VoidCallback onClearFilters;
 
   @override
+  State<MaterialSearchFilters> createState() => _MaterialSearchFiltersState();
+}
+
+class _MaterialSearchFiltersState extends State<MaterialSearchFilters> {
+  bool _showLocationFields = false;
+
+  @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final categoryLabels = [
-      const LocalizedText(en: 'All', ar: 'الكل'),
-      ...categories.map(
-        (category) => LocalizedText(
-          en: category.nameEn,
-          ar: category.nameAr.isNotEmpty ? category.nameAr : category.nameEn,
-        ),
-      ),
-    ];
+    final hasLocationInput = widget.cityController.text.trim().isNotEmpty ||
+        widget.areaController.text.trim().isNotEmpty;
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.panelSurface,
         borderRadius: AppRadius.xlAll,
@@ -79,8 +80,8 @@ class MaterialSearchFilters extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
-            controller: searchController,
-            onChanged: onSearchChanged,
+            controller: widget.searchController,
+            onChanged: widget.onSearchChanged,
             style: AppTextStyles.body(
               context,
             ).copyWith(color: palette.textPrimary),
@@ -97,12 +98,12 @@ class MaterialSearchFilters extends StatelessWidget {
                 Icons.search_rounded,
                 color: palette.textSecondary,
               ),
-              suffixIcon: searchValue.isEmpty
+              suffixIcon: widget.searchValue.isEmpty
                   ? Icon(Icons.grid_view_rounded, color: palette.mint)
                   : IconButton(
                       onPressed: () {
-                        searchController.clear();
-                        onSearchChanged('');
+                        widget.searchController.clear();
+                        widget.onSearchChanged('');
                       },
                       icon: Icon(
                         Icons.close_rounded,
@@ -125,122 +126,176 @@ class MaterialSearchFilters extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: cityController,
-                  onChanged: onCityChanged,
-                  style: AppTextStyles.body(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                  decoration: InputDecoration(
-                    labelText: LocalizedText(
-                      en: 'City',
-                      ar: 'المدينة',
-                    ).resolve(context),
-                    filled: true,
-                    fillColor: palette.cardSurfaceAlt,
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.lgAll,
+          const SizedBox(height: AppSpacing.sm),
+          InkWell(
+            onTap: () => setState(() => _showLocationFields = !_showLocationFields),
+            borderRadius: AppRadius.lgAll,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.xs,
+                vertical: AppSpacing.xs,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 18,
+                    color: hasLocationInput ? palette.mint : palette.textSecondary,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      hasLocationInput
+                          ? LocalizedText(
+                              en:
+                                  'Location: ${widget.cityController.text.trim().isEmpty ? 'Any city' : widget.cityController.text.trim()}${widget.areaController.text.trim().isEmpty ? '' : ', ${widget.areaController.text.trim()}'}',
+                              ar: 'الموقع: مفلتر',
+                            ).resolve(context)
+                          : const LocalizedText(
+                              en: 'Filter by city or area',
+                              ar: 'تصفية حسب المدينة أو المنطقة',
+                            ).resolve(context),
+                      style: AppTextStyles.label(context).copyWith(
+                        color: hasLocationInput
+                            ? palette.textPrimary
+                            : palette.textSecondary,
+                      ),
+                      textAlign: TextAlign.start,
+                    ),
+                  ),
+                  Icon(
+                    _showLocationFields
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    color: palette.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_showLocationFields) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: widget.cityController,
+                    onChanged: widget.onCityChanged,
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
+                    decoration: InputDecoration(
+                      labelText: LocalizedText(
+                        en: 'City',
+                        ar: 'المدينة',
+                      ).resolve(context),
+                      isDense: true,
+                      filled: true,
+                      fillColor: palette.cardSurfaceAlt,
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadius.lgAll,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: TextField(
-                  controller: areaController,
-                  onChanged: onAreaChanged,
-                  style: AppTextStyles.body(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                  decoration: InputDecoration(
-                    labelText: LocalizedText(
-                      en: 'Area',
-                      ar: 'المنطقة',
-                    ).resolve(context),
-                    filled: true,
-                    fillColor: palette.cardSurfaceAlt,
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.lgAll,
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: TextField(
+                    controller: widget.areaController,
+                    onChanged: widget.onAreaChanged,
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
+                    decoration: InputDecoration(
+                      labelText: LocalizedText(
+                        en: 'Area',
+                        ar: 'المنطقة',
+                      ).resolve(context),
+                      isDense: true,
+                      filled: true,
+                      fillColor: palette.cardSurfaceAlt,
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadius.lgAll,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          DiscoveryCategoryPicker(
+            categories: widget.categories,
+            selectedCategoryIndex: widget.selectedCategoryIndex,
+            onCategorySelected: widget.onCategorySelected,
           ),
           const SizedBox(height: AppSpacing.md),
           _FilterSectionTitle(
-            label: const LocalizedText(en: 'Categories', ar: 'الفئات'),
+            label: const LocalizedText(
+              en: 'Quick filters & sort',
+              ar: 'فلاتر سريعة وترتيب',
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: List.generate(categoryLabels.length, (index) {
-              return _FilterChipButton(
-                label: categoryLabels[index].resolve(context),
-                selected: selectedCategoryIndex == index,
-                onPressed: () => onCategorySelected(index),
-              );
-            }),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _FilterSectionTitle(
-            label: const LocalizedText(en: 'Quick filters', ar: 'فلاتر سريعة'),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: List.generate(quickFilters.length, (index) {
-              return _FilterChipButton(
-                label: quickFilters[index].resolve(context),
-                selected: selectedQuickFilterIndex == index,
-                onPressed: () => onQuickFilterSelected(index),
-              );
-            }),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _FilterSectionTitle(
-            label: const LocalizedText(en: 'Sort', ar: 'الترتيب'),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: List.generate(sortOptions.length, (index) {
-              return _FilterChipButton(
-                label: sortOptions[index].resolve(context),
-                selected: selectedSortIndex == index,
-                onPressed: () => onSortSelected(index),
-              );
-            }),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ...List.generate(widget.quickFilters.length, (index) {
+                  return Padding(
+                    padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+                    child: _FilterChipButton(
+                      label: widget.quickFilters[index].resolve(context),
+                      selected: widget.selectedQuickFilterIndex == index,
+                      onPressed: () => widget.onQuickFilterSelected(index),
+                    ),
+                  );
+                }),
+                Container(
+                  width: 1,
+                  height: 28,
+                  margin: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+                  color: palette.borderSubtle,
+                ),
+                ...List.generate(widget.sortOptions.length, (index) {
+                  return Padding(
+                    padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+                    child: _FilterChipButton(
+                      label: widget.sortOptions[index].resolve(context),
+                      selected: widget.selectedSortIndex == index,
+                      onPressed: () => widget.onSortSelected(index),
+                    ),
+                  );
+                }),
+              ],
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           _FilterSectionTitle(
             label: const LocalizedText(en: 'Condition', ar: 'الحالة'),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: List.generate(conditionFilters.length, (index) {
-              return _FilterChipButton(
-                label: conditionFilters[index].label.resolve(context),
-                selected: selectedConditionIndex == index,
-                onPressed: () => onConditionSelected(index),
-              );
-            }),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(widget.conditionFilters.length, (index) {
+                return Padding(
+                  padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+                  child: _FilterChipButton(
+                    label: widget.conditionFilters[index].label.resolve(context),
+                    selected: widget.selectedConditionIndex == index,
+                    onPressed: () => widget.onConditionSelected(index),
+                  ),
+                );
+              }),
+            ),
           ),
-          if (hasActiveFilters) ...[
-            const SizedBox(height: AppSpacing.md),
+          if (widget.hasActiveFilters) ...[
+            const SizedBox(height: AppSpacing.sm),
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: TextButton.icon(
-                onPressed: onClearFilters,
+                onPressed: widget.onClearFilters,
                 style: TextButton.styleFrom(
                   foregroundColor: palette.mint,
                   padding: const EdgeInsetsDirectional.symmetric(

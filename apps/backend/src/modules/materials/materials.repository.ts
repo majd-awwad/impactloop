@@ -139,13 +139,8 @@ const materialInclude = {
     },
   },
   images: {
-    where: {
-      isCover: true,
-    },
+    orderBy: [{ isCover: 'desc' }, { sortOrder: 'asc' }],
     take: 1,
-    orderBy: {
-      sortOrder: 'asc' as const,
-    },
   },
   supplierProfile: {
     select: {

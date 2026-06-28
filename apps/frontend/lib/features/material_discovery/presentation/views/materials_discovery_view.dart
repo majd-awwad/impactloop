@@ -29,6 +29,7 @@ class MaterialsDiscoveryView extends StatelessWidget {
     required this.selectedSortIndex,
     required this.selectedConditionIndex,
     required this.hasActiveFilters,
+    required this.isRefetching,
     required this.isLoadingMore,
     this.refetchErrorMessage,
     this.onRetryRefetch,
@@ -59,6 +60,7 @@ class MaterialsDiscoveryView extends StatelessWidget {
   final int selectedSortIndex;
   final int selectedConditionIndex;
   final bool hasActiveFilters;
+  final bool isRefetching;
   final bool isLoadingMore;
   final String? refetchErrorMessage;
   final VoidCallback? onRetryRefetch;
@@ -117,6 +119,10 @@ class MaterialsDiscoveryView extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
         ],
+        if (isRefetching) ...[
+          const _RefetchingIndicator(),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         MaterialSearchFilters(
           searchController: searchController,
           cityController: cityController,
@@ -166,6 +172,9 @@ class MaterialsDiscoveryView extends StatelessWidget {
 
               final itemWidth =
                   (width - ((columns - 1) * AppSpacing.md)) / columns;
+              final effectiveCardVariant = itemWidth < 400
+                  ? AppMaterialCardVariant.compact
+                  : cardVariant;
 
               return Wrap(
                 spacing: AppSpacing.md,
@@ -196,7 +205,7 @@ class MaterialsDiscoveryView extends StatelessWidget {
                           : material.ratingLabel?.resolve(context),
                       showPopularBadge: material.isPopular,
                       fallbackIcon: material.heroIconData,
-                      variant: cardVariant,
+                      variant: effectiveCardVariant,
                       onTap: onMaterialTap == null
                           ? null
                           : () => onMaterialTap!(material),
@@ -343,6 +352,40 @@ class _EmptyStatePanel extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RefetchingIndicator extends StatelessWidget {
+  const _RefetchingIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ClipRRect(
+          borderRadius: AppRadius.pillAll,
+          child: LinearProgressIndicator(
+            minHeight: 3,
+            backgroundColor: palette.borderSubtle,
+            color: palette.mint,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          const LocalizedText(
+            en: 'Updating results...',
+            ar: 'جارٍ تحديث النتائج...',
+          ).resolve(context),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary, fontSize: 12),
+          textAlign: TextAlign.start,
+        ),
+      ],
     );
   }
 }

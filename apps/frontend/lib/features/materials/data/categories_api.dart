@@ -9,11 +9,17 @@ class CategoriesApi {
 
   final Dio _client;
 
-  Future<List<MaterialCategory>> fetchMaterialCategories() async {
+  Future<List<MaterialCategory>> fetchMaterialCategories({
+    bool discoveryOnly = false,
+  }) async {
     try {
       final response = await _client.get<Map<String, dynamic>>(
         '/api/categories',
-        queryParameters: const {'type': 'MATERIAL', 'rootOnly': true},
+        queryParameters: {
+          'type': 'MATERIAL',
+          'rootOnly': true,
+          if (discoveryOnly) 'discoveryOnly': true,
+        },
       );
       final body = response.data;
 

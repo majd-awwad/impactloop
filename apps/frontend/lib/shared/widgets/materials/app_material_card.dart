@@ -128,14 +128,15 @@ class AppMaterialCard extends StatelessWidget {
                           title: title,
                           ratingLabel: ratingLabel,
                           trailing: trailing,
+                          compact: compact,
                         ),
-                        const SizedBox(height: AppSpacing.sm),
+                        SizedBox(height: compact ? AppSpacing.xs : AppSpacing.sm),
                         compact
-                            ? SizedBox(height: 48, child: descriptionText)
+                            ? SizedBox(height: 40, child: descriptionText)
                             : descriptionText,
                         const Spacer(),
                         _CardChipRow(
-                          minHeight: compact ? 42 : 46,
+                          minHeight: compact ? 34 : 40,
                           children: [
                             MaterialConditionBadge(
                               label: conditionLabel,
@@ -151,37 +152,69 @@ class AppMaterialCard extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        _CardChipRow(
-                          minHeight: compact ? 42 : 46,
-                          spacing: AppSpacing.sm,
-                          children: [
-                            _MetaLine(
-                              icon: Icons.straighten_rounded,
-                              label: quantityLabel,
-                              maxLabelWidth: compact ? 92 : 180,
+                        SizedBox(height: compact ? AppSpacing.xs : AppSpacing.sm),
+                        if (compact)
+                          SizedBox(
+                            height: 34,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _MetaLine(
+                                    icon: Icons.straighten_rounded,
+                                    label: quantityLabel,
+                                    maxLabelWidth: 92,
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  _MetaLine(
+                                    icon: Icons.location_on_outlined,
+                                    label: locationLabel,
+                                    maxLabelWidth: 120,
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  _MetaLine(
+                                    icon: deliveryAvailable
+                                        ? Icons.local_shipping_outlined
+                                        : Icons.storefront_outlined,
+                                    label: availabilityLabel,
+                                    maxLabelWidth: 120,
+                                  ),
+                                ],
+                              ),
                             ),
-                            _MetaLine(
-                              icon: Icons.location_on_outlined,
-                              label: locationLabel,
-                              maxLabelWidth: compact ? 132 : 180,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        _CardChipRow(
-                          minHeight: compact ? 42 : 46,
-                          spacing: AppSpacing.sm,
-                          children: [
-                            _MetaLine(
-                              icon: deliveryAvailable
-                                  ? Icons.local_shipping_outlined
-                                  : Icons.storefront_outlined,
-                              label: availabilityLabel,
-                              maxLabelWidth: compact ? 132 : 180,
-                            ),
-                          ],
-                        ),
+                          )
+                        else ...[
+                          _CardChipRow(
+                            minHeight: 40,
+                            spacing: AppSpacing.sm,
+                            children: [
+                              _MetaLine(
+                                icon: Icons.straighten_rounded,
+                                label: quantityLabel,
+                                maxLabelWidth: 180,
+                              ),
+                              _MetaLine(
+                                icon: Icons.location_on_outlined,
+                                label: locationLabel,
+                                maxLabelWidth: 180,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          _CardChipRow(
+                            minHeight: 40,
+                            spacing: AppSpacing.sm,
+                            children: [
+                              _MetaLine(
+                                icon: deliveryAvailable
+                                    ? Icons.local_shipping_outlined
+                                    : Icons.storefront_outlined,
+                                label: availabilityLabel,
+                                maxLabelWidth: 180,
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -196,14 +229,14 @@ class AppMaterialCard extends StatelessWidget {
 
   static double _defaultMediaHeight(bool compact, bool hasImage) {
     if (compact) {
-      return hasImage ? 154 : 128;
+      return hasImage ? 140 : 120;
     }
 
-    return hasImage ? 212 : 160;
+    return hasImage ? 168 : 128;
   }
 }
 
-class _MaterialMedia extends StatelessWidget {
+class _MaterialMedia extends StatefulWidget {
   const _MaterialMedia({
     required this.category,
     required this.statusLabel,
@@ -229,19 +262,37 @@ class _MaterialMedia extends StatelessWidget {
   final bool compact;
 
   @override
+  State<_MaterialMedia> createState() => _MaterialMediaState();
+}
+
+class _MaterialMediaState extends State<_MaterialMedia> {
+  bool _imageFailed = false;
+
+  @override
+  void didUpdateWidget(covariant _MaterialMedia oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageUrl != widget.imageUrl) {
+      _imageFailed = false;
+    }
+  }
+
+  bool get _showNetworkImage =>
+      widget.hasImage && !_imageFailed && widget.imageUrl!.trim().isNotEmpty;
+
+  @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final topRadius = compact ? AppRadius.lg : AppRadius.xl;
-    final mediaGradientColors = hasImage
-        ? gradientColors
+    final topRadius = widget.compact ? AppRadius.lg : AppRadius.xl;
+    final mediaGradientColors = _showNetworkImage
+        ? widget.gradientColors
         : [palette.fallbackStart, palette.fallbackMid, palette.fallbackEnd];
-    final overlayColor = hasImage
-        ? palette.overlayDark.withValues(alpha: isDark ? 0.72 : 0.34)
+    final overlayColor = _showNetworkImage
+        ? palette.overlayDark.withValues(alpha: isDark ? 0.42 : 0.22)
         : palette.overlayDark.withValues(alpha: isDark ? 0.08 : 0.02);
 
     return SizedBox(
-      height: height,
+      height: widget.height,
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadiusDirectional.only(
@@ -262,12 +313,18 @@ class _MaterialMedia extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (hasImage)
+              if (_showNetworkImage)
                 Image.network(
-                  imageUrl!.trim(),
+                  widget.imageUrl!.trim(),
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const SizedBox.shrink(),
+                  errorBuilder: (context, error, stackTrace) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && !_imageFailed) {
+                        setState(() => _imageFailed = true);
+                      }
+                    });
+                    return const SizedBox.shrink();
+                  },
                 ),
               DecoratedBox(decoration: BoxDecoration(color: overlayColor)),
               Padding(
@@ -282,15 +339,15 @@ class _MaterialMedia extends StatelessWidget {
                             alignment: AlignmentDirectional.centerStart,
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
-                                maxWidth: compact ? 140 : 190,
+                                maxWidth: widget.compact ? 140 : 190,
                               ),
-                              child: _MediaTagChip(label: category),
+                              child: _MediaTagChip(label: widget.category),
                             ),
                           ),
                         ),
                         const Spacer(),
                         const SizedBox(width: AppSpacing.sm),
-                        if (showPopularBadge) ...[
+                        if (widget.showPopularBadge) ...[
                           const _PopularBadge(),
                           const SizedBox(width: AppSpacing.sm),
                         ],
@@ -298,20 +355,20 @@ class _MaterialMedia extends StatelessWidget {
                           child: Align(
                             alignment: AlignmentDirectional.centerEnd,
                             child: MaterialStatusBadge(
-                              label: statusLabel,
-                              tone: statusTone,
+                              label: widget.statusLabel,
+                              tone: widget.statusTone,
                             ),
                           ),
                         ),
                       ],
                     ),
                     const Spacer(),
-                    if (!hasImage)
+                    if (!_showNetworkImage)
                       Align(
                         alignment: AlignmentDirectional.bottomStart,
                         child: Container(
-                          width: compact ? 60 : 72,
-                          height: compact ? 60 : 72,
+                          width: widget.compact ? 56 : 64,
+                          height: widget.compact ? 56 : 64,
                           decoration: BoxDecoration(
                             color: isDark
                                 ? palette.cardSurfaceAlt.withValues(alpha: 0.78)
@@ -324,9 +381,9 @@ class _MaterialMedia extends StatelessWidget {
                             ),
                           ),
                           child: Icon(
-                            fallbackIcon,
+                            widget.fallbackIcon,
                             color: palette.mint,
-                            size: compact ? 30 : 36,
+                            size: widget.compact ? 28 : 32,
                           ),
                         ),
                       ),
@@ -388,11 +445,13 @@ class _CardHeader extends StatelessWidget {
     required this.title,
     required this.ratingLabel,
     required this.trailing,
+    this.compact = false,
   });
 
   final String title;
   final String? ratingLabel;
   final Widget? trailing;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -401,7 +460,7 @@ class _CardHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          height: 52,
+          height: compact ? 40 : 46,
           child: Text(
             title,
             style: AppTextStyles.title(
