@@ -49,7 +49,7 @@ The intended feature-first direction is visible, but not perfectly consistent: s
 |------|------------------|-----|
 | `Provider<T>` | `apiClientProvider`, `authRepositoryProvider`, `materialListingRepositoryProvider`, supplier repository/API providers | Dependency construction and synchronous derived values. |
 | `NotifierProvider<Notifier, State>` | `authControllerProvider`, `registrationDraftProvider`, `appSettingsProvider`, supplier filters/query providers | Mutable app/session/form/query state. |
-| `FutureProvider<T>` | `materialCategoriesProvider`, `materialListingPolicyProvider`, `supplierDashboardProvider`, `supplierProfileProvider` | Async loads with `AsyncValue`. |
+| `FutureProvider<T>` | `materialCategoriesProvider`, `discoveryMaterialCategoriesProvider`, `materialListingPolicyProvider`, `supplierDashboardProvider`, `supplierProfileProvider` | Async loads with `AsyncValue`. |
 | `FutureProvider.autoDispose<T>` | `healthStatusProvider`, `homeSuggestedMaterialsProvider`, `supplierMyMaterialsProvider`, incoming requests, pickup schedule, notifications | Screen-bound async loads that may be disposed. |
 | `FutureProvider.family<T, Arg>` | `materialTypesSearchProvider`, `supplierMyMaterialByIdProvider` | Parameterized async reads. |
 
@@ -118,7 +118,7 @@ Examples:
 - `healthStatusProvider` fetches backend health.
 - `homeSuggestedMaterialsProvider` loads material discovery results and takes the first four.
 - `learningProjectsProvider`, `learningProjectProvider`, and `projectCategoriesProvider` load Learning Hub list/detail/category data from `/api/learning-projects` and `/api/categories?type=PROJECT`.
-- `materialCategoriesProvider`, `materialListingPolicyProvider`, and `categoryRequestsProvider` load add-material support data.
+- `materialCategoriesProvider`, `discoveryMaterialCategoriesProvider`, `materialListingPolicyProvider`, and `categoryRequestsProvider` load shared materials data. Supplier add-material uses the full category list; discovery browse uses `discoveryMaterialCategoriesProvider` (`discoveryOnly=true`); admin approvals uses `materialCategoriesProvider`.
 - `reservationCreateControllerProvider` submits learner reservation requests from material detail and exposes loading/error state for the Reserve button.
 - `myReservationsProvider` loads `GET /api/reservations/my` for the learner reservation page and material-detail reservation state.
 - `learnerDeliveriesProvider` and `learnerDeliveryProvider` load learner delivery status from `/api/deliveries`; `deliveryRequestControllerProvider` submits accepted-reservation delivery requests.
@@ -142,7 +142,7 @@ These providers keep UI selection state separate from the async data providers t
 Current repository providers live mostly in feature `data/` files:
 
 - Auth: `authRepositoryProvider`
-- Materials listing: `materialListingRepositoryProvider`
+- Materials listing: `materialListingRepositoryProvider` (API client providers are co-located in `material_listing_repository.dart` today)
 - Supplier dashboard: `supplierDashboardRepositoryProvider`
 - Supplier profile: `supplierProfileRepositoryProvider`
 - Supplier requests: `supplierRequestsRepositoryProvider`
@@ -192,6 +192,8 @@ Keep invalidation close to the mutation that changes server state.
 ## Remaining Inconsistencies
 
 - Supplier portal providers are split between `application/` and `presentation/controllers/`.
-- `material_discovery` has repository classes but no central provider for all pages.
+- `material_discovery` has repository classes but no central provider for list/detail fetch; it **does** use `discoveryMaterialCategoriesProvider` from `features/materials` for category chips only.
+- `features/materials` is data-only (no routes). Public browse routes `/materials` and `/materials/:id` are registered on `material_discovery` pages; supplier routes `/supplier/materials/*` are on `supplier_portal`.
 - Some form submit flows call repository/helper functions directly from widgets after validation; this is current practice but should remain thin.
 - Learning hub remains mock-data oriented and was not found using application providers in the inspected paths.
+- Optional follow-up: extract Riverpod API providers from `material_listing_repository.dart` into a dedicated providers file without changing behavior.

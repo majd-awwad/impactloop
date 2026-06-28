@@ -6,7 +6,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../materials/data/models/category.dart';
-import '../../domain/discovery_category_utils.dart';
+import '../../domain/material_discovery_constants.dart';
 
 class DiscoveryCategoryPicker extends StatefulWidget {
   const DiscoveryCategoryPicker({

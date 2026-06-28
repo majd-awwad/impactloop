@@ -30,11 +30,11 @@ List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, 
 
 ## Category display (discovery)
 
-- Discovery uses `GET /api/categories?type=MATERIAL&rootOnly=true&discoveryOnly=true`.
-- When `discoveryOnly=true`, the API filters out internal/test/admin-looking names (bracketed labels, `test`, `admin`, `approvals`) and dedupes by normalized English label.
-- Supplier/admin listing flows use the same endpoint **without** `discoveryOnly` and receive the full active category list.
-- Discovery UI shows a compact row: **All**, up to 8 visible categories, and **More** for the rest in a constrained scroll panel.
-- Filtering still uses `categoryId` server-side.
+- Discovery category chips load via shared `discoveryMaterialCategoriesProvider` in `features/materials` → `GET /api/categories?type=MATERIAL&rootOnly=true&discoveryOnly=true`.
+- When `discoveryOnly=true`, the **backend** filters out internal/test/admin-looking names (bracketed labels, `test`, `admin`, `approvals`) and dedupes by normalized English label (`category-discovery-filter.ts`). There is **no** client-side category filtering in production discovery UI.
+- Supplier/admin listing flows use `materialCategoriesProvider` (same endpoint **without** `discoveryOnly`) and receive the full active category list.
+- Discovery UI shows a compact row: **All**, up to 8 visible categories (`discoveryVisibleCategoryCount` in `material_discovery_constants.dart`), and **More** for the rest in a constrained scroll panel.
+- Material list filtering still uses `categoryId` server-side via `ApiMaterialDiscoveryRepository`.
 
 ## Main user flow
 
@@ -49,19 +49,25 @@ List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, 
 
 | Area | Path |
 |------|------|
-| Domain | `domain/discovery_material.dart`, `material_discovery_query.dart`, `material_discovery_result.dart`, `material_discovery_repository.dart`, `material_discovery_constants.dart`, `discovery_category_utils.dart` |
+| Domain | `domain/discovery_material.dart`, `material_discovery_query.dart`, `material_discovery_result.dart`, `material_discovery_repository.dart`, `material_discovery_constants.dart` |
+| Shared data (categories only) | `features/materials/application/material_listing_providers.dart` — `discoveryMaterialCategoriesProvider`; model `features/materials/data/models/category.dart` |
 | Data | `data/api_material_discovery_repository.dart`, `material_discovery_api_mapper.dart`, `mock_material_discovery_repository.dart` |
 | Pages | `presentation/pages/materials_discovery_page.dart`, `material_details_page.dart` |
 | Views / widgets | `presentation/views/materials_discovery_view.dart`, `widgets/material_search_filters.dart`, `widgets/discovery_category_picker.dart`, `widgets/discovery_location_privacy_panel.dart`, `widgets/materials_hero_section.dart` |
 
 **Also used from:** `features/home/application/home_suggested_materials_provider.dart` (first page subset).
 
+**Routes:** `/materials` and `/materials/:id` belong to this feature only — not to `features/materials`.
+
+**Report material:** detail page calls `materialReportsApiProvider` from `features/materials/data/material_reports_api.dart` (`POST /api/materials/:id/reports`).
+
 ## Backend files
 
 | Area | Path |
 |------|------|
-| Module | `modules/materials/materials.routes.ts`, `materials.controller.ts`, `materials.service.ts`, `materials.repository.ts`, `materials.validation.ts` |
-| Tests | `modules/materials/materials.discovery.test.ts` |
+| Public read / policy / price-check / reports | `modules/materials/materials.routes.ts`, `materials.controller.ts`, `materials.service.ts`, `materials.repository.ts`, `materials.validation.ts` |
+| Discovery category filter | `modules/categories/category-discovery-filter.ts` |
+| Tests | `modules/materials/materials.discovery.test.ts`, `modules/categories/category-discovery-filter.test.ts` |
 
 ## API endpoints
 

@@ -12,7 +12,6 @@ import 'models/material_draft_image.dart';
 import 'models/material_listing_policy.dart';
 import 'models/material_price_check_request.dart';
 import 'models/material_price_check_result.dart';
-import 'models/material_price_rule.dart';
 import 'models/material_type.dart';
 import 'models/price_rule_request.dart';
 import 'models/price_rule_request_draft.dart';
@@ -104,10 +103,6 @@ class MaterialListingRepository {
       categoryId: categoryId,
       query: query,
     );
-  }
-
-  Future<MaterialPriceRule?> fetchActivePriceRule(String materialTypeId) {
-    return _materialTypesApi.fetchActivePriceRule(materialTypeId);
   }
 
   Future<MaterialListingPolicy> fetchListingPolicy() {
