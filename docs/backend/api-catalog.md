@@ -286,7 +286,9 @@ Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must s
 | PATCH | `/api/supplier/reservations/:id/decline` | `supplier-reservations/supplier-reservations.routes.ts` |
 | PATCH | `/api/supplier/reservations/:id/complete` | `supplier-reservations/supplier-reservations.routes.ts` |
 
-Accept keeps the held quantity and recomputes material status. Decline rejects a pending reservation and releases the hold. Complete subtracts `quantityRequested` from `material.quantity` for self-pickup; material becomes `REUSED` only when remaining quantity reaches `0`. Complete is blocked when an active or delivered delivery exists.
+`GET /api/supplier/reservations` returns supplier reservation cards by status tab. Items include material and learner summaries, `quantityRequested`, `unit`, pickup window fields, `deliveryRequested`, nullable `activeDelivery` (`id`, `status` only), and `canSupplierComplete`. `canSupplierComplete` is true only for accepted self-pickup reservations that the supplier may manually complete. Reservations with `deliveryRequested` or any `Delivery` row, including cancelled or failed delivery attempts, return false so the UI can show driver-delivery status instead of a complete button.
+
+Accept keeps the held quantity and recomputes material status. Decline rejects a pending reservation and releases the hold. Complete subtracts `quantityRequested` from `material.quantity` for self-pickup; material becomes `REUSED` only when remaining quantity reaches `0`. Complete is blocked when `deliveryRequested` is true or any delivery row exists for the reservation.
 
 ## Endpoints documented elsewhere but **not mounted**
 

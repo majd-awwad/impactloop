@@ -130,6 +130,48 @@ class SupplierPickupWindow {
   }
 }
 
+class SupplierReservationDeliverySummary {
+  const SupplierReservationDeliverySummary({
+    required this.id,
+    required this.status,
+  });
+
+  final String id;
+  final String status;
+
+  factory SupplierReservationDeliverySummary.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return SupplierReservationDeliverySummary(
+      id: json['id'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+    );
+  }
+
+  String get statusLabel {
+    switch (status.toUpperCase()) {
+      case 'WAITING_FOR_DRIVER':
+        return 'Delivery requested';
+      case 'DRIVER_ASSIGNED':
+      case 'ARRIVED_PICKUP':
+      case 'PICKED_UP':
+        return 'Driver assigned';
+      case 'ON_THE_WAY':
+      case 'ARRIVED_DROPOFF':
+        return 'On the way';
+      case 'DELIVERED':
+        return 'Delivered';
+      case 'CANCELLED':
+        return 'Delivery cancelled';
+      case 'FAILED_PICKUP':
+      case 'FAILED_DELIVERY':
+        return 'Delivery failed';
+      default:
+        return 'Delivery requested';
+    }
+  }
+}
+
 class SupplierIncomingRequest {
   const SupplierIncomingRequest({
     required this.id,
@@ -139,6 +181,9 @@ class SupplierIncomingRequest {
     required this.unit,
     required this.status,
     required this.requestedAt,
+    this.deliveryRequested = false,
+    this.activeDelivery,
+    this.canSupplierComplete = false,
     this.materialImageUrl,
     this.learnerNote,
     this.pickupPreference,
@@ -154,14 +199,23 @@ class SupplierIncomingRequest {
   final String unit;
   final SupplierIncomingRequestStatus status;
   final DateTime requestedAt;
+  final bool deliveryRequested;
+  final SupplierReservationDeliverySummary? activeDelivery;
+  final bool canSupplierComplete;
   final String? learnerNote;
   final String? pickupPreference;
   final SupplierPickupWindow? pickupWindow;
   final String? declineReason;
 
+  bool get hasDelivery => deliveryRequested || activeDelivery != null;
+
+  String get deliveryStatusLabel =>
+      activeDelivery?.statusLabel ?? 'Delivery requested';
+
   SupplierIncomingRequest copyWith({
     SupplierIncomingRequestStatus? status,
     SupplierPickupWindow? pickupWindow,
+    bool? canSupplierComplete,
     String? declineReason,
   }) {
     return SupplierIncomingRequest(
@@ -173,6 +227,9 @@ class SupplierIncomingRequest {
       unit: unit,
       status: status ?? this.status,
       requestedAt: requestedAt,
+      deliveryRequested: deliveryRequested,
+      activeDelivery: activeDelivery,
+      canSupplierComplete: canSupplierComplete ?? this.canSupplierComplete,
       learnerNote: learnerNote,
       pickupPreference: pickupPreference,
       pickupWindow: pickupWindow ?? this.pickupWindow,
@@ -197,6 +254,12 @@ class SupplierIncomingRequest {
 
     final pickupType = json['pickupType'] as String?;
     final deliveryRequested = json['deliveryRequested'] as bool? ?? false;
+    final activeDeliveryJson = json['activeDelivery'];
+    final activeDelivery = activeDeliveryJson is Map
+        ? SupplierReservationDeliverySummary.fromJson(
+            Map<String, dynamic>.from(activeDeliveryJson),
+          )
+        : null;
     String? preference = json['pickupPreference'] as String?;
     if (preference == null || preference.isEmpty) {
       if (deliveryRequested) {
@@ -205,6 +268,15 @@ class SupplierIncomingRequest {
         preference = 'Self pickup';
       }
     }
+
+    final status = SupplierIncomingRequestStatusLabels.fromApiValue(
+      json['status'] as String? ?? 'PENDING',
+    );
+    final canSupplierComplete =
+        json['canSupplierComplete'] as bool? ??
+        (status == SupplierIncomingRequestStatus.accepted &&
+            !deliveryRequested &&
+            activeDelivery == null);
 
     SupplierPickupWindow? pickupWindow;
     final start = json['pickupWindowStart'] as String?;
@@ -231,12 +303,13 @@ class SupplierIncomingRequest {
           '',
       quantityRequested: (json['quantityRequested'] as num?)?.toDouble() ?? 0,
       unit: material?['unit'] as String? ?? json['unit'] as String? ?? 'piece',
-      status: SupplierIncomingRequestStatusLabels.fromApiValue(
-        json['status'] as String? ?? 'PENDING',
-      ),
+      status: status,
       requestedAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
+      deliveryRequested: deliveryRequested,
+      activeDelivery: activeDelivery,
+      canSupplierComplete: canSupplierComplete,
       learnerNote: json['message'] as String?,
       pickupPreference: preference,
       pickupWindow: pickupWindow,

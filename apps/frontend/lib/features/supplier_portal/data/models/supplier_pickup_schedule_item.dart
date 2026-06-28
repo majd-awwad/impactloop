@@ -65,6 +65,9 @@ class SupplierPickupScheduleItem {
     required this.unit,
     required this.status,
     required this.pickupType,
+    this.deliveryRequested = false,
+    this.activeDelivery,
+    this.canSupplierComplete = false,
     this.materialImageUrl,
     this.pickupWindow,
     this.supplierNote,
@@ -80,12 +83,18 @@ class SupplierPickupScheduleItem {
   final String unit;
   final SupplierPickupScheduleStatus status;
   final String pickupType;
+  final bool deliveryRequested;
+  final SupplierReservationDeliverySummary? activeDelivery;
+  final bool canSupplierComplete;
   final SupplierPickupWindow? pickupWindow;
   final String? supplierNote;
   final String? learnerMessage;
   final DateTime? completedAt;
 
   bool get isCompleted => status == SupplierPickupScheduleStatus.completed;
+  bool get hasDelivery => deliveryRequested || activeDelivery != null;
+  String get deliveryStatusLabel =>
+      activeDelivery?.statusLabel ?? 'Delivery requested';
 
   DateTime? get scheduleDate {
     if (isCompleted) {
@@ -120,6 +129,12 @@ class SupplierPickupScheduleItem {
 
     final pickupTypeRaw = json['pickupType'] as String?;
     final deliveryRequested = json['deliveryRequested'] as bool? ?? false;
+    final activeDeliveryJson = json['activeDelivery'];
+    final activeDelivery = activeDeliveryJson is Map
+        ? SupplierReservationDeliverySummary.fromJson(
+            Map<String, dynamic>.from(activeDeliveryJson),
+          )
+        : null;
     String pickupTypeLabel = json['pickupPreference'] as String? ?? '';
     if (pickupTypeLabel.isEmpty) {
       if (deliveryRequested) {
@@ -147,6 +162,11 @@ class SupplierPickupScheduleItem {
     final scheduleStatus = statusRaw == 'COMPLETED'
         ? SupplierPickupScheduleStatus.completed
         : SupplierPickupScheduleStatus.accepted;
+    final canSupplierComplete =
+        json['canSupplierComplete'] as bool? ??
+        (scheduleStatus == SupplierPickupScheduleStatus.accepted &&
+            !deliveryRequested &&
+            activeDelivery == null);
 
     DateTime? completedAt;
     final completedAtRaw = json['completedAt'] as String?;
@@ -169,6 +189,9 @@ class SupplierPickupScheduleItem {
       unit: json['unit'] as String? ?? material?['unit'] as String? ?? 'piece',
       status: scheduleStatus,
       pickupType: pickupTypeLabel,
+      deliveryRequested: deliveryRequested,
+      activeDelivery: activeDelivery,
+      canSupplierComplete: canSupplierComplete,
       pickupWindow: pickupWindow,
       supplierNote: json['supplierNote'] as String?,
       learnerMessage: json['message'] as String?,

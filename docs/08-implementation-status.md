@@ -51,7 +51,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `supplier` | **Implemented** | Dashboard, profile, materials |
 | `category-requests` | **Implemented** | Under `/api/supplier` |
 | `price-rule-requests` | **Implemented** | Create + supplier drafts |
-| `supplier-reservations` | **Partial** | Supplier accept/decline/self-pickup complete; complete blocked for delivery reservations |
+| `supplier-reservations` | **Partial** | Supplier accept/decline/self-pickup complete; delivery reservations expose delivery summary and hide supplier complete action |
 | `supplier-notifications` | **Implemented** | Derived supplier inbox |
 
 ### Backend **not implemented** as modules
@@ -98,7 +98,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Role invitations (DRIVER/MODERATOR/ADMIN) | **Implemented** | Admin email invitations + `/invite/accept` registration; `EMAIL_PROVIDER=mock` or SMTP |
 | Material discovery (public) | **Implemented** | Backend + Flutter |
 | Supplier list/create/update/delete materials | **Implemented** | Create is idempotent with required `Idempotency-Key`; edit/delete gated by status + reservation history |
-| Supplier reservations workflow | **Partial** | Supplier list/accept/decline/self-pickup complete; delivery complete guarded — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
+| Supplier reservations workflow | **Partial** | Supplier list/accept/decline/self-pickup complete; delivery reservations show driver-delivery status instead of supplier complete — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
 | Learner reservation status UX | **Partial** | Partial-quantity reserve/cancel, material `availableQuantity`, `/learner/reservations` with delivery request/status — [reservations.md](features/reservations.md), [learner-reservation-flow](flows/learner-reservation-flow.md) |
 | Delivery workflow | **Partial** | Delivery domain, learner/driver APIs, status history, pings; learner request/status/tracking summary/map marker and driver jobs/status/manual ping UI exist; no realtime stream — [delivery.md](features/delivery.md) |
 | Driver portal | **Partial** | Flutter `/driver/jobs` and `/driver/deliveries/:id` use driver APIs for available jobs, active assignments, accept, status updates, foreground auto-location sharing on the active delivery detail page, and manual foreground location ping — [delivery.md](features/delivery.md) |

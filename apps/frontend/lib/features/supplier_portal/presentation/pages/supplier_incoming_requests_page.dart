@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/api_exception.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
 import '../theme/supplier_theme_extension.dart';
@@ -14,6 +15,14 @@ import '../widgets/incoming_request_filter_chips.dart';
 import '../widgets/supplier_feedback.dart';
 
 const _contentMaxWidth = 960.0;
+const _deliveryHandledCompleteMessage =
+    'This reservation is handled by delivery. The driver will mark it completed.';
+
+bool _isDeliveryCompleteConflict(Object error) {
+  return error is ApiException &&
+      error.statusCode == 409 &&
+      error.message.toLowerCase().contains('self-pickup');
+}
 
 class SupplierIncomingRequestsPage extends ConsumerStatefulWidget {
   const SupplierIncomingRequestsPage({
@@ -135,18 +144,17 @@ class _SupplierIncomingRequestsPageState
             child: IncomingRequestCard(
               request: request,
               isCompleting: completingId == request.id,
-              onAccept:
-                  request.status == SupplierIncomingRequestStatus.pending
-                      ? () => _handleAccept(context, ref, request)
-                      : null,
-              onDecline:
-                  request.status == SupplierIncomingRequestStatus.pending
-                      ? () => _handleDecline(context, ref, request)
-                      : null,
+              onAccept: request.status == SupplierIncomingRequestStatus.pending
+                  ? () => _handleAccept(context, ref, request)
+                  : null,
+              onDecline: request.status == SupplierIncomingRequestStatus.pending
+                  ? () => _handleDecline(context, ref, request)
+                  : null,
               onMarkCompleted:
-                  request.status == SupplierIncomingRequestStatus.accepted
-                      ? () => _handleComplete(context, ref, request)
-                      : null,
+                  request.status == SupplierIncomingRequestStatus.accepted &&
+                      request.canSupplierComplete
+                  ? () => _handleComplete(context, ref, request)
+                  : null,
             ),
           ),
         )
@@ -175,9 +183,9 @@ class _SupplierIncomingRequestsPageState
       );
       if (!context.mounted) return;
       showSupplierInfoSnackBar(context, context.s.requestAccepted);
-      ref.read(incomingRequestTabProvider.notifier).selectTab(
-            SupplierIncomingRequestTab.accepted,
-          );
+      ref
+          .read(incomingRequestTabProvider.notifier)
+          .selectTab(SupplierIncomingRequestTab.accepted);
     } catch (_) {
       if (!context.mounted) return;
       showSupplierErrorSnackBar(context, context.s.requestAcceptFailed);
@@ -208,9 +216,9 @@ class _SupplierIncomingRequestsPageState
       );
       if (!context.mounted) return;
       showSupplierInfoSnackBar(context, context.s.requestDeclined);
-      ref.read(incomingRequestTabProvider.notifier).selectTab(
-            SupplierIncomingRequestTab.declined,
-          );
+      ref
+          .read(incomingRequestTabProvider.notifier)
+          .selectTab(SupplierIncomingRequestTab.declined);
     } catch (_) {
       if (!context.mounted) return;
       showSupplierErrorSnackBar(context, context.s.requestDeclineFailed);
@@ -227,17 +235,24 @@ class _SupplierIncomingRequestsPageState
       return;
     }
 
-    ref.read(completingReservationIdProvider.notifier).setCompleting(request.id);
+    ref
+        .read(completingReservationIdProvider.notifier)
+        .setCompleting(request.id);
     try {
       await completeIncomingRequest(ref, requestId: request.id);
       if (!context.mounted) return;
       showSupplierInfoSnackBar(context, context.s.pickupCompleted);
-      ref.read(incomingRequestTabProvider.notifier).selectTab(
-            SupplierIncomingRequestTab.completed,
-          );
-    } catch (_) {
+      ref
+          .read(incomingRequestTabProvider.notifier)
+          .selectTab(SupplierIncomingRequestTab.completed);
+    } catch (error) {
       if (!context.mounted) return;
-      showSupplierErrorSnackBar(context, context.s.pickupCompleteFailed);
+      showSupplierErrorSnackBar(
+        context,
+        _isDeliveryCompleteConflict(error)
+            ? _deliveryHandledCompleteMessage
+            : context.s.pickupCompleteFailed,
+      );
     } finally {
       ref.read(completingReservationIdProvider.notifier).setCompleting(null);
     }
@@ -303,10 +318,7 @@ class _PageHeader extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({
-    required this.title,
-    required this.subtitle,
-  });
+  const _EmptyState({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
@@ -331,11 +343,7 @@ class _EmptyState extends StatelessWidget {
               color: colors.accentSoft.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.inbox_outlined,
-              color: colors.accent,
-              size: 28,
-            ),
+            child: Icon(Icons.inbox_outlined, color: colors.accent, size: 28),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
@@ -347,9 +355,7 @@ class _EmptyState extends StatelessWidget {
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: context.supplierBody().copyWith(
-              color: colors.textSecondary,
-            ),
+            style: context.supplierBody().copyWith(color: colors.textSecondary),
           ),
         ],
       ),
@@ -383,9 +389,7 @@ class _LoadingState extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           Text(
             context.s.loadingRequests,
-            style: context.supplierBody().copyWith(
-              color: colors.textPrimary,
-            ),
+            style: context.supplierBody().copyWith(color: colors.textPrimary),
           ),
         ],
       ),
@@ -410,11 +414,7 @@ class _ErrorState extends StatelessWidget {
       decoration: decorations.dashboardCard,
       child: Column(
         children: [
-          Icon(
-            Icons.cloud_off_outlined,
-            color: colors.textSecondary,
-            size: 28,
-          ),
+          Icon(Icons.cloud_off_outlined, color: colors.textSecondary, size: 28),
           const SizedBox(height: AppSpacing.md),
           Text(
             l.requestsLoadError,
