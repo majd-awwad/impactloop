@@ -6,6 +6,7 @@ import 'app/app.dart';
 import 'core/network/api_client.dart';
 import 'features/learning_hub/application/learning_hub_providers.dart';
 import 'features/learning_hub/data/api_learning_hub_repository.dart';
+import 'features/materials/data/material_listing_data_providers.dart';
 
 void main() {
   usePathUrlStrategy();
@@ -13,7 +14,10 @@ void main() {
     ProviderScope(
       overrides: [
         learningHubRepositoryProvider.overrideWith(
-          (ref) => ApiLearningHubRepository(ref.watch(apiClientProvider)),
+          (ref) => ApiLearningHubRepository(
+            client: ref.watch(apiClientProvider),
+            categoriesApi: ref.watch(categoriesApiProvider),
+          ),
         ),
       ],
       child: const ImpactLoopApp(),

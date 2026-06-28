@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config/api_config.dart';
 import '../../../shared/models/localized_text.dart';
 import '../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../shared/widgets/materials/material_status_badge.dart';
@@ -33,7 +34,9 @@ class MaterialDiscoveryApiMapper {
     final city = _nullableString(json['city']);
     final area = _nullableString(json['area']);
     final deliveryAvailable = json['deliveryAvailable'] == true;
+    final pickupAllowed = json['pickupAllowed'] != false;
     final ratingSummary = _numberFromDynamic(json['ratingSummary']);
+    final viewsCount = _intFromDynamic(json['viewsCount']) ?? 0;
 
     final conditionMeta = _conditionMeta(condition);
     final statusMeta = _statusMeta(
@@ -76,18 +79,20 @@ class MaterialDiscoveryApiMapper {
         ar: deliveryAvailable ? 'التوصيل متاح' : 'استلام فقط',
       ),
       deliveryAvailable: deliveryAvailable,
+      pickupAllowed: pickupAllowed,
       isFree: isFree,
       supplierName: LocalizedText(en: supplierName, ar: supplierName),
       supplierSubtitle: LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
       heroIconData: _heroIconForCategory(categoryNameEn),
       cardGradient: _gradientForCategory(categoryNameEn),
-      imageUrl: _imageUrl(json, categoryNameEn),
+      imageUrl: _resolveImageUrl(json),
       ratingLabel: ratingSummary == null
           ? null
           : LocalizedText(
               en: _formatCompactNumber(ratingSummary),
               ar: _formatCompactNumber(ratingSummary),
             ),
+      viewsCount: viewsCount,
     );
   }
 
@@ -117,10 +122,28 @@ class MaterialDiscoveryApiMapper {
     return normalized.isEmpty ? null : normalized;
   }
 
-  static String _imageUrl(Map<String, dynamic> json, String categoryNameEn) {
-    final directImage = _nullableString(json['imageUrl']);
+  static String? _resolveImageUrl(Map<String, dynamic> json) {
+    final directImage = _nullableString(json['primaryImageUrl']) ??
+        _nullableString(json['imageUrl']);
     if (directImage != null) {
-      return directImage;
+      return ApiConfig.resolveMediaUrl(directImage);
+    }
+
+    final images = json['images'];
+    if (images is List) {
+      for (final image in images) {
+        if (image is Map) {
+          final url = _nullableString(image['url'] ?? image['imageUrl']);
+          if (url != null) {
+            return ApiConfig.resolveMediaUrl(url);
+          }
+        } else {
+          final url = _nullableString(image);
+          if (url != null) {
+            return ApiConfig.resolveMediaUrl(url);
+          }
+        }
+      }
     }
 
     final imageUrls = json['imageUrls'];
@@ -129,48 +152,34 @@ class MaterialDiscoveryApiMapper {
         if (image is Map) {
           final url = _nullableString(image['url'] ?? image['imageUrl']);
           if (url != null) {
-            return url;
+            return ApiConfig.resolveMediaUrl(url);
           }
         } else {
           final url = _nullableString(image);
           if (url != null) {
-            return url;
+            return ApiConfig.resolveMediaUrl(url);
           }
         }
       }
     }
 
-    return _fallbackImageForCategory(categoryNameEn);
+    return null;
   }
 
-  static String _fallbackImageForCategory(String categoryNameEn) {
-    final normalized = categoryNameEn.toLowerCase();
-
-    if (normalized.contains('wood')) {
-      return 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80';
+  static int? _intFromDynamic(Object? value) {
+    if (value == null) {
+      return null;
     }
 
-    if (normalized.contains('electronic') ||
-        normalized.contains('sensor') ||
-        normalized.contains('circuit')) {
-      return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
+    if (value is int) {
+      return value;
     }
 
-    if (normalized.contains('metal') || normalized.contains('steel')) {
-      return 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80';
+    if (value is num) {
+      return value.toInt();
     }
 
-    if (normalized.contains('plastic') || normalized.contains('acrylic')) {
-      return 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=1200&q=80';
-    }
-
-    if (normalized.contains('fabric') ||
-        normalized.contains('textile') ||
-        normalized.contains('denim')) {
-      return 'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=1200&q=80';
-    }
-
-    return 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80';
+    return int.tryParse(value.toString());
   }
 
   static double? _numberFromDynamic(Object? value) {

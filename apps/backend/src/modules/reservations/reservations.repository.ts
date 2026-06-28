@@ -47,8 +47,13 @@ const learnerReservationListInclude = {
       deliveryAllowed: true,
       location: {
         select: {
+          country: true,
           city: true,
           area: true,
+          addressLine: true,
+          latitude: true,
+          longitude: true,
+          isApproximate: true,
         },
       },
       images: {

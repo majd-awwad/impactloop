@@ -1,4 +1,7 @@
-import { Prisma, type ReservationStatus } from '../../generated/prisma/client.js';
+import {
+  Prisma,
+  type ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 
 import {
@@ -6,16 +9,6 @@ import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
 } from '../reservations/reservations.quantity.js';
-
-const deliveryBlocksSupplierCompleteStatuses = [
-  'WAITING_FOR_DRIVER',
-  'DRIVER_ASSIGNED',
-  'ARRIVED_PICKUP',
-  'PICKED_UP',
-  'ON_THE_WAY',
-  'ARRIVED_DROPOFF',
-  'DELIVERED',
-] as const;
 
 const reservationInclude = {
   material: {
@@ -33,11 +26,40 @@ const reservationInclude = {
       profileImageUrl: true,
     },
   },
+  deliveries: {
+    select: {
+      id: true,
+      status: true,
+    },
+    orderBy: { requestedAt: 'desc' as const },
+    take: 1,
+  },
+  _count: {
+    select: {
+      deliveries: true,
+    },
+  },
 } satisfies Prisma.ReservationInclude;
 
 export type SupplierReservationRecord = Prisma.ReservationGetPayload<{
   include: typeof reservationInclude;
 }>;
+
+export const supplierCanCompleteReservation = (input: {
+  status: ReservationStatus;
+  deliveryRequested: boolean;
+  hasDelivery: boolean;
+}) => {
+  if (input.status !== 'ACCEPTED') {
+    return false;
+  }
+
+  if (input.deliveryRequested || input.hasDelivery) {
+    return false;
+  }
+
+  return true;
+};
 
 export const findSupplierReservations = async (
   ownerId: string,
@@ -190,14 +212,11 @@ export const completeSupplierReservation = async (input: {
       return { conflict: true as const, reservation: existing };
     }
 
-    const blockingDeliveryCount = await tx.delivery.count({
-      where: {
-        reservationId: existing.id,
-        status: { in: [...deliveryBlocksSupplierCompleteStatuses] },
-      },
+    const deliveryCount = await tx.delivery.count({
+      where: { reservationId: existing.id },
     });
 
-    if (blockingDeliveryCount > 0) {
+    if (existing.deliveryRequested || deliveryCount > 0) {
       return { conflict: true as const, reservation: existing };
     }
 

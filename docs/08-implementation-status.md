@@ -44,14 +44,14 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `locations` | **Partial** | Reverse geocode only — no CRUD locations API |
 | `learning-projects` | **Implemented** | Read list + detail |
 | `invitations` | **Implemented** | Admin email invitations (mock/SMTP), validate/accept API, unified `driver_profiles` |
-| `reservations` | **Partial** | Learner create/cancel + my reservations read; partial-quantity holds; learner delivery request route mounted |
+| `reservations` | **Partial** | Learner create/cancel + my reservations read with post-acceptance `pickupLocationFull`; partial-quantity holds; learner delivery request route mounted |
 | `deliveries` | **Partial** | Learner delivery request/read backed by `deliveries`; Flutter learner request/status UI, latest ping summary, and polling map marker exist; driver jobs/status UI exists; no realtime stream |
 | `driver` | **Partial** | Driver available/active jobs, accept, status updates, foreground auto-location sharing on active delivery detail page, and manual location pings; no background GPS |
 | `admin` | **Partial** | Dashboard + invitations + supplier verification review + approvals + materials moderation + people management; other admin pages placeholder |
 | `supplier` | **Implemented** | Dashboard, profile, materials |
 | `category-requests` | **Implemented** | Under `/api/supplier` |
 | `price-rule-requests` | **Implemented** | Create + supplier drafts |
-| `supplier-reservations` | **Partial** | Supplier accept/decline/self-pickup complete; complete blocked for delivery reservations |
+| `supplier-reservations` | **Partial** | Supplier accept/decline/self-pickup complete; delivery reservations expose delivery summary and hide supplier complete action |
 | `supplier-notifications` | **Implemented** | Derived supplier inbox |
 
 ### Backend **not implemented** as modules
@@ -70,7 +70,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `home` | **Partial** | — | Suggested materials + learning spotlight: API | [home-learner.md](features/home-learner.md) |
 | `material_discovery` | **Implemented** | `GET /api/materials`, `POST /api/reservations` | API discovery + reservation CTA | — |
 | `materials` | **Partial** | taxonomy/upload APIs | Data layer for supplier add-material; no routes | [materials-listing.md](features/materials-listing.md) |
-| `reservations` | **Partial** | `POST/PATCH /api/reservations`, `GET /api/reservations/my`, delivery request route | Partial-quantity reserve UI + PENDING cancel + My Reservations quantity display | [reservations.md](features/reservations.md) |
+| `reservations` | **Partial** | `POST/PATCH /api/reservations`, `GET /api/reservations/my` (incl. `pickupLocationFull` after accept/complete), delivery request route | Partial-quantity reserve UI + PENDING cancel + My Reservations pickup address reveal | [reservations.md](features/reservations.md) |
 | `deliveries` | **Partial** | `/api/deliveries/my`, `/api/deliveries/:id`, `POST /api/reservations/:id/delivery` | Learner delivery request dialog/status page/latest ping summary/polling map marker; driver jobs/status portal with foreground auto-location sharing on active delivery detail; no realtime stream | [delivery.md](features/delivery.md) |
 | `driver_portal` | **Partial** | `/api/driver/deliveries/*` | Driver job board, accept action, active delivery detail, ordered status updates, foreground auto-location sharing on detail page, manual location ping; no live map/background pings | [delivery.md](features/delivery.md) |
 | `learning_hub` | **Partial** | `GET /api/learning-projects` + categories | List/detail + Home spotlight API-backed; add-draft mock-only; AI disabled; ratings hidden | [learning-hub.md](features/learning-hub.md) |
@@ -78,7 +78,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `admin_portal` | **Partial** | Dashboard + invitations + supplier verification + approvals + materials moderation + people management UI | [admin.md](features/admin.md) |
 
 **Dev seed admin (local testing):** `admin@impactloop.test` / `AdminPassword123!` — created idempotently by `prisma/seeds/seed-admin.ts`. After login, `postAuthRouteForUser` routes ADMIN users to `/admin`.
-| `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH | `supplier_portal` profile/map | [locations.md](features/locations.md) |
+| `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH + learner pickup reveal on accepted reservations | `supplier_portal` profile/map; learner My Reservations pickup address | [locations.md](features/locations.md) |
 | `invitations` | **Implemented** | `/api/invitations` validate/accept; admin `/api/admin/invitations` | `/invite/accept` public page + admin invitations UI | [invitations.md](features/invitations.md) |
 
 ### Flutter **not implemented** as features
@@ -98,7 +98,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Role invitations (DRIVER/MODERATOR/ADMIN) | **Implemented** | Admin email invitations + `/invite/accept` registration; `EMAIL_PROVIDER=mock` or SMTP |
 | Material discovery (public) | **Implemented** | Backend + Flutter |
 | Supplier list/create/update/delete materials | **Implemented** | Create is idempotent with required `Idempotency-Key`; edit/delete gated by status + reservation history |
-| Supplier reservations workflow | **Partial** | Supplier list/accept/decline/self-pickup complete; delivery complete guarded — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
+| Supplier reservations workflow | **Partial** | Supplier list/accept/decline/self-pickup complete; delivery reservations show driver-delivery status instead of supplier complete — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
 | Learner reservation status UX | **Partial** | Partial-quantity reserve/cancel, material `availableQuantity`, `/learner/reservations` with delivery request/status — [reservations.md](features/reservations.md), [learner-reservation-flow](flows/learner-reservation-flow.md) |
 | Delivery workflow | **Partial** | Delivery domain, learner/driver APIs, status history, pings; learner request/status/tracking summary/map marker and driver jobs/status/manual ping UI exist; no realtime stream — [delivery.md](features/delivery.md) |
 | Driver portal | **Partial** | Flutter `/driver/jobs` and `/driver/deliveries/:id` use driver APIs for available jobs, active assignments, accept, status updates, foreground auto-location sharing on the active delivery detail page, and manual foreground location ping — [delivery.md](features/delivery.md) |

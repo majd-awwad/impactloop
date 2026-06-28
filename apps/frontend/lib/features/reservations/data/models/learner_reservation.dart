@@ -1,3 +1,48 @@
+class LearnerReservationPickupLocation {
+  const LearnerReservationPickupLocation({
+    this.country,
+    required this.city,
+    this.area,
+    this.addressLine,
+    this.latitude,
+    this.longitude,
+    this.isApproximate = true,
+  });
+
+  final String? country;
+  final String city;
+  final String? area;
+  final String? addressLine;
+  final double? latitude;
+  final double? longitude;
+  final bool isApproximate;
+
+  factory LearnerReservationPickupLocation.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return LearnerReservationPickupLocation(
+      country: json['country'] as String?,
+      city: json['city'] as String? ?? '',
+      area: json['area'] as String?,
+      addressLine: json['addressLine'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      isApproximate: json['isApproximate'] == true,
+    );
+  }
+
+  String get formattedAddress {
+    final parts = <String>[
+      if (addressLine?.trim().isNotEmpty == true) addressLine!.trim(),
+      if (area?.trim().isNotEmpty == true) area!.trim(),
+      city.trim(),
+      if (country?.trim().isNotEmpty == true) country!.trim(),
+    ];
+
+    return parts.where((part) => part.isNotEmpty).join(', ');
+  }
+}
+
 class LearnerReservationMaterial {
   const LearnerReservationMaterial({
     required this.id,
@@ -73,6 +118,8 @@ class LearnerReservation {
     this.pickupWindowEnd,
     this.supplierNote,
     this.rejectionReason,
+    this.pickupLocationFull,
+    this.deliveryRequested = false,
     required this.material,
     required this.supplier,
   });
@@ -87,12 +134,15 @@ class LearnerReservation {
   final DateTime? pickupWindowEnd;
   final String? supplierNote;
   final String? rejectionReason;
+  final LearnerReservationPickupLocation? pickupLocationFull;
+  final bool deliveryRequested;
   final LearnerReservationMaterial material;
   final LearnerReservationSupplier supplier;
 
   factory LearnerReservation.fromJson(Map<String, dynamic> json) {
     final materialJson = json['material'];
     final supplierJson = json['supplier'];
+    final pickupLocationJson = json['pickupLocationFull'];
 
     return LearnerReservation(
       id: json['id'] as String? ?? '',
@@ -113,6 +163,10 @@ class LearnerReservation {
       ),
       supplierNote: json['supplierNote'] as String?,
       rejectionReason: json['rejectionReason'] as String?,
+      pickupLocationFull: pickupLocationJson is Map<String, dynamic>
+          ? LearnerReservationPickupLocation.fromJson(pickupLocationJson)
+          : null,
+      deliveryRequested: json['deliveryRequested'] == true,
       material: LearnerReservationMaterial.fromJson(
         materialJson is Map<String, dynamic>
             ? materialJson
@@ -132,4 +186,12 @@ class LearnerReservation {
   bool get isCompleted => status == 'COMPLETED';
   bool get isCancelled => status == 'CANCELLED';
   bool get isExpired => status == 'EXPIRED';
+
+  bool get hasRevealedPickupLocation =>
+      pickupLocationFull != null &&
+      pickupLocationFull!.formattedAddress.isNotEmpty &&
+      (isAccepted || isCompleted);
+
+  bool shouldShowSelfPickupAddress({required bool hasDeliveryRecord}) =>
+      hasRevealedPickupLocation && !deliveryRequested && !hasDeliveryRecord;
 }

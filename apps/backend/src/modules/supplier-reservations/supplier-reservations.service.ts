@@ -57,36 +57,54 @@ const mapPickupPreference = (
 
 export const mapSupplierReservation = (
   reservation: supplierReservationsRepository.SupplierReservationRecord,
-) => ({
-  id: reservation.id,
-  status: reservation.status,
-  material: {
-    id: reservation.material.id,
-    title: reservation.material.title,
-    categoryName: reservation.material.category.nameEn,
+) => {
+  const latestDelivery = reservation.deliveries[0] ?? null;
+  const hasDelivery = reservation._count.deliveries > 0;
+
+  return {
+    id: reservation.id,
+    status: reservation.status,
+    material: {
+      id: reservation.material.id,
+      title: reservation.material.title,
+      categoryName: reservation.material.category.nameEn,
+      unit: reservation.material.unit,
+      imageUrl: pickMaterialImageUrl(reservation.material.images),
+    },
+    learner: {
+      id: reservation.requester.id,
+      displayName: reservation.requester.displayName,
+      profileImageUrl: reservation.requester.profileImageUrl,
+    },
+    quantityRequested: Number(reservation.quantityRequested),
     unit: reservation.material.unit,
-    imageUrl: pickMaterialImageUrl(reservation.material.images),
-  },
-  learner: {
-    id: reservation.requester.id,
-    displayName: reservation.requester.displayName,
-    profileImageUrl: reservation.requester.profileImageUrl,
-  },
-  quantityRequested: Number(reservation.quantityRequested),
-  unit: reservation.material.unit,
-  message: reservation.message,
-  pickupType: reservation.pickupType,
-  pickupPreference: mapPickupPreference(
-    reservation.pickupType,
-    reservation.deliveryRequested,
-  ),
-  pickupWindowStart: reservation.pickupWindowStart?.toISOString() ?? null,
-  pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
-  supplierNote: reservation.supplierNote,
-  rejectionReason: reservation.rejectionReason,
-  completedAt: reservation.completedAt?.toISOString() ?? null,
-  createdAt: reservation.createdAt.toISOString(),
-});
+    message: reservation.message,
+    pickupType: reservation.pickupType,
+    pickupPreference: mapPickupPreference(
+      reservation.pickupType,
+      reservation.deliveryRequested,
+    ),
+    deliveryRequested: reservation.deliveryRequested,
+    activeDelivery: latestDelivery
+      ? {
+          id: latestDelivery.id,
+          status: latestDelivery.status,
+        }
+      : null,
+    canSupplierComplete:
+      supplierReservationsRepository.supplierCanCompleteReservation({
+        status: reservation.status,
+        deliveryRequested: reservation.deliveryRequested,
+        hasDelivery,
+      }),
+    pickupWindowStart: reservation.pickupWindowStart?.toISOString() ?? null,
+    pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
+    supplierNote: reservation.supplierNote,
+    rejectionReason: reservation.rejectionReason,
+    completedAt: reservation.completedAt?.toISOString() ?? null,
+    createdAt: reservation.createdAt.toISOString(),
+  };
+};
 
 export const listSupplierReservations = async (
   ownerId: string,

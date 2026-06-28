@@ -401,6 +401,7 @@ describe('createReservation', () => {
     assert.equal(listed?.material.status, 'AVAILABLE');
     assert.equal(listed?.material.city, 'Nablus');
     assert.equal(listed?.material.area, TEST_MARKER);
+    assert.equal(listed?.pickupLocationFull, null);
     assert.ok(listed?.supplier.displayName);
   });
 

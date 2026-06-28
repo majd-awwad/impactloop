@@ -4,11 +4,19 @@
 
 ## Purpose
 
-Shared Flutter **data layer** and Riverpod providers that power **supplier material create** (add-material flow). Supplies taxonomy, listing policy, price validation, image upload, and optional category/price-rule request workflows.
+Shared Flutter **data infrastructure** (API clients, models, repository facade, Riverpod providers) for material taxonomy, listing policy, price validation, image upload, and optional category/price-rule request workflows.
 
-The `materials` feature folder has **no routes** — it is consumed by `supplier_portal` only. It does **not** feed the `material_discovery` repository or `ApiMaterialDiscoveryRepository`. Any overlap with discovery UI is limited to shared widgets, models, or patterns where applicable (e.g. `AppMaterialCard`), not this data layer.
+`features/materials` is **not** a standalone learner feature. It has **no presentation layer and no routes**. Public browse lives in `material_discovery`; supplier owned-material CRUD lives in `supplier_portal`.
 
-**Not in scope:** public material discovery (`material_discovery` feature), learner material create, material image/location/price/category edit on update.
+| Consumer | Shared usage |
+|----------|----------------|
+| `supplier_portal` | Add-material taxonomy (`materialCategoriesProvider`), listing policy, price-check, category/price-rule requests, upload DTOs, `CreateMaterialRequest` / `CreatedMaterial` |
+| `material_discovery` | `discoveryMaterialCategoriesProvider` for discovery category chips only — **not** public list/detail fetch |
+| `admin_portal` | `materialCategoriesProvider` for admin approval and category-related flows |
+
+Public material browse (`GET /api/materials`, filters, pagination) stays in `material_discovery` via `ApiMaterialDiscoveryRepository`. Supplier create/update/delete stays on `/api/supplier/materials/*` via supplier portal repositories.
+
+**Not in scope for this feature:** discovery list/detail UI, learner material create, supplier edit/delete screens, shared material cards (`shared/widgets/materials/`).
 
 ## Current status
 
@@ -59,10 +67,23 @@ Add Material generates one idempotency key per form session and sends it as the 
 | Area | Path |
 |------|------|
 | Repository | `data/material_listing_repository.dart` |
+| Data providers | `data/material_listing_data_providers.dart` — API client + repository Riverpod providers |
 | Providers | `application/material_listing_providers.dart` |
-| APIs | `data/categories_api.dart`, `material_types_api.dart`, `material_listing_policy_api.dart`, `material_price_check_api.dart`, `category_requests_api.dart`, `price_rule_requests_api.dart`, `material_upload_api.dart` |
-| Models | `data/models/*` (`category.dart`, `material_type.dart`, `create_material_request.dart`, `created_material.dart`, `material_listing_policy.dart`, `material_price_check_*`, `category_request.dart`, `price_rule_request*.dart`, `material_draft_image.dart`) |
-| Consumer UI | `features/supplier_portal/presentation/pages/add_material_page.dart` + add-material widgets |
+| APIs | `data/categories_api.dart` (`MATERIAL` and `PROJECT` taxonomy), `material_types_api.dart`, `material_listing_policy_api.dart`, `material_price_check_api.dart`, `category_requests_api.dart`, `price_rule_requests_api.dart`, `material_upload_api.dart`, `material_reports_api.dart` (public report endpoint; discovery detail consumer) |
+| Models | `data/models/*` (`category.dart`, `material_type.dart`, `create_material_request.dart`, `created_material.dart`, `material_listing_policy.dart`, `material_price_check_*`, `category_request.dart`, `price_rule_request*.dart`, `material_draft_image.dart`, `material_price_rule.dart` — model retained; active rule lookup uses price-check in UI) |
+| Primary consumer UI | `features/supplier_portal/presentation/pages/add_material_page.dart` + add-material widgets |
+| Other consumers | `material_discovery` (category provider only), `admin_portal` (approvals categories) |
+
+## Backend modules (separation)
+
+| Module | Role |
+|--------|------|
+| `categories` | Taxonomy list; optional `discoveryOnly` filter for public browse chips |
+| `material-types` | Type search; `GET /api/material-types/:id/price-rule` exists but add-material uses `POST /api/materials/price-check` |
+| `materials` | Public read/list, listing policy, price-check, material reports |
+| `category-requests` / `price-rule-requests` | Supplier approval workflows |
+| `supplier` | Owned material create/update/delete and inventory facets |
+| `uploads` | Multipart image storage (URLs persisted on create) |
 
 ## Backend files
 
@@ -82,7 +103,7 @@ Add Material generates one idempotency key per form session and sends it as the 
 |--------|------|------|---------|
 | GET | `/api/categories` | Public | Categories |
 | GET | `/api/material-types` | Public | Type search |
-| GET | `/api/material-types/:id/price-rule` | Public | Active rule lookup |
+| GET | `/api/material-types/:id/price-rule` | Public | Backend endpoint; Flutter add-material uses price-check instead |
 | GET | `/api/materials/listing-policy` | Public | Policy caps/rules |
 | POST | `/api/materials/price-check` | Bearer JWT | Paid listing validation |
 | POST | `/api/uploads/material-images` | Bearer JWT + **SUPPLIER** | Image upload |
@@ -93,6 +114,7 @@ Add Material generates one idempotency key per form session and sends it as the 
 | GET | `/api/supplier/price-rule-requests` | Bearer JWT + **SUPPLIER** | List drafts |
 | GET | `/api/supplier/price-rule-requests/:id/draft` | Bearer JWT + **SUPPLIER** | Resume draft |
 | POST | `/api/supplier/materials` | Bearer JWT + **SUPPLIER** + `Idempotency-Key` | Final create (supplier module) |
+| POST | `/api/materials/:id/reports` | Bearer JWT | Material report from discovery detail (`material_reports_api.dart`) |
 
 Static: `GET /uploads/materials/*`
 

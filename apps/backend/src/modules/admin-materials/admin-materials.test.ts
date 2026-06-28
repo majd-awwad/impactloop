@@ -183,6 +183,7 @@ describe('admin materials management', () => {
       q: material.title,
       status: 'AVAILABLE',
       priceType: 'ANY',
+      sort: 'newest',
     });
     assert.equal(
       publicList.items.some((item) => item.id === material.id),

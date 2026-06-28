@@ -41,6 +41,8 @@ Validation schemas: `auth/auth.validation.ts`
 
 Query validation: `categoriesQuerySchema`
 
+Optional query `discoveryOnly=true` applies discovery name filtering and dedupe (`category-discovery-filter.ts`) for public browse UI only. Without it, supplier/admin category pickers receive the full active category list.
+
 ## Material types — `/api/material-types`
 
 | Method | Path | Auth | Source file |
@@ -62,6 +64,10 @@ Query validation: `categoriesQuerySchema`
 
 **`POST /api/materials/:id/reports` body:** `{ reason: MaterialReportReason, note?: string }` — `note` required when `reason=OTHER`. Duplicate pending report by same user/material returns 409. Public discovery excludes `UNAVAILABLE` materials (default list status `AVAILABLE`).
 
+**`GET /api/materials` query:** `q`, `categoryId`, `condition`, `status` (default `AVAILABLE`), `priceType` (`FREE` \| `PAID` \| `ANY`, default `ANY`), `deliveryAvailable`, `pickupAllowed`, `city`, `area`, `sort` (`newest` \| `popular`, default `newest`), `page`, `limit`. Response: `{ items, pagination: { page, limit, total, totalPages } }`. Public item fields include `quantity`, `availableQuantity`, `unit`, `city`, `area`, `pickupAllowed`, `deliveryAvailable`, `viewsCount`; no `addressLine` / `latitude` / `longitude`.
+
+**`GET /api/materials/:id`:** increments `viewsCount` on each successful public detail read (`404` does not increment). `viewsCount` is a total detail-view counter, not unique visitors. Same public field redaction as list items.
+
 ## Reservations — `/api/reservations`
 
 | Method | Path | Auth | Roles | Source file |
@@ -71,7 +77,7 @@ Query validation: `categoriesQuerySchema`
 | PATCH | `/api/reservations/:id/cancel` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
 | POST | `/api/reservations/:id/delivery` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` + `deliveries` |
 
-`GET /api/reservations/my` returns the authenticated learner's reservations newest first. Items include reservation status, `quantityRequested`, message, timestamps, safe material summary (including `unit`), `material.deliveryAllowed`, supplier display name, pickup window fields, supplier note, and rejection reason. It does not expose precise pickup coordinates.
+`GET /api/reservations/my` returns the authenticated learner's reservations newest first. Items include reservation status, `quantityRequested`, message, timestamps, safe material summary (including `unit` and approximate `city`/`area`), `material.deliveryAllowed`, `deliveryRequested`, supplier display name, pickup window fields, supplier note, rejection reason, and nullable `pickupLocationFull`. `pickupLocationFull` is populated only when the reservation status is `ACCEPTED` or `COMPLETED`; it is `null` for `PENDING`, `REJECTED`, `CANCELLED`, and `EXPIRED`. When present, `pickupLocationFull` includes `country`, `city`, `area`, `addressLine`, `latitude`, `longitude`, and `isApproximate` using the same decimal-to-number JSON convention as other location DTOs. Public material discovery endpoints continue to expose only approximate city/area.
 
 `POST /api/reservations` creates a partial-quantity hold for an available material. Body: `{ materialId, quantityRequested, message? }`. The transaction validates `quantityRequested` against computed `availableQuantity`, blocks a second open reservation by the same learner on the same material, creates a `PENDING` reservation, writes status history, and recomputes material status. Material stays `AVAILABLE` while stock remains reservable.
 
@@ -286,7 +292,9 @@ Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must s
 | PATCH | `/api/supplier/reservations/:id/decline` | `supplier-reservations/supplier-reservations.routes.ts` |
 | PATCH | `/api/supplier/reservations/:id/complete` | `supplier-reservations/supplier-reservations.routes.ts` |
 
-Accept keeps the held quantity and recomputes material status. Decline rejects a pending reservation and releases the hold. Complete subtracts `quantityRequested` from `material.quantity` for self-pickup; material becomes `REUSED` only when remaining quantity reaches `0`. Complete is blocked when an active or delivered delivery exists.
+`GET /api/supplier/reservations` returns supplier reservation cards by status tab. Items include material and learner summaries, `quantityRequested`, `unit`, pickup window fields, `deliveryRequested`, nullable `activeDelivery` (`id`, `status` only), and `canSupplierComplete`. `canSupplierComplete` is true only for accepted self-pickup reservations that the supplier may manually complete. Reservations with `deliveryRequested` or any `Delivery` row, including cancelled or failed delivery attempts, return false so the UI can show driver-delivery status instead of a complete button.
+
+Accept keeps the held quantity and recomputes material status. Decline rejects a pending reservation and releases the hold. Complete subtracts `quantityRequested` from `material.quantity` for self-pickup; material becomes `REUSED` only when remaining quantity reaches `0`. Complete is blocked when `deliveryRequested` is true or any delivery row exists for the reservation.
 
 ## Endpoints documented elsewhere but **not mounted**
 
