@@ -372,6 +372,10 @@ class _ReservationDetails extends ConsumerWidget {
             ).copyWith(color: palette.textSecondary),
           ),
         ],
+        if (reservation.shouldShowSelfPickupAddress(hasDeliveryRecord: delivery != null)) ...[
+          const SizedBox(height: AppSpacing.md),
+          _PickupAddressSection(location: reservation.pickupLocationFull!),
+        ],
         if (reservation.isAccepted) ...[
           const SizedBox(height: AppSpacing.md),
           _AcceptedDeliveryPanel(
@@ -521,6 +525,52 @@ class _ReservationDetails extends ConsumerWidget {
     } finally {
       ref.read(cancellingReservationIdProvider.notifier).setCancelling(null);
     }
+  }
+}
+
+class _PickupAddressSection extends StatelessWidget {
+  const _PickupAddressSection({required this.location});
+
+  final LearnerReservationPickupLocation location;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurfaceAlt,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.place_outlined, color: palette.mint),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  'Pickup address',
+                  style: AppTextStyles.label(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            location.formattedAddress,
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+          ),
+        ],
+      ),
+    );
   }
 }
 

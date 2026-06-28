@@ -3,6 +3,31 @@ import { AppError } from '../../utils/app-error.js';
 import * as reservationsRepository from './reservations.repository.js';
 import type { CreateReservationInput } from './reservations.validation.js';
 
+const PICKUP_LOCATION_REVEAL_STATUSES = new Set(['ACCEPTED', 'COMPLETED']);
+
+type MaterialPickupLocation =
+  reservationsRepository.LearnerReservationListRecord['material']['location'];
+
+const mapPickupLocationFull = (location: MaterialPickupLocation) => ({
+  country: location.country,
+  city: location.city,
+  area: location.area,
+  addressLine: location.addressLine,
+  latitude:
+    location.latitude == null
+      ? null
+      : typeof location.latitude === 'number'
+        ? location.latitude
+        : location.latitude.toNumber(),
+  longitude:
+    location.longitude == null
+      ? null
+      : typeof location.longitude === 'number'
+        ? location.longitude
+        : location.longitude.toNumber(),
+  isApproximate: location.isApproximate,
+});
+
 const pickMaterialCoverImageUrl = (
   images: { imageUrl: string; isCover: boolean; sortOrder: number }[],
 ) => images[0]?.imageUrl ?? null;
@@ -52,6 +77,7 @@ const mapLearnerReservation = (
   pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
   supplierNote: reservation.supplierNote,
   rejectionReason: reservation.rejectionReason,
+  deliveryRequested: reservation.deliveryRequested,
   material: {
     id: reservation.material.id,
     title: reservation.material.title,
@@ -69,6 +95,9 @@ const mapLearnerReservation = (
     id: reservation.owner.id,
     displayName: resolveSupplierDisplayName(reservation.owner),
   },
+  pickupLocationFull: PICKUP_LOCATION_REVEAL_STATUSES.has(reservation.status)
+    ? mapPickupLocationFull(reservation.material.location)
+    : null,
 });
 
 const mapCancelledReservation = (

@@ -44,7 +44,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `locations` | **Partial** | Reverse geocode only — no CRUD locations API |
 | `learning-projects` | **Implemented** | Read list + detail |
 | `invitations` | **Implemented** | Admin email invitations (mock/SMTP), validate/accept API, unified `driver_profiles` |
-| `reservations` | **Partial** | Learner create/cancel + my reservations read; partial-quantity holds; learner delivery request route mounted |
+| `reservations` | **Partial** | Learner create/cancel + my reservations read with post-acceptance `pickupLocationFull`; partial-quantity holds; learner delivery request route mounted |
 | `deliveries` | **Partial** | Learner delivery request/read backed by `deliveries`; Flutter learner request/status UI, latest ping summary, and polling map marker exist; driver jobs/status UI exists; no realtime stream |
 | `driver` | **Partial** | Driver available/active jobs, accept, status updates, foreground auto-location sharing on active delivery detail page, and manual location pings; no background GPS |
 | `admin` | **Partial** | Dashboard + invitations + supplier verification review + approvals + materials moderation + people management; other admin pages placeholder |
@@ -70,7 +70,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `home` | **Partial** | — | Suggested materials + learning spotlight: API | [home-learner.md](features/home-learner.md) |
 | `material_discovery` | **Implemented** | `GET /api/materials`, `POST /api/reservations` | API discovery + reservation CTA | — |
 | `materials` | **Partial** | taxonomy/upload APIs | Data layer for supplier add-material; no routes | [materials-listing.md](features/materials-listing.md) |
-| `reservations` | **Partial** | `POST/PATCH /api/reservations`, `GET /api/reservations/my`, delivery request route | Partial-quantity reserve UI + PENDING cancel + My Reservations quantity display | [reservations.md](features/reservations.md) |
+| `reservations` | **Partial** | `POST/PATCH /api/reservations`, `GET /api/reservations/my` (incl. `pickupLocationFull` after accept/complete), delivery request route | Partial-quantity reserve UI + PENDING cancel + My Reservations pickup address reveal | [reservations.md](features/reservations.md) |
 | `deliveries` | **Partial** | `/api/deliveries/my`, `/api/deliveries/:id`, `POST /api/reservations/:id/delivery` | Learner delivery request dialog/status page/latest ping summary/polling map marker; driver jobs/status portal with foreground auto-location sharing on active delivery detail; no realtime stream | [delivery.md](features/delivery.md) |
 | `driver_portal` | **Partial** | `/api/driver/deliveries/*` | Driver job board, accept action, active delivery detail, ordered status updates, foreground auto-location sharing on detail page, manual location ping; no live map/background pings | [delivery.md](features/delivery.md) |
 | `learning_hub` | **Partial** | `GET /api/learning-projects` + categories | List/detail + Home spotlight API-backed; add-draft mock-only; AI disabled; ratings hidden | [learning-hub.md](features/learning-hub.md) |
@@ -78,7 +78,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `admin_portal` | **Partial** | Dashboard + invitations + supplier verification + approvals + materials moderation + people management UI | [admin.md](features/admin.md) |
 
 **Dev seed admin (local testing):** `admin@impactloop.test` / `AdminPassword123!` — created idempotently by `prisma/seeds/seed-admin.ts`. After login, `postAuthRouteForUser` routes ADMIN users to `/admin`.
-| `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH | `supplier_portal` profile/map | [locations.md](features/locations.md) |
+| `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH + learner pickup reveal on accepted reservations | `supplier_portal` profile/map; learner My Reservations pickup address | [locations.md](features/locations.md) |
 | `invitations` | **Implemented** | `/api/invitations` validate/accept; admin `/api/admin/invitations` | `/invite/accept` public page + admin invitations UI | [invitations.md](features/invitations.md) |
 
 ### Flutter **not implemented** as features

@@ -23,13 +23,13 @@ Current MVP status for material reservations.
 | Database `reservations` + `reservation_status_history` | **Implemented** | Existing schema; `quantityRequested` already present |
 | Learner `POST /api/reservations` | **Implemented** | Partial-quantity holds + per-learner open-reservation guard |
 | Learner `PATCH /api/reservations/:id/cancel` | **Implemented** | PENDING-only cancel releases hold |
-| Learner `GET /api/reservations/my` | **Implemented** | Includes `quantityRequested` and `material.unit` |
+| Learner `GET /api/reservations/my` | **Implemented** | Includes `quantityRequested`, `material.unit`, approximate `material.city`/`area`, and `pickupLocationFull` after accept/complete |
 | Material discovery/detail `availableQuantity` | **Implemented** | Public browse/detail DTO field |
 | Learner reserve UI | **Implemented** | Material detail quantity dialog |
-| Learner “My Reservations” UI | **Partial** | Quantity + PENDING cancel; no detail page |
+| Learner “My Reservations” UI | **Partial** | Quantity + PENDING cancel + self-pickup pickup address after accept/complete; no detail page |
 | Supplier list/accept/decline/complete | **Partial** | Partial-quantity completion subtracts stock; delivery complete guarded |
 | Delivery learner UI | **Partial** | Request/status/tracking summary exists |
-**Overall:** **Partial**. Partial-quantity holds, learner PENDING cancel, and quantity-aware reserve UI are implemented. Expiry, notifications, QR, reservation detail page, pickup map, and precise pickup-location reveal remain pending.
+**Overall:** **Partial**. Partial-quantity holds, learner PENDING cancel, quantity-aware reserve UI, and post-acceptance self-pickup address reveal are implemented. Expiry, notifications, QR, reservation detail page, pickup map, and saved dropoff addresses remain pending.
 
 ## Existing Related Files
 
@@ -86,8 +86,16 @@ Current MVP status for material reservations.
 - Expiry workflow for stale `PENDING` reservations.
 - Generic persisted notification table flow.
 - Live delivery map/tracking stream, ETA, delivery cancellation/retry, payment, and reviews.
-- Precise self-pickup location reveal on learner reservation UI.
+- Saved learner dropoff addresses, standalone location CRUD, current-location delivery request, and nearest-first sorting.
 - QR polish.
+
+## Location privacy (MVP)
+
+- Public material discovery (`GET /api/materials`, `GET /api/materials/:id`) exposes only approximate `city` and `area`.
+- `GET /api/reservations/my` keeps the same approximate material fields for all statuses.
+- `deliveryRequested` is included on learner reservation list items so the UI can hide self-pickup instructions when delivery is in progress, even if the deliveries list has not loaded yet.
+- `pickupLocationFull` (country, city, area, address line, coordinates, `isApproximate`) is returned only for learner-owned reservations in `ACCEPTED` or `COMPLETED` status; it is `null` for `PENDING`, `REJECTED`, `CANCELLED`, and `EXPIRED`. The My Reservations UI shows the pickup address panel only for self-pickup reservations without `deliveryRequested` and without a loaded delivery row.
+- Delivery route exact pickup/dropoff locations remain on learner-owned or assigned-driver delivery APIs only.
 
 ## Legacy data and dev DB cleanup
 
