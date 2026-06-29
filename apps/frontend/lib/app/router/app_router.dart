@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/auth_navigation.dart';
 import '../../features/auth/application/registration_draft_notifier.dart';
+import '../widgets/app_mobile_bottom_nav_bar.dart';
 import '../../features/auth/presentation/models/registration_intent.dart';
 import '../../features/auth/presentation/pages/auth_checking_page.dart';
 import '../../features/auth/presentation/pages/complete_learner_profile_page.dart';
@@ -23,6 +24,7 @@ import '../../features/learning_hub/presentation/pages/learning_project_details_
 import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
+import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
 import '../../features/supplier_portal/application/supplier_verification_access.dart';
@@ -152,7 +154,7 @@ _RouteAccessLevel _routeAccessForPath(String path) {
     return _RouteAccessLevel.learner;
   }
 
-  if (path == '/home' || path == _supplierAccessDeniedRoute) {
+  if (path == '/home' || path == '/profile' || path == _supplierAccessDeniedRoute) {
     return _RouteAccessLevel.authenticated;
   }
 
@@ -344,10 +346,36 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/', builder: (context, state) => const LandingPage()),
       GoRoute(path: '/health', builder: (context, state) => const HealthPage()),
-      GoRoute(path: '/home', builder: (context, state) => const HomePage()),
-      GoRoute(
-        path: '/learner/reservations',
-        builder: (context, state) => const LearnerReservationsPage(),
+      ShellRoute(
+        builder: (context, state, child) =>
+            AppMobileNavigationShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/home',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: HomePage()),
+          ),
+          GoRoute(
+            path: '/materials',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: MaterialsDiscoveryPage()),
+          ),
+          GoRoute(
+            path: '/learning',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: LearningHubPage()),
+          ),
+          GoRoute(
+            path: '/learner/reservations',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: LearnerReservationsPage()),
+          ),
+          GoRoute(
+            path: '/profile',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: ProfilePage()),
+          ),
+        ],
       ),
       GoRoute(
         path: '/learner/deliveries/:id',
@@ -357,10 +385,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: authCheckingRoute,
         builder: (context, state) => const AuthCheckingPage(),
-      ),
-      GoRoute(
-        path: '/learning',
-        builder: (context, state) => const LearningHubPage(),
       ),
       GoRoute(
         path: '/learning/add-draft',
@@ -373,10 +397,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           return LearningProjectDetailsPage(projectId: projectId);
         },
-      ),
-      GoRoute(
-        path: '/materials',
-        builder: (context, state) => const MaterialsDiscoveryPage(),
       ),
       GoRoute(
         path: '/materials/:id',

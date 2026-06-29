@@ -4,6 +4,7 @@ Current Flutter widget reuse inventory. Prefer documented shared/app widgets bef
 
 **Inspected source files:**
 - `apps/frontend/lib/app/widgets/entry_nav_bar.dart`
+- `apps/frontend/lib/app/widgets/app_mobile_bottom_nav_bar.dart`
 - `apps/frontend/lib/app/widgets/hero_workshop_visual.dart`
 - `apps/frontend/lib/app/widgets/impact_loop_logo.dart`
 - `apps/frontend/lib/app/widgets/nav_pill_menu.dart`
@@ -72,7 +73,8 @@ No `showSuccessSnackBar` exists in current code.
 
 | Widget | File | Current purpose |
 |--------|------|-----------------|
-| `EntryNavBar` | `entry_nav_bar.dart` | Consumer top nav for landing/entry surfaces. It watches auth/settings state and includes theme/language controls. |
+| `EntryNavBar` | `entry_nav_bar.dart` | Consumer top nav for landing/entry surfaces. It watches auth/settings state. Desktop/tablet surfaces keep top navigation and utility controls; phone widths use a compact logo + account/menu app bar with theme/language inside the menu. |
+| `AppMobileNavigationShell` / `AppMobileBottomNavBar` / `appMobileAwareScrollPadding` | `app_mobile_bottom_nav_bar.dart` | Phone-only shell and floating bottom navigation for primary learner/public destinations (`Home`, `Materials`, `Learning`, `Reservations`, `Profile`) plus a helper that adds safe bottom padding to scrollable pages. The shell returns the child unchanged at tablet/desktop widths. |
 | `ImpactLoopLogo` | `impact_loop_logo.dart` | Brand mark/wordmark with optional colors and compact mode. |
 | `HeroWorkshopVisual` | `hero_workshop_visual.dart` | Landing hero visual using landing assets/palette. App-level but landing-oriented. |
 | `NavPillMenu<T>` | `nav_pill_menu.dart` | Generic pill-style menu for selecting one value from a typed list. |

@@ -35,7 +35,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | Level | Paths | Guard behavior |
 |-------|-------|----------------|
 | **public** | Most routes (landing, materials, learning, auth pages, profile completion) | No login required |
-| **authenticated** | `/home`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
+| **authenticated** | `/home`, `/profile`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
 | **learner** | `/learner/reservations`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
 | **driver** | `/driver`, `/driver/*` | Requires login + `DRIVER` role; non-drivers redirect to `/home` |
@@ -64,6 +64,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/` | `LandingPage` | public | |
 | `/health` | `HealthPage` | public | Backend health diagnostic |
 | `/home` | `HomePage` → `LearnerHomePage` | authenticated | |
+| `/profile` | `ProfilePage` | authenticated | Minimal account/profile and settings page; mobile bottom Profile tab and avatar menu target this route |
 | `/learner/reservations` | `LearnerReservationsPage` | learner | Learner reservation status list |
 | `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline, latest driver ping summary, and page-scoped polling map marker when tracking coordinates are allowed |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
