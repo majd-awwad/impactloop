@@ -162,27 +162,72 @@ class MaterialsDiscoveryView extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final width = constraints.maxWidth;
-              var columns = 1;
+              if (width < 600) {
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: materials.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, index) {
+                    final material = materials[index];
 
-              if (width >= 1160) {
-                columns = 3;
-              } else if (width >= 760) {
-                columns = 2;
+                    return ImpactMaterialCompactCard(
+                      title: material.title.resolve(context),
+                      description: material.description.resolve(context),
+                      category: material.category.resolve(context),
+                      conditionLabel: material.conditionLabel.resolve(context),
+                      conditionTone: material.conditionTone,
+                      statusLabel: material.statusLabel.resolve(context),
+                      statusTone: material.statusTone,
+                      quantityLabel: material.quantityLabel.resolve(context),
+                      priceLabel: material.priceLabel.resolve(context),
+                      locationLabel: material.locationLabel.resolve(context),
+                      availabilityLabel: material.availabilityLabel.resolve(
+                        context,
+                      ),
+                      deliveryAvailable: material.deliveryAvailable,
+                      isFree: material.isFree,
+                      gradientColors: materialGradient(material),
+                      imageUrl: material.imageUrl,
+                      ratingLabel: material.isPopular
+                          ? null
+                          : material.ratingLabel?.resolve(context),
+                      showPopularBadge: material.isPopular,
+                      fallbackIcon: material.heroIconData,
+                      onTap: onMaterialTap == null
+                          ? null
+                          : () => onMaterialTap!(material),
+                    );
+                  },
+                );
               }
 
+              final columns = _materialGridColumnCount(width);
               final itemWidth =
                   (width - ((columns - 1) * AppSpacing.md)) / columns;
               final effectiveCardVariant = itemWidth < 400
                   ? AppMaterialCardVariant.compact
                   : cardVariant;
+              final cardHeight = ImpactMaterialGridCard.heightForWidth(
+                itemWidth,
+                variant: effectiveCardVariant,
+              );
 
-              return Wrap(
-                spacing: AppSpacing.md,
-                runSpacing: AppSpacing.md,
-                children: materials.map((material) {
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: materials.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: AppSpacing.md,
+                  mainAxisSpacing: AppSpacing.md,
+                  mainAxisExtent: cardHeight,
+                ),
+                itemBuilder: (context, index) {
+                  final material = materials[index];
                   return SizedBox(
-                    width: itemWidth,
-                    child: AppMaterialCard(
+                    child: ImpactMaterialGridCard(
                       title: material.title.resolve(context),
                       description: material.description.resolve(context),
                       category: material.category.resolve(context),
@@ -211,7 +256,7 @@ class MaterialsDiscoveryView extends StatelessWidget {
                           : () => onMaterialTap!(material),
                     ),
                   );
-                }).toList(),
+                },
               );
             },
           ),
@@ -248,6 +293,19 @@ class MaterialsDiscoveryView extends StatelessWidget {
       ],
     );
   }
+}
+
+int _materialGridColumnCount(double width) {
+  if (width >= 1320) {
+    return 4;
+  }
+  if (width >= 900) {
+    return 3;
+  }
+  if (width >= 600) {
+    return 2;
+  }
+  return 1;
 }
 
 class _ResultsHeader extends StatelessWidget {
