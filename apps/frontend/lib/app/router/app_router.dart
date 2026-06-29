@@ -43,6 +43,8 @@ import '../../features/admin_portal/presentation/pages/admin_invitations_page.da
 import '../../features/admin_portal/presentation/pages/admin_overview_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_audit_logs_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_deliveries_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_reservations_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_impact_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_materials_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_people_page.dart';
@@ -560,6 +562,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/audit-logs',
             builder: (context, state) => const AdminAuditLogsPage(),
+          ),
+          GoRoute(
+            path: '/admin/reservations',
+            builder: (context, state) => const AdminReservationsPage(),
+          ),
+          GoRoute(
+            path: '/admin/deliveries',
+            builder: (context, state) => AdminDeliveriesPage(
+              initialOpenDeliveryId: state.uri.queryParameters['open'],
+            ),
           ),
         ],
       ),

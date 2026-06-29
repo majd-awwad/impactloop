@@ -23,6 +23,8 @@ class AdminL10n {
   String get navInvitations => t('Invitations', 'الدعوات');
   String get navImpactAnalytics => t('Impact Analytics', 'تحليلات الأثر');
   String get navAuditLogs => t('Audit Logs', 'سجلات التدقيق');
+  String get navReservations => t('Reservations', 'الحجوزات');
+  String get navDeliveries => t('Deliveries', 'التوصيل');
 
   String get accessDeniedTitle => t('Access denied', 'تم رفض الوصول');
   String get accessDeniedBody => t(

@@ -47,7 +47,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `reservations` | **Partial** | Learner create/cancel + my reservations read with post-acceptance `pickupLocationFull`; partial-quantity holds; learner delivery request route mounted |
 | `deliveries` | **Partial** | Learner delivery request/read backed by `deliveries`; Flutter learner request/status UI, latest ping summary, and polling map marker exist; driver jobs/status UI exists; no realtime stream |
 | `driver` | **Partial** | Driver available/active jobs, accept, status updates, foreground auto-location sharing on active delivery detail page, and manual location pings; no background GPS |
-| `admin` | **Partial** | Dashboard + invitations + supplier verification + approvals + materials moderation + people management + impact analytics + audit logs (full action coverage + filters); other admin pages placeholder |
+| `admin` | **Partial** | Dashboard + invitations + supplier verification + approvals + materials moderation + people management + impact analytics + audit logs + reservations/deliveries monitoring (read-only); other admin pages placeholder |
 | `supplier` | **Implemented** | Dashboard, profile, materials |
 | `category-requests` | **Implemented** | Under `/api/supplier` |
 | `price-rule-requests` | **Implemented** | Create + supplier drafts |

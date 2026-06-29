@@ -91,6 +91,22 @@ import {
   adminPeopleUserIdParamSchema,
   suspendUserSchema,
 } from '../admin-people/admin-people.validation.js';
+import {
+  getAdminReservationHandler,
+  listAdminReservationsHandler,
+} from '../admin-reservations/admin-reservations.controller.js';
+import {
+  adminReservationIdParamSchema,
+  adminReservationsListQuerySchema,
+} from '../admin-reservations/admin-reservations.validation.js';
+import {
+  getAdminDeliveryHandler,
+  listAdminDeliveriesHandler,
+} from '../admin-deliveries/admin-deliveries.controller.js';
+import {
+  adminDeliveriesListQuerySchema,
+  adminDeliveryIdParamSchema,
+} from '../admin-deliveries/admin-deliveries.validation.js';
 
 export const adminRouter = Router();
 
@@ -388,5 +404,37 @@ adminRouter.patch(
   requireRoles('ADMIN'),
   validate(adminPeopleUserIdParamSchema, 'params'),
   asyncHandler(reactivateAdminPerson),
+);
+
+adminRouter.get(
+  '/reservations',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminReservationsListQuerySchema, 'query'),
+  asyncHandler(listAdminReservationsHandler),
+);
+
+adminRouter.get(
+  '/reservations/:id',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminReservationIdParamSchema, 'params'),
+  asyncHandler(getAdminReservationHandler),
+);
+
+adminRouter.get(
+  '/deliveries',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveriesListQuerySchema, 'query'),
+  asyncHandler(listAdminDeliveriesHandler),
+);
+
+adminRouter.get(
+  '/deliveries/:id',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveryIdParamSchema, 'params'),
+  asyncHandler(getAdminDeliveryHandler),
 );
 
