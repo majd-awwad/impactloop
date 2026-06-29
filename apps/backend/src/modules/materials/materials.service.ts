@@ -6,21 +6,25 @@ import {
   MATERIAL_CONDITION_FACTORS,
 } from '../../constants/material-condition-factors.js';
 import { MATERIAL_LISTING_POLICY } from '../../constants/material-listing-policy.js';
+import { prisma } from '../../database/prisma.js';
 import {
   mapMatchedReferenceDto,
   matchMaterialReference,
 } from '../../services/material-reference-matching.service.js';
 import { AppError } from '../../utils/app-error.js';
 import { decimalToNumber, roundCurrency } from '../../utils/decimal.js';
+import type { AccessTokenPayload } from '../../utils/jwt.js';
 import { isOtherCategory } from '../categories/categories.repository.js';
 import * as categoriesRepository from '../categories/categories.repository.js';
 import * as materialTypesRepository from '../material-types/material-types.repository.js';
 import {
+  ACTIVE_HOLD_STATUSES,
   computeAvailableQuantity,
   decimalToNumber as quantityDecimalToNumber,
   getHeldQuantitiesByMaterialIds,
   toDecimal,
 } from '../reservations/reservations.quantity.js';
+import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
 
 import * as materialsRepository from './materials.repository.js';
 import type {
@@ -324,13 +328,13 @@ const runPriceRuleCheck = async (
   );
 };
 
-const resolveSupplierName = (material: Awaited<
-  ReturnType<typeof materialsRepository.findMaterialById>
->) => {
-  if (!material) {
-    return null;
-  }
-
+const resolveSupplierName = (material: {
+  supplierProfile: {
+    publicName: string | null;
+    user: { displayName: string };
+  } | null;
+  owner: { displayName: string };
+}) => {
   return (
     material.supplierProfile?.publicName ??
     material.supplierProfile?.user.displayName ??
@@ -339,16 +343,40 @@ const resolveSupplierName = (material: Awaited<
   );
 };
 
-const resolvePrimaryImageUrl = (
-  material: NonNullable<
-    Awaited<ReturnType<typeof materialsRepository.findMaterialById>>
-  >,
-) => material.images[0]?.imageUrl ?? null;
+const resolvePrimaryImageUrl = (material: { images: { imageUrl: string }[] }) =>
+  material.images[0]?.imageUrl ?? null;
 
 const mapMaterial = (
-  material: NonNullable<
-    Awaited<ReturnType<typeof materialsRepository.findMaterialById>>
-  >,
+  material: {
+    id: string;
+    title: string;
+    description: string;
+    category: {
+      id: string;
+      nameEn: string;
+      nameAr: string;
+    };
+    condition: MaterialCondition;
+    status: string;
+    quantity: Parameters<typeof toDecimal>[0];
+    unit: string;
+    isFree: boolean;
+    price: Parameters<typeof decimalToNumber>[0] | null;
+    location: {
+      city: string;
+      area: string | null;
+    };
+    deliveryAllowed: boolean;
+    pickupAllowed: boolean;
+    images: { imageUrl: string }[];
+    supplierProfile: {
+      publicName: string | null;
+      user: { displayName: string };
+    } | null;
+    owner: { displayName: string };
+    viewsCount: number;
+    createdAt: Date;
+  },
   heldQuantity = toDecimal(0),
 ) => {
   const quantity = toDecimal(material.quantity);
@@ -384,6 +412,98 @@ const mapMaterial = (
   };
 };
 
+export type MaterialReserveBlockReason =
+  | 'OWN_MATERIAL'
+  | 'NOT_LEARNER'
+  | 'UNAVAILABLE'
+  | 'OPEN_RESERVATION_EXISTS';
+
+type MaterialDetailRecord = NonNullable<
+  Awaited<ReturnType<typeof materialsRepository.findMaterialById>>
+>;
+
+const resolvePublicSupplierVerified = (
+  supplierProfile: MaterialDetailRecord['supplierProfile'],
+) => {
+  if (!supplierProfile?.verificationStatus) {
+    return false;
+  }
+
+  const status = normalizeSupplierVerificationStatus(
+    supplierProfile.verificationStatus,
+  );
+
+  return status === 'APPROVED' || status === 'NOT_REQUIRED';
+};
+
+const mapMaterialDetailFields = (material: MaterialDetailRecord) => ({
+  pickupNotes: material.pickupNotes?.trim() || null,
+  suggestedUses: material.suggestedUses?.trim() || null,
+  sourceType: material.sourceType,
+  supplierType: material.supplierProfile?.supplierType ?? null,
+  supplierVerified: resolvePublicSupplierVerified(material.supplierProfile),
+});
+
+const buildMaterialReserveEnrichment = async (
+  material: MaterialDetailRecord,
+  availableQuantity: number,
+  viewer: AccessTokenPayload,
+) => {
+  const isOwnMaterial = material.ownerId === viewer.sub;
+
+  if (isOwnMaterial) {
+    return {
+      isOwnMaterial: true as const,
+      canReserve: false as const,
+      reserveBlockReason: 'OWN_MATERIAL' as const,
+    };
+  }
+
+  const isLearner = viewer.roles.includes('LEARNER');
+  if (!isLearner) {
+    return {
+      isOwnMaterial: false as const,
+      canReserve: false as const,
+      reserveBlockReason: 'NOT_LEARNER' as const,
+    };
+  }
+
+  const isAvailable =
+    availableQuantity > 0 &&
+    material.status !== 'REUSED' &&
+    material.status !== 'UNAVAILABLE';
+
+  if (!isAvailable) {
+    return {
+      isOwnMaterial: false as const,
+      canReserve: false as const,
+      reserveBlockReason: 'UNAVAILABLE' as const,
+    };
+  }
+
+  const openLearnerReservationCount = await prisma.reservation.count({
+    where: {
+      materialId: material.id,
+      requesterId: viewer.sub,
+      status: { in: [...ACTIVE_HOLD_STATUSES] },
+    },
+  });
+
+  if (openLearnerReservationCount > 0) {
+    return {
+      isOwnMaterial: false as const,
+      canReserve: false as const,
+      reserveBlockReason: 'OPEN_RESERVATION_EXISTS' as const,
+    };
+  }
+
+  return {
+    isOwnMaterial: false as const,
+    canReserve: true as const,
+    reserveBlockReason: null,
+  };
+};
+
 export const getMaterials = async (query: MaterialsQuery) => {
   const result = await materialsRepository.findMaterials(query);
   const heldByMaterialId = await getHeldQuantitiesByMaterialIds(
@@ -403,7 +523,10 @@ export const getMaterials = async (query: MaterialsQuery) => {
   };
 };
 
-export const getMaterialById = async (id: string) => {
+export const getMaterialById = async (
+  id: string,
+  viewer?: AccessTokenPayload,
+) => {
   const material = await materialsRepository.findMaterialById(id);
 
   if (!material) {
@@ -415,11 +538,31 @@ export const getMaterialById = async (id: string) => {
   );
 
   const heldByMaterialId = await getHeldQuantitiesByMaterialIds([material.id]);
-
-  return mapMaterial(
+  const heldQuantity = heldByMaterialId.get(material.id) ?? toDecimal(0);
+  const mappedMaterial = mapMaterial(
     { ...material, viewsCount: incremented.viewsCount },
-    heldByMaterialId.get(material.id) ?? toDecimal(0),
+    heldQuantity,
   );
+  const detailFields = mapMaterialDetailFields(material);
+
+  if (!viewer) {
+    return {
+      ...mappedMaterial,
+      ...detailFields,
+    };
+  }
+
+  const reserveEnrichment = await buildMaterialReserveEnrichment(
+    material,
+    mappedMaterial.availableQuantity,
+    viewer,
+  );
+
+  return {
+    ...mappedMaterial,
+    ...detailFields,
+    ...reserveEnrichment,
+  };
 };
 
 export const checkMaterialPrice = async (

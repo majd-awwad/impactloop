@@ -585,4 +585,57 @@ describe('public material discovery', () => {
     assert.ok(detail);
     assert.equal(detail.primaryImageUrl, coverUrl);
   });
+
+  test('public detail includes extended safe fields and omits precise location', async () => {
+    const unique = `${TEST_MARKER}-detail-fields-${Date.now()}`;
+    const material = await createMaterial(ctx, {
+      title: `${unique} extended detail stock`,
+      pickupAllowed: false,
+      deliveryAllowed: true,
+    });
+
+    await prisma.material.update({
+      where: { id: material.id },
+      data: {
+        pickupNotes: 'Call one hour before pickup.',
+        suggestedUses: 'Useful for Arduino motor projects.',
+      },
+    });
+
+    const detail = await getMaterialById(material.id);
+
+    assert.ok(detail);
+    assert.equal(detail.pickupNotes, 'Call one hour before pickup.');
+    assert.equal(detail.suggestedUses, 'Useful for Arduino motor projects.');
+    assert.equal(detail.sourceType, 'WORKSHOP_SURPLUS');
+    assert.equal(detail.pickupAllowed, false);
+    assert.equal(detail.deliveryAvailable, true);
+    assert.equal(detail.supplierType, 'INDIVIDUAL_SUPPLIER');
+    assert.equal(detail.supplierVerified, true);
+    assert.equal('latitude' in detail, false);
+    assert.equal('longitude' in detail, false);
+    assert.equal('addressLine' in detail, false);
+    assert.equal('ownerId' in detail, false);
+    assert.equal('isOwnMaterial' in detail, false);
+  });
+
+  test('authenticated owner receives reserve enrichment on detail', async () => {
+    const unique = `${TEST_MARKER}-own-material-${Date.now()}`;
+    const material = await createMaterial(ctx, {
+      title: `${unique} own material stock`,
+    });
+
+    const detail = await getMaterialById(material.id, {
+      sub: ctx.supplierId,
+      roles: ['SUPPLIER'],
+    }) as {
+      isOwnMaterial: boolean;
+      canReserve: boolean;
+      reserveBlockReason: string | null;
+    };
+
+    assert.equal(detail.isOwnMaterial, true);
+    assert.equal(detail.canReserve, false);
+    assert.equal(detail.reserveBlockReason, 'OWN_MATERIAL');
+  });
 });

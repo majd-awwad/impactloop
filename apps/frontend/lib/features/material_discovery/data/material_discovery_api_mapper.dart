@@ -36,6 +36,14 @@ class MaterialDiscoveryApiMapper {
     final area = _nullableString(json['area']);
     final deliveryAvailable = json['deliveryAvailable'] == true;
     final pickupAllowed = json['pickupAllowed'] != false;
+    final pickupNotes = _nullableString(json['pickupNotes']);
+    final suggestedUses = _nullableString(json['suggestedUses']);
+    final sourceType = _nullableString(json['sourceType']);
+    final supplierType = _nullableString(json['supplierType']);
+    final supplierVerified = json['supplierVerified'] == true;
+    final isOwnMaterial = json['isOwnMaterial'] == true ? true : null;
+    final canReserve = json['canReserve'] is bool ? json['canReserve'] as bool : null;
+    final reserveBlockReason = _nullableString(json['reserveBlockReason']);
     final ratingSummary = _numberFromDynamic(json['ratingSummary']);
     final viewsCount = _intFromDynamic(json['viewsCount']) ?? 0;
 
@@ -57,6 +65,7 @@ class MaterialDiscoveryApiMapper {
     );
 
     final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
+    final supplierTypeLabel = DiscoveryMaterial.supplierTypeLabelFor(supplierType);
 
     return DiscoveryMaterial(
       id: _stringOrFallback(json['id'], fallback: ''),
@@ -90,7 +99,10 @@ class MaterialDiscoveryApiMapper {
       pickupAllowed: pickupAllowed,
       isFree: isFree,
       supplierName: LocalizedText(en: supplierName, ar: supplierName),
-      supplierSubtitle: LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
+      supplierSubtitle: supplierTypeLabel ??
+          const LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
+      supplierType: supplierType,
+      supplierVerified: supplierVerified,
       heroIconData: _heroIconForCategory(categoryNameEn),
       cardGradient: _gradientForCategory(categoryNameEn),
       imageUrl: _resolveImageUrl(json),
@@ -102,6 +114,12 @@ class MaterialDiscoveryApiMapper {
             ),
       viewsCount: viewsCount,
       postedAt: _dateTimeFromDynamic(json['createdAt']),
+      pickupNotes: pickupNotes,
+      suggestedUses: suggestedUses,
+      sourceType: sourceType,
+      isOwnMaterial: isOwnMaterial,
+      canReserve: canReserve,
+      reserveBlockReason: reserveBlockReason,
     );
   }
 

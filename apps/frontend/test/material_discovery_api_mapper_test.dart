@@ -210,4 +210,38 @@ void main() {
 
     expect(deliveryOnly.availabilityLabel.en, 'Delivery available');
   });
+
+  test('maps material detail enrichment and optional text fields', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-11',
+      'title': 'Detail material',
+      'description': 'Extended detail payload',
+      'status': 'AVAILABLE',
+      'quantity': 2,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': true,
+      'pickupAllowed': false,
+      'pickupNotes': 'Ring the bell at the workshop gate.',
+      'suggestedUses': 'Good for robotics club builds.',
+      'sourceType': 'WORKSHOP_SURPLUS',
+      'supplierType': 'WORKSHOP',
+      'supplierVerified': true,
+      'isOwnMaterial': true,
+      'canReserve': false,
+      'reserveBlockReason': 'OWN_MATERIAL',
+      'category': {'nameEn': 'Electronics', 'nameAr': 'إلكترونيات'},
+    });
+
+    expect(material.pickupNotes, 'Ring the bell at the workshop gate.');
+    expect(material.suggestedUses, 'Good for robotics club builds.');
+    expect(material.sourceTypeLabel?.en, 'Workshop surplus');
+    expect(material.supplierTypeLabel?.en, 'Workshop');
+    expect(material.supplierVerified, isTrue);
+    expect(material.isOwnMaterial, isTrue);
+    expect(material.canReserve, isFalse);
+    expect(material.reserveBlockReason, 'OWN_MATERIAL');
+    expect(material.availabilityLabel.en, 'Delivery available');
+  });
 }

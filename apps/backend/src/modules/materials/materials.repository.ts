@@ -159,6 +159,22 @@ const materialInclude = {
   },
 } satisfies Prisma.MaterialInclude;
 
+const materialDetailInclude = {
+  ...materialInclude,
+  supplierProfile: {
+    select: {
+      publicName: true,
+      supplierType: true,
+      verificationStatus: true,
+      user: {
+        select: {
+          displayName: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.MaterialInclude;
+
 const buildMaterialsOrderBy = (
   sort: MaterialsQuery['sort'],
 ): Prisma.MaterialOrderByWithRelationInput[] => {
@@ -215,6 +231,6 @@ export const findMaterialById = async (id: string) => {
         },
       },
     },
-    include: materialInclude,
+    include: materialDetailInclude,
   });
 };

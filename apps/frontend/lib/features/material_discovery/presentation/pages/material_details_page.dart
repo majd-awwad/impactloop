@@ -345,6 +345,7 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                               ),
                               const SizedBox(height: AppSpacing.md),
                               _MaterialDetailsPanel(material: material),
+                              _MaterialDetailExtraSections(material: material),
                               const SizedBox(height: AppSpacing.md),
                               _SupplierCard(material: material),
                               const SizedBox(height: AppSpacing.md),
@@ -412,16 +413,32 @@ class _ReservationUiState {
     final isAuthenticatedNonLearner =
         authState.status == AuthStatus.authenticated &&
         authState.user?.hasRole('LEARNER') != true;
+    final isOwnMaterial = material.isOwnMaterial == true;
+    final backendBlocksReserve =
+        authState.status == AuthStatus.authenticated &&
+        material.canReserve == false;
     final canTapReserve =
         isAvailable &&
         learnerReservation == null &&
         !isAuthenticatedNonLearner &&
-        !isSubmitting;
+        !isSubmitting &&
+        !isOwnMaterial &&
+        !backendBlocksReserve;
 
     final helperText = !isAvailable
         ? const LocalizedText(
             en: 'This material is not available for new reservations.',
             ar: 'هذه المادة غير متاحة لحجوزات جديدة.',
+          )
+        : isOwnMaterial
+        ? const LocalizedText(
+            en: 'This is your listing. You cannot reserve your own material.',
+            ar: 'هذه مادتك. لا يمكنك حجز مادتك الخاصة.',
+          )
+        : material.reserveBlockReason == 'OPEN_RESERVATION_EXISTS'
+        ? const LocalizedText(
+            en: 'You already have an open reservation for this material.',
+            ar: 'لديك بالفعل حجزاً مفتوحاً لهذه المادة.',
           )
         : isAuthenticatedNonLearner
         ? const LocalizedText(
@@ -440,6 +457,8 @@ class _ReservationUiState {
 
     final buttonLabel = isSubmitting
         ? const LocalizedText(en: 'Requesting...', ar: 'جارٍ الطلب...')
+        : isOwnMaterial
+        ? const LocalizedText(en: 'Your listing', ar: 'مادتك')
         : !isAvailable
         ? const LocalizedText(
             en: 'Not available',
@@ -760,6 +779,15 @@ class _MaterialDetailsPanel extends StatelessWidget {
         ).resolve(context),
         value: material.category.resolve(context),
       ),
+      if (material.sourceTypeLabel != null)
+        _InfoRow(
+          icon: Icons.inventory_outlined,
+          label: const LocalizedText(
+            en: 'Source',
+            ar: 'المصدر',
+          ).resolve(context),
+          value: material.sourceTypeLabel!.resolve(context),
+        ),
       _InfoRow(
         icon: Icons.straighten_rounded,
         label: const LocalizedText(
@@ -848,6 +876,108 @@ class _MaterialDetailsPanel extends StatelessWidget {
   }
 }
 
+class _MaterialDetailExtraSections extends StatelessWidget {
+  const _MaterialDetailExtraSections({
+    required this.material,
+    this.topSpacing = AppSpacing.md,
+  });
+
+  final DiscoveryMaterial material;
+  final double topSpacing;
+
+  @override
+  Widget build(BuildContext context) {
+    final sections = <Widget>[];
+
+    final pickupNotes = material.pickupNotes?.trim();
+    if (pickupNotes != null && pickupNotes.isNotEmpty) {
+      sections.add(
+        _DetailTextSection(
+          title: const LocalizedText(
+            en: 'Pickup notes',
+            ar: 'ملاحظات الاستلام',
+          ),
+          body: pickupNotes,
+          icon: Icons.notes_outlined,
+        ),
+      );
+    }
+
+    final suggestedUses = material.suggestedUses?.trim();
+    if (suggestedUses != null && suggestedUses.isNotEmpty) {
+      sections.add(
+        _DetailTextSection(
+          title: const LocalizedText(
+            en: 'Suggested uses',
+            ar: 'استخدامات مقترحة',
+          ),
+          body: suggestedUses,
+          icon: Icons.lightbulb_outline_rounded,
+        ),
+      );
+    }
+
+    if (sections.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(height: topSpacing),
+        for (var i = 0; i < sections.length; i++) ...[
+          if (i > 0) const SizedBox(height: AppSpacing.md),
+          sections[i],
+        ],
+      ],
+    );
+  }
+}
+
+class _DetailTextSection extends StatelessWidget {
+  const _DetailTextSection({
+    required this.title,
+    required this.body,
+    required this.icon,
+  });
+
+  final LocalizedText title;
+  final String body;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: palette.textMuted),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                title.resolve(context),
+                style: AppTextStyles.label(context).copyWith(
+                  color: palette.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            body,
+            style: AppTextStyles.body(context).copyWith(
+              color: palette.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SupplierCard extends StatelessWidget {
   const _SupplierCard({required this.material});
 
@@ -897,6 +1027,29 @@ class _SupplierCard extends StatelessWidget {
                     context,
                   ).copyWith(color: palette.textSecondary),
                 ),
+                if (material.supplierVerified) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Container(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: palette.mint.withValues(alpha: 0.1),
+                      borderRadius: AppRadius.pillAll,
+                      border: Border.all(color: palette.borderSubtle),
+                    ),
+                    child: Text(
+                      const LocalizedText(
+                        en: 'Verified supplier',
+                        ar: 'مورد موثّق',
+                      ).resolve(context),
+                      style: AppTextStyles.label(context).copyWith(
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1143,6 +1296,10 @@ class _DetailsMainColumn extends StatelessWidget {
         _MaterialDetailsPanel(
           material: material,
           compactDesktopLayout: compactDetailsLayout,
+        ),
+        _MaterialDetailExtraSections(
+          material: material,
+          topSpacing: _materialDetailsSectionGap,
         ),
         const SizedBox(height: _materialDetailsSectionGap),
         const DiscoveryLocationPrivacyPanel(),
