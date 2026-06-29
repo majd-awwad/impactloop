@@ -6,14 +6,17 @@ import { validate } from '../../middlewares/validate.middleware.js';
 import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
+  cancelReservationHandler,
   createReservationHandler,
   listMyReservationsHandler,
 } from './reservations.controller.js';
-import { createReservationSchema } from './reservations.validation.js';
+import {
+  createReservationSchema,
+  reservationIdParamsSchema,
+} from './reservations.validation.js';
 import { requestDeliveryForReservationHandler } from '../deliveries/deliveries.controller.js';
 import {
   requestDeliverySchema,
-  reservationIdParamsSchema,
 } from '../deliveries/deliveries.validation.js';
 
 export const reservationsRouter = Router();
@@ -31,6 +34,14 @@ reservationsRouter.post(
   requireRoles('LEARNER'),
   validate(createReservationSchema),
   asyncHandler(createReservationHandler),
+);
+
+reservationsRouter.patch(
+  '/:id/cancel',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(cancelReservationHandler),
 );
 
 reservationsRouter.post(

@@ -92,7 +92,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Partial** — forgot-password UI not built |
 | Material discovery | [features/material-discovery.md](features/material-discovery.md) | [flows/material-discovery-flow.md](flows/material-discovery-flow.md) | **Implemented** |
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** — material read/create/edit/delete; supplier reservations; delivery complete guarded backend-only |
-| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — Flutter **mock-only**; `GET /api/learning-projects` **backend-only** until wired |
+| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed (`/learning`, `/learning/:id`, Home spotlight); add-draft mock-only; legacy mock file for disabled AI/add-draft only |
 
 ### Phase 2B — supporting features
 
@@ -102,7 +102,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Locations | [features/locations.md](features/locations.md) | — | **Partial** — reverse geocode + profile/material usage; public redaction **Needs verification** |
 | Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Backend-only** — no admin portal or Flutter accept UI |
 | Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static UI; no API |
-| Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — suggested materials **API-backed**; learning spotlight **mock-only** |
+| Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — suggested materials + learning spotlight **API-backed** |
 
 ### Phase 2C — gaps and open questions
 

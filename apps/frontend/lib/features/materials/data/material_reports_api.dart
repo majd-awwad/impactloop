@@ -4,6 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_response.dart';
 
+/// Public material API helper for `POST /api/materials/:id/reports`.
+///
+/// Lives in `features/materials` (not `material_discovery`) because it calls a
+/// backend `materials` module endpoint. Today the only Flutter consumer is
+/// material discovery detail; supplier flows do not use it.
 class MaterialReportsApi {
   const MaterialReportsApi(this._client);
 

@@ -1,6 +1,16 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 
+import {
+  ACTIVE_HOLD_STATUSES,
+  decimalToNumber,
+  getMaterialQuantityState,
+  isPositiveDecimal,
+  recomputeAndUpdateMaterialStatus,
+  runSerializableTransaction,
+  toDecimal,
+} from './reservations.quantity.js';
+
 const reservationInclude = {
   material: {
     select: {
@@ -33,11 +43,17 @@ const learnerReservationListInclude = {
       materialType: true,
       customMaterialType: true,
       status: true,
+      unit: true,
       deliveryAllowed: true,
       location: {
         select: {
+          country: true,
           city: true,
           area: true,
+          addressLine: true,
+          latitude: true,
+          longitude: true,
+          isApproximate: true,
         },
       },
       images: {
@@ -65,12 +81,28 @@ const learnerReservationListInclude = {
   },
 } satisfies Prisma.ReservationInclude;
 
+const learnerCancelInclude = {
+  material: {
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      unit: true,
+      quantity: true,
+    },
+  },
+} satisfies Prisma.ReservationInclude;
+
 export type LearnerReservationRecord = Prisma.ReservationGetPayload<{
   include: typeof reservationInclude;
 }>;
 
 export type LearnerReservationListRecord = Prisma.ReservationGetPayload<{
   include: typeof learnerReservationListInclude;
+}>;
+
+export type LearnerCancelledReservationRecord = Prisma.ReservationGetPayload<{
+  include: typeof learnerCancelInclude;
 }>;
 
 export const findLearnerReservations = async (requesterId: string) => {
@@ -87,13 +119,12 @@ export const createLearnerReservation = async (input: {
   quantityRequested: number;
   message?: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  return runSerializableTransaction(async (tx) => {
     const material = await tx.material.findUnique({
       where: { id: input.materialId },
       select: {
         id: true,
         ownerId: true,
-        quantity: true,
         status: true,
       },
     });
@@ -106,48 +137,42 @@ export const createLearnerReservation = async (input: {
       return { outcome: 'SELF_RESERVATION' as const };
     }
 
-    const materialQuantity =
-      typeof material.quantity === 'number'
-        ? material.quantity
-        : material.quantity.toNumber();
+    if (material.status === 'UNAVAILABLE' || material.status === 'REUSED') {
+      return { outcome: 'UNAVAILABLE' as const };
+    }
 
-    if (
-      input.quantityRequested <= 0 ||
-      input.quantityRequested > materialQuantity
-    ) {
+    const quantityState = await getMaterialQuantityState(tx, material.id);
+
+    if (!quantityState) {
+      return { outcome: 'NOT_FOUND' as const };
+    }
+
+    const requestedQuantity = toDecimal(input.quantityRequested);
+
+    if (!isPositiveDecimal(requestedQuantity)) {
       return {
         outcome: 'INVALID_QUANTITY' as const,
-        availableQuantity: materialQuantity,
+        availableQuantity: decimalToNumber(quantityState.availableQuantity),
       };
     }
 
-    if (material.status !== 'AVAILABLE') {
-      return { outcome: 'UNAVAILABLE' as const };
+    if (requestedQuantity.gt(quantityState.availableQuantity)) {
+      return {
+        outcome: 'INVALID_QUANTITY' as const,
+        availableQuantity: decimalToNumber(quantityState.availableQuantity),
+      };
     }
 
-    const activeReservationCount = await tx.reservation.count({
+    const openLearnerReservationCount = await tx.reservation.count({
       where: {
         materialId: material.id,
-        status: { in: ['PENDING', 'ACCEPTED', 'COMPLETED'] },
+        requesterId: input.requesterId,
+        status: { in: [...ACTIVE_HOLD_STATUSES] },
       },
     });
 
-    if (activeReservationCount > 0) {
-      return { outcome: 'ACTIVE_RESERVATION_EXISTS' as const };
-    }
-
-    const materialUpdate = await tx.material.updateMany({
-      where: {
-        id: material.id,
-        status: 'AVAILABLE',
-      },
-      data: {
-        status: 'PENDING_RESERVATION',
-      },
-    });
-
-    if (materialUpdate.count !== 1) {
-      return { outcome: 'UNAVAILABLE' as const };
+    if (openLearnerReservationCount > 0) {
+      return { outcome: 'OPEN_RESERVATION_EXISTS' as const };
     }
 
     const message = input.message?.trim() || null;
@@ -157,7 +182,7 @@ export const createLearnerReservation = async (input: {
         materialId: material.id,
         requesterId: input.requesterId,
         ownerId: material.ownerId,
-        quantityRequested: input.quantityRequested,
+        quantityRequested: requestedQuantity,
         message,
         status: 'PENDING',
       },
@@ -175,6 +200,69 @@ export const createLearnerReservation = async (input: {
       },
     });
 
-    return { outcome: 'CREATED' as const, reservation };
+    await recomputeAndUpdateMaterialStatus(tx, material.id);
+
+    const updatedReservation = await tx.reservation.findUniqueOrThrow({
+      where: { id: reservation.id },
+      include: reservationInclude,
+    });
+
+    return { outcome: 'CREATED' as const, reservation: updatedReservation };
+  });
+};
+
+export const cancelLearnerReservation = async (input: {
+  requesterId: string;
+  reservationId: string;
+}) => {
+  return runSerializableTransaction(async (tx) => {
+    const existing = await tx.reservation.findFirst({
+      where: {
+        id: input.reservationId,
+        requesterId: input.requesterId,
+      },
+    });
+
+    if (!existing) {
+      return { outcome: 'NOT_FOUND' as const };
+    }
+
+    if (existing.status !== 'PENDING') {
+      return { outcome: 'INVALID_STATUS' as const, status: existing.status };
+    }
+
+    const deliveryCount = await tx.delivery.count({
+      where: { reservationId: existing.id },
+    });
+
+    if (deliveryCount > 0) {
+      return { outcome: 'DELIVERY_EXISTS' as const };
+    }
+
+    const now = new Date();
+
+    const reservation = await tx.reservation.update({
+      where: { id: existing.id },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: now,
+      },
+      include: learnerCancelInclude,
+    });
+
+    await tx.reservationStatusHistory.create({
+      data: {
+        reservationId: reservation.id,
+        statusGroup: 'RESERVATION',
+        oldStatus: 'PENDING',
+        newStatus: 'CANCELLED',
+        changedBy: input.requesterId,
+        note: 'Cancelled by learner',
+      },
+    });
+
+    await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+
+    return { outcome: 'CANCELLED' as const, reservation };
   });
 };

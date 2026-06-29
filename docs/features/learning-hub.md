@@ -11,32 +11,36 @@ Browse educational project ideas (components, steps, links) for inspiration. **L
 | Layer | Status | Notes |
 |-------|--------|-------|
 | Backend `learning-projects` | **Implemented** | Public read list + detail (`PUBLISHED` only in repository) |
-| Flutter `learning_hub` | **Partial** | **Frontend mock-only** — does not call API |
+| Flutter list/detail pages | **Partial** | `/learning` and `/learning/:id` use `ApiLearningHubRepository` + Riverpod providers |
+| Home learning spotlight | **Implemented** | Reuses `learningProjectsProvider` with `limit: 2` on `/home` |
 | Add draft page | **Mock-only** | Interactive form; **no submit API** |
 | AI panel on detail | **Frontend-only** | `disabled_ai_panel.dart` — placeholder |
-| Ratings on cards | **Mock-only** | `MockRatingSummaryCard`, mock rating fields in mock data |
+| Ratings on cards/detail | **Partial** | Hidden when backend `ratingSummary` is null (current API returns null) |
 | AI material agent | **Not implemented** | No `ai-agent` module |
 
-**Critical:** Do **not** treat Learning Hub UI as API-backed. Backend API exists separately and is used by seeds/tests — **not** wired in `learning_hub_page.dart` or `learning_project_details_page.dart`.
+**Critical:** Learning Hub list/detail and Home spotlight are API-backed. Add-draft remains mock-only.
 
 ## Main user flow (as shipped in Flutter)
 
 1. User opens `/learning` (public).
-2. Page reads `learningProjects` from `learning_hub_mock_data.dart` — featured + paginated “load more” client-side.
-3. User filters categories via chips (local mock data).
-4. Tap project → `/learning/:id` → `learningProjectById(projectId)` from same mock file.
-5. Optional: `/learning/add-draft` — edit mock form; submit does not persist.
+2. Page loads published projects from `GET /api/learning-projects` via `learningProjectsProvider`.
+3. Category chips filter by `categoryId` using `GET /api/categories?type=PROJECT`.
+4. First list item is shown as featured; remaining items render in the grid.
+5. Tap project → `/learning/:id` → `learningProjectProvider(id)` loads detail from `GET /api/learning-projects/:id`.
+6. Optional: `/learning/add-draft` — mock form only; submit does not persist.
+7. Home `/home` learning spotlight loads up to 2 published projects via `learningProjectsProvider`.
 
 ## Frontend files
 
 | Area | Path |
 |------|------|
-| Mock data | `data/learning_hub_mock_data.dart` |
-| Domain | `domain/models/learning_project.dart` |
+| Repository | `domain/learning_project_repository.dart`, `data/api_learning_hub_repository.dart`, `data/learning_hub_api_mapper.dart` |
+| Providers | `application/learning_hub_providers.dart` |
+| Legacy mock data | `data/learning_hub_mock_data.dart` (add-draft + disabled AI copy only) |
+| Theme | `presentation/theme/learning_ui_palette.dart`, `learning_project_visuals.dart` |
+| Domain | `domain/models/learning_project.dart`, `domain/learning_projects_result.dart` |
 | Pages | `presentation/pages/learning_hub_page.dart`, `learning_project_details_page.dart`, `learning_add_draft_page.dart` |
-| Widgets | `learning_project_card.dart`, `featured_project_card.dart`, `learning_hub_hero.dart`, `learning_category_chips.dart`, `project_components_section.dart`, `project_steps_timeline.dart`, `project_link_list.dart`, `disabled_ai_panel.dart`, `mock_rating_summary_card.dart` |
-
-**No** `learning_hub_api.dart` or repository provider found.
+| Widgets | `learning_project_card.dart`, `featured_project_card.dart`, `learning_hub_hero.dart`, `learning_category_chips.dart`, `project_components_section.dart`, `project_steps_timeline.dart`, `project_link_list.dart`, `disabled_ai_panel.dart` |
 
 ## Backend files
 
@@ -50,10 +54,11 @@ Repository filter: `status: 'PUBLISHED'` (`learning-projects.repository.ts`).
 
 | Method | Path | Auth | Flutter wired |
 |--------|------|------|---------------|
-| GET | `/api/learning-projects` | Public | **No** |
-| GET | `/api/learning-projects/:id` | Public | **No** |
+| GET | `/api/learning-projects` | Public | **Yes** — Learning Hub list |
+| GET | `/api/learning-projects/:id` | Public | **Yes** — Learning Hub detail |
+| GET | `/api/categories?type=PROJECT` | Public | **Yes** — category chips |
 
-Optional category filter via query — see `learning-projects.validation.ts`.
+Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`.
 
 ## Database tables
 
@@ -74,8 +79,9 @@ Optional category filter via query — see `learning-projects.validation.ts`.
 
 ## Known gaps / Needs verification
 
-- **Wire Flutter to `GET /api/learning-projects`** — primary integration gap.
-- Mock project IDs (e.g. `robot-sorter`) will not match database UUIDs until API integration.
-- `ratingSummary: null` in backend list mapper — ratings **not** in API.
+- Add-draft page remains mock-only (no submit API).
+- Project IDs are backend UUIDs; old mock slug bookmarks will not resolve.
+- `ratingSummary` is currently null in backend responses — rating UI stays hidden.
+- Project links are display-only (`url_launcher` not in dependencies).
 - Project submission / moderator review — **not implemented** in Flutter; draft page is mock.
 - AI material matching — **not implemented**.

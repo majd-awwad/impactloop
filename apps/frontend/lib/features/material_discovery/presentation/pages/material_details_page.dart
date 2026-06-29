@@ -24,11 +24,12 @@ import '../../../reservations/application/my_reservations_provider.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
 import '../../../reservations/data/models/learner_reservation.dart';
+import '../../../reservations/presentation/reservation_create_error_message.dart';
 import '../../data/api_material_discovery_repository.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_repository.dart';
 import '../material_discovery_content.dart';
-import '../widgets/nearby_map_placeholder.dart';
+import '../widgets/discovery_location_privacy_panel.dart';
 
 class MaterialDetailsPage extends ConsumerStatefulWidget {
   const MaterialDetailsPage({
@@ -264,12 +265,18 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       return;
     }
 
+    final request = await showDialog<CreateReservationRequest>(
+      context: context,
+      builder: (context) => _ReserveMaterialDialog(material: material),
+    );
+
+    if (request == null || !mounted) {
+      return;
+    }
+
     try {
       await ref.read(reservationCreateControllerProvider.notifier).create(
-            CreateReservationRequest(
-              materialId: material.id,
-              quantityRequested: material.quantity,
-            ),
+            request,
           );
 
       if (!mounted) {
@@ -288,12 +295,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
         return;
       }
 
-      showInfoSnackBar(
-        context,
-        error.statusCode == 409
-            ? 'This material is no longer available.'
-            : error.displayMessage,
-      );
+      showInfoSnackBar(context, reservationCreateErrorMessage(error));
       setState(() {
         _materialFuture = _activeRepository.getMaterialById(widget.materialId);
       });
@@ -338,7 +340,7 @@ LearnerReservation? _reservationForMaterial(
       continue;
     }
 
-    if (reservation.isRejected && material.status == 'AVAILABLE') {
+    if (!reservation.isPending && !reservation.isAccepted) {
       continue;
     }
 
@@ -369,20 +371,42 @@ class _SimpleStateScaffold extends StatelessWidget {
   }
 }
 
-class _MaterialDetailsHero extends StatelessWidget {
+class _MaterialDetailsHero extends StatefulWidget {
   const _MaterialDetailsHero({required this.material});
 
   final DiscoveryMaterial material;
 
   @override
+  State<_MaterialDetailsHero> createState() => _MaterialDetailsHeroState();
+}
+
+class _MaterialDetailsHeroState extends State<_MaterialDetailsHero> {
+  bool _imageFailed = false;
+
+  @override
+  void didUpdateWidget(covariant _MaterialDetailsHero oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.material.imageUrl != widget.material.imageUrl) {
+      _imageFailed = false;
+    }
+  }
+
+  bool get _showNetworkImage {
+    final url = widget.material.imageUrl;
+    return url != null && url.trim().isNotEmpty && !_imageFailed;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final material = widget.material;
     final palette = MaterialsUiPalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.sizeOf(context).width;
     final heroHeight = screenWidth >= 1100
-        ? 380.0
-        : screenWidth >= 700
         ? 340.0
-        : 296.0;
+        : screenWidth >= 700
+        ? 300.0
+        : 260.0;
 
     return SizedBox(
       height: heroHeight,
@@ -391,21 +415,39 @@ class _MaterialDetailsHero extends StatelessWidget {
           gradient: LinearGradient(
             begin: AlignmentDirectional.topStart,
             end: AlignmentDirectional.bottomEnd,
-            colors: materialGradient(material),
+            colors: _showNetworkImage
+                ? materialGradient(material)
+                : [
+                    palette.fallbackStart,
+                    palette.fallbackMid,
+                    palette.fallbackEnd,
+                  ],
           ),
         ),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (material.imageUrl != null)
+            if (_showNetworkImage)
               Image.network(
                 material.imageUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    const SizedBox.shrink(),
+                errorBuilder: (context, error, stackTrace) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && !_imageFailed) {
+                      setState(() => _imageFailed = true);
+                    }
+                  });
+                  return const SizedBox.shrink();
+                },
               ),
-            const DecoratedBox(
-              decoration: BoxDecoration(color: materialOverlayDark),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: _showNetworkImage
+                    ? palette.overlayDark.withValues(
+                        alpha: isDark ? 0.42 : 0.24,
+                      )
+                    : palette.overlayDark.withValues(alpha: 0.04),
+              ),
             ),
             PositionedDirectional(
               top: 34,
@@ -440,31 +482,24 @@ class _MaterialDetailsHero extends StatelessWidget {
                 ),
               ),
             ),
-            Align(
-              alignment: AlignmentDirectional.center,
-              child: Container(
-                width: 112,
-                height: 112,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: AlignmentDirectional.topStart,
-                    end: AlignmentDirectional.bottomEnd,
-                    colors: [
-                      materialFallbackStart,
-                      materialFallbackMid,
-                      materialFallbackEnd,
-                    ],
+            if (!_showNetworkImage)
+              Align(
+                alignment: AlignmentDirectional.center,
+                child: Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: palette.cardSurfaceAlt.withValues(alpha: 0.88),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: palette.borderStrong),
                   ),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: palette.borderStrong),
-                ),
-                child: Icon(
-                  material.heroIconData,
-                  size: 52,
-                  color: palette.mint,
+                  child: Icon(
+                    material.heroIconData,
+                    size: 44,
+                    color: palette.mint,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -519,8 +554,26 @@ class _DetailsMainColumn extends StatelessWidget {
                     label: material.priceLabel.resolve(context),
                     isFree: material.isFree,
                   ),
+                  if (material.isPopular)
+                    MaterialStatusBadge(
+                      label: 'Popular',
+                      tone: MaterialStatusBadgeTone.available,
+                    ),
                 ],
               ),
+              if (material.viewsCount > 0) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  LocalizedText(
+                    en: '${material.viewsCount} views',
+                    ar: '${material.viewsCount} مشاهدة',
+                  ).resolve(context),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary),
+                  textAlign: TextAlign.start,
+                ),
+              ],
             ],
           ),
         ),
@@ -568,16 +621,7 @@ class _DetailsMainColumn extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        const NearbyMapPlaceholder(
-          title: LocalizedText(
-            en: 'Nearby Map Preview',
-            ar: 'معاينة الخريطة القريبة',
-          ),
-          subtitle: LocalizedText(
-            en: 'Exact public coordinates remain hidden until reservation logic exists.',
-            ar: 'تبقى الإحداثيات العامة الدقيقة مخفية حتى يوجد منطق حجز فعلي.',
-          ),
-        ),
+        const DiscoveryLocationPrivacyPanel(),
       ],
     );
   }
@@ -607,7 +651,10 @@ class _DetailsSideColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final isAvailable = material.status == 'AVAILABLE' && material.quantity > 0;
+    final isAvailable =
+        material.availableQuantity > 0 &&
+        material.status != 'REUSED' &&
+        material.status != 'UNAVAILABLE';
     final isAuthenticatedLearner =
         authState.status == AuthStatus.authenticated &&
         authState.user?.hasRole('LEARNER') == true;
@@ -615,7 +662,10 @@ class _DetailsSideColumn extends StatelessWidget {
         authState.status == AuthStatus.authenticated &&
         authState.user?.hasRole('LEARNER') != true;
     final canTapReserve =
-        isAvailable && !isAuthenticatedNonLearner && !isSubmitting;
+        isAvailable &&
+        learnerReservation == null &&
+        !isAuthenticatedNonLearner &&
+        !isSubmitting;
     final reservationHelperText = !isAvailable
         ? const LocalizedText(
             en: 'This material is not available for new reservations.',
@@ -632,8 +682,8 @@ class _DetailsSideColumn extends StatelessWidget {
                     ar: 'سجل الدخول كمتعلم لطلب هذه المادة.',
                   )
                 : const LocalizedText(
-                    en: 'Send a reservation request for the full listed material.',
-                    ar: 'أرسل طلب حجز لكامل المادة المعروضة.',
+                    en: 'Choose how much to request from the available quantity.',
+                    ar: 'اختر الكمية التي تريد طلبها من المخزون المتاح.',
                   );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1299,6 +1349,161 @@ class _ReportMaterialSection extends ConsumerWidget {
             color: palette.textSecondary,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ReserveMaterialDialog extends StatefulWidget {
+  const _ReserveMaterialDialog({required this.material});
+
+  final DiscoveryMaterial material;
+
+  @override
+  State<_ReserveMaterialDialog> createState() => _ReserveMaterialDialogState();
+}
+
+class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _quantityController;
+  final _messageController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final defaultQuantity = _defaultQuantity(
+      widget.material.availableQuantity,
+      widget.material.unit,
+    );
+    _quantityController = TextEditingController(
+      text: _formatQuantity(defaultQuantity),
+    );
+  }
+
+  @override
+  void dispose() {
+    _quantityController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  double _defaultQuantity(double available, String unit) {
+    if (available <= 0) {
+      return 0;
+    }
+
+    final countLike = {
+      'piece',
+      'pieces',
+      'item',
+      'items',
+      'unit',
+      'units',
+      'sheet',
+      'sheets',
+      'panel',
+      'panels',
+      'crate',
+      'crates',
+    };
+
+    if (countLike.contains(unit.toLowerCase())) {
+      return available >= 1 ? 1 : available;
+    }
+
+    return available;
+  }
+
+  String _formatQuantity(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+    return value.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final material = widget.material;
+    final totalLabel = _formatQuantity(material.quantity);
+    final availableLabel = _formatQuantity(material.availableQuantity);
+
+    return AlertDialog(
+      title: const Text('Request reservation'),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                material.title.resolve(context),
+                style: AppTextStyles.body(context),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Available: $availableLabel of $totalLabel ${material.unit}',
+                style: AppTextStyles.body(context),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _quantityController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Quantity (${material.unit})',
+                ),
+                validator: (value) {
+                  final parsed = double.tryParse(value?.trim() ?? '');
+                  if (parsed == null || parsed <= 0) {
+                    return 'Enter a quantity greater than 0';
+                  }
+                  if (parsed > material.availableQuantity) {
+                    return 'Cannot exceed available quantity';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _messageController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Message to supplier (optional)',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Send request'),
+        ),
+      ],
+    );
+  }
+
+  void _submit() {
+    if (_formKey.currentState?.validate() != true) {
+      return;
+    }
+
+    final quantity = double.parse(_quantityController.text.trim());
+    final message = _messageController.text.trim();
+
+    Navigator.of(context).pop(
+      CreateReservationRequest(
+        materialId: widget.material.id,
+        quantityRequested: quantity,
+        message: message.isEmpty ? null : message,
       ),
     );
   }

@@ -12,14 +12,13 @@ final availableDriverDeliveriesProvider =
 
 final activeDriverDeliveriesProvider =
     FutureProvider.autoDispose<List<DriverDelivery>>((ref) {
-      return ref.watch(driverDeliveriesRepositoryProvider).fetchActiveDeliveries();
+      return ref
+          .watch(driverDeliveriesRepositoryProvider)
+          .fetchActiveDeliveries();
     });
 
-final activeDriverDeliveryProvider =
-    FutureProvider.autoDispose.family<DriverDelivery?, String>((
-      ref,
-      deliveryId,
-    ) async {
+final activeDriverDeliveryProvider = FutureProvider.autoDispose
+    .family<DriverDelivery?, String>((ref, deliveryId) async {
       final deliveries = await ref.watch(activeDriverDeliveriesProvider.future);
 
       for (final delivery in deliveries) {

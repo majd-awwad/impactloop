@@ -30,7 +30,7 @@ Read-only.
 
 ### Success state
 
-List renders `SupplierIncomingRequest` cards.
+List renders `SupplierIncomingRequest` cards. Each reservation DTO includes `deliveryRequested`, nullable `activeDelivery` (`id`, `status`), and `canSupplierComplete`. The supplier UI uses `canSupplierComplete` instead of guessing whether the complete action is allowed.
 
 ### Error states
 
@@ -109,7 +109,7 @@ Decline invalidates incoming requests, supplier notifications, supplier dashboar
 
 ### Trigger
 
-Supplier marks pickup complete (incoming requests or pickup schedule UI).
+Supplier marks self-pickup complete (incoming requests or pickup schedule UI). Delivery reservations do not show the manual complete action; they show delivery status copy such as “Delivery requested”, “Driver assigned”, “On the way”, or “Delivered”.
 
 ### Frontend path
 
@@ -121,9 +121,10 @@ Transaction:
 
 - `reservations.status`: `ACCEPTED` → `COMPLETED`; `completedAt`
 - History: ACCEPTED → COMPLETED
-- `materials.status` → `REUSED`; `reusedAt`; `reusedByReservationId`
+- `material.quantity` decreases by `quantityRequested`
+- `materials.status` → `AVAILABLE` if quantity remains, else `REUSED` with `reusedAt` and `reusedByReservationId`
 
-If the reservation has an active or delivered `Delivery`, supplier complete returns `409 CONFLICT`. Delivery reservations complete only through the assigned driver `DELIVERED` transition.
+If the reservation has `deliveryRequested` or any `Delivery` row, supplier complete returns `409 CONFLICT`. Delivery reservations complete only through the assigned driver `DELIVERED` transition. The supplier UI maps this stale/race conflict to: “This reservation is handled by delivery. The driver will mark it completed.”
 
 ### Database changes
 
@@ -131,7 +132,7 @@ Update `reservations` + `materials`; insert history.
 
 ### Success state
 
-Reservation completed; material marked reused.
+Reservation completed; material quantity decremented; material marked `REUSED` only when depleted.
 
 ### Frontend invalidation
 

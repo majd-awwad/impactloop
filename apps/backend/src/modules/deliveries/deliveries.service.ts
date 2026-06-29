@@ -300,6 +300,11 @@ export const requestDeliveryForReservation = async (
         },
       });
 
+      await tx.reservation.update({
+        where: { id: reservation.id },
+        data: { deliveryRequested: true },
+      });
+
       const delivery = await tx.delivery.create({
         data: {
           reservationId: reservation.id,

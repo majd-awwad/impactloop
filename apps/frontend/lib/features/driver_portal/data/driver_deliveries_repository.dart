@@ -10,10 +10,11 @@ final driverDeliveriesApiProvider = Provider<DriverDeliveriesApi>((ref) {
   return DriverDeliveriesApi(ref.watch(apiClientProvider));
 });
 
-final driverDeliveriesRepositoryProvider =
-    Provider<DriverDeliveriesRepository>((ref) {
-      return DriverDeliveriesRepository(ref.watch(driverDeliveriesApiProvider));
-    });
+final driverDeliveriesRepositoryProvider = Provider<DriverDeliveriesRepository>(
+  (ref) {
+    return DriverDeliveriesRepository(ref.watch(driverDeliveriesApiProvider));
+  },
+);
 
 class DriverDeliveriesRepository {
   const DriverDeliveriesRepository(this._api);

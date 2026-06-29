@@ -34,7 +34,12 @@ class PickupScheduleCard extends StatelessWidget {
     final note = _displayNote(item);
     final showMarkCompleted =
         item.status == SupplierPickupScheduleStatus.accepted &&
-            onMarkCompleted != null;
+        item.canSupplierComplete &&
+        onMarkCompleted != null;
+    final showDeliveryStatus =
+        item.status == SupplierPickupScheduleStatus.accepted &&
+        item.hasDelivery &&
+        !item.canSupplierComplete;
 
     return Material(
       color: Colors.transparent,
@@ -46,9 +51,7 @@ class PickupScheduleCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: colors.surfaceSolid.withValues(alpha: 0.55),
           borderRadius: AppRadius.mdAll,
-          border: Border.all(
-            color: colors.border.withValues(alpha: 0.22),
-          ),
+          border: Border.all(color: colors.border.withValues(alpha: 0.22)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -87,8 +90,9 @@ class PickupScheduleCard extends StatelessWidget {
                   Container(
                     width: 1,
                     height: compact ? 48 : 52,
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
                     color: colors.border.withValues(alpha: 0.28),
                   ),
                   Expanded(
@@ -155,8 +159,7 @@ class PickupScheduleCard extends StatelessWidget {
                 child: FilledButton.tonal(
                   onPressed: isCompleting ? null : onMarkCompleted,
                   style: FilledButton.styleFrom(
-                    backgroundColor:
-                        colors.accentSoft.withValues(alpha: 0.22),
+                    backgroundColor: colors.accentSoft.withValues(alpha: 0.22),
                     foregroundColor: colors.textPrimary,
                     padding: EdgeInsets.symmetric(
                       horizontal: compact ? 12 : 14,
@@ -187,13 +190,20 @@ class PickupScheduleCard extends StatelessWidget {
                 ),
               ),
             ],
+            if (showDeliveryStatus) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _DeliveryStatusPanel(statusLabel: item.deliveryStatusLabel),
+            ],
           ],
         ),
       ),
     );
   }
 
-  (String, String) _timeParts(SupplierPickupScheduleItem item, String doneLabel) {
+  (String, String) _timeParts(
+    SupplierPickupScheduleItem item,
+    String doneLabel,
+  ) {
     final window = item.pickupWindow;
     if (window == null) {
       return item.isCompleted ? (doneLabel, '') : ('—', '');
@@ -201,10 +211,7 @@ class PickupScheduleCard extends StatelessWidget {
 
     final start = window.start.toLocal();
     final end = window.end.toLocal();
-    return (
-      _formatClock(start),
-      _formatClock(end),
-    );
+    return (_formatClock(start), _formatClock(end));
   }
 
   String? _displayNote(SupplierPickupScheduleItem item) {
@@ -224,11 +231,51 @@ class PickupScheduleCard extends StatelessWidget {
   }
 }
 
+class _DeliveryStatusPanel extends StatelessWidget {
+  const _DeliveryStatusPanel({required this.statusLabel});
+
+  final String statusLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.accentSoft.withValues(alpha: 0.16),
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: colors.border.withValues(alpha: 0.24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.sm,
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.local_shipping_outlined, size: 18, color: colors.accent),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Text(
+                statusLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.supplierLabel().copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({
-    required this.status,
-    required this.style,
-  });
+  const _StatusBadge({required this.status, required this.style});
 
   final SupplierPickupScheduleStatus status;
   final PickupScheduleStatusStyle style;
@@ -255,10 +302,7 @@ class _StatusBadge extends StatelessWidget {
 }
 
 class _MaterialThumbnail extends StatelessWidget {
-  const _MaterialThumbnail({
-    required this.imageUrl,
-    required this.size,
-  });
+  const _MaterialThumbnail({required this.imageUrl, required this.size});
 
   final String? imageUrl;
   final double size;

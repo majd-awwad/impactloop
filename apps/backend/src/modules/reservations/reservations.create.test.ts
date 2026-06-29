@@ -214,7 +214,7 @@ describe('createReservation', () => {
     await prisma.$disconnect();
   });
 
-  test('learner can reserve available material and status becomes pending reservation', async () => {
+  test('learner can reserve part of available material and listing stays available', async () => {
     const material = await createMaterial(ctx, 'AVAILABLE', 4);
 
     const reservation = await createReservation(ctx.learnerId, {
@@ -230,9 +230,10 @@ describe('createReservation', () => {
 
     const updatedMaterial = await prisma.material.findUnique({
       where: { id: material.id },
-      select: { status: true },
+      select: { status: true, quantity: true },
     });
-    assert.equal(updatedMaterial?.status, 'PENDING_RESERVATION');
+    assert.equal(updatedMaterial?.status, 'AVAILABLE');
+    assert.equal(Number(updatedMaterial?.quantity), 4);
 
     const history = await prisma.reservationStatusHistory.findFirst({
       where: {
@@ -261,13 +262,8 @@ describe('createReservation', () => {
     );
   });
 
-  test('learner cannot reserve unavailable material statuses', async () => {
-    for (const status of [
-      'UNAVAILABLE',
-      'PENDING_RESERVATION',
-      'RESERVED',
-      'REUSED',
-    ] as const) {
+  test('learner cannot reserve unavailable or reused materials', async () => {
+    for (const status of ['UNAVAILABLE', 'REUSED'] as const) {
       const material = await createMaterial(ctx, status);
 
       await assert.rejects(
@@ -302,7 +298,7 @@ describe('createReservation', () => {
     );
   });
 
-  test('cannot create duplicate active reservation for same material', async () => {
+  test('cannot create duplicate open reservation for same learner and material', async () => {
     const material = await createMaterial(ctx);
 
     const reservation = await createReservation(ctx.learnerId, {
@@ -325,7 +321,7 @@ describe('createReservation', () => {
     );
   });
 
-  test('learner-created pending reservation blocks supplier edit and delete', async () => {
+  test('learner-created pending reservation blocks supplier delete but allows safe edit', async () => {
     const material = await createMaterial(ctx, 'AVAILABLE', 2);
 
     const reservation = await createReservation(ctx.learnerId, {
@@ -334,12 +330,23 @@ describe('createReservation', () => {
     });
     ctx.createdReservationIds.push(reservation.id);
 
+    const updated = await updateSupplierMaterial(ctx.supplierId, material.id, {
+      title: 'Updated title',
+      description: 'Updated description',
+      quantity: 2,
+      unit: 'piece',
+      condition: 'GOOD',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    });
+    assert.equal(updated.title, 'Updated title');
+
     await assert.rejects(
       () =>
         updateSupplierMaterial(ctx.supplierId, material.id, {
-          title: 'Blocked update',
-          description: 'Blocked update description',
-          quantity: 2,
+          title: 'Too little stock',
+          description: 'Updated description',
+          quantity: 0,
           unit: 'piece',
           condition: 'GOOD',
           pickupAllowed: true,
@@ -347,7 +354,7 @@ describe('createReservation', () => {
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
-        assert.equal(error.statusCode, 409);
+        assert.equal(error.statusCode, 400);
         return true;
       },
     );
@@ -391,9 +398,10 @@ describe('createReservation', () => {
     assert.equal(listed?.quantityRequested, 1);
     assert.equal(listed?.message, 'Need it for class');
     assert.equal(listed?.material.id, ownMaterial.id);
-    assert.equal(listed?.material.status, 'PENDING_RESERVATION');
+    assert.equal(listed?.material.status, 'AVAILABLE');
     assert.equal(listed?.material.city, 'Nablus');
     assert.equal(listed?.material.area, TEST_MARKER);
+    assert.equal(listed?.pickupLocationFull, null);
     assert.ok(listed?.supplier.displayName);
   });
 

@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../materials/application/material_listing_providers.dart';
-import '../../../materials/data/material_listing_repository.dart';
+import '../../../materials/data/material_listing_data_providers.dart';
 import '../../../materials/data/models/category.dart';
 import '../../../materials/data/models/create_material_request.dart';
 import '../../../materials/data/models/created_material.dart';

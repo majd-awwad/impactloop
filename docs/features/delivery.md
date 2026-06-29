@@ -10,9 +10,9 @@ Internal delivery is now a backend domain for accepted reservations. Learners ca
 | Learner delivery request API | **Implemented** | `POST /api/reservations/:id/delivery` |
 | Learner delivery read/tracking API | **Implemented** | `GET /api/deliveries/my`, `GET /api/deliveries/:id` |
 | Driver jobs/assignment/status API | **Implemented** | `/api/driver/deliveries/*` |
-| Driver location pings | **Partial** | Assigned active drivers can manually send foreground location pings; no background tracking |
+| Driver location pings | **Partial** | Assigned active drivers can share foreground location manually or automatically every 45 seconds while the active delivery detail page is open; no background tracking |
 | Flutter learner delivery UI | **Partial** | My Reservations request dialog, `/learner/deliveries/:id` status page, safe latest driver ping summary, and polling map marker; no realtime stream |
-| Flutter driver portal | **Partial** | `/driver/jobs` job board, `/driver/deliveries/:id` status updates, and manual location ping; no live map or automatic pings |
+| Flutter driver portal | **Partial** | `/driver/jobs` job board, `/driver/deliveries/:id` status updates, foreground auto-location sharing on the active delivery detail page, and manual location ping; no live map or background pings |
 | External partners/payment/AI | **Out of scope** | Not implemented |
 
 ## Data Model
@@ -25,7 +25,7 @@ Delivery is separate from reservation lifecycle:
 - Service checks and partial unique database indexes enforce one active delivery per reservation and one active delivery per driver.
 - `DriverProfile` is linked to a `User` with `DRIVER` role.
 
-Deprecated compatibility fields remain on `Reservation`: `deliveryRequested`, `deliveryStatus`, `deliveryCost`, `dropoffLocationId`, `driverProfileId`. New delivery code does not use them as the source of truth.
+Deprecated compatibility fields remain on `Reservation`: `deliveryRequested`, `deliveryStatus`, `deliveryCost`, `dropoffLocationId`, `driverProfileId`. `deliveryRequested` is set to `true` when the learner creates a delivery via `POST /api/reservations/:id/delivery`; other legacy fields are not the source of truth.
 
 ## Backend Behavior
 
@@ -57,8 +57,8 @@ Flutter driver portal:
 - Accepting a job invalidates available and active job providers, then opens `/driver/deliveries/:id`.
 - Active delivery detail shows assigned-driver data, including exact pickup/dropoff snapshots returned by the backend.
 - The status UI exposes only the next valid backend transition.
-- Assigned active drivers can tap **Send my location** on the active delivery detail page. The app captures one foreground current location and posts it to `POST /api/driver/deliveries/:id/location-pings`.
-- Learner delivery detail shows a safe tracking status card with the latest ping time and optional accuracy. When the backend includes coordinates for an active tracking status, the page renders a simple map marker and polls the detail endpoint while open. Raw driver coordinates are not printed as text.
+- Assigned active drivers can tap **Send my location** on the active delivery detail page, or turn on **Share automatically** to send foreground location pings every 45 seconds while that page stays open. The app captures foreground current location and posts it to `POST /api/driver/deliveries/:id/location-pings`. This is not background GPS.
+- Learner delivery detail shows a safe tracking status card with the latest ping time and optional accuracy. When the backend includes coordinates for an active tracking status, the page renders a simple map marker and polls the detail endpoint while open. Raw driver coordinates are not printed as text. Learner tracking uses polling, not WebSocket/SSE.
 
 Driver assignment:
 
@@ -71,7 +71,7 @@ Driver assignment:
 Completion:
 
 - Driver status transitions must follow the allowed order.
-- `DELIVERED` completes the reservation and marks the material `REUSED`.
+- `DELIVERED` completes the reservation, subtracts `quantityRequested`, and marks the material `REUSED` only when remaining quantity reaches `0`.
 - Supplier complete is blocked when an active or delivered delivery exists.
 - Self-pickup reservations without delivery still use supplier complete.
 
@@ -108,8 +108,8 @@ Driver:
 ## Not Implemented Yet
 
 - Admin reassignment/cancellation workflow.
-- Real-time tracking stream.
-- Realtime tracking stream and WebSockets.
-- Background GPS streaming and automatic location-ping UI.
+- Real-time tracking stream and WebSockets.
+- Background GPS streaming.
 - Delivery payment/cost calculation.
+- Delivery failure retry workflow, learner delivery cancellation, and proof of delivery.
 - External delivery partners.

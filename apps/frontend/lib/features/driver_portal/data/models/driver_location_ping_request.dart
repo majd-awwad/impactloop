@@ -22,7 +22,8 @@ class DriverLocationPingRequest {
       if (accuracyMeters != null) 'accuracyMeters': accuracyMeters,
       if (heading != null) 'heading': heading,
       if (speed != null) 'speed': speed,
-      if (capturedAt != null) 'capturedAt': capturedAt!.toUtc().toIso8601String(),
+      if (capturedAt != null)
+        'capturedAt': capturedAt!.toUtc().toIso8601String(),
     };
   }
 }

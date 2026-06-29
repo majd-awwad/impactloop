@@ -48,7 +48,8 @@ class DriverJobsPage extends ConsumerWidget {
                   title: 'Could not load active delivery',
                   subtitle: 'Refresh before accepting a new job.',
                   actionLabel: 'Retry',
-                  onAction: () => ref.invalidate(activeDriverDeliveriesProvider),
+                  onAction: () =>
+                      ref.invalidate(activeDriverDeliveriesProvider),
                 ),
                 data: (deliveries) {
                   final activeDelivery = deliveries.isEmpty
@@ -152,10 +153,7 @@ class _ActiveDeliveryPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            delivery!.material.title,
-            style: AppTextStyles.label(context),
-          ),
+          Text(delivery!.material.title, style: AppTextStyles.label(context)),
           const SizedBox(height: AppSpacing.xs),
           Text(
             '${delivery!.pickupLocation.exactSummary} - ${delivery!.dropoffLocation.exactSummary}',
@@ -195,10 +193,7 @@ class _AvailableJobsList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Available jobs',
-          style: AppTextStyles.title(context),
-        ),
+        Text('Available jobs', style: AppTextStyles.title(context)),
         if (hasActiveDelivery) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(

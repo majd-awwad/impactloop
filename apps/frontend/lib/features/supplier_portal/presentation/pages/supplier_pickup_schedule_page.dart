@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/api_exception.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../../data/pickup_schedule_grouping.dart';
 import '../controllers/supplier_pickup_schedule_providers.dart';
@@ -15,6 +16,14 @@ import '../widgets/pickup_schedule_filter_chips.dart';
 import '../widgets/supplier_feedback.dart';
 
 const _contentMaxWidth = 960.0;
+const _deliveryHandledCompleteMessage =
+    'This reservation is handled by delivery. The driver will mark it completed.';
+
+bool _isDeliveryCompleteConflict(Object error) {
+  return error is ApiException &&
+      error.statusCode == 409 &&
+      error.message.toLowerCase().contains('self-pickup');
+}
 
 Future<void> _handleCompletePickup(
   BuildContext context,
@@ -31,9 +40,14 @@ Future<void> _handleCompletePickup(
     await completeIncomingRequest(ref, requestId: item.id);
     if (!context.mounted) return;
     showSupplierInfoSnackBar(context, context.s.pickupCompleted);
-  } catch (_) {
+  } catch (error) {
     if (!context.mounted) return;
-    showSupplierErrorSnackBar(context, context.s.pickupCompleteFailed);
+    showSupplierErrorSnackBar(
+      context,
+      _isDeliveryCompleteConflict(error)
+          ? _deliveryHandledCompleteMessage
+          : context.s.pickupCompleteFailed,
+    );
   } finally {
     ref.read(completingReservationIdProvider.notifier).setCompleting(null);
   }
@@ -94,19 +108,19 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                             item: item,
                             groupKind: groups[i].kind,
                             isCompleting: completingId == item.id,
-                            onViewDetails: () => PickupScheduleDetailsDialog.show(
-                              context,
-                              item: item,
-                              groupKind: groups[i].kind,
-                            ),
+                            onViewDetails: () =>
+                                PickupScheduleDetailsDialog.show(
+                                  context,
+                                  item: item,
+                                  groupKind: groups[i].kind,
+                                ),
                             onMarkCompleted:
-                                item.status == SupplierPickupScheduleStatus.accepted
-                                    ? () => _handleCompletePickup(
-                                          context,
-                                          ref,
-                                          item,
-                                        )
-                                    : null,
+                                item.status ==
+                                        SupplierPickupScheduleStatus.accepted &&
+                                    item.canSupplierComplete
+                                ? () =>
+                                      _handleCompletePickup(context, ref, item)
+                                : null,
                           ),
                         ),
                       ],
@@ -144,9 +158,7 @@ class _EmptyState extends StatelessWidget {
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: context.supplierBody().copyWith(
-            color: colors.textMuted,
-          ),
+          style: context.supplierBody().copyWith(color: colors.textMuted),
         ),
       ),
     );
@@ -201,14 +213,9 @@ class _ErrorState extends StatelessWidget {
           Text(
             l.pickupScheduleLoadError,
             textAlign: TextAlign.center,
-            style: context.supplierBody().copyWith(
-              color: colors.textMuted,
-            ),
+            style: context.supplierBody().copyWith(color: colors.textMuted),
           ),
-          TextButton(
-            onPressed: onRetry,
-            child: Text(l.tryAgain),
-          ),
+          TextButton(onPressed: onRetry, child: Text(l.tryAgain)),
         ],
       ),
     );

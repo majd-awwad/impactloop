@@ -29,11 +29,7 @@ class DriverDeliveryMaterial {
 }
 
 class DriverDeliveryParty {
-  const DriverDeliveryParty({
-    this.id,
-    required this.displayName,
-    this.phone,
-  });
+  const DriverDeliveryParty({this.id, required this.displayName, this.phone});
 
   final String? id;
   final String displayName;
@@ -198,6 +194,20 @@ class DriverDelivery {
         return null;
     }
   }
+
+  bool get isAutoPingEligible => isDriverAutoPingEligibleStatus(status);
+}
+
+const driverAutoPingEligibleStatuses = {
+  'DRIVER_ASSIGNED',
+  'ARRIVED_PICKUP',
+  'PICKED_UP',
+  'ON_THE_WAY',
+  'ARRIVED_DROPOFF',
+};
+
+bool isDriverAutoPingEligibleStatus(String status) {
+  return driverAutoPingEligibleStatuses.contains(status);
 }
 
 DateTime? _dateFromJson(Object? value) {

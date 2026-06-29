@@ -73,7 +73,8 @@ class IncomingRequestCard extends StatelessWidget {
     final isPending = request.status == SupplierIncomingRequestStatus.pending;
     final isDeclined = request.status == SupplierIncomingRequestStatus.declined;
     final isAccepted = request.status == SupplierIncomingRequestStatus.accepted;
-    final isCompleted = request.status == SupplierIncomingRequestStatus.completed;
+    final isCompleted =
+        request.status == SupplierIncomingRequestStatus.completed;
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
     final pendingHeight = compact ? 312.0 : _pendingCardHeight;
@@ -156,6 +157,15 @@ class IncomingRequestCard extends StatelessWidget {
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
                 child: _PickupFooter(window: request.pickupWindow!),
               ),
+            if (isAccepted &&
+                request.hasDelivery &&
+                !request.canSupplierComplete)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: _DeliveryFooter(
+                  statusLabel: request.deliveryStatusLabel,
+                ),
+              ),
             if (isDeclined &&
                 request.declineReason != null &&
                 request.declineReason!.trim().isNotEmpty)
@@ -176,15 +186,16 @@ class IncomingRequestCard extends StatelessWidget {
                 stacked: compact,
               ),
             ],
-            if (isAccepted && onMarkCompleted != null) ...[
+            if (isAccepted &&
+                request.canSupplierComplete &&
+                onMarkCompleted != null) ...[
               const SizedBox(height: AppSpacing.md),
               Align(
                 alignment: Alignment.centerRight,
                 child: FilledButton.tonal(
                   onPressed: isCompleting ? null : onMarkCompleted,
                   style: FilledButton.styleFrom(
-                    backgroundColor:
-                        colors.accentSoft.withValues(alpha: 0.22),
+                    backgroundColor: colors.accentSoft.withValues(alpha: 0.22),
                     foregroundColor: colors.textPrimary,
                     padding: EdgeInsets.symmetric(
                       horizontal: compact ? 12 : 14,
@@ -227,10 +238,7 @@ class IncomingRequestCard extends StatelessWidget {
 }
 
 class _MaterialThumbnail extends StatelessWidget {
-  const _MaterialThumbnail({
-    required this.size,
-    this.imageUrl,
-  });
+  const _MaterialThumbnail({required this.size, this.imageUrl});
 
   final double size;
   final String? imageUrl;
@@ -449,6 +457,62 @@ class _DeclineFooter extends StatelessWidget {
   }
 }
 
+class _DeliveryFooter extends StatelessWidget {
+  const _DeliveryFooter({required this.statusLabel});
+
+  final String statusLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.accentSoft.withValues(alpha: 0.16),
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: colors.border.withValues(alpha: 0.24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.sm,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.local_shipping_outlined, size: 18, color: colors.accent),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    statusLabel == 'Delivered'
+                        ? 'Delivered'
+                        : 'Waiting for driver delivery',
+                    style: context.supplierLabel().copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'The driver will complete this reservation after delivery.',
+                    style: context.supplierBody().copyWith(
+                      color: colors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ActionRow extends StatelessWidget {
   const _ActionRow({
     required this.onAccept,
@@ -501,10 +565,7 @@ class _IncomingRequestActionButtonMetrics {
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
       side: side ?? BorderSide.none,
-      textStyle: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-      ),
+      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
     );
   }
 }
@@ -542,21 +603,24 @@ class _DeclineButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return FilledButton.icon(
       onPressed: onPressed,
-      style: _IncomingRequestActionButtonMetrics.baseStyle(
-        background: AppColorTokens.supplierDeclineButtonBackground,
-        foreground: AppColorTokens.supplierDashboardUnavailable,
-        side: const BorderSide(color: AppColorTokens.supplierDeclineButtonBorder),
-      ).copyWith(
-        overlayColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) {
-            return AppColorTokens.supplierDeclineButtonPressedOverlay;
-          }
-          if (states.contains(WidgetState.hovered)) {
-            return AppColorTokens.supplierDeclineButtonHoverOverlay;
-          }
-          return null;
-        }),
-      ),
+      style:
+          _IncomingRequestActionButtonMetrics.baseStyle(
+            background: AppColorTokens.supplierDeclineButtonBackground,
+            foreground: AppColorTokens.supplierDashboardUnavailable,
+            side: const BorderSide(
+              color: AppColorTokens.supplierDeclineButtonBorder,
+            ),
+          ).copyWith(
+            overlayColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.pressed)) {
+                return AppColorTokens.supplierDeclineButtonPressedOverlay;
+              }
+              if (states.contains(WidgetState.hovered)) {
+                return AppColorTokens.supplierDeclineButtonHoverOverlay;
+              }
+              return null;
+            }),
+          ),
       icon: const Icon(
         Icons.close,
         size: _IncomingRequestActionButtonMetrics.iconSize,

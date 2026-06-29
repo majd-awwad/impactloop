@@ -13,11 +13,13 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../deliveries/application/delivery_request_controller.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../deliveries/data/models/learner_delivery.dart';
 import '../../../deliveries/data/models/request_delivery_request.dart';
 import '../../application/my_reservations_provider.dart';
+import '../../application/reservation_cancel_controller.dart';
 import '../../data/models/learner_reservation.dart';
 
 class LearnerReservationsPage extends ConsumerWidget {
@@ -294,7 +296,10 @@ class _ReservationDetails extends ConsumerWidget {
     final pickupText = _pickupText(reservation);
     final secondaryText = _secondaryText(reservation);
     final requestState = ref.watch(deliveryRequestControllerProvider);
+    final cancelState = ref.watch(reservationCancelControllerProvider);
+    final cancellingId = ref.watch(cancellingReservationIdProvider);
     final activeDelivery = delivery?.isActive == true ? delivery : null;
+    final isCancelling = cancellingId == reservation.id;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,6 +347,13 @@ class _ReservationDetails extends ConsumerWidget {
             context,
           ).copyWith(color: palette.textSecondary),
         ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Requested: ${_formatQuantity(reservation.quantityRequested)} ${reservation.material.unit}',
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: palette.textPrimary),
+        ),
         if (pickupText != null) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
@@ -360,6 +372,10 @@ class _ReservationDetails extends ConsumerWidget {
             ).copyWith(color: palette.textSecondary),
           ),
         ],
+        if (reservation.shouldShowSelfPickupAddress(hasDeliveryRecord: delivery != null)) ...[
+          const SizedBox(height: AppSpacing.md),
+          _PickupAddressSection(location: reservation.pickupLocationFull!),
+        ],
         if (reservation.isAccepted) ...[
           const SizedBox(height: AppSpacing.md),
           _AcceptedDeliveryPanel(
@@ -375,6 +391,20 @@ class _ReservationDetails extends ConsumerWidget {
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
           children: [
+            if (reservation.isPending)
+              TextButton.icon(
+                onPressed: isCancelling || cancelState.isLoading
+                    ? null
+                    : () => _confirmCancel(context, ref),
+                icon: isCancelling
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.cancel_outlined),
+                label: const Text('Cancel request'),
+              ),
             TextButton.icon(
               onPressed: () =>
                   context.go('/materials/${reservation.material.id}'),
@@ -436,6 +466,111 @@ class _ReservationDetails extends ConsumerWidget {
 
       showErrorSnackBar(context, error);
     }
+  }
+
+  Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel reservation?'),
+        content: const Text(
+          'This will release the requested quantity back to the listing.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep request'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Cancel request'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+
+    ref
+        .read(cancellingReservationIdProvider.notifier)
+        .setCancelling(reservation.id);
+
+    try {
+      await ref
+          .read(reservationCancelControllerProvider.notifier)
+          .cancel(reservation.id);
+      ref.invalidate(myReservationsProvider);
+      ref.invalidate(learnerDeliveriesProvider);
+      ref.invalidate(homeSuggestedMaterialsProvider);
+
+      if (!context.mounted) {
+        return;
+      }
+
+      showInfoSnackBar(context, 'Reservation cancelled.');
+    } on ApiException catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+
+      showInfoSnackBar(context, error.displayMessage);
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+
+      showErrorSnackBar(context, error);
+    } finally {
+      ref.read(cancellingReservationIdProvider.notifier).setCancelling(null);
+    }
+  }
+}
+
+class _PickupAddressSection extends StatelessWidget {
+  const _PickupAddressSection({required this.location});
+
+  final LearnerReservationPickupLocation location;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurfaceAlt,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.place_outlined, color: palette.mint),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  'Pickup address',
+                  style: AppTextStyles.label(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            location.formattedAddress,
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -992,3 +1127,10 @@ String _formatDateTime(DateTime value) {
 }
 
 String _two(int value) => value.toString().padLeft(2, '0');
+
+String _formatQuantity(double value) {
+  if (value == value.roundToDouble()) {
+    return value.toStringAsFixed(0);
+  }
+  return value.toString();
+}

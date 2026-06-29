@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { successResponse } from '../../utils/api-response.js';
 
 import {
+  cancelReservation,
   createReservation,
   listMyReservations,
 } from './reservations.service.js';
@@ -29,4 +30,16 @@ export const listMyReservationsHandler = async (
   const reservations = await listMyReservations(req.auth!.sub);
 
   res.json(successResponse('Reservations loaded.', { reservations }));
+};
+
+export const cancelReservationHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const reservation = await cancelReservation(
+    req.auth!.sub,
+    req.params.id as string,
+  );
+
+  res.json(successResponse('Reservation cancelled.', reservation));
 };
