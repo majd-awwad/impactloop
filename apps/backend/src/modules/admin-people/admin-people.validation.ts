@@ -19,7 +19,7 @@ export const adminPeopleUserIdParamSchema = z.object({
 });
 
 export const suspendUserSchema = z.object({
-  reason: z.string().trim().min(3).max(2000).optional(),
+  reason: z.string().trim().min(3, 'Suspension reason is required.').max(2000),
 });
 
 export type AdminPeopleListQuery = z.infer<typeof adminPeopleListQuerySchema>;

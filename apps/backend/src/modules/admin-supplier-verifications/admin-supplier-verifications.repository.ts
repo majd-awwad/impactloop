@@ -118,6 +118,16 @@ export const countOrganizationSupplierVerificationsByStatus = async () => {
   return profiles;
 };
 
+export const countPendingOrganizationSupplierVerifications = async () => {
+  return prisma.supplierProfile.count({
+    where: {
+      supplierType: { in: [...OFFICIAL_SUPPLIER_TYPES] },
+      organizationProfile: { isNot: null },
+      verificationStatus: { in: ['PENDING', 'UNVERIFIED'] },
+    },
+  });
+};
+
 export const findOrganizationSupplierVerificationById = async (id: string) => {
   return prisma.supplierProfile.findFirst({
     where: {

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../data/models/admin_dashboard_models.dart';
 import '../l10n/admin_l10n.dart';
@@ -14,9 +16,9 @@ class AdminReviewSection extends StatelessWidget {
     required this.recentActivity,
   });
 
-  final List<dynamic> supplierVerificationPreview;
+  final List<AdminSupplierVerificationPreview> supplierVerificationPreview;
   final List<AdminInvitationPreview> recentInvitations;
-  final List<dynamic> recentActivity;
+  final List<AdminActivityPreview> recentActivity;
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +36,11 @@ class AdminReviewSection extends StatelessWidget {
             ? AdminEmptyState(
                 icon: Icons.verified_outlined,
                 title: l.emptyNoSupplierVerifications,
-                subtitle: l.supplierVerificationFutureNote,
               )
             : Column(
                 children: [
-                  for (final row in supplierVerificationPreview.take(3))
-                    _RowText(text: row.toString()),
+                  for (final item in supplierVerificationPreview.take(5))
+                    _SupplierVerificationPreviewRow(item: item),
                 ],
               ),
       ),
@@ -72,8 +73,8 @@ class AdminReviewSection extends StatelessWidget {
               )
             : Column(
                 children: [
-                  for (final row in recentActivity.take(3))
-                    _RowText(text: row.toString()),
+                  for (final item in recentActivity.take(5))
+                    _ActivityRow(activity: item),
                 ],
               ),
       ),
@@ -165,25 +166,125 @@ class _ReviewCard extends StatelessWidget {
   }
 }
 
-class _RowText extends StatelessWidget {
-  const _RowText({required this.text});
-  final String text;
+class _SupplierVerificationPreviewRow extends StatelessWidget {
+  const _SupplierVerificationPreviewRow({required this.item});
+
+  final AdminSupplierVerificationPreview item;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final submitted = _formatDate(item.submittedAt);
+    final org = item.organizationName.trim();
+    final subtitle = org.isNotEmpty ? org : item.supplierType.replaceAll('_', ' ');
+
     return Padding(
-      padding: const EdgeInsetsDirectional.only(bottom: 4),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: palette.textPrimary,
-              height: 1.3,
-              fontSize: 12,
+      padding: const EdgeInsetsDirectional.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.ownerName,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: palette.textSecondary,
+                        fontSize: 11,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (submitted != null)
+                  Text(
+                    submitted,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: palette.textSecondary,
+                          fontSize: 10,
+                        ),
+                  ),
+              ],
             ),
+          ),
+          TextButton(
+            onPressed: () => context.go('/admin/supplier-verification'),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Review'),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _ActivityRow extends StatelessWidget {
+  const _ActivityRow({required this.activity});
+
+  final AdminActivityPreview activity;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final when = _formatDate(activity.createdAt);
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            activity.actionLabel,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            '${activity.actorName} · ${activity.targetLabel}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: palette.textSecondary,
+                  fontSize: 11,
+                ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (when != null)
+            Text(
+              when,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: palette.textSecondary,
+                    fontSize: 10,
+                  ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+String? _formatDate(String? raw) {
+  if (raw == null || raw.isEmpty) return null;
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return null;
+  return DateFormat.yMMMd().add_jm().format(parsed.toLocal());
 }
 
 class _InvitationRow extends StatelessWidget {

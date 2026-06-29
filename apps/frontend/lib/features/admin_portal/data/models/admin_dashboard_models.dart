@@ -6,6 +6,7 @@ class AdminDashboardResponse {
     required this.materialsByCategory,
     required this.reservationStatusBreakdown,
     required this.recentInvitations,
+    required this.supplierVerificationPendingCount,
     required this.supplierVerificationPreview,
     required this.recentActivity,
   });
@@ -16,8 +17,9 @@ class AdminDashboardResponse {
   final List<AdminCategoryCount> materialsByCategory;
   final List<AdminStatusCount> reservationStatusBreakdown;
   final List<AdminInvitationPreview> recentInvitations;
-  final List<dynamic> supplierVerificationPreview;
-  final List<dynamic> recentActivity;
+  final int supplierVerificationPendingCount;
+  final List<AdminSupplierVerificationPreview> supplierVerificationPreview;
+  final List<AdminActivityPreview> recentActivity;
 
   factory AdminDashboardResponse.fromJson(Map<String, dynamic> json) {
     return AdminDashboardResponse(
@@ -51,11 +53,24 @@ class AdminDashboardResponse {
                     Map<String, dynamic>.from(item),
                   ))
               .toList(),
+      supplierVerificationPendingCount:
+          (json['supplierVerificationPendingCount'] as num?)?.toInt() ??
+              (json['pendingActions']?['supplierVerifications'] as num?)?.toInt() ??
+              0,
       supplierVerificationPreview:
           (json['supplierVerificationPreview'] as List<dynamic>? ?? const [])
+              .whereType<Map>()
+              .map((item) => AdminSupplierVerificationPreview.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ))
               .toList(),
       recentActivity:
-          (json['recentActivity'] as List<dynamic>? ?? const []).toList(),
+          (json['recentActivity'] as List<dynamic>? ?? const [])
+              .whereType<Map>()
+              .map((item) => AdminActivityPreview.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ))
+              .toList(),
     );
   }
 }
@@ -271,6 +286,68 @@ class AdminInvitationPreview {
       targetRole: (json['targetRole'] as String? ?? '').toUpperCase(),
       status: (json['status'] as String? ?? '').toUpperCase(),
       expiresAt: json['expiresAt'] as String? ?? '',
+      createdAt: json['createdAt'] as String? ?? '',
+    );
+  }
+}
+
+class AdminSupplierVerificationPreview {
+  const AdminSupplierVerificationPreview({
+    required this.supplierProfileId,
+    required this.ownerName,
+    required this.organizationName,
+    required this.supplierType,
+    required this.verificationStatus,
+    required this.submittedAt,
+  });
+
+  final String supplierProfileId;
+  final String ownerName;
+  final String organizationName;
+  final String supplierType;
+  final String verificationStatus;
+  final String? submittedAt;
+
+  factory AdminSupplierVerificationPreview.fromJson(Map<String, dynamic> json) {
+    return AdminSupplierVerificationPreview(
+      supplierProfileId: json['supplierProfileId'] as String? ?? '',
+      ownerName: json['ownerName'] as String? ?? '',
+      organizationName: json['organizationName'] as String? ?? '',
+      supplierType: json['supplierType'] as String? ?? '',
+      verificationStatus:
+          (json['verificationStatus'] as String? ?? '').toUpperCase(),
+      submittedAt: json['submittedAt'] as String?,
+    );
+  }
+}
+
+class AdminActivityPreview {
+  const AdminActivityPreview({
+    required this.id,
+    required this.action,
+    required this.actionLabel,
+    required this.actorName,
+    required this.actorEmail,
+    required this.targetLabel,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String action;
+  final String actionLabel;
+  final String actorName;
+  final String actorEmail;
+  final String targetLabel;
+  final String createdAt;
+
+  factory AdminActivityPreview.fromJson(Map<String, dynamic> json) {
+    return AdminActivityPreview(
+      id: json['id'] as String? ?? '',
+      action: json['action'] as String? ?? '',
+      actionLabel: json['actionLabel'] as String? ?? '',
+      actorName: json['actorName'] as String? ?? '',
+      actorEmail: json['actorEmail'] as String? ?? '',
+      targetLabel: json['targetLabel'] as String? ?? '',
       createdAt: json['createdAt'] as String? ?? '',
     );
   }

@@ -1,5 +1,10 @@
 import { AppError } from '../../utils/app-error.js';
 
+import {
+  ADMIN_ACTIVITY_ACTIONS,
+  logAdminActivity,
+} from '../admin/admin-activity-log.js';
+
 import * as repository from './admin-supplier-verifications.repository.js';
 import {
   mapAdminStatusToDocumentStatus,
@@ -101,6 +106,15 @@ export type SupplierVerificationListResponseDto = {
     limit: number;
     total: number;
   };
+};
+
+export type SupplierVerificationDashboardPreviewItem = {
+  supplierProfileId: string;
+  ownerName: string;
+  organizationName: string;
+  supplierType: string;
+  verificationStatus: AdminSupplierVerificationStatus;
+  submittedAt: string | null;
 };
 
 const mapLocation = (
@@ -280,6 +294,34 @@ export const listSupplierVerificationsForAdmin = async (
   };
 };
 
+export const countPendingSupplierVerificationsForDashboard = async () =>
+  repository.countPendingOrganizationSupplierVerifications();
+
+export const listSupplierVerificationDashboardPreview = async (
+  limit: number,
+): Promise<SupplierVerificationDashboardPreviewItem[]> => {
+  const { items } = await repository.listOrganizationSupplierVerifications({
+    status: 'PENDING',
+    page: 1,
+    limit,
+    search: undefined,
+    city: undefined,
+    supplierType: undefined,
+  });
+
+  return items.map((profile) => {
+    const organization = profile.organizationProfile!;
+    return {
+      supplierProfileId: profile.id,
+      ownerName: profile.user.displayName,
+      organizationName: organization.organizationName,
+      supplierType: profile.supplierType ?? organization.organizationType,
+      verificationStatus: mapDbVerificationStatusToAdmin(profile.verificationStatus),
+      submittedAt: resolveSubmittedAt(profile),
+    };
+  });
+};
+
 export const getSupplierVerificationForAdmin = async (
   id: string,
 ): Promise<SupplierVerificationDetailDto> => {
@@ -315,6 +357,17 @@ export const approveSupplierVerification = async (
     body: `Your organization verification was approved.${noteSuffix}`,
   });
 
+  const organizationName =
+    existing.organizationProfile?.organizationName ?? existing.publicName ?? 'Supplier';
+
+  await logAdminActivity({
+    actorUserId: adminId,
+    action: ADMIN_ACTIVITY_ACTIONS.SUPPLIER_VERIFICATION_APPROVED,
+    targetType: 'SUPPLIER_PROFILE',
+    targetId: existing.id,
+    targetLabel: organizationName,
+  });
+
   return mapDetail(updated);
 };
 
@@ -342,6 +395,18 @@ export const rejectSupplierVerification = async (
     body: `Your organization verification was rejected. Reason: ${adminNote}`,
   });
 
+  const organizationName =
+    existing.organizationProfile?.organizationName ?? existing.publicName ?? 'Supplier';
+
+  await logAdminActivity({
+    actorUserId: adminId,
+    action: ADMIN_ACTIVITY_ACTIONS.SUPPLIER_VERIFICATION_REJECTED,
+    targetType: 'SUPPLIER_PROFILE',
+    targetId: existing.id,
+    targetLabel: organizationName,
+    metadata: { reason: adminNote },
+  });
+
   return mapDetail(updated);
 };
 
@@ -367,6 +432,18 @@ export const requestChangesForSupplierVerification = async (
     supplierProfileId: existing.id,
     title: 'Supplier verification changes requested',
     body: `Please update your verification submission. Admin note: ${adminNote}`,
+  });
+
+  const organizationName =
+    existing.organizationProfile?.organizationName ?? existing.publicName ?? 'Supplier';
+
+  await logAdminActivity({
+    actorUserId: adminId,
+    action: ADMIN_ACTIVITY_ACTIONS.SUPPLIER_VERIFICATION_CHANGES_REQUESTED,
+    targetType: 'SUPPLIER_PROFILE',
+    targetId: existing.id,
+    targetLabel: organizationName,
+    metadata: { note: adminNote },
   });
 
   return mapDetail(updated);

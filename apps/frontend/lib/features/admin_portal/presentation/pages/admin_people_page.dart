@@ -63,6 +63,33 @@ String _formatStatus(String status) => status.replaceAll('_', ' ').toLowerCase()
 String _formatRole(String? role) =>
     role?.replaceAll('_', ' ').toLowerCase() ?? 'unknown';
 
+String _suspensionPreviewLine(String? reason) {
+  final trimmed = reason?.trim();
+  if (trimmed == null || trimmed.isEmpty) {
+    return 'Suspended: reason not recorded';
+  }
+  final preview = trimmed.length > 80 ? '${trimmed.substring(0, 80)}…' : trimmed;
+  return 'Suspended: $preview';
+}
+
+String? _formatSuspendedBy(dynamic raw) {
+  if (raw is! Map) return null;
+  final name = raw['displayName'] as String? ?? '';
+  final email = raw['email'] as String? ?? '';
+  if (name.isEmpty && email.isEmpty) return null;
+  if (name.isEmpty) return email;
+  if (email.isEmpty) return name;
+  return '$name ($email)';
+}
+
+String _suspensionReasonText(dynamic raw) {
+  final reason = raw?.toString().trim();
+  if (reason == null || reason.isEmpty) {
+    return 'Reason not recorded for this older suspension.';
+  }
+  return reason;
+}
+
 Color _statusColor(AdminPalette palette, String status) {
   switch (status) {
     case 'ACTIVE':
@@ -190,7 +217,7 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
             TextField(
               controller: reasonController,
               decoration: const InputDecoration(
-                labelText: 'Reason (optional)',
+                labelText: 'Reason (required)',
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
@@ -213,16 +240,28 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true) {
+      reasonController.dispose();
+      return;
+    }
+
+    final reason = reasonController.text.trim();
+    reasonController.dispose();
+    if (reason.length < 3) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A suspension reason of at least 3 characters is required.')),
+      );
+      return;
+    }
 
     await _runAction(
       () => ref.read(adminPeopleApiProvider).suspendPerson(
             userId: item.userId,
-            reason: reasonController.text.trim(),
+            reason: reason,
           ),
       successMessage: 'Account suspended.',
     );
-    reasonController.dispose();
   }
 
   Future<void> _confirmReactivate(AdminPeopleListItem item) async {
@@ -612,6 +651,16 @@ class _PersonCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
+            if (item.accountStatus == 'SUSPENDED') ...[
+              Text(
+                _suspensionPreviewLine(item.suspensionReasonPreview),
+                style: AdminTypography.kpiHelper(palette).copyWith(
+                  color: palette.amber,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -722,13 +771,29 @@ class _PersonDetailDialog extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text('Suspension', style: AdminTypography.sectionTitle(palette)),
                 const SizedBox(height: 6),
-                _DetailRow('Status', 'suspended'),
+                _DetailRow('Status', 'Suspended'),
+                _AlwaysShowDetailRow(
+                  'Reason',
+                  _suspensionReasonText(detail['suspensionReason']),
+                ),
+                _DetailRow(
+                  'Suspended by',
+                  _formatSuspendedBy(detail['suspendedBy']),
+                ),
                 _DetailRow(
                   'Suspended at',
                   _formatDetailDate(detail['suspendedAt']),
                 ),
-                _DetailRow('Reason', detail['suspensionReason']),
-                _DetailRow('Suspended by', detail['suspendedByName']),
+                if (detail['reactivatedAt'] != null) ...[
+                  _DetailRow(
+                    'Last reactivated at',
+                    _formatDetailDate(detail['reactivatedAt']),
+                  ),
+                  _DetailRow(
+                    'Reactivated by',
+                    _formatSuspendedBy(detail['reactivatedBy']),
+                  ),
+                ],
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
@@ -755,6 +820,33 @@ class _PersonDetailDialog extends StatelessWidget {
           child: const Text('Close'),
         ),
       ],
+    );
+  }
+}
+
+class _AlwaysShowDetailRow extends StatelessWidget {
+  const _AlwaysShowDetailRow(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: RichText(
+        text: TextSpan(
+          style: AdminTypography.pageSubtitle(palette),
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            TextSpan(text: value),
+          ],
+        ),
+      ),
     );
   }
 }

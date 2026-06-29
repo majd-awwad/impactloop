@@ -194,6 +194,14 @@ Verification document upload: PDF/JPG/JPEG/PNG, max 5MB. Returns `{ url, fileNam
 
 **People management safety (MVP):** No delete-user or manual role-edit endpoints. `suspend` / `reactivate` are blocked for the acting admin (self), any user with `ADMIN` role, and the last active admin account. Admin tab is view-only in Flutter (no suspend button). Pending admin invitations are still revoked via `/api/admin/invitations/:id/revoke`. Future admin suspension should require `SUPER_ADMIN` (not implemented).
 
+**`PATCH /api/admin/people/:id/suspend` body:** `{ reason: string }` (required, min 3 chars). Persists `suspensionReason`, `suspendedAt`, `suspendedById` on `users`. Logs `USER_SUSPENDED` to `admin_activity_logs`.
+
+**`PATCH /api/admin/people/:id/reactivate`:** Sets `accountStatus=ACTIVE`, `reactivatedAt`, `reactivatedById`; keeps prior suspension fields for history. Logs `USER_REACTIVATED`.
+
+**People list/detail suspension fields:** `suspensionReason`, `suspendedAt`, `suspendedBy` (`{ id, displayName, email }`), `reactivatedAt`, `reactivatedBy`, `suspensionReasonPreview` (list, when suspended).
+
+**`GET /api/admin/dashboard` extras:** `supplierVerificationPendingCount`, `supplierVerificationPreview` (pending org verifications, max 5), `recentActivity` (latest `admin_activity_logs`, max 5). `pendingActions.supplierVerifications` and `pendingActions.reports` use real pending counts.
+
 **`GET /api/admin/supplier-verifications` query:** `status` (`PENDING` \| `APPROVED` \| `REJECTED` \| `CHANGES_REQUESTED`), `search`, `supplierType` (`WORKSHOP` \| `FACTORY` \| `EDUCATIONAL_INSTITUTION`), `city`, `page`, `limit`.
 
 **`PATCH .../reject` and `.../request-changes` body:** `{ adminNote: string }` (required, min 3 chars). **`PATCH .../approve` body:** `{ adminNote?: string }`.

@@ -247,6 +247,11 @@ model User {
   emailVerifiedAt              DateTime?                  @map("email_verified_at")
   phoneVerifiedAt              DateTime?                  @map("phone_verified_at")
   lastLoginAt                  DateTime?                  @map("last_login_at")
+  suspensionReason             String?                    @map("suspension_reason")
+  suspendedAt                  DateTime?                  @map("suspended_at")
+  suspendedById                String?                    @map("suspended_by_id")
+  reactivatedAt                DateTime?                  @map("reactivated_at")
+  reactivatedById              String?                    @map("reactivated_by_id")
   createdAt                    DateTime                   @default(now()) @map("created_at")
   updatedAt                    DateTime                   @updatedAt @map("updated_at")
   roles                        UserRoleAssignment[]
@@ -277,8 +282,31 @@ model User {
   materialReportsSubmitted     MaterialReport[] @relation("MaterialReportReporter")
   materialReportsReviewed      MaterialReport[] @relation("MaterialReportReviewedBy")
   moderatedMaterials           Material[]       @relation("MaterialModeratedBy")
+  suspendedBy                  User?            @relation("UserSuspendedBy", fields: [suspendedById], references: [id], onDelete: SetNull)
+  accountsSuspended            User[]           @relation("UserSuspendedBy")
+  reactivatedBy                User?            @relation("UserReactivatedBy", fields: [reactivatedById], references: [id], onDelete: SetNull)
+  accountsReactivated          User[]           @relation("UserReactivatedBy")
+  adminActivityLogs            AdminActivityLog[]
 
+  @@index([suspendedById])
+  @@index([reactivatedById])
   @@map("users")
+}
+
+model AdminActivityLog {
+  id          String   @id @default(cuid())
+  actorUserId String   @map("actor_user_id")
+  action      String
+  targetType  String   @map("target_type")
+  targetId    String?  @map("target_id")
+  targetLabel String   @map("target_label")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  actor       User     @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([actorUserId])
+  @@map("admin_activity_logs")
 }
 
 model UserRoleAssignment {
