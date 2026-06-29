@@ -98,8 +98,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/admin/materials` | `AdminMaterialsPage` | admin | Materials moderation + reports |
 | `/admin/approvals` | `AdminApprovalsPage` | admin | Category + price approvals |
 | `/admin/invitations` | `AdminInvitationsPage` | admin | Admin invitation management |
-| `/admin/impact` | `AdminPlaceholderPage` | admin | Placeholder |
-| `/admin/audit-logs` | `AdminPlaceholderPage` | admin | Placeholder |
+| `/admin/impact` | `AdminImpactPage` | admin | Reuse + estimated CO₂ analytics from dashboard API |
+| `/admin/audit-logs` | `AdminAuditLogsPage` | admin | Paginated `admin_activity_logs` with backend filters, summary stats, actor/date filters, details dialog |
 
 ## Admin shell navigation
 

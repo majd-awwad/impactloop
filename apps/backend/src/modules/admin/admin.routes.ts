@@ -33,6 +33,8 @@ import {
   supplierVerificationIdParamSchema,
 } from '../admin-supplier-verifications/admin-supplier-verifications.validation.js';
 import { getAdminDashboard } from './admin.controller.js';
+import { listAdminAuditLogs } from './admin-audit-logs.controller.js';
+import { adminAuditLogsListQuerySchema } from './admin-audit-logs.validation.js';
 import {
   approveAdminCategoryRequest,
   approveAdminPriceRequest,
@@ -97,6 +99,14 @@ adminRouter.get(
   authMiddleware,
   requireRoles('ADMIN'),
   asyncHandler(getAdminDashboard),
+);
+
+adminRouter.get(
+  '/audit-logs',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminAuditLogsListQuerySchema, 'query'),
+  asyncHandler(listAdminAuditLogs),
 );
 
 adminRouter.get(

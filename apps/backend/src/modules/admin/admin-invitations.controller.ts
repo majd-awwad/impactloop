@@ -55,7 +55,7 @@ export const resendAdminInvitation = async (
   res: Response,
 ): Promise<void> => {
   const { id } = req.params as { id: string };
-  const invitation = await resendEmailInvitation(id);
+  const invitation = await resendEmailInvitation(id, req.auth!.sub);
 
   res.json(successResponse('Invitation resent', invitation));
 };
@@ -65,7 +65,7 @@ export const revokeAdminInvitation = async (
   res: Response,
 ): Promise<void> => {
   const { id } = req.params as { id: string };
-  const invitation = await revokeInvitation(id);
+  const invitation = await revokeInvitation(id, req.auth!.sub);
 
   res.json(successResponse('Invitation revoked', invitation));
 };

@@ -41,8 +41,9 @@ import '../../features/supplier_portal/presentation/shell/supplier_shell.dart';
 import '../../features/admin_portal/presentation/pages/admin_access_denied_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_invitations_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_overview_page.dart';
-import '../../features/admin_portal/presentation/pages/admin_placeholder_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_audit_logs_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_impact_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_materials_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_people_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_supplier_verification_page.dart';
@@ -554,13 +555,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/impact',
-            builder: (context, state) =>
-                const AdminPlaceholderPage(title: 'Impact Analytics'),
+            builder: (context, state) => const AdminImpactPage(),
           ),
           GoRoute(
             path: '/admin/audit-logs',
-            builder: (context, state) =>
-                const AdminPlaceholderPage(title: 'Audit Logs'),
+            builder: (context, state) => const AdminAuditLogsPage(),
           ),
         ],
       ),

@@ -1,6 +1,11 @@
 import { AppError } from '../../utils/app-error.js';
 import { decimalToNumber } from '../../utils/decimal.js';
 
+import {
+  ADMIN_ACTIVITY_ACTIONS,
+  ADMIN_ACTIVITY_TARGET_TYPES,
+  logAdminActivity,
+} from '../admin/admin-activity-log.js';
 import * as repository from './admin-materials.repository.js';
 import type {
   AdminMaterialReportsListQuery,
@@ -216,6 +221,19 @@ export const hideAdminMaterial = async (
     materialId,
   });
 
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_HIDDEN,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL,
+    targetId: materialId,
+    targetLabel: material.title,
+    metadata: {
+      reason: input.reason.trim(),
+      previousStatus: material.status,
+      newStatus: updated.status,
+    },
+  });
+
   return {
     id: updated.id,
     status: updated.status,
@@ -249,6 +267,19 @@ export const markAdminMaterialUnavailable = async (
       materialId,
     });
   }
+
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_MARKED_UNAVAILABLE,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL,
+    targetId: materialId,
+    targetLabel: material.title,
+    metadata: {
+      reason: input.reason?.trim() ?? null,
+      previousStatus: material.status,
+      newStatus: updated.status,
+    },
+  });
 
   return {
     id: updated.id,
@@ -293,6 +324,18 @@ export const restoreAdminMaterial = async (
     title: 'Material restored',
     body: `Your material '${material.title}' was restored and is visible again.`,
     materialId,
+  });
+
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_RESTORED,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL,
+    targetId: materialId,
+    targetLabel: material.title,
+    metadata: {
+      previousStatus: material.status,
+      newStatus: updated.status,
+    },
   });
 
   return {
@@ -412,6 +455,19 @@ export const resolveAdminMaterialReport = async (
     adminNote: input.adminNote?.trim(),
   });
 
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_REPORT_RESOLVED,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL_REPORT,
+    targetId: reportId,
+    targetLabel: report.material.title,
+    metadata: {
+      materialId: report.materialId,
+      reportReason: report.reason,
+      adminNote: input.adminNote?.trim() ?? null,
+    },
+  });
+
   return {
     id: updated.id,
     status: updated.status,
@@ -442,6 +498,19 @@ export const rejectAdminMaterialReport = async (
     title: 'Report reviewed',
     body: `Your report for '${report.material.title}' was reviewed.`,
     materialId: report.materialId,
+  });
+
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_REPORT_REJECTED,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL_REPORT,
+    targetId: reportId,
+    targetLabel: report.material.title,
+    metadata: {
+      materialId: report.materialId,
+      reportReason: report.reason,
+      adminNote: input.adminNote.trim(),
+    },
   });
 
   return {
@@ -478,6 +547,20 @@ export const hideMaterialFromAdminReport = async (
     title: 'Material hidden after report review',
     body: `Your material '${material.title}' was hidden after admin review. Reason: ${input.adminNote.trim()}.`,
     materialId: report.materialId,
+  });
+
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_REPORT_HIDE_MATERIAL,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL,
+    targetId: report.materialId,
+    targetLabel: material.title,
+    metadata: {
+      reportId,
+      reportReason: report.reason,
+      adminNote: input.adminNote.trim(),
+      materialStatus: material.status,
+    },
   });
 
   return {

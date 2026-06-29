@@ -100,6 +100,10 @@ class AdminL10n {
         'Estimated from reused materials and category-based reuse factors.',
         'تقدير من المواد المعاد استخدامها وعوامل إعادة الاستخدام حسب الفئة.',
       );
+  String get estimatedCo2ShortHelper => t(
+        'Estimated from reused materials',
+        'تقدير من المواد المعاد استخدامها',
+      );
   String get reuseCompletionRateLabel =>
       t('Reuse completion rate', 'معدل إكمال إعادة الاستخدام');
 
@@ -146,6 +150,7 @@ class AdminL10n {
         'No admin activity yet',
         'لا يوجد نشاط إداري بعد',
       );
+  String get viewAllAuditLogs => t('View all logs', 'عرض كل السجلات');
   String get supplierVerificationQueueTitle => t('Supplier verification queue', 'قائمة التحقق من الموردين');
   String get reviewQueuesTitle => t('Review queues', 'قوائم المراجعة');
   String get reviewQueuesSubtitle => t(
