@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../materials/data/material_reports_api.dart';
@@ -27,9 +29,17 @@ import '../../../reservations/data/models/learner_reservation.dart';
 import '../../../reservations/presentation/reservation_create_error_message.dart';
 import '../../data/api_material_discovery_repository.dart';
 import '../../domain/discovery_material.dart';
+import '../../domain/material_discovery_query.dart';
 import '../../domain/material_discovery_repository.dart';
 import '../material_discovery_content.dart';
+import '../discovery_material_display.dart';
 import '../widgets/discovery_location_privacy_panel.dart';
+
+const _materialDetailsStickyCtaHeight = 76.0;
+const _materialDetailsDesktopMaxWidth = 1160.0;
+const _materialDetailsSectionGap = AppSpacing.lg;
+const _materialDetailsRelatedSectionsTopGap = AppSpacing.xxl;
+const _relatedCompactCardWidth = 340.0;
 
 class MaterialDetailsPage extends ConsumerStatefulWidget {
   const MaterialDetailsPage({
@@ -79,172 +89,57 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
 
-    return Scaffold(
-      backgroundColor: palette.pageBackground,
-      body: SafeArea(
-        child: FutureBuilder<DiscoveryMaterial?>(
-          future: _materialFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return Center(
+    return FutureBuilder<DiscoveryMaterial?>(
+      future: _materialFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Scaffold(
+            backgroundColor: palette.pageBackground,
+            body: SafeArea(
+              child: Center(
                 child: CircularProgressIndicator(color: palette.mint),
-              );
-            }
+              ),
+            ),
+          );
+        }
 
-            if (snapshot.hasError) {
-              return _SimpleStateScaffold(
-                child: Text(
-                  const LocalizedText(
-                    en: 'Unable to load material details right now.',
-                    ar: 'تعذر تحميل تفاصيل المادة حالياً.',
-                  ).resolve(context),
-                  style: AppTextStyles.title(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                  textAlign: TextAlign.center,
-                ),
-              );
-            }
+        if (snapshot.hasError) {
+          return _SimpleStateScaffold(
+            child: Text(
+              const LocalizedText(
+                en: 'Unable to load material details right now.',
+                ar: 'تعذر تحميل تفاصيل المادة حالياً.',
+              ).resolve(context),
+              style: AppTextStyles.title(
+                context,
+              ).copyWith(color: palette.textPrimary),
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
 
-            final material = snapshot.data;
-            if (material == null) {
-              return _SimpleStateScaffold(
-                child: Text(
-                  const LocalizedText(
-                    en: 'Material not found',
-                    ar: 'المادة غير موجودة',
-                  ).resolve(context),
-                  style: AppTextStyles.title(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                  textAlign: TextAlign.center,
-                ),
-              );
-            }
+        final material = snapshot.data;
+        if (material == null) {
+          return _SimpleStateScaffold(
+            child: Text(
+              const LocalizedText(
+                en: 'Material not found',
+                ar: 'المادة غير موجودة',
+              ).resolve(context),
+              style: AppTextStyles.title(
+                context,
+              ).copyWith(color: palette.textPrimary),
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const EntryNavBar(
-                  showSignIn: true,
-                  showCreateAccount: true,
-                  homeRoute: '/',
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsetsDirectional.only(
-                      bottom: AppSpacing.xl,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _MaterialDetailsHero(material: material),
-                        Transform.translate(
-                          offset: const Offset(0, -34),
-                          child: Padding(
-                            padding: const EdgeInsetsDirectional.symmetric(
-                              horizontal: AppSpacing.md,
-                            ),
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 1400,
-                                ),
-                                child: LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    final wide = constraints.maxWidth >= 980;
-                                    final authState = ref.watch(
-                                      authControllerProvider,
-                                    );
-                                    final reserveState = ref.watch(
-                                      reservationCreateControllerProvider,
-                                    );
-                                    final myReservationsState =
-                                        authState.status ==
-                                                AuthStatus.authenticated &&
-                                            authState.user?.hasRole(
-                                                  'LEARNER',
-                                                ) ==
-                                                true
-                                        ? ref.watch(myReservationsProvider)
-                                        : null;
-                                    final learnerReservation =
-                                        myReservationsState?.maybeWhen(
-                                          data: (reservations) =>
-                                              _reservationForMaterial(
-                                                reservations,
-                                                material,
-                                              ),
-                                          orElse: () => null,
-                                        );
-                                    final myDeliveriesState =
-                                        learnerReservation != null
-                                        ? ref.watch(learnerDeliveriesProvider)
-                                        : null;
-                                    final learnerDelivery =
-                                        myDeliveriesState?.maybeWhen(
-                                          data: (deliveries) =>
-                                              _deliveryForReservation(
-                                                deliveries,
-                                                learnerReservation!.id,
-                                              ),
-                                          orElse: () => null,
-                                        );
-
-                                    final mainColumn = _DetailsMainColumn(
-                                      material: material,
-                                    );
-                                    final sideColumn = _DetailsSideColumn(
-                                      material: material,
-                                      authState: authState,
-                                      isSubmitting: reserveState.isLoading,
-                                      isLoadingReservation:
-                                          myReservationsState?.isLoading ==
-                                          true,
-                                      showReservationStatusCta:
-                                          _showReservationStatusCta,
-                                      learnerReservation: learnerReservation,
-                                      learnerDelivery: learnerDelivery,
-                                      onReserve: () =>
-                                          _handleReserve(material),
-                                    );
-
-                                    if (!wide) {
-                                      return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          mainColumn,
-                                          const SizedBox(height: AppSpacing.lg),
-                                          sideColumn,
-                                        ],
-                                      );
-                                    }
-
-                                    return Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(flex: 7, child: mainColumn),
-                                        const SizedBox(width: AppSpacing.lg),
-                                        Expanded(flex: 4, child: sideColumn),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+        return _MaterialDetailsLoadedContent(
+          material: material,
+          showReservationStatusCta: _showReservationStatusCta,
+          onReserve: () => _handleReserve(material),
+        );
+      },
     );
   }
 
@@ -312,6 +207,263 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
   }
 }
 
+class _MaterialDetailsLoadedContent extends ConsumerWidget {
+  const _MaterialDetailsLoadedContent({
+    required this.material,
+    required this.showReservationStatusCta,
+    required this.onReserve,
+  });
+
+  final DiscoveryMaterial material;
+  final bool showReservationStatusCta;
+  final VoidCallback onReserve;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authControllerProvider);
+    final reserveState = ref.watch(reservationCreateControllerProvider);
+    final myReservationsState =
+        authState.status == AuthStatus.authenticated &&
+            authState.user?.hasRole('LEARNER') == true
+        ? ref.watch(myReservationsProvider)
+        : null;
+    final learnerReservation = myReservationsState?.maybeWhen(
+      data: (reservations) => _reservationForMaterial(reservations, material),
+      orElse: () => null,
+    );
+    final myDeliveriesState = learnerReservation != null
+        ? ref.watch(learnerDeliveriesProvider)
+        : null;
+    final learnerDelivery = myDeliveriesState?.maybeWhen(
+      data: (deliveries) =>
+          _deliveryForReservation(deliveries, learnerReservation!.id),
+      orElse: () => null,
+    );
+    final reservationUi = _ReservationUiState.from(
+      material: material,
+      authState: authState,
+      isSubmitting: reserveState.isLoading,
+      isLoadingReservation: myReservationsState?.isLoading == true,
+      showReservationStatusCta: showReservationStatusCta,
+      learnerReservation: learnerReservation,
+    );
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isWide = screenWidth >= 980;
+    final showMobileStickyCta =
+        !isWide &&
+        !reservationUi.isLoadingReservation &&
+        learnerReservation == null &&
+        !showReservationStatusCta;
+
+    final sideColumn = _DetailsSideColumn(
+      material: material,
+      reservationUi: reservationUi,
+      learnerDelivery: learnerDelivery,
+      onReserve: onReserve,
+      showPrimaryReserveButton: true,
+    );
+
+    return Scaffold(
+      backgroundColor: MaterialsUiPalette.of(context).pageBackground,
+      bottomNavigationBar: showMobileStickyCta
+          ? _MobileStickyReserveBar(
+              reservationUi: reservationUi,
+              onReserve: onReserve,
+            )
+          : null,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const EntryNavBar(
+              showSignIn: true,
+              showCreateAccount: true,
+              homeRoute: '/',
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  isWide ? AppSpacing.lg : AppSpacing.md,
+                  isWide ? AppSpacing.xl : AppSpacing.md,
+                  isWide ? AppSpacing.lg : AppSpacing.md,
+                  AppSpacing.xl +
+                      (showMobileStickyCta ? _materialDetailsStickyCtaHeight : 0),
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: _materialDetailsDesktopMaxWidth,
+                    ),
+                    child: isWide
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _DetailsPageHeader(material: material),
+                              const SizedBox(height: _materialDetailsSectionGap),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: _DetailsMainColumn(
+                                      material: material,
+                                      includeHeader: false,
+                                      compactDetailsLayout: true,
+                                    ),
+                                  ),
+                                  const SizedBox(width: _materialDetailsSectionGap),
+                                  Expanded(
+                                    flex: 2,
+                                    child: sideColumn,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: _materialDetailsRelatedSectionsTopGap),
+                              _RelatedMaterialsSections(
+                                material: material,
+                                layout: _RelatedMaterialsLayout.desktop,
+                              ),
+                            ],
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _DetailsPageHeader(material: material),
+                              _MaterialDetailsImage(
+                                material: material,
+                                compact: true,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              _MaterialSummaryPanel(material: material),
+                              const SizedBox(height: AppSpacing.md),
+                              _ReservationPanel(
+                                material: material,
+                                reservationUi: reservationUi,
+                                learnerDelivery: learnerDelivery,
+                                onReserve: onReserve,
+                                showPrimaryReserveButton: false,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              _MaterialDetailsPanel(material: material),
+                              const SizedBox(height: AppSpacing.md),
+                              _SupplierCard(material: material),
+                              const SizedBox(height: AppSpacing.md),
+                              const DiscoveryLocationPrivacyPanel(),
+                              const SizedBox(height: AppSpacing.md),
+                              _RelatedMaterialsSections(
+                                material: material,
+                                layout: _RelatedMaterialsLayout.mobile,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              _ReportMaterialSection(materialId: material.id),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReservationUiState {
+  const _ReservationUiState({
+    required this.isAvailable,
+    required this.isAuthenticatedLearner,
+    required this.isAuthenticatedNonLearner,
+    required this.canTapReserve,
+    required this.isSubmitting,
+    required this.isLoadingReservation,
+    required this.showReservationStatusCta,
+    required this.learnerReservation,
+    required this.helperText,
+    required this.buttonLabel,
+  });
+
+  final bool isAvailable;
+  final bool isAuthenticatedLearner;
+  final bool isAuthenticatedNonLearner;
+  final bool canTapReserve;
+  final bool isSubmitting;
+  final bool isLoadingReservation;
+  final bool showReservationStatusCta;
+  final LearnerReservation? learnerReservation;
+  final LocalizedText helperText;
+  final LocalizedText buttonLabel;
+
+  factory _ReservationUiState.from({
+    required DiscoveryMaterial material,
+    required AuthState authState,
+    required bool isSubmitting,
+    required bool isLoadingReservation,
+    required bool showReservationStatusCta,
+    required LearnerReservation? learnerReservation,
+  }) {
+    final isAvailable =
+        material.availableQuantity > 0 &&
+        material.status != 'REUSED' &&
+        material.status != 'UNAVAILABLE';
+    final isAuthenticatedLearner =
+        authState.status == AuthStatus.authenticated &&
+        authState.user?.hasRole('LEARNER') == true;
+    final isAuthenticatedNonLearner =
+        authState.status == AuthStatus.authenticated &&
+        authState.user?.hasRole('LEARNER') != true;
+    final canTapReserve =
+        isAvailable &&
+        learnerReservation == null &&
+        !isAuthenticatedNonLearner &&
+        !isSubmitting;
+
+    final helperText = !isAvailable
+        ? const LocalizedText(
+            en: 'This material is not available for new reservations.',
+            ar: 'هذه المادة غير متاحة لحجوزات جديدة.',
+          )
+        : isAuthenticatedNonLearner
+        ? const LocalizedText(
+            en: 'Use a learner account to reserve materials.',
+            ar: 'استخدم حساب متعلم لحجز المواد.',
+          )
+        : authState.status == AuthStatus.unauthenticated
+        ? const LocalizedText(
+            en: 'Sign in as a learner to request this material.',
+            ar: 'سجل الدخول كمتعلم لطلب هذه المادة.',
+          )
+        : const LocalizedText(
+            en: 'Request this material from the supplier.',
+            ar: 'اطلب هذه المادة من المورد.',
+          );
+
+    final buttonLabel = isSubmitting
+        ? const LocalizedText(en: 'Requesting...', ar: 'جارٍ الطلب...')
+        : !isAvailable
+        ? const LocalizedText(
+            en: 'Not available',
+            ar: 'غير متاح',
+          )
+        : isAuthenticatedLearner || authState.status == AuthStatus.unauthenticated
+        ? const LocalizedText(en: 'Reserve Material', ar: 'احجز المادة')
+        : const LocalizedText(en: 'Sign in to Reserve', ar: 'سجل الدخول للحجز');
+
+    return _ReservationUiState(
+      isAvailable: isAvailable,
+      isAuthenticatedLearner: isAuthenticatedLearner,
+      isAuthenticatedNonLearner: isAuthenticatedNonLearner,
+      canTapReserve: canTapReserve,
+      isSubmitting: isSubmitting,
+      isLoadingReservation: isLoadingReservation,
+      showReservationStatusCta: showReservationStatusCta,
+      learnerReservation: learnerReservation,
+      helperText: helperText,
+      buttonLabel: buttonLabel,
+    );
+  }
+}
+
 LearnerDelivery? _deliveryForReservation(
   List<LearnerDelivery> deliveries,
   String reservationId,
@@ -371,20 +523,66 @@ class _SimpleStateScaffold extends StatelessWidget {
   }
 }
 
-class _MaterialDetailsHero extends StatefulWidget {
-  const _MaterialDetailsHero({required this.material});
+class _DetailsPageHeader extends StatelessWidget {
+  const _DetailsPageHeader({required this.material});
 
   final DiscoveryMaterial material;
 
   @override
-  State<_MaterialDetailsHero> createState() => _MaterialDetailsHeroState();
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Row(
+      children: [
+        IconButton.outlined(
+          onPressed: () => context.go('/materials'),
+          style: IconButton.styleFrom(
+            foregroundColor: palette.textPrimary,
+            side: BorderSide(color: palette.borderStrong),
+          ),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.xs,
+          ),
+          decoration: BoxDecoration(
+            color: palette.cardSurfaceAlt,
+            borderRadius: AppRadius.pillAll,
+            border: Border.all(color: palette.borderSubtle),
+          ),
+          child: Text(
+            material.category.resolve(context),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
-class _MaterialDetailsHeroState extends State<_MaterialDetailsHero> {
+class _MaterialDetailsImage extends StatefulWidget {
+  const _MaterialDetailsImage({
+    required this.material,
+    this.compact = false,
+  });
+
+  final DiscoveryMaterial material;
+  final bool compact;
+
+  @override
+  State<_MaterialDetailsImage> createState() => _MaterialDetailsImageState();
+}
+
+class _MaterialDetailsImageState extends State<_MaterialDetailsImage> {
   bool _imageFailed = false;
 
   @override
-  void didUpdateWidget(covariant _MaterialDetailsHero oldWidget) {
+  void didUpdateWidget(covariant _MaterialDetailsImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.material.imageUrl != widget.material.imageUrl) {
       _imageFailed = false;
@@ -400,227 +598,553 @@ class _MaterialDetailsHeroState extends State<_MaterialDetailsHero> {
   Widget build(BuildContext context) {
     final material = widget.material;
     final palette = MaterialsUiPalette.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final heroHeight = screenWidth >= 1100
-        ? 340.0
-        : screenWidth >= 700
-        ? 300.0
+    final imageHeight = widget.compact
+        ? 200.0
+        : screenWidth >= 1100
+        ? 320.0
+        : screenWidth >= 980
+        ? 280.0
         : 260.0;
 
-    return SizedBox(
-      height: heroHeight,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: AlignmentDirectional.topStart,
-            end: AlignmentDirectional.bottomEnd,
-            colors: _showNetworkImage
-                ? materialGradient(material)
-                : [
-                    palette.fallbackStart,
-                    palette.fallbackMid,
-                    palette.fallbackEnd,
-                  ],
+    return ClipRRect(
+      borderRadius: AppRadius.lgAll,
+      child: SizedBox(
+        height: imageHeight,
+        width: double.infinity,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: AlignmentDirectional.topStart,
+              end: AlignmentDirectional.bottomEnd,
+              colors: _showNetworkImage
+                  ? materialGradient(material)
+                  : [
+                      palette.fallbackStart,
+                      palette.fallbackMid,
+                      palette.fallbackEnd,
+                    ],
+            ),
+            border: Border.all(color: palette.borderSubtle),
           ),
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (_showNetworkImage)
-              Image.network(
-                material.imageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted && !_imageFailed) {
-                      setState(() => _imageFailed = true);
-                    }
-                  });
-                  return const SizedBox.shrink();
-                },
-              ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: _showNetworkImage
-                    ? palette.overlayDark.withValues(
-                        alpha: isDark ? 0.42 : 0.24,
-                      )
-                    : palette.overlayDark.withValues(alpha: 0.04),
-              ),
-            ),
-            PositionedDirectional(
-              top: 34,
-              start: 24,
-              child: IconButton.filled(
-                onPressed: () => context.go('/materials'),
-                style: IconButton.styleFrom(
-                  backgroundColor: palette.panelSurface.withValues(alpha: 0.9),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (_showNetworkImage)
+                Image.network(
+                  material.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && !_imageFailed) {
+                        setState(() => _imageFailed = true);
+                      }
+                    });
+                    return const SizedBox.shrink();
+                  },
                 ),
-                icon: const Icon(Icons.arrow_back_rounded),
-              ),
-            ),
-            PositionedDirectional(
-              top: 34,
-              end: 24,
-              child: Container(
-                padding: const EdgeInsetsDirectional.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm,
-                ),
-                decoration: BoxDecoration(
-                  color: palette.panelSurface.withValues(alpha: 0.88),
-                  borderRadius: AppRadius.pillAll,
-                  border: Border.all(color: palette.borderSubtle),
-                ),
-                child: Text(
-                  material.category.resolve(context),
-                  style: AppTextStyles.label(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                  textAlign: TextAlign.start,
-                ),
-              ),
-            ),
-            if (!_showNetworkImage)
-              Align(
-                alignment: AlignmentDirectional.center,
-                child: Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: palette.cardSurfaceAlt.withValues(alpha: 0.88),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: palette.borderStrong),
-                  ),
-                  child: Icon(
-                    material.heroIconData,
-                    size: 44,
-                    color: palette.mint,
+              if (!_showNetworkImage)
+                Center(
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: palette.cardSurfaceAlt.withValues(alpha: 0.88),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: palette.borderStrong),
+                    ),
+                    child: Icon(
+                      material.heroIconData,
+                      size: 34,
+                      color: palette.mint,
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _DetailsMainColumn extends StatelessWidget {
-  const _DetailsMainColumn({required this.material});
+class _MaterialSummaryPanel extends StatelessWidget {
+  const _MaterialSummaryPanel({required this.material});
 
   final DiscoveryMaterial material;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _Panel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final description = DiscoveryMaterialDisplay.displayDescription(
+      material.description,
+    );
+    final showDescription = DiscoveryMaterialDisplay.hasDisplayDescription(
+      material.description,
+    );
+
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            material.title.resolve(context),
+            style: AppTextStyles.title(
+              context,
+            ).copyWith(color: palette.textPrimary),
+            textAlign: TextAlign.start,
+          ),
+          if (showDescription) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              description.resolve(context),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary),
+              textAlign: TextAlign.start,
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: [
-              Text(
-                material.title.resolve(context),
-                style: AppTextStyles.display(
-                  context,
-                ).copyWith(color: palette.textPrimary),
-                textAlign: TextAlign.start,
+              MaterialConditionBadge(
+                label: material.conditionLabel.resolve(context),
+                tone: material.conditionTone,
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                material.description.resolve(context),
-                style: AppTextStyles.subtitle(
-                  context,
-                ).copyWith(color: palette.textSecondary),
-                textAlign: TextAlign.start,
+              MaterialStatusBadge(
+                label: material.statusLabel.resolve(context),
+                tone: material.statusTone,
               ),
-              const SizedBox(height: AppSpacing.md),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  MaterialConditionBadge(
-                    label: material.conditionLabel.resolve(context),
-                    tone: material.conditionTone,
-                  ),
-                  MaterialStatusBadge(
-                    label: material.statusLabel.resolve(context),
-                    tone: material.statusTone,
-                  ),
-                  MaterialPriceBadge(
-                    label: material.priceLabel.resolve(context),
-                    isFree: material.isFree,
-                  ),
-                  if (material.isPopular)
-                    MaterialStatusBadge(
-                      label: 'Popular',
-                      tone: MaterialStatusBadgeTone.available,
-                    ),
+              MaterialPriceBadge(
+                label: material.priceLabel.resolve(context),
+                isFree: material.isFree,
+              ),
+            ],
+          ),
+          if (material.viewsCount > 0) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              LocalizedText(
+                en: '${material.viewsCount} views',
+                ar: '${material.viewsCount} مشاهدة',
+              ).resolve(context),
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textMuted),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MaterialDetailsPanel extends StatelessWidget {
+  const _MaterialDetailsPanel({
+    required this.material,
+    this.compactDesktopLayout = false,
+  });
+
+  final DiscoveryMaterial material;
+  final bool compactDesktopLayout;
+
+  List<Widget> _infoRows(BuildContext context) {
+    return [
+      _InfoRow(
+        icon: Icons.category_outlined,
+        label: const LocalizedText(
+          en: 'Category',
+          ar: 'الفئة',
+        ).resolve(context),
+        value: material.category.resolve(context),
+      ),
+      _InfoRow(
+        icon: Icons.straighten_rounded,
+        label: const LocalizedText(
+          en: 'Quantity',
+          ar: 'الكمية',
+        ).resolve(context),
+        value: material.quantityLabel.resolve(context),
+      ),
+      _InfoRow(
+        icon: Icons.location_on_outlined,
+        label: const LocalizedText(
+          en: 'Location',
+          ar: 'الموقع',
+        ).resolve(context),
+        value: material.locationLabel.resolve(context),
+      ),
+      _InfoRow(
+        icon: material.deliveryAvailable
+            ? Icons.local_shipping_outlined
+            : Icons.storefront_outlined,
+        label: const LocalizedText(
+          en: 'Delivery',
+          ar: 'التوصيل',
+        ).resolve(context),
+        value: material.availabilityLabel.resolve(context),
+      ),
+      if (material.postedAt != null)
+        _InfoRow(
+          icon: Icons.calendar_today_outlined,
+          label: const LocalizedText(
+            en: 'Posted',
+            ar: 'تاريخ النشر',
+          ).resolve(context),
+          value: _formatPostedDate(material.postedAt!),
+        ),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _infoRows(context);
+
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionTitle(
+            title: const LocalizedText(
+              en: 'Material Details',
+              ar: 'تفاصيل المادة',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (compactDesktopLayout)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = (constraints.maxWidth - AppSpacing.md) / 2;
+
+                return Wrap(
+                  spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.md,
+                  children: rows
+                      .map(
+                        (row) => SizedBox(
+                          width: itemWidth,
+                          child: row,
+                        ),
+                      )
+                      .toList(growable: false),
+                );
+              },
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < rows.length; i++) ...[
+                  if (i > 0) const SizedBox(height: AppSpacing.md),
+                  rows[i],
                 ],
-              ),
-              if (material.viewsCount > 0) ...[
-                const SizedBox(height: AppSpacing.sm),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SupplierCard extends StatelessWidget {
+  const _SupplierCard({required this.material});
+
+  final DiscoveryMaterial material;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return _Panel(
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: palette.mint.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: palette.borderSubtle),
+            ),
+            child: Icon(Icons.storefront_outlined, color: palette.mint, size: 22),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  LocalizedText(
-                    en: '${material.viewsCount} views',
-                    ar: '${material.viewsCount} مشاهدة',
-                  ).resolve(context),
+                  const LocalizedText(en: 'Supplier', ar: 'المورد').resolve(
+                    context,
+                  ),
+                  style: AppTextStyles.label(
+                    context,
+                  ).copyWith(color: palette.textMuted),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  material.supplierName.resolve(context),
+                  style: AppTextStyles.title(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  material.supplierSubtitle.resolve(context),
                   style: AppTextStyles.body(
                     context,
                   ).copyWith(color: palette.textSecondary),
-                  textAlign: TextAlign.start,
                 ),
               ],
-            ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReservationPanel extends StatelessWidget {
+  const _ReservationPanel({
+    required this.material,
+    required this.reservationUi,
+    required this.learnerDelivery,
+    required this.onReserve,
+    required this.showPrimaryReserveButton,
+    this.emphasized = false,
+  });
+
+  final DiscoveryMaterial material;
+  final _ReservationUiState reservationUi;
+  final LearnerDelivery? learnerDelivery;
+  final VoidCallback onReserve;
+  final bool showPrimaryReserveButton;
+  final bool emphasized;
+
+  static const _quantityStepHint = LocalizedText(
+    en: "You'll choose quantity in the next step.",
+    ar: 'ستختار الكمية في الخطوة التالية.',
+  );
+
+  bool get _showQuantityStepHint =>
+      reservationUi.isAvailable &&
+      !reservationUi.isAuthenticatedNonLearner &&
+      reservationUi.learnerReservation == null &&
+      !reservationUi.showReservationStatusCta;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final themeColors = AppThemeColors.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: emphasized ? themeColors.primarySoft : palette.panelSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(
+          color: emphasized ? themeColors.primary.withValues(alpha: 0.28) : palette.borderStrong,
+          width: emphasized ? 1.2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: palette.cardShadow.withValues(alpha: emphasized ? 0.16 : 0.12),
+            blurRadius: emphasized ? 20 : 16,
+            offset: Offset(0, emphasized ? 8 : 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SectionTitle(
+            title: const LocalizedText(en: 'Reservation', ar: 'الحجز'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            reservationUi.helperText.resolve(context),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+          ),
+          if (_showQuantityStepHint) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              _quantityStepHint.resolve(context),
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textMuted),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          if (reservationUi.isLoadingReservation &&
+              reservationUi.isAuthenticatedLearner)
+            const _ReservationLoadingState()
+          else if (reservationUi.learnerReservation != null)
+            _LearnerReservationStateCard(
+              reservation: reservationUi.learnerReservation!,
+              delivery: learnerDelivery,
+              deliveryAvailable: material.deliveryAvailable,
+            )
+          else if (reservationUi.showReservationStatusCta)
+            const _PostReservationStatusCta()
+          else if (showPrimaryReserveButton)
+            _ReserveMaterialButton(
+              reservationUi: reservationUi,
+              onReserve: onReserve,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReserveMaterialButton extends StatelessWidget {
+  const _ReserveMaterialButton({
+    required this.reservationUi,
+    required this.onReserve,
+  });
+
+  final _ReservationUiState reservationUi;
+  final VoidCallback onReserve;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return FilledButton.icon(
+      onPressed: reservationUi.canTapReserve ? onReserve : null,
+      style: _materialDetailsReserveButtonStyle(context),
+      icon: reservationUi.isSubmitting
+          ? SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colors.textOnPrimary,
+              ),
+            )
+          : const Icon(Icons.shopping_bag_outlined),
+      label: Text(reservationUi.buttonLabel.resolve(context)),
+    );
+  }
+}
+
+ButtonStyle _materialDetailsReserveButtonStyle(BuildContext context) {
+  final colors = AppThemeColors.of(context);
+  final palette = MaterialsUiPalette.of(context);
+
+  return FilledButton.styleFrom(
+    minimumSize: const Size.fromHeight(52),
+    shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+    elevation: 0,
+  ).merge(
+    ButtonStyle(
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return palette.mutedSurface;
+        }
+        if (states.contains(WidgetState.pressed) ||
+            states.contains(WidgetState.hovered)) {
+          return colors.primaryHover;
+        }
+        return colors.primary;
+      }),
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return palette.textMuted;
+        }
+        return colors.textOnPrimary;
+      }),
+    ),
+  );
+}
+
+class _MobileStickyReserveBar extends StatelessWidget {
+  const _MobileStickyReserveBar({
+    required this.reservationUi,
+    required this.onReserve,
+  });
+
+  final _ReservationUiState reservationUi;
+  final VoidCallback onReserve;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Material(
+      elevation: 8,
+      color: palette.panelSurface,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.sm,
+          ),
+          child: _ReserveMaterialButton(
+            reservationUi: reservationUi,
+            onReserve: onReserve,
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        _Panel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _SectionTitle(
-                title: const LocalizedText(
-                  en: 'Material Details',
-                  ar: 'تفاصيل المادة',
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _InfoRow(
-                icon: Icons.straighten_rounded,
-                label: const LocalizedText(
-                  en: 'Quantity',
-                  ar: 'الكمية',
-                ).resolve(context),
-                value: material.quantityLabel.resolve(context),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _InfoRow(
-                icon: Icons.location_on_outlined,
-                label: const LocalizedText(
-                  en: 'Location',
-                  ar: 'الموقع',
-                ).resolve(context),
-                value: material.locationLabel.resolve(context),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _InfoRow(
-                icon: material.deliveryAvailable
-                    ? Icons.local_shipping_outlined
-                    : Icons.storefront_outlined,
-                label: const LocalizedText(
-                  en: 'Delivery',
-                  ar: 'التوصيل',
-                ).resolve(context),
-                value: material.availabilityLabel.resolve(context),
-              ),
-            ],
-          ),
+      ),
+    );
+  }
+}
+
+String _formatPostedDate(DateTime value) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  return '${months[value.month - 1]} ${value.day}, ${value.year}';
+}
+
+class _DetailsMainColumn extends StatelessWidget {
+  const _DetailsMainColumn({
+    required this.material,
+    this.includeHeader = true,
+    this.compactDetailsLayout = false,
+  });
+
+  final DiscoveryMaterial material;
+  final bool includeHeader;
+  final bool compactDetailsLayout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (includeHeader) ...[
+          _DetailsPageHeader(material: material),
+          const SizedBox(height: _materialDetailsSectionGap),
+        ],
+        _MaterialDetailsImage(material: material),
+        const SizedBox(height: _materialDetailsSectionGap),
+        _MaterialSummaryPanel(material: material),
+        const SizedBox(height: _materialDetailsSectionGap),
+        _MaterialDetailsPanel(
+          material: material,
+          compactDesktopLayout: compactDetailsLayout,
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: _materialDetailsSectionGap),
         const DiscoveryLocationPrivacyPanel(),
       ],
     );
@@ -630,210 +1154,35 @@ class _DetailsMainColumn extends StatelessWidget {
 class _DetailsSideColumn extends StatelessWidget {
   const _DetailsSideColumn({
     required this.material,
-    required this.authState,
-    required this.isSubmitting,
-    required this.isLoadingReservation,
-    required this.showReservationStatusCta,
-    required this.learnerReservation,
+    required this.reservationUi,
     required this.learnerDelivery,
     required this.onReserve,
+    required this.showPrimaryReserveButton,
   });
 
   final DiscoveryMaterial material;
-  final AuthState authState;
-  final bool isSubmitting;
-  final bool isLoadingReservation;
-  final bool showReservationStatusCta;
-  final LearnerReservation? learnerReservation;
+  final _ReservationUiState reservationUi;
   final LearnerDelivery? learnerDelivery;
   final VoidCallback onReserve;
+  final bool showPrimaryReserveButton;
 
   @override
   Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final isAvailable =
-        material.availableQuantity > 0 &&
-        material.status != 'REUSED' &&
-        material.status != 'UNAVAILABLE';
-    final isAuthenticatedLearner =
-        authState.status == AuthStatus.authenticated &&
-        authState.user?.hasRole('LEARNER') == true;
-    final isAuthenticatedNonLearner =
-        authState.status == AuthStatus.authenticated &&
-        authState.user?.hasRole('LEARNER') != true;
-    final canTapReserve =
-        isAvailable &&
-        learnerReservation == null &&
-        !isAuthenticatedNonLearner &&
-        !isSubmitting;
-    final reservationHelperText = !isAvailable
-        ? const LocalizedText(
-            en: 'This material is not available for new reservations.',
-            ar: 'هذه المادة غير متاحة لحجوزات جديدة.',
-          )
-        : isAuthenticatedNonLearner
-            ? const LocalizedText(
-                en: 'Use a learner account to reserve materials.',
-                ar: 'استخدم حساب متعلم لحجز المواد.',
-              )
-            : authState.status == AuthStatus.unauthenticated
-                ? const LocalizedText(
-                    en: 'Sign in as a learner to request this material.',
-                    ar: 'سجل الدخول كمتعلم لطلب هذه المادة.',
-                  )
-                : const LocalizedText(
-                    en: 'Choose how much to request from the available quantity.',
-                    ar: 'اختر الكمية التي تريد طلبها من المخزون المتاح.',
-                  );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Panel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _SectionTitle(
-                title: const LocalizedText(en: 'Supplier', ar: 'المورد'),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: palette.mint.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(Icons.apartment_rounded, color: palette.mint),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          material.supplierName.resolve(context),
-                          style: AppTextStyles.title(
-                            context,
-                          ).copyWith(color: palette.textPrimary),
-                          textAlign: TextAlign.start,
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          material.supplierSubtitle.resolve(context),
-                          style: AppTextStyles.body(
-                            context,
-                          ).copyWith(color: palette.textSecondary),
-                          textAlign: TextAlign.start,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (material.ratingLabel != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                Container(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: palette.cardSurfaceAlt,
-                    borderRadius: AppRadius.pillAll,
-                    border: Border.all(color: palette.borderStrong),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.star_rounded, color: materialLime),
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        LocalizedText(
-                          en: '${material.ratingLabel!.resolve(context)} supplier rating',
-                          ar: 'تقييم المورد ${material.ratingLabel!.resolve(context)}',
-                        ).resolve(context),
-                        style: AppTextStyles.label(
-                          context,
-                        ).copyWith(color: palette.textPrimary),
-                        textAlign: TextAlign.start,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
+        _SupplierCard(material: material),
+        const SizedBox(height: _materialDetailsSectionGap),
+        _ReservationPanel(
+          material: material,
+          reservationUi: reservationUi,
+          learnerDelivery: learnerDelivery,
+          onReserve: onReserve,
+          showPrimaryReserveButton: showPrimaryReserveButton,
+          emphasized: showPrimaryReserveButton,
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: _materialDetailsSectionGap),
         _ReportMaterialSection(materialId: material.id),
-        const SizedBox(height: AppSpacing.lg),
-        _Panel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _SectionTitle(
-                title: const LocalizedText(en: 'Reservation', ar: 'الحجز'),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                reservationHelperText.resolve(context),
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: palette.textSecondary),
-                textAlign: TextAlign.start,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              if (isLoadingReservation && isAuthenticatedLearner)
-                const _ReservationLoadingState()
-              else if (learnerReservation != null)
-                _LearnerReservationStateCard(
-                  reservation: learnerReservation!,
-                  delivery: learnerDelivery,
-                  deliveryAvailable: material.deliveryAvailable,
-                )
-              else if (showReservationStatusCta)
-                const _PostReservationStatusCta()
-              else
-                FilledButton.icon(
-                  onPressed: canTapReserve ? onReserve : null,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: materialMint,
-                    foregroundColor: palette.ctaForeground,
-                    minimumSize: const Size.fromHeight(54),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.lgAll,
-                    ),
-                  ),
-                  icon: isSubmitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.shopping_bag_outlined),
-                  label: Text(
-                    (isSubmitting
-                            ? const LocalizedText(
-                                en: 'Requesting...',
-                                ar: 'جارٍ الطلب...',
-                              )
-                            : isAuthenticatedLearner || !isAvailable
-                                ? const LocalizedText(
-                                    en: 'Reserve Material',
-                                    ar: 'احجز المادة',
-                                  )
-                                : const LocalizedText(
-                                    en: 'Sign in to Reserve',
-                                    ar: 'سجل الدخول للحجز',
-                                  ))
-                        .resolve(context),
-                  ),
-                ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -1112,16 +1461,16 @@ class _Panel extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.panelSurface,
-        borderRadius: AppRadius.xlAll,
+        borderRadius: AppRadius.lgAll,
         border: Border.all(color: palette.borderStrong),
         boxShadow: [
           BoxShadow(
-            color: palette.cardShadow,
-            blurRadius: 28,
-            offset: Offset(0, 10),
+            color: palette.cardShadow.withValues(alpha: 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -1350,6 +1699,243 @@ class _ReportMaterialSection extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+enum _RelatedMaterialsLayout { desktop, mobile }
+
+class _RelatedMaterialsSections extends ConsumerWidget {
+  const _RelatedMaterialsSections({
+    required this.material,
+    required this.layout,
+  });
+
+  final DiscoveryMaterial material;
+  final _RelatedMaterialsLayout layout;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categoryId = material.categoryId?.trim();
+    final city = material.city?.trim();
+    final strips = <Widget>[];
+
+    if (categoryId != null && categoryId.isNotEmpty) {
+      strips.add(
+        _RelatedMaterialsStrip(
+          excludeMaterialId: material.id,
+          layout: layout,
+          minItemCount: layout == _RelatedMaterialsLayout.desktop ? 2 : 1,
+          query: MaterialDiscoveryQuery(
+            categoryId: categoryId,
+            status: 'AVAILABLE',
+            limit: 5,
+          ),
+          title: LocalizedText(
+            en: 'More in ${material.category.en}',
+            ar: 'المزيد في ${material.category.ar}',
+          ),
+        ),
+      );
+    }
+
+    if (city != null && city.isNotEmpty) {
+      final area = material.area?.trim();
+      final locationLabel = area != null && area.isNotEmpty
+          ? '$city, $area'
+          : city;
+
+      strips.add(
+        _RelatedMaterialsStrip(
+          excludeMaterialId: material.id,
+          layout: layout,
+          minItemCount: layout == _RelatedMaterialsLayout.desktop ? 2 : 1,
+          query: MaterialDiscoveryQuery(
+            city: city,
+            area: area?.isNotEmpty == true ? area : null,
+            status: 'AVAILABLE',
+            limit: 5,
+          ),
+          title: LocalizedText(
+            en: 'More in $locationLabel',
+            ar: 'المزيد في $locationLabel',
+          ),
+        ),
+      );
+    }
+
+    if (strips.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < strips.length; i++) ...[
+          if (i > 0) const SizedBox(height: _materialDetailsSectionGap),
+          strips[i],
+        ],
+      ],
+    );
+  }
+}
+
+class _RelatedMaterialsStrip extends ConsumerStatefulWidget {
+  const _RelatedMaterialsStrip({
+    required this.excludeMaterialId,
+    required this.layout,
+    required this.minItemCount,
+    required this.query,
+    required this.title,
+  });
+
+  final String excludeMaterialId;
+  final _RelatedMaterialsLayout layout;
+  final int minItemCount;
+  final MaterialDiscoveryQuery query;
+  final LocalizedText title;
+
+  @override
+  ConsumerState<_RelatedMaterialsStrip> createState() =>
+      _RelatedMaterialsStripState();
+}
+
+class _RelatedMaterialsStripState extends ConsumerState<_RelatedMaterialsStrip> {
+  List<DiscoveryMaterial> _materials = const [];
+  var _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMaterials();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RelatedMaterialsStrip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.excludeMaterialId != widget.excludeMaterialId ||
+        oldWidget.query != widget.query) {
+      _loaded = false;
+      _materials = const [];
+      _loadMaterials();
+    }
+  }
+
+  Future<void> _loadMaterials() async {
+    try {
+      final repository = ApiMaterialDiscoveryRepository(
+        ref.read(apiClientProvider),
+      );
+      final result = await repository.fetchMaterials(widget.query);
+      final materials = result.items
+          .where((item) => item.id != widget.excludeMaterialId)
+          .take(4)
+          .toList(growable: false);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _materials = materials;
+        _loaded = true;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _materials = const [];
+        _loaded = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded || _materials.length < widget.minItemCount) {
+      return const SizedBox.shrink();
+    }
+
+    final palette = MaterialsUiPalette.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          widget.title.resolve(context),
+          style: AppTextStyles.title(
+            context,
+          ).copyWith(color: palette.textPrimary),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        if (widget.layout == _RelatedMaterialsLayout.desktop)
+          Wrap(
+            spacing: AppSpacing.lg,
+            runSpacing: AppSpacing.lg,
+            children: _materials
+                .map(
+                  (related) => SizedBox(
+                    width: _relatedCompactCardWidth,
+                    height: ImpactMaterialCompactCard.height,
+                    child: _RelatedMaterialCompactCard(material: related),
+                  ),
+                )
+                .toList(growable: false),
+          )
+        else
+          SizedBox(
+            height: ImpactMaterialCompactCard.height,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _materials.length,
+              separatorBuilder: (context, index) =>
+                  const SizedBox(width: AppSpacing.md),
+              itemBuilder: (context, index) {
+                final related = _materials[index];
+
+                return SizedBox(
+                  width: 320,
+                  child: _RelatedMaterialCompactCard(material: related),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _RelatedMaterialCompactCard extends StatelessWidget {
+  const _RelatedMaterialCompactCard({required this.material});
+
+  final DiscoveryMaterial material;
+
+  @override
+  Widget build(BuildContext context) {
+    return ImpactMaterialCompactCard(
+      title: material.title.resolve(context),
+      description: material.description.resolve(context),
+      category: material.category.resolve(context),
+      conditionLabel: material.conditionLabel.resolve(context),
+      conditionTone: material.conditionTone,
+      statusLabel: material.statusLabel.resolve(context),
+      statusTone: material.statusTone,
+      quantityLabel: material.quantityLabel.resolve(context),
+      priceLabel: material.priceLabel.resolve(context),
+      locationLabel: material.locationLabel.resolve(context),
+      availabilityLabel: material.availabilityLabel.resolve(context),
+      deliveryAvailable: material.deliveryAvailable,
+      isFree: material.isFree,
+      gradientColors: materialGradient(material),
+      imageUrl: material.imageUrl,
+      ratingLabel: material.isPopular
+          ? null
+          : material.ratingLabel?.resolve(context),
+      showPopularBadge: material.isPopular,
+      fallbackIcon: material.heroIconData,
+      onTap: () => context.go('/materials/${material.id}'),
     );
   }
 }

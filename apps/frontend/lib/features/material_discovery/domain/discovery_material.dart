@@ -16,6 +16,9 @@ class DiscoveryMaterial {
     required this.title,
     required this.description,
     required this.category,
+    this.categoryId,
+    this.city,
+    this.area,
     required this.conditionLabel,
     required this.conditionTone,
     required this.statusLabel,
@@ -34,6 +37,7 @@ class DiscoveryMaterial {
     this.imageUrl,
     this.ratingLabel,
     this.viewsCount = 0,
+    this.postedAt,
   });
 
   final String id;
@@ -44,6 +48,9 @@ class DiscoveryMaterial {
   final LocalizedText title;
   final LocalizedText description;
   final LocalizedText category;
+  final String? categoryId;
+  final String? city;
+  final String? area;
   final LocalizedText conditionLabel;
   final MaterialConditionBadgeTone conditionTone;
   final LocalizedText statusLabel;
@@ -62,6 +69,7 @@ class DiscoveryMaterial {
   final String? imageUrl;
   final LocalizedText? ratingLabel;
   final int viewsCount;
+  final DateTime? postedAt;
 
   bool get isPopular => viewsCount >= materialPopularViewsThreshold;
 }

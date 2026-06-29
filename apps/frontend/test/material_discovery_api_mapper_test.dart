@@ -104,4 +104,110 @@ void main() {
 
     expect(material.imageUrl, isNull);
   });
+
+  test('strips internal seed markers from public descriptions', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-6',
+      'title': 'Motor driver',
+      'description':
+          '[my-materials-seed] key:elec-12-l298n-drivers\nDual H-bridge motor driver modules for Arduino projects.',
+      'status': 'AVAILABLE',
+      'quantity': 2,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'category': {'nameEn': 'Electronics', 'nameAr': 'إلكترونيات'},
+    });
+
+    expect(
+      material.description.en,
+      'Dual H-bridge motor driver modules for Arduino projects.',
+    );
+    expect(material.description.en.contains('[my-materials-seed]'), isFalse);
+    expect(material.description.en.contains('key:'), isFalse);
+  });
+
+  test('maps createdAt to postedAt', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-7',
+      'title': 'Posted material',
+      'description': 'Has posted date',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'createdAt': '2026-03-15T10:30:00.000Z',
+      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+    });
+
+    expect(material.postedAt, isNotNull);
+    expect(material.postedAt!.year, 2026);
+    expect(material.postedAt!.month, 3);
+    expect(material.postedAt!.day, 15);
+  });
+
+  test('maps category id and pickup/delivery availability labels', () {
+    final both = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-8',
+      'title': 'Dual option stock',
+      'description': 'Supports pickup and delivery',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': true,
+      'pickupAllowed': true,
+      'category': {
+        'id': 'cat-electronics',
+        'nameEn': 'Electronics',
+        'nameAr': 'إلكترونيات',
+      },
+      'city': 'Nablus',
+      'area': 'Industrial',
+    });
+
+    expect(both.categoryId, 'cat-electronics');
+    expect(both.city, 'Nablus');
+    expect(both.area, 'Industrial');
+    expect(
+      both.availabilityLabel.en,
+      'Pickup and delivery available',
+    );
+
+    final pickupOnly = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-9',
+      'title': 'Pickup only stock',
+      'description': 'Pickup only',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'pickupAllowed': true,
+      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+    });
+
+    expect(pickupOnly.availabilityLabel.en, 'Pickup only');
+
+    final deliveryOnly = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-10',
+      'title': 'Delivery only stock',
+      'description': 'Delivery only',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': true,
+      'pickupAllowed': false,
+      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+    });
+
+    expect(deliveryOnly.availabilityLabel.en, 'Delivery available');
+  });
 }

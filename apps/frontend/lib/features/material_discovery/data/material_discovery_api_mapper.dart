@@ -5,6 +5,7 @@ import '../../../shared/models/localized_text.dart';
 import '../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../shared/widgets/materials/material_status_badge.dart';
 import '../domain/discovery_material.dart';
+import '../presentation/discovery_material_display.dart';
 
 class MaterialDiscoveryApiMapper {
   const MaterialDiscoveryApiMapper._();
@@ -43,15 +44,19 @@ class MaterialDiscoveryApiMapper {
       status,
       availableQuantity: availableQuantity ?? 0,
     );
-    final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
+    final categoryId = _nullableString(categoryJson?['id']);
     final title = _stringOrFallback(
       json['title'],
       fallback: 'Untitled material',
     );
-    final description = _stringOrFallback(
-      json['description'],
-      fallback: 'No description available.',
+    final description = DiscoveryMaterialDisplay.sanitizedDescriptionOrFallback(
+      _stringOrFallback(
+        json['description'],
+        fallback: '',
+      ),
     );
+
+    final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
 
     return DiscoveryMaterial(
       id: _stringOrFallback(json['id'], fallback: ''),
@@ -63,6 +68,9 @@ class MaterialDiscoveryApiMapper {
       title: LocalizedText(en: title, ar: title),
       description: LocalizedText(en: description, ar: description),
       category: categoryLabel,
+      categoryId: categoryId,
+      city: city,
+      area: area,
       conditionLabel: conditionMeta.label,
       conditionTone: conditionMeta.tone,
       statusLabel: statusMeta.label,
@@ -74,9 +82,9 @@ class MaterialDiscoveryApiMapper {
       ),
       priceLabel: _priceLabel(isFree: isFree, price: price),
       locationLabel: _locationLabel(city: city, area: area),
-      availabilityLabel: LocalizedText(
-        en: deliveryAvailable ? 'Delivery available' : 'Pickup only',
-        ar: deliveryAvailable ? 'التوصيل متاح' : 'استلام فقط',
+      availabilityLabel: _availabilityLabel(
+        deliveryAvailable: deliveryAvailable,
+        pickupAllowed: pickupAllowed,
       ),
       deliveryAvailable: deliveryAvailable,
       pickupAllowed: pickupAllowed,
@@ -93,7 +101,25 @@ class MaterialDiscoveryApiMapper {
               ar: _formatCompactNumber(ratingSummary),
             ),
       viewsCount: viewsCount,
+      postedAt: _dateTimeFromDynamic(json['createdAt']),
     );
+  }
+
+  static DateTime? _dateTimeFromDynamic(Object? value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is DateTime) {
+      return value;
+    }
+
+    final normalized = value.toString().trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    return DateTime.tryParse(normalized);
   }
 
   static Map<String, dynamic>? _asMap(Object? value) {
@@ -230,6 +256,37 @@ class MaterialDiscoveryApiMapper {
 
     final priceText = _formatCompactNumber(price);
     return LocalizedText(en: 'NIS $priceText', ar: '$priceText شيكل');
+  }
+
+  static LocalizedText _availabilityLabel({
+    required bool deliveryAvailable,
+    required bool pickupAllowed,
+  }) {
+    if (pickupAllowed && deliveryAvailable) {
+      return const LocalizedText(
+        en: 'Pickup and delivery available',
+        ar: 'الاستلام والتوصيل متاحان',
+      );
+    }
+
+    if (deliveryAvailable) {
+      return const LocalizedText(
+        en: 'Delivery available',
+        ar: 'التوصيل متاح',
+      );
+    }
+
+    if (pickupAllowed) {
+      return const LocalizedText(
+        en: 'Pickup only',
+        ar: 'استلام فقط',
+      );
+    }
+
+    return const LocalizedText(
+      en: 'Contact supplier for pickup options',
+      ar: 'تواصل مع المورد لخيارات الاستلام',
+    );
   }
 
   static LocalizedText _locationLabel({
