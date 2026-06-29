@@ -51,6 +51,37 @@ export const findInvitationRecordById = async (
   });
 };
 
+export const findActivePendingInvitationByEmailAndRole = async (
+  targetEmail: string,
+  targetRole: RoleInvitationTargetRole,
+): Promise<InvitationRecord | null> => {
+  const normalizedEmail = targetEmail.trim().toLowerCase();
+
+  return prisma.roleInvitation.findFirst({
+    where: {
+      targetEmail: {
+        equals: normalizedEmail,
+        mode: 'insensitive',
+      },
+      targetRole,
+      status: 'PENDING',
+      usedAt: null,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    include: {
+      invitedByUser: {
+        select: {
+          id: true,
+          displayName: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
 export const createInvitationRecord = async (input: {
   targetEmail: string;
   targetRole: RoleInvitationTargetRole;
@@ -61,7 +92,7 @@ export const createInvitationRecord = async (input: {
 }): Promise<InvitationRecord> => {
   return prisma.roleInvitation.create({
     data: {
-      targetEmail: input.targetEmail,
+      targetEmail: input.targetEmail.trim().toLowerCase(),
       targetRole: input.targetRole,
       tokenHash: input.tokenHash,
       invitedBy: input.invitedBy,
@@ -121,6 +152,27 @@ export const rotateInvitationToken = async (input: {
       sentAt: null,
       sendError: null,
       providerMessageId: null,
+    },
+    include: {
+      invitedByUser: {
+        select: {
+          id: true,
+          displayName: true,
+          email: true,
+        },
+      },
+    },
+  });
+};
+
+export const rotateInvitationTokenHashOnly = async (input: {
+  id: string;
+  tokenHash: string;
+}): Promise<InvitationRecord> => {
+  return prisma.roleInvitation.update({
+    where: { id: input.id },
+    data: {
+      tokenHash: input.tokenHash,
     },
     include: {
       invitedByUser: {

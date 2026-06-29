@@ -12,6 +12,8 @@ import {
 
 import {
   createAdminInvitation,
+  getAdminInvitation,
+  issueAdminInvitationLink,
   listAdminInvitations,
   resendAdminInvitation,
   revokeAdminInvitation,
@@ -104,12 +106,28 @@ adminRouter.get(
   asyncHandler(listAdminInvitations),
 );
 
+adminRouter.get(
+  '/invitations/:id',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(invitationIdParamSchema, 'params'),
+  asyncHandler(getAdminInvitation),
+);
+
 adminRouter.post(
   '/invitations',
   authMiddleware,
   requireRoles('ADMIN'),
   validate(adminCreateInvitationSchema),
   asyncHandler(createAdminInvitation),
+);
+
+adminRouter.post(
+  '/invitations/:id/issue-link',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(invitationIdParamSchema, 'params'),
+  asyncHandler(issueAdminInvitationLink),
 );
 
 adminRouter.post(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/config/api_config.dart';
@@ -179,7 +180,9 @@ Color _cardAccent(AdminPalette palette, AdminMaterialListItem item) {
 }
 
 class AdminMaterialsPage extends ConsumerStatefulWidget {
-  const AdminMaterialsPage({super.key});
+  const AdminMaterialsPage({super.key, this.initialStatus});
+
+  final String? initialStatus;
 
   @override
   ConsumerState<AdminMaterialsPage> createState() => _AdminMaterialsPageState();
@@ -187,6 +190,30 @@ class AdminMaterialsPage extends ConsumerStatefulWidget {
 
 class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
   final _searchController = TextEditingController();
+  var _appliedInitialStatus = false;
+
+  static const _validStatusFilters = {
+    'AVAILABLE',
+    'REUSED',
+    'UNAVAILABLE',
+    'RESERVED',
+    'PENDING_RESERVATION',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+  }
+
+  @override
+  void didUpdateWidget(AdminMaterialsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialStatus != widget.initialStatus) {
+      _appliedInitialStatus = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+    }
+  }
 
   @override
   void dispose() {
@@ -198,6 +225,15 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     ref.invalidate(adminMaterialsSummaryProvider);
     ref.invalidate(adminMaterialsListProvider);
     ref.invalidate(adminMaterialReportsProvider);
+  }
+
+  void _applyInitialStatusIfNeeded() {
+    if (!mounted || _appliedInitialStatus) return;
+    final raw = widget.initialStatus?.trim().toUpperCase();
+    if (raw == null || raw.isEmpty) return;
+    _appliedInitialStatus = true;
+    if (!_validStatusFilters.contains(raw)) return;
+    ref.read(_materialsFiltersProvider.notifier).setStatus(raw);
   }
 
   Future<void> _runAction(
@@ -332,6 +368,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
               onReset: () {
                 _searchController.clear();
                 ref.read(_materialsFiltersProvider.notifier).reset();
+                context.go('/admin/materials');
               },
               onRefresh: _refresh,
               showMaterialFilters: filters.tab == 'MATERIALS',

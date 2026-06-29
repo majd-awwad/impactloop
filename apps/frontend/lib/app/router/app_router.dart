@@ -521,12 +521,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/users',
             builder: (context, state) => AdminPeoplePage(
+              initialRole: state.uri.queryParameters['role'],
               initialTab: state.uri.queryParameters['tab'],
             ),
           ),
           GoRoute(
             path: '/admin/suppliers',
-            redirect: (context, state) => '/admin/users?tab=SUPPLIERS',
+            redirect: (context, state) => '/admin/users?role=SUPPLIER',
           ),
           GoRoute(
             path: '/admin/supplier-verification',
@@ -535,15 +536,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/materials',
-            builder: (context, state) => const AdminMaterialsPage(),
+            builder: (context, state) => AdminMaterialsPage(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
           GoRoute(
             path: '/admin/approvals',
-            builder: (context, state) => const AdminApprovalsPage(),
+            builder: (context, state) => AdminApprovalsPage(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
           GoRoute(
             path: '/admin/invitations',
-            builder: (context, state) => const AdminInvitationsPage(),
+            builder: (context, state) => AdminInvitationsPage(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
           GoRoute(
             path: '/admin/impact',

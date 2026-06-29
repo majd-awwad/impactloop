@@ -35,6 +35,13 @@ class AdminInvitationsApi {
     }
   }
 
+  Future<AdminInvitationItem> fetchInvitation(String id) async {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>('/api/admin/invitations/$id'),
+      AdminInvitationItem.fromJson,
+    );
+  }
+
   Future<AdminInvitationCreateResult> createInvitation(
     AdminInvitationCreateRequest request,
   ) {
@@ -44,6 +51,15 @@ class AdminInvitationsApi {
         data: request.toJson(),
       ),
       AdminInvitationCreateResult.fromJson,
+    );
+  }
+
+  Future<AdminInvitationLinkResult> issueInvitationLink(String id) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/admin/invitations/$id/issue-link',
+      ),
+      AdminInvitationLinkResult.fromJson,
     );
   }
 

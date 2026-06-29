@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/errors/api_exception.dart';
 import '../../data/admin_invitations_providers.dart';
 import '../../data/models/admin_invitations_models.dart';
 import '../l10n/admin_l10n.dart';
@@ -25,11 +27,66 @@ String _invitationSendSnackMessage(AdminInvitationCreateResult result) {
   return 'Email invitation sent successfully.';
 }
 
-class AdminInvitationsPage extends ConsumerWidget {
-  const AdminInvitationsPage({super.key});
+AdminInvitationItem? _parseExistingInvitation(ApiException error) {
+  final raw = error.details?['existingInvitation'];
+  if (raw is Map<String, dynamic>) {
+    return AdminInvitationItem.fromJson(raw);
+  }
+  return null;
+}
+
+Future<void> _copyInvitationLink(
+  BuildContext context,
+  WidgetRef ref, {
+  required String invitationId,
+  String? directUrl,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+
+  try {
+    final url = (directUrl != null && directUrl.trim().isNotEmpty)
+        ? directUrl.trim()
+        : await ref.read(adminInvitationsRepositoryProvider).issueInvitationLink(
+              invitationId,
+            );
+
+    if (url.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not copy invitation link.')),
+      );
+      return;
+    }
+
+    await Clipboard.setData(ClipboardData(text: url));
+
+    if (!context.mounted) return;
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Invitation link copied.')),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          error is ApiException ? error.message : 'Could not copy invitation link.',
+        ),
+      ),
+    );
+  }
+}
+
+class AdminInvitationsPage extends ConsumerStatefulWidget {
+  const AdminInvitationsPage({super.key, this.initialStatus});
+
+  final String? initialStatus;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminInvitationsPage> createState() => _AdminInvitationsPageState();
+}
+
+class _AdminInvitationsPageState extends ConsumerState<AdminInvitationsPage> {
+  @override
+  Widget build(BuildContext context) {
     final l = AdminL10n.of(context);
     final palette = context.adminPalette;
     final asyncInvitations = ref.watch(adminInvitationsProvider);
@@ -49,15 +106,22 @@ class AdminInvitationsPage extends ConsumerWidget {
           ],
         ),
       ),
-      data: (invitations) => _InvitationsBody(invitations: invitations),
+      data: (invitations) => _InvitationsBody(
+        invitations: invitations,
+        initialStatus: widget.initialStatus,
+      ),
     );
   }
 }
 
 class _InvitationsBody extends ConsumerStatefulWidget {
-  const _InvitationsBody({required this.invitations});
+  const _InvitationsBody({
+    required this.invitations,
+    this.initialStatus,
+  });
 
   final List<AdminInvitationItem> invitations;
+  final String? initialStatus;
 
   @override
   ConsumerState<_InvitationsBody> createState() => _InvitationsBodyState();
@@ -67,11 +131,53 @@ class _InvitationsBodyState extends ConsumerState<_InvitationsBody> {
   final _searchController = TextEditingController();
   String _roleFilter = 'ALL';
   String _statusFilter = 'ALL';
+  var _appliedInitialStatus = false;
+
+  static const _validInvitationStatusFilters = {
+    'PENDING',
+    'ACCEPTED',
+    'REVOKED',
+    'EXPIRED',
+    'SENT',
+    'FAILED',
+    'USED',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+  }
+
+  @override
+  void didUpdateWidget(_InvitationsBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialStatus != widget.initialStatus) {
+      _appliedInitialStatus = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+    }
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _applyInitialStatusIfNeeded() {
+    if (!mounted || _appliedInitialStatus) return;
+    final raw = widget.initialStatus?.trim().toUpperCase();
+    if (raw == null || raw.isEmpty) return;
+    _appliedInitialStatus = true;
+    if (!_validInvitationStatusFilters.contains(raw)) return;
+    setState(() => _statusFilter = raw);
+  }
+
+  bool _matchesActiveFilter(AdminInvitationItem item) {
+    return item.status != 'USED' &&
+        item.status != 'REVOKED' &&
+        item.status != 'EXPIRED' &&
+        item.expiresAt.isAfter(DateTime.now());
   }
 
   int _count(String status) =>
@@ -90,8 +196,14 @@ class _InvitationsBodyState extends ConsumerState<_InvitationsBody> {
         return false;
       }
 
-      if (_statusFilter != 'ALL' && item.status != _statusFilter) {
-        return false;
+      if (_statusFilter != 'ALL') {
+        if (_statusFilter == 'PENDING') {
+          if (!_matchesActiveFilter(item)) return false;
+        } else if (_statusFilter == 'ACCEPTED') {
+          if (item.status != 'USED') return false;
+        } else if (item.status != _statusFilter) {
+          return false;
+        }
       }
 
       return true;
@@ -103,8 +215,28 @@ class _InvitationsBodyState extends ConsumerState<_InvitationsBody> {
       context: context,
       builder: (context) => _CreateInvitationDialog(
         onCreated: () => ref.invalidate(adminInvitationsProvider),
+        onDuplicate: (existing) => _openDetailsDialog(context, existing),
       ),
     );
+  }
+
+  Future<void> _openDetailsDialog(
+    BuildContext context,
+    AdminInvitationItem item,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => _InvitationDetailDialog(item: item),
+    );
+  }
+
+  void _resetFilters() {
+    _searchController.clear();
+    setState(() {
+      _roleFilter = 'ALL';
+      _statusFilter = 'ALL';
+    });
+    context.go('/admin/invitations');
   }
 
   @override
@@ -190,9 +322,13 @@ class _InvitationsBodyState extends ConsumerState<_InvitationsBody> {
           onRoleChanged: (value) => setState(() => _roleFilter = value),
           onStatusChanged: (value) => setState(() => _statusFilter = value),
           onSearchChanged: () => setState(() {}),
+          onReset: _resetFilters,
         ),
         const SizedBox(height: 12),
-        _InvitationsList(invitations: invitations),
+        _InvitationsList(
+          invitations: invitations,
+          onOpenDetails: (item) => _openDetailsDialog(context, item),
+        ),
       ],
     );
   }
@@ -206,6 +342,7 @@ class _FiltersBar extends StatelessWidget {
     required this.onRoleChanged,
     required this.onStatusChanged,
     required this.onSearchChanged,
+    required this.onReset,
   });
 
   final TextEditingController searchController;
@@ -214,6 +351,7 @@ class _FiltersBar extends StatelessWidget {
   final ValueChanged<String> onRoleChanged;
   final ValueChanged<String> onStatusChanged;
   final VoidCallback onSearchChanged;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
@@ -278,8 +416,10 @@ class _FiltersBar extends StatelessWidget {
               ),
               items: const [
                 DropdownMenuItem(value: 'ALL', child: Text('All')),
+                DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
                 DropdownMenuItem(value: 'SENT', child: Text('Sent')),
                 DropdownMenuItem(value: 'FAILED', child: Text('Failed')),
+                DropdownMenuItem(value: 'ACCEPTED', child: Text('Accepted')),
                 DropdownMenuItem(value: 'USED', child: Text('Used')),
                 DropdownMenuItem(value: 'EXPIRED', child: Text('Expired')),
                 DropdownMenuItem(value: 'REVOKED', child: Text('Revoked')),
@@ -289,6 +429,11 @@ class _FiltersBar extends StatelessWidget {
               },
             ),
           ),
+          OutlinedButton.icon(
+            onPressed: onReset,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: Text(l.t('Reset', 'إعادة تعيين')),
+          ),
         ],
       ),
     );
@@ -296,9 +441,13 @@ class _FiltersBar extends StatelessWidget {
 }
 
 class _InvitationsList extends ConsumerWidget {
-  const _InvitationsList({required this.invitations});
+  const _InvitationsList({
+    required this.invitations,
+    required this.onOpenDetails,
+  });
 
   final List<AdminInvitationItem> invitations;
+  final ValueChanged<AdminInvitationItem> onOpenDetails;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -337,6 +486,7 @@ class _InvitationsList extends ConsumerWidget {
                   context: context,
                   builder: (context) => _CreateInvitationDialog(
                     onCreated: () => ref.invalidate(adminInvitationsProvider),
+                    onDuplicate: (existing) => onOpenDetails(existing),
                   ),
                 ),
                 style: FilledButton.styleFrom(
@@ -368,6 +518,7 @@ class _InvitationsList extends ConsumerWidget {
         itemBuilder: (context, index) {
           final item = invitations[index];
           final canAct = item.status != 'USED' && item.status != 'REVOKED';
+          final createdBy = item.createdBy?.label;
 
           return Padding(
             padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 14, 12),
@@ -392,22 +543,20 @@ class _InvitationsList extends ConsumerWidget {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           _StatusBadge(status: item.status),
+                          _RoleBadge(role: item.role),
                           Text(
-                            item.role,
+                            '${l.t('Created', 'أُنشئت')}: ${dateFormat.format(item.createdAt.toLocal())}',
                             style: AdminTypography.kpiHelper(palette),
                           ),
                           Text(
                             '${l.t('Expires', 'تنتهي')}: ${dateFormat.format(item.expiresAt.toLocal())}',
                             style: AdminTypography.kpiHelper(palette),
                           ),
-                          Text(
-                            '${l.t('Sent', 'أُرسلت')}: ${item.sentAt == null ? '—' : dateFormat.format(item.sentAt!.toLocal())}',
-                            style: AdminTypography.kpiHelper(palette),
-                          ),
-                          Text(
-                            '${l.t('Used', 'استُخدمت')}: ${item.usedAt == null ? '—' : dateFormat.format(item.usedAt!.toLocal())}',
-                            style: AdminTypography.kpiHelper(palette),
-                          ),
+                          if (createdBy != null && createdBy.isNotEmpty)
+                            Text(
+                              '${l.t('Created by', 'أنشأها')}: $createdBy',
+                              style: AdminTypography.kpiHelper(palette),
+                            ),
                         ],
                       ),
                     ],
@@ -417,6 +566,19 @@ class _InvitationsList extends ConsumerWidget {
                   spacing: 6,
                   runSpacing: 2,
                   children: [
+                    TextButton(
+                      onPressed: () => onOpenDetails(item),
+                      child: Text(l.t('Details', 'التفاصيل')),
+                    ),
+                    if (item.isActivePending)
+                      TextButton(
+                        onPressed: () => _copyInvitationLink(
+                          context,
+                          ref,
+                          invitationId: item.id,
+                        ),
+                        child: Text(l.t('Copy link', 'نسخ الرابط')),
+                      ),
                     if (item.status == 'FAILED' &&
                         item.sendError != null &&
                         item.sendError!.trim().isNotEmpty)
@@ -479,8 +641,12 @@ class _InvitationsList extends ConsumerWidget {
           action: result.inviteLink.isNotEmpty
               ? SnackBarAction(
                   label: 'Copy link',
-                  onPressed: () =>
-                      Clipboard.setData(ClipboardData(text: result.inviteLink)),
+                  onPressed: () => _copyInvitationLink(
+                    context,
+                    ref,
+                    invitationId: id,
+                    directUrl: result.inviteLink,
+                  ),
                 )
               : null,
         ),
@@ -590,10 +756,206 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
+class _RoleBadge extends StatelessWidget {
+  const _RoleBadge({required this.role});
+
+  final String role;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: palette.blue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        role,
+        style: AdminTypography.kpiHelper(palette).copyWith(
+          color: palette.blue,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _InvitationDetailDialog extends ConsumerStatefulWidget {
+  const _InvitationDetailDialog({required this.item});
+
+  final AdminInvitationItem item;
+
+  @override
+  ConsumerState<_InvitationDetailDialog> createState() =>
+      _InvitationDetailDialogState();
+}
+
+class _InvitationDetailDialogState extends ConsumerState<_InvitationDetailDialog> {
+  String? _invitationUrl;
+  bool _loadingLink = false;
+
+  String? _formatDate(DateTime? value) {
+    if (value == null) return null;
+    return DateFormat.yMMMd().add_jm().format(value.toLocal());
+  }
+
+  Future<void> _loadAndCopyLink() async {
+    setState(() => _loadingLink = true);
+    try {
+      final url = await ref
+          .read(adminInvitationsRepositoryProvider)
+          .issueInvitationLink(widget.item.id);
+      if (!mounted) return;
+      setState(() {
+        _invitationUrl = url;
+        _loadingLink = false;
+      });
+      await Clipboard.setData(ClipboardData(text: url));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invitation link copied.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _loadingLink = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ApiException
+                ? error.message
+                : 'Could not copy invitation link.',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AdminL10n.of(context);
+    final palette = context.adminPalette;
+    final item = widget.item;
+    final createdBy = item.createdBy?.label;
+
+    return AlertDialog(
+      title: Text(l.t('Invitation details', 'تفاصيل الدعوة')),
+      content: SizedBox(
+        width: 520,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _DetailRow(l.t('Email', 'البريد'), item.recipientEmail),
+              _DetailRow(l.t('Role', 'الدور'), item.role),
+              _DetailRow(l.t('Status', 'الحالة'), item.status),
+              _DetailRow(
+                l.t('Created at', 'تاريخ الإنشاء'),
+                _formatDate(item.createdAt),
+              ),
+              _DetailRow(
+                l.t('Expires at', 'تاريخ الانتهاء'),
+                _formatDate(item.expiresAt),
+              ),
+              if (createdBy != null && createdBy.isNotEmpty)
+                _DetailRow(l.t('Created by', 'أنشأها'), createdBy),
+              if (item.acceptedAt != null)
+                _DetailRow(
+                  l.t('Accepted at', 'تاريخ القبول'),
+                  _formatDate(item.acceptedAt),
+                ),
+              if (item.revokedAt != null)
+                _DetailRow(
+                  l.t('Revoked at', 'تاريخ الإلغاء'),
+                  _formatDate(item.revokedAt),
+                ),
+              const SizedBox(height: 12),
+              if (item.isActivePending) ...[
+                if (_invitationUrl != null) ...[
+                  Text(
+                    l.t('Invitation link', 'رابط الدعوة'),
+                    style: AdminTypography.kpiLabel(palette),
+                  ),
+                  const SizedBox(height: 6),
+                  SelectableText(
+                    _invitationUrl!,
+                    style: AdminTypography.kpiHelper(palette),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                FilledButton.icon(
+                  onPressed: _loadingLink ? null : _loadAndCopyLink,
+                  icon: _loadingLink
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.link, size: 18),
+                  label: Text(l.t('Copy link', 'نسخ الرابط')),
+                ),
+              ] else
+                Text(
+                  l.t(
+                    'This invitation is no longer active.',
+                    'هذه الدعوة لم تعد نشطة.',
+                  ),
+                  style: AdminTypography.kpiHelper(palette).copyWith(
+                    color: palette.amber,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l.t('Close', 'إغلاق')),
+        ),
+      ],
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow(this.label, this.value);
+
+  final String label;
+  final String? value;
+
+  @override
+  Widget build(BuildContext context) {
+    if (value == null || value!.trim().isEmpty) return const SizedBox.shrink();
+    final palette = context.adminPalette;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: RichText(
+        text: TextSpan(
+          style: AdminTypography.pageSubtitle(palette),
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            TextSpan(text: value),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CreateInvitationDialog extends ConsumerStatefulWidget {
-  const _CreateInvitationDialog({required this.onCreated});
+  const _CreateInvitationDialog({
+    required this.onCreated,
+    this.onDuplicate,
+  });
 
   final VoidCallback onCreated;
+  final ValueChanged<AdminInvitationItem>? onDuplicate;
 
   @override
   ConsumerState<_CreateInvitationDialog> createState() =>
@@ -607,9 +969,7 @@ class _CreateInvitationDialogState extends ConsumerState<_CreateInvitationDialog
   String _role = 'DRIVER';
   int _expiresInMinutes = 60;
   bool _submitting = false;
-  String? _inviteLink;
   String? _sendError;
-  String? _emailProvider;
 
   @override
   void dispose() {
@@ -619,13 +979,12 @@ class _CreateInvitationDialogState extends ConsumerState<_CreateInvitationDialog
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _submitting = true;
-      _inviteLink = null;
       _sendError = null;
-      _emailProvider = null;
     });
 
     try {
@@ -642,24 +1001,52 @@ class _CreateInvitationDialogState extends ConsumerState<_CreateInvitationDialog
 
       if (!mounted) return;
 
-      setState(() {
-        _submitting = false;
-        _inviteLink = result.inviteLink;
-        _sendError = result.sendStatus == 'FAILED' ? result.sendError : null;
-        _emailProvider = result.emailProvider;
-      });
+      Navigator.of(context).pop();
 
       final messenger = ScaffoldMessenger.of(context);
       messenger.showSnackBar(
         SnackBar(
-          content: Text(_invitationSendSnackMessage(result)),
+          content: Text(
+            result.sendStatus == 'FAILED'
+                ? _invitationSendSnackMessage(result)
+                : 'Invitation sent successfully.',
+          ),
         ),
       );
     } catch (error) {
       if (!mounted) return;
       setState(() => _submitting = false);
+
+      if (error is ApiException &&
+          error.code == 'DUPLICATE_PENDING_INVITATION') {
+        final existing = _parseExistingInvitation(error);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error.message.isNotEmpty
+                  ? error.message
+                  : 'An active pending invitation already exists for this email and role.',
+            ),
+            action: existing != null && widget.onDuplicate != null
+                ? SnackBarAction(
+                    label: 'View',
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      widget.onDuplicate!(existing);
+                    },
+                  )
+                : null,
+          ),
+        );
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(
+          content: Text(
+            error is ApiException ? error.message : error.toString(),
+          ),
+        ),
       );
     }
   }
@@ -730,24 +1117,6 @@ class _CreateInvitationDialogState extends ConsumerState<_CreateInvitationDialog
               if (_sendError != null) ...[
                 const SizedBox(height: 12),
                 Text(_sendError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-              ],
-              if (_emailProvider == 'mock' &&
-                  _inviteLink != null &&
-                  _inviteLink!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'Mock provider is enabled. No real email was sent.',
-                  style: TextStyle(color: Theme.of(context).colorScheme.primary),
-                ),
-              ],
-              if (_inviteLink != null && _inviteLink!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                SelectableText('Invitation link: $_inviteLink'),
-                TextButton(
-                  onPressed: () =>
-                      Clipboard.setData(ClipboardData(text: _inviteLink!)),
-                  child: Text(l.t('Copy link', 'نسخ الرابط')),
-                ),
               ],
             ],
           ),

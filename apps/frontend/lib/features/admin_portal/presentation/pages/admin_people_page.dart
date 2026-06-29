@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
@@ -128,9 +129,18 @@ const _validPeopleTabs = {
   'ADMINS',
 };
 
-class AdminPeoplePage extends ConsumerStatefulWidget {
-  const AdminPeoplePage({super.key, this.initialTab});
+const _roleToPeopleTab = {
+  'LEARNER': 'LEARNERS',
+  'SUPPLIER': 'SUPPLIERS',
+  'DRIVER': 'DRIVERS',
+  'MODERATOR': 'MODERATORS',
+  'ADMIN': 'ADMINS',
+};
 
+class AdminPeoplePage extends ConsumerStatefulWidget {
+  const AdminPeoplePage({super.key, this.initialRole, this.initialTab});
+
+  final String? initialRole;
   final String? initialTab;
 
   @override
@@ -142,18 +152,47 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
   var _appliedInitialTab = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialTabIfNeeded());
+  }
+
+  @override
+  void didUpdateWidget(AdminPeoplePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialRole != widget.initialRole ||
+        oldWidget.initialTab != widget.initialTab) {
+      _appliedInitialTab = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialTabIfNeeded());
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
-  void _applyInitialTabIfNeeded() {
-    if (_appliedInitialTab) return;
-    final tab = widget.initialTab?.trim().toUpperCase();
-    if (tab == null || tab.isEmpty || !_validPeopleTabs.contains(tab)) {
-      return;
+  String? _resolveInitialTab() {
+    final role = widget.initialRole?.trim().toUpperCase();
+    if (role != null && role.isNotEmpty) {
+      return _roleToPeopleTab[role];
     }
+    final tab = widget.initialTab?.trim().toUpperCase();
+    if (tab != null && _validPeopleTabs.contains(tab)) {
+      return tab;
+    }
+    return null;
+  }
+
+  void _applyInitialTabIfNeeded() {
+    if (!mounted || _appliedInitialTab) return;
+    final hasQuery = (widget.initialRole?.trim().isNotEmpty ?? false) ||
+        (widget.initialTab?.trim().isNotEmpty ?? false);
+    if (!hasQuery) return;
     _appliedInitialTab = true;
+    final tab = _resolveInitialTab();
+    if (tab == null) return;
     ref.read(_peopleFiltersProvider.notifier).setTab(tab);
   }
 
@@ -295,7 +334,6 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
 
   @override
   Widget build(BuildContext context) {
-    _applyInitialTabIfNeeded();
     final palette = context.adminPalette;
     final filters = ref.watch(_peopleFiltersProvider);
     final summaryAsync = ref.watch(adminPeopleSummaryProvider);
@@ -449,6 +487,7 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
                     onPressed: () {
                       _searchController.clear();
                       ref.read(_peopleFiltersProvider.notifier).reset();
+                      context.go('/admin/users');
                     },
                     icon: const Icon(Icons.refresh, size: 18),
                     label: const Text('Reset'),

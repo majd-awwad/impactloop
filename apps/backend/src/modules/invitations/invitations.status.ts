@@ -43,3 +43,18 @@ export const isInvitationActionable = (
 ): boolean => {
   return !invitation.usedAt && !invitation.revokedAt && invitation.status !== 'REVOKED';
 };
+
+export const isActivePendingInvitation = (
+  invitation: Pick<
+    RoleInvitation,
+    'status' | 'usedAt' | 'revokedAt' | 'expiresAt'
+  >,
+  now: Date = new Date(),
+): boolean => {
+  return (
+    invitation.status === 'PENDING' &&
+    !invitation.usedAt &&
+    !invitation.revokedAt &&
+    invitation.expiresAt > now
+  );
+};
