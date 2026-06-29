@@ -5,6 +5,7 @@ import '../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../shared/widgets/materials/material_status_badge.dart';
 
 import 'material_discovery_constants.dart';
+import 'discovery_material_image.dart';
 
 class DiscoveryMaterial {
   const DiscoveryMaterial({
@@ -37,6 +38,7 @@ class DiscoveryMaterial {
     required this.heroIconData,
     required this.cardGradient,
     this.imageUrl,
+    this.galleryImages = const [],
     this.ratingLabel,
     this.viewsCount = 0,
     this.postedAt,
@@ -77,6 +79,7 @@ class DiscoveryMaterial {
   final IconData heroIconData;
   final List<int> cardGradient;
   final String? imageUrl;
+  final List<DiscoveryMaterialImage> galleryImages;
   final LocalizedText? ratingLabel;
   final int viewsCount;
   final DateTime? postedAt;
@@ -88,6 +91,26 @@ class DiscoveryMaterial {
   final String? reserveBlockReason;
 
   bool get isPopular => viewsCount >= materialPopularViewsThreshold;
+
+  List<DiscoveryMaterialImage> get resolvedGalleryImages {
+    if (galleryImages.isNotEmpty) {
+      return galleryImages;
+    }
+
+    final url = imageUrl?.trim();
+    if (url == null || url.isEmpty) {
+      return const [];
+    }
+
+    return [
+      DiscoveryMaterialImage(
+        id: id,
+        url: url,
+        isCover: true,
+        isPrimary: true,
+      ),
+    ];
+  }
 
   LocalizedText? get sourceTypeLabel => _sourceTypeLabel(sourceType);
 

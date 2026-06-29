@@ -343,8 +343,42 @@ const resolveSupplierName = (material: {
   );
 };
 
-const resolvePrimaryImageUrl = (material: { images: { imageUrl: string }[] }) =>
-  material.images[0]?.imageUrl ?? null;
+const resolvePrimaryImageUrl = (material: {
+  images: { imageUrl: string; isCover?: boolean }[];
+}) => {
+  const cover = material.images.find((image) => image.isCover);
+  return cover?.imageUrl ?? material.images[0]?.imageUrl ?? null;
+};
+
+type PublicMaterialImageRecord = {
+  id: string;
+  imageUrl: string;
+  sortOrder: number;
+  isCover: boolean;
+  createdAt: Date;
+};
+
+const mapPublicMaterialImages = (images: PublicMaterialImageRecord[]) => {
+  const sorted = [...images].sort((left, right) => {
+    if (left.isCover !== right.isCover) {
+      return left.isCover ? -1 : 1;
+    }
+
+    if (left.sortOrder !== right.sortOrder) {
+      return left.sortOrder - right.sortOrder;
+    }
+
+    return left.createdAt.getTime() - right.createdAt.getTime();
+  });
+
+  return sorted.map((image, index) => ({
+    id: image.id,
+    url: image.imageUrl,
+    isCover: image.isCover,
+    isPrimary: image.isCover || index === 0,
+    sortOrder: image.sortOrder,
+  }));
+};
 
 const mapMaterial = (
   material: {
@@ -442,6 +476,7 @@ const mapMaterialDetailFields = (material: MaterialDetailRecord) => ({
   sourceType: material.sourceType,
   supplierType: material.supplierProfile?.supplierType ?? null,
   supplierVerified: resolvePublicSupplierVerified(material.supplierProfile),
+  images: mapPublicMaterialImages(material.images),
 });
 
 const buildMaterialReserveEnrichment = async (

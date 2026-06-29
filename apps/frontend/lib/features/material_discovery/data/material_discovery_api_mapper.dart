@@ -5,6 +5,7 @@ import '../../../shared/models/localized_text.dart';
 import '../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../shared/widgets/materials/material_status_badge.dart';
 import '../domain/discovery_material.dart';
+import '../domain/discovery_material_image.dart';
 import '../presentation/discovery_material_display.dart';
 
 class MaterialDiscoveryApiMapper {
@@ -66,6 +67,10 @@ class MaterialDiscoveryApiMapper {
 
     final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
     final supplierTypeLabel = DiscoveryMaterial.supplierTypeLabelFor(supplierType);
+    final galleryImages = _mapGalleryImages(json);
+    final imageUrl = galleryImages.isNotEmpty
+        ? galleryImages.first.url
+        : _resolveImageUrl(json);
 
     return DiscoveryMaterial(
       id: _stringOrFallback(json['id'], fallback: ''),
@@ -105,7 +110,8 @@ class MaterialDiscoveryApiMapper {
       supplierVerified: supplierVerified,
       heroIconData: _heroIconForCategory(categoryNameEn),
       cardGradient: _gradientForCategory(categoryNameEn),
-      imageUrl: _resolveImageUrl(json),
+      imageUrl: imageUrl,
+      galleryImages: galleryImages,
       ratingLabel: ratingSummary == null
           ? null
           : LocalizedText(
@@ -164,6 +170,58 @@ class MaterialDiscoveryApiMapper {
 
     final normalized = value.toString().trim();
     return normalized.isEmpty ? null : normalized;
+  }
+
+  static List<DiscoveryMaterialImage> _mapGalleryImages(
+    Map<String, dynamic> json,
+  ) {
+    final images = json['images'];
+    if (images is! List) {
+      return const [];
+    }
+
+    final mapped = <DiscoveryMaterialImage>[];
+
+    for (final image in images) {
+      if (image is! Map) {
+        continue;
+      }
+
+      final imageMap = Map<String, dynamic>.from(image);
+      final url = _nullableString(imageMap['url'] ?? imageMap['imageUrl']);
+      if (url == null) {
+        continue;
+      }
+
+      mapped.add(
+        DiscoveryMaterialImage(
+          id: _stringOrFallback(imageMap['id'], fallback: url),
+          url: ApiConfig.resolveMediaUrl(url),
+          isCover: imageMap['isCover'] == true,
+          isPrimary: imageMap['isPrimary'] == true || imageMap['isCover'] == true,
+          sortOrder: _intFromDynamic(imageMap['sortOrder']) ?? mapped.length,
+        ),
+      );
+    }
+
+    if (mapped.isEmpty) {
+      return const [];
+    }
+
+    mapped.sort((left, right) {
+      if (left.isCover != right.isCover) {
+        return left.isCover ? -1 : 1;
+      }
+
+      final sortCompare = left.sortOrder.compareTo(right.sortOrder);
+      if (sortCompare != 0) {
+        return sortCompare;
+      }
+
+      return left.id.compareTo(right.id);
+    });
+
+    return mapped;
   }
 
   static String? _resolveImageUrl(Map<String, dynamic> json) {

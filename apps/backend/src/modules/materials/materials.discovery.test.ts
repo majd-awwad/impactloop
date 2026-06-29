@@ -638,4 +638,44 @@ describe('public material discovery', () => {
     assert.equal(detail.canReserve, false);
     assert.equal(detail.reserveBlockReason, 'OWN_MATERIAL');
   });
+
+  test('public detail returns ordered images array and keeps primaryImageUrl', async () => {
+    const unique = `${TEST_MARKER}-gallery-${Date.now()}`;
+    const material = await createMaterial(ctx, {
+      title: `${unique} gallery stock`,
+    });
+    const secondaryUrl = '/uploads/materials/gallery-secondary.jpg';
+    const coverUrl = '/uploads/materials/gallery-cover.jpg';
+
+    await prisma.materialImage.createMany({
+      data: [
+        {
+          materialId: material.id,
+          imageUrl: secondaryUrl,
+          sortOrder: 0,
+          isCover: false,
+        },
+        {
+          materialId: material.id,
+          imageUrl: coverUrl,
+          sortOrder: 1,
+          isCover: true,
+        },
+      ],
+    });
+
+    const detail = await getMaterialById(material.id);
+
+    assert.ok(Array.isArray(detail.images));
+    assert.equal(detail.images.length, 2);
+    assert.equal(detail.images[0]?.url, coverUrl);
+    assert.equal(detail.images[0]?.isCover, true);
+    assert.equal(detail.images[0]?.isPrimary, true);
+    assert.equal(detail.images[1]?.url, secondaryUrl);
+    assert.equal(detail.primaryImageUrl, coverUrl);
+    assert.equal(detail.imageUrl, coverUrl);
+    assert.equal('latitude' in detail, false);
+    assert.equal('longitude' in detail, false);
+    assert.equal('addressLine' in detail, false);
+  });
 });

@@ -244,4 +244,61 @@ void main() {
     expect(material.reserveBlockReason, 'OWN_MATERIAL');
     expect(material.availabilityLabel.en, 'Delivery available');
   });
+
+  test('maps detail images array and keeps imageUrl fallback', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-12',
+      'title': 'Gallery material',
+      'description': 'Has multiple images',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'primaryImageUrl': '/uploads/materials/cover.jpg',
+      'images': [
+        {
+          'id': 'img-cover',
+          'url': '/uploads/materials/cover.jpg',
+          'isCover': true,
+          'isPrimary': true,
+          'sortOrder': 1,
+        },
+        {
+          'id': 'img-secondary',
+          'url': '/uploads/materials/secondary.jpg',
+          'isCover': false,
+          'isPrimary': false,
+          'sortOrder': 0,
+        },
+      ],
+      'category': {'nameEn': 'Electronics', 'nameAr': 'إلكترونيات'},
+    });
+
+    expect(material.galleryImages.length, 2);
+    expect(material.galleryImages.first.isCover, isTrue);
+    expect(material.imageUrl, endsWith('/uploads/materials/cover.jpg'));
+    expect(material.resolvedGalleryImages.length, 2);
+  });
+
+  test('falls back to imageUrl when images array is empty', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-13',
+      'title': 'Single image material',
+      'description': 'Legacy single image payload',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'primaryImageUrl': '/uploads/materials/legacy.jpg',
+      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+    });
+
+    expect(material.galleryImages, isEmpty);
+    expect(material.imageUrl, endsWith('/uploads/materials/legacy.jpg'));
+    expect(material.resolvedGalleryImages.length, 1);
+  });
 }

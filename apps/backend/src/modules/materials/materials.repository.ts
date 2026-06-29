@@ -161,6 +161,16 @@ const materialInclude = {
 
 const materialDetailInclude = {
   ...materialInclude,
+  images: {
+    orderBy: [{ isCover: 'desc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }],
+    select: {
+      id: true,
+      imageUrl: true,
+      sortOrder: true,
+      isCover: true,
+      createdAt: true,
+    },
+  },
   supplierProfile: {
     select: {
       publicName: true,

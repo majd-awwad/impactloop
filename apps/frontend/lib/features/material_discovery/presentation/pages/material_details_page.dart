@@ -32,6 +32,7 @@ import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_query.dart';
 import '../../domain/material_discovery_repository.dart';
 import '../material_discovery_content.dart';
+import '../widgets/material_details_gallery.dart';
 import '../discovery_material_display.dart';
 import '../widgets/discovery_location_privacy_panel.dart';
 
@@ -329,7 +330,7 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _DetailsPageHeader(material: material),
-                              _MaterialDetailsImage(
+                              _MaterialDetailsGallery(
                                 material: material,
                                 compact: true,
                               ),
@@ -584,8 +585,8 @@ class _DetailsPageHeader extends StatelessWidget {
   }
 }
 
-class _MaterialDetailsImage extends StatefulWidget {
-  const _MaterialDetailsImage({
+class _MaterialDetailsGallery extends StatelessWidget {
+  const _MaterialDetailsGallery({
     required this.material,
     this.compact = false,
   });
@@ -594,95 +595,13 @@ class _MaterialDetailsImage extends StatefulWidget {
   final bool compact;
 
   @override
-  State<_MaterialDetailsImage> createState() => _MaterialDetailsImageState();
-}
-
-class _MaterialDetailsImageState extends State<_MaterialDetailsImage> {
-  bool _imageFailed = false;
-
-  @override
-  void didUpdateWidget(covariant _MaterialDetailsImage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.material.imageUrl != widget.material.imageUrl) {
-      _imageFailed = false;
-    }
-  }
-
-  bool get _showNetworkImage {
-    final url = widget.material.imageUrl;
-    return url != null && url.trim().isNotEmpty && !_imageFailed;
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final material = widget.material;
-    final palette = MaterialsUiPalette.of(context);
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final imageHeight = widget.compact
-        ? 200.0
-        : screenWidth >= 1100
-        ? 320.0
-        : screenWidth >= 980
-        ? 280.0
-        : 260.0;
-
-    return ClipRRect(
-      borderRadius: AppRadius.lgAll,
-      child: SizedBox(
-        height: imageHeight,
-        width: double.infinity,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: AlignmentDirectional.topStart,
-              end: AlignmentDirectional.bottomEnd,
-              colors: _showNetworkImage
-                  ? materialGradient(material)
-                  : [
-                      palette.fallbackStart,
-                      palette.fallbackMid,
-                      palette.fallbackEnd,
-                    ],
-            ),
-            border: Border.all(color: palette.borderSubtle),
-          ),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (_showNetworkImage)
-                Image.network(
-                  material.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted && !_imageFailed) {
-                        setState(() => _imageFailed = true);
-                      }
-                    });
-                    return const SizedBox.shrink();
-                  },
-                ),
-              if (!_showNetworkImage)
-                Center(
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: palette.cardSurfaceAlt.withValues(alpha: 0.88),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: palette.borderStrong),
-                    ),
-                    child: Icon(
-                      material.heroIconData,
-                      size: 34,
-                      color: palette.mint,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
+    return MaterialDetailsGallery(
+      images: material.resolvedGalleryImages,
+      imageAltText: material.title,
+      fallbackIcon: material.heroIconData,
+      gradientColors: materialGradient(material),
+      compact: compact,
     );
   }
 }
@@ -1289,7 +1208,7 @@ class _DetailsMainColumn extends StatelessWidget {
           _DetailsPageHeader(material: material),
           const SizedBox(height: _materialDetailsSectionGap),
         ],
-        _MaterialDetailsImage(material: material),
+        _MaterialDetailsGallery(material: material),
         const SizedBox(height: _materialDetailsSectionGap),
         _MaterialSummaryPanel(material: material),
         const SizedBox(height: _materialDetailsSectionGap),
