@@ -51,9 +51,9 @@ class DiscoveryLocationPrivacyPanel extends StatelessWidget {
                 Text(
                   const LocalizedText(
                     en:
-                        'Map browsing is coming later. For privacy, public results only show city and area until a reservation is accepted.',
+                        'For privacy, public results show city and area only until a reservation is accepted.',
                     ar:
-                        'تصفح الخريطة قادم لاحقاً. لحماية الخصوصية، تُعرض النتائج العامة بالمدينة والمنطقة فقط حتى يتم قبول الحجز.',
+                        'لحماية الخصوصية، تُعرض النتائج العامة بالمدينة والمنطقة فقط حتى يتم قبول الحجز.',
                   ).resolve(context),
                   style: AppTextStyles.subtitle(
                     context,

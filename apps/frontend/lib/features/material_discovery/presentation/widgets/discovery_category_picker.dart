@@ -14,11 +14,13 @@ class DiscoveryCategoryPicker extends StatefulWidget {
     required this.categories,
     required this.selectedCategoryIndex,
     required this.onCategorySelected,
+    this.compact = false,
   });
 
   final List<MaterialCategory> categories;
   final int selectedCategoryIndex;
   final ValueChanged<int> onCategorySelected;
+  final bool compact;
 
   @override
   State<DiscoveryCategoryPicker> createState() =>
@@ -43,10 +45,13 @@ class _DiscoveryCategoryPickerState extends State<DiscoveryCategoryPicker> {
           const LocalizedText(en: 'Categories', ar: 'الفئات').resolve(context),
           style: AppTextStyles.label(
             context,
-          ).copyWith(color: palette.textPrimary),
+          ).copyWith(
+            color: palette.textPrimary,
+            fontSize: widget.compact ? 12 : null,
+          ),
           textAlign: TextAlign.start,
         ),
-        const SizedBox(height: AppSpacing.sm),
+        SizedBox(height: widget.compact ? AppSpacing.xs : AppSpacing.sm),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
