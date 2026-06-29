@@ -102,6 +102,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/admin/audit-logs` | `AdminAuditLogsPage` | admin | Paginated `admin_activity_logs` with backend filters, summary stats, actor/date filters, details dialog |
 | `/admin/reservations` | `AdminReservationsPage` | admin | Read-only platform reservations monitor with filters, summary stats, detail dialog |
 | `/admin/deliveries` | `AdminDeliveriesPage` | admin | Read-only delivery lifecycle monitor with timeline/location history, filters, detail dialog |
+| `/admin/learning-projects` | `AdminLearningProjectsPage` | admin | Learning Hub project moderation: summary stats, filters, review detail dialog, approve/reject/hide/archive actions |
 
 ## Admin shell navigation
 
@@ -119,6 +120,7 @@ From `admin_sidebar.dart`:
 | Audit Logs | `/admin/audit-logs` |
 | Reservations | `/admin/reservations` |
 | Deliveries | `/admin/deliveries` |
+| Learning Projects | `/admin/learning-projects` |
 
 ## Supplier shell navigation
 

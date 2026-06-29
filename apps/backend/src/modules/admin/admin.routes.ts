@@ -107,6 +107,21 @@ import {
   adminDeliveriesListQuerySchema,
   adminDeliveryIdParamSchema,
 } from '../admin-deliveries/admin-deliveries.validation.js';
+import {
+  approveAdminLearningProjectHandler,
+  archiveAdminLearningProjectHandler,
+  getAdminLearningProjectHandler,
+  hideAdminLearningProjectHandler,
+  listAdminLearningProjectsHandler,
+  rejectAdminLearningProjectHandler,
+  requestChangesAdminLearningProjectHandler,
+  restoreAdminLearningProjectHandler,
+} from '../admin-learning-projects/admin-learning-projects.controller.js';
+import {
+  adminLearningProjectIdParamSchema,
+  adminLearningProjectsListQuerySchema,
+  moderationReasonSchema,
+} from '../admin-learning-projects/admin-learning-projects.validation.js';
 
 export const adminRouter = Router();
 
@@ -436,5 +451,73 @@ adminRouter.get(
   requireRoles('ADMIN'),
   validate(adminDeliveryIdParamSchema, 'params'),
   asyncHandler(getAdminDeliveryHandler),
+);
+
+adminRouter.get(
+  '/learning-projects',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectsListQuerySchema, 'query'),
+  asyncHandler(listAdminLearningProjectsHandler),
+);
+
+adminRouter.get(
+  '/learning-projects/:id',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  asyncHandler(getAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/approve',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  asyncHandler(approveAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/request-changes',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  validate(moderationReasonSchema),
+  asyncHandler(requestChangesAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/reject',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  validate(moderationReasonSchema),
+  asyncHandler(rejectAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/hide',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  validate(moderationReasonSchema),
+  asyncHandler(hideAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/restore',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  asyncHandler(restoreAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/archive',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  validate(moderationReasonSchema),
+  asyncHandler(archiveAdminLearningProjectHandler),
 );
 

@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/errors/api_exception.dart';
+import '../../application/learning_hub_providers.dart';
 import '../../data/learning_hub_mock_data.dart';
 import '../../domain/models/learning_project.dart';
 import '../widgets/disabled_ai_panel.dart';
 import '../widgets/learning_hub_text.dart';
 
-class LearningAddDraftPage extends StatefulWidget {
+class LearningAddDraftPage extends ConsumerStatefulWidget {
   const LearningAddDraftPage({super.key});
 
   @override
-  State<LearningAddDraftPage> createState() => _LearningAddDraftPageState();
+  ConsumerState<LearningAddDraftPage> createState() =>
+      _LearningAddDraftPageState();
 }
 
-class _LearningAddDraftPageState extends State<LearningAddDraftPage> {
+class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
   static const String _legacyTitleExample = 'Solar classroom weather station';
   static const String _legacySummaryExample =
       'A reusable classroom project that teaches sensors, power management, and simple data reporting using reclaimed materials.';
@@ -37,6 +41,148 @@ class _LearningAddDraftPageState extends State<LearningAddDraftPage> {
   String _selectedDifficulty = 'medium';
   String _selectedDuration = 'medium';
   bool _normalizedLegacyValues = false;
+  bool _isSubmitting = false;
+
+  String _mapDifficulty(String value) {
+    switch (value) {
+      case 'easy':
+        return 'BEGINNER';
+      case 'advanced':
+        return 'ADVANCED';
+      default:
+        return 'INTERMEDIATE';
+    }
+  }
+
+  String? _resolveCategoryId() {
+    final categories = ref.read(projectCategoriesProvider).value;
+    if (categories == null || categories.isEmpty) return null;
+
+    final selected = _selectedCategory?.trim().toLowerCase();
+    if (selected != null && selected.isNotEmpty) {
+      for (final category in categories) {
+        final name = category.nameEn.toLowerCase();
+        if (name.contains(selected) || selected.contains(name)) {
+          return category.id;
+        }
+      }
+    }
+
+    return categories.first.id;
+  }
+
+  List<Map<String, dynamic>> _parseComponents(String raw) {
+    return raw
+        .split(',')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .map((name) => {'name': name})
+        .toList();
+  }
+
+  List<Map<String, dynamic>> _parseSteps(String raw) {
+    final lines = raw.split('\n').map((line) => line.trim()).where(
+          (line) => line.isNotEmpty,
+        );
+    final steps = <Map<String, dynamic>>[];
+    var index = 0;
+    for (final line in lines) {
+      index += 1;
+      final cleaned = line.replaceFirst(RegExp(r'^\d+[\).\s-]+'), '').trim();
+      steps.add({
+        'title': 'Step $index',
+        'description': cleaned.isEmpty ? line : cleaned,
+      });
+    }
+    return steps;
+  }
+
+  List<Map<String, dynamic>> _parseLinks(String raw) {
+    return raw
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.startsWith('http'))
+        .map((url) => {'url': url})
+        .toList();
+  }
+
+  Future<void> _submitForReview() async {
+    final title = _titleController.text.trim();
+    final summary = _summaryController.text.trim();
+    if (title.length < 3 || summary.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            const LocalizedText(
+              en: 'Add a title and summary before submitting.',
+              ar: 'أضف عنواناً وملخصاً قبل الإرسال.',
+            ).resolve(context),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final categoryId = _resolveCategoryId();
+    if (categoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            const LocalizedText(
+              en: 'Project categories are not available yet.',
+              ar: 'فئات المشاريع غير متاحة بعد.',
+            ).resolve(context),
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final repository = ref.read(learningHubRepositoryProvider);
+      await repository.submitProjectForReview(
+        title: title,
+        shortDescription: summary,
+        description: summary,
+        categoryId: categoryId,
+        difficulty: _mapDifficulty(_selectedDifficulty),
+        requiredComponents: _parseComponents(_componentsController.text),
+        steps: _parseSteps(_stepsController.text),
+        links: _parseLinks(_linksController.text),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            const LocalizedText(
+              en: 'Your project was submitted for admin review.',
+              ar: 'تم إرسال مشروعك لمراجعة الإدارة.',
+            ).resolve(context),
+          ),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.displayMessage)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            const LocalizedText(
+              en: 'Could not submit project for review.',
+              ar: 'تعذر إرسال المشروع للمراجعة.',
+            ).resolve(context),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
 
   static const List<_ChoiceOption> _categoryOptions = [
     _ChoiceOption(
@@ -372,23 +518,18 @@ class _LearningAddDraftPageState extends State<LearningAddDraftPage> {
                         ),
                       );
                       final submitButton = FilledButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                const LocalizedText(
-                                  en: 'Project review flow will be connected later.',
-                                  ar: 'سيتم ربط مسار مراجعة المشروع لاحقاً.',
-                                ).resolve(context),
-                              ),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.arrow_forward_rounded),
+                        onPressed: _isSubmitting ? null : _submitForReview,
+                        icon: _isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.arrow_forward_rounded),
                         label: Text(
                           const LocalizedText(
-                            en: 'Submit for review soon',
-                            ar: 'إرسال للمراجعة قريباً',
+                            en: 'Submit for review',
+                            ar: 'إرسال للمراجعة',
                           ).resolve(context),
                         ),
                         style: FilledButton.styleFrom(
@@ -422,8 +563,8 @@ class _LearningAddDraftPageState extends State<LearningAddDraftPage> {
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     const LocalizedText(
-                      en: 'This page is presentation-only. No submission, moderation, storage, or AI workflow is wired yet.',
-                      ar: 'هذه الصفحة للعرض فقط. لا يوجد إرسال أو مراجعة أو حفظ أو ربط فعلي بالذكاء الاصطناعي حتى الآن.',
+                      en: 'Submit sends your draft for admin review. It will not appear publicly until approved.',
+                      ar: 'الإرسال يوجّه مسودتك لمراجعة الإدارة. لن تظهر علناً حتى تتم الموافقة.',
                     ).resolve(context),
                     style: AppTextStyles.subtitle(
                       context,

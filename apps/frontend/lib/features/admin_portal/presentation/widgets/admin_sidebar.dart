@@ -54,6 +54,11 @@ class AdminSidebar extends ConsumerWidget {
         Icons.local_shipping_outlined,
         '/admin/deliveries',
       ),
+      _NavDef(
+        l.navLearningProjects,
+        Icons.school_outlined,
+        '/admin/learning-projects',
+      ),
       _NavDef(l.navImpactAnalytics, Icons.insights_outlined, '/admin/impact'),
       _NavDef(l.navAuditLogs, Icons.receipt_long_outlined, '/admin/audit-logs'),
     ];

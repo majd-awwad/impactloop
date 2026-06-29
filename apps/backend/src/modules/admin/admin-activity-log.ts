@@ -21,6 +21,12 @@ export const ADMIN_ACTIVITY_ACTIONS = {
   CATEGORY_REQUEST_REJECTED: 'CATEGORY_REQUEST_REJECTED',
   PRICE_REQUEST_APPROVED: 'PRICE_REQUEST_APPROVED',
   PRICE_REQUEST_REJECTED: 'PRICE_REQUEST_REJECTED',
+  LEARNING_PROJECT_APPROVED: 'LEARNING_PROJECT_APPROVED',
+  LEARNING_PROJECT_CHANGES_REQUESTED: 'LEARNING_PROJECT_CHANGES_REQUESTED',
+  LEARNING_PROJECT_REJECTED: 'LEARNING_PROJECT_REJECTED',
+  LEARNING_PROJECT_HIDDEN: 'LEARNING_PROJECT_HIDDEN',
+  LEARNING_PROJECT_RESTORED: 'LEARNING_PROJECT_RESTORED',
+  LEARNING_PROJECT_ARCHIVED: 'LEARNING_PROJECT_ARCHIVED',
 } as const;
 
 export const ADMIN_ACTIVITY_TARGET_TYPES = {
@@ -31,6 +37,7 @@ export const ADMIN_ACTIVITY_TARGET_TYPES = {
   MATERIAL_REPORT: 'MATERIAL_REPORT',
   CATEGORY_REQUEST: 'CATEGORY_REQUEST',
   PRICE_RULE_REQUEST: 'PRICE_RULE_REQUEST',
+  LEARNING_PROJECT: 'LEARNING_PROJECT',
 } as const;
 
 export type AdminActivityAction =
@@ -58,6 +65,12 @@ const ACTION_LABELS: Record<AdminActivityAction, string> = {
   CATEGORY_REQUEST_REJECTED: 'Category request rejected',
   PRICE_REQUEST_APPROVED: 'Price request approved',
   PRICE_REQUEST_REJECTED: 'Price request rejected',
+  LEARNING_PROJECT_APPROVED: 'Learning project approved',
+  LEARNING_PROJECT_CHANGES_REQUESTED: 'Learning project changes requested',
+  LEARNING_PROJECT_REJECTED: 'Learning project rejected',
+  LEARNING_PROJECT_HIDDEN: 'Learning project hidden',
+  LEARNING_PROJECT_RESTORED: 'Learning project restored',
+  LEARNING_PROJECT_ARCHIVED: 'Learning project archived',
 };
 
 const TARGET_TYPE_LABELS: Record<AdminActivityTargetType, string> = {
@@ -68,6 +81,7 @@ const TARGET_TYPE_LABELS: Record<AdminActivityTargetType, string> = {
   MATERIAL_REPORT: 'Material report',
   CATEGORY_REQUEST: 'Category request',
   PRICE_RULE_REQUEST: 'Price request',
+  LEARNING_PROJECT: 'Learning project',
 };
 
 export const getAdminActivityActionLabel = (action: string): string =>

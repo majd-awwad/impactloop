@@ -210,7 +210,9 @@ enum LearningProjectStatus {
   DRAFT
   PENDING_REVIEW
   PUBLISHED
+  CHANGES_REQUESTED
   REJECTED
+  HIDDEN
   ARCHIVED
 }
 
@@ -517,8 +519,18 @@ model LearningProject {
   estimatedDurationMinutes Int?                       @map("estimated_duration_minutes")
   coverImageUrl            String?                    @map("cover_image_url")
   status                   LearningProjectStatus      @default(DRAFT)
+  submittedAt              DateTime?                  @map("submitted_at")
   reviewedBy               String?                    @map("reviewed_by")
+  reviewedAt               DateTime?                  @map("reviewed_at")
   reviewNote               String?                    @map("review_note")
+  rejectionReason          String?                    @map("rejection_reason")
+  changesRequestedReason   String?                    @map("changes_requested_reason")
+  hiddenAt                 DateTime?                  @map("hidden_at")
+  hiddenBy                 String?                    @map("hidden_by")
+  hiddenReason             String?                    @map("hidden_reason")
+  archivedAt               DateTime?                  @map("archived_at")
+  archivedBy               String?                    @map("archived_by")
+  archivedReason           String?                    @map("archived_reason")
   stepsGeneratedByAi       Boolean                    @default(false) @map("steps_generated_by_ai")
   aiStepsGeneratedAt       DateTime?                  @map("ai_steps_generated_at")
   createdAt                DateTime                   @default(now()) @map("created_at")

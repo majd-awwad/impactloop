@@ -123,7 +123,10 @@ Available jobs return safe area-level pickup/dropoff data only. Accept is transa
 | Method | Path | Auth | Source file |
 |--------|------|------|-------------|
 | GET | `/api/learning-projects` | Public | `learning-projects/learning-projects.routes.ts` |
-| GET | `/api/learning-projects/:id` | Public | `learning-projects/learning-projects.routes.ts` |
+| GET | `/api/learning-projects/:id` | Public (`PUBLISHED` only) | `learning-projects/learning-projects.routes.ts` |
+| POST | `/api/learning-projects/submit` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+
+Public list/detail return only `PUBLISHED` projects. Learner submit creates `PENDING_REVIEW` with `submittedAt`.
 
 ## Uploads — `/api/uploads`
 
@@ -160,6 +163,14 @@ Verification document upload: PDF/JPG/JPEG/PNG, max 5MB. Returns `{ url, fileNam
 | GET | `/api/admin/reservations/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/deliveries` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/deliveries/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/learning-projects` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/learning-projects/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/learning-projects/:id/approve` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/learning-projects/:id/request-changes` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/learning-projects/:id/reject` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/learning-projects/:id/hide` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/learning-projects/:id/restore` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/learning-projects/:id/archive` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/invitations` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/invitations/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | POST | `/api/admin/invitations` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
