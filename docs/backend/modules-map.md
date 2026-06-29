@@ -22,6 +22,7 @@ Maps each folder under `apps/backend/src/modules/` to its responsibility and key
 | `material-types` | `/api/material-types` | No |
 | `materials` | `/api/materials` | No |
 | `price-rule-requests` | `/api/price-rule-requests`, `/api/supplier/price-rule-requests` | Partial |
+| `profile` | `/api/profile` | No |
 | `reservations` | `/api/reservations` | No |
 | `supplier` | `/api/supplier` | — (parent) |
 | `supplier-notifications` | `/api/supplier/notifications` | Yes |
@@ -29,6 +30,16 @@ Maps each folder under `apps/backend/src/modules/` to its responsibility and key
 | `uploads` | `/api/uploads` | No |
 
 Mount order: `apps/backend/src/app.ts`
+
+---
+
+## `profile`
+
+**Purpose:** Authenticated learner/user profile updates (`displayName`, `phone`, `profileImageUrl`, learner profile fields).
+
+**Key files:** `profile.routes.ts`, `profile.controller.ts`, `profile.service.ts`, `profile.repository.ts`, `profile.validation.ts`, `profile.test.ts`
+
+**Inspected:** `profile.routes.ts` — `PATCH /`, `PATCH /learner`
 
 ---
 

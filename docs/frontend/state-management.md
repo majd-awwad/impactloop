@@ -151,6 +151,7 @@ Current repository providers live mostly in feature `data/` files:
 - Supplier my materials: `supplierMyMaterialsRepositoryProvider`
 - Learning Hub: `learningHubRepositoryProvider` (overridden in `main.dart`; widget tests use `emptyLearningHubRepository` from `test/support/learning_hub_test_support.dart`)
 - Home suggested materials preview: `homeMaterialDiscoveryRepositoryProvider`
+- Profile updates: `profileRepositoryProvider` (`features/profile/application/profile_providers.dart`)
 
 Repository providers should construct API clients and expose feature operations. Widgets should not instantiate API clients directly.
 

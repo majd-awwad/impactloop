@@ -24,7 +24,10 @@ import '../../features/learning_hub/presentation/pages/learning_project_details_
 import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
+import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
+import '../../features/profile/presentation/pages/profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/profile/presentation/pages/profile_security_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
 import '../../features/supplier_portal/application/supplier_verification_access.dart';
@@ -154,7 +157,10 @@ _RouteAccessLevel _routeAccessForPath(String path) {
     return _RouteAccessLevel.learner;
   }
 
-  if (path == '/home' || path == '/profile' || path == _supplierAccessDeniedRoute) {
+  if (path == '/home' ||
+      path == '/profile' ||
+      path.startsWith('/profile/') ||
+      path == _supplierAccessDeniedRoute) {
     return _RouteAccessLevel.authenticated;
   }
 
@@ -376,6 +382,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 const NoTransitionPage(child: ProfilePage()),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => const ProfileEditPage(),
+      ),
+      GoRoute(
+        path: '/profile/learner/edit',
+        builder: (context, state) => const LearnerProfileEditPage(),
+      ),
+      GoRoute(
+        path: '/profile/security',
+        builder: (context, state) => const ProfileSecurityPage(),
       ),
       GoRoute(
         path: '/learner/deliveries/:id',

@@ -31,16 +31,17 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 
 ---
 
-## Backend modules (18 folders)
+## Backend modules (19 folders)
 
 | Module | Status | Notes |
 |--------|--------|-------|
-| `auth` | **Implemented** | Register, login, refresh, logout, me, change-password API; forgot/reset **API only** (no Flutter forgot-password UI) |
+| `auth` | **Implemented** | Register, login, refresh, logout, me (+ `phoneVerifiedAt`, `lastLoginAt`), change-password API; forgot/reset **API only** (no Flutter forgot-password UI) |
 | `health` | **Implemented** | |
 | `categories` | **Implemented** | Read list |
 | `material-types` | **Implemented** | Search + price rule |
 | `materials` | **Partial** | Public read + price-check; no `POST /api/materials` |
-| `uploads` | **Implemented** | Supplier material images |
+| `uploads` | **Implemented** | Profile images + supplier material images + verification documents |
+| `profile` | **Implemented** | Authenticated user + learner profile PATCH |
 | `locations` | **Partial** | Reverse geocode only — no CRUD locations API |
 | `learning-projects` | **Implemented** | Read list + detail |
 | `invitations` | **Implemented** | Admin email invitations (mock/SMTP), validate/accept API, unified `driver_profiles` |
@@ -58,9 +59,11 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 
 `users`, `roles`, `ai-agent`, `notifications` (general API), `moderator`, `reports`, `reviews`
 
+(`profile` module handles authenticated user/learner profile updates; supplier org profile remains under `supplier`.)
+
 ---
 
-## Flutter features (10 folders)
+## Flutter features (11 folders)
 
 | Feature | Status | Backend | Frontend data | Feature doc |
 |---------|--------|---------|---------------|-------------|
@@ -78,6 +81,8 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `admin_portal` | **Partial** | Dashboard + invitations + supplier verification + approvals + materials moderation + people management UI | [admin.md](features/admin.md) |
 
 **Dev seed admin (local testing):** `admin@impactloop.test` / `AdminPassword123!` — created idempotently by `prisma/seeds/seed-admin.ts`. After login, `postAuthRouteForUser` routes ADMIN users to `/admin`.
+
+| `profile` | **Implemented** | `/api/profile`, `/api/uploads/profile-image` | Hub + edit/security pages | — |
 | `locations` *(supplier UI; no `features/locations` folder)* | **Partial** | reverse geocode + profile PATCH + learner pickup reveal on accepted reservations | `supplier_portal` profile/map; learner My Reservations pickup address | [locations.md](features/locations.md) |
 | `invitations` | **Implemented** | `/api/invitations` validate/accept; admin `/api/admin/invitations` | `/invite/accept` public page + admin invitations UI | [invitations.md](features/invitations.md) |
 

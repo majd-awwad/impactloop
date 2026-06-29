@@ -9,10 +9,50 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../core/config/api_config.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
 import '../../../auth/data/models/user.dart';
+
+const _profileDesktopBreakpoint = 600.0;
+const _profileDesktopMaxWidth = 1080.0;
+const _profileMobileMaxWidth = 900.0;
+
+class LearnerProfileCompletionHintCopy {
+  const LearnerProfileCompletionHintCopy({
+    required this.title,
+    required this.body,
+  });
+
+  final String title;
+  final String body;
+}
+
+LearnerProfileCompletionHintCopy? learnerProfileCompletionHint({
+  required bool missingInterests,
+  required bool missingBio,
+}) {
+  if (!missingInterests && !missingBio) {
+    return null;
+  }
+  if (missingInterests && missingBio) {
+    return const LearnerProfileCompletionHintCopy(
+      title: 'Complete your learner profile',
+      body: 'Add interests and a short bio to get better project suggestions.',
+    );
+  }
+  if (missingInterests) {
+    return const LearnerProfileCompletionHintCopy(
+      title: 'Add your interests',
+      body: 'Add interests to improve project suggestions.',
+    );
+  }
+  return const LearnerProfileCompletionHintCopy(
+    title: 'Add a short bio',
+    body: 'Add a short bio to help personalize project suggestions.',
+  );
+}
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -22,6 +62,8 @@ class ProfilePage extends ConsumerWidget {
     final colors = AppThemeColors.of(context);
     final authState = ref.watch(authControllerProvider);
     final user = authState.user;
+    final width = MediaQuery.sizeOf(context).width;
+    final isDesktopLayout = width >= _profileDesktopBreakpoint;
 
     return Scaffold(
       backgroundColor: colors.pageBackground,
@@ -33,13 +75,19 @@ class ProfilePage extends ConsumerWidget {
               showSignIn: false,
               showCreateAccount: false,
               homeRoute: '/home',
+              showPhoneAccountMenu: false,
+              phoneTitle: 'Profile',
             ),
             Expanded(
               child: SingleChildScrollView(
                 padding: appMobileAwareScrollPadding(context),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 900),
+                    constraints: BoxConstraints(
+                      maxWidth: isDesktopLayout
+                          ? _profileDesktopMaxWidth
+                          : _profileMobileMaxWidth,
+                    ),
                     child: user == null
                         ? const _ProfileStatePanel()
                         : _ProfileContent(user: user),
@@ -68,6 +116,27 @@ class _ProfileContent extends ConsumerWidget {
     final name = _displayName.trim();
     return name.isEmpty ? 'A' : name.characters.first.toUpperCase();
   }
+
+  String _phoneStatusLabel(User user) {
+    final phone = _clean(user.phone);
+    if (phone.isEmpty) {
+      return 'Not added';
+    }
+    if (user.phoneVerifiedAt != null) {
+      return 'Verified';
+    }
+    return 'Not verified';
+  }
+
+  String _phoneStatusValue(User user) {
+    final phone = _clean(user.phone);
+    if (phone.isEmpty) {
+      return 'Not added';
+    }
+    return phone;
+  }
+
+  bool get _isLearner => user.hasRole('LEARNER');
 
   bool get _hasSupplierAccess {
     return user.hasRole('SUPPLIER') || user.supplierProfile != null;
@@ -124,90 +193,167 @@ class _ProfileContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppThemeColors.of(context);
     final learnerProfile = user.learnerProfile;
+    final isDesktopLayout =
+        MediaQuery.sizeOf(context).width >= _profileDesktopBreakpoint;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final header = _ProfileHeaderCard(
+      initial: _initial,
+      imageUrl: _clean(user.profileImageUrl),
+      displayName: _displayName,
+      email: user.email,
+      accountStatus: _humanize(user.accountStatus),
+      memberSince: _memberSinceLabel(context),
+    );
+    final learnerSection = _LearnerProfileCard(
+      profile: learnerProfile,
+      humanize: _humanize,
+      showEditAction: _isLearner,
+      onEdit: () => context.push('/profile/learner/edit'),
+    );
+    final profileManagement = _ProfileSection(
+      title: 'Profile management',
       children: [
-        _ProfileHeaderCard(
-          initial: _initial,
-          imageUrl: _clean(user.profileImageUrl),
-          displayName: _displayName,
-          email: user.email,
-          accountStatus: _humanize(user.accountStatus),
-          memberSince: _memberSinceLabel(context),
+        _ProfileActionTile(
+          icon: Icons.edit_outlined,
+          title: 'Edit profile',
+          subtitle: 'Update your name, phone, and photo.',
+          onTap: () => context.push('/profile/edit'),
         ),
-        const SizedBox(height: AppSpacing.md),
-        _LearnerProfileCard(
-          profile: learnerProfile,
-          humanize: _humanize,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _ProfileSection(
-          title: 'Account actions',
-          children: [
-            _ProfileActionTile(
-              icon: Icons.receipt_long_outlined,
-              title: 'My reservations',
-              subtitle: 'Track pickups and material requests.',
-              onTap: () => context.go(learnerReservationsRoute),
-            ),
-            _ProfileDivider(),
-            _ProfileActionTile(
-              icon: _hasSupplierAccess
-                  ? Icons.storefront_outlined
-                  : Icons.add_business_outlined,
-              title: _hasSupplierAccess
-                  ? 'Supplier profile'
-                  : 'Become a supplier',
-              subtitle: _hasSupplierAccess
-                  ? 'Manage your supplier details.'
-                  : 'Start sharing reusable materials.',
-              onTap: () => context.go(supplierEntryRouteForUser(user)),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _ProfileSection(
-          title: 'Account status',
-          children: [
-            _StatusLine(
-              icon: user.emailVerifiedAt == null
-                  ? Icons.mark_email_unread_outlined
-                  : Icons.mark_email_read_outlined,
-              label: 'Email',
-              value: user.emailVerifiedAt == null ? 'Not verified' : 'Verified',
-              emphasized: user.emailVerifiedAt != null,
-            ),
-            _ProfileDivider(),
-            _StatusLine(
-              icon: _clean(user.phone).isEmpty
-                  ? Icons.phone_disabled_outlined
-                  : Icons.phone_iphone_outlined,
-              label: 'Phone',
-              value: _clean(user.phone).isEmpty ? 'Not added' : user.phone!.trim(),
-            ),
-            _ProfileDivider(),
-            _StatusLine(
-              icon: Icons.verified_user_outlined,
-              label: 'Account',
-              value: _humanize(user.accountStatus),
-              emphasized: user.accountStatus.toUpperCase() == 'ACTIVE',
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        const _SettingsSection(),
-        const SizedBox(height: AppSpacing.md),
-        OutlinedButton.icon(
-          onPressed: () => _logout(context, ref),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: colors.danger,
-            side: BorderSide(color: colors.danger.withValues(alpha: 0.42)),
-            minimumSize: const Size(0, 48),
-            shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+        if (_isLearner) ...[
+          _ProfileDivider(),
+          _ProfileActionTile(
+            icon: Icons.school_outlined,
+            title: 'Edit learner profile',
+            subtitle: 'Update learner type, skills, and interests.',
+            onTap: () => context.push('/profile/learner/edit'),
           ),
-          icon: const Icon(Icons.logout_rounded),
-          label: const Text('Logout'),
+        ],
+        _ProfileDivider(),
+        _ProfileActionTile(
+          icon: Icons.lock_outline_rounded,
+          title: 'Security',
+          subtitle: 'Change your password.',
+          onTap: () => context.push('/profile/security'),
+        ),
+      ],
+    );
+    final accountActions = _ProfileSection(
+      title: 'Account actions',
+      children: [
+        _ProfileActionTile(
+          icon: Icons.receipt_long_outlined,
+          title: 'My reservations',
+          subtitle: 'Track pickups and material requests.',
+          onTap: () => context.go(learnerReservationsRoute),
+        ),
+        _ProfileDivider(),
+        _ProfileActionTile(
+          icon: _hasSupplierAccess
+              ? Icons.storefront_outlined
+              : Icons.add_business_outlined,
+          title: _hasSupplierAccess ? 'Supplier profile' : 'Become a supplier',
+          subtitle: _hasSupplierAccess
+              ? 'Manage your supplier details.'
+              : 'Start sharing reusable materials.',
+          onTap: () => context.go(supplierEntryRouteForUser(user)),
+        ),
+      ],
+    );
+    final accountStatus = _ProfileSection(
+      title: 'Account status',
+      children: [
+        _StatusLine(
+          icon: user.emailVerifiedAt == null
+              ? Icons.mark_email_unread_outlined
+              : Icons.mark_email_read_outlined,
+          label: 'Email',
+          value: user.emailVerifiedAt == null ? 'Not verified' : 'Verified',
+          emphasized: user.emailVerifiedAt != null,
+        ),
+        _ProfileDivider(),
+        _StatusLine(
+          icon: _clean(user.phone).isEmpty
+              ? Icons.phone_disabled_outlined
+              : user.phoneVerifiedAt != null
+              ? Icons.verified_outlined
+              : Icons.phone_iphone_outlined,
+          label: 'Phone',
+          value: _phoneStatusValue(user),
+          detail: _clean(user.phone).isEmpty ? null : _phoneStatusLabel(user),
+          emphasized: user.phoneVerifiedAt != null,
+        ),
+        _ProfileDivider(),
+        _StatusLine(
+          icon: Icons.verified_user_outlined,
+          label: 'Account',
+          value: _humanize(user.accountStatus),
+          emphasized: user.accountStatus.toUpperCase() == 'ACTIVE',
+        ),
+      ],
+    );
+    const settings = _SettingsSection();
+    final logout = OutlinedButton.icon(
+      onPressed: () => _logout(context, ref),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: colors.danger,
+        side: BorderSide(color: colors.danger.withValues(alpha: 0.42)),
+        minimumSize: const Size(0, 48),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+      ),
+      icon: const Icon(Icons.logout_rounded),
+      label: const Text('Logout'),
+    );
+
+    if (!isDesktopLayout) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          header,
+          const SizedBox(height: AppSpacing.md),
+          learnerSection,
+          const SizedBox(height: AppSpacing.md),
+          profileManagement,
+          const SizedBox(height: AppSpacing.md),
+          accountActions,
+          const SizedBox(height: AppSpacing.md),
+          accountStatus,
+          const SizedBox(height: AppSpacing.md),
+          settings,
+          const SizedBox(height: AppSpacing.md),
+          logout,
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              header,
+              const SizedBox(height: AppSpacing.md),
+              accountStatus,
+              const SizedBox(height: AppSpacing.md),
+              settings,
+              const SizedBox(height: AppSpacing.md),
+              logout,
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.lg),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              learnerSection,
+              const SizedBox(height: AppSpacing.md),
+              profileManagement,
+              const SizedBox(height: AppSpacing.md),
+              accountActions,
+            ],
+          ),
         ),
       ],
     );
@@ -234,7 +380,9 @@ class _ProfileHeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final imageProvider = imageUrl.isEmpty ? null : NetworkImage(imageUrl);
+    final imageProvider = imageUrl.isEmpty
+        ? null
+        : NetworkImage(ApiConfig.resolveMediaUrl(imageUrl));
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
@@ -323,10 +471,14 @@ class _LearnerProfileCard extends StatelessWidget {
   const _LearnerProfileCard({
     required this.profile,
     required this.humanize,
+    required this.showEditAction,
+    required this.onEdit,
   });
 
   final LearnerProfile? profile;
   final String Function(String value) humanize;
+  final bool showEditAction;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -339,7 +491,12 @@ class _LearnerProfileCard extends StatelessWidget {
             .where((interest) => interest.isNotEmpty)
             .toList() ??
         const <String>[];
-    final needsCompletion = interests.isEmpty || bio.isEmpty;
+    final missingInterests = interests.isEmpty;
+    final missingBio = bio.isEmpty;
+    final completionHint = learnerProfileCompletionHint(
+      missingInterests: missingInterests,
+      missingBio: missingBio,
+    );
 
     final rows = <Widget>[];
 
@@ -360,15 +517,28 @@ class _LearnerProfileCard extends StatelessWidget {
       if (rows.isNotEmpty) rows.add(_ProfileDivider());
       rows.add(_ProfileBodyText(text: bio));
     }
-    if (needsCompletion) {
+    if (completionHint != null) {
       if (rows.isNotEmpty) rows.add(_ProfileDivider());
-      rows.add(const _LearnerCompletionHint());
+      rows.add(
+        _LearnerCompletionHint(
+          title: completionHint.title,
+          body: completionHint.body,
+        ),
+      );
     }
 
     return _ProfileSection(
       title: 'Learner profile',
-      trailingLabel: 'Coming soon',
-      children: rows.isEmpty ? const [_LearnerCompletionHint()] : rows,
+      trailingLabel: showEditAction ? 'Edit' : null,
+      onTrailingTap: showEditAction ? onEdit : null,
+      children: rows.isEmpty && completionHint != null
+          ? [
+              _LearnerCompletionHint(
+                title: completionHint.title,
+                body: completionHint.body,
+              ),
+            ]
+          : rows,
     );
   }
 }
@@ -413,11 +583,13 @@ class _ProfileSection extends StatelessWidget {
     required this.title,
     required this.children,
     this.trailingLabel,
+    this.onTrailingTap,
   });
 
   final String title;
   final List<Widget> children;
   final String? trailingLabel;
+  final VoidCallback? onTrailingTap;
 
   @override
   Widget build(BuildContext context) {
@@ -447,13 +619,25 @@ class _ProfileSection extends StatelessWidget {
                 ),
               ),
               if (trailingLabel != null)
-                Text(
-                  trailingLabel!,
-                  style: AppTextStyles.label(context).copyWith(
-                    color: colors.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
+                InkWell(
+                  onTap: onTrailingTap,
+                  borderRadius: AppRadius.pillAll,
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: AppSpacing.xs,
+                      vertical: 2,
+                    ),
+                    child: Text(
+                      trailingLabel!,
+                      style: AppTextStyles.label(context).copyWith(
+                        color: onTrailingTap == null
+                            ? colors.textMuted
+                            : colors.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0,
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -583,12 +767,14 @@ class _StatusLine extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.detail,
     this.emphasized = false,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final String? detail;
   final bool emphasized;
 
   @override
@@ -600,13 +786,30 @@ class _StatusLine extends StatelessWidget {
         Icon(icon, color: emphasized ? colors.primary : colors.textMuted, size: 18),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: Text(
-            label,
-            style: AppTextStyles.label(context).copyWith(
-              color: colors.textSecondary,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTextStyles.label(context).copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0,
+                ),
+              ),
+              if (detail != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  detail!,
+                  style: AppTextStyles.label(context).copyWith(
+                    color: emphasized ? colors.primary : colors.textMuted,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
         Text(
@@ -770,7 +973,13 @@ class _ProfileBodyText extends StatelessWidget {
 }
 
 class _LearnerCompletionHint extends StatelessWidget {
-  const _LearnerCompletionHint();
+  const _LearnerCompletionHint({
+    required this.title,
+    required this.body,
+  });
+
+  final String title;
+  final String body;
 
   @override
   Widget build(BuildContext context) {
@@ -792,7 +1001,7 @@ class _LearnerCompletionHint extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Complete your learner profile',
+                  title,
                   style: AppTextStyles.label(context).copyWith(
                     color: colors.textPrimary,
                     fontWeight: FontWeight.w800,
@@ -801,7 +1010,7 @@ class _LearnerCompletionHint extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Add interests and a short bio to get better project suggestions.',
+                  body,
                   style: AppTextStyles.label(context).copyWith(
                     color: colors.textSecondary,
                     fontWeight: FontWeight.w600,

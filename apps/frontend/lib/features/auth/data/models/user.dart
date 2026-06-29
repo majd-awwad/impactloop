@@ -72,6 +72,8 @@ class User {
     this.learnerProfile,
     this.supplierProfile,
     this.emailVerifiedAt,
+    this.phoneVerifiedAt,
+    this.lastLoginAt,
     required this.createdAt,
   });
 
@@ -85,6 +87,8 @@ class User {
   final LearnerProfile? learnerProfile;
   final SupplierProfile? supplierProfile;
   final DateTime? emailVerifiedAt;
+  final DateTime? phoneVerifiedAt;
+  final DateTime? lastLoginAt;
   final DateTime createdAt;
 
   bool hasRole(String role) {
@@ -114,6 +118,10 @@ class User {
       emailVerifiedAt: DateTime.tryParse(
         json['emailVerifiedAt'] as String? ?? '',
       ),
+      phoneVerifiedAt: DateTime.tryParse(
+        json['phoneVerifiedAt'] as String? ?? '',
+      ),
+      lastLoginAt: DateTime.tryParse(json['lastLoginAt'] as String? ?? ''),
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),

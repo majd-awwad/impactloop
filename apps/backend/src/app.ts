@@ -19,17 +19,20 @@ import { reservationsRouter } from './modules/reservations/reservations.routes.j
 import { adminRouter } from './modules/admin/admin.routes.js';
 import { supplierRouter } from './modules/supplier/supplier.routes.js';
 import { locationsRouter } from './modules/locations/locations.routes.js';
+import { profileRouter } from './modules/profile/profile.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
 import {
   ensureMaterialUploadsDir,
   MATERIAL_UPLOADS_DIR,
 } from './modules/uploads/uploads.storage.js';
+import { ensureProfileUploadsDir, PROFILE_UPLOADS_DIR } from './modules/uploads/profile-uploads.storage.js';
 import {
   ensureSupplierVerificationUploadsDir,
   SUPPLIER_VERIFICATION_UPLOADS_DIR,
 } from './modules/uploads/verification-uploads.storage.js';
 
 ensureMaterialUploadsDir();
+ensureProfileUploadsDir();
 ensureSupplierVerificationUploadsDir();
 
 export const app = express();
@@ -53,6 +56,7 @@ app.use(
 );
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.use('/uploads/materials', express.static(MATERIAL_UPLOADS_DIR));
+app.use('/uploads/profiles', express.static(PROFILE_UPLOADS_DIR));
 app.use(
   '/uploads/supplier-verification',
   express.static(SUPPLIER_VERIFICATION_UPLOADS_DIR),
@@ -61,6 +65,7 @@ app.use(express.json());
 
 app.use('/health', healthRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/profile', profileRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/material-types', materialTypesRouter);
 app.use('/api/price-rule-requests', priceRuleRequestsRouter);

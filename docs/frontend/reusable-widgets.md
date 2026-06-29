@@ -38,7 +38,8 @@ Theme details are documented in [07-theme-system.md](../07-theme-system.md). Sta
 
 | Widget/helper | File | Current purpose |
 |---------------|------|-----------------|
-| `AppTextField` | `app_text_field.dart` | Themed single-line or controlled multiline `TextFormField`; supports validation, forced error text, autofill, submit, and change callbacks. |
+| `AppTextField` | `app_text_field.dart` | Themed single-line or controlled multiline `TextFormField`; supports validation, forced error text, autofill, submit, change callbacks, and optional `suffixIcon`. |
+| `AppPasswordField` | `app_password_field.dart` | Password variant of `AppTextField` with per-field visibility toggle (or optional shared `obscureOverride` / `onToggleVisibility`), tooltip, and semantic labels. |
 | `AppFieldGap` | `app_text_field.dart` | Standard vertical field gap using `AppSpacing.md`. |
 | `AppTextArea` | `app_text_area.dart` | Themed multiline text field with label, hint, validation, forced error text, and callbacks. |
 | `AppDropdownField<T>` | `app_dropdown_field.dart` | Themed `DropdownButtonFormField` using generic values and forced error text. |
@@ -47,6 +48,7 @@ Theme details are documented in [07-theme-system.md](../07-theme-system.md). Sta
 | `AppInlineError` | `app_inline_error.dart` | Inline body-small error text using `Theme.of(context).colorScheme.error`. |
 | `showErrorSnackBar` | `app_feedback.dart` | Error snackbar using normalized API-friendly message text. |
 | `showInfoSnackBar` | `app_feedback.dart` | Informational snackbar. |
+| `UserAvatar` | `user_avatar.dart` | Circular user avatar from `profileImageUrl` with `ApiConfig.resolveMediaUrl`; falls back to display-name initial on empty URL or image load error. |
 
 No `showSuccessSnackBar` exists in current code.
 

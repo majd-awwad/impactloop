@@ -11,6 +11,7 @@ import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/auth_navigation.dart';
 import '../../features/auth/data/models/user.dart';
 import '../../shared/widgets/app_feedback.dart';
+import '../../shared/widgets/user_avatar.dart';
 import 'impact_loop_logo.dart';
 import 'nav_pill_menu.dart';
 
@@ -23,6 +24,8 @@ class EntryNavBar extends ConsumerWidget {
     this.onCreateAccount,
     this.homeRoute = '/',
     this.trailingActions = const [],
+    this.showPhoneAccountMenu = true,
+    this.phoneTitle,
   });
 
   final bool showSignIn;
@@ -31,6 +34,8 @@ class EntryNavBar extends ConsumerWidget {
   final VoidCallback? onCreateAccount;
   final String homeRoute;
   final List<Widget> trailingActions;
+  final bool showPhoneAccountMenu;
+  final String? phoneTitle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -69,6 +74,8 @@ class EntryNavBar extends ConsumerWidget {
             isAuthenticated: isAuthenticated,
             isAuthLoading: authState.isLoading,
             ref: ref,
+            showAccountMenu: showPhoneAccountMenu,
+            phoneTitle: phoneTitle,
           ),
         ),
       );
@@ -157,6 +164,8 @@ class _PhoneAppBarLayout extends StatelessWidget {
     required this.isAuthenticated,
     required this.isAuthLoading,
     required this.ref,
+    required this.showAccountMenu,
+    this.phoneTitle,
   });
 
   final bool showSignIn;
@@ -169,9 +178,13 @@ class _PhoneAppBarLayout extends StatelessWidget {
   final bool isAuthenticated;
   final bool isAuthLoading;
   final WidgetRef ref;
+  final bool showAccountMenu;
+  final String? phoneTitle;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
     return Row(
       children: [
         InkWell(
@@ -179,8 +192,19 @@ class _PhoneAppBarLayout extends StatelessWidget {
           borderRadius: AppRadius.mdAll,
           child: const ImpactLoopLogo(compact: true, showWordmark: false),
         ),
+        if (phoneTitle != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            phoneTitle!,
+            style: AuthDarkTextStyles.label(context).copyWith(
+              color: colors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
         const Spacer(),
-        if (isAuthenticated && user != null)
+        if (isAuthenticated && user != null && showAccountMenu)
           _AccountMenu(
             user: user!,
             settings: settings,
@@ -188,7 +212,7 @@ class _PhoneAppBarLayout extends StatelessWidget {
             compact: true,
             isLoggingOut: isAuthLoading,
           )
-        else
+        else if (!isAuthenticated)
           _GuestMobileMenu(
             showSignIn: showSignIn,
             showCreateAccount: showCreateAccount,
@@ -648,11 +672,6 @@ class _AccountMenu extends StatelessWidget {
     return name.isEmpty ? 'Account' : name;
   }
 
-  String get _initial {
-    final name = _displayName.trim();
-    return name.isEmpty ? 'A' : name.characters.first.toUpperCase();
-  }
-
   bool get _isSupplier => user.hasRole('SUPPLIER');
 
   bool get _isLearner => user.hasRole('LEARNER');
@@ -727,20 +746,15 @@ class _AccountMenu extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: isDark ? 0.16 : 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      _initial,
-                      style: AuthDarkTextStyles.label(
-                        context,
-                      ).copyWith(color: accent, fontWeight: FontWeight.w800),
-                    ),
+                  UserAvatar(
+                    displayName: _displayName,
+                    profileImageUrl: user.profileImageUrl,
+                    radius: 15,
+                    backgroundColor: accent.withValues(alpha: isDark ? 0.16 : 0.1),
+                    foregroundColor: accent,
+                    initialTextStyle: AuthDarkTextStyles.label(
+                      context,
+                    ).copyWith(color: accent, fontWeight: FontWeight.w800),
                   ),
                   if (!compact) ...[
                     const SizedBox(width: AppSpacing.sm),
@@ -783,15 +797,15 @@ class _AccountMenu extends StatelessWidget {
             width: 280,
             child: Row(
               children: [
-                CircleAvatar(
+                UserAvatar(
+                  displayName: _displayName,
+                  profileImageUrl: user.profileImageUrl,
                   radius: 22,
                   backgroundColor: accent.withValues(alpha: 0.14),
-                  child: Text(
-                    _initial,
-                    style: AuthDarkTextStyles.title(
-                      context,
-                    ).copyWith(color: accent, fontSize: 18),
-                  ),
+                  foregroundColor: accent,
+                  initialTextStyle: AuthDarkTextStyles.title(
+                    context,
+                  ).copyWith(color: accent, fontSize: 18),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(

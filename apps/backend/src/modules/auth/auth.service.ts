@@ -54,6 +54,8 @@ export type UserSummary = {
   learnerProfile: LearnerProfileSummary | null;
   supplierProfile: SupplierProfileSummary | null;
   emailVerifiedAt: string | null;
+  phoneVerifiedAt: string | null;
+  lastLoginAt: string | null;
   createdAt: string;
 };
 
@@ -85,6 +87,8 @@ const toUserSummary = (
     accountStatus: AccountStatus;
     profileImageUrl: string | null;
     emailVerifiedAt: Date | null;
+    phoneVerifiedAt: Date | null;
+    lastLoginAt: Date | null;
     createdAt: Date;
     roles: { role: UserRole }[];
     learnerProfile?: authRepository.UserWithRolesAndProfiles['learnerProfile'];
@@ -137,6 +141,8 @@ const toUserSummary = (
       }
     : null,
   emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+  phoneVerifiedAt: user.phoneVerifiedAt?.toISOString() ?? null,
+  lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
   createdAt: user.createdAt.toISOString(),
 });
 

@@ -77,7 +77,7 @@ class AppMobileBottomNavBar extends ConsumerWidget {
         label: 'Profile',
         icon: Icons.person_rounded,
         route: profileRoute,
-        selected: currentPath == '/profile',
+        selected: currentPath == '/profile' || currentPath.startsWith('/profile/'),
       ),
     ];
 
