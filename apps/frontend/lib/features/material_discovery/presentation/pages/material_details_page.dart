@@ -34,6 +34,7 @@ import '../../domain/material_discovery_repository.dart';
 import '../material_discovery_content.dart';
 import '../widgets/material_details_gallery.dart';
 import '../discovery_material_display.dart';
+import '../reservation_dialog_copy.dart';
 import '../widgets/discovery_location_privacy_panel.dart';
 
 const _materialDetailsStickyCtaHeight = 76.0;
@@ -41,6 +42,11 @@ const _materialDetailsDesktopMaxWidth = 1160.0;
 const _materialDetailsSectionGap = AppSpacing.lg;
 const _materialDetailsRelatedSectionsTopGap = AppSpacing.xxl;
 const _relatedCompactCardWidth = 340.0;
+const _reservationDialogMaxWidth = 460.0;
+const _reservationDialogMaxHeightFactor = 0.85;
+const _reservationMessageMaxLength = 1000;
+const _reservationDialogChromeHeight = 156.0;
+const _reservationDialogSectionGap = AppSpacing.md;
 
 class MaterialDetailsPage extends ConsumerStatefulWidget {
   const MaterialDetailsPage({
@@ -161,50 +167,35 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       return;
     }
 
-    final request = await showDialog<CreateReservationRequest>(
-      context: context,
-      builder: (context) => _ReserveMaterialDialog(material: material),
-    );
+    FocusManager.instance.primaryFocus?.unfocus();
 
-    if (request == null || !mounted) {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => _ReserveMaterialDialog(
+        material: material,
+        onSubmit: _submitReservationRequest,
+      ),
+    );
+  }
+
+  Future<void> _submitReservationRequest(
+    CreateReservationRequest request,
+  ) async {
+    await ref.read(reservationCreateControllerProvider.notifier).create(
+          request,
+        );
+
+    if (!mounted) {
       return;
     }
 
-    try {
-      await ref.read(reservationCreateControllerProvider.notifier).create(
-            request,
-          );
-
-      if (!mounted) {
-        return;
-      }
-
-      showInfoSnackBar(context, 'Reservation request sent to the supplier.');
-      ref.invalidate(myReservationsProvider);
-      ref.invalidate(homeSuggestedMaterialsProvider);
-      setState(() {
-        _showReservationStatusCta = true;
-        _materialFuture = _activeRepository.getMaterialById(widget.materialId);
-      });
-    } on ApiException catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      showInfoSnackBar(context, reservationCreateErrorMessage(error));
-      setState(() {
-        _materialFuture = _activeRepository.getMaterialById(widget.materialId);
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      showInfoSnackBar(
-        context,
-        'Could not request this reservation. Please try again.',
-      );
-    }
+    ref.invalidate(myReservationsProvider);
+    ref.invalidate(homeSuggestedMaterialsProvider);
+    setState(() {
+      _showReservationStatusCta = true;
+      _materialFuture = _activeRepository.getMaterialById(widget.materialId);
+    });
+    showInfoSnackBar(context, 'Reservation request sent to the supplier.');
   }
 }
 
@@ -1134,6 +1125,38 @@ ButtonStyle _materialDetailsReserveButtonStyle(BuildContext context) {
   );
 }
 
+ButtonStyle _reservationDialogSubmitButtonStyle(BuildContext context) {
+  final colors = AppThemeColors.of(context);
+  final palette = MaterialsUiPalette.of(context);
+
+  return ButtonStyle(
+    minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+    padding: const WidgetStatePropertyAll(
+      EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+    ),
+    shape: WidgetStatePropertyAll(
+      RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+    ),
+    elevation: const WidgetStatePropertyAll(0),
+    backgroundColor: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.disabled)) {
+        return palette.mutedSurface;
+      }
+      if (states.contains(WidgetState.pressed) ||
+          states.contains(WidgetState.hovered)) {
+        return colors.primaryHover;
+      }
+      return colors.primary;
+    }),
+    foregroundColor: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.disabled)) {
+        return palette.textMuted;
+      }
+      return colors.textOnPrimary;
+    }),
+  );
+}
+
 class _MobileStickyReserveBar extends StatelessWidget {
   const _MobileStickyReserveBar({
     required this.reservationUi,
@@ -2017,9 +2040,13 @@ class _RelatedMaterialCompactCard extends StatelessWidget {
 }
 
 class _ReserveMaterialDialog extends StatefulWidget {
-  const _ReserveMaterialDialog({required this.material});
+  const _ReserveMaterialDialog({
+    required this.material,
+    required this.onSubmit,
+  });
 
   final DiscoveryMaterial material;
+  final Future<void> Function(CreateReservationRequest request) onSubmit;
 
   @override
   State<_ReserveMaterialDialog> createState() => _ReserveMaterialDialogState();
@@ -2029,6 +2056,8 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _quantityController;
   final _messageController = TextEditingController();
+  var _isSubmitting = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -2049,12 +2078,24 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     super.dispose();
   }
 
+  bool get _usesCountSteps => _isCountLikeUnit(widget.material.unit);
+
+  double get _availableQuantity => widget.material.availableQuantity;
+
   double _defaultQuantity(double available, String unit) {
     if (available <= 0) {
       return 0;
     }
 
-    final countLike = {
+    if (_isCountLikeUnit(unit)) {
+      return available >= 1 ? 1 : available;
+    }
+
+    return available;
+  }
+
+  static bool _isCountLikeUnit(String unit) {
+    const countLike = {
       'piece',
       'pieces',
       'item',
@@ -2069,104 +2110,523 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
       'crates',
     };
 
-    if (countLike.contains(unit.toLowerCase())) {
-      return available >= 1 ? 1 : available;
-    }
-
-    return available;
+    return countLike.contains(unit.toLowerCase());
   }
 
-  String _formatQuantity(double value) {
-    if (value == value.roundToDouble()) {
-      return value.toStringAsFixed(0);
-    }
-    return value.toString();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final material = widget.material;
-    final totalLabel = _formatQuantity(material.quantity);
-    final availableLabel = _formatQuantity(material.availableQuantity);
-
-    return AlertDialog(
-      title: const Text('Request reservation'),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                material.title.resolve(context),
-                style: AppTextStyles.body(context),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Available: $availableLabel of $totalLabel ${material.unit}',
-                style: AppTextStyles.body(context),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _quantityController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: InputDecoration(
-                  labelText: 'Quantity (${material.unit})',
-                ),
-                validator: (value) {
-                  final parsed = double.tryParse(value?.trim() ?? '');
-                  if (parsed == null || parsed <= 0) {
-                    return 'Enter a quantity greater than 0';
-                  }
-                  if (parsed > material.availableQuantity) {
-                    return 'Cannot exceed available quantity';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _messageController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Message to supplier (optional)',
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: const Text('Send request'),
-        ),
-      ],
+  static String _formatAvailableQuantityLabel(DiscoveryMaterial material) {
+    return formatReservationAvailableQuantityLabel(
+      availableQuantity: material.availableQuantity,
+      unit: material.unit,
     );
   }
 
-  void _submit() {
-    if (_formKey.currentState?.validate() != true) {
+  String _formatQuantity(double value) =>
+      formatReservationQuantity(value);
+
+  double? _parsedQuantity() {
+    return double.tryParse(_quantityController.text.trim());
+  }
+
+  void _setQuantity(double value) {
+    final clamped = value.clamp(0, _availableQuantity).toDouble();
+    _quantityController.text = _formatQuantity(clamped);
+  }
+
+  void _incrementQuantity() {
+    final current = _parsedQuantity();
+    if (current == null) {
+      setState(() => _setQuantity(1));
+      return;
+    }
+
+    if (current >= _availableQuantity) {
+      return;
+    }
+
+    final step = _usesCountSteps ? 1.0 : 0.1;
+    setState(() => _setQuantity(current + step));
+  }
+
+  void _decrementQuantity() {
+    final current = _parsedQuantity();
+    if (current == null) {
+      setState(() => _setQuantity(1));
+      return;
+    }
+
+    final step = _usesCountSteps ? 1.0 : 0.1;
+    final minValue = _usesCountSteps ? 1.0 : 0.1;
+    if (current <= minValue) {
+      return;
+    }
+
+    setState(() => _setQuantity(current - step));
+  }
+
+  Future<void> _submit() async {
+    if (_isSubmitting || _formKey.currentState?.validate() != true) {
       return;
     }
 
     final quantity = double.parse(_quantityController.text.trim());
     final message = _messageController.text.trim();
 
-    Navigator.of(context).pop(
-      CreateReservationRequest(
-        materialId: widget.material.id,
-        quantityRequested: quantity,
-        message: message.isEmpty ? null : message,
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await widget.onSubmit(
+        CreateReservationRequest(
+          materialId: widget.material.id,
+          quantityRequested: quantity,
+          message: message.isEmpty ? null : message,
+        ),
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).pop();
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _errorMessage = reservationCreateErrorMessage(error);
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _errorMessage =
+            'Could not request this reservation. Please try again.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final material = widget.material;
+    final palette = MaterialsUiPalette.of(context);
+    final screenSize = MediaQuery.sizeOf(context);
+    final isNarrow = screenSize.width < 480;
+    final dialogWidth = isNarrow
+        ? screenSize.width * 0.92
+        : _reservationDialogMaxWidth;
+    final maxDialogHeight =
+        screenSize.height * _reservationDialogMaxHeightFactor;
+    final maxBodyHeight = (maxDialogHeight - _reservationDialogChromeHeight)
+        .clamp(180.0, maxDialogHeight);
+
+    return Dialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isNarrow ? screenSize.width * 0.04 : AppSpacing.lg,
+        vertical: AppSpacing.lg,
       ),
+      backgroundColor: palette.panelSurface,
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+      child: SizedBox(
+        width: dialogWidth,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxDialogHeight),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.xs,
+                  AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Request reservation',
+                        style: AppTextStyles.body(context).copyWith(
+                          color: palette.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _isSubmitting
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      tooltip: 'Close',
+                      visualDensity: VisualDensity.compact,
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                      icon: Icon(Icons.close_rounded, color: palette.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: palette.borderSubtle),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxBodyHeight),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsetsDirectional.fromSTEB(
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _ReservationDialogMaterialSummary(
+                          material: material,
+                          availabilityLabel:
+                              _formatAvailableQuantityLabel(material),
+                        ),
+                        if (_errorMessage != null) ...[
+                          const SizedBox(height: _reservationDialogSectionGap),
+                          Container(
+                            padding: const EdgeInsetsDirectional.all(
+                              AppSpacing.sm,
+                            ),
+                            decoration: BoxDecoration(
+                              color: palette.inputSurface,
+                              borderRadius: AppRadius.mdAll,
+                              border: Border.all(color: palette.borderStrong),
+                            ),
+                            child: Text(
+                              _errorMessage!,
+                              style: AppTextStyles.body(context).copyWith(
+                                color: palette.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: _reservationDialogSectionGap),
+                        Text(
+                          'Quantity',
+                          style: AppTextStyles.label(context).copyWith(
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        _ReservationDialogQuantityStepper(
+                          controller: _quantityController,
+                          unit: material.unit,
+                          enabled: !_isSubmitting,
+                          onDecrement: _isSubmitting ||
+                                  (_parsedQuantity() ?? 1) <=
+                                      (_usesCountSteps ? 1.0 : 0.1)
+                              ? null
+                              : _decrementQuantity,
+                          onIncrement: _isSubmitting ||
+                                  (_parsedQuantity() ?? 0) >= _availableQuantity
+                              ? null
+                              : _incrementQuantity,
+                          validator: (value) {
+                            final parsed = double.tryParse(value?.trim() ?? '');
+                            if (parsed == null || parsed <= 0) {
+                              return 'Enter a quantity greater than 0';
+                            }
+                            if (parsed > material.availableQuantity) {
+                              return 'Cannot exceed available quantity';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: _reservationDialogSectionGap),
+                        Text(
+                          'Message to supplier',
+                          style: AppTextStyles.label(context).copyWith(
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        TextFormField(
+                          controller: _messageController,
+                          enabled: !_isSubmitting,
+                          minLines: 3,
+                          maxLines: 5,
+                          maxLength: _reservationMessageMaxLength,
+                          decoration: InputDecoration(
+                            hintText: 'Add pickup notes or questions…',
+                            helperText: 'Optional',
+                            filled: true,
+                            fillColor: palette.inputSurface,
+                            contentPadding: const EdgeInsetsDirectional.all(
+                              AppSpacing.sm,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: AppRadius.mdAll,
+                              borderSide: BorderSide(color: palette.borderSubtle),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: AppRadius.mdAll,
+                              borderSide: BorderSide(color: palette.borderSubtle),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: AppRadius.mdAll,
+                              borderSide: BorderSide(color: palette.mint),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Divider(height: 1, color: palette.borderSubtle),
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                ),
+                child: isNarrow
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _ReservationDialogSubmitButton(
+                            isSubmitting: _isSubmitting,
+                            onPressed: _submit,
+                            fullWidth: true,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          TextButton(
+                            onPressed: _isSubmitting
+                                ? null
+                                : () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: _isSubmitting
+                                ? null
+                                : () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          _ReservationDialogSubmitButton(
+                            isSubmitting: _isSubmitting,
+                            onPressed: _submit,
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReservationDialogMaterialSummary extends StatelessWidget {
+  const _ReservationDialogMaterialSummary({
+    required this.material,
+    required this.availabilityLabel,
+  });
+
+  final DiscoveryMaterial material;
+  final String availabilityLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          material.title.resolve(context),
+          style: AppTextStyles.body(context).copyWith(
+            color: palette.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          material.category.resolve(context),
+          style: AppTextStyles.label(context).copyWith(
+            color: palette.textMuted,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          availabilityLabel,
+          style: AppTextStyles.label(context).copyWith(
+            color: palette.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReservationDialogQuantityStepper extends StatelessWidget {
+  const _ReservationDialogQuantityStepper({
+    required this.controller,
+    required this.unit,
+    required this.enabled,
+    required this.onDecrement,
+    required this.onIncrement,
+    required this.validator,
+  });
+
+  final TextEditingController controller;
+  final String unit;
+  final bool enabled;
+  final VoidCallback? onDecrement;
+  final VoidCallback? onIncrement;
+  final FormFieldValidator<String> validator;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Row(
+      children: [
+        _QuantityStepButton(
+          icon: Icons.remove_rounded,
+          onPressed: onDecrement,
+          compact: true,
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        SizedBox(
+          width: 156,
+          child: TextFormField(
+            controller: controller,
+            enabled: enabled,
+            textAlign: TextAlign.center,
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            style: AppTextStyles.body(context).copyWith(
+              color: palette.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              suffixText: unit,
+              suffixStyle: AppTextStyles.label(context).copyWith(
+                color: palette.textMuted,
+              ),
+              contentPadding: const EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.sm,
+              ),
+              filled: true,
+              fillColor: palette.inputSurface,
+              border: OutlineInputBorder(
+                borderRadius: AppRadius.mdAll,
+                borderSide: BorderSide(color: palette.borderSubtle),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: AppRadius.mdAll,
+                borderSide: BorderSide(color: palette.borderSubtle),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: AppRadius.mdAll,
+                borderSide: BorderSide(color: palette.mint),
+              ),
+            ),
+            validator: validator,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        _QuantityStepButton(
+          icon: Icons.add_rounded,
+          onPressed: onIncrement,
+          compact: true,
+        ),
+      ],
+    );
+  }
+}
+
+class _ReservationDialogSubmitButton extends StatelessWidget {
+  const _ReservationDialogSubmitButton({
+    required this.isSubmitting,
+    required this.onPressed,
+    this.fullWidth = false,
+  });
+
+  final bool isSubmitting;
+  final VoidCallback? onPressed;
+  final bool fullWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = FilledButton(
+      onPressed: isSubmitting ? null : onPressed,
+      style: _reservationDialogSubmitButtonStyle(context),
+      child: isSubmitting
+          ? SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppThemeColors.of(context).textOnPrimary,
+              ),
+            )
+          : const Text('Send request'),
+    );
+
+    if (fullWidth) {
+      return Row(
+        children: [
+          Expanded(child: button),
+        ],
+      );
+    }
+
+    return IntrinsicWidth(child: button);
+  }
+}
+
+class _QuantityStepButton extends StatelessWidget {
+  const _QuantityStepButton({
+    required this.icon,
+    required this.onPressed,
+    this.compact = false,
+  });
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final size = compact ? 36.0 : 44.0;
+
+    return IconButton.outlined(
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+      style: IconButton.styleFrom(
+        minimumSize: Size(size, size),
+        maximumSize: Size(size, size),
+        padding: EdgeInsets.zero,
+        side: BorderSide(color: palette.borderStrong),
+        foregroundColor: palette.textPrimary,
+      ),
+      icon: Icon(icon, size: compact ? 18 : 20),
     );
   }
 }
