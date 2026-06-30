@@ -57,9 +57,13 @@ const learnerReservationListInclude = {
         },
       },
       images: {
-        where: { isCover: true },
+        select: {
+          imageUrl: true,
+          isCover: true,
+          sortOrder: true,
+        },
+        orderBy: [{ isCover: 'desc' }, { sortOrder: 'asc' }],
         take: 1,
-        orderBy: { sortOrder: 'asc' as const },
       },
     },
   },

@@ -405,6 +405,31 @@ describe('createReservation', () => {
     assert.ok(listed?.supplier.displayName);
   });
 
+  test('learner reservation list includes material imageUrl when material has images', async () => {
+    const material = await createMaterial(ctx, 'AVAILABLE', 2);
+    const imageUrl = `https://example.test/${TEST_MARKER}/reservation-material.jpg`;
+
+    await prisma.materialImage.create({
+      data: {
+        materialId: material.id,
+        imageUrl,
+        isCover: false,
+        sortOrder: 0,
+      },
+    });
+
+    const reservation = await createReservation(ctx.learnerId, {
+      materialId: material.id,
+      quantityRequested: 1,
+    });
+    ctx.createdReservationIds.push(reservation.id);
+
+    const reservations = await listMyReservations(ctx.learnerId);
+    const listed = reservations.find((item) => item.id === reservation.id);
+
+    assert.equal(listed?.material.imageUrl, imageUrl);
+  });
+
   test('accepted reservation list item includes pickup window data', async () => {
     const material = await createMaterial(ctx, 'AVAILABLE', 2);
     const reservation = await createReservation(ctx.learnerId, {
