@@ -1824,7 +1824,6 @@ class _RelatedMaterialsSections extends ConsumerWidget {
         _RelatedMaterialsStrip(
           excludeMaterialId: material.id,
           layout: layout,
-          minItemCount: layout == _RelatedMaterialsLayout.desktop ? 2 : 1,
           query: MaterialDiscoveryQuery(
             categoryId: categoryId,
             status: 'AVAILABLE',
@@ -1848,7 +1847,6 @@ class _RelatedMaterialsSections extends ConsumerWidget {
         _RelatedMaterialsStrip(
           excludeMaterialId: material.id,
           layout: layout,
-          minItemCount: layout == _RelatedMaterialsLayout.desktop ? 2 : 1,
           query: MaterialDiscoveryQuery(
             city: city,
             area: area?.isNotEmpty == true ? area : null,
@@ -1883,14 +1881,12 @@ class _RelatedMaterialsStrip extends ConsumerStatefulWidget {
   const _RelatedMaterialsStrip({
     required this.excludeMaterialId,
     required this.layout,
-    required this.minItemCount,
     required this.query,
     required this.title,
   });
 
   final String excludeMaterialId;
   final _RelatedMaterialsLayout layout;
-  final int minItemCount;
   final MaterialDiscoveryQuery query;
   final LocalizedText title;
 
@@ -1953,7 +1949,7 @@ class _RelatedMaterialsStripState extends ConsumerState<_RelatedMaterialsStrip> 
 
   @override
   Widget build(BuildContext context) {
-    if (!_loaded || _materials.length < widget.minItemCount) {
+    if (!_loaded || _materials.isEmpty) {
       return const SizedBox.shrink();
     }
 
