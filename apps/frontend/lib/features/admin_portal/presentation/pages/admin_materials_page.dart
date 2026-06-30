@@ -8,6 +8,7 @@ import '../../../../core/errors/api_exception.dart';
 import '../../data/admin_materials_api.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
+import '../utils/admin_material_moderation_policy.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart' show AdminTypography;
 
@@ -404,23 +405,35 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       if (!mounted) return;
       await showDialog<void>(
         context: context,
-        builder: (dialogContext) => _MaterialDetailDialog(
-          detail: detail,
-          onHide: () {
-            Navigator.pop(dialogContext);
-            _showHideDialogFromDetail(detail);
-          },
-          onUnavailable: () {
-            Navigator.pop(dialogContext);
-            _showUnavailableDialogFromDetail(detail);
-          },
-          onRestore: detail['status'] == 'UNAVAILABLE'
-              ? () {
-                  Navigator.pop(dialogContext);
-                  _showRestoreDialogFromDetail(detail);
-                }
-              : null,
-        ),
+        builder: (dialogContext) {
+          final status = detail['status'] as String? ?? '';
+          final actions = AdminMaterialModerationPolicy.actionsFromJson(
+            detail['allowedActions'] as Map<String, dynamic>?,
+            status,
+          );
+          return _MaterialDetailDialog(
+            detail: detail,
+            moderation: actions,
+            onHide: actions.canHide
+                ? () {
+                    Navigator.pop(dialogContext);
+                    _showHideDialogFromDetail(detail);
+                  }
+                : null,
+            onUnavailable: actions.canMarkUnavailable
+                ? () {
+                    Navigator.pop(dialogContext);
+                    _showUnavailableDialogFromDetail(detail);
+                  }
+                : null,
+            onRestore: actions.canRestore
+                ? () {
+                    Navigator.pop(dialogContext);
+                    _showRestoreDialogFromDetail(detail);
+                  }
+                : null,
+          );
+        },
       );
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -1060,9 +1073,7 @@ class _MaterialsTab extends ConsumerWidget {
                     onDetails: () => onViewDetails(item.materialId),
                     onHide: () => onHide(item),
                     onUnavailable: () => onUnavailable(item),
-                    onRestore: item.status == 'UNAVAILABLE'
-                        ? () => onRestore(item)
-                        : null,
+                    onRestore: () => onRestore(item),
                   ),
                 ),
               )
@@ -1247,14 +1258,14 @@ class _MaterialCard extends StatelessWidget {
     required this.onDetails,
     required this.onHide,
     required this.onUnavailable,
-    this.onRestore,
+    required this.onRestore,
   });
 
   final AdminMaterialListItem item;
   final VoidCallback onDetails;
   final VoidCallback onHide;
   final VoidCallback onUnavailable;
-  final VoidCallback? onRestore;
+  final VoidCallback onRestore;
 
   @override
   Widget build(BuildContext context) {
@@ -1264,6 +1275,7 @@ class _MaterialCard extends StatelessWidget {
     final priceLabel = item.isFree
         ? 'Free'
         : '${item.price?.toStringAsFixed(0) ?? '—'} ${item.currency}';
+    final moderation = AdminMaterialModerationPolicy.actionsFor(item.status);
 
     return Container(
       decoration: BoxDecoration(
@@ -1367,6 +1379,16 @@ class _MaterialCard extends StatelessWidget {
               style: AdminTypography.kpiHelper(palette),
             ),
             const SizedBox(height: 12),
+            if (moderation.listLockNote != null) ...[
+              Text(
+                moderation.listLockNote!,
+                style: AdminTypography.kpiHelper(palette).copyWith(
+                  color: palette.textMuted,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -1377,23 +1399,25 @@ class _MaterialCard extends StatelessWidget {
                   onPressed: onDetails,
                   variant: _CardActionVariant.neutral,
                 ),
-                _CardActionButton(
-                  label: 'Hide',
-                  icon: Icons.visibility_off_outlined,
-                  onPressed: onHide,
-                  variant: _CardActionVariant.hide,
-                ),
-                _CardActionButton(
-                  label: 'Mark unavailable',
-                  icon: Icons.block_outlined,
-                  onPressed: onUnavailable,
-                  variant: _CardActionVariant.unavailable,
-                ),
-                if (onRestore != null)
+                if (moderation.canHide)
+                  _CardActionButton(
+                    label: 'Hide',
+                    icon: Icons.visibility_off_outlined,
+                    onPressed: onHide,
+                    variant: _CardActionVariant.hide,
+                  ),
+                if (moderation.canMarkUnavailable)
+                  _CardActionButton(
+                    label: 'Mark unavailable',
+                    icon: Icons.block_outlined,
+                    onPressed: onUnavailable,
+                    variant: _CardActionVariant.unavailable,
+                  ),
+                if (moderation.canRestore)
                   _CardActionButton(
                     label: 'Restore',
                     icon: Icons.restore,
-                    onPressed: onRestore!,
+                    onPressed: onRestore,
                     variant: _CardActionVariant.restore,
                   ),
               ],
@@ -1457,6 +1481,9 @@ class _ReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final created = DateFormat.yMMMd().add_jm().format(report.createdAt);
+    final canHideMaterial = AdminMaterialModerationPolicy.canHide(
+      report.materialStatus,
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -1552,15 +1579,20 @@ class _ReportCard extends StatelessWidget {
                             icon: const Icon(Icons.cancel_outlined, size: 18),
                             label: const Text('Reject'),
                           ),
-                          FilledButton.tonalIcon(
-                            onPressed: onHideMaterial,
-                            style: FilledButton.styleFrom(
-                              foregroundColor: palette.red,
-                              backgroundColor: palette.red.withValues(alpha: 0.12),
+                          if (canHideMaterial)
+                            FilledButton.tonalIcon(
+                              onPressed: onHideMaterial,
+                              style: FilledButton.styleFrom(
+                                foregroundColor: palette.red,
+                                backgroundColor:
+                                    palette.red.withValues(alpha: 0.12),
+                              ),
+                              icon: const Icon(
+                                Icons.visibility_off_outlined,
+                                size: 18,
+                              ),
+                              label: const Text('Hide material'),
                             ),
-                            icon: const Icon(Icons.visibility_off_outlined, size: 18),
-                            label: const Text('Hide material'),
-                          ),
                         ],
                       ),
                     ],
@@ -1606,14 +1638,16 @@ class _SemanticBadge extends StatelessWidget {
 class _MaterialDetailDialog extends StatelessWidget {
   const _MaterialDetailDialog({
     required this.detail,
-    required this.onHide,
-    required this.onUnavailable,
+    required this.moderation,
+    this.onHide,
+    this.onUnavailable,
     this.onRestore,
   });
 
   final Map<String, dynamic> detail;
-  final VoidCallback onHide;
-  final VoidCallback onUnavailable;
+  final AdminMaterialModerationActions moderation;
+  final VoidCallback? onHide;
+  final VoidCallback? onUnavailable;
   final VoidCallback? onRestore;
 
   @override
@@ -1690,6 +1724,24 @@ class _MaterialDetailDialog extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (moderation.detailLockMessage != null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: palette.bannerBackground,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: palette.cardBorder),
+                        ),
+                        child: Text(
+                          moderation.detailLockMessage!,
+                          style: AdminTypography.pageSubtitle(palette).copyWith(
+                            color: palette.textMuted,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     if (images.isNotEmpty) ...[
                       _DetailSection(
                         title: 'Images',
@@ -1867,17 +1919,19 @@ class _MaterialDetailDialog extends StatelessWidget {
                     onPressed: () => Navigator.pop(context),
                     child: const Text('Close'),
                   ),
-                  FilledButton.tonal(
-                    onPressed: onHide,
-                    style: FilledButton.styleFrom(
-                      foregroundColor: palette.amber,
+                  if (onHide != null)
+                    FilledButton.tonal(
+                      onPressed: onHide,
+                      style: FilledButton.styleFrom(
+                        foregroundColor: palette.amber,
+                      ),
+                      child: const Text('Hide'),
                     ),
-                    child: const Text('Hide'),
-                  ),
-                  OutlinedButton(
-                    onPressed: onUnavailable,
-                    child: const Text('Mark unavailable'),
-                  ),
+                  if (onUnavailable != null)
+                    OutlinedButton(
+                      onPressed: onUnavailable,
+                      child: const Text('Mark unavailable'),
+                    ),
                   if (onRestore != null)
                     FilledButton(
                       onPressed: onRestore,
