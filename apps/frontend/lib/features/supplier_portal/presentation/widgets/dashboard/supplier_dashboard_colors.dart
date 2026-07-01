@@ -12,6 +12,10 @@ abstract final class SupplierDashboardColors {
   static const Color reserved = AppColorTokens.supplierDashboardReserved;
   static const Color unavailable = AppColorTokens.supplierDashboardUnavailable;
   static const Color neutral = AppColorTokens.supplierDashboardNeutral;
+  static const Color views = AppColorTokens.supplierDashboardAccepted;
+  static const Color likes = Color(0xFFF472B6);
+  static const Color followers = Color(0xFF3B82F6);
+  static const Color totalMaterials = Color(0xFF14B8A6);
 }
 
 class SupplierDashboardChartSegment {

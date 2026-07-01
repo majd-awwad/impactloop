@@ -1066,6 +1066,7 @@ model PriceRuleRequest {
   status                      MaterialRequestStatus @default(PENDING)
   aiSuggestedUnit             String?               @map("ai_suggested_unit")
   aiSuggestedMaxUnitPriceNis  Decimal?              @map("ai_suggested_max_unit_price_nis") @db.Decimal(10, 2)
+  adminApprovedMaxUnitPriceNis Decimal?             @map("admin_approved_max_unit_price_nis") @db.Decimal(10, 2)
   aiSuggestedMaxTotalPriceNis Decimal?              @map("ai_suggested_max_total_price_nis") @db.Decimal(10, 2)
   aiSuggestedAliasesJson      Json?                 @map("ai_suggested_aliases_json")
   aiResultJson                Json?                 @map("ai_result_json")

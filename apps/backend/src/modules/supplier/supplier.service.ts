@@ -15,6 +15,8 @@ import {
 } from "./dto/supplier-dashboard.dto.js";
 
 import { AppError } from "../../utils/app-error.js";
+import { env } from "../../config/env.js";
+import { prisma } from "../../database/prisma.js";
 import { decimalToNumber } from "../../utils/decimal.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import * as categoriesRepository from "../categories/categories.repository.js";
@@ -32,6 +34,10 @@ import {
   SUPPLIER_CREATE_MATERIAL_SCOPE,
 } from "../../services/idempotency.service.js";
 import * as supplierRepository from "./supplier.repository.js";
+import {
+  buildSupplierMaterialWhere,
+  resolveSupplierContext,
+} from "./supplier-material-scope.js";
 import { assertSupplierCanPublishMaterials } from "../supplier-verification/supplier-verification.service.js";
 import {
   getHeldQuantitiesByMaterialIds,
@@ -183,7 +189,11 @@ const assertSourceRequestPublishable = async (
     }
 
     if (!input.isFree && input.price != null) {
-      const acceptance = evaluateApprovedPriceRuleRequest(request, input.price);
+      const acceptance = evaluateApprovedPriceRuleRequest(
+        request,
+        input.price,
+        input.condition,
+      );
       if (acceptance.ok === false && acceptance.reason === "PRICE_TOO_HIGH") {
         const unit =
           request.unit ?? request.materialType?.defaultUnit ?? "unit";
@@ -293,8 +303,10 @@ const buildRecentActivity = (
 export const getSupplierDashboard = async (
   userId: string,
 ): Promise<SupplierDashboardDto> => {
-  const supplierProfile =
-    await supplierRepository.findSupplierProfileForDashboard(userId);
+  const scope = await resolveSupplierContext(userId);
+  const supplierProfile = scope.supplierProfileId
+    ? await supplierRepository.findSupplierProfileForDashboard(userId)
+    : null;
 
   const [
     materialGroups,
@@ -306,17 +318,53 @@ export const getSupplierDashboard = async (
     upcomingPickups,
     recentNotifications,
     recentReservations,
+    totalViews,
+    totalLikes,
+    followersCount,
+    scheduledPickups,
+    mostViewedMaterial,
+    highDemandMaterials,
   ] = await Promise.all([
-    supplierRepository.countMaterialsByStatus(userId),
+    supplierRepository.countMaterialsByStatus(scope),
     supplierRepository.countReservationsByStatus(userId),
-    supplierRepository.aggregateReusedMaterials(userId),
+    supplierRepository.aggregateReusedMaterials(scope),
     supplierRepository.aggregateSupplierReviews(userId),
     supplierRepository.countUnreadNotifications(userId),
-    supplierRepository.findRecentMaterials(userId),
+    supplierRepository.findRecentMaterials(scope),
     supplierRepository.findUpcomingPickups(userId),
     supplierRepository.findRecentNotifications(userId),
     supplierRepository.findRecentReservationsForActivity(userId),
+    supplierRepository.countTotalViewsForSupplier(scope),
+    supplierRepository.countTotalLikesForSupplier(scope),
+    scope.supplierProfileId
+      ? supplierRepository.countSupplierFollowers(scope.supplierProfileId)
+      : Promise.resolve(0),
+    supplierRepository.countScheduledPickups(userId),
+    supplierRepository.findMostViewedMaterial(scope),
+    supplierRepository.findHighDemandMaterials(scope),
   ]);
+
+  if (env.nodeEnv !== "production") {
+    const [ownerCount, profileCount, scopedCount] = await Promise.all([
+      prisma.material.count({ where: { ownerId: userId } }),
+      scope.supplierProfileId
+        ? prisma.material.count({
+            where: { supplierProfileId: scope.supplierProfileId },
+          })
+        : Promise.resolve(0),
+      prisma.material.count({ where: buildSupplierMaterialWhere(scope) }),
+    ]);
+
+    console.debug("[supplier-dashboard]", {
+      userId,
+      supplierProfileId: scope.supplierProfileId,
+      ownerCount,
+      profileCount,
+      scopedCount,
+      materialStatsTotal: supplierRepository.foldMaterialStatusCounts(materialGroups)
+        .total,
+    });
+  }
 
   const materialStats =
     supplierRepository.foldMaterialStatusCounts(materialGroups);
@@ -337,7 +385,51 @@ export const getSupplierDashboard = async (
     notifications: {
       unread: unreadNotifications,
     },
+    engagement: {
+      totalViews,
+      totalLikes,
+      followersCount,
+    },
+    operational: {
+      scheduledPickups,
+      activeMaterials: materialStats.available,
+    },
   };
+
+  const recentReservationRequestsDto: SupplierDashboardDto['recentReservationRequests'] =
+    [];
+
+  const mostViewedMaterialDto =
+    totalViews > 0 && mostViewedMaterial
+      ? {
+          id: mostViewedMaterial.material.id,
+          title: mostViewedMaterial.material.title,
+          status: mostViewedMaterial.material.status,
+          categoryName: mostViewedMaterial.material.category?.nameEn ?? null,
+          coverImageUrl:
+            mostViewedMaterial.material.images[0]?.imageUrl ?? null,
+          viewsCount: mostViewedMaterial.viewsCount,
+          demandCount: 0,
+        }
+      : null;
+
+  const highDemandMaterialIds = highDemandMaterials.map(
+    ({ material }) => material.id,
+  );
+  const highDemandViewCounts =
+    await supplierRepository.countViewsByMaterialIds(highDemandMaterialIds);
+
+  const highDemandMaterialsDto = highDemandMaterials.map(
+    ({ material, demandCount }) => ({
+      id: material.id,
+      title: material.title,
+      status: material.status,
+      categoryName: material.category?.nameEn ?? null,
+      coverImageUrl: material.images[0]?.imageUrl ?? null,
+      viewsCount: highDemandViewCounts.get(material.id) ?? 0,
+      demandCount,
+    }),
+  );
 
   const recentMaterialsDto = recentMaterials.map((material) => ({
     id: material.id,
@@ -379,6 +471,9 @@ export const getSupplierDashboard = async (
       recentMaterials: recentMaterialsDto,
       upcomingPickups: upcomingPickupsDto,
       recentActivity,
+      recentReservationRequests: recentReservationRequestsDto,
+      mostViewedMaterial: mostViewedMaterialDto,
+      highDemandMaterials: highDemandMaterialsDto,
     };
   }
 
@@ -417,6 +512,9 @@ export const getSupplierDashboard = async (
     recentMaterials: recentMaterialsDto,
     upcomingPickups: upcomingPickupsDto,
     recentActivity,
+    recentReservationRequests: recentReservationRequestsDto,
+    mostViewedMaterial: mostViewedMaterialDto,
+    highDemandMaterials: highDemandMaterialsDto,
   };
 };
 
@@ -538,6 +636,7 @@ export const createSupplierMaterial = async (
     const acceptance = evaluateApprovedPriceRuleRequest(
       priceRuleRequest,
       input.price,
+      input.condition,
     );
 
     if (acceptance.ok) {
@@ -726,6 +825,9 @@ export const getEmptySupplierDashboard = (): SupplierDashboardDto => ({
   recentMaterials: [],
   upcomingPickups: [],
   recentActivity: [],
+  recentReservationRequests: [],
+  mostViewedMaterial: null,
+  highDemandMaterials: [],
 });
 
 const mapLocation = (
@@ -930,10 +1032,11 @@ const mapSupplierProfileResponse = (
 export const getSupplierProfile = async (
   userId: string,
 ): Promise<SupplierProfileResponseDto> => {
+  const scope = await resolveSupplierContext(userId);
   const record =
     await supplierRepository.findSupplierProfileDetailsByUserId(userId);
 
-  const supplierProfileId = record?.supplierProfile?.id ?? null;
+  const supplierProfileId = scope.supplierProfileId;
 
   const [
     materialsSummary,
@@ -943,14 +1046,14 @@ export const getSupplierProfile = async (
     latestFollowers,
     materialsPreview,
   ] = await Promise.all([
-    supplierRepository.findSupplierMaterialsSummary(userId),
+    supplierRepository.findSupplierMaterialsSummary(scope),
     supplierRepository.countSupplierReservationsTotal(userId),
-    supplierRepository.countTotalLikesForSupplier(userId),
-    supplierRepository.countTotalViewsForSupplier(userId),
+    supplierRepository.countTotalLikesForSupplier(scope),
+    supplierRepository.countTotalViewsForSupplier(scope),
     supplierProfileId
       ? supplierRepository.listLatestSupplierFollowers(supplierProfileId, 5)
       : Promise.resolve([]),
-    supplierRepository.findSupplierMaterialsPreview(userId, 4),
+    supplierRepository.findSupplierMaterialsPreview(scope, 4),
   ]);
 
   const previewIds = materialsPreview.map((material) => material.id);
@@ -1235,10 +1338,11 @@ export const getSupplierMaterials = async (
   userId: string,
   query: SupplierMaterialsQuery,
 ) => {
+  const scope = await resolveSupplierContext(userId);
   const [result, summary, categories] = await Promise.all([
-    supplierRepository.findSupplierMaterials(userId, query),
-    supplierRepository.findSupplierMaterialsSummary(userId),
-    supplierRepository.findSupplierMaterialCategories(userId),
+    supplierRepository.findSupplierMaterials(scope, query),
+    supplierRepository.findSupplierMaterialsSummary(scope),
+    supplierRepository.findSupplierMaterialCategories(scope),
   ]);
 
   const blockingReservationCounts =
@@ -1277,8 +1381,9 @@ export const getSupplierMaterial = async (
   userId: string,
   materialId: string,
 ) => {
+  const scope = await resolveSupplierContext(userId);
   const material = await supplierRepository.findSupplierOwnedMaterialById(
-    userId,
+    scope,
     materialId,
   );
 
@@ -1297,8 +1402,9 @@ export const updateSupplierMaterial = async (
   materialId: string,
   input: UpdateSupplierMaterialInput,
 ) => {
+  const scope = await resolveSupplierContext(userId);
   const material = await supplierRepository.findSupplierOwnedMaterialById(
-    userId,
+    scope,
     materialId,
   );
 
@@ -1327,7 +1433,7 @@ export const updateSupplierMaterial = async (
   }
 
   const updated = await supplierRepository.updateSupplierOwnedMaterial(
-    userId,
+    scope,
     materialId,
     {
       title: input.title,
@@ -1353,8 +1459,9 @@ export const deleteSupplierMaterial = async (
   userId: string,
   materialId: string,
 ) => {
+  const scope = await resolveSupplierContext(userId);
   const material = await supplierRepository.findSupplierOwnedMaterialById(
-    userId,
+    scope,
     materialId,
   );
 

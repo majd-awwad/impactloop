@@ -11,6 +11,7 @@ import '../widgets/dashboard/supplier_dashboard_chart_card.dart';
 import '../widgets/dashboard/supplier_dashboard_hero.dart';
 import '../widgets/dashboard/supplier_dashboard_quick_actions_panel.dart';
 import '../widgets/dashboard/supplier_dashboard_recent_activity_panel.dart';
+import '../widgets/dashboard/supplier_dashboard_insights_panel.dart';
 import '../widgets/dashboard/supplier_dashboard_stat_card.dart';
 import '../widgets/dashboard/supplier_materials_status_chart.dart';
 import '../widgets/dashboard/supplier_performance_summary.dart';
@@ -51,9 +52,9 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
     final stats = widget.dashboard.stats;
-    final scheduledPickups = widget.dashboard.upcomingPickups.isNotEmpty
-        ? widget.dashboard.upcomingPickups.length
-        : stats.reservations.accepted;
+    final scheduledPickups = stats.operational.scheduledPickups > 0
+        ? stats.operational.scheduledPickups
+        : widget.dashboard.upcomingPickups.length;
     final supplierProfile = ref.watch(authControllerProvider).user?.supplierProfile;
     final showApprovedBanner = !_approvalBannerDismissed &&
         isOrganizationSupplierType(supplierProfile?.supplierType) &&
@@ -109,11 +110,20 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
               compact: compact,
             ),
           const SizedBox(height: AppSpacing.lg),
-          SupplierDashboardStatGrid(
+          SupplierDashboardMainStatGrid(
             activeMaterials: stats.materials.available,
             pendingRequests: stats.reservations.pending,
             scheduledPickups: scheduledPickups,
             reusedMaterials: stats.materials.reused,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SupplierDashboardSecondaryMetricsRow(
+            totalMaterials: stats.materials.total,
+            availableMaterials: stats.materials.available,
+            reservedMaterials: stats.materials.reserved,
+            totalViews: stats.engagement.totalViews,
+            totalLikes: stats.engagement.totalLikes,
+            followersCount: stats.engagement.followersCount,
           ),
           const SizedBox(height: AppSpacing.xl),
           Text(
@@ -169,6 +179,8 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
           ),
           const SizedBox(height: AppSpacing.md),
           SupplierPerformanceSummary(dashboard: widget.dashboard),
+          const SizedBox(height: AppSpacing.lg),
+          SupplierDashboardInsightsPanel(dashboard: widget.dashboard),
           const SizedBox(height: AppSpacing.xl),
           LayoutBuilder(
             builder: (context, constraints) {

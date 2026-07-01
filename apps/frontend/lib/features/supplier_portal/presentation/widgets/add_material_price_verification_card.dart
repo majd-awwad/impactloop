@@ -67,6 +67,30 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
               ),
               style: context.supplierBody(),
             ),
+          if (result.baseMaxPrice != null &&
+              result.adjustedMaxPrice != null &&
+              result.selectedCondition != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              l.conditionAdjustedMaxMessage(
+                result.currencySymbol,
+                result.baseMaxPrice!.toStringAsFixed(2),
+                l.conditionLabel(result.selectedCondition!),
+                result.adjustedMaxPrice!.toStringAsFixed(2),
+              ),
+              style: context.supplierBody().copyWith(
+                color: context.supplierColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ],
+          if (result.submittedPrice != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              '${l.pricePerUnit}: ${result.currencySymbol}${result.submittedPrice!.toStringAsFixed(2)}',
+              style: context.supplierBody(),
+            ),
+          ],
           if (result.approvedUnit != null)
             Text(
               l.approvedUnitLabel(result.approvedUnit!),

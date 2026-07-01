@@ -34,7 +34,7 @@ Conventions for response shape: [04-api-conventions.md](../04-api-conventions.md
 | POST | `/api/auth/become-supplier` | Bearer JWT | `auth/auth.routes.ts` |
 | POST | `/api/auth/switch-role` | Bearer JWT | `auth/auth.routes.ts` |
 
-`GET /api/auth/me` returns `{ user }` including `roles`, `activeRole`, `canSwitchToLearner`, `canSwitchToSupplier`, `defaultPortalRoute`, profile summaries, `phoneVerifiedAt`, and `lastLoginAt` when present.
+`GET /api/auth/me` returns `{ user }` including `roles`, `activeRole`, `canSwitchToLearner`, `canSwitchToSupplier`, `defaultPortalRoute`, profile summaries (including `supplierProfile.id` when present), `phoneVerifiedAt`, and `lastLoginAt` when present.
 
 `POST /api/auth/become-supplier` adds `SUPPLIER` role and creates a supplier profile on the same account when missing; keeps existing `LEARNER` role; sets `activeRole` to `SUPPLIER`. Response matches login/register: new `accessToken`, optional `refreshToken`, and updated `user` so JWT roles stay in sync.
 
@@ -106,6 +106,8 @@ Optional query `discoveryOnly=true` applies discovery name filtering and dedupe 
 |--------|------|------|-------------|
 | GET | `/api/materials/listing-policy` | Public | `materials/materials.routes.ts` |
 | POST | `/api/materials/price-check` | Bearer JWT | `materials/materials.routes.ts` |
+
+**`POST /api/materials/price-check`:** Paid listings require `condition`. Response includes `baseMaxPrice`, `selectedCondition`, `conditionMultiplier`, `adjustedMaxPrice`, `submittedPrice`, `isWithinAdjustedRange`, and `source` (`RULE` | `AI` | `ADMIN_REVIEW`). Supplier-facing `maxAllowedPrice` is the condition-adjusted max, not the raw rule/AI base.
 | GET | `/api/materials` | Public | `materials/materials.routes.ts` |
 | GET | `/api/materials/:id` | Public | `materials/materials.routes.ts` |
 | POST | `/api/materials/:id/reports` | Bearer JWT | `materials/materials.routes.ts` |
@@ -302,6 +304,8 @@ All routes below require Bearer JWT + `SUPPLIER` role unless noted. Source: `sup
 | Method | Path | Source file |
 |--------|------|-------------|
 | GET | `/api/supplier/dashboard` | `supplier/supplier.routes.ts` |
+
+**`GET /api/supplier/dashboard` response extras:** `stats.engagement` (`totalViews`, `totalLikes`, `followersCount` from `MaterialView`, `MaterialLike`, and `SupplierFollower` counts scoped to the supplier), `stats.operational` (`scheduledPickups`, `activeMaterials`), `mostViewedMaterial` (highest `MaterialView` count; null when `totalViews` is 0), `highDemandMaterials` (top 3 by pending+accepted reservations). `recentReservationRequests` is always an empty array (not shown on overview UI). Engagement view counts use the `MaterialView` table consistently (not cached `material.viewsCount` alone).
 | GET | `/api/supplier/profile` | `supplier/supplier.routes.ts` |
 | PATCH | `/api/supplier/profile` | `supplier/supplier.routes.ts` |
 | GET | `/api/supplier/materials` | `supplier/supplier.routes.ts` |

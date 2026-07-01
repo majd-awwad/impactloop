@@ -36,10 +36,22 @@ void main() {
           'notifications': {
             'unread': 0,
           },
+          'engagement': {
+            'totalViews': 0,
+            'totalLikes': 0,
+            'followersCount': 0,
+          },
+          'operational': {
+            'scheduledPickups': 0,
+            'activeMaterials': 0,
+          },
         },
         'recentMaterials': [],
         'upcomingPickups': [],
         'recentActivity': [],
+        'recentReservationRequests': [],
+        'mostViewedMaterial': null,
+        'highDemandMaterials': [],
       });
 
       expect(dashboard.hasSupplierProfile, isFalse);
@@ -95,6 +107,15 @@ void main() {
           'notifications': {
             'unread': 3,
           },
+          'engagement': {
+            'totalViews': 20,
+            'totalLikes': 4,
+            'followersCount': 2,
+          },
+          'operational': {
+            'scheduledPickups': 1,
+            'activeMaterials': 1,
+          },
         },
         'recentMaterials': [
           {
@@ -111,11 +132,15 @@ void main() {
         ],
         'upcomingPickups': [],
         'recentActivity': [],
+        'recentReservationRequests': [],
+        'mostViewedMaterial': null,
+        'highDemandMaterials': [],
       });
 
       expect(dashboard.hasSupplierProfile, isTrue);
       expect(dashboard.supplier?.publicName, 'ImpactLoop Supplier');
       expect(dashboard.stats.materials.total, 2);
+      expect(dashboard.stats.engagement.totalViews, 20);
       expect(dashboard.stats.reviews.averageRating, 4.5);
       expect(dashboard.recentMaterials, hasLength(1));
     });

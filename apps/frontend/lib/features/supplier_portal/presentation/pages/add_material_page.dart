@@ -740,7 +740,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                         _isCheckingPrice ||
                             _isSubmitting ||
                             _submittedSuccessfully ||
-                            paidOtherBlocked
+                            paidOtherBlocked ||
+                            !_conditions.contains(_condition)
                         ? null
                         : _verifyPrice,
                     icon: _isCheckingPrice
@@ -1536,6 +1537,14 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       showSupplierErrorSnackBar(context, context.s.enterMaterialNameFirst);
       return;
     }
+    if (!_conditions.contains(_condition)) {
+      showSupplierErrorSnackBar(
+        context,
+        context.s.selectConditionBeforePriceVerify,
+      );
+      return;
+    }
+
     final quantity = double.tryParse(_quantityController.text.trim());
     final price = double.tryParse(_priceController.text.trim());
     if (quantity == null || quantity <= 0 || price == null || price <= 0) {

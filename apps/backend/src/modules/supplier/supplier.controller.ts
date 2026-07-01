@@ -15,6 +15,7 @@ import {
   updateSupplierProfile,
   updateSupplierProfileImages,
 } from "./supplier.service.js";
+import { setSupplierPrivateCacheHeaders } from "./supplier-response-headers.js";
 import { validateIdempotencyKey } from "../../services/idempotency.service.js";
 import type {
   CreateSupplierMaterialInput,
@@ -29,6 +30,7 @@ export const getDashboard = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
+  setSupplierPrivateCacheHeaders(res);
   const dashboard = await getSupplierDashboard(req.auth!.sub);
 
   res.json(successResponse("Supplier dashboard loaded", dashboard));
@@ -38,6 +40,7 @@ export const getProfile = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
+  setSupplierPrivateCacheHeaders(res);
   const profile = await getSupplierProfile(req.auth!.sub);
 
   res.json(successResponse("Supplier profile loaded", profile));
@@ -83,6 +86,7 @@ export const getMaterials = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
+  setSupplierPrivateCacheHeaders(res);
   const materials = await getSupplierMaterials(
     req.auth!.sub,
     readValidatedQuery<SupplierMaterialsQuery>(req),

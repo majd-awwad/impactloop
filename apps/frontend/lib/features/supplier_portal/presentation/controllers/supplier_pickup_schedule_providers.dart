@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../../data/supplier_pickup_schedule_api_repository.dart';
+import '../../application/supplier_portal_session.dart';
 
 export '../../data/supplier_pickup_schedule_api_repository.dart'
     show supplierPickupScheduleRepositoryProvider;
@@ -24,6 +25,7 @@ final pickupScheduleFilterProvider =
 
 final pickupScheduleProvider =
     FutureProvider.autoDispose<List<SupplierPickupScheduleItem>>((ref) async {
+      watchSupplierPortalSessionFromRef(ref);
       final filter = ref.watch(pickupScheduleFilterProvider);
       return ref
           .read(supplierPickupScheduleRepositoryProvider)
@@ -44,6 +46,7 @@ class PickupScheduleSummary {
 
 final pickupScheduleSummaryProvider =
     FutureProvider.autoDispose<PickupScheduleSummary>((ref) async {
+      watchSupplierPortalSessionFromRef(ref);
       final repository = ref.read(supplierPickupScheduleRepositoryProvider);
       final results = await Future.wait([
         repository.fetchPickupSchedule(SupplierPickupScheduleFilter.today),

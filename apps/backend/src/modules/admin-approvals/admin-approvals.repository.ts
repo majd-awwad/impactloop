@@ -185,7 +185,7 @@ export const updatePriceRuleRequestDecision = async (input: {
     data: {
       status: input.status,
       moderatorNote: input.moderatorNote,
-      aiSuggestedMaxUnitPriceNis: input.approvedMaxAllowedUnitPriceNis,
+      adminApprovedMaxUnitPriceNis: input.approvedMaxAllowedUnitPriceNis,
     },
     include: priceRequestInclude,
   });

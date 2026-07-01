@@ -405,7 +405,12 @@ export const becomeSupplierForUser = async (
       throw new Error('User not found');
     }
 
-    if (existing.supplierProfile) {
+    const existingProfiles = await tx.supplierProfile.findMany({
+      where: { userId: input.userId },
+      select: { id: true },
+    });
+
+    if (existing.supplierProfile || existingProfiles.length > 0) {
       await tx.userRoleAssignment.upsert({
         where: {
           userId_role: {
