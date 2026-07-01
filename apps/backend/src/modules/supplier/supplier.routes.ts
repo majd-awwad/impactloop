@@ -12,10 +12,12 @@ import {
   getMaterials,
   getProfile,
   getProfileFollowers,
+  markMaterialUnavailable,
   patchMaterial,
   patchProfile,
   patchProfileImages,
   postMaterial,
+  restoreMaterialAvailable,
 } from './supplier.controller.js';
 import {
   createSupplierMaterialSchema,
@@ -111,6 +113,22 @@ supplierRouter.delete(
   requireRoles('SUPPLIER'),
   validate(supplierMaterialIdParamSchema, 'params'),
   asyncHandler(deleteMaterial),
+);
+
+supplierRouter.post(
+  '/materials/:id/mark-unavailable',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(supplierMaterialIdParamSchema, 'params'),
+  asyncHandler(markMaterialUnavailable),
+);
+
+supplierRouter.post(
+  '/materials/:id/restore-available',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(supplierMaterialIdParamSchema, 'params'),
+  asyncHandler(restoreMaterialAvailable),
 );
 
 supplierRouter.use('/category-requests', categoryRequestsRouter);

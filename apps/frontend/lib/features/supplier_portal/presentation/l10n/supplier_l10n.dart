@@ -117,6 +117,38 @@ class SupplierL10n {
         'Try clearing filters or adjusting your search.',
         'جرّب مسح التصفية أو تعديل البحث.',
       );
+  String get likesLabel => t('Likes', 'الإعجابات');
+  String get engagementSectionTitle => t('Engagement', 'التفاعل');
+  String get reservationsSectionTitle =>
+      t('Reservations for this material', 'حجوزات هذه المادة');
+  String get demandSectionTitle => t('Demand indicators', 'مؤشرات الطلب');
+  String get noMaterialReservationsYet => t(
+        'No reservations for this material yet.',
+        'لا توجد حجوزات لهذه المادة بعد.',
+      );
+  String get noActiveDemandYet => t(
+        'No active demand yet.',
+        'لا يوجد طلب نشط بعد.',
+      );
+  String get activeDemandLabel => t('Active demand', 'طلب نشط');
+  String get markUnavailableAction =>
+      t('Mark unavailable', 'تعليم كغير متاحة');
+  String get restoreAvailableAction =>
+      t('Restore available', 'إعادة إلى متاحة');
+  String materialRequestsBadge(int count) => t(
+        '$count request${count == 1 ? '' : 's'}',
+        count == 1 ? 'طلب واحد' : '$count طلبات',
+      );
+  String get highDemandBadge => t('High demand', 'طلب مرتفع');
+  String get openReservationActionLabel =>
+      t('Open reservation', 'فتح الحجز');
+  String get pendingReservationsLabel =>
+      t('Pending reservations', 'حجوزات قيد الانتظار');
+  String get reservedReservationsLabel =>
+      t('Reserved reservations', 'حجوزات مقبولة');
+  String get totalActiveRequestsLabel =>
+      t('Total active requests', 'إجمالي الطلبات النشطة');
+  String get demandScoreLabel => t('Demand score', 'درجة الطلب');
   String materialsResultCount(int count) => t(
         '$count material${count == 1 ? '' : 's'} shown',
         count == 1 ? 'مادة واحدة معروضة' : '$count مواد معروضة',

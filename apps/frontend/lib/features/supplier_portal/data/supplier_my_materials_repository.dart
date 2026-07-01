@@ -38,4 +38,12 @@ class SupplierMyMaterialsRepository {
   Future<void> deleteMaterial(String materialId) {
     return _api.deleteMaterial(materialId);
   }
+
+  Future<SupplierMyMaterial> markMaterialUnavailable(String materialId) {
+    return _api.markMaterialUnavailable(materialId);
+  }
+
+  Future<SupplierMyMaterial> restoreMaterialAvailable(String materialId) {
+    return _api.restoreMaterialAvailable(materialId);
+  }
 }

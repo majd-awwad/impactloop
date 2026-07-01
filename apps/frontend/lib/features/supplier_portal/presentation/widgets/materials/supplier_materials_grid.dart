@@ -83,6 +83,13 @@ Widget buildSupplierMaterialCard({
   final imageUrl = material.coverImageUrl == null
       ? null
       : ApiConfig.resolveMediaUrl(material.coverImageUrl!);
+  final compactBadges = <String>[];
+  if (material.demandScore > 0) {
+    if (material.reservationsCount > 0) {
+      compactBadges.add(context.s.materialRequestsBadge(material.reservationsCount));
+    }
+    compactBadges.add(context.s.highDemandBadge);
+  }
 
   return SupplierMaterialCard(
     title: material.title,
@@ -127,6 +134,7 @@ Widget buildSupplierMaterialCard({
     imageUrl: imageUrl,
     viewsCount: material.viewsCount,
     likesCount: material.likesCount,
+    compactBadgeLabels: compactBadges,
     createdAtLabel: createdAtLabel,
     onTap: onTap,
     actions: actions,
