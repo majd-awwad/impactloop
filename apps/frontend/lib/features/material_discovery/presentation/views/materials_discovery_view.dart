@@ -84,170 +84,320 @@ class MaterialsDiscoveryView extends StatelessWidget {
     final showingCount = materials.length;
     final hasMore = pagination?.hasMore ?? false;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (showHeroSection) ...[
-          MaterialsHeroSection(
-            title: const LocalizedText(
-              en: 'Material Discovery',
-              ar: 'اكتشاف المواد',
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        final showHero = showHeroSection && !isMobile;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showHero) ...[
+              MaterialsHeroSection(
+                compact: true,
+                title: const LocalizedText(
+                  en: 'Material Discovery',
+                  ar: 'اكتشاف المواد',
+                ),
+                subtitle: const LocalizedText(
+                  en:
+                      'Browse reusable materials from verified suppliers. Search, filter, and reserve what you need.',
+                  ar:
+                      'تصفح المواد القابلة لإعادة الاستخدام من موردين موثوقين. ابحث، وفلتر، واحجز ما تحتاجه.',
+                ),
+                stats: {
+                  const LocalizedText(
+                    en: 'loaded',
+                    ar: 'محمّلة',
+                  ): '$showingCount',
+                  const LocalizedText(
+                    en: 'matches',
+                    ar: 'مطابقة',
+                  ): '$total',
+                },
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            if (isMobile) ...[
+              _CompactDiscoveryHeader(
+                showingCount: showingCount,
+                total: total,
+                hasActiveFilters: hasActiveFilters,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            if (refetchErrorMessage != null) ...[
+              _RefetchErrorBanner(
+                message: refetchErrorMessage!,
+                onRetry: onRetryRefetch,
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            if (isRefetching) ...[
+              const _RefetchingIndicator(),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            MaterialSearchFilters(
+              compactMobile: isMobile,
+              searchController: searchController,
+              cityController: cityController,
+              areaController: areaController,
+              searchValue: searchValue,
+              onSearchChanged: onSearchChanged,
+              onCityChanged: onCityChanged,
+              onAreaChanged: onAreaChanged,
+              categories: categories,
+              selectedCategoryIndex: selectedCategoryIndex,
+              onCategorySelected: onCategorySelected,
+              quickFilters: materialQuickFilters,
+              selectedQuickFilterIndex: selectedQuickFilterIndex,
+              onQuickFilterSelected: onQuickFilterSelected,
+              sortOptions: materialSortOptions,
+              selectedSortIndex: selectedSortIndex,
+              onSortSelected: onSortSelected,
+              conditionFilters: materialConditionFilters,
+              selectedConditionIndex: selectedConditionIndex,
+              onConditionSelected: onConditionSelected,
+              hasActiveFilters: hasActiveFilters,
+              onClearFilters: onClearFilters,
             ),
-            subtitle: const LocalizedText(
-              en:
-                  'Browse reusable materials from verified suppliers. Search, filter, and reserve what you need.',
-              ar:
-                  'تصفح المواد القابلة لإعادة الاستخدام من موردين موثوقين. ابحث، وفلتر، واحجز ما تحتاجه.',
-            ),
-            stats: {
-              const LocalizedText(
-                en: 'Results loaded',
-                ar: 'النتائج المحملة',
-              ): '$showingCount',
-              const LocalizedText(
-                en: 'Total matches',
-                ar: 'إجمالي المطابقات',
-              ): '$total',
-            },
-          ),
-          const SizedBox(height: AppSpacing.lg),
-        ],
-        if (refetchErrorMessage != null) ...[
-          _RefetchErrorBanner(
-            message: refetchErrorMessage!,
-            onRetry: onRetryRefetch,
-          ),
-          const SizedBox(height: AppSpacing.md),
-        ],
-        if (isRefetching) ...[
-          const _RefetchingIndicator(),
-          const SizedBox(height: AppSpacing.sm),
-        ],
-        MaterialSearchFilters(
-          searchController: searchController,
-          cityController: cityController,
-          areaController: areaController,
-          searchValue: searchValue,
-          onSearchChanged: onSearchChanged,
-          onCityChanged: onCityChanged,
-          onAreaChanged: onAreaChanged,
-          categories: categories,
-          selectedCategoryIndex: selectedCategoryIndex,
-          onCategorySelected: onCategorySelected,
-          quickFilters: materialQuickFilters,
-          selectedQuickFilterIndex: selectedQuickFilterIndex,
-          onQuickFilterSelected: onQuickFilterSelected,
-          sortOptions: materialSortOptions,
-          selectedSortIndex: selectedSortIndex,
-          onSortSelected: onSortSelected,
-          conditionFilters: materialConditionFilters,
-          selectedConditionIndex: selectedConditionIndex,
-          onConditionSelected: onConditionSelected,
-          hasActiveFilters: hasActiveFilters,
-          onClearFilters: onClearFilters,
-        ),
-        const SizedBox(height: AppSpacing.xl),
-        _ResultsHeader(
-          showingCount: showingCount,
-          total: total,
-          hasActiveFilters: hasActiveFilters,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        if (materials.isEmpty)
-          const _EmptyStatePanel(
-            title: materialDiscoveryEmptyTitle,
-            subtitle: materialDiscoveryEmptySubtitle,
-          )
-        else
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              var columns = 1;
+            SizedBox(height: isMobile ? AppSpacing.sm : AppSpacing.xl),
+            if (!isMobile) ...[
+              _ResultsHeader(
+                showingCount: showingCount,
+                total: total,
+                hasActiveFilters: hasActiveFilters,
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            if (materials.isEmpty)
+              const _EmptyStatePanel(
+                title: materialDiscoveryEmptyTitle,
+                subtitle: materialDiscoveryEmptySubtitle,
+              )
+            else
+              _MaterialsResultsGrid(
+                materials: materials,
+                cardVariant: cardVariant,
+                onMaterialTap: onMaterialTap,
+              ),
+            if (hasMore) ...[
+              const SizedBox(height: AppSpacing.lg),
+              Center(
+                child: FilledButton.icon(
+                  onPressed: isLoadingMore ? null : onLoadMore,
+                  icon: isLoadingMore
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.expand_more_rounded),
+                  label: Text(
+                    isLoadingMore
+                        ? const LocalizedText(
+                            en: 'Loading more...',
+                            ar: 'جارٍ تحميل المزيد...',
+                          ).resolve(context)
+                        : LocalizedText(
+                            en: 'Load more ($showingCount of $total)',
+                            ar: 'تحميل المزيد ($showingCount من $total)',
+                          ).resolve(context),
+                  ),
+                ),
+              ),
+            ],
+            if (showLocationPrivacyPanel) ...[
+              SizedBox(height: isMobile ? AppSpacing.lg : AppSpacing.xl),
+              const DiscoveryLocationPrivacyPanel(),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
 
-              if (width >= 1160) {
-                columns = 3;
-              } else if (width >= 760) {
-                columns = 2;
-              }
+class _MaterialsResultsGrid extends StatelessWidget {
+  const _MaterialsResultsGrid({
+    required this.materials,
+    required this.cardVariant,
+    required this.onMaterialTap,
+  });
 
-              final itemWidth =
-                  (width - ((columns - 1) * AppSpacing.md)) / columns;
-              final effectiveCardVariant = itemWidth < 400
-                  ? AppMaterialCardVariant.compact
-                  : cardVariant;
+  final List<DiscoveryMaterial> materials;
+  final AppMaterialCardVariant cardVariant;
+  final ValueChanged<DiscoveryMaterial>? onMaterialTap;
 
-              return Wrap(
-                spacing: AppSpacing.md,
-                runSpacing: AppSpacing.md,
-                children: materials.map((material) {
-                  return SizedBox(
-                    width: itemWidth,
-                    child: AppMaterialCard(
-                      title: material.title.resolve(context),
-                      description: material.description.resolve(context),
-                      category: material.category.resolve(context),
-                      conditionLabel: material.conditionLabel.resolve(context),
-                      conditionTone: material.conditionTone,
-                      statusLabel: material.statusLabel.resolve(context),
-                      statusTone: material.statusTone,
-                      quantityLabel: material.quantityLabel.resolve(context),
-                      priceLabel: material.priceLabel.resolve(context),
-                      locationLabel: material.locationLabel.resolve(context),
-                      availabilityLabel: material.availabilityLabel.resolve(
-                        context,
-                      ),
-                      deliveryAvailable: material.deliveryAvailable,
-                      isFree: material.isFree,
-                      gradientColors: materialGradient(material),
-                      imageUrl: material.imageUrl,
-                      ratingLabel: material.isPopular
-                          ? null
-                          : material.ratingLabel?.resolve(context),
-                      showPopularBadge: material.isPopular,
-                      fallbackIcon: material.heroIconData,
-                      variant: effectiveCardVariant,
-                      onTap: onMaterialTap == null
-                          ? null
-                          : () => onMaterialTap!(material),
-                    ),
-                  );
-                }).toList(),
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        if (width < 600) {
+          return ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: materials.length,
+            separatorBuilder: (context, index) =>
+                const SizedBox(height: AppSpacing.sm),
+            itemBuilder: (context, index) {
+              final material = materials[index];
+
+              return ImpactMaterialCompactCard(
+                title: material.title.resolve(context),
+                description: material.description.resolve(context),
+                category: material.category.resolve(context),
+                conditionLabel: material.conditionLabel.resolve(context),
+                conditionTone: material.conditionTone,
+                statusLabel: material.statusLabel.resolve(context),
+                statusTone: material.statusTone,
+                quantityLabel: material.quantityLabel.resolve(context),
+                priceLabel: material.priceLabel.resolve(context),
+                locationLabel: material.locationLabel.resolve(context),
+                availabilityLabel: material.availabilityLabel.resolve(
+                  context,
+                ),
+                deliveryAvailable: material.deliveryAvailable,
+                isFree: material.isFree,
+                gradientColors: materialGradient(material),
+                imageUrl: material.imageUrl,
+                ratingLabel: material.isPopular
+                    ? null
+                    : material.ratingLabel?.resolve(context),
+                showPopularBadge: material.isPopular,
+                fallbackIcon: material.heroIconData,
+                onTap: onMaterialTap == null
+                    ? null
+                    : () => onMaterialTap!(material),
               );
             },
+          );
+        }
+
+        final columns = _materialGridColumnCount(width);
+        final itemWidth = (width - ((columns - 1) * AppSpacing.md)) / columns;
+        final effectiveCardVariant = itemWidth < 400
+            ? AppMaterialCardVariant.compact
+            : cardVariant;
+        final cardHeight = ImpactMaterialGridCard.heightForWidth(
+          itemWidth,
+          variant: effectiveCardVariant,
+        );
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: materials.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: AppSpacing.md,
+            mainAxisSpacing: AppSpacing.md,
+            mainAxisExtent: cardHeight,
           ),
-        if (hasMore) ...[
-          const SizedBox(height: AppSpacing.lg),
-          Center(
-            child: FilledButton.icon(
-              onPressed: isLoadingMore ? null : onLoadMore,
-              icon: isLoadingMore
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.expand_more_rounded),
-              label: Text(
-                isLoadingMore
-                    ? const LocalizedText(
-                        en: 'Loading more...',
-                        ar: 'جارٍ تحميل المزيد...',
-                      ).resolve(context)
-                    : LocalizedText(
-                        en: 'Load more ($showingCount of $total)',
-                        ar: 'تحميل المزيد ($showingCount من $total)',
-                      ).resolve(context),
+          itemBuilder: (context, index) {
+            final material = materials[index];
+            return SizedBox(
+              child: ImpactMaterialGridCard(
+                title: material.title.resolve(context),
+                description: material.description.resolve(context),
+                category: material.category.resolve(context),
+                conditionLabel: material.conditionLabel.resolve(context),
+                conditionTone: material.conditionTone,
+                statusLabel: material.statusLabel.resolve(context),
+                statusTone: material.statusTone,
+                quantityLabel: material.quantityLabel.resolve(context),
+                priceLabel: material.priceLabel.resolve(context),
+                locationLabel: material.locationLabel.resolve(context),
+                availabilityLabel: material.availabilityLabel.resolve(
+                  context,
+                ),
+                deliveryAvailable: material.deliveryAvailable,
+                isFree: material.isFree,
+                gradientColors: materialGradient(material),
+                imageUrl: material.imageUrl,
+                ratingLabel: material.isPopular
+                    ? null
+                    : material.ratingLabel?.resolve(context),
+                showPopularBadge: material.isPopular,
+                fallbackIcon: material.heroIconData,
+                variant: effectiveCardVariant,
+                onTap: onMaterialTap == null
+                    ? null
+                    : () => onMaterialTap!(material),
               ),
-            ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _CompactDiscoveryHeader extends StatelessWidget {
+  const _CompactDiscoveryHeader({
+    required this.showingCount,
+    required this.total,
+    required this.hasActiveFilters,
+  });
+
+  final int showingCount;
+  final int total;
+  final bool hasActiveFilters;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          LocalizedText(
+            en: 'Reusable Materials',
+            ar: 'المواد القابلة لإعادة الاستخدام',
+          ).resolve(context),
+          style: AppTextStyles.title(context).copyWith(
+            color: palette.textPrimary,
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
           ),
-        ],
-        if (showLocationPrivacyPanel) ...[
-          const SizedBox(height: AppSpacing.xl),
-          const DiscoveryLocationPrivacyPanel(),
-        ],
+          textAlign: TextAlign.start,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          (hasActiveFilters
+                  ? LocalizedText(
+                      en: 'Showing $showingCount of $total matching results',
+                      ar: 'عرض $showingCount من $total نتيجة مطابقة',
+                    )
+                  : LocalizedText(
+                      en: 'Showing $showingCount of $total public results',
+                      ar: 'عرض $showingCount من $total نتيجة عامة',
+                    ))
+              .resolve(context),
+          style: AppTextStyles.subtitle(context).copyWith(
+            color: palette.textSecondary,
+            fontSize: 14,
+          ),
+          textAlign: TextAlign.start,
+        ),
       ],
     );
   }
+}
+
+int _materialGridColumnCount(double width) {
+  if (width >= 1320) {
+    return 4;
+  }
+  if (width >= 900) {
+    return 3;
+  }
+  if (width >= 600) {
+    return 2;
+  }
+  return 1;
 }
 
 class _ResultsHeader extends StatelessWidget {

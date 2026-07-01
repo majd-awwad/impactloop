@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../shared/models/localized_text.dart';
@@ -354,12 +355,7 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
                 }
 
                 return SingleChildScrollView(
-                  padding: const EdgeInsetsDirectional.fromSTEB(
-                    AppSpacing.md,
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                    AppSpacing.xl,
-                  ),
+                  padding: appMobileAwareScrollPadding(context),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1400),

@@ -15,8 +15,9 @@ void main() {
     expect(find.textContaining('Radius'), findsNothing);
     expect(find.textContaining('Nearby Material Map'), findsNothing);
     expect(
-      find.textContaining('Map browsing is coming later'),
+      find.textContaining('For privacy, public results show city and area only'),
       findsOneWidget,
     );
+    expect(find.textContaining('Map browsing is coming later'), findsNothing);
   });
 }

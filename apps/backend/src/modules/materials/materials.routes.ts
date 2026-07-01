@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { authMiddleware } from '../../middlewares/auth.middleware.js';
+import { authMiddleware, optionalAuthMiddleware } from '../../middlewares/auth.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { asyncHandler } from '../../utils/async-handler.js';
 
@@ -45,6 +45,7 @@ materialsRouter.post(
 
 materialsRouter.get(
   '/:id',
+  optionalAuthMiddleware,
   validate(materialIdParamSchema, 'params'),
   asyncHandler(getMaterial),
 );

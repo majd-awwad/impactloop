@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Browse educational project ideas (components, steps, links) for inspiration. **Learning only** — no in-hub material booking or AI matching in the current UI.
+Browse educational project ideas (components, steps, links) for inspiration. **Learning only** in the current UI: no in-hub booking, build checklist, or AI material matching is shipped yet.
 
 ## Current status
 
@@ -17,6 +17,8 @@ Browse educational project ideas (components, steps, links) for inspiration. **L
 | AI panel on detail | **Frontend-only** | `disabled_ai_panel.dart` — placeholder |
 | Ratings on cards/detail | **Partial** | Hidden when backend `ratingSummary` is null (current API returns null) |
 | AI material agent | **Not implemented** | No `ai-agent` module |
+
+Product intent from role planning: the learning hub should eventually support project-to-material matching, material coverage, missing materials, alternatives, already-owned markers, saved projects, likes, and start-build/checklist flows. These are planned/future unless code changes prove otherwise.
 
 **Critical:** Learning Hub list/detail and Home spotlight are API-backed. Add-draft remains mock-only.
 
@@ -85,3 +87,4 @@ Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`.
 - Project links are display-only (`url_launcher` not in dependencies).
 - Project submission / moderator review — **not implemented** in Flutter; draft page is mock.
 - AI material matching — **not implemented**.
+- Save project, like project, follow project/category, start build, build checklist, and available/missing/alternative material coverage — **not implemented**.

@@ -85,6 +85,17 @@ class AuthRepository {
     );
   }
 
+  Future<void> forgotPassword({required String email}) {
+    return _api.forgotPassword(email: email);
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) {
+    return _api.resetPassword(token: token, newPassword: newPassword);
+  }
+
   Future<void> _persistSession(AuthTokens tokens, User user) async {
     await _applyTokens(tokens);
   }

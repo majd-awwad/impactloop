@@ -16,6 +16,8 @@ Current MVP status for material reservations.
 - Material becomes `REUSED` only when remaining quantity reaches `0` after completion/delivery.
 - Learner may cancel only while reservation is `PENDING`.
 
+Reservation is the booking layer. Future build-checklist states such as `Available`, `Missing`, `Alternative`, `Already owned`, and `Reserved` should integrate with reservations, but the checklist itself belongs to future Learning Hub / AI matching work.
+
 ## Current Code Status
 
 | Layer | Status | Evidence |
@@ -88,6 +90,7 @@ Current MVP status for material reservations.
 - Live delivery map/tracking stream, ETA, delivery cancellation/retry, payment, and reviews.
 - Saved learner dropoff addresses, standalone location CRUD, current-location delivery request, and nearest-first sorting.
 - QR polish.
+- Project build checklist integration and already-owned material markers.
 
 ## Location privacy (MVP)
 

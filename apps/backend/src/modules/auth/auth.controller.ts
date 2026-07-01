@@ -76,12 +76,7 @@ export const forgotPassword = async (
   const { email } = req.body as ForgotPasswordInput;
   const result = await requestPasswordReset(email);
 
-  res.json(
-    successResponse(
-      result.message,
-      result.resetToken ? { resetToken: result.resetToken } : null,
-    ),
-  );
+  res.json(successResponse(result.message, null));
 };
 
 export const resetPassword = async (

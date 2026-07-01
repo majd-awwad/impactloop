@@ -11,11 +11,13 @@ class HomeSectionHeader extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.action,
+    this.compactInlineAction = false,
   });
 
   final String title;
   final String? subtitle;
   final Widget? action;
+  final bool compactInlineAction;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +50,22 @@ class HomeSectionHeader extends StatelessWidget {
             ],
           ],
         );
+
+        if (compact && compactInlineAction && action != null) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: titleBlock),
+                  const SizedBox(width: AppSpacing.sm),
+                  action!,
+                ],
+              ),
+            ],
+          );
+        }
 
         if (compact || action == null) {
           return Column(

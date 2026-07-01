@@ -19,6 +19,8 @@ void main() {
     'quantityRequested': 1,
     'createdAt': '2026-01-01T00:00:00.000Z',
     'updatedAt': '2026-01-01T00:00:00.000Z',
+    'pickupWindowStart': '2026-06-27T10:00:00.000Z',
+    'pickupWindowEnd': '2026-06-27T16:00:00.000Z',
     'pickupLocationFull': {
       'country': 'Palestine',
       'city': 'Nablus',
@@ -46,15 +48,6 @@ void main() {
     'deliveryRequested': true,
     'createdAt': '2026-01-01T00:00:00.000Z',
     'updatedAt': '2026-01-01T00:00:00.000Z',
-    'pickupLocationFull': {
-      'country': 'Palestine',
-      'city': 'Nablus',
-      'area': 'Old City',
-      'addressLine': '12 Supplier Street',
-      'latitude': 32.2211,
-      'longitude': 35.2544,
-      'isApproximate': false,
-    },
     'material': {
       'id': 'mat-1',
       'title': 'Wood panels',
@@ -121,20 +114,19 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('accepted self-pickup reservation shows pickup address panel', (
+  testWidgets('accepted reservation shows compact pickup info block', (
     tester,
   ) async {
     await pumpPage(tester, reservations: [acceptedReservation]);
 
-    expect(find.text('Pickup address'), findsOneWidget);
-    expect(
-      find.text('12 Supplier Street, Old City, Nablus, Palestine'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('32.2211'), findsNothing);
+    expect(find.text('Request delivery'), findsNothing);
+    expect(find.text('Wood panels'), findsOneWidget);
+    expect(find.textContaining('Pickup:'), findsOneWidget);
+    expect(find.textContaining('Pickup address:'), findsOneWidget);
+    expect(find.text('Delivery available'), findsOneWidget);
   });
 
-  testWidgets('accepted delivery reservation hides pickup address panel', (
+  testWidgets('accepted reservation with delivery shows View delivery action', (
     tester,
   ) async {
     await pumpPage(
@@ -143,12 +135,12 @@ void main() {
       deliveries: [buildDelivery()],
     );
 
-    expect(find.text('Pickup address'), findsNothing);
     expect(find.text('View delivery'), findsOneWidget);
+    expect(find.text('Delivery in progress'), findsOneWidget);
   });
 
   testWidgets(
-    'accepted reservation with deliveryRequested hides pickup address when deliveries are not loaded',
+    'accepted reservation with deliveryRequested shows delivery requested label',
     (tester) async {
       await pumpPage(
         tester,
@@ -156,8 +148,9 @@ void main() {
         deliveries: const [],
       );
 
-      expect(find.text('Pickup address'), findsNothing);
-      expect(find.text('Request delivery'), findsOneWidget);
+      expect(find.text('Request delivery'), findsNothing);
+      expect(find.text('Delivery requested'), findsOneWidget);
+      expect(find.text('View material'), findsOneWidget);
     },
   );
 }

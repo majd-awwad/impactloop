@@ -21,6 +21,15 @@ class LoginFooter extends StatelessWidget {
           style: TextStyle(color: colors.textSecondary, height: 1.45),
         ),
         TextButton(
+          style: TextButton.styleFrom(
+            minimumSize: Size.zero,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.xs,
+            ),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
+          ),
           onPressed: () => context.go('/register'),
           child: Text(
             'Create account',

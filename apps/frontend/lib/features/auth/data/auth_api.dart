@@ -77,6 +77,33 @@ class AuthApi {
     );
   }
 
+  Future<void> forgotPassword({required String email}) {
+    return unwrapApiVoidResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_authBasePath/forgot-password',
+        data: {'email': email.trim()},
+        options: Options(
+          extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
+        ),
+      ),
+    );
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) {
+    return unwrapApiVoidResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_authBasePath/reset-password',
+        data: {'token': token, 'newPassword': newPassword},
+        options: Options(
+          extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
+        ),
+      ),
+    );
+  }
+
   Future<({AuthTokens tokens, User user})> _postAuthSession(
     String path, {
     required Map<String, dynamic> data,

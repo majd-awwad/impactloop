@@ -4,13 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/auth_navigation.dart';
-import '../../features/auth/application/registration_draft_notifier.dart';
-import '../../features/auth/presentation/models/registration_intent.dart';
+import '../widgets/app_mobile_bottom_nav_bar.dart';
+import '../../features/auth/presentation/models/registration_wizard_step.dart';
 import '../../features/auth/presentation/pages/auth_checking_page.dart';
-import '../../features/auth/presentation/pages/complete_learner_profile_page.dart';
-import '../../features/auth/presentation/pages/complete_supplier_profile_page.dart';
+import '../../features/auth/presentation/pages/deprecated_onboarding_page.dart';
+import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/deliveries/presentation/pages/learner_delivery_detail_page.dart';
@@ -23,6 +24,10 @@ import '../../features/learning_hub/presentation/pages/learning_project_details_
 import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
+import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
+import '../../features/profile/presentation/pages/profile_edit_page.dart';
+import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/profile/presentation/pages/profile_security_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
 import '../../features/supplier_portal/application/supplier_verification_access.dart';
@@ -66,42 +71,7 @@ String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
     return null;
   }
 
-  final draft = ref.read(registrationDraftProvider);
-
-  if (path == '/complete-learner-profile') {
-    if (!draft.hasBasicInfo) {
-      return '/register';
-    }
-
-    if (draft.intent == null) {
-      return '/register';
-    }
-
-    if (draft.intent == RegistrationIntent.supplier) {
-      return '/complete-supplier-profile';
-    }
-  }
-
-  if (path == '/complete-supplier-profile') {
-    if (!draft.hasBasicInfo) {
-      return '/register';
-    }
-
-    if (draft.intent == null) {
-      return '/register';
-    }
-
-    if (draft.intent == RegistrationIntent.learner) {
-      return '/complete-learner-profile';
-    }
-
-    if (draft.intent == RegistrationIntent.both &&
-        draft.learnerProfile == null) {
-      return '/complete-learner-profile?intent=both';
-    }
-  }
-
-  return null;
+  return '/register';
 }
 
 bool _isSupplierPortalPath(String path) {
@@ -131,7 +101,11 @@ bool _isAdminPortalPath(String path) {
 
 bool _isCheckingPath(String path) => path == authCheckingRoute;
 
-bool _isAuthPage(String path) => path == loginRoute || path == registerRoute;
+bool _isAuthPage(String path) =>
+    path == loginRoute ||
+    path == registerRoute ||
+    path == forgotPasswordRoute ||
+    path == resetPasswordRoute;
 
 _RouteAccessLevel _routeAccessForPath(String path) {
   if (isSupplierVerificationStatusRoute(path) ||
@@ -156,7 +130,10 @@ _RouteAccessLevel _routeAccessForPath(String path) {
     return _RouteAccessLevel.learner;
   }
 
-  if (path == '/home' || path == _supplierAccessDeniedRoute) {
+  if (path == '/home' ||
+      path == '/profile' ||
+      path.startsWith('/profile/') ||
+      path == _supplierAccessDeniedRoute) {
     return _RouteAccessLevel.authenticated;
   }
 
@@ -348,10 +325,48 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/', builder: (context, state) => const LandingPage()),
       GoRoute(path: '/health', builder: (context, state) => const HealthPage()),
-      GoRoute(path: '/home', builder: (context, state) => const HomePage()),
+      ShellRoute(
+        builder: (context, state, child) =>
+            AppMobileNavigationShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/home',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: HomePage()),
+          ),
+          GoRoute(
+            path: '/materials',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: MaterialsDiscoveryPage()),
+          ),
+          GoRoute(
+            path: '/learning',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: LearningHubPage()),
+          ),
+          GoRoute(
+            path: '/learner/reservations',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: LearnerReservationsPage()),
+          ),
+          GoRoute(
+            path: '/profile',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: ProfilePage()),
+          ),
+        ],
+      ),
       GoRoute(
-        path: '/learner/reservations',
-        builder: (context, state) => const LearnerReservationsPage(),
+        path: '/profile/edit',
+        builder: (context, state) => const ProfileEditPage(),
+      ),
+      GoRoute(
+        path: '/profile/learner/edit',
+        builder: (context, state) => const LearnerProfileEditPage(),
+      ),
+      GoRoute(
+        path: '/profile/security',
+        builder: (context, state) => const ProfileSecurityPage(),
       ),
       GoRoute(
         path: '/learner/deliveries/:id',
@@ -361,10 +376,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: authCheckingRoute,
         builder: (context, state) => const AuthCheckingPage(),
-      ),
-      GoRoute(
-        path: '/learning',
-        builder: (context, state) => const LearningHubPage(),
       ),
       GoRoute(
         path: '/learning/add-draft',
@@ -379,10 +390,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/materials',
-        builder: (context, state) => const MaterialsDiscoveryPage(),
-      ),
-      GoRoute(
         path: '/materials/:id',
         builder: (context, state) {
           final materialId = state.pathParameters['id']!;
@@ -395,21 +402,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const _AuthPageGuard(child: LoginPage()),
       ),
       GoRoute(
-        path: registerRoute,
-        builder: (context, state) =>
-            const _AuthPageGuard(child: RegisterPage()),
+        path: forgotPasswordRoute,
+        builder: (context, state) => _AuthPageGuard(
+          child: ForgotPasswordPage(
+            initialEmail: state.uri.queryParameters['email'],
+          ),
+        ),
       ),
       GoRoute(
-        path: '/complete-learner-profile',
+        path: resetPasswordRoute,
+        builder: (context, state) => _AuthPageGuard(
+          child: ResetPasswordPage(token: state.uri.queryParameters['token']),
+        ),
+      ),
+      GoRoute(
+        path: registerRoute,
         builder: (context, state) {
-          final isBothIntent = state.uri.queryParameters['intent'] == 'both';
+          final initialIntent = registrationIntentFromQuery(
+            state.uri.queryParameters['intent'],
+          );
 
-          return CompleteLearnerProfilePage(showSupplierNextHint: isBothIntent);
+          return _AuthPageGuard(
+            child: RegisterPage(initialIntent: initialIntent),
+          );
         },
       ),
       GoRoute(
+        path: '/complete-learner-profile',
+        builder: (context, state) => const DeprecatedOnboardingPage(),
+      ),
+      GoRoute(
         path: '/complete-supplier-profile',
-        builder: (context, state) => const CompleteSupplierProfilePage(),
+        builder: (context, state) => const DeprecatedOnboardingPage(),
       ),
       GoRoute(
         path: '/invite/accept',

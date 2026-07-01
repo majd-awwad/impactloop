@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/learning_projects_result.dart';
@@ -158,12 +159,7 @@ class _HubContent extends StatelessWidget {
     };
 
     return SingleChildScrollView(
-      padding: const EdgeInsetsDirectional.fromSTEB(
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.xl,
-      ),
+      padding: appMobileAwareScrollPadding(context, top: AppSpacing.md),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1400),

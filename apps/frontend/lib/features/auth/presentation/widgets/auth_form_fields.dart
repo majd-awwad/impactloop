@@ -120,29 +120,6 @@ class AuthTextArea extends StatelessWidget {
   }
 }
 
-class AuthSectionTitle extends StatelessWidget {
-  const AuthSectionTitle({super.key, required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AuthUiPalette.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-          color: colors.primary,
-        ),
-      ),
-    );
-  }
-}
-
 class AuthIntentChip extends StatelessWidget {
   const AuthIntentChip({
     super.key,
@@ -184,6 +161,97 @@ class AuthIntentChip extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: isSelected ? colors.primary : colors.textSecondary,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AuthSectionTitle extends StatelessWidget {
+  const AuthSectionTitle({super.key, required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AuthUiPalette.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: colors.primary,
+        ),
+      ),
+    );
+  }
+}
+
+class AuthSelectCard extends StatelessWidget {
+  const AuthSelectCard({
+    super.key,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    this.description,
+  });
+
+  final String label;
+  final String? description;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AuthUiPalette.of(context);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.mdAll,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected ? colors.primarySoft : colors.surfaceElevated,
+            borderRadius: AppRadius.mdAll,
+            border: Border.all(
+              color: isSelected ? colors.primary : colors.border,
+              width: isSelected ? 1.4 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? colors.primary : colors.textPrimary,
+                ),
+              ),
+              if (description != null && description!.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  description!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.35,
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),

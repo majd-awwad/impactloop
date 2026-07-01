@@ -6,7 +6,7 @@
 
 Public browse and detail view of surplus materials available for reuse. Guests and authenticated users can search, filter, paginate, and open material details without logging in.
 
-**Not in scope:** real public map pins, distance/nearest sort, similar materials, account-wide saved materials.
+**Not in current shipped scope:** real public map pins, distance/nearest sort, similar materials, material-to-project suggestions, account-wide saved materials, likes, and follows.
 
 ## Current status
 
@@ -93,5 +93,6 @@ List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, 
 - Bilingual material titles/descriptions (backend has single `title`/`description` today).
 - Real map with privacy-safe approximate pins.
 - Distance / nearest-first sort.
-- Similar materials and saved materials lists.
+- Similar materials, saved materials, likes, follows, and supplier/category follow signals.
+- "Projects you can build with this material" suggestions.
 - Database `isPublic` category flag to replace discovery name-pattern filtering.

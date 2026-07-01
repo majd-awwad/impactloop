@@ -11,6 +11,7 @@ import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/auth_navigation.dart';
 import '../../features/auth/data/models/user.dart';
 import '../../shared/widgets/app_feedback.dart';
+import '../../shared/widgets/user_avatar.dart';
 import 'impact_loop_logo.dart';
 import 'nav_pill_menu.dart';
 
@@ -23,6 +24,8 @@ class EntryNavBar extends ConsumerWidget {
     this.onCreateAccount,
     this.homeRoute = '/',
     this.trailingActions = const [],
+    this.showPhoneAccountMenu = true,
+    this.phoneTitle,
   });
 
   final bool showSignIn;
@@ -31,12 +34,14 @@ class EntryNavBar extends ConsumerWidget {
   final VoidCallback? onCreateAccount;
   final String homeRoute;
   final List<Widget> trailingActions;
+  final bool showPhoneAccountMenu;
+  final String? phoneTitle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final viewportWidth = MediaQuery.sizeOf(context).width;
     final isCompact = viewportWidth < 900;
-    final isPhone = viewportWidth < 640;
+    final isPhone = viewportWidth < 600;
     final useCondensedDesktop = viewportWidth < 1500;
     final settings = ref.watch(appSettingsProvider);
     final authState = ref.watch(authControllerProvider);
@@ -47,6 +52,35 @@ class EntryNavBar extends ConsumerWidget {
         user != null;
     final effectiveShowSignIn = !isAuthenticated && showSignIn;
     final effectiveShowCreateAccount = !isAuthenticated && showCreateAccount;
+
+    if (isPhone) {
+      return Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(
+          AppSpacing.md,
+          AppSpacing.xs,
+          AppSpacing.md,
+          0,
+        ),
+        child: SizedBox(
+          height: 52,
+          child: _PhoneAppBarLayout(
+            showSignIn: effectiveShowSignIn,
+            showCreateAccount: effectiveShowCreateAccount,
+            onSignIn: onSignIn,
+            onCreateAccount: onCreateAccount,
+            homeRoute: homeRoute,
+            settings: settings,
+            user: user,
+            isAuthenticated: isAuthenticated,
+            isAuthLoading: authState.isLoading,
+            ref: ref,
+            showAccountMenu: showPhoneAccountMenu,
+            phoneTitle: phoneTitle,
+          ),
+        ),
+      );
+    }
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = AppThemeColors.of(context);
 
@@ -114,6 +148,80 @@ class EntryNavBar extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PhoneAppBarLayout extends StatelessWidget {
+  const _PhoneAppBarLayout({
+    required this.showSignIn,
+    required this.showCreateAccount,
+    required this.onSignIn,
+    required this.onCreateAccount,
+    required this.homeRoute,
+    required this.settings,
+    required this.user,
+    required this.isAuthenticated,
+    required this.isAuthLoading,
+    required this.ref,
+    required this.showAccountMenu,
+    this.phoneTitle,
+  });
+
+  final bool showSignIn;
+  final bool showCreateAccount;
+  final VoidCallback? onSignIn;
+  final VoidCallback? onCreateAccount;
+  final String homeRoute;
+  final AppSettings settings;
+  final User? user;
+  final bool isAuthenticated;
+  final bool isAuthLoading;
+  final WidgetRef ref;
+  final bool showAccountMenu;
+  final String? phoneTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Row(
+      children: [
+        InkWell(
+          onTap: () => context.go(homeRoute),
+          borderRadius: AppRadius.mdAll,
+          child: const ImpactLoopLogo(compact: true, showWordmark: false),
+        ),
+        if (phoneTitle != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            phoneTitle!,
+            style: AuthDarkTextStyles.label(context).copyWith(
+              color: colors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+        const Spacer(),
+        if (isAuthenticated && user != null && showAccountMenu)
+          _AccountMenu(
+            user: user!,
+            settings: settings,
+            ref: ref,
+            compact: true,
+            isLoggingOut: isAuthLoading,
+          )
+        else if (!isAuthenticated)
+          _GuestMobileMenu(
+            showSignIn: showSignIn,
+            showCreateAccount: showCreateAccount,
+            onSignIn: onSignIn,
+            onCreateAccount: onCreateAccount,
+            settings: settings,
+            ref: ref,
+          ),
+      ],
     );
   }
 }
@@ -454,6 +562,96 @@ class _UtilityPills extends StatelessWidget {
   }
 }
 
+class _GuestMobileMenu extends StatelessWidget {
+  const _GuestMobileMenu({
+    required this.showSignIn,
+    required this.showCreateAccount,
+    required this.onSignIn,
+    required this.onCreateAccount,
+    required this.settings,
+    required this.ref,
+  });
+
+  final bool showSignIn;
+  final bool showCreateAccount;
+  final VoidCallback? onSignIn;
+  final VoidCallback? onCreateAccount;
+  final AppSettings settings;
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return MenuAnchor(
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(colors.surfaceElevated),
+        elevation: const WidgetStatePropertyAll(10),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: AppRadius.lgAll,
+            side: BorderSide(color: colors.borderSubtle),
+          ),
+        ),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        ),
+      ),
+      builder: (context, controller, child) {
+        return IconButton.filledTonal(
+          tooltip: 'Menu',
+          onPressed: () {
+            if (controller.isOpen) {
+              controller.close();
+            } else {
+              controller.open();
+            }
+          },
+          icon: const Icon(Icons.menu_rounded),
+          style: IconButton.styleFrom(
+            backgroundColor: colors.surfaceMuted,
+            foregroundColor: colors.textPrimary,
+            side: BorderSide(color: colors.borderSubtle),
+          ),
+        );
+      },
+      menuChildren: [
+        if (showSignIn)
+          _AccountMenuItem(
+            icon: Icons.login_rounded,
+            label: 'Sign in',
+            onPressed: onSignIn ?? () => context.go('/login'),
+          ),
+        if (showCreateAccount)
+          _AccountMenuItem(
+            icon: Icons.person_add_alt_1_rounded,
+            label: 'Create account',
+            onPressed: onCreateAccount ?? () => context.go('/register'),
+          ),
+        if (showSignIn || showCreateAccount) const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Settings',
+                style: AuthDarkTextStyles.label(context).copyWith(
+                  color: colors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _UtilityPills(settings: settings, ref: ref, compact: true),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _AccountMenu extends StatelessWidget {
   const _AccountMenu({
     required this.user,
@@ -474,12 +672,9 @@ class _AccountMenu extends StatelessWidget {
     return name.isEmpty ? 'Account' : name;
   }
 
-  String get _initial {
-    final name = _displayName.trim();
-    return name.isEmpty ? 'A' : name.characters.first.toUpperCase();
-  }
-
   bool get _isSupplier => user.hasRole('SUPPLIER');
+
+  bool get _isLearner => user.hasRole('LEARNER');
 
   bool get _isAdmin => userHasAdminRole(user);
 
@@ -551,20 +746,15 @@ class _AccountMenu extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: isDark ? 0.16 : 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      _initial,
-                      style: AuthDarkTextStyles.label(
-                        context,
-                      ).copyWith(color: accent, fontWeight: FontWeight.w800),
-                    ),
+                  UserAvatar(
+                    displayName: _displayName,
+                    profileImageUrl: user.profileImageUrl,
+                    radius: 15,
+                    backgroundColor: accent.withValues(alpha: isDark ? 0.16 : 0.1),
+                    foregroundColor: accent,
+                    initialTextStyle: AuthDarkTextStyles.label(
+                      context,
+                    ).copyWith(color: accent, fontWeight: FontWeight.w800),
                   ),
                   if (!compact) ...[
                     const SizedBox(width: AppSpacing.sm),
@@ -607,15 +797,15 @@ class _AccountMenu extends StatelessWidget {
             width: 280,
             child: Row(
               children: [
-                CircleAvatar(
+                UserAvatar(
+                  displayName: _displayName,
+                  profileImageUrl: user.profileImageUrl,
                   radius: 22,
                   backgroundColor: accent.withValues(alpha: 0.14),
-                  child: Text(
-                    _initial,
-                    style: AuthDarkTextStyles.title(
-                      context,
-                    ).copyWith(color: accent, fontSize: 18),
-                  ),
+                  foregroundColor: accent,
+                  initialTextStyle: AuthDarkTextStyles.title(
+                    context,
+                  ).copyWith(color: accent, fontSize: 18),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
@@ -649,10 +839,15 @@ class _AccountMenu extends StatelessWidget {
         const Divider(height: 1),
         _AccountMenuItem(
           icon: Icons.person_outline_rounded,
-          label: _isSupplier ? 'View supplier profile' : 'Profile',
-          onPressed: () =>
-              context.go(_isSupplier ? '/supplier/profile' : '/home'),
+          label: 'Profile',
+          onPressed: () => context.go('/profile'),
         ),
+        if (_isLearner)
+          _AccountMenuItem(
+            icon: Icons.receipt_long_outlined,
+            label: 'My reservations',
+            onPressed: () => context.go(learnerReservationsRoute),
+          ),
         if (_isAdmin)
           _AccountMenuItem(
             icon: Icons.admin_panel_settings_outlined,
@@ -665,11 +860,12 @@ class _AccountMenu extends StatelessWidget {
             label: 'Supplier dashboard',
             onPressed: () => context.go('/supplier'),
           ),
-        _AccountMenuItem(
-          icon: Icons.home_outlined,
-          label: 'Learner home',
-          onPressed: () => context.go('/home'),
-        ),
+        if (!_isSupplier)
+          _AccountMenuItem(
+            icon: Icons.storefront_outlined,
+            label: 'Become a supplier',
+            onPressed: () => context.go(supplierEntryRouteForUser(user)),
+          ),
         const Divider(height: 1),
         Padding(
           padding: const EdgeInsetsDirectional.all(AppSpacing.md),

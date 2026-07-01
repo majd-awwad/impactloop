@@ -28,3 +28,31 @@ export const authMiddleware = (
     next(new AppError('Invalid or expired token', 401, 'UNAUTHENTICATED'));
   }
 };
+
+export const optionalAuthMiddleware = (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): void => {
+  const authorization = req.headers.authorization;
+
+  if (!authorization?.startsWith('Bearer ')) {
+    next();
+    return;
+  }
+
+  const token = authorization.slice('Bearer '.length).trim();
+
+  if (!token) {
+    next();
+    return;
+  }
+
+  try {
+    req.auth = verifyAccessToken(token);
+  } catch {
+    // Ignore invalid tokens on public routes; treat the request as anonymous.
+  }
+
+  next();
+};

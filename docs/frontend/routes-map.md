@@ -21,6 +21,8 @@ From `auth_navigation.dart`:
 | `rootRoute` | `/` |
 | `loginRoute` | `/login` |
 | `registerRoute` | `/register` |
+| `forgotPasswordRoute` | `/forgot-password` |
+| `resetPasswordRoute` | `/reset-password` |
 | `authCheckingRoute` | `/auth/checking` |
 | `supplierPortalRoute` | `/supplier` |
 | `driverPortalRoute` | `/driver/jobs` |
@@ -34,8 +36,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 
 | Level | Paths | Guard behavior |
 |-------|-------|----------------|
-| **public** | Most routes (landing, materials, learning, auth pages, profile completion) | No login required |
-| **authenticated** | `/home`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
+| **public** | Most routes (landing, materials, learning, auth pages, register deprecated fallbacks) | No login required |
+| **authenticated** | `/home`, `/profile`, `/profile/*`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
 | **learner** | `/learner/reservations`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
 | **driver** | `/driver`, `/driver/*` | Requires login + `DRIVER` role; non-drivers redirect to `/home` |
@@ -50,12 +52,12 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 3. **Supplier route without SUPPLIER role** → `/supplier/access-denied`
 4. **Driver route without DRIVER role** → `/home`
 5. **Admin route without ADMIN role** → `/admin/access-denied`
-6. **Authenticated user on login/register** → redirect to `from` query or `postAuthRouteForUser(user)`:
+6. **Authenticated user on login/register/forgot/reset auth pages** → redirect to `from` query or `postAuthRouteForUser(user)`:
    - Admin role → `/admin`
    - Supplier role → `/supplier` (or verification gate when required)
    - Driver role → `/driver/jobs`
    - Otherwise → `/home`
-7. **Profile completion paths** (`/complete-learner-profile`, `/complete-supplier-profile`) → `legacyOnboardingRedirect` validates `registrationDraftProvider` and intent
+7. **Deprecated registration continuation paths** (`/complete-learner-profile`, `/complete-supplier-profile`) → `legacyOnboardingRedirect` sends users to `/register`
 
 ## Route table
 
@@ -64,18 +66,24 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/` | `LandingPage` | public | |
 | `/health` | `HealthPage` | public | Backend health diagnostic |
 | `/home` | `HomePage` → `LearnerHomePage` | authenticated | |
+| `/profile` | `ProfilePage` | authenticated | Account summary hub; mobile bottom Profile tab and avatar menu target this route |
+| `/profile/edit` | `ProfileEditPage` | authenticated | Edit display name, phone, and profile photo |
+| `/profile/learner/edit` | `LearnerProfileEditPage` | authenticated | Edit learner type, skill level, interests, and bio (`LEARNER` role required) |
+| `/profile/security` | `ProfileSecurityPage` | authenticated | Change password via `/api/auth/change-password` |
 | `/learner/reservations` | `LearnerReservationsPage` | learner | Learner reservation status list |
 | `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline, latest driver ping summary, and page-scoped polling map marker when tracking coordinates are allowed |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
-| `/learning` | `LearningHubPage` | public | **Partial** — mock data; backend API exists but not wired |
+| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list; add-draft/AI paths remain mock/disabled |
 | `/learning/add-draft` | `LearningAddDraftPage` | public | **Mock form** — no submit API |
-| `/learning/:id` | `LearningProjectDetailsPage` | public | **Mock data** |
+| `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail |
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default |
 | `/materials/:id` | `MaterialDetailsPage` | public | API-backed default |
 | `/login` | `LoginPage` | public | `_AuthPageGuard` |
-| `/register` | `RegisterPage` | public | `_AuthPageGuard` |
-| `/complete-learner-profile` | `CompleteLearnerProfilePage` | public | Registration draft flow; `?intent=both` supported |
-| `/complete-supplier-profile` | `CompleteSupplierProfilePage` | public | Registration draft flow |
+| `/forgot-password` | `ForgotPasswordPage` | public | `_AuthPageGuard`; optional `email` query pre-fills the form |
+| `/reset-password` | `ResetPasswordPage` | public | `_AuthPageGuard`; reads reset `token` query |
+| `/register` | `RegisterPage` | public | `_AuthPageGuard`; unified onboarding wizard for learner, supplier, and dual-role registration |
+| `/complete-learner-profile` | `DeprecatedOnboardingPage` | public | Deprecated fallback; redirects to `/register` |
+| `/complete-supplier-profile` | `DeprecatedOnboardingPage` | public | Deprecated fallback; redirects to `/register` |
 | `/supplier/access-denied` | `SupplierAccessDeniedPage` | authenticated | |
 | `/driver` | redirect | driver | Redirects to `/driver/jobs` |
 | `/driver/jobs` | `DriverJobsPage` | driver | Driver available jobs + active delivery panel inside `DriverPortalShell` |
@@ -145,7 +153,7 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 
 | File | Status |
 |------|--------|
-| `auth/presentation/pages/choose_role_page.dart` | **Unwired** — legacy; registration uses `UnifiedRegisterForm` with intent chips |
+| `auth/presentation/pages/choose_role_page.dart` | **Unwired** — legacy; registration uses `RegistrationWizard` with intent chips |
 | `supplier_portal/presentation/pages/supplier_coming_soon_page.dart` | **Unwired** |
 
 ## Query parameters
@@ -153,7 +161,9 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 | Route | Params | Purpose |
 |-------|--------|---------|
 | `/login`, `/register`, protected redirects | `from` | Return URL after auth |
-| `/complete-learner-profile` | `intent=both` | Dual-role registration hint |
+| `/forgot-password` | `email` | Optional email prefill from the login form |
+| `/reset-password` | `token` | Password reset token from email link |
+| `/complete-learner-profile`, `/complete-supplier-profile` | any | Deprecated fallback paths; redirected to `/register` |
 | `/supplier/materials/new` | `categoryRequestId`, `priceRuleRequestId` | Resume listing from approved request |
 | `/supplier/reservations` | `tab`, `focus` | Deep link into reservation inbox |
 

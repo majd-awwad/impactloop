@@ -17,6 +17,9 @@ class LoginView extends StatelessWidget {
       brandingVariant: AuthEntryBrandingVariant.login,
       showSignIn: false,
       showCreateAccount: true,
+      formStageTone: AuthFormStageTone.subtle,
+      splitBrandingFlex: 10,
+      splitFormFlex: 9,
       formContent: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -25,7 +28,7 @@ class LoginView extends StatelessWidget {
             subtitle:
                 'Sign in to continue discovering materials and building with less waste.',
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           const AuthFormCard(footer: LoginFooter(), child: LoginForm()),
         ],
       ),

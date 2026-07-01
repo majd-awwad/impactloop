@@ -48,6 +48,22 @@ Used by: `RoleInvitation.status`
 
 ---
 
+## `RoleInvitationSendStatus`
+
+`PENDING`, `SENT`, `FAILED`
+
+Used by: `RoleInvitation.sendStatus`
+
+---
+
+## `TransportationType`
+
+`CAR`, `MOTORCYCLE`, `BICYCLE`, `WALKING`
+
+Used by: `DriverProfile.transportationType`
+
+---
+
 ## `MaterialCondition`
 
 `NEW`, `LIKE_NEW`, `GOOD`, `USED`, `NEEDS_REPAIR`
@@ -69,6 +85,22 @@ Used by: `Material.sourceType`
 `AVAILABLE`, `PENDING_RESERVATION`, `RESERVED`, `REUSED`, `UNAVAILABLE`
 
 Used by: `Material.status`
+
+---
+
+## `MaterialReportReason`
+
+`MISLEADING_INFORMATION`, `WRONG_CATEGORY`, `WRONG_PRICE`, `INAPPROPRIATE`, `ITEM_NOT_AVAILABLE`, `SUSPICIOUS_SUPPLIER`, `OTHER`
+
+Used by: `MaterialReport.reason`
+
+---
+
+## `MaterialReportStatus`
+
+`PENDING`, `RESOLVED`, `REJECTED`
+
+Used by: `MaterialReport.status`
 
 ---
 

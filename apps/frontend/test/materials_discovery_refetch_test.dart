@@ -49,7 +49,7 @@ void main() {
     expect(find.text('Updating results...'), findsOneWidget);
     expect(find.text('Reclaimed Birch Plywood Panels'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
-    expect(find.byType(AppMaterialCard), findsNWidgets(2));
+    expect(find.byType(ImpactMaterialGridCard), findsNWidgets(2));
 
     controllers.dispose();
   });

@@ -5,6 +5,8 @@ import '../../../shared/models/localized_text.dart';
 import '../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../shared/widgets/materials/material_status_badge.dart';
 import '../domain/discovery_material.dart';
+import '../domain/discovery_material_image.dart';
+import '../presentation/discovery_material_display.dart';
 
 class MaterialDiscoveryApiMapper {
   const MaterialDiscoveryApiMapper._();
@@ -35,6 +37,14 @@ class MaterialDiscoveryApiMapper {
     final area = _nullableString(json['area']);
     final deliveryAvailable = json['deliveryAvailable'] == true;
     final pickupAllowed = json['pickupAllowed'] != false;
+    final pickupNotes = _nullableString(json['pickupNotes']);
+    final suggestedUses = _nullableString(json['suggestedUses']);
+    final sourceType = _nullableString(json['sourceType']);
+    final supplierType = _nullableString(json['supplierType']);
+    final supplierVerified = json['supplierVerified'] == true;
+    final isOwnMaterial = json['isOwnMaterial'] == true ? true : null;
+    final canReserve = json['canReserve'] is bool ? json['canReserve'] as bool : null;
+    final reserveBlockReason = _nullableString(json['reserveBlockReason']);
     final ratingSummary = _numberFromDynamic(json['ratingSummary']);
     final viewsCount = _intFromDynamic(json['viewsCount']) ?? 0;
 
@@ -43,15 +53,24 @@ class MaterialDiscoveryApiMapper {
       status,
       availableQuantity: availableQuantity ?? 0,
     );
-    final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
+    final categoryId = _nullableString(categoryJson?['id']);
     final title = _stringOrFallback(
       json['title'],
       fallback: 'Untitled material',
     );
-    final description = _stringOrFallback(
-      json['description'],
-      fallback: 'No description available.',
+    final description = DiscoveryMaterialDisplay.sanitizedDescriptionOrFallback(
+      _stringOrFallback(
+        json['description'],
+        fallback: '',
+      ),
     );
+
+    final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
+    final supplierTypeLabel = DiscoveryMaterial.supplierTypeLabelFor(supplierType);
+    final galleryImages = _mapGalleryImages(json);
+    final imageUrl = galleryImages.isNotEmpty
+        ? galleryImages.first.url
+        : _resolveImageUrl(json);
 
     return DiscoveryMaterial(
       id: _stringOrFallback(json['id'], fallback: ''),
@@ -63,6 +82,9 @@ class MaterialDiscoveryApiMapper {
       title: LocalizedText(en: title, ar: title),
       description: LocalizedText(en: description, ar: description),
       category: categoryLabel,
+      categoryId: categoryId,
+      city: city,
+      area: area,
       conditionLabel: conditionMeta.label,
       conditionTone: conditionMeta.tone,
       statusLabel: statusMeta.label,
@@ -74,18 +96,22 @@ class MaterialDiscoveryApiMapper {
       ),
       priceLabel: _priceLabel(isFree: isFree, price: price),
       locationLabel: _locationLabel(city: city, area: area),
-      availabilityLabel: LocalizedText(
-        en: deliveryAvailable ? 'Delivery available' : 'Pickup only',
-        ar: deliveryAvailable ? 'التوصيل متاح' : 'استلام فقط',
+      availabilityLabel: _availabilityLabel(
+        deliveryAvailable: deliveryAvailable,
+        pickupAllowed: pickupAllowed,
       ),
       deliveryAvailable: deliveryAvailable,
       pickupAllowed: pickupAllowed,
       isFree: isFree,
       supplierName: LocalizedText(en: supplierName, ar: supplierName),
-      supplierSubtitle: LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
+      supplierSubtitle: supplierTypeLabel ??
+          const LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
+      supplierType: supplierType,
+      supplierVerified: supplierVerified,
       heroIconData: _heroIconForCategory(categoryNameEn),
       cardGradient: _gradientForCategory(categoryNameEn),
-      imageUrl: _resolveImageUrl(json),
+      imageUrl: imageUrl,
+      galleryImages: galleryImages,
       ratingLabel: ratingSummary == null
           ? null
           : LocalizedText(
@@ -93,7 +119,31 @@ class MaterialDiscoveryApiMapper {
               ar: _formatCompactNumber(ratingSummary),
             ),
       viewsCount: viewsCount,
+      postedAt: _dateTimeFromDynamic(json['createdAt']),
+      pickupNotes: pickupNotes,
+      suggestedUses: suggestedUses,
+      sourceType: sourceType,
+      isOwnMaterial: isOwnMaterial,
+      canReserve: canReserve,
+      reserveBlockReason: reserveBlockReason,
     );
+  }
+
+  static DateTime? _dateTimeFromDynamic(Object? value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is DateTime) {
+      return value;
+    }
+
+    final normalized = value.toString().trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    return DateTime.tryParse(normalized);
   }
 
   static Map<String, dynamic>? _asMap(Object? value) {
@@ -120,6 +170,58 @@ class MaterialDiscoveryApiMapper {
 
     final normalized = value.toString().trim();
     return normalized.isEmpty ? null : normalized;
+  }
+
+  static List<DiscoveryMaterialImage> _mapGalleryImages(
+    Map<String, dynamic> json,
+  ) {
+    final images = json['images'];
+    if (images is! List) {
+      return const [];
+    }
+
+    final mapped = <DiscoveryMaterialImage>[];
+
+    for (final image in images) {
+      if (image is! Map) {
+        continue;
+      }
+
+      final imageMap = Map<String, dynamic>.from(image);
+      final url = _nullableString(imageMap['url'] ?? imageMap['imageUrl']);
+      if (url == null) {
+        continue;
+      }
+
+      mapped.add(
+        DiscoveryMaterialImage(
+          id: _stringOrFallback(imageMap['id'], fallback: url),
+          url: ApiConfig.resolveMediaUrl(url),
+          isCover: imageMap['isCover'] == true,
+          isPrimary: imageMap['isPrimary'] == true || imageMap['isCover'] == true,
+          sortOrder: _intFromDynamic(imageMap['sortOrder']) ?? mapped.length,
+        ),
+      );
+    }
+
+    if (mapped.isEmpty) {
+      return const [];
+    }
+
+    mapped.sort((left, right) {
+      if (left.isCover != right.isCover) {
+        return left.isCover ? -1 : 1;
+      }
+
+      final sortCompare = left.sortOrder.compareTo(right.sortOrder);
+      if (sortCompare != 0) {
+        return sortCompare;
+      }
+
+      return left.id.compareTo(right.id);
+    });
+
+    return mapped;
   }
 
   static String? _resolveImageUrl(Map<String, dynamic> json) {
@@ -230,6 +332,37 @@ class MaterialDiscoveryApiMapper {
 
     final priceText = _formatCompactNumber(price);
     return LocalizedText(en: 'NIS $priceText', ar: '$priceText شيكل');
+  }
+
+  static LocalizedText _availabilityLabel({
+    required bool deliveryAvailable,
+    required bool pickupAllowed,
+  }) {
+    if (pickupAllowed && deliveryAvailable) {
+      return const LocalizedText(
+        en: 'Pickup and delivery available',
+        ar: 'الاستلام والتوصيل متاحان',
+      );
+    }
+
+    if (deliveryAvailable) {
+      return const LocalizedText(
+        en: 'Delivery available',
+        ar: 'التوصيل متاح',
+      );
+    }
+
+    if (pickupAllowed) {
+      return const LocalizedText(
+        en: 'Pickup only',
+        ar: 'استلام فقط',
+      );
+    }
+
+    return const LocalizedText(
+      en: 'Contact supplier for pickup options',
+      ar: 'تواصل مع المورد لخيارات الاستلام',
+    );
   }
 
   static LocalizedText _locationLabel({

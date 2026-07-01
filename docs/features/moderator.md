@@ -1,74 +1,91 @@
 # Moderator Feature (Gap Doc)
 
-**Gap / stub — not an implementation guide.**
+**Gap / stub - not an implementation guide.**
 
-**Sources inspected:** `apps/backend/src/app.ts`, `apps/backend/src/modules/category-requests/*`, `apps/backend/src/modules/price-rule-requests/*`, `apps/backend/prisma/schema.prisma` (`category_requests`, `price_rule_requests`, `learning_projects`), `apps/frontend/lib/features/` (no `moderator` folder), `docs/01-requirements.md` (§Moderator, §Learning Hub), `docs/05-roadmap.md` (Phase 7), `docs/08-implementation-status.md`
+**Sources inspected:** `apps/backend/src/app.ts`, `apps/backend/src/modules/admin*`, `apps/backend/src/modules/category-requests/*`, `apps/backend/src/modules/price-rule-requests/*`, `apps/backend/src/modules/materials/*`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/features/`, `docs/features/admin.md`, `docs/features/roles-and-capabilities.md`, `docs/08-implementation-status.md`
 
-## Intended purpose (requirements / roadmap — aspirational)
+## Purpose
 
-From [01-requirements.md](01-requirements.md):
+Moderator is intended to preserve content quality without receiving full admin system permissions. This role should eventually review reports, suspicious listings, wrong categories, price issues, material type/category requests, and project submissions.
 
-- Review pending learning projects (approve/reject/request edits).
-- Review reports; hide content per permissions.
-- Cannot manage sensitive roles or system settings (vs Admin).
-
-Roadmap Phase 7: moderator review queue, reports, project approval.
+Moderator is invitation-only. It is not available through public registration.
 
 ## Current code status
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
+| `MODERATOR` stored role | **Implemented** | `UserRole.MODERATOR` and role invitation target |
+| Moderator invitation | **Implemented** | Admin can invite `MODERATOR` |
 | `moderator` backend module | **Not implemented** | No folder under `modules/` |
-| Moderator Flutter feature | **Not implemented** | No `features/moderator` |
-| `MODERATOR` role in invitations | **Backend-only** | Target role on `POST /api/invitations` only |
-| Category request **approval** API | **Not implemented** | Supplier create/list/draft only (`category-requests.routes.ts`) |
-| Price rule request **approval** API | **Not implemented** | Supplier create + draft read; AI suggestion on create |
+| Moderator Flutter feature | **Not implemented** | No `features/moderator` and no `/moderator` route |
+| Moderator post-login experience | **Not implemented** | `postAuthRouteForUser` sends moderator-only users to `/home` |
+| Category request approval | **Implemented for ADMIN** | `/api/admin/approvals/category-requests*` |
+| Price request approval | **Implemented for ADMIN** | `/api/admin/approvals/price-requests*` |
+| Material reports review | **Implemented for ADMIN** | `/api/admin/material-reports*` |
 | Learning project moderation API | **Not implemented** | Public read `PUBLISHED` only; no submit/review endpoints |
-| Content reports (user flags) | **Not implemented** | No `Report` model/table exists in the current schema. Review moderation is not implemented; current schema has `Review` only if applicable. |
 
-**Overall:** **Not implemented** as portal; supplier-facing **request** workflows exist without moderator approve endpoints in code.
+**Overall:** Moderator exists as a role and invitation target, but there is no moderator portal or moderator-specific API. Some planned moderation work is currently handled by admin routes.
 
-## Existing related files
+## Current related implementation
 
-### Backend (supplier-side requests only)
+| Area | Current owner |
+|------|---------------|
+| Material report submission | Authenticated users via `POST /api/materials/:id/reports` |
+| Material report review | Admin material reports UI/API |
+| Hide/restore material | Admin materials UI/API |
+| Category request approval | Admin approvals UI/API |
+| Price request approval | Admin approvals UI/API |
+| Supplier verification review | Admin supplier verification UI/API |
+| Project publishing/review | Not implemented |
 
-| Path | Role |
-|------|------|
-| `modules/category-requests/*` | Supplier `POST/GET` category requests |
-| `modules/price-rule-requests/*` | Authenticated create; supplier draft `GET` |
-| `modules/learning-projects/*` | Public read published projects |
+## Planned moderator scope
 
-### Database (pending review data may exist from seeds)
+From the role capability plan, moderator should eventually be able to:
 
-| Table | Role |
-|-------|------|
-| `category_requests` | Status includes approval fields in schema |
-| `price_rule_requests` | AI + review status columns |
-| `learning_projects` | `status` enum — publish workflow **not implemented** in API |
+- Review reported materials.
+- Review suspicious listings.
+- Review wrong categories.
+- Review inappropriate images/descriptions.
+- Review project reports when project reports exist.
+- Review price issues.
+- Review material type/category requests if delegated from admin.
+- Hide material or reject content when policy allows.
+- Add moderation reason.
+- Work from a moderation queue.
+
+## Boundaries vs admin
+
+Moderator should not manage:
+
+- Admin invitations.
+- Sensitive role assignment.
+- Platform settings.
+- Price/category system policy unless explicitly delegated.
+- User suspension/reactivation unless the team makes a separate decision.
+
+Admin remains the current implemented owner for approvals and material report review.
 
 ## What is missing
 
-- Moderator-authenticated routes (`requireRoles('MODERATOR')` or ADMIN delegate).
-- Review queues UI (category, price rule, projects; user reports **not implemented** — no `Report` table in schema).
-- Approve/reject actions updating request/project status.
-- Notifications to suppliers on approval outcomes.
-- Separation of moderator vs admin permissions in code.
-
-## Risks
-
-- Suppliers can submit category/price requests with **no in-app approval path** — blocked on paid “Other” category server-side only.
-- Learning hub draft page is mock — no real submit queue.
-- Moderator role assignable via invitation API but no post-login experience.
+- `/moderator` route and Flutter feature.
+- Moderator-authenticated backend routes.
+- Moderator queue API and UI.
+- Clear permission matrix for moderator vs admin actions.
+- Project submission/review workflow.
+- Notifications to suppliers/learners after moderator actions.
 
 ## Questions before implementation
 
-- Shared review module vs per-domain approve endpoints?
-- Can ADMIN act as moderator for all queues?
-- How are requests marked `APPROVED` today (seed/manual DB)?
-- See [09-open-questions.md](../09-open-questions.md) § Admin and moderator.
+- Should moderator share admin approval endpoints with `requireRoles('ADMIN', 'MODERATOR')`, or use a separate `moderator` module?
+- Which queues are safe for moderator in MVP: material reports only, category/price approvals, or project review too?
+- Can ADMIN act as moderator for every queue permanently, or only until moderator portal is built?
+- What audit trail is required for moderator actions?
+
+See [09-open-questions.md](../09-open-questions.md) for the current open-question index.
 
 ## Related docs
 
+- [Roles and capabilities](roles-and-capabilities.md)
 - [Admin](admin.md)
 - [Materials listing](materials-listing.md)
 - [Learning hub](learning-hub.md)

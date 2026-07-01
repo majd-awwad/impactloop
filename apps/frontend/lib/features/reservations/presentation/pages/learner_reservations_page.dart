@@ -5,22 +5,28 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/app_theme_colors.dart';
+import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
-import '../../../../shared/widgets/app_text_area.dart';
-import '../../../../shared/widgets/app_text_field.dart';
-import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
-import '../../../deliveries/application/delivery_request_controller.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../deliveries/data/models/learner_delivery.dart';
-import '../../../deliveries/data/models/request_delivery_request.dart';
 import '../../application/my_reservations_provider.dart';
 import '../../application/reservation_cancel_controller.dart';
 import '../../data/models/learner_reservation.dart';
+import '../learner_reservation_ui_helpers.dart';
+
+const _learnerReservationsMaxWidth = 920.0;
+const _cancelDialogMaxWidth = 440.0;
+const _desktopReservationActionsWidth = 140.0;
+const _desktopCardPadding = 18.0;
+const _reservationMediaSizeDesktop = 96.0;
+const _reservationMediaSizeMobile = 72.0;
+const _desktopCardMinHeight = 132.0;
 
 class LearnerReservationsPage extends ConsumerWidget {
   const LearnerReservationsPage({super.key});
@@ -44,15 +50,12 @@ class LearnerReservationsPage extends ConsumerWidget {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsetsDirectional.fromSTEB(
-                  AppSpacing.md,
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                  AppSpacing.xl,
-                ),
+                padding: appMobileAwareScrollPadding(context),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1120),
+                    constraints: const BoxConstraints(
+                      maxWidth: _learnerReservationsMaxWidth,
+                    ),
                     child: !isLearner
                         ? const _StatePanel(
                             icon: Icons.lock_outline,
@@ -72,11 +75,20 @@ class LearnerReservationsPage extends ConsumerWidget {
   }
 }
 
-class _ReservationsContent extends ConsumerWidget {
+class _ReservationsContent extends ConsumerStatefulWidget {
   const _ReservationsContent();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ReservationsContent> createState() =>
+      _ReservationsContentState();
+}
+
+class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
+  LearnerReservationStatusFilter _selectedFilter =
+      LearnerReservationStatusFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
     final reservationsAsync = ref.watch(myReservationsProvider);
     final deliveriesAsync = ref.watch(learnerDeliveriesProvider);
     final deliveriesByReservationId = deliveriesAsync.maybeWhen(
@@ -89,7 +101,21 @@ class _ReservationsContent extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _PageHeader(),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.md),
+        reservationsAsync.maybeWhen(
+          data: (reservations) {
+            if (reservations.isEmpty) {
+              return const SizedBox.shrink();
+            }
+
+            return _StatusFilterChips(
+              selected: _selectedFilter,
+              onSelected: (filter) => setState(() => _selectedFilter = filter),
+            );
+          },
+          orElse: () => const SizedBox.shrink(),
+        ),
+        const SizedBox(height: AppSpacing.md),
         if (deliveryStateUnavailable) ...[
           _DeliveryLoadWarning(
             onRetry: () => ref.invalidate(learnerDeliveriesProvider),
@@ -121,15 +147,34 @@ class _ReservationsContent extends ConsumerWidget {
               );
             }
 
+            final filtered = reservations
+                .where(
+                  (reservation) => reservationMatchesStatusFilter(
+                    reservation,
+                    _selectedFilter,
+                  ),
+                )
+                .toList(growable: false);
+
+            if (filtered.isEmpty) {
+              return _StatePanel(
+                icon: Icons.filter_list_off_outlined,
+                title: 'No matching reservations',
+                subtitle:
+                    'Try another filter or browse materials to start a new request.',
+                actionLabel: 'Browse materials',
+                onAction: () => context.go('/materials'),
+              );
+            }
+
             return Column(
-              children: reservations
+              children: filtered
                   .map(
                     (reservation) => Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.md),
                       child: _ReservationCard(
                         reservation: reservation,
                         delivery: deliveriesByReservationId[reservation.id],
-                        deliveryStateUnavailable: deliveryStateUnavailable,
                       ),
                     ),
                   )
@@ -148,38 +193,88 @@ class _PageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final compact = MediaQuery.sizeOf(context).width < 720;
 
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        color: palette.panelSurface,
-        borderRadius: AppRadius.xlAll,
-        border: Border.all(color: palette.borderStrong),
-        boxShadow: [
-          BoxShadow(
-            color: palette.cardShadow,
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'My Reservations',
-            style: AppTextStyles.display(
-              context,
-            ).copyWith(color: palette.textPrimary),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Track supplier responses and pickup windows for materials you requested.',
-            style: AppTextStyles.subtitle(
-              context,
-            ).copyWith(color: palette.textSecondary),
-          ),
-        ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'My Reservations',
+          style: (compact
+                  ? AppTextStyles.title(context)
+                  : AppTextStyles.display(context))
+              .copyWith(color: palette.textPrimary),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Track requests, pickup windows, and delivery updates.',
+          style: AppTextStyles.subtitle(
+            context,
+          ).copyWith(color: palette.textSecondary),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusFilterChips extends StatelessWidget {
+  const _StatusFilterChips({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final LearnerReservationStatusFilter selected;
+  final ValueChanged<LearnerReservationStatusFilter> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final colors = AppThemeColors.of(context);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: LearnerReservationStatusFilter.values.map((filter) {
+          final isSelected = filter == selected;
+
+          return Padding(
+            padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => onSelected(filter),
+                borderRadius: AppRadius.pillAll,
+                child: Ink(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? colors.primarySoft
+                        : palette.panelSurface,
+                    borderRadius: AppRadius.pillAll,
+                    border: Border.all(
+                      color: isSelected
+                          ? colors.primary.withValues(alpha: 0.35)
+                          : palette.borderSubtle,
+                    ),
+                  ),
+                  child: Text(
+                    filter.label,
+                    style: AppTextStyles.label(context).copyWith(
+                      color: isSelected
+                          ? colors.primary
+                          : palette.textSecondary,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(growable: false),
       ),
     );
   }
@@ -189,303 +284,636 @@ class _ReservationCard extends StatelessWidget {
   const _ReservationCard({
     required this.reservation,
     required this.delivery,
-    required this.deliveryStateUnavailable,
   });
 
   final LearnerReservation reservation;
   final LearnerDelivery? delivery;
-  final bool deliveryStateUnavailable;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final statusStyle = LearnerReservationStatusStyle.forStatus(
+      context,
+      reservation.status,
+    );
+    final compact = MediaQuery.sizeOf(context).width < 720;
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: palette.borderStrong),
+        border: Border.all(color: palette.borderSubtle),
+        boxShadow: [
+          BoxShadow(
+            color: palette.textPrimary.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 720;
-          final media = _MaterialPreview(reservation: reservation);
-          final details = _ReservationDetails(
-            reservation: reservation,
-            delivery: delivery,
-            deliveryStateUnavailable: deliveryStateUnavailable,
-          );
-
-          if (compact) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                media,
-                const SizedBox(height: AppSpacing.md),
-                details,
-              ],
-            );
-          }
-
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(width: 176, child: media),
-              const SizedBox(width: AppSpacing.lg),
-              Expanded(child: details),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _MaterialPreview extends StatelessWidget {
-  const _MaterialPreview({required this.reservation});
-
-  final LearnerReservation reservation;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final imageUrl = reservation.material.imageUrl;
-
-    return AspectRatio(
-      aspectRatio: 16 / 10,
-      child: ClipRRect(
-        borderRadius: AppRadius.mdAll,
-        child: DecoratedBox(
-          decoration: BoxDecoration(color: palette.cardSurfaceAlt),
-          child: imageUrl == null
-              ? Icon(
-                  Icons.inventory_2_outlined,
-                  color: palette.mint,
-                  size: 40,
-                )
-              : Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
-                    Icons.inventory_2_outlined,
-                    color: palette.mint,
-                    size: 40,
-                  ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 4,
+              color: statusStyle.accentColor,
+            ),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsetsDirectional.all(
+                  compact ? AppSpacing.md : _desktopCardPadding,
                 ),
+                child: compact
+                    ? _ReservationCardMobileLayout(
+                        reservation: reservation,
+                        delivery: delivery,
+                        statusStyle: statusStyle,
+                      )
+                    : _ReservationCardDesktopLayout(
+                        reservation: reservation,
+                        delivery: delivery,
+                        statusStyle: statusStyle,
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _ReservationDetails extends ConsumerWidget {
-  const _ReservationDetails({
+class _ReservationCardDesktopLayout extends StatelessWidget {
+  const _ReservationCardDesktopLayout({
     required this.reservation,
     required this.delivery,
-    required this.deliveryStateUnavailable,
+    required this.statusStyle,
   });
 
   final LearnerReservation reservation;
   final LearnerDelivery? delivery;
-  final bool deliveryStateUnavailable;
+  final LearnerReservationStatusStyle statusStyle;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final palette = MaterialsUiPalette.of(context);
-    final pickupText = _pickupText(reservation);
-    final secondaryText = _secondaryText(reservation);
-    final requestState = ref.watch(deliveryRequestControllerProvider);
-    final cancelState = ref.watch(reservationCancelControllerProvider);
-    final cancellingId = ref.watch(cancellingReservationIdProvider);
-    final activeDelivery = delivery?.isActive == true ? delivery : null;
-    final isCancelling = cancellingId == reservation.id;
+  Widget build(BuildContext context) {
+    final showPickupInfo = shouldShowAcceptedPickupInfo(reservation);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            MaterialStatusBadge(
-              label: _statusLabel(reservation.status),
-              tone: _statusTone(reservation.status),
-            ),
-            if (delivery != null)
-              MaterialStatusBadge(
-                label: _deliveryStatusLabel(delivery!.status),
-                tone: _deliveryStatusTone(delivery!.status),
-              ),
-            Text(
-              _formatDate(reservation.createdAt),
-              style: AppTextStyles.label(
-                context,
-              ).copyWith(color: palette.textMuted),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          reservation.material.title,
-          style: AppTextStyles.title(
-            context,
-          ).copyWith(color: palette.textPrimary),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          '${reservation.material.materialType} • ${reservation.material.locationLabel}',
-          style: AppTextStyles.body(
-            context,
-          ).copyWith(color: palette.textSecondary),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          'Supplier: ${reservation.supplier.displayName}',
-          style: AppTextStyles.body(
-            context,
-          ).copyWith(color: palette.textSecondary),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          'Requested: ${_formatQuantity(reservation.quantityRequested)} ${reservation.material.unit}',
-          style: AppTextStyles.body(
-            context,
-          ).copyWith(color: palette.textPrimary),
-        ),
-        if (pickupText != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            pickupText,
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: palette.textPrimary),
-          ),
-        ],
-        if (secondaryText != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            secondaryText,
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: palette.textSecondary),
-          ),
-        ],
-        if (reservation.shouldShowSelfPickupAddress(hasDeliveryRecord: delivery != null)) ...[
-          const SizedBox(height: AppSpacing.md),
-          _PickupAddressSection(location: reservation.pickupLocationFull!),
-        ],
-        if (reservation.isAccepted) ...[
-          const SizedBox(height: AppSpacing.md),
-          _AcceptedDeliveryPanel(
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: _desktopCardMinHeight),
+      child: Row(
+        crossAxisAlignment:
+            showPickupInfo ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        children: [
+          _ReservationMediaTile(
             reservation: reservation,
-            activeDelivery: activeDelivery,
-            deliveryStateUnavailable: deliveryStateUnavailable,
-            isSubmitting: requestState.isLoading,
-            onRequestDelivery: () => _requestDelivery(context, ref),
+            isMobile: false,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: _ReservationCardSummary(
+              reservation: reservation,
+              delivery: delivery,
+              statusStyle: statusStyle,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          _ReservationCardActions(
+            reservation: reservation,
+            delivery: delivery,
+            desktopColumn: true,
+            alignTop: showPickupInfo,
           ),
         ],
-        const SizedBox(height: AppSpacing.md),
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
+      ),
+    );
+  }
+}
+
+class _ReservationCardMobileLayout extends StatelessWidget {
+  const _ReservationCardMobileLayout({
+    required this.reservation,
+    required this.delivery,
+    required this.statusStyle,
+  });
+
+  final LearnerReservation reservation;
+  final LearnerDelivery? delivery;
+  final LearnerReservationStatusStyle statusStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ReservationStatusRow(
+          reservation: reservation,
+          delivery: delivery,
+          statusStyle: statusStyle,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (reservation.isPending)
-              TextButton.icon(
-                onPressed: isCancelling || cancelState.isLoading
-                    ? null
-                    : () => _confirmCancel(context, ref),
-                icon: isCancelling
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.cancel_outlined),
-                label: const Text('Cancel request'),
-              ),
-            TextButton.icon(
-              onPressed: () =>
-                  context.go('/materials/${reservation.material.id}'),
-              icon: const Icon(Icons.open_in_new_rounded),
-              label: const Text('View material'),
+            _ReservationMediaTile(
+              reservation: reservation,
+              isMobile: true,
             ),
-            if (delivery != null)
-              TextButton.icon(
-                onPressed: () => context.go('/learner/deliveries/${delivery!.id}'),
-                icon: const Icon(Icons.local_shipping_outlined),
-                label: const Text('View delivery'),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _ReservationCardSummaryLines(
+                reservation: reservation,
+                delivery: delivery,
               ),
+            ),
           ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _ReservationCardActions(
+          reservation: reservation,
+          delivery: delivery,
         ),
       ],
     );
   }
+}
 
-  Future<void> _requestDelivery(BuildContext context, WidgetRef ref) async {
-    final request = await showDialog<RequestDeliveryRequest>(
-      context: context,
-      builder: (context) => _RequestDeliveryDialog(reservation: reservation),
+class _ReservationMediaTile extends StatefulWidget {
+  const _ReservationMediaTile({
+    required this.reservation,
+    required this.isMobile,
+  });
+
+  final LearnerReservation reservation;
+  final bool isMobile;
+
+  @override
+  State<_ReservationMediaTile> createState() => _ReservationMediaTileState();
+}
+
+class _ReservationMediaTileState extends State<_ReservationMediaTile> {
+  bool _imageFailed = false;
+
+  @override
+  void didUpdateWidget(covariant _ReservationMediaTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.reservation.material.imageUrl !=
+        widget.reservation.material.imageUrl) {
+      _imageFailed = false;
+    }
+  }
+
+  bool get _hasImage {
+    final url = widget.reservation.material.imageUrl?.trim();
+    return url != null && url.isNotEmpty && !_imageFailed;
+  }
+
+  double get _size =>
+      widget.isMobile ? _reservationMediaSizeMobile : _reservationMediaSizeDesktop;
+
+  Widget _placeholderTile(AppThemeColors colors) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.successSoft.withValues(alpha: 0.55),
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Icon(
+        Icons.inventory_2_outlined,
+        size: widget.isMobile ? 28 : 32,
+        color: colors.success.withValues(alpha: 0.55),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return SizedBox(
+      width: _size,
+      height: _size,
+      child: ClipRRect(
+        borderRadius: AppRadius.mdAll,
+        child: _hasImage
+            ? Image.network(
+                widget.reservation.material.imageUrl!.trim(),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && !_imageFailed) {
+                      setState(() => _imageFailed = true);
+                    }
+                  });
+                  return _placeholderTile(colors);
+                },
+              )
+            : _placeholderTile(colors),
+      ),
+    );
+  }
+}
+
+class _ReservationStatusChip extends StatelessWidget {
+  const _ReservationStatusChip({
+    required this.label,
+    required this.background,
+    required this.foreground,
+    required this.border,
+  });
+
+  final String label;
+  final Color background;
+  final Color foreground;
+  final Color border;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 10,
+        vertical: 5,
+      ),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: border),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.label(context).copyWith(
+          color: foreground,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+class _ReservationStatusRow extends StatelessWidget {
+  const _ReservationStatusRow({
+    required this.reservation,
+    required this.delivery,
+    required this.statusStyle,
+  });
+
+  final LearnerReservation reservation;
+  final LearnerDelivery? delivery;
+  final LearnerReservationStatusStyle statusStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final deliveryStyle = delivery == null
+        ? null
+        : _deliveryStatusStyle(context, delivery!.status);
+
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        _ReservationStatusChip(
+          label: reservationStatusLabel(reservation.status),
+          background: statusStyle.chipBackground,
+          foreground: statusStyle.chipForeground,
+          border: statusStyle.chipBorder,
+        ),
+        if (deliveryStyle != null)
+          _ReservationStatusChip(
+            label: _deliveryStatusLabel(delivery!.status),
+            background: deliveryStyle.background,
+            foreground: deliveryStyle.foreground,
+            border: deliveryStyle.border,
+          ),
+        Text(
+          formatReservationDate(reservation.createdAt),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textMuted, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
+}
+
+class _DeliveryStatusChipStyle {
+  const _DeliveryStatusChipStyle({
+    required this.background,
+    required this.foreground,
+    required this.border,
+  });
+
+  final Color background;
+  final Color foreground;
+  final Color border;
+}
+
+_DeliveryStatusChipStyle _deliveryStatusStyle(BuildContext context, String status) {
+  final colors = AppThemeColors.of(context);
+
+  switch (status) {
+    case 'DELIVERED':
+      return _DeliveryStatusChipStyle(
+        background: colors.successSoft,
+        foreground: colors.success,
+        border: colors.success.withValues(alpha: 0.35),
+      );
+    case 'CANCELLED':
+    case 'FAILED_PICKUP':
+    case 'FAILED_DELIVERY':
+      return _DeliveryStatusChipStyle(
+        background: colors.dangerSoft,
+        foreground: colors.danger,
+        border: colors.danger.withValues(alpha: 0.35),
+      );
+    default:
+      return _DeliveryStatusChipStyle(
+        background: colors.warningSoft,
+        foreground: colors.warningText,
+        border: colors.warningBorder,
+      );
+  }
+}
+
+class _AcceptedPickupInfoBlock extends StatelessWidget {
+  const _AcceptedPickupInfoBlock({
+    required this.reservation,
+    required this.hasDeliveryRecord,
+  });
+
+  final LearnerReservation reservation;
+  final bool hasDeliveryRecord;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final pickupWindow = formatPickupWindow(reservation);
+    final pickupAddress = formatPickupAddress(reservation);
+    final deliveryAvailability = formatDeliveryAvailability(
+      reservation,
+      hasDeliveryRecord: hasDeliveryRecord,
     );
 
-    if (request == null || !context.mounted) {
-      return;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: palette.inputSurface,
+        borderRadius: AppRadius.smAll,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (pickupWindow != null)
+            _AcceptedPickupInfoRow(
+              icon: Icons.schedule_outlined,
+              label: pickupWindow,
+            ),
+          if (pickupAddress != null) ...[
+            if (pickupWindow != null) const SizedBox(height: AppSpacing.xs),
+            _AcceptedPickupInfoRow(
+              icon: Icons.location_on_outlined,
+              label: 'Pickup address: $pickupAddress',
+            ),
+          ],
+          if (pickupWindow != null || pickupAddress != null)
+            const SizedBox(height: AppSpacing.xs),
+          _AcceptedPickupInfoRow(
+            icon: Icons.local_shipping_outlined,
+            label: deliveryAvailability,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AcceptedPickupInfoRow extends StatelessWidget {
+  const _AcceptedPickupInfoRow({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 15, color: palette.textMuted),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReservationCardSummary extends StatelessWidget {
+  const _ReservationCardSummary({
+    required this.reservation,
+    required this.delivery,
+    required this.statusStyle,
+  });
+
+  final LearnerReservation reservation;
+  final LearnerDelivery? delivery;
+  final LearnerReservationStatusStyle statusStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ReservationStatusRow(
+          reservation: reservation,
+          delivery: delivery,
+          statusStyle: statusStyle,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _ReservationCardSummaryLines(
+          reservation: reservation,
+          delivery: delivery,
+        ),
+      ],
+    );
+  }
+}
+
+class _ReservationCardSummaryLines extends StatelessWidget {
+  const _ReservationCardSummaryLines({
+    required this.reservation,
+    required this.delivery,
+  });
+
+  final LearnerReservation reservation;
+  final LearnerDelivery? delivery;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final statusMessage = reservationStatusMessage(reservation);
+    final showPickupInfo = shouldShowAcceptedPickupInfo(reservation);
+    final compact = MediaQuery.sizeOf(context).width < 720;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          reservation.material.title,
+          style: AppTextStyles.body(context).copyWith(
+            color: palette.textPrimary,
+            fontWeight: FontWeight.w600,
+            fontSize: compact ? 16 : 17,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          '${reservation.material.materialType} · ${reservation.material.locationLabel}',
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textMuted, fontWeight: FontWeight.w400),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          formatSupplierQuantityLine(reservation),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w400),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (statusMessage != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            statusMessage,
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w400),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+        if (showPickupInfo) ...[
+          const SizedBox(height: 12),
+          _AcceptedPickupInfoBlock(
+            reservation: reservation,
+            hasDeliveryRecord: delivery != null,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ReservationCardActions extends ConsumerWidget {
+  const _ReservationCardActions({
+    required this.reservation,
+    required this.delivery,
+    this.desktopColumn = false,
+    this.alignTop = false,
+  });
+
+  final LearnerReservation reservation;
+  final LearnerDelivery? delivery;
+  final bool desktopColumn;
+  final bool alignTop;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cancelState = ref.watch(reservationCancelControllerProvider);
+    final cancellingId = ref.watch(cancellingReservationIdProvider);
+    final isCancelling = cancellingId == reservation.id;
+
+    final viewMaterial = _ReservationActionButton(
+      label: 'View material',
+      onPressed: () => context.go('/materials/${reservation.material.id}'),
+      desktopRail: desktopColumn,
+    );
+
+    final viewDelivery = delivery != null
+        ? _ReservationActionButton(
+            label: 'View delivery',
+            onPressed: () => context.go('/learner/deliveries/${delivery!.id}'),
+            desktopRail: desktopColumn,
+          )
+        : null;
+
+    final cancelRequest = reservation.isPending
+        ? _ReservationActionButton(
+            label: 'Cancel request',
+            onPressed: isCancelling || cancelState.isLoading
+                ? null
+                : () => _confirmCancel(context, ref),
+            desktopRail: desktopColumn,
+            loading: isCancelling,
+            danger: true,
+          )
+        : null;
+
+    if (desktopColumn) {
+      final rail = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          viewMaterial,
+          if (viewDelivery != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            viewDelivery,
+          ],
+          if (cancelRequest != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            cancelRequest,
+          ],
+        ],
+      );
+
+      return SizedBox(
+        width: _desktopReservationActionsWidth,
+        child: alignTop
+            ? rail
+            : Align(alignment: Alignment.center, child: rail),
+      );
     }
 
-    try {
-      final delivery = await ref
-          .read(deliveryRequestControllerProvider.notifier)
-          .requestDelivery(reservationId: reservation.id, request: request);
-
-      ref.invalidate(myReservationsProvider);
-      ref.invalidate(learnerDeliveriesProvider);
-      ref.invalidate(learnerDeliveryProvider(delivery.id));
-
-      if (!context.mounted) {
-        return;
-      }
-
-      showInfoSnackBar(context, 'Delivery requested. Waiting for a driver.');
-    } on ApiException catch (error) {
-      ref.invalidate(myReservationsProvider);
-      ref.invalidate(learnerDeliveriesProvider);
-
-      if (!context.mounted) {
-        return;
-      }
-
-      final message = error.statusCode == 409
-          ? 'Delivery is no longer available for this reservation. Refreshed your reservations.'
-          : error.displayMessage;
-      showInfoSnackBar(context, message);
-    } catch (error) {
-      if (!context.mounted) {
-        return;
-      }
-
-      showErrorSnackBar(context, error);
-    }
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: [
+        viewMaterial,
+        ?viewDelivery,
+        ?cancelRequest,
+      ],
+    );
   }
 
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel reservation?'),
-        content: const Text(
-          'This will release the requested quantity back to the listing.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep request'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Cancel request'),
-          ),
-        ],
+      builder: (dialogContext) => _CancelReservationDialog(
+        reservation: reservation,
+        onKeep: () => Navigator.of(dialogContext).pop(false),
+        onCancel: () => Navigator.of(dialogContext).pop(true),
       ),
     );
 
@@ -528,331 +956,307 @@ class _ReservationDetails extends ConsumerWidget {
   }
 }
 
-class _PickupAddressSection extends StatelessWidget {
-  const _PickupAddressSection({required this.location});
-
-  final LearnerReservationPickupLocation location;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.cardSurfaceAlt,
-        borderRadius: AppRadius.mdAll,
-        border: Border.all(color: palette.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.place_outlined, color: palette.mint),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  'Pickup address',
-                  style: AppTextStyles.label(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            location.formattedAddress,
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: palette.textSecondary),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AcceptedDeliveryPanel extends StatelessWidget {
-  const _AcceptedDeliveryPanel({
-    required this.reservation,
-    required this.activeDelivery,
-    required this.deliveryStateUnavailable,
-    required this.isSubmitting,
-    required this.onRequestDelivery,
+class _ReservationActionButton extends StatelessWidget {
+  const _ReservationActionButton({
+    required this.label,
+    required this.onPressed,
+    this.desktopRail = false,
+    this.loading = false,
+    this.danger = false,
   });
 
-  final LearnerReservation reservation;
-  final LearnerDelivery? activeDelivery;
-  final bool deliveryStateUnavailable;
-  final bool isSubmitting;
-  final VoidCallback onRequestDelivery;
+  final String label;
+  final VoidCallback? onPressed;
+  final bool desktopRail;
+  final bool loading;
+  final bool danger;
 
   @override
   Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
+    final colors = AppThemeColors.of(context);
 
-    if (activeDelivery != null) {
-      return _InlineInfoPanel(
-        icon: Icons.local_shipping_outlined,
-        title: _deliveryStatusLabel(activeDelivery!.status),
-        body: _deliveryStatusDescription(activeDelivery!),
-        action: TextButton.icon(
-          onPressed: () =>
-              context.go('/learner/deliveries/${activeDelivery!.id}'),
-          icon: const Icon(Icons.route_outlined),
-          label: const Text('Open delivery status'),
-        ),
-      );
-    }
-
-    if (!reservation.material.deliveryAllowed) {
-      return const _InlineInfoPanel(
-        icon: Icons.storefront_outlined,
-        title: 'Pickup only',
-        body:
-            'This material is not enabled for internal delivery. Use the pickup window and supplier note above.',
-      );
-    }
-
-    if (deliveryStateUnavailable) {
-      return const _InlineInfoPanel(
-        icon: Icons.sync_problem_outlined,
-        title: 'Delivery status unavailable',
-        body:
-            'Refresh delivery status before requesting delivery for this reservation.',
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.cardSurfaceAlt,
-        borderRadius: AppRadius.mdAll,
-        border: Border.all(color: palette.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.local_shipping_outlined, color: palette.mint),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  'Internal delivery available',
-                  style: AppTextStyles.label(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                ),
+    if (desktopRail) {
+      if (danger) {
+        return SizedBox(
+          height: 34,
+          child: TextButton(
+            onPressed: onPressed,
+            style: TextButton.styleFrom(
+              foregroundColor: colors.danger,
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Share a clear dropoff address and the internal team will assign a driver.',
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: palette.textSecondary),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          FilledButton.icon(
-            onPressed: isSubmitting ? null : onRequestDelivery,
-            icon: isSubmitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            child: loading
+                ? SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colors.danger,
+                    ),
                   )
-                : const Icon(Icons.add_location_alt_outlined),
-            label: Text(isSubmitting ? 'Requesting...' : 'Request delivery'),
+                : Text(label),
           ),
-        ],
-      ),
-    );
-  }
-}
+        );
+      }
 
-class _InlineInfoPanel extends StatelessWidget {
-  const _InlineInfoPanel({
-    required this.icon,
-    required this.title,
-    required this.body,
-    this.action,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.cardSurfaceAlt,
-        borderRadius: AppRadius.mdAll,
-        border: Border.all(color: palette.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: palette.mint),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  title,
-                  style: AppTextStyles.label(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            body,
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: palette.textSecondary),
-          ),
-          if (action != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            action!,
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _RequestDeliveryDialog extends StatefulWidget {
-  const _RequestDeliveryDialog({required this.reservation});
-
-  final LearnerReservation reservation;
-
-  @override
-  State<_RequestDeliveryDialog> createState() => _RequestDeliveryDialogState();
-}
-
-class _RequestDeliveryDialogState extends State<_RequestDeliveryDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _countryController = TextEditingController(text: 'Palestine');
-  final _cityController = TextEditingController();
-  final _areaController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _noteController = TextEditingController();
-
-  @override
-  void dispose() {
-    _countryController.dispose();
-    _cityController.dispose();
-    _areaController.dispose();
-    _addressController.dispose();
-    _noteController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Request delivery'),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.reservation.material.title,
-                  style: AppTextStyles.body(context),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                AppTextField(
-                  controller: _countryController,
-                  label: 'Country',
-                  textInputAction: TextInputAction.next,
-                  validator: _required,
-                ),
-                const AppFieldGap(),
-                AppTextField(
-                  controller: _cityController,
-                  label: 'City',
-                  hint: 'Ramallah',
-                  textInputAction: TextInputAction.next,
-                  validator: _required,
-                ),
-                const AppFieldGap(),
-                AppTextField(
-                  controller: _areaController,
-                  label: 'Area',
-                  hint: 'Neighborhood, campus, or landmark',
-                  textInputAction: TextInputAction.next,
-                ),
-                const AppFieldGap(),
-                AppTextArea(
-                  controller: _addressController,
-                  label: 'Dropoff details',
-                  hint: 'Street, building, floor, entrance, or meeting point',
-                  validator: _required,
-                  minLines: 3,
-                  maxLines: 4,
-                ),
-                const AppFieldGap(),
-                AppTextArea(
-                  controller: _noteController,
-                  label: 'Note for delivery team',
-                  hint: 'Optional contact or access instructions',
-                  minLines: 2,
-                  maxLines: 3,
-                ),
-              ],
+      return SizedBox(
+        height: 36,
+        width: double.infinity,
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: colors.success,
+            side: BorderSide(color: colors.success.withValues(alpha: 0.45)),
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
+            textStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
             ),
           ),
+          child: Text(label),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton.icon(
-          onPressed: _submit,
-          icon: const Icon(Icons.local_shipping_outlined),
-          label: const Text('Submit request'),
-        ),
-      ],
-    );
-  }
-
-  void _submit() {
-    if (_formKey.currentState?.validate() != true) {
-      return;
+      );
     }
 
-    Navigator.of(context).pop(
-      RequestDeliveryRequest(
-        dropoffLocation: DeliveryLocationInput(
-          country: _countryController.text.trim(),
-          city: _cityController.text.trim(),
-          area: _areaController.text.trim(),
-          addressLine: _addressController.text.trim(),
+    if (danger) {
+      return OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colors.danger,
+          side: BorderSide(color: colors.danger.withValues(alpha: 0.4)),
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
         ),
-        learnerNote: _noteController.text.trim(),
+        child: loading
+            ? SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colors.danger,
+                ),
+              )
+            : Text(label),
+      );
+    }
+
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: colors.success,
+        side: BorderSide(color: colors.success.withValues(alpha: 0.45)),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
       ),
+      child: Text(label),
     );
   }
+}
 
-  String? _required(String? value) {
-    return value == null || value.trim().isEmpty ? 'Required' : null;
+class _CancelReservationDialog extends StatefulWidget {
+  const _CancelReservationDialog({
+    required this.reservation,
+    required this.onKeep,
+    required this.onCancel,
+  });
+
+  final LearnerReservation reservation;
+  final VoidCallback onKeep;
+  final VoidCallback onCancel;
+
+  @override
+  State<_CancelReservationDialog> createState() =>
+      _CancelReservationDialogState();
+}
+
+class _CancelReservationDialogState extends State<_CancelReservationDialog> {
+  var _isSubmitting = false;
+
+  void _handleCancel() {
+    if (_isSubmitting) {
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    widget.onCancel();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final colors = AppThemeColors.of(context);
+    final screenSize = MediaQuery.sizeOf(context);
+    final isNarrow = screenSize.width < 480;
+    final dialogWidth =
+        isNarrow ? screenSize.width * 0.92 : _cancelDialogMaxWidth;
+
+    final keepButton = OutlinedButton(
+      onPressed: _isSubmitting ? null : widget.onKeep,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.lg,
+        ),
+        side: BorderSide(color: palette.borderStrong),
+        foregroundColor: palette.textSecondary,
+      ),
+      child: const Text('Keep request'),
+    );
+
+    final cancelButton = FilledButton(
+      onPressed: _isSubmitting ? null : _handleCancel,
+      style: FilledButton.styleFrom(
+        backgroundColor: colors.danger,
+        foregroundColor: colors.textOnPrimary,
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.md,
+        ),
+      ),
+      child: _isSubmitting
+          ? SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colors.textOnPrimary,
+              ),
+            )
+          : const Text('Cancel request'),
+    );
+
+    return Dialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isNarrow ? screenSize.width * 0.04 : AppSpacing.lg,
+        vertical: AppSpacing.lg,
+      ),
+      backgroundColor: palette.panelSurface,
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+      child: SizedBox(
+        width: dialogWidth,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.xs,
+                AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Cancel reservation?',
+                      style: AppTextStyles.body(context).copyWith(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _isSubmitting ? null : widget.onKeep,
+                    tooltip: 'Close',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
+                    icon: Icon(Icons.close_rounded, color: palette.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: palette.borderSubtle),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.sm,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'This will release the requested quantity back to the listing.',
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textSecondary),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Container(
+                    padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: palette.inputSurface,
+                      borderRadius: AppRadius.mdAll,
+                      border: Border.all(color: palette.borderSubtle),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.reservation.material.title,
+                          style: AppTextStyles.body(context).copyWith(
+                            color: palette.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          'Requested: ${formatRequestedQuantity(widget.reservation)}',
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: palette.textMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: palette.borderSubtle),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
+              child: isNarrow
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        cancelButton,
+                        const SizedBox(height: AppSpacing.xs),
+                        keepButton,
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        keepButton,
+                        const SizedBox(width: AppSpacing.md),
+                        SizedBox(height: 44, child: cancelButton),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -962,25 +1366,6 @@ Map<String, LearnerDelivery> _latestDeliveryByReservationId(
   return result;
 }
 
-String _statusLabel(String status) {
-  switch (status) {
-    case 'PENDING':
-      return 'Pending supplier response';
-    case 'ACCEPTED':
-      return 'Accepted / Ready for pickup';
-    case 'REJECTED':
-      return 'Rejected';
-    case 'COMPLETED':
-      return 'Completed';
-    case 'CANCELLED':
-      return 'Cancelled';
-    case 'EXPIRED':
-      return 'Expired';
-    default:
-      return status;
-  }
-}
-
 String _deliveryStatusLabel(String status) {
   switch (status) {
     case 'WAITING_FOR_DRIVER':
@@ -1006,131 +1391,4 @@ String _deliveryStatusLabel(String status) {
     default:
       return status;
   }
-}
-
-MaterialStatusBadgeTone _deliveryStatusTone(String status) {
-  switch (status) {
-    case 'WAITING_FOR_DRIVER':
-    case 'DRIVER_ASSIGNED':
-    case 'ARRIVED_PICKUP':
-    case 'PICKED_UP':
-    case 'ON_THE_WAY':
-    case 'ARRIVED_DROPOFF':
-      return MaterialStatusBadgeTone.reserved;
-    case 'DELIVERED':
-      return MaterialStatusBadgeTone.reused;
-    case 'CANCELLED':
-    case 'FAILED_PICKUP':
-    case 'FAILED_DELIVERY':
-    default:
-      return MaterialStatusBadgeTone.draft;
-  }
-}
-
-String _deliveryStatusDescription(LearnerDelivery delivery) {
-  switch (delivery.status) {
-    case 'WAITING_FOR_DRIVER':
-      return 'Your request is queued for an internal driver.';
-    case 'DRIVER_ASSIGNED':
-      return 'An internal driver has accepted this delivery.';
-    case 'ARRIVED_PICKUP':
-      return 'The driver is at the supplier pickup location.';
-    case 'PICKED_UP':
-      return 'The driver picked up the material.';
-    case 'ON_THE_WAY':
-      return 'The material is on the way to your dropoff location.';
-    case 'ARRIVED_DROPOFF':
-      return 'The driver has arrived at your dropoff location.';
-    case 'DELIVERED':
-      return 'Delivery is complete.';
-    case 'CANCELLED':
-      return 'This delivery was cancelled.';
-    case 'FAILED_PICKUP':
-      return delivery.failureReason?.trim().isNotEmpty == true
-          ? delivery.failureReason!
-          : 'The pickup could not be completed.';
-    case 'FAILED_DELIVERY':
-      return delivery.failureReason?.trim().isNotEmpty == true
-          ? delivery.failureReason!
-          : 'The delivery could not be completed.';
-    default:
-      return 'Delivery status updated.';
-  }
-}
-
-MaterialStatusBadgeTone _statusTone(String status) {
-  switch (status) {
-    case 'PENDING':
-    case 'ACCEPTED':
-      return MaterialStatusBadgeTone.reserved;
-    case 'COMPLETED':
-      return MaterialStatusBadgeTone.reused;
-    case 'REJECTED':
-    case 'CANCELLED':
-    case 'EXPIRED':
-    default:
-      return MaterialStatusBadgeTone.draft;
-  }
-}
-
-String? _pickupText(LearnerReservation reservation) {
-  if (!reservation.isAccepted || reservation.pickupWindowStart == null) {
-    return null;
-  }
-
-  final start = _formatDateTime(reservation.pickupWindowStart!);
-  final end = reservation.pickupWindowEnd == null
-      ? null
-      : _formatDateTime(reservation.pickupWindowEnd!);
-
-  return end == null ? 'Pickup starts $start' : 'Pickup window: $start - $end';
-}
-
-String? _secondaryText(LearnerReservation reservation) {
-  if (reservation.isPending) {
-    return 'Reservation request sent. Waiting for supplier response.';
-  }
-
-  if (reservation.isAccepted) {
-    return reservation.supplierNote?.trim().isNotEmpty == true
-        ? reservation.supplierNote
-        : 'Reservation accepted. Follow the pickup window from the supplier.';
-  }
-
-  if (reservation.isRejected) {
-    return reservation.rejectionReason?.trim().isNotEmpty == true
-        ? reservation.rejectionReason
-        : 'The supplier rejected this reservation request.';
-  }
-
-  if (reservation.isCompleted) {
-    return 'This reservation is completed.';
-  }
-
-  if (reservation.isCancelled) {
-    return 'This reservation was cancelled.';
-  }
-
-  if (reservation.isExpired) {
-    return 'This reservation expired.';
-  }
-
-  return null;
-}
-
-String _formatDate(DateTime value) {
-  return '${value.year}-${_two(value.month)}-${_two(value.day)}';
-}
-
-String _formatDateTime(DateTime value) {
-  return '${_formatDate(value)} ${_two(value.hour)}:${_two(value.minute)}';
-}
-
-String _two(int value) => value.toString().padLeft(2, '0');
-
-String _formatQuantity(double value) {
-  if (value == value.roundToDouble()) {
-    return value.toStringAsFixed(0);
-  }
-  return value.toString();
 }
