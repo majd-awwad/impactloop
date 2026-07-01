@@ -180,11 +180,23 @@ class _LoginFormState extends ConsumerState<LoginForm> {
               return null;
             },
           ),
-          if (_formError != null) AppInlineError(message: _formError!),
-          const SizedBox(height: AppSpacing.sm),
+          if (_formError != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            AppInlineError(message: _formError!),
+          ],
+          const SizedBox(height: AppSpacing.xs),
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: Alignment.centerRight,
             child: TextButton(
+              style: TextButton.styleFrom(
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: AppSpacing.xs,
+                ),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
               onPressed: () {
                 final email = _emailController.text.trim();
                 final target = email.isEmpty
@@ -201,7 +213,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           AuthPrimaryButton(
             label: 'Sign in',
             isLoading: _isSubmitting,
