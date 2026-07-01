@@ -138,6 +138,8 @@ class AdminPriceRequestListItem {
     this.supplierPriceNis,
     this.aiSuggestedMaxUnitPriceNis,
     this.aiSuggestedMaxTotalPriceNis,
+    this.conditionMultiplier,
+    this.adjustedMaxUnitPriceNis,
     this.adminNote,
   });
 
@@ -155,6 +157,8 @@ class AdminPriceRequestListItem {
   final double? supplierPriceNis;
   final double? aiSuggestedMaxUnitPriceNis;
   final double? aiSuggestedMaxTotalPriceNis;
+  final double? conditionMultiplier;
+  final double? adjustedMaxUnitPriceNis;
   final String? adminNote;
 
   factory AdminPriceRequestListItem.fromJson(Map<String, dynamic> json) {
@@ -175,6 +179,8 @@ class AdminPriceRequestListItem {
       supplierPriceNis: numToDouble(json['supplierPriceNis']),
       aiSuggestedMaxUnitPriceNis: numToDouble(json['aiSuggestedMaxUnitPriceNis']),
       aiSuggestedMaxTotalPriceNis: numToDouble(json['aiSuggestedMaxTotalPriceNis']),
+      conditionMultiplier: numToDouble(json['conditionMultiplier']),
+      adjustedMaxUnitPriceNis: numToDouble(json['adjustedMaxUnitPriceNis']),
       adminNote: json['adminNote'] as String?,
     );
   }

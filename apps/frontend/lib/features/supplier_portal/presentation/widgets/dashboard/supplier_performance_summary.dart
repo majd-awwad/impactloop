@@ -23,6 +23,9 @@ class SupplierPerformanceSummary extends StatelessWidget {
     final pending = stats.reservations.pending;
     final activeMaterials = stats.materials.available;
     final reusedMaterials = stats.materials.reused;
+    final totalViews = stats.engagement.totalViews;
+    final totalLikes = stats.engagement.totalLikes;
+    final hasHighDemand = dashboard.highDemandMaterials.isNotEmpty;
     final locationSet = _hasPickupLocation(
       dashboard.hasSupplierProfile,
       supplier?.defaultLocation,
@@ -52,6 +55,18 @@ class SupplierPerformanceSummary extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           if (allCaughtUp) ...[
             const _AllCaughtUpBanner(),
+            if (activeMaterials == 0) ...[
+              const SizedBox(height: AppSpacing.md),
+              _AddMaterialInsight(),
+            ],
+            if (hasHighDemand) ...[
+              const SizedBox(height: AppSpacing.md),
+              const _HighDemandInsight(),
+            ],
+            if (totalViews > 0 && totalLikes <= 1) ...[
+              const SizedBox(height: AppSpacing.md),
+              const _EngagementInsight(),
+            ],
             if (activeMaterials > 0 || reusedMaterials > 0) ...[
               const SizedBox(height: AppSpacing.md),
               _GrowReuseInsight(
@@ -74,13 +89,37 @@ class SupplierPerformanceSummary extends StatelessWidget {
                   activeMaterials: activeMaterials,
                   reusedMaterials: reusedMaterials,
                 );
+                final highDemand = hasHighDemand
+                    ? const _HighDemandInsight()
+                    : null;
+                final engagement =
+                    totalViews > 0 && totalLikes <= 1
+                        ? const _EngagementInsight()
+                        : null;
+                final addMaterial =
+                    activeMaterials == 0 ? const _AddMaterialInsight() : null;
 
                 if (wide) {
                   return IntrinsicHeight(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(flex: 3, child: requests),
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            children: [
+                              requests,
+                              if (addMaterial != null) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                addMaterial,
+                              ],
+                              if (highDemand != null) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                highDemand,
+                              ],
+                            ],
+                          ),
+                        ),
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
                           flex: 2,
@@ -89,6 +128,10 @@ class SupplierPerformanceSummary extends StatelessWidget {
                               Expanded(child: pickup),
                               const SizedBox(height: AppSpacing.sm),
                               Expanded(child: growReuse),
+                              if (engagement != null) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                engagement,
+                              ],
                             ],
                           ),
                         ),
@@ -100,10 +143,22 @@ class SupplierPerformanceSummary extends StatelessWidget {
                 return Column(
                   children: [
                     requests,
+                    if (addMaterial != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      addMaterial,
+                    ],
                     const SizedBox(height: AppSpacing.sm),
                     pickup,
                     const SizedBox(height: AppSpacing.sm),
                     growReuse,
+                    if (highDemand != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      highDemand,
+                    ],
+                    if (engagement != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      engagement,
+                    ],
                   ],
                 );
               },
@@ -358,6 +413,54 @@ class _AllCaughtUpBanner extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _HighDemandInsight extends StatelessWidget {
+  const _HighDemandInsight();
+
+  @override
+  Widget build(BuildContext context) {
+    return _InsightShell(
+      accent: SupplierDashboardColors.pending,
+      icon: Icons.trending_up_outlined,
+      title: context.s.highDemandMaterialsTitle,
+      message: context.s.strongDemandInsight,
+      actionLabel: context.s.viewMaterials,
+      onAction: () => context.go('/supplier/materials'),
+    );
+  }
+}
+
+class _EngagementInsight extends StatelessWidget {
+  const _EngagementInsight();
+
+  @override
+  Widget build(BuildContext context) {
+    return _InsightShell(
+      accent: SupplierDashboardColors.views,
+      icon: Icons.visibility_outlined,
+      title: context.s.statTotalViews,
+      message: context.s.improveEngagementInsight,
+      actionLabel: context.s.viewMaterials,
+      onAction: () => context.go('/supplier/materials'),
+    );
+  }
+}
+
+class _AddMaterialInsight extends StatelessWidget {
+  const _AddMaterialInsight();
+
+  @override
+  Widget build(BuildContext context) {
+    return _InsightShell(
+      accent: SupplierDashboardColors.available,
+      icon: Icons.add_box_outlined,
+      title: context.s.addMaterial,
+      message: context.s.addFirstMaterialInsight,
+      actionLabel: context.s.addMaterial,
+      onAction: () => context.go('/supplier/materials/new'),
     );
   }
 }

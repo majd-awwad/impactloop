@@ -191,6 +191,10 @@ describe('admin approvals', () => {
 
     const approved = await approvePriceRequest(admin.id, request.id, {});
     assert.equal(approved.status, 'APPROVED');
+    const approvedMax =
+      (approved.adminApprovedMaxUnitPriceNis as any)?.toNumber?.() ??
+      Number(approved.adminApprovedMaxUnitPriceNis);
+    assert.equal(approvedMax, 25);
 
     const request2 = await prisma.priceRuleRequest.create({
       data: {
@@ -208,11 +212,11 @@ describe('admin approvals', () => {
       maxAllowedPrice: 20,
     });
     assert.equal(rejected.status, 'REJECTED');
-    const approvedMax =
-      // prisma decimal has toNumber; fallback for nullish
-      (rejected.aiSuggestedMaxUnitPriceNis as any)?.toNumber?.() ??
-      Number(rejected.aiSuggestedMaxUnitPriceNis);
-    assert.equal(approvedMax, 20);
+    const rejectedMax =
+      (rejected.adminApprovedMaxUnitPriceNis as any)?.toNumber?.() ??
+      Number(rejected.adminApprovedMaxUnitPriceNis);
+    assert.equal(rejectedMax, 20);
+    assert.equal(rejected.aiSuggestedMaxUnitPriceNis, null);
   });
 });
 

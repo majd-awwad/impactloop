@@ -189,7 +189,11 @@ const assertSourceRequestPublishable = async (
     }
 
     if (!input.isFree && input.price != null) {
-      const acceptance = evaluateApprovedPriceRuleRequest(request, input.price);
+      const acceptance = evaluateApprovedPriceRuleRequest(
+        request,
+        input.price,
+        input.condition,
+      );
       if (acceptance.ok === false && acceptance.reason === "PRICE_TOO_HIGH") {
         const unit =
           request.unit ?? request.materialType?.defaultUnit ?? "unit";
@@ -314,6 +318,12 @@ export const getSupplierDashboard = async (
     upcomingPickups,
     recentNotifications,
     recentReservations,
+    totalViews,
+    totalLikes,
+    followersCount,
+    scheduledPickups,
+    mostViewedMaterial,
+    highDemandMaterials,
   ] = await Promise.all([
     supplierRepository.countMaterialsByStatus(scope),
     supplierRepository.countReservationsByStatus(userId),
@@ -324,6 +334,14 @@ export const getSupplierDashboard = async (
     supplierRepository.findUpcomingPickups(userId),
     supplierRepository.findRecentNotifications(userId),
     supplierRepository.findRecentReservationsForActivity(userId),
+    supplierRepository.countTotalViewsForSupplier(scope),
+    supplierRepository.countTotalLikesForSupplier(scope),
+    scope.supplierProfileId
+      ? supplierRepository.countSupplierFollowers(scope.supplierProfileId)
+      : Promise.resolve(0),
+    supplierRepository.countScheduledPickups(userId),
+    supplierRepository.findMostViewedMaterial(scope),
+    supplierRepository.findHighDemandMaterials(scope),
   ]);
 
   if (env.nodeEnv !== "production") {
@@ -367,7 +385,51 @@ export const getSupplierDashboard = async (
     notifications: {
       unread: unreadNotifications,
     },
+    engagement: {
+      totalViews,
+      totalLikes,
+      followersCount,
+    },
+    operational: {
+      scheduledPickups,
+      activeMaterials: materialStats.available,
+    },
   };
+
+  const recentReservationRequestsDto: SupplierDashboardDto['recentReservationRequests'] =
+    [];
+
+  const mostViewedMaterialDto =
+    totalViews > 0 && mostViewedMaterial
+      ? {
+          id: mostViewedMaterial.material.id,
+          title: mostViewedMaterial.material.title,
+          status: mostViewedMaterial.material.status,
+          categoryName: mostViewedMaterial.material.category?.nameEn ?? null,
+          coverImageUrl:
+            mostViewedMaterial.material.images[0]?.imageUrl ?? null,
+          viewsCount: mostViewedMaterial.viewsCount,
+          demandCount: 0,
+        }
+      : null;
+
+  const highDemandMaterialIds = highDemandMaterials.map(
+    ({ material }) => material.id,
+  );
+  const highDemandViewCounts =
+    await supplierRepository.countViewsByMaterialIds(highDemandMaterialIds);
+
+  const highDemandMaterialsDto = highDemandMaterials.map(
+    ({ material, demandCount }) => ({
+      id: material.id,
+      title: material.title,
+      status: material.status,
+      categoryName: material.category?.nameEn ?? null,
+      coverImageUrl: material.images[0]?.imageUrl ?? null,
+      viewsCount: highDemandViewCounts.get(material.id) ?? 0,
+      demandCount,
+    }),
+  );
 
   const recentMaterialsDto = recentMaterials.map((material) => ({
     id: material.id,
@@ -409,6 +471,9 @@ export const getSupplierDashboard = async (
       recentMaterials: recentMaterialsDto,
       upcomingPickups: upcomingPickupsDto,
       recentActivity,
+      recentReservationRequests: recentReservationRequestsDto,
+      mostViewedMaterial: mostViewedMaterialDto,
+      highDemandMaterials: highDemandMaterialsDto,
     };
   }
 
@@ -447,6 +512,9 @@ export const getSupplierDashboard = async (
     recentMaterials: recentMaterialsDto,
     upcomingPickups: upcomingPickupsDto,
     recentActivity,
+    recentReservationRequests: recentReservationRequestsDto,
+    mostViewedMaterial: mostViewedMaterialDto,
+    highDemandMaterials: highDemandMaterialsDto,
   };
 };
 
@@ -568,6 +636,7 @@ export const createSupplierMaterial = async (
     const acceptance = evaluateApprovedPriceRuleRequest(
       priceRuleRequest,
       input.price,
+      input.condition,
     );
 
     if (acceptance.ok) {
@@ -756,6 +825,9 @@ export const getEmptySupplierDashboard = (): SupplierDashboardDto => ({
   recentMaterials: [],
   upcomingPickups: [],
   recentActivity: [],
+  recentReservationRequests: [],
+  mostViewedMaterial: null,
+  highDemandMaterials: [],
 });
 
 const mapLocation = (

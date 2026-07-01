@@ -3,7 +3,8 @@ import type { MaterialCondition } from '../../generated/prisma/client.js';
 import {
   DEFAULT_CURRENCY,
   DEFAULT_CURRENCY_SYMBOL,
-  MATERIAL_CONDITION_FACTORS,
+  applyConditionPriceMultiplier,
+  conditionPriceMultiplier,
 } from '../../constants/material-condition-factors.js';
 import { MATERIAL_LISTING_POLICY } from '../../constants/material-listing-policy.js';
 import { prisma } from '../../database/prisma.js';
@@ -60,6 +61,15 @@ export type PriceCheckResult = {
   currency: string;
   currencySymbol: string;
   maxAllowedPrice?: number | null;
+  baseMaxPrice?: number | null;
+  baseSuggestedPrice?: number | null;
+  selectedCondition?: MaterialCondition;
+  conditionMultiplier?: number;
+  adjustedSuggestedPrice?: number | null;
+  adjustedMaxPrice?: number | null;
+  submittedPrice?: number | null;
+  isWithinAdjustedRange?: boolean;
+  source?: 'RULE' | 'AI' | 'ADMIN_REVIEW' | null;
   priceRuleId?: string | null;
   materialTypeId?: string | null;
   matchedReference?: MatchedReferenceDto | null;
@@ -68,29 +78,67 @@ export type PriceCheckResult = {
   message: string;
 };
 
+const buildConditionPriceBreakdown = (
+  input: PriceCheckInput,
+  baseMaxPrice: number,
+  source: 'RULE' | 'AI' | 'ADMIN_REVIEW',
+) => {
+  const multiplier = conditionPriceMultiplier(input.condition);
+  const adjustedMaxPrice = applyConditionPriceMultiplier(
+    baseMaxPrice,
+    input.condition,
+  );
+
+  return {
+    baseMaxPrice,
+    baseSuggestedPrice: baseMaxPrice,
+    selectedCondition: input.condition,
+    conditionMultiplier: multiplier,
+    adjustedSuggestedPrice: adjustedMaxPrice,
+    adjustedMaxPrice,
+    submittedPrice: input.price ?? null,
+    isWithinAdjustedRange:
+      input.price != null ? input.price <= adjustedMaxPrice : undefined,
+    source,
+    maxAllowedPrice: adjustedMaxPrice,
+  };
+};
+
+const formatConditionLabel = (condition: MaterialCondition) =>
+  condition
+    .toLowerCase()
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
 export const getListingPolicy = () => MATERIAL_LISTING_POLICY;
 
 const buildAllowedResult = (
-  maxAllowedPrice: number | null,
+  input: PriceCheckInput,
+  baseMaxPrice: number,
   priceRuleId: string | null = null,
   materialTypeId: string | null = null,
   matchedReference: MatchedReferenceDto | null = null,
+  source: 'RULE' | 'AI' | 'ADMIN_REVIEW' = 'RULE',
 ): PriceCheckResult => ({
   allowed: true,
   currency: DEFAULT_CURRENCY,
   currencySymbol: DEFAULT_CURRENCY_SYMBOL,
-  maxAllowedPrice,
   priceRuleId,
   materialTypeId,
   matchedReference,
   candidates: [],
   message: 'Price verified.',
+  ...buildConditionPriceBreakdown(input, baseMaxPrice, source),
 });
 
 const buildBlockedResult = (
   reason: PriceCheckReason,
   message: string,
   options: {
+    input?: PriceCheckInput;
+    baseMaxPrice?: number | null;
+    source?: 'RULE' | 'AI' | 'ADMIN_REVIEW' | null;
     maxAllowedPrice?: number | null;
     priceRuleId?: string | null;
     materialTypeId?: string | null;
@@ -103,13 +151,22 @@ const buildBlockedResult = (
   reason,
   currency: DEFAULT_CURRENCY,
   currencySymbol: DEFAULT_CURRENCY_SYMBOL,
-  maxAllowedPrice: options.maxAllowedPrice ?? null,
   priceRuleId: options.priceRuleId ?? null,
   materialTypeId: options.materialTypeId ?? null,
   matchedReference: options.matchedReference ?? null,
   approvedUnit: options.approvedUnit ?? null,
   candidates: options.candidates ?? [],
   message,
+  ...(options.input != null && options.baseMaxPrice != null
+    ? buildConditionPriceBreakdown(
+        options.input,
+        options.baseMaxPrice,
+        options.source ?? 'RULE',
+      )
+    : {
+        maxAllowedPrice: options.maxAllowedPrice ?? null,
+        source: options.source ?? null,
+      }),
 });
 
 export const calculateMaxAllowedPrice = (input: {
@@ -118,7 +175,7 @@ export const calculateMaxAllowedPrice = (input: {
   quantity: number;
   condition: MaterialCondition;
 }): number | null => {
-  const conditionFactor = MATERIAL_CONDITION_FACTORS[input.condition];
+  const conditionFactor = conditionPriceMultiplier(input.condition);
   const candidateCaps: number[] = [];
 
   if (input.maxAllowedUnitPriceNis != null) {
@@ -281,14 +338,19 @@ const runPriceRuleCheck = async (
     );
   }
 
-  const maxAllowedPrice = calculateMaxAllowedPrice({
+  const baseMaxPrice = calculateMaxAllowedPrice({
     maxAllowedUnitPriceNis: decimalToNumber(activeRule.maxAllowedUnitPriceNis),
     maxAllowedTotalPriceNis: decimalToNumber(activeRule.maxAllowedTotalPriceNis),
     quantity: input.quantity,
-    condition: input.condition,
+    condition: 'NEW',
   });
 
-  if (maxAllowedPrice == null) {
+  const maxAllowedPrice =
+    baseMaxPrice == null
+      ? null
+      : applyConditionPriceMultiplier(baseMaxPrice, input.condition);
+
+  if (maxAllowedPrice == null || baseMaxPrice == null) {
     return buildBlockedResult(
       'PRICE_RULE_INVALID',
       'This material has an invalid active price reference.',
@@ -308,11 +370,14 @@ const runPriceRuleCheck = async (
 
   if (input.price > maxAllowedPrice) {
     const unitLabel = activeRule.unit;
+    const conditionLabel = formatConditionLabel(input.condition);
     return buildBlockedResult(
       'PRICE_TOO_HIGH',
-      `Maximum allowed price per ${unitLabel} is ${maxAllowedPrice} NIS.`,
+      `The entered price is above the recommended maximum for this condition. Base max: ${baseMaxPrice} NIS, condition: ${conditionLabel}, adjusted max: ${maxAllowedPrice} NIS.`,
       {
-        maxAllowedPrice,
+        input,
+        baseMaxPrice,
+        source: 'RULE',
         materialTypeId: materialType.id,
         matchedReference,
         approvedUnit: unitLabel,
@@ -321,10 +386,12 @@ const runPriceRuleCheck = async (
   }
 
   return buildAllowedResult(
-    maxAllowedPrice,
+    input,
+    baseMaxPrice,
     activeRule.id,
     materialType.id,
     matchedReference,
+    'RULE',
   );
 };
 

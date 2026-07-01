@@ -30,6 +30,15 @@ class MaterialPriceCheckResult {
     required this.currency,
     required this.currencySymbol,
     this.maxAllowedPrice,
+    this.baseMaxPrice,
+    this.baseSuggestedPrice,
+    this.selectedCondition,
+    this.conditionMultiplier,
+    this.adjustedSuggestedPrice,
+    this.adjustedMaxPrice,
+    this.submittedPrice,
+    this.isWithinAdjustedRange,
+    this.source,
     this.priceRuleId,
     this.materialTypeId,
     this.matchedReference,
@@ -43,6 +52,15 @@ class MaterialPriceCheckResult {
   final String currency;
   final String currencySymbol;
   final double? maxAllowedPrice;
+  final double? baseMaxPrice;
+  final double? baseSuggestedPrice;
+  final String? selectedCondition;
+  final double? conditionMultiplier;
+  final double? adjustedSuggestedPrice;
+  final double? adjustedMaxPrice;
+  final double? submittedPrice;
+  final bool? isWithinAdjustedRange;
+  final String? source;
   final String? priceRuleId;
   final String? materialTypeId;
   final MatchedMaterialReference? matchedReference;
@@ -91,6 +109,15 @@ class MaterialPriceCheckResult {
       currency: json['currency'] as String? ?? 'NIS',
       currencySymbol: json['currencySymbol'] as String? ?? '₪',
       maxAllowedPrice: _parseAmount(json['maxAllowedPrice']),
+      baseMaxPrice: _parseAmount(json['baseMaxPrice']),
+      baseSuggestedPrice: _parseAmount(json['baseSuggestedPrice']),
+      selectedCondition: json['selectedCondition'] as String?,
+      conditionMultiplier: _parseAmount(json['conditionMultiplier']),
+      adjustedSuggestedPrice: _parseAmount(json['adjustedSuggestedPrice']),
+      adjustedMaxPrice: _parseAmount(json['adjustedMaxPrice']),
+      submittedPrice: _parseAmount(json['submittedPrice']),
+      isWithinAdjustedRange: json['isWithinAdjustedRange'] as bool?,
+      source: json['source'] as String?,
       priceRuleId: json['priceRuleId'] as String?,
       materialTypeId: json['materialTypeId'] as String?,
       matchedReference: rawMatched is Map

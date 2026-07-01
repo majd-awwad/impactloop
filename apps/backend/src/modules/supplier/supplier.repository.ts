@@ -211,6 +211,123 @@ export const countTotalViewsForSupplier = async (scope: SupplierMaterialScope) =
   });
 };
 
+export const countScheduledPickups = async (ownerId: string) => {
+  const now = new Date();
+
+  return prisma.reservation.count({
+    where: {
+      ownerId,
+      status: 'ACCEPTED',
+      pickupWindowStart: { gte: now },
+    },
+  });
+};
+
+export const findRecentReservationRequests = async (
+  ownerId: string,
+  limit = 5,
+) => {
+  return prisma.reservation.findMany({
+    where: { ownerId },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: {
+      material: { select: { id: true, title: true } },
+      requester: { select: { displayName: true } },
+    },
+  });
+};
+
+export const findMostViewedMaterial = async (scope: SupplierMaterialScope) => {
+  const materialWhere = buildSupplierMaterialWhere(scope);
+
+  const topViewGroup = await prisma.materialView.groupBy({
+    by: ['materialId'],
+    where: { material: materialWhere },
+    _count: { _all: true },
+    orderBy: { _count: { materialId: 'desc' } },
+    take: 1,
+  });
+
+  if (topViewGroup.length === 0 || topViewGroup[0]._count._all <= 0) {
+    return null;
+  }
+
+  const material = await prisma.material.findFirst({
+    where: {
+      AND: [{ id: topViewGroup[0].materialId }, materialWhere],
+    },
+    include: {
+      category: { select: { nameEn: true } },
+      images: {
+        where: { isCover: true },
+        take: 1,
+        orderBy: { sortOrder: 'asc' },
+      },
+    },
+  });
+
+  if (!material) {
+    return null;
+  }
+
+  return {
+    material,
+    viewsCount: topViewGroup[0]._count._all,
+  };
+};
+
+export const findHighDemandMaterials = async (
+  scope: SupplierMaterialScope,
+  limit = 5,
+) => {
+  const materialWhere = buildSupplierMaterialWhere(scope);
+
+  const demandGroups = await prisma.reservation.groupBy({
+    by: ['materialId'],
+    where: {
+      status: { in: ['PENDING', 'ACCEPTED'] },
+      material: materialWhere,
+    },
+    _count: { _all: true },
+    orderBy: { _count: { materialId: 'desc' } },
+    take: limit,
+  });
+
+  if (demandGroups.length === 0) {
+    return [];
+  }
+
+  const materialIds = demandGroups.map((group) => group.materialId);
+  const materials = await prisma.material.findMany({
+    where: { id: { in: materialIds } },
+    include: {
+      category: { select: { nameEn: true } },
+      images: {
+        where: { isCover: true },
+        take: 1,
+        orderBy: { sortOrder: 'asc' },
+      },
+    },
+  });
+
+  const materialById = new Map(materials.map((material) => [material.id, material]));
+
+  return demandGroups
+    .map((group) => {
+      const material = materialById.get(group.materialId);
+      if (!material) {
+        return null;
+      }
+
+      return {
+        material,
+        demandCount: group._count._all,
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry != null);
+};
+
 export const isOrganizationSupplierType = (supplierType: string): boolean => {
   return (
     supplierType === "WORKSHOP" ||

@@ -11,7 +11,10 @@ import {
 } from '../../services/ai-price-suggestion.service.js';
 import * as categoriesRepository from '../categories/categories.repository.js';
 import * as materialTypesRepository from '../material-types/material-types.repository.js';
-import { resolveApprovedMaxUnitPriceNis } from './price-rule-request-pricing.js';
+import {
+  resolveBaseSuggestedMaxUnitPriceNis,
+  resolveFinalAllowedMaxUnitPriceNis,
+} from './price-rule-request-pricing.js';
 import * as priceRuleRequestsRepository from './price-rule-requests.repository.js';
 import type { CreatePriceRuleRequestInput } from './price-rule-requests.validation.js';
 import { decimalToNumber } from '../../utils/decimal.js';
@@ -358,32 +361,64 @@ const extractDraftTitle = (listingDraftJson: unknown): string => {
   return typeof title === 'string' ? title.trim() : '';
 };
 
-const resolveMaxAllowedUnitPrice = resolveApprovedMaxUnitPriceNis;
+const resolveMaxAllowedUnitPrice = (
+  request: Parameters<typeof resolveBaseSuggestedMaxUnitPriceNis>[0] & {
+    condition?: import('../../generated/prisma/client.js').MaterialCondition | null;
+    listingDraftJson?: unknown;
+  },
+) => {
+  const condition =
+    request.condition ??
+    (typeof request.listingDraftJson === 'object' &&
+    request.listingDraftJson != null &&
+    !Array.isArray(request.listingDraftJson)
+      ? (request.listingDraftJson as Record<string, unknown>).condition
+      : null);
+
+  if (
+    typeof condition === 'string' &&
+    (condition === 'NEW' ||
+      condition === 'LIKE_NEW' ||
+      condition === 'GOOD' ||
+      condition === 'USED' ||
+      condition === 'NEEDS_REPAIR')
+  ) {
+    return resolveFinalAllowedMaxUnitPriceNis(request, condition);
+  }
+
+  return resolveFinalAllowedMaxUnitPriceNis(request, null);
+};
 
 export const listSupplierPriceRuleRequests = async (userId: string) => {
   const requests =
     await priceRuleRequestsRepository.listPriceRuleRequestsForSupplier(userId);
 
-  return requests.map((request) => ({
-    id: request.id,
-    status: request.status,
-    materialName:
-      request.materialName ??
-      request.materialType?.nameEn ??
-      extractDraftTitle(request.listingDraftJson),
-    unit: request.unit ?? request.materialType?.defaultUnit ?? null,
-    quantity: request.quantity != null ? Number(request.quantity) : null,
-    supplierPriceNis:
-      request.supplierPriceNis != null
-        ? Number(request.supplierPriceNis)
-        : null,
-    maxAllowedUnitPriceNis: resolveApprovedMaxUnitPriceNis(request),
-    moderatorNote: request.moderatorNote,
-    categoryName: request.category?.nameEn ?? null,
-    title: extractDraftTitle(request.listingDraftJson),
-    hasDraft: request.listingDraftJson != null,
-    createdAt: request.createdAt.toISOString(),
-  }));
+  return requests.map((request) => {
+    const baseMaxAllowedUnitPriceNis = resolveBaseSuggestedMaxUnitPriceNis(request);
+    const maxAllowedUnitPriceNis = resolveMaxAllowedUnitPrice(request);
+
+    return {
+      id: request.id,
+      status: request.status,
+      materialName:
+        request.materialName ??
+        request.materialType?.nameEn ??
+        extractDraftTitle(request.listingDraftJson),
+      unit: request.unit ?? request.materialType?.defaultUnit ?? null,
+      quantity: request.quantity != null ? Number(request.quantity) : null,
+      supplierPriceNis:
+        request.supplierPriceNis != null
+          ? Number(request.supplierPriceNis)
+          : null,
+      baseMaxAllowedUnitPriceNis,
+      maxAllowedUnitPriceNis,
+      moderatorNote: request.moderatorNote,
+      categoryName: request.category?.nameEn ?? null,
+      title: extractDraftTitle(request.listingDraftJson),
+      hasDraft: request.listingDraftJson != null,
+      createdAt: request.createdAt.toISOString(),
+    };
+  });
 };
 
 export const getPriceRuleRequestDraft = async (userId: string, id: string) => {
@@ -404,11 +439,13 @@ export const getPriceRuleRequestDraft = async (userId: string, id: string) => {
     );
   }
 
+  const baseMaxAllowedUnitPriceNis = resolveBaseSuggestedMaxUnitPriceNis(request);
   const maxAllowedUnitPriceNis = resolveMaxAllowedUnitPrice(request);
 
   return {
     id: request.id,
     status: request.status,
+    baseMaxAllowedUnitPriceNis,
     maxAllowedUnitPriceNis,
     unit: request.unit ?? request.materialType?.defaultUnit ?? null,
     category: request.category

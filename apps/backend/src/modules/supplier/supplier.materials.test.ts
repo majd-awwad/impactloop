@@ -981,7 +981,7 @@ describe("createSupplierMaterial", () => {
       unit: "piece",
       condition: "GOOD",
       isFree: false,
-      price: 15,
+      price: 13,
       currency: "NIS",
       pickupAllowed: true,
       deliveryAllowed: false,
@@ -991,8 +991,8 @@ describe("createSupplierMaterial", () => {
     });
     ctx.createdMaterialIds.push(material.id);
 
-    assert.equal(material.price, 15);
-    assert.equal(material.maxAllowedPriceAtCheck, 21);
+    assert.equal(material.price, 13);
+    assert.equal(material.maxAllowedPriceAtCheck, 13.65);
 
     const updatedRequest = await prisma.priceRuleRequest.findUnique({
       where: { id: priceRuleRequest.id },
@@ -1011,7 +1011,7 @@ describe("createSupplierMaterial", () => {
         materialName: `${TEST_MARKER} boundary price widget`,
         normalizedMaterialName: "boundary-price-widget",
         unit: "piece",
-        supplierPriceNis: 21,
+        supplierPriceNis: 13.65,
         categoryId: ctx.categoryId,
         requestedByUserId: ctx.supplierId,
         status: "APPROVED",
@@ -1028,7 +1028,7 @@ describe("createSupplierMaterial", () => {
       unit: "piece",
       condition: "GOOD",
       isFree: false,
-      price: 21,
+      price: 13.65,
       currency: "NIS",
       pickupAllowed: true,
       deliveryAllowed: false,
@@ -1038,8 +1038,8 @@ describe("createSupplierMaterial", () => {
     });
     ctx.createdMaterialIds.push(material.id);
 
-    assert.equal(material.price, 21);
-    assert.equal(material.maxAllowedPriceAtCheck, 21);
+    assert.equal(material.price, 13.65);
+    assert.equal(material.maxAllowedPriceAtCheck, 13.65);
 
     await prisma.priceRuleRequest.delete({
       where: { id: priceRuleRequest.id },
@@ -1084,7 +1084,7 @@ describe("createSupplierMaterial", () => {
         assert.equal(error.statusCode, 400);
         assert.match(
           error.message,
-          /Maximum allowed price is 21 NIS per piece/,
+          /Maximum allowed price is 13\.65 NIS per piece/,
         );
         assert.equal(
           (error.details as { reason?: string } | undefined)?.reason,

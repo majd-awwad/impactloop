@@ -578,8 +578,14 @@ class _PriceRequestCard extends StatelessWidget {
         ? '—'
         : '${item.supplierPriceNis!.toStringAsFixed(2)} NIS per $unit';
     final aiSuggested = item.aiSuggestedMaxUnitPriceNis == null
-        ? 'AI suggestion unavailable'
-        : '${item.aiSuggestedMaxUnitPriceNis!.toStringAsFixed(2)} NIS max per $unit';
+        ? 'AI/base suggestion unavailable'
+        : '${item.aiSuggestedMaxUnitPriceNis!.toStringAsFixed(2)} NIS max per $unit (base)';
+    final multiplierLabel = item.conditionMultiplier == null
+        ? '—'
+        : '${(item.conditionMultiplier! * 100).toStringAsFixed(0)}%';
+    final adjustedMax = item.adjustedMaxUnitPriceNis == null
+        ? '—'
+        : '${item.adjustedMaxUnitPriceNis!.toStringAsFixed(2)} NIS max per $unit';
 
     return _ApprovalCardShell(
       child: Column(
@@ -598,7 +604,9 @@ class _PriceRequestCard extends StatelessWidget {
           _InfoBlock(
             rows: [
               _InfoRow('Supplier price', supplierPrice),
-              _InfoRow('AI suggested', aiSuggested),
+              _InfoRow('AI/base suggested price', aiSuggested),
+              _InfoRow('Condition multiplier', multiplierLabel),
+              _InfoRow('Adjusted suggested/max price', adjustedMax),
               _InfoRow(
                 'Quantity',
                 item.quantity == null
@@ -1048,9 +1056,22 @@ Future<void> _quickApprovePrice(
           const SizedBox(height: 6),
           Text(
             item.aiSuggestedMaxUnitPriceNis == null
-                ? 'AI suggested: unavailable'
-                : 'AI suggested: ${item.aiSuggestedMaxUnitPriceNis!.toStringAsFixed(2)} NIS (max unit)',
+                ? 'AI/base suggested: unavailable'
+                : 'AI/base suggested: ${item.aiSuggestedMaxUnitPriceNis!.toStringAsFixed(2)} NIS (max unit)',
           ),
+          if (item.conditionMultiplier != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Condition: ${_formatCondition(item.condition)} · Multiplier: ${(item.conditionMultiplier! * 100).toStringAsFixed(0)}%',
+            ),
+          ],
+          if (item.adjustedMaxUnitPriceNis != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Adjusted suggested/max price: ${item.adjustedMaxUnitPriceNis!.toStringAsFixed(2)} NIS',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
         ],
       ),
       actions: [
@@ -1112,7 +1133,9 @@ Future<void> _quickRejectPrice(
             controller: maxController,
             keyboardType: TextInputType.number,
             decoration: const InputDecoration(
-              labelText: 'Max allowed unit price (NIS)',
+              labelText: 'Final allowed price for this condition (NIS)',
+              helperText:
+                  'This value is already condition-adjusted and will be sent to the supplier.',
               border: OutlineInputBorder(),
             ),
           ),
@@ -1504,7 +1527,9 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
               controller: maxController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                labelText: 'Max allowed unit price (NIS)',
+                labelText: 'Final allowed price for this condition (NIS)',
+                helperText:
+                    'This value is already condition-adjusted and will be sent to the supplier.',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -1576,10 +1601,23 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
             const SizedBox(height: 12),
             _kv('Supplier price', item.supplierPriceNis == null ? '—' : '${item.supplierPriceNis!.toStringAsFixed(2)} NIS'),
             _kv(
-              'AI suggested',
+              'AI/base suggested price',
               item.aiSuggestedMaxUnitPriceNis == null
-                  ? 'AI suggestion unavailable'
+                  ? 'AI/base suggestion unavailable'
                   : '${item.aiSuggestedMaxUnitPriceNis!.toStringAsFixed(2)} NIS (max unit)',
+            ),
+            _kv('Condition', _formatCondition(item.condition)),
+            _kv(
+              'Condition multiplier',
+              item.conditionMultiplier == null
+                  ? '—'
+                  : '${(item.conditionMultiplier! * 100).toStringAsFixed(0)}%',
+            ),
+            _kv(
+              'Adjusted suggested/max price',
+              item.adjustedMaxUnitPriceNis == null
+                  ? '—'
+                  : '${item.adjustedMaxUnitPriceNis!.toStringAsFixed(2)} NIS',
             ),
             if (item.adminNote?.trim().isNotEmpty == true) ...[
               const SizedBox(height: 12),
