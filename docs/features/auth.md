@@ -14,7 +14,7 @@ Public signup and login for **LEARNER** and **SUPPLIER** roles, session bootstra
 |-------|--------|-------|
 | Backend `auth` module | **Implemented** | Register, login, refresh, logout, me, change-password, secure forgot/reset password |
 | Flutter `auth` feature | **Implemented for auth MVP** | Register/login/session/change-password/forgot-reset work; shared Dio refreshes eligible 401s and retries once |
-| Role invitations | **Backend-only** | `invitations` module — no Flutter accept flow |
+| Role invitations | **Implemented** | Admin invitation UI and `/invite/accept` exist; post-accept role portals vary by role |
 | Forgot / reset password UI | **Implemented** | `/forgot-password`, `/reset-password?token=...` |
 
 ## Main user flow
@@ -71,7 +71,7 @@ Forgot/reset password behavior:
 - Reset tokens use cryptographically secure random bytes, are stored as hashes in `auth_tokens`, expire by `PASSWORD_RESET_EXPIRES_IN` (default `30m`), and older unused reset tokens are invalidated when a new reset is requested.
 - `POST /api/auth/reset-password` body `{ token, newPassword }`; successful reset marks the token used, updates the password hash, revokes active refresh tokens, sends a password-changed notification email, and does not auto-login.
 
-Related but separate module: `/api/invitations/*` — **Backend-only**.
+Related but separate flow: invitations for `DRIVER`, `MODERATOR`, and `ADMIN` use `/api/invitations/*`, `/api/admin/invitations*`, and `/invite/accept`; see [invitations](invitations.md).
 
 ## Database tables
 

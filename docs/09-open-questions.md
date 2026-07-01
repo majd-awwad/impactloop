@@ -28,7 +28,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 |----------|--------|--------|
 | Production distribution of `inviteToken` without email service? | Open | [invitation-flow](flows/invitation-flow.md) |
 | Should `GET /api/invitations/validate/:token` be rate-limited against token guessing? | Open | [invitation-flow](flows/invitation-flow.md) |
-| Profile onboarding for DRIVER/MODERATOR/ADMIN after accept? | Open | [invitation-flow](flows/invitation-flow.md) |
+| Post-accept workspace completeness for DRIVER/MODERATOR/ADMIN? | Partial — driver/admin have partial portals; moderator has no portal | [invitation-flow](flows/invitation-flow.md), [roles-and-capabilities](features/roles-and-capabilities.md) |
 | Production value of `env.invitationExpiresIn` | **Needs verification** | [invitations](features/invitations.md), `apps/backend/src/config/env.ts` |
 
 ---
@@ -109,12 +109,13 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 ---
 
-## Admin and moderator (not implemented)
+## Admin and moderator
 
 | Question | Status | Source |
 |----------|--------|--------|
-| How are `category_requests` / `price_rule_requests` approved without moderator API? | Open (seed/manual DB?) | [moderator](features/moderator.md) |
-| Admin invitation create only — other admin capabilities deferred? | Documented | [admin](features/admin.md) |
+| Should category/price/material report review remain admin-only, or should moderator share those queues? | Open | [admin](features/admin.md), [moderator](features/moderator.md) |
+| What moderator portal should be built first? | Open | [moderator](features/moderator.md), [roles-and-capabilities](features/roles-and-capabilities.md) |
+| Should future sensitive admin actions require a `SUPER_ADMIN` role or another policy? | Open | [admin](features/admin.md) |
 
 ---
 

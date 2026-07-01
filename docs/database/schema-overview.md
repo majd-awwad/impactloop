@@ -8,9 +8,9 @@
 
 | Metric | Value | Source |
 |--------|-------|--------|
-| Prisma models | 34 | `schema.prisma` (`^model ` count) |
-| PostgreSQL tables | 34 | `@@map(...)` on each model |
-| Enums | 28 | [enums.md](enums.md) |
+| Prisma models | 35 | `schema.prisma` (`^model ` count) |
+| PostgreSQL tables | 35 | `@@map(...)` on each model |
+| Enums | 33 | [enums.md](enums.md) |
 | PostGIS | Yes | `Location.location` — `Unsupported("geography(Point,4326)")`; enabled in migration `20260614145408_add_auth_schema` |
 
 ## Domain groups
@@ -63,6 +63,7 @@ MaterialType ──┬── MaterialTypeAlias
 ```
 Material ──┬── MaterialImage
            ├── MaterialTag
+           ├── MaterialReport
            ├── Reservation (many)
            ├── publishedFromCategoryRequest (CategoryRequest)
            └── publishedFromPriceRuleRequest (PriceRuleRequest)
@@ -103,6 +104,7 @@ LearningProject ──┬── ProjectImage
 
 ```
 Review → Reservation, User (reviewer, reviewedUser)
+MaterialReport → Material, User (reporter, reviewedBy)
 Notification → User (generic table; no REST module in apps/backend/src/modules/)
 ```
 
