@@ -35,6 +35,9 @@ export type UserEmailIdentity = {
 export type PasswordResetTokenRecord = {
   id: string;
   userId: string;
+  user: {
+    email: string;
+  };
 };
 
 export type RefreshTokenWithUser = {
@@ -280,6 +283,11 @@ export const findActivePasswordResetToken = async (
     select: {
       id: true,
       userId: true,
+      user: {
+        select: {
+          email: true,
+        },
+      },
     },
   });
 };
@@ -289,14 +297,24 @@ export const completePasswordReset = async (input: {
   userId: string;
   passwordHash: string;
 }): Promise<void> => {
+  const usedAt = new Date();
+
   await prisma.$transaction([
     prisma.authToken.update({
       where: { id: input.tokenId },
-      data: { usedAt: new Date() },
+      data: { usedAt },
     }),
     prisma.user.update({
       where: { id: input.userId },
       data: { passwordHash: input.passwordHash },
+    }),
+    prisma.authToken.updateMany({
+      where: {
+        userId: input.userId,
+        tokenType: 'REFRESH_TOKEN',
+        usedAt: null,
+      },
+      data: { usedAt },
     }),
   ]);
 };

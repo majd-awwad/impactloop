@@ -21,6 +21,8 @@ From `auth_navigation.dart`:
 | `rootRoute` | `/` |
 | `loginRoute` | `/login` |
 | `registerRoute` | `/register` |
+| `forgotPasswordRoute` | `/forgot-password` |
+| `resetPasswordRoute` | `/reset-password` |
 | `authCheckingRoute` | `/auth/checking` |
 | `supplierPortalRoute` | `/supplier` |
 | `driverPortalRoute` | `/driver/jobs` |
@@ -50,7 +52,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 3. **Supplier route without SUPPLIER role** → `/supplier/access-denied`
 4. **Driver route without DRIVER role** → `/home`
 5. **Admin route without ADMIN role** → `/admin/access-denied`
-6. **Authenticated user on login/register** → redirect to `from` query or `postAuthRouteForUser(user)`:
+6. **Authenticated user on login/register/forgot/reset auth pages** → redirect to `from` query or `postAuthRouteForUser(user)`:
    - Admin role → `/admin`
    - Supplier role → `/supplier` (or verification gate when required)
    - Driver role → `/driver/jobs`
@@ -77,6 +79,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default |
 | `/materials/:id` | `MaterialDetailsPage` | public | API-backed default |
 | `/login` | `LoginPage` | public | `_AuthPageGuard` |
+| `/forgot-password` | `ForgotPasswordPage` | public | `_AuthPageGuard`; optional `email` query pre-fills the form |
+| `/reset-password` | `ResetPasswordPage` | public | `_AuthPageGuard`; reads reset `token` query |
 | `/register` | `RegisterPage` | public | `_AuthPageGuard`; unified onboarding wizard for learner, supplier, and dual-role registration |
 | `/complete-learner-profile` | `DeprecatedOnboardingPage` | public | Deprecated fallback; redirects to `/register` |
 | `/complete-supplier-profile` | `DeprecatedOnboardingPage` | public | Deprecated fallback; redirects to `/register` |
@@ -151,6 +155,8 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 | Route | Params | Purpose |
 |-------|--------|---------|
 | `/login`, `/register`, protected redirects | `from` | Return URL after auth |
+| `/forgot-password` | `email` | Optional email prefill from the login form |
+| `/reset-password` | `token` | Password reset token from email link |
 | `/complete-learner-profile`, `/complete-supplier-profile` | any | Deprecated fallback paths; redirected to `/register` |
 | `/supplier/materials/new` | `categoryRequestId`, `priceRuleRequestId` | Resume listing from approved request |
 | `/supplier/reservations` | `tab`, `focus` | Deep link into reservation inbox |

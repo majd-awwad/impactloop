@@ -18,10 +18,13 @@ import { comparePassword, hashPassword } from '../../utils/password.js';
 
 import { generateOpaqueToken, hashToken } from '../../utils/token.js';
 
+import { checkRateLimit } from '../../middlewares/rate-limit.middleware.js';
+
 import * as authRepository from './auth.repository.js';
 
 import { formatPickupAreaLabel } from './pickup-area.js';
 import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
+import { getAuthEmailProvider } from './email/index.js';
 
 import type { ChangePasswordInput, LoginInput, RegisterInput } from './auth.validation.js';
 
@@ -72,11 +75,16 @@ export type RefreshResult = {
 
 export type ForgotPasswordResult = {
   message: string;
-  resetToken?: string;
 };
 
 const PASSWORD_RESET_SAFE_MESSAGE =
   'If an account with that email exists, password reset instructions have been sent.';
+
+const PASSWORD_RESET_ACCOUNT_RATE_LIMIT = {
+  name: 'password-reset-account',
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+};
 
 const toUserSummary = (
   user: {
@@ -171,6 +179,49 @@ const getPasswordResetExpiry = (): Date => {
   };
 
   return new Date(Date.now() + amount * multipliers[unit]!);
+};
+
+const assertPasswordResetLinkConfig = (): void => {
+  if (!env.appPublicBaseUrl) {
+    throw new AppError(
+      'Password reset links are not configured.',
+      500,
+      'CONFIGURATION_ERROR',
+    );
+  }
+
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(env.appPublicBaseUrl);
+  } catch {
+    throw new AppError(
+      'Password reset links are not configured.',
+      500,
+      'CONFIGURATION_ERROR',
+    );
+  }
+
+  if (env.nodeEnv === 'production' && parsedUrl.protocol !== 'https:') {
+    throw new AppError(
+      'Password reset links must use HTTPS in production.',
+      500,
+      'CONFIGURATION_ERROR',
+    );
+  }
+};
+
+const buildPasswordResetLink = (token: string): string => {
+  assertPasswordResetLinkConfig();
+
+  const resetUrl = new URL('/reset-password', `${env.appPublicBaseUrl}/`);
+  resetUrl.searchParams.set('token', token);
+
+  return resetUrl.toString();
+};
+
+const logAuthEmailFailure = (event: string, error?: string): void => {
+  console.error(`[Auth email] ${event} failed`, error ?? 'Unknown email error');
 };
 
 const createAuthSession = async (
@@ -320,12 +371,14 @@ export const getAuthenticatedUser = async (
 export const requestPasswordReset = async (
   email: string,
 ): Promise<ForgotPasswordResult> => {
+  assertPasswordResetLinkConfig();
+
   const user = await authRepository.findUserEmailIdentity(email);
 
-  let resetToken: string | undefined;
-
   if (user) {
-    resetToken = generateOpaqueToken();
+    const resetToken = generateOpaqueToken();
+    const expiresAt = getPasswordResetExpiry();
+    const resetLink = buildPasswordResetLink(resetToken);
 
     await authRepository.invalidatePasswordResetTokens(user.id);
 
@@ -334,20 +387,23 @@ export const requestPasswordReset = async (
       tokenHash: hashToken(resetToken),
       tokenType: 'PASSWORD_RESET',
       target: user.email,
-      expiresAt: getPasswordResetExpiry(),
+      expiresAt,
     });
+
+    const emailResult = await getAuthEmailProvider().sendPasswordResetEmail({
+      recipientEmail: user.email,
+      resetLink,
+      expiresAt,
+    });
+
+    if (emailResult.status === 'FAILED') {
+      logAuthEmailFailure('Password reset email', emailResult.sendError);
+    }
   }
 
-  const result: ForgotPasswordResult = {
+  return {
     message: PASSWORD_RESET_SAFE_MESSAGE,
   };
-
-  if (env.nodeEnv === 'development' && resetToken) {
-    // TODO: Remove dev-only resetToken exposure once email delivery is implemented.
-    result.resetToken = resetToken;
-  }
-
-  return result;
 };
 
 export const resetPasswordWithToken = async (
@@ -366,6 +422,11 @@ export const resetPasswordWithToken = async (
     );
   }
 
+  checkRateLimit(
+    storedToken.userId,
+    PASSWORD_RESET_ACCOUNT_RATE_LIMIT,
+  );
+
   const passwordHash = await hashPassword(newPassword);
 
   await authRepository.completePasswordReset({
@@ -373,6 +434,14 @@ export const resetPasswordWithToken = async (
     userId: storedToken.userId,
     passwordHash,
   });
+
+  const emailResult = await getAuthEmailProvider().sendPasswordChangedEmail({
+    recipientEmail: storedToken.user.email,
+  });
+
+  if (emailResult.status === 'FAILED') {
+    logAuthEmailFailure('Password changed email', emailResult.sendError);
+  }
 };
 
 export const changePasswordForUser = async (

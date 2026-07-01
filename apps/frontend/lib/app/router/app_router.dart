@@ -8,8 +8,10 @@ import '../widgets/app_mobile_bottom_nav_bar.dart';
 import '../../features/auth/presentation/models/registration_wizard_step.dart';
 import '../../features/auth/presentation/pages/auth_checking_page.dart';
 import '../../features/auth/presentation/pages/deprecated_onboarding_page.dart';
+import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/deliveries/presentation/pages/learner_delivery_detail_page.dart';
@@ -95,7 +97,11 @@ bool _isAdminPortalPath(String path) {
 
 bool _isCheckingPath(String path) => path == authCheckingRoute;
 
-bool _isAuthPage(String path) => path == loginRoute || path == registerRoute;
+bool _isAuthPage(String path) =>
+    path == loginRoute ||
+    path == registerRoute ||
+    path == forgotPasswordRoute ||
+    path == resetPasswordRoute;
 
 _RouteAccessLevel _routeAccessForPath(String path) {
   if (isSupplierVerificationStatusRoute(path) ||
@@ -390,6 +396,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: loginRoute,
         builder: (context, state) => const _AuthPageGuard(child: LoginPage()),
+      ),
+      GoRoute(
+        path: forgotPasswordRoute,
+        builder: (context, state) => _AuthPageGuard(
+          child: ForgotPasswordPage(
+            initialEmail: state.uri.queryParameters['email'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: resetPasswordRoute,
+        builder: (context, state) => _AuthPageGuard(
+          child: ResetPasswordPage(token: state.uri.queryParameters['token']),
+        ),
       ),
       GoRoute(
         path: registerRoute,

@@ -164,11 +164,82 @@ Update `users.password_hash`; may revoke sessions — **Needs verification**.
 
 ---
 
-## Flow G — Forgot password (not implemented in UI)
+## Flow G — Forgot password
 
-### Status
+### Trigger
 
-**Backend-only.** Endpoints exist; Flutter shows snackbar “Forgot password screen coming soon.”
+User taps **Forgot password?** on `/login`.
+
+### User path
+
+`/login` → `/forgot-password?email=<prefill>` → submit email → generic success:
+
+`If an account exists for this email, reset instructions have been sent.`
+
+The same success text is shown whether the email exists or not.
+
+### Frontend path
+
+`LoginForm` → `context.go('/forgot-password?email=...')` → `ForgotPasswordForm` → `authRepository.forgotPassword` → `POST /api/auth/forgot-password`.
+
+The forgot/reset API calls set `skipAuthRefresh`, so they do not trigger token refresh or mutate local auth storage.
+
+### Backend path
+
+`auth.routes.ts` applies per-IP and per-email rate limits, validates `{ email }`, then `auth.service.requestPasswordReset`:
+
+1. Checks reset-link configuration.
+2. Looks up the normalized email.
+3. For an existing user only, invalidates older unused password reset tokens.
+4. Creates a new `auth_tokens` row with `tokenType=PASSWORD_RESET`, hashed token, and default 30-minute expiry.
+5. Sends a reset email through the auth email provider.
+6. Returns the generic response with `data: null`.
+
+### Error states
+
+- Invalid email format → validation error.
+- Missing reset-link base URL or production non-HTTPS base URL → server configuration error.
+- Rate limit exceeded → `429 RATE_LIMITED`.
+- Email provider failure is logged server-side and does not reveal whether the email exists.
+
+---
+
+## Flow H — Reset password
+
+### Trigger
+
+User opens the reset email link built from `APP_PUBLIC_BASE_URL`:
+
+`/reset-password?token=<opaque-token>`
+
+### User path
+
+Enter new password + confirmation → submit → success state links to `/login`.
+
+Missing token shows a clean inline error. The reset flow does not auto-login.
+
+### Frontend path
+
+`ResetPasswordPage` reads `token` from the route query → `ResetPasswordForm` validates password length and confirmation → `authRepository.resetPassword` → `POST /api/auth/reset-password`.
+
+### Backend path
+
+`auth.routes.ts` applies per-IP and per-token rate limits, validates `{ token, newPassword }`, then `auth.service.resetPasswordWithToken`:
+
+1. Hashes the raw token and finds an active, unused, unexpired password-reset token.
+2. Applies per-account reset rate limiting after token lookup.
+3. Hashes the new password with the same password utility used by register/change-password.
+4. In one transaction, marks the reset token used, updates `users.password_hash`, and revokes active `REFRESH_TOKEN` rows for that user.
+5. Sends a password-changed notification email.
+6. Returns success with `data: null`.
+
+### Error states
+
+- Missing/invalid token in Flutter → inline error.
+- Invalid, expired, or used token → safe validation error.
+- New password under policy length → validation error.
+- Notification email failure is logged server-side and does not undo the password reset.
+
 
 ---
 

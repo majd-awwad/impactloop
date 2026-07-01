@@ -6,16 +6,16 @@
 
 Public signup and login for **LEARNER** and **SUPPLIER** roles, session bootstrap, and authenticated access to protected routes. Profiles are collected inside the `/register` wizard and sent in a single `POST /api/auth/register` call.
 
-**Not in scope (not implemented):** DRIVER/MODERATOR/ADMIN self-registration, forgot-password UI, invitation acceptance UI, learner-only post-login features beyond `/home`.
+**Not in scope (not implemented):** DRIVER/MODERATOR/ADMIN self-registration, learner-only post-login features beyond `/home`.
 
 ## Current status
 
 | Layer | Status | Notes |
 |-------|--------|-------|
-| Backend `auth` module | **Implemented** | Register, login, refresh, logout, me, change-password, forgot/reset **API** |
-| Flutter `auth` feature | **Partial** | Register/login/session/change-password work; shared Dio refreshes eligible 401s and retries once; forgot-password shows “coming soon” |
+| Backend `auth` module | **Implemented** | Register, login, refresh, logout, me, change-password, secure forgot/reset password |
+| Flutter `auth` feature | **Implemented for auth MVP** | Register/login/session/change-password/forgot-reset work; shared Dio refreshes eligible 401s and retries once |
 | Role invitations | **Backend-only** | `invitations` module — no Flutter accept flow |
-| Forgot / reset password UI | **Not implemented** | `login_form.dart` |
+| Forgot / reset password UI | **Implemented** | `/forgot-password`, `/reset-password?token=...` |
 
 ## Main user flow
 
@@ -25,17 +25,18 @@ Public signup and login for **LEARNER** and **SUPPLIER** roles, session bootstra
 4. **Session restore:** app/router sends unknown auth to `/auth/checking` → `AuthController.bootstrapSession()` → refresh + `/me`.
 5. **Authenticated request refresh:** shared Dio requests attach the in-memory access token. If an eligible request receives 401, the auth interceptor uses a bare refresh client to call `/api/auth/refresh`, updates the token holder/storage, and retries the original request once.
 6. **Change password:** supplier account security card → `PATCH /api/auth/change-password` (uses `authRepository`).
+7. **Forgot/reset password:** `/login` link opens `/forgot-password` with optional email prefill. Forgot always shows a generic success message. Reset reads `token` from the query string, requires new password + confirmation in Flutter, calls `POST /api/auth/reset-password`, and links back to `/login` after success without creating a session.
 
 ## Frontend files
 
-**Routes:** `/login`, `/register`, `/auth/checking`; `/complete-learner-profile` and `/complete-supplier-profile` are deprecated fallbacks that redirect to `/register` — see [routes-map](../frontend/routes-map.md).
+**Routes:** `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/checking`; `/complete-learner-profile` and `/complete-supplier-profile` are deprecated fallbacks that redirect to `/register` — see [routes-map](../frontend/routes-map.md).
 
 | Area | Path |
 |------|------|
 | Application | `features/auth/application/auth_controller.dart`, `auth_providers.dart`, `auth_navigation.dart`, `registration_draft_notifier.dart` |
 | Data | `features/auth/data/auth_api.dart`, `auth_repository.dart`, `models/` |
-| Pages | `presentation/pages/login_page.dart`, `register_page.dart`, `auth_checking_page.dart`, `deprecated_onboarding_page.dart` |
-| Forms | `presentation/widgets/registration_wizard.dart`, `complete_learner_profile_form.dart` (deprecated), `complete_supplier_profile_form.dart` (deprecated), `login_form.dart` |
+| Pages | `presentation/pages/login_page.dart`, `register_page.dart`, `forgot_password_page.dart`, `reset_password_page.dart`, `auth_checking_page.dart`, `deprecated_onboarding_page.dart` |
+| Forms | `presentation/widgets/registration_wizard.dart`, `forgot_password_form.dart`, `reset_password_form.dart`, `complete_learner_profile_form.dart` (deprecated), `complete_supplier_profile_form.dart` (deprecated), `login_form.dart` |
 | Shell / theme | `presentation/widgets/auth_shell.dart`, `auth_*` widgets |
 
 **Legacy (unwired):** `presentation/pages/choose_role_page.dart`, `choose_role_form.dart`.
@@ -48,7 +49,8 @@ Public signup and login for **LEARNER** and **SUPPLIER** roles, session bootstra
 |------|------|
 | Module | `modules/auth/auth.routes.ts`, `auth.controller.ts`, `auth.service.ts`, `auth.repository.ts`, `auth.validation.ts` |
 | Token delivery | `modules/auth/auth-token-delivery.ts` (httpOnly refresh cookie + optional body token) |
-| Middleware | `middlewares/auth.middleware.ts`, `role.middleware.ts` (used by other modules) |
+| Middleware | `middlewares/auth.middleware.ts`, `rate-limit.middleware.ts`, `role.middleware.ts` (used by other modules) |
+| Auth email | `modules/auth/email/*` (mock or SMTP provider for reset/change notifications) |
 
 ## API endpoints
 
@@ -60,8 +62,14 @@ Public signup and login for **LEARNER** and **SUPPLIER** roles, session bootstra
 | POST | `/api/auth/logout` | Yes |
 | GET | `/api/auth/me` | Yes |
 | PATCH | `/api/auth/change-password` | Yes (supplier portal) |
-| POST | `/api/auth/forgot-password` | **No UI** |
-| POST | `/api/auth/reset-password` | **No UI** |
+| POST | `/api/auth/forgot-password` | Yes |
+| POST | `/api/auth/reset-password` | Yes |
+
+Forgot/reset password behavior:
+- `POST /api/auth/forgot-password` body `{ email }`; response is always generic for existing and non-existing emails and never includes a reset token.
+- Reset links are built from configured `APP_PUBLIC_BASE_URL`; production requires HTTPS.
+- Reset tokens use cryptographically secure random bytes, are stored as hashes in `auth_tokens`, expire by `PASSWORD_RESET_EXPIRES_IN` (default `30m`), and older unused reset tokens are invalidated when a new reset is requested.
+- `POST /api/auth/reset-password` body `{ token, newPassword }`; successful reset marks the token used, updates the password hash, revokes active refresh tokens, sends a password-changed notification email, and does not auto-login.
 
 Related but separate module: `/api/invitations/*` — **Backend-only**.
 
@@ -85,7 +93,6 @@ From [reusable-widgets](../frontend/reusable-widgets.md):
 
 ## Known gaps / Needs verification
 
-- Forgot-password and reset-password screens **not implemented** on Flutter.
 - Web refresh token: `WebCookieTokenStorage` is a no-op; refresh relies on **httpOnly cookie** from backend (`auth-token-delivery.ts`) and a credentialed bare refresh Dio client — **Needs verification** on all browsers.
 - `RegistrationIntent.both` registers both roles in one `/register` wizard. Interests are collected once and mapped to `learnerProfile.interests`; learner bio is not collected during registration. Student/self-learner selections can suggest a matching supplier type, supplier public name defaults to the account full name, and supplier `pickupArea` is derived from onboarding city/area.
 - Email/phone verification enforcement — **Needs verification** (`account_status` vs actual gate).

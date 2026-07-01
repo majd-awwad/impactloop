@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
-import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
@@ -187,10 +186,11 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             alignment: Alignment.centerLeft,
             child: TextButton(
               onPressed: () {
-                showInfoSnackBar(
-                  context,
-                  'Forgot password screen coming soon.',
-                );
+                final email = _emailController.text.trim();
+                final target = email.isEmpty
+                    ? forgotPasswordRoute
+                    : '$forgotPasswordRoute?email=${Uri.encodeQueryComponent(email)}';
+                context.go(target);
               },
               child: Text(
                 'Forgot password?',

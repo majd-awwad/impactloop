@@ -36,6 +36,18 @@ Conventions for response shape: [04-api-conventions.md](../04-api-conventions.md
 
 Validation schemas: `auth/auth.validation.ts`
 
+`POST /api/auth/forgot-password`
+- Public route with per-IP and per-email fixed-window rate limits.
+- Body: `{ email: string }`.
+- Response: generic success with `data: null` for both existing and non-existing emails. The API never returns reset tokens.
+- For existing users, backend invalidates older unused password-reset tokens, stores a hashed new token in `auth_tokens`, expires it after `PASSWORD_RESET_EXPIRES_IN` (default `30m`), and sends an email reset link based on `APP_PUBLIC_BASE_URL`.
+
+`POST /api/auth/reset-password`
+- Public route with per-IP, per-token, and valid-token per-account rate limits.
+- Body: `{ token: string, newPassword: string }`.
+- Success: marks token used, updates `users.password_hash`, revokes active `REFRESH_TOKEN` rows for the user, sends a password-changed notification email, and returns `data: null`.
+- Invalid, expired, or used tokens return a safe validation error. Reset does not create an auth session.
+
 ## Profile — `/api/profile`
 
 | Method | Path | Auth | Source file |
