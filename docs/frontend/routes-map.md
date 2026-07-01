@@ -49,15 +49,17 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 
 1. **Auth unknown** → redirect to `/auth/checking?from=<destination>`
 2. **Protected route + unauthenticated** → `/login?from=<destination>`
-3. **Supplier route without SUPPLIER role** → `/supplier/access-denied`
-4. **Driver route without DRIVER role** → `/home`
-5. **Admin route without ADMIN role** → `/admin/access-denied`
-6. **Authenticated user on login/register/forgot/reset auth pages** → redirect to `from` query or `postAuthRouteForUser(user)`:
-   - Admin role → `/admin`
-   - Supplier role → `/supplier` (or verification gate when required)
-   - Driver role → `/driver/jobs`
-   - Otherwise → `/home`
-7. **Deprecated registration continuation paths** (`/complete-learner-profile`, `/complete-supplier-profile`) → `legacyOnboardingRedirect` sends users to `/register`
+3. **Supplier route without SUPPLIER role** → `/supplier/access-denied` (except `/supplier/onboarding`, which is authenticated-only)
+4. **Active portal mismatch** — authenticated users with `activeRole=SUPPLIER` are redirected from learner home/reservations to `/supplier`; users with `activeRole=LEARNER` are redirected from supplier portal routes to `/home` (except onboarding/verification routes)
+5. **Post-auth landing** uses `activeRole` from `/api/auth/me` (not role priority alone)
+6. **Driver route without DRIVER role** → `/home`
+7. **Admin route without ADMIN role** → `/admin/access-denied`
+8. **Authenticated user on login/register/forgot/reset auth pages** → redirect to `from` query or `postAuthRouteForUser(user)`:
+   - Admin `activeRole` → `/admin`
+   - Supplier `activeRole` → `/supplier` (or verification gate when required)
+   - Driver `activeRole` → `/driver/jobs`
+   - Learner `activeRole` → `/home`
+9. **Deprecated registration continuation paths** (`/complete-learner-profile`, `/complete-supplier-profile`) → `legacyOnboardingRedirect` sends users to `/register`
 
 ## Route table
 
@@ -84,6 +86,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/register` | `RegisterPage` | public | `_AuthPageGuard`; unified onboarding wizard for learner, supplier, and dual-role registration |
 | `/complete-learner-profile` | `DeprecatedOnboardingPage` | public | Deprecated fallback; redirects to `/register` |
 | `/complete-supplier-profile` | `DeprecatedOnboardingPage` | public | Deprecated fallback; redirects to `/register` |
+| `/supplier/onboarding` | redirect | authenticated | Legacy alias → `/become-supplier` |
+| `/become-supplier` | `BecomeSupplierPage` | authenticated | Personal learner → supplier wizard (Student/Individual only) |
 | `/supplier/access-denied` | `SupplierAccessDeniedPage` | authenticated | |
 | `/driver` | redirect | driver | Redirects to `/driver/jobs` |
 | `/driver/jobs` | `DriverJobsPage` | driver | Driver available jobs + active delivery panel inside `DriverPortalShell` |

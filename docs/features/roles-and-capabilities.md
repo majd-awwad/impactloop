@@ -115,7 +115,6 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 
 **Planned / future:**
 
-- Existing learner account upgrade to supplier as a complete self-service flow.
 - Supplier followers and followed-supplier recommendations.
 - Saves/likes per material as demand signals.
 - Supplier insights for views, likes, saves, reservations, category demand, and materials learners request.

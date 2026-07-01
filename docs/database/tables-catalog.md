@@ -19,6 +19,7 @@ Per-table reference from `apps/backend/prisma/schema.prisma`. Column names shown
 | accountStatus | AccountStatus | default `PENDING_VERIFICATION` |
 | profileImageUrl | String? | |
 | emailVerifiedAt, phoneVerifiedAt, lastLoginAt | DateTime? | |
+| activeRole | UserRole? | Current portal selection (`LEARNER`, `SUPPLIER`, etc.); does not remove stored roles |
 | createdAt, updatedAt | DateTime | |
 
 Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, material reports, learning projects, requests.

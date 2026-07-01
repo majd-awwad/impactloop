@@ -21,7 +21,7 @@ void main() {
     });
 
     test('returns onboarding for learner-only users', () {
-      expect(supplierEntryRouteForUser(_testUser()), supplierOnboardingRoute);
+      expect(supplierEntryRouteForUser(_testUser()), becomeSupplierRoute);
     });
 
     test('returns profile for supplier users', () {

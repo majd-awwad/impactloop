@@ -249,6 +249,7 @@ model User {
   emailVerifiedAt              DateTime?                  @map("email_verified_at")
   phoneVerifiedAt              DateTime?                  @map("phone_verified_at")
   lastLoginAt                  DateTime?                  @map("last_login_at")
+  activeRole                   UserRole?                  @map("active_role")
   suspensionReason             String?                    @map("suspension_reason")
   suspendedAt                  DateTime?                  @map("suspended_at")
   suspendedById                String?                    @map("suspended_by_id")

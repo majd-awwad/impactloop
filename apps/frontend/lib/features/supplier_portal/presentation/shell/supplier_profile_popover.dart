@@ -6,6 +6,8 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../auth/application/portal_navigation.dart';
+import '../../../auth/presentation/widgets/portal_switch_menu.dart';
 import 'supplier_settings_controls.dart';
 import '../widgets/supplier_feedback.dart';
 import '../widgets/supplier_portal_avatar.dart';
@@ -115,7 +117,7 @@ class SupplierProfileButton extends ConsumerWidget {
   }
 }
 
-class SupplierProfilePopoverContent extends StatelessWidget {
+class SupplierProfilePopoverContent extends ConsumerWidget {
   const SupplierProfilePopoverContent({
     super.key,
     required this.displayName,
@@ -136,9 +138,10 @@ class SupplierProfilePopoverContent extends StatelessWidget {
   final VoidCallback onLogout;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.supplierColors;
     final decorations = context.supplierDecorations;
+    final user = ref.watch(authControllerProvider).user;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -168,6 +171,13 @@ class SupplierProfilePopoverContent extends StatelessWidget {
                       Text(
                         context.s.supplierTypeLabel(supplierType!),
                         style: context.supplierBody(),
+                      ),
+                    if (user != null)
+                      Text(
+                        activePortalModeLabel(user),
+                        style: context.supplierBody().copyWith(
+                          color: colors.accent,
+                        ),
                       ),
                   ],
                 ),
@@ -201,6 +211,18 @@ class SupplierProfilePopoverContent extends StatelessWidget {
             icon: Icons.notifications_none_rounded,
             onTap: () => onNavigate('/supplier/notifications'),
           ),
+          if (user != null) ...[
+            Divider(color: colors.border, height: 24),
+            ...PortalSwitchMenuItems.build(
+              context: context,
+              ref: ref,
+              user: user,
+              labelStyle: context.supplierLabel().copyWith(
+                color: colors.textPrimary,
+              ),
+              noteStyle: context.supplierBody(),
+            ),
+          ],
           Divider(color: colors.border, height: 24),
           _PopoverAction(
             label: context.s.logout,

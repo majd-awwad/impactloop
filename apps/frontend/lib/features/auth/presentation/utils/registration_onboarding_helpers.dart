@@ -32,9 +32,13 @@ const registrationSkillLevels = [
   'Expert',
 ];
 
-const registrationSupplierTypes = [
+const registrationPersonalSupplierTypes = [
   'Student supplier',
   'Individual supplier',
+];
+
+const registrationSupplierTypes = [
+  ...registrationPersonalSupplierTypes,
   'Workshop',
   'Factory',
   'Educational institution',

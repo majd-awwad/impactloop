@@ -21,6 +21,8 @@ import {
   register,
   resetPassword,
   changePassword,
+  postBecomeSupplier,
+  postSwitchRole,
 } from './auth.controller.js';
 
 import {
@@ -30,6 +32,8 @@ import {
   refreshTokenSchema,
   registerSchema,
   resetPasswordSchema,
+  becomeSupplierSchema,
+  switchRoleSchema,
 } from './auth.validation.js';
 
 export const authRouter = Router();
@@ -132,4 +136,18 @@ authRouter.patch(
   authMiddleware,
   validate(changePasswordSchema),
   asyncHandler(changePassword),
+);
+
+authRouter.post(
+  '/become-supplier',
+  authMiddleware,
+  validate(becomeSupplierSchema),
+  asyncHandler(postBecomeSupplier),
+);
+
+authRouter.post(
+  '/switch-role',
+  authMiddleware,
+  validate(switchRoleSchema),
+  asyncHandler(postSwitchRole),
 );

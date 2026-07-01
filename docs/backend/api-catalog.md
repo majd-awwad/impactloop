@@ -31,8 +31,14 @@ Conventions for response shape: [04-api-conventions.md](../04-api-conventions.md
 | POST | `/api/auth/logout` | Public | `auth/auth.routes.ts` |
 | GET | `/api/auth/me` | Bearer JWT | `auth/auth.routes.ts` |
 | PATCH | `/api/auth/change-password` | Bearer JWT | `auth/auth.routes.ts` |
+| POST | `/api/auth/become-supplier` | Bearer JWT | `auth/auth.routes.ts` |
+| POST | `/api/auth/switch-role` | Bearer JWT | `auth/auth.routes.ts` |
 
-`GET /api/auth/me` returns `{ user }` including `phoneVerifiedAt` and `lastLoginAt` when present on the user record.
+`GET /api/auth/me` returns `{ user }` including `roles`, `activeRole`, `canSwitchToLearner`, `canSwitchToSupplier`, `defaultPortalRoute`, profile summaries, `phoneVerifiedAt`, and `lastLoginAt` when present.
+
+`POST /api/auth/become-supplier` adds `SUPPLIER` role and creates a supplier profile on the same account when missing; keeps existing `LEARNER` role; sets `activeRole` to `SUPPLIER`. Response matches login/register: new `accessToken`, optional `refreshToken`, and updated `user` so JWT roles stay in sync.
+
+`POST /api/auth/switch-role` body: `{ "activeRole": "LEARNER" | "SUPPLIER" }`. Backend enforces portal switch rules (organization suppliers cannot switch to learner unless they already have `LEARNER`; student/individual suppliers may be granted `LEARNER` on first switch). Response includes refreshed auth tokens and updated `user`.
 
 Validation schemas: `auth/auth.validation.ts`
 
