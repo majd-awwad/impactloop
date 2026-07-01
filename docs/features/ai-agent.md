@@ -26,6 +26,17 @@ From [01-requirements.md](01-requirements.md) and [05-roadmap.md](05-roadmap.md)
 
 **Overall:** Material-matching **AI agent** is **not implemented**. Internal price AI is **Partial** and separate from product “AI agent” scope.
 
+## Product intent from role planning
+
+The learner-facing AI/material matching direction is:
+
+- Project to materials: show available, missing, and alternative materials for a selected project.
+- Material to projects: suggest projects a learner can build with a selected material.
+- Build checklist support: available, missing, alternative, already owned, and reserved states.
+- "I already have this" should remove owned materials from missing-material recommendations.
+
+These are planned/future capabilities and should not be documented as shipped until matching APIs, schema, and Flutter flows exist.
+
 ## Existing related files
 
 ### Backend (price suggestion only)

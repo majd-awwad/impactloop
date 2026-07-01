@@ -1,6 +1,7 @@
+import '../../../../core/config/api_config.dart';
+
 class LearnerReservationPickupLocation {
-  const LearnerReservationPickupLocation({
-    this.country,
+  const LearnerReservationPickupLocation({    this.country,
     required this.city,
     this.area,
     this.addressLine,
@@ -74,12 +75,24 @@ class LearnerReservationMaterial {
       status: json['status'] as String? ?? '',
       deliveryAllowed: json['deliveryAllowed'] == true,
       unit: json['unit'] as String? ?? 'piece',
-      imageUrl: json['imageUrl'] as String?,
+      imageUrl: _parseImageUrl(json['imageUrl']),
       city: json['city'] as String?,
       area: json['area'] as String?,
     );
   }
 
+  static String? _parseImageUrl(Object? value) {
+    if (value is! String) {
+      return null;
+    }
+
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    return ApiConfig.resolveMediaUrl(trimmed);
+  }
   String get locationLabel {
     if (city != null && area != null) {
       return '$city, $area';

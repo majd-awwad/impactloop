@@ -6,7 +6,7 @@
 
 Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials, handle incoming reservation requests, pickup schedule, notifications, and account security.
 
-**Not in scope:** learner reservation cancel, delivery driver workflow, admin/moderator tools.
+**Not in current supplier scope:** learner reservation cancel, delivery driver workflow, admin/moderator tools, supplier followers, deep demand insights, and related-project suggestions for supplier materials.
 
 ## Current status
 
@@ -35,6 +35,8 @@ Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials,
 Supplier API calls use the shared authenticated Dio client. When the access token expires, eligible Supplier JSON requests now refresh the token centrally through the auth/network layer and retry once. Material image uploads are not auto-retried because replaying multipart request bodies is unsafe; expired sessions during upload surface as an auth/API error.
 
 Add-material uses category-scoped material type/name autocomplete backed by `GET /api/material-types?categoryId=&q=`. Suppliers can still type a custom `materialName`; selecting a reviewed type sends `materialTypeId` to price check only, while create continues to send `materialName` for backend material type/alias matching. `Listing title` remains display-only. The UI no longer asks for source type; backend derives `materials.sourceType` from `supplierProfile.supplierType` (`WORKSHOP` → `WORKSHOP_SURPLUS`, `FACTORY` → `FACTORY_SURPLUS`, `EDUCATIONAL_INSTITUTION` → `EDUCATIONAL_INSTITUTION`, `INDIVIDUAL_SUPPLIER` → `STUDENT_LEFTOVER`). The individual mapping is an MVP fallback and may need a more precise enum later.
+
+**Price governance:** paid listings are checked against accepted price rules or review workflows before publish. The current AI support is price-reference assistance for rule/request review; broader AI description/category/use suggestions are planned future scope.
 
 **Pickup and delivery on create:** Organization suppliers see a read-only profile pickup map; individual/student suppliers can use profile default or override per material. Backend always requires a profile default pickup, copies it into a dedicated `locations` row per material (or creates override row for individual/student). Organization suppliers cannot send `useDefaultPickupLocation: false` or `pickupLocation`. Suppliers can also set `deliveryAllowed`; accepted learner reservations for those materials can request internal delivery. Supplier reservation responses include `deliveryRequested`, `activeDelivery` (`id`, `status`), and `canSupplierComplete`; the UI uses these fields to show manual completion only for accepted self-pickup reservations. Reservations with `deliveryRequested` or any `Delivery` row, including cancelled or failed delivery attempts, remain driver-delivery handled and do not expose supplier manual completion.
 
@@ -110,3 +112,4 @@ Static images: `GET /uploads/materials/*`
 - Accept reservation recomputes material status from holds; material may stay `AVAILABLE` when partial stock remains.
 - Admin impact metrics still count whole `REUSED` materials; partial depletion may need reservation-level impact later.
 - `POST /api/price-rule-requests` has auth but no `SUPPLIER` role guard in route file.
+- Supplier followers, follower impact, saves/likes analytics, category demand insights, and "related projects for this material" are planned/future.

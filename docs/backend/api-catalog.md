@@ -11,6 +11,7 @@ Conventions for response shape: [04-api-conventions.md](../04-api-conventions.md
 | Method | Path | Auth | Source |
 |--------|------|------|--------|
 | GET | `/uploads/materials/*` | Public | `app.ts` — `express.static(MATERIAL_UPLOADS_DIR)` |
+| GET | `/uploads/profiles/*` | Public | `app.ts` — `express.static(PROFILE_UPLOADS_DIR)` |
 
 ## Health
 
@@ -31,7 +32,50 @@ Conventions for response shape: [04-api-conventions.md](../04-api-conventions.md
 | GET | `/api/auth/me` | Bearer JWT | `auth/auth.routes.ts` |
 | PATCH | `/api/auth/change-password` | Bearer JWT | `auth/auth.routes.ts` |
 
+`GET /api/auth/me` returns `{ user }` including `phoneVerifiedAt` and `lastLoginAt` when present on the user record.
+
 Validation schemas: `auth/auth.validation.ts`
+
+`POST /api/auth/forgot-password`
+- Public route with per-IP and per-email fixed-window rate limits.
+- Body: `{ email: string }`.
+- Response: generic success with `data: null` for both existing and non-existing emails. The API never returns reset tokens.
+- For existing users, backend invalidates older unused password-reset tokens, stores a hashed new token in `auth_tokens`, expires it after `PASSWORD_RESET_EXPIRES_IN` (default `30m`), and sends an email reset link based on `APP_PUBLIC_BASE_URL`.
+
+`POST /api/auth/reset-password`
+- Public route with per-IP, per-token, and valid-token per-account rate limits.
+- Body: `{ token: string, newPassword: string }`.
+- Success: marks token used, updates `users.password_hash`, revokes active `REFRESH_TOKEN` rows for the user, sends a password-changed notification email, and returns `data: null`.
+- Invalid, expired, or used tokens return a safe validation error. Reset does not create an auth session.
+
+## Profile — `/api/profile`
+
+| Method | Path | Auth | Source file |
+|--------|------|------|-------------|
+| PATCH | `/api/profile` | Bearer JWT | `profile/profile.routes.ts` |
+| PATCH | `/api/profile/learner` | Bearer JWT + `LEARNER` role | `profile/profile.routes.ts` |
+
+`PATCH /api/profile` body (partial, at least one field): `{ displayName?, phone?, profileImageUrl? }`. Changing `phone` clears `phoneVerifiedAt`. `profileImageUrl` accepts `/uploads/profiles/...` or safe `https://` URLs only.
+
+`PATCH /api/profile/learner` body: `{ learnerType, skillLevel, interests?, bio? }`. Upserts `learner_profiles` for users with the `LEARNER` role.
+
+Both routes return `{ user }` using the same summary shape as `/api/auth/me`.
+
+Validation schemas: `profile/profile.validation.ts`
+
+## Uploads — `/api/uploads`
+
+| Method | Path | Auth | Source file |
+|--------|------|------|-------------|
+| POST | `/api/uploads/profile-image` | Bearer JWT | `uploads/uploads.routes.ts` |
+| POST | `/api/uploads/material-images` | Bearer JWT + `SUPPLIER` | `uploads/uploads.routes.ts` |
+| POST | `/api/uploads/supplier-verification-document` | Bearer JWT + `SUPPLIER` | `uploads/uploads.routes.ts` |
+
+`POST /api/uploads/profile-image` accepts multipart field `image` (JPG/PNG/WebP, max 5 MB). Response: `{ image: { url, filename, mimeType, sizeBytes } }` with `url` under `/uploads/profiles/...`.
+
+Verification document upload: PDF/JPG/JPEG/PNG, max 5MB. Returns `{ url, fileName }`.
+
+Static files: `GET /uploads/materials/*`, `GET /uploads/profiles/*`, `GET /uploads/supplier-verification/*` (`app.ts`).
 
 ## Categories — `/api/categories`
 
@@ -124,17 +168,6 @@ Available jobs return safe area-level pickup/dropoff data only. Accept is transa
 |--------|------|------|-------------|
 | GET | `/api/learning-projects` | Public | `learning-projects/learning-projects.routes.ts` |
 | GET | `/api/learning-projects/:id` | Public | `learning-projects/learning-projects.routes.ts` |
-
-## Uploads — `/api/uploads`
-
-| Method | Path | Auth | Roles | Source file |
-|--------|------|------|-------|-------------|
-| POST | `/api/uploads/material-images` | Bearer JWT | `SUPPLIER` | `uploads/uploads.routes.ts` |
-| POST | `/api/uploads/supplier-verification-document` | Bearer JWT | authenticated (org supplier registration) | `uploads/uploads.routes.ts` |
-
-Static files: `GET /uploads/materials/*`, `GET /uploads/supplier-verification/*` (`app.ts`).
-
-Verification document upload: PDF/JPG/JPEG/PNG, max 5MB. Returns `{ url, fileName }`.
 
 ## Locations — `/api/locations`
 

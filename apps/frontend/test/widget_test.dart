@@ -770,6 +770,15 @@ class _FakeAuthApi extends AuthApi {
       throw logoutError!;
     }
   }
+
+  @override
+  Future<void> forgotPassword({required String email}) async {}
+
+  @override
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {}
 }
 
 User _testUser({List<String> roles = const ['LEARNER']}) {

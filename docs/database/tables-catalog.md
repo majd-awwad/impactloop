@@ -21,7 +21,7 @@ Per-table reference from `apps/backend/prisma/schema.prisma`. Column names shown
 | emailVerifiedAt, phoneVerifiedAt, lastLoginAt | DateTime? | |
 | createdAt, updatedAt | DateTime | |
 
-Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, learning projects, requests.
+Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, material reports, learning projects, requests.
 
 ---
 
@@ -63,6 +63,11 @@ Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfil
 | tokenHash | String | unique |
 | invitedBy | String? | FK → users |
 | status | RoleInvitationStatus | default `PENDING` |
+| sendStatus | RoleInvitationSendStatus | default `PENDING` |
+| sentAt | DateTime? | |
+| sendError | String? | |
+| providerMessageId | String? | |
+| revokedAt | DateTime? | |
 | expiresAt | DateTime | |
 | usedAt | DateTime? | |
 | usedByUserId | String? | FK → users |
@@ -282,6 +287,25 @@ Child tables: project_images, project_required_components, project_steps, projec
 | viewsCount | Int | default 0 |
 | reusedAt | DateTime? | |
 | reusedByReservationId | String? | unique FK → reservations |
+
+---
+
+## `material_reports` — model `MaterialReport`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| materialId | String | FK → materials |
+| reporterId | String | FK → users |
+| reason | MaterialReportReason | |
+| note | String? | Required by API when `reason=OTHER` |
+| status | MaterialReportStatus | default `PENDING` |
+| adminNote | String? | |
+| reviewedById | String? | FK → users |
+| reviewedAt | DateTime? | |
+| createdAt, updatedAt | DateTime | |
+
+Used by authenticated material reporting and admin material report review. This is material-specific reporting, not a general `reports` module/table.
 
 ---
 

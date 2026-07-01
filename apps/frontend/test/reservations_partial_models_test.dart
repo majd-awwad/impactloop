@@ -29,6 +29,52 @@ void main() {
     expect(reservation.isPending, isTrue);
   });
 
+  test('LearnerReservation parses material imageUrl', () {
+    final reservation = LearnerReservation.fromJson({
+      'id': 'res-1',
+      'status': 'PENDING',
+      'quantityRequested': 1,
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'material': {
+        'id': 'mat-1',
+        'title': 'Wood panels',
+        'materialType': 'Wood',
+        'status': 'AVAILABLE',
+        'unit': 'sheet',
+        'imageUrl': 'https://example.test/material.jpg',
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+
+    expect(reservation.material.imageUrl, 'https://example.test/material.jpg');
+  });
+
+  test('LearnerReservation resolves relative material imageUrl', () {
+    final reservation = LearnerReservation.fromJson({
+      'id': 'res-1',
+      'status': 'PENDING',
+      'quantityRequested': 1,
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'material': {
+        'id': 'mat-1',
+        'title': 'Wood panels',
+        'materialType': 'Wood',
+        'status': 'AVAILABLE',
+        'unit': 'sheet',
+        'imageUrl': '/uploads/materials/cover.jpg',
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+
+    expect(
+      reservation.material.imageUrl,
+      endsWith('/uploads/materials/cover.jpg'),
+    );
+    expect(reservation.material.imageUrl, startsWith('http'));
+  });
+
   test('LearnerReservation exposes cancelled and expired helpers', () {
     final cancelled = LearnerReservation.fromJson({
       'id': 'res-2',

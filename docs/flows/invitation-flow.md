@@ -1,12 +1,12 @@
 # Invitation Flow
 
-**Sources inspected:** `apps/backend/src/modules/invitations/*`, `apps/backend/src/modules/auth/*`, `docs/features/invitations.md`
+**Sources inspected:** `apps/backend/src/modules/invitations/*`, `apps/backend/src/modules/admin/*`, `apps/backend/src/modules/auth/*`, `apps/frontend/lib/features/invitations/`, `apps/frontend/lib/features/admin_portal/`, `docs/features/invitations.md`
 
 ## Trigger
 
 An **ADMIN** user needs to onboard a **DRIVER**, **MODERATOR**, or **ADMIN** account outside public LEARNER/SUPPLIER registration.
 
-**Prerequisite:** No full admin portal — flow is **API-only** today.
+**Prerequisite:** Admin user has `ADMIN` role. Admin accounts are invitation-only.
 
 ---
 
@@ -14,21 +14,23 @@ An **ADMIN** user needs to onboard a **DRIVER**, **MODERATOR**, or **ADMIN** acc
 
 ### Trigger
 
-Authenticated ADMIN calls create endpoint (manual API / script).
+Authenticated ADMIN creates an invitation from the admin invitations page or API.
 
 ### User path
 
-N/A in Flutter — operator uses API client with ADMIN credentials.
+Admin opens `/admin/invitations`, fills target role/contact details, and submits the invitation.
 
 ### Frontend path
 
-**Not implemented.**
+`AdminInvitationsPage` uses `admin_invitations_api.dart` and invalidates the admin invitation list after successful create/resend/revoke.
 
 ### Backend path
 
-1. `POST /api/invitations` — `authMiddleware` + `requireRoles('ADMIN')`.
-2. `createInvitation` generates opaque token, stores `hashToken(rawToken)` in `role_invitations`.
-3. Response: invitation summary; in `development`, includes `inviteToken` for manual distribution.
+1. Preferred route: `POST /api/admin/invitations` — `authMiddleware` + `requireRoles('ADMIN')`.
+2. Legacy/admin-compatible route: `POST /api/invitations`.
+3. `createInvitation` generates opaque token, stores `hashToken(rawToken)` in `role_invitations`.
+4. Email/mock provider attempts delivery when configured.
+5. Response returns invitation summary; mock/dev behavior may expose delivery token metadata for local testing.
 
 ### Database changes
 
@@ -36,7 +38,7 @@ Insert `role_invitations` (`status: PENDING`, `expires_at` from `env.invitationE
 
 ### Success state
 
-`201` with invitation metadata (and dev token).
+`201` with invitation metadata.
 
 ### Error states
 
@@ -45,7 +47,7 @@ Insert `role_invitations` (`status: PENDING`, `expires_at` from `env.invitationE
 
 ### Files involved
 
-`invitations.routes.ts`, `invitations.controller.ts`, `invitations.service.ts`, `invitations.repository.ts`, `utils/token.ts`
+`admin.routes.ts`, `admin-invitations.controller.ts`, `invitations.routes.ts`, `invitations.controller.ts`, `invitations.service.ts`, `invitations.repository.ts`, `utils/token.ts`
 
 ---
 
@@ -53,15 +55,15 @@ Insert `role_invitations` (`status: PENDING`, `expires_at` from `env.invitationE
 
 ### Trigger
 
-Prospective invitee opens link with token (future UI) or client calls validate before showing accept form.
+Prospective invitee opens `/invite/accept?token=...`.
 
 ### User path
 
-Check whether token is still valid and which role/email it targets.
+Flutter checks whether token is still valid and which role/contact it targets before showing the accept form.
 
 ### Frontend path
 
-**Not implemented.**
+`InviteAcceptPage` reads the token query parameter and calls the invitation validation API.
 
 ### Backend path
 
@@ -89,15 +91,15 @@ Invalid/expired token → `valid: false` (not necessarily HTTP error).
 
 ### Trigger
 
-Invitee submits account details with invitation token.
+Invitee submits account details from `/invite/accept`.
 
 ### User path
 
-N/A in Flutter — API client posts accept payload.
+Invitee completes display name, email, password, and optional phone fields. Targeted email/phone invitations must match the invitation.
 
 ### Frontend path
 
-**Not implemented.**
+`InviteAcceptPage` submits the accept payload through the invitations data layer.
 
 ### Backend path
 
@@ -106,11 +108,12 @@ N/A in Flutter — API client posts accept payload.
 3. Validate email/phone match invitation targets when provided.
 4. Reject if email/phone already registered (`409 CONFLICT`).
 5. `acceptInvitationTransaction`: create `users` + `user_roles`, mark invitation used.
-6. `createAuthSessionForUser` → access + refresh tokens (same as login response).
+6. If target role is `DRIVER`, create `driver_profiles`.
+7. `createAuthSessionForUser` returns access + refresh tokens (same as login response).
 
 ### Database changes
 
-Insert `users`, `user_roles`; update `role_invitations` (`status`, `used_at`, `used_by_user_id`); insert `auth_tokens` for refresh.
+Insert `users`, `user_roles`; insert `driver_profiles` for driver invitations; update `role_invitations` (`status`, `used_at`, `used_by_user_id`); insert `auth_tokens` for refresh.
 
 ### Success state
 
@@ -132,18 +135,31 @@ Insert `users`, `user_roles`; update `role_invitations` (`status`, `used_at`, `u
 
 ---
 
-## Not implemented
+## Admin manage invitations
 
-- Admin portal to create/manage invitations
-- Flutter accept-invitation page / deep link route
-- Email or SMS token delivery
-- Invitation revoke/list APIs
-- Post-accept DRIVER/MODERATOR/ADMIN dashboards
+Implemented under `/admin/invitations`:
+
+- List invitations.
+- Resend invitation.
+- Revoke invitation.
+
+Backend routes:
+
+- `GET /api/admin/invitations`
+- `POST /api/admin/invitations/:id/resend`
+- `PATCH /api/admin/invitations/:id/revoke`
+
+## Not implemented / partial
+
+- Moderator post-accept portal.
+- Full admin audit trail for invitation operations.
+- Production email/SMS behavior needs environment verification.
+- Driver and admin portals are partial role experiences after accept.
 
 ---
 
 ## Open questions
 
-- Production distribution of `inviteToken` without email service?
+- Production distribution behavior when email provider is not configured?
 - Should validate endpoint rate-limit token guessing?
-- Profile onboarding for DRIVER/MODERATOR after accept?
+- What moderator onboarding/workspace should exist after accept?

@@ -18,6 +18,7 @@ class AppTextField extends StatelessWidget {
     this.maxLines,
     this.errorText,
     this.onChanged,
+    this.suffixIcon,
   });
 
   final TextEditingController controller;
@@ -33,6 +34,7 @@ class AppTextField extends StatelessWidget {
   final int? maxLines;
   final String? errorText;
   final ValueChanged<String>? onChanged;
+  final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +44,7 @@ class AppTextField extends StatelessWidget {
         labelText: label,
         hintText: hint,
         floatingLabelBehavior: FloatingLabelBehavior.always,
+        suffixIcon: suffixIcon,
       ),
       keyboardType: keyboardType,
       textInputAction: textInputAction,

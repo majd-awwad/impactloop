@@ -47,7 +47,7 @@ export const getMaterial = async (
   res: Response,
 ): Promise<void> => {
   const { id } = readValidatedParams<{ id: string }>(req);
-  const material = await getMaterialById(id);
+  const material = await getMaterialById(id, req.auth);
 
   res.json(successResponse('Material fetched successfully', material));
 };

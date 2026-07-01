@@ -15,10 +15,4 @@ enum RegistrationIntent {
     RegistrationIntent.supplier => 'SUPPLIER',
     RegistrationIntent.both => 'BOTH',
   };
-
-  String get continueRoute => switch (this) {
-    RegistrationIntent.learner => '/complete-learner-profile',
-    RegistrationIntent.supplier => '/complete-supplier-profile',
-    RegistrationIntent.both => '/complete-learner-profile?intent=both',
-  };
 }

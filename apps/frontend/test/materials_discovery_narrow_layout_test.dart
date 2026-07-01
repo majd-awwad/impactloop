@@ -6,7 +6,9 @@ import 'package:frontend/features/material_discovery/presentation/views/material
 import 'package:frontend/shared/widgets/materials/app_material_card.dart';
 
 void main() {
-  testWidgets('uses compact cards on narrow discovery widths', (tester) async {
+  testWidgets('uses compact list cards on narrow discovery widths', (
+    tester,
+  ) async {
     final controllers = _FilterControllers();
 
     await tester.binding.setSurfaceSize(const Size(360, 900));
@@ -20,31 +22,31 @@ void main() {
             child: SizedBox(
               width: 328,
               child: MaterialsDiscoveryView(
-              materials: mockMaterials.take(1).toList(),
-              pagination: null,
-              categories: const [],
-              searchController: controllers.search,
-              cityController: controllers.city,
-              areaController: controllers.area,
-              searchValue: '',
-              selectedCategoryIndex: 0,
-              selectedQuickFilterIndex: 0,
-              selectedSortIndex: 0,
-              selectedConditionIndex: 0,
-              hasActiveFilters: false,
-              isRefetching: false,
-              isLoadingMore: false,
-              onSearchChanged: (_) {},
-              onCityChanged: (_) {},
-              onAreaChanged: (_) {},
-              onCategorySelected: (_) {},
-              onQuickFilterSelected: (_) {},
-              onSortSelected: (_) {},
-              onConditionSelected: (_) {},
-              onClearFilters: () {},
-              onLoadMore: () {},
-              showHeroSection: false,
-              showLocationPrivacyPanel: false,
+                materials: mockMaterials.take(1).toList(),
+                pagination: null,
+                categories: const [],
+                searchController: controllers.search,
+                cityController: controllers.city,
+                areaController: controllers.area,
+                searchValue: '',
+                selectedCategoryIndex: 0,
+                selectedQuickFilterIndex: 0,
+                selectedSortIndex: 0,
+                selectedConditionIndex: 0,
+                hasActiveFilters: false,
+                isRefetching: false,
+                isLoadingMore: false,
+                onSearchChanged: (_) {},
+                onCityChanged: (_) {},
+                onAreaChanged: (_) {},
+                onCategorySelected: (_) {},
+                onQuickFilterSelected: (_) {},
+                onSortSelected: (_) {},
+                onConditionSelected: (_) {},
+                onClearFilters: () {},
+                onLoadMore: () {},
+                showHeroSection: false,
+                showLocationPrivacyPanel: false,
               ),
             ),
           ),
@@ -54,8 +56,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    final card = tester.widget<AppMaterialCard>(find.byType(AppMaterialCard));
-    expect(card.variant, AppMaterialCardVariant.compact);
+    expect(find.byType(ImpactMaterialCompactCard), findsOneWidget);
+    expect(find.byType(ImpactMaterialGridCard), findsNothing);
     expect(tester.takeException(), isNull);
 
     controllers.dispose();

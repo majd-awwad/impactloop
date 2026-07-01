@@ -8,6 +8,8 @@ Authenticated **learner dashboard** at `/home`: welcome hero, quick actions, sug
 
 Requires login (router guard).
 
+Role-scope framing: see [roles-and-capabilities](roles-and-capabilities.md) for the planned personalized learner home sections. The current home page is API-backed but not yet a dedicated recommendation engine.
+
 ## Current status
 
 | Section | Status | Data source |
@@ -85,6 +87,7 @@ No home-specific tables.
 
 - Existing learner-to-supplier role upgrade API is **not implemented**. `/supplier/onboarding` is a status/next-action page, not a completed self-upgrade flow.
 - Suggested materials uses unfiltered discovery list (first 4) — no personalization API.
+- No saved projects, followed suppliers/categories, materials-for-saved-projects, free-near-you, or continue-build sections yet.
 - Supplier users may land on `/supplier` after login via `postAuthRouteForUser` but can still open `/home` manually.
 
 ## Related docs

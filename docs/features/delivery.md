@@ -2,6 +2,8 @@
 
 Internal delivery is now a backend domain for accepted reservations. Learners can request delivery and view delivery status in Flutter; internal drivers can accept jobs and advance assigned deliveries through the driver portal.
 
+Role-scope boundary: driver is an operational support role for basic internal delivery coordination. Full Uber-style dispatch/tracking is not an MVP requirement.
+
 ## Current Status
 
 | Layer | Status | Notes |

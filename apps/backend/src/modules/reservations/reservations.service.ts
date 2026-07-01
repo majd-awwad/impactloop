@@ -30,7 +30,14 @@ const mapPickupLocationFull = (location: MaterialPickupLocation) => ({
 
 const pickMaterialCoverImageUrl = (
   images: { imageUrl: string; isCover: boolean; sortOrder: number }[],
-) => images[0]?.imageUrl ?? null;
+) => {
+  if (images.length === 0) {
+    return null;
+  }
+
+  const cover = images.find((image) => image.isCover);
+  return cover?.imageUrl ?? images[0]?.imageUrl ?? null;
+};
 
 const resolveSupplierDisplayName = (
   owner: reservationsRepository.LearnerReservationListRecord['owner'],
