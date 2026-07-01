@@ -7,6 +7,7 @@ import '../../features/auth/application/auth_navigation.dart';
 import '../widgets/app_mobile_bottom_nav_bar.dart';
 import '../../features/auth/presentation/models/registration_wizard_step.dart';
 import '../../features/auth/presentation/pages/auth_checking_page.dart';
+import '../../features/auth/presentation/widgets/become_supplier_wizard.dart';
 import '../../features/auth/presentation/pages/deprecated_onboarding_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -79,6 +80,10 @@ bool _isSupplierPortalPath(String path) {
     return false;
   }
 
+  if (path == becomeSupplierRoute || path == '/supplier/onboarding') {
+    return false;
+  }
+
   if (isSupplierVerificationStatusRoute(path) ||
       path == supplierVerificationPendingRoute) {
     return false;
@@ -108,6 +113,10 @@ bool _isAuthPage(String path) =>
     path == resetPasswordRoute;
 
 _RouteAccessLevel _routeAccessForPath(String path) {
+  if (path == becomeSupplierRoute || path == '/supplier/onboarding') {
+    return _RouteAccessLevel.authenticated;
+  }
+
   if (isSupplierVerificationStatusRoute(path) ||
       path == supplierVerificationPendingRoute) {
     return _RouteAccessLevel.supplier;
@@ -275,6 +284,36 @@ String? _resolveSupplierVerificationRedirect(
   return null;
 }
 
+bool _isLearnerPortalHomePath(String path) {
+  return path == '/home' ||
+      path == '/learner/reservations' ||
+      path.startsWith('/learner/deliveries/');
+}
+
+String? _resolveActivePortalRedirect(AuthState authState, String path) {
+  if (!authState.isAuthenticated || authState.user == null) {
+    return null;
+  }
+
+  final user = authState.user!;
+
+  if (user.isSupplierMode &&
+      _isLearnerPortalHomePath(path) &&
+      user.canSwitchToSupplier) {
+    return supplierOverviewRoute;
+  }
+
+  if (user.isLearnerMode &&
+      _isSupplierPortalPath(path) &&
+      path != becomeSupplierRoute &&
+      path != '/supplier/onboarding' &&
+      user.canSwitchToSupplier) {
+    return learningHubRoute;
+  }
+
+  return null;
+}
+
 String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
   final authState = ref.read(authControllerProvider);
   final path = state.matchedLocation;
@@ -303,6 +342,11 @@ String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
   );
   if (verificationRedirect != null) {
     return verificationRedirect;
+  }
+
+  final portalRedirect = _resolveActivePortalRedirect(authState, path);
+  if (portalRedirect != null) {
+    return portalRedirect;
   }
 
   if (authState.status == AuthStatus.unknown) {
@@ -436,6 +480,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const DeprecatedOnboardingPage(),
       ),
       GoRoute(
+        path: becomeSupplierRoute,
+        builder: (context, state) => const BecomeSupplierPage(),
+      ),
+      GoRoute(
+        path: '/supplier/onboarding',
+        redirect: (context, state) => becomeSupplierRoute,
+      ),
+      GoRoute(
         path: '/invite/accept',
         builder: (context, state) {
           final token = state.uri.queryParameters['token'] ?? '';
@@ -482,6 +534,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/supplier',
+            redirect: (context, state) => supplierOverviewRoute,
+          ),
+          GoRoute(
+            path: '/supplier/overview',
             builder: (context, state) => const SupplierDashboardPage(),
           ),
           GoRoute(

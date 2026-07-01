@@ -104,6 +104,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | JWT + refresh tokens | **Implemented** | `auth` module, `AuthTokenType.REFRESH_TOKEN` |
 | Role middleware | **Implemented** | `role.middleware.ts`, supplier routes |
 | Public LEARNER/SUPPLIER registration | **Implemented** | `auth.validation.ts`, `UnifiedRegisterForm` with `RegistrationIntent.both` |
+| Same-account learner/supplier role switching | **Implemented** | `activeRole` on `users`, `POST /api/auth/switch-role`, `POST /api/auth/become-supplier`, portal switch UI |
 | Forgot / reset password | **Implemented** | Backend: `auth.routes.ts`; Flutter: `/forgot-password` and `/reset-password` |
 | Role invitations (DRIVER/MODERATOR/ADMIN) | **Implemented** | Admin email invitations + `/invite/accept` registration; `EMAIL_PROVIDER=mock` or SMTP |
 | Material discovery (public) | **Implemented** | Backend + Flutter |

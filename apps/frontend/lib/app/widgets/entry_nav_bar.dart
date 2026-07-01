@@ -9,6 +9,7 @@ import '../theme/auth_dark_text_styles.dart';
 import '../theme/app_theme_colors.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/auth_navigation.dart';
+import '../../features/auth/presentation/widgets/portal_switch_menu.dart';
 import '../../features/auth/data/models/user.dart';
 import '../../shared/widgets/app_feedback.dart';
 import '../../shared/widgets/user_avatar.dart';
@@ -829,6 +830,12 @@ class _AccountMenu extends StatelessWidget {
                           context,
                         ).copyWith(color: secondaryText, fontSize: 12),
                       ),
+                      Text(
+                        activePortalModeLabel(user),
+                        style: AuthDarkTextStyles.body(
+                          context,
+                        ).copyWith(color: accent, fontSize: 12),
+                      ),
                     ],
                   ),
                 ),
@@ -866,6 +873,25 @@ class _AccountMenu extends StatelessWidget {
             label: 'Become a supplier',
             onPressed: () => context.go(supplierEntryRouteForUser(user)),
           ),
+        ...PortalSwitchMenuItems.build(
+          context: context,
+          ref: ref,
+          user: user,
+          labelStyle: AuthDarkTextStyles.label(context).copyWith(
+            color: primaryText,
+          ),
+          noteStyle: AuthDarkTextStyles.body(context).copyWith(
+            color: secondaryText,
+            fontSize: 12,
+          ),
+        ).map(
+          (item) => Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.md,
+            ),
+            child: item,
+          ),
+        ),
         const Divider(height: 1),
         Padding(
           padding: const EdgeInsetsDirectional.all(AppSpacing.md),

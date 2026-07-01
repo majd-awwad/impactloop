@@ -44,11 +44,12 @@ class SupplierProfileHeader extends StatelessWidget {
     final resolvedAvatar = (avatarUrl != null && avatarUrl.trim().isNotEmpty)
         ? ApiConfig.resolveMediaUrl(avatarUrl)
         : null;
+    final pickup = supplier?.defaultPickupLocation;
+    final city = (pickup?.city ?? '').trim();
+    final area = (pickup?.area ?? '').trim();
     final location = [
-      if ((supplier?.defaultPickupLocation?.city ?? '').trim().isNotEmpty)
-        supplier!.defaultPickupLocation!.city,
-      if ((supplier?.defaultPickupLocation?.area ?? '').trim().isNotEmpty)
-        supplier!.defaultPickupLocation!.area,
+      if (city.isNotEmpty) city,
+      if (area.isNotEmpty) area,
     ].join(', ');
 
     return ClipRRect(

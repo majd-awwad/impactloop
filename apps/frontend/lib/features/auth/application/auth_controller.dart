@@ -2,8 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_session_refresh.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../supplier_portal/application/supplier_portal_refresh.dart';
 import '../data/auth_repository.dart';
 import '../data/models/auth_tokens.dart';
+import '../data/models/become_supplier_request.dart';
 import '../data/models/register_request.dart';
 import '../data/models/user.dart';
 import 'auth_providers.dart';
@@ -257,6 +259,54 @@ class AuthController extends Notifier<AuthState> {
         hasBootstrapped: true,
       );
 
+      return user;
+    } on ApiException catch (error) {
+      state = state.copyWith(isLoading: false, error: error);
+      rethrow;
+    } catch (error) {
+      final apiError = normalizeApiException(error);
+      state = state.copyWith(isLoading: false, error: apiError);
+      throw apiError;
+    }
+  }
+
+  Future<User> becomeSupplier(BecomeSupplierRequest request) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      final user = await _repository.becomeSupplier(request);
+      state = AuthState(
+        user: user,
+        accessToken: _repository.accessToken,
+        isLoading: false,
+        hasBootstrapped: true,
+      );
+      invalidateSupplierPortalProviders(ref);
+      return user;
+    } on ApiException catch (error) {
+      state = state.copyWith(isLoading: false, error: error);
+      rethrow;
+    } catch (error) {
+      final apiError = normalizeApiException(error);
+      state = state.copyWith(isLoading: false, error: apiError);
+      throw apiError;
+    }
+  }
+
+  Future<User> switchActiveRole(String activeRole) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      final user = await _repository.switchActiveRole(activeRole);
+      state = AuthState(
+        user: user,
+        accessToken: _repository.accessToken,
+        isLoading: false,
+        hasBootstrapped: true,
+      );
+      if (activeRole.trim().toUpperCase() == 'SUPPLIER') {
+        invalidateSupplierPortalProviders(ref);
+      }
       return user;
     } on ApiException catch (error) {
       state = state.copyWith(isLoading: false, error: error);

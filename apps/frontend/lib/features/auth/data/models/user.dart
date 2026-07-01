@@ -69,6 +69,10 @@ class User {
     required this.accountStatus,
     this.profileImageUrl,
     required this.roles,
+    this.activeRole = 'LEARNER',
+    this.canSwitchToLearner = false,
+    this.canSwitchToSupplier = false,
+    this.defaultPortalRoute = '/home',
     this.learnerProfile,
     this.supplierProfile,
     this.emailVerifiedAt,
@@ -84,12 +88,20 @@ class User {
   final String accountStatus;
   final String? profileImageUrl;
   final List<String> roles;
+  final String activeRole;
+  final bool canSwitchToLearner;
+  final bool canSwitchToSupplier;
+  final String defaultPortalRoute;
   final LearnerProfile? learnerProfile;
   final SupplierProfile? supplierProfile;
   final DateTime? emailVerifiedAt;
   final DateTime? phoneVerifiedAt;
   final DateTime? lastLoginAt;
   final DateTime createdAt;
+
+  bool get isLearnerMode => activeRole.trim().toUpperCase() == 'LEARNER';
+
+  bool get isSupplierMode => activeRole.trim().toUpperCase() == 'SUPPLIER';
 
   bool hasRole(String role) {
     final normalizedRole = role.trim().toUpperCase();
@@ -109,6 +121,12 @@ class User {
       accountStatus: json['accountStatus'] as String? ?? 'PENDING_VERIFICATION',
       profileImageUrl: json['profileImageUrl'] as String?,
       roles: parsedRoles,
+      activeRole: (json['activeRole'] as String?)?.trim().toUpperCase() ??
+          (parsedRoles.isNotEmpty ? parsedRoles.first : 'LEARNER'),
+      canSwitchToLearner: json['canSwitchToLearner'] as bool? ?? false,
+      canSwitchToSupplier: json['canSwitchToSupplier'] as bool? ?? false,
+      defaultPortalRoute:
+          json['defaultPortalRoute'] as String? ?? '/home',
       learnerProfile: learnerProfileJson is Map<String, dynamic>
           ? LearnerProfile.fromJson(learnerProfileJson)
           : null,
