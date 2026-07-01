@@ -34,7 +34,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 
 | Level | Paths | Guard behavior |
 |-------|-------|----------------|
-| **public** | Most routes (landing, materials, learning, auth pages, profile completion) | No login required |
+| **public** | Most routes (landing, materials, learning, auth pages, register deprecated fallbacks) | No login required |
 | **authenticated** | `/home`, `/profile`, `/profile/*`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
 | **learner** | `/learner/reservations`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
@@ -55,7 +55,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
    - Supplier role → `/supplier` (or verification gate when required)
    - Driver role → `/driver/jobs`
    - Otherwise → `/home`
-7. **Profile completion paths** (`/complete-learner-profile`, `/complete-supplier-profile`) → `legacyOnboardingRedirect` validates `registrationDraftProvider` and intent
+7. **Deprecated registration continuation paths** (`/complete-learner-profile`, `/complete-supplier-profile`) → `legacyOnboardingRedirect` sends users to `/register`
 
 ## Route table
 
@@ -77,9 +77,9 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default |
 | `/materials/:id` | `MaterialDetailsPage` | public | API-backed default |
 | `/login` | `LoginPage` | public | `_AuthPageGuard` |
-| `/register` | `RegisterPage` | public | `_AuthPageGuard` |
-| `/complete-learner-profile` | `CompleteLearnerProfilePage` | public | Registration draft flow; `?intent=both` supported |
-| `/complete-supplier-profile` | `CompleteSupplierProfilePage` | public | Registration draft flow |
+| `/register` | `RegisterPage` | public | `_AuthPageGuard`; unified onboarding wizard for learner, supplier, and dual-role registration |
+| `/complete-learner-profile` | `DeprecatedOnboardingPage` | public | Deprecated fallback; redirects to `/register` |
+| `/complete-supplier-profile` | `DeprecatedOnboardingPage` | public | Deprecated fallback; redirects to `/register` |
 | `/supplier/access-denied` | `SupplierAccessDeniedPage` | authenticated | |
 | `/driver` | redirect | driver | Redirects to `/driver/jobs` |
 | `/driver/jobs` | `DriverJobsPage` | driver | Driver available jobs + active delivery panel inside `DriverPortalShell` |
@@ -143,7 +143,7 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 
 | File | Status |
 |------|--------|
-| `auth/presentation/pages/choose_role_page.dart` | **Unwired** — legacy; registration uses `UnifiedRegisterForm` with intent chips |
+| `auth/presentation/pages/choose_role_page.dart` | **Unwired** — legacy; registration uses `RegistrationWizard` with intent chips |
 | `supplier_portal/presentation/pages/supplier_coming_soon_page.dart` | **Unwired** |
 
 ## Query parameters
@@ -151,7 +151,7 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 | Route | Params | Purpose |
 |-------|--------|---------|
 | `/login`, `/register`, protected redirects | `from` | Return URL after auth |
-| `/complete-learner-profile` | `intent=both` | Dual-role registration hint |
+| `/complete-learner-profile`, `/complete-supplier-profile` | any | Deprecated fallback paths; redirected to `/register` |
 | `/supplier/materials/new` | `categoryRequestId`, `priceRuleRequestId` | Resume listing from approved request |
 | `/supplier/reservations` | `tab`, `focus` | Deep link into reservation inbox |
 

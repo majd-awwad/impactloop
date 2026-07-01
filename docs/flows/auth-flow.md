@@ -1,6 +1,6 @@
 # Auth Flow
 
-**Sources inspected:** `auth_controller.dart`, `auth_repository.dart`, `unified_register_form.dart`, `complete_*_profile_form.dart`, `app_router.dart`, `auth.routes.ts`, `auth.service.ts`, `auth.validation.ts`
+**Sources inspected:** `auth_controller.dart`, `auth_repository.dart`, `registration_wizard.dart`, `app_router.dart`, `auth.routes.ts`, `auth.service.ts`, `auth.validation.ts`
 
 ## Trigger
 
@@ -12,13 +12,13 @@ User chooses **Sign up** or **Sign in**, or app loads a protected route while se
 
 ### User path
 
-1. `/register` → fill basic fields + select **Find materials** intent.
-2. `/complete-learner-profile` → learner type, skill level, interests, bio.
+1. `/register` → select **Find materials**, fill account fields, interests, goals, optional city/area, learner type, and skill level.
+2. Review inside `/register`.
 3. Submit → account created → land on `/home`.
 
 ### Frontend path
 
-`UnifiedRegisterForm` → `registrationDraftProvider` → `CompleteLearnerProfileForm` → `authController.register(draft.toRegisterRequest())` → `context.go(postAuthRouteForUser(user))`.
+`RegistrationWizard` → `registrationDraftProvider` → `authController.register(draft.toRegisterRequest())` → `context.go(postAuthRouteForUser(user))`.
 
 ### Backend path
 
@@ -36,26 +36,26 @@ Authenticated session; access token in memory; refresh via cookie/body; user red
 
 - Validation 400 → field errors on form (`ApiException` mapping).
 - Duplicate email 409 — **Needs verification** of exact code.
-- Incomplete draft → redirect `/register` with form error.
+- Incomplete wizard state → inline `/register` error.
 
 ### Files involved
 
-`unified_register_form.dart`, `complete_learner_profile_form.dart`, `registration_draft_notifier.dart`, `register_request.dart`, `auth_controller.dart`, `auth_api.dart`, `auth.service.ts`, `auth.repository.ts`
+`registration_wizard.dart`, `registration_draft_notifier.dart`, `register_request.dart`, `auth_controller.dart`, `auth_api.dart`, `auth.service.ts`, `auth.repository.ts`
 
 ---
 
 ## Flow B — Register (supplier only)
 
-Same as Flow A but intent **Share materials** → `/complete-supplier-profile` → registers with `supplierProfile` + `pickupArea` → redirect `/supplier` if SUPPLIER role.
+Same as Flow A but intent **Share materials** collects goals/location, supplier type, supplier display name, and optional description. Supplier display name defaults to the account full name if the user does not change it. The register payload includes `supplierProfile.pickupArea` derived from onboarding city/area. If the supplier type requires organization verification, the wizard creates the authenticated session, uploads the document to `/api/uploads/supplier-verification-document`, submits `/api/supplier/verification/submit`, then routes to `/supplier/verification-pending`. Student and individual suppliers skip the verification step. If verification upload/submission fails after account creation, the wizard stays recoverable inside `/register` and lets the user retry verification without recreating the account.
 
 ---
 
 ## Flow C — Register (both roles)
 
-1. Intent **Do both** → `/complete-learner-profile?intent=both`.
-2. Learner step saves draft only → `/complete-supplier-profile`.
-3. Supplier step → single `register` with both profiles and roles `[LEARNER, SUPPLIER]`.
-4. Redirect: `postAuthRouteForUser` → `/admin` if `ADMIN` role present, else `/supplier` when supplier role present.
+1. Intent **Do both** stays inside `/register`.
+2. The wizard collects interests once, goals/location, learner basics, supplier basics, verification document only when required, and review. Student learner types can preselect **Student supplier**; self-learners and makers can preselect **Individual supplier**.
+3. Submit sends one register payload with roles `[LEARNER, SUPPLIER]`, `learnerProfile.interests`, and supplier `pickupArea` from city/area.
+4. Redirect: organization suppliers go to `/supplier/verification-pending` after verification submission; otherwise `postAuthRouteForUser` routes the authenticated user.
 
 ---
 

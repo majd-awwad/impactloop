@@ -4,12 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/auth_navigation.dart';
-import '../../features/auth/application/registration_draft_notifier.dart';
 import '../widgets/app_mobile_bottom_nav_bar.dart';
-import '../../features/auth/presentation/models/registration_intent.dart';
+import '../../features/auth/presentation/models/registration_wizard_step.dart';
 import '../../features/auth/presentation/pages/auth_checking_page.dart';
-import '../../features/auth/presentation/pages/complete_learner_profile_page.dart';
-import '../../features/auth/presentation/pages/complete_supplier_profile_page.dart';
+import '../../features/auth/presentation/pages/deprecated_onboarding_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
@@ -67,42 +65,7 @@ String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
     return null;
   }
 
-  final draft = ref.read(registrationDraftProvider);
-
-  if (path == '/complete-learner-profile') {
-    if (!draft.hasBasicInfo) {
-      return '/register';
-    }
-
-    if (draft.intent == null) {
-      return '/register';
-    }
-
-    if (draft.intent == RegistrationIntent.supplier) {
-      return '/complete-supplier-profile';
-    }
-  }
-
-  if (path == '/complete-supplier-profile') {
-    if (!draft.hasBasicInfo) {
-      return '/register';
-    }
-
-    if (draft.intent == null) {
-      return '/register';
-    }
-
-    if (draft.intent == RegistrationIntent.learner) {
-      return '/complete-learner-profile';
-    }
-
-    if (draft.intent == RegistrationIntent.both &&
-        draft.learnerProfile == null) {
-      return '/complete-learner-profile?intent=both';
-    }
-  }
-
-  return null;
+  return '/register';
 }
 
 bool _isSupplierPortalPath(String path) {
@@ -430,20 +393,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: registerRoute,
-        builder: (context, state) =>
-            const _AuthPageGuard(child: RegisterPage()),
-      ),
-      GoRoute(
-        path: '/complete-learner-profile',
         builder: (context, state) {
-          final isBothIntent = state.uri.queryParameters['intent'] == 'both';
+          final initialIntent = registrationIntentFromQuery(
+            state.uri.queryParameters['intent'],
+          );
 
-          return CompleteLearnerProfilePage(showSupplierNextHint: isBothIntent);
+          return _AuthPageGuard(
+            child: RegisterPage(initialIntent: initialIntent),
+          );
         },
       ),
       GoRoute(
+        path: '/complete-learner-profile',
+        builder: (context, state) => const DeprecatedOnboardingPage(),
+      ),
+      GoRoute(
         path: '/complete-supplier-profile',
-        builder: (context, state) => const CompleteSupplierProfilePage(),
+        builder: (context, state) => const DeprecatedOnboardingPage(),
       ),
       GoRoute(
         path: '/invite/accept',
