@@ -284,6 +284,9 @@ model User {
   materialReportsSubmitted     MaterialReport[] @relation("MaterialReportReporter")
   materialReportsReviewed      MaterialReport[] @relation("MaterialReportReviewedBy")
   moderatedMaterials           Material[]       @relation("MaterialModeratedBy")
+  supplierFollows              SupplierFollower[] @relation("SupplierFollowerUser")
+  materialLikes                MaterialLike[]     @relation("MaterialLikeUser")
+  materialViews                MaterialView[]     @relation("MaterialViewUser")
   suspendedBy                  User?            @relation("UserSuspendedBy", fields: [suspendedById], references: [id], onDelete: SetNull)
   accountsSuspended            User[]           @relation("UserSuspendedBy")
   reactivatedBy                User?            @relation("UserReactivatedBy", fields: [reactivatedById], references: [id], onDelete: SetNull)
@@ -393,6 +396,8 @@ model SupplierProfile {
   supplierType             String?              @map("supplier_type")
   publicName               String?              @map("public_name")
   description              String?
+  coverImageUrl            String?              @map("cover_image_url")
+  avatarImageUrl           String?              @map("avatar_image_url")
   verificationStatus       String               @default("UNVERIFIED") @map("verification_status")
   verificationSubmittedAt  DateTime?            @map("verification_submitted_at")
   verificationReviewedAt   DateTime?            @map("verification_reviewed_at")
@@ -406,10 +411,25 @@ model SupplierProfile {
   defaultPickupLocation    Location?            @relation("SupplierDefaultPickupLocation", fields: [defaultPickupLocationId], references: [id], onDelete: SetNull)
   organizationProfile      OrganizationProfile?
   materials                Material[]
+  followers                SupplierFollower[]
 
   @@index([defaultPickupLocationId])
   @@index([verificationReviewedById])
   @@map("supplier_profiles")
+}
+
+model SupplierFollower {
+  id               String         @id @default(cuid())
+  supplierProfileId String        @map("supplier_profile_id")
+  followerUserId   String         @map("follower_user_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  supplierProfile  SupplierProfile @relation(fields: [supplierProfileId], references: [id], onDelete: Cascade)
+  followerUser     User           @relation("SupplierFollowerUser", fields: [followerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierProfileId, followerUserId])
+  @@index([supplierProfileId])
+  @@index([followerUserId])
+  @@map("supplier_followers")
 }
 
 model DriverProfile {
@@ -688,6 +708,8 @@ model Material {
   publishedFromCategoryRequest  CategoryRequest?   @relation("CategoryRequestPublishedMaterial")
   publishedFromPriceRuleRequest PriceRuleRequest?  @relation("PriceRuleRequestPublishedMaterial")
   reports                       MaterialReport[]
+  likes                         MaterialLike[]
+  views                         MaterialView[]
 
   @@index([ownerId])
   @@index([moderatedById])
@@ -698,6 +720,34 @@ model Material {
   @@index([status])
   @@index([locationId])
   @@map("materials")
+}
+
+model MaterialLike {
+  id        String   @id @default(cuid())
+  materialId String  @map("material_id")
+  userId    String  @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  material  Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  user      User     @relation("MaterialLikeUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([materialId, userId])
+  @@index([materialId])
+  @@index([userId])
+  @@map("material_likes")
+}
+
+model MaterialView {
+  id           String   @id @default(cuid())
+  materialId   String   @map("material_id")
+  viewerUserId String?  @map("viewer_user_id")
+  viewSource   String?  @map("view_source")
+  createdAt    DateTime @default(now()) @map("created_at")
+  material     Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  viewerUser   User?    @relation("MaterialViewUser", fields: [viewerUserId], references: [id], onDelete: SetNull)
+
+  @@index([materialId])
+  @@index([viewerUserId])
+  @@map("material_views")
 }
 
 model MaterialReport {

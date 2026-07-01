@@ -126,6 +126,7 @@ Widget buildSupplierMaterialCard({
     isFree: material.isFree,
     imageUrl: imageUrl,
     viewsCount: material.viewsCount,
+    likesCount: material.likesCount,
     createdAtLabel: createdAtLabel,
     onTap: onTap,
     actions: actions,

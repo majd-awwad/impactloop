@@ -7,6 +7,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../controllers/supplier_dashboard_providers.dart';
 import '../theme/supplier_theme_extension.dart';
+import '../widgets/supplier_portal_avatar.dart';
 import 'supplier_nav_config.dart';
 
 class SupplierSidebar extends ConsumerWidget {
@@ -144,11 +145,6 @@ class _SidebarProfileCard extends StatelessWidget {
   final String name;
   final String subtitle;
 
-  String get _initial {
-    final trimmed = name.trim();
-    return trimmed.isEmpty ? 'S' : trimmed.characters.first.toUpperCase();
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
@@ -161,19 +157,7 @@ class _SidebarProfileCard extends StatelessWidget {
         decoration: context.supplierDecorations.sidebarProfile,
         child: Row(
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              alignment: Alignment.center,
-              decoration: context.supplierDecorations.avatarCircle,
-              child: Text(
-                _initial,
-                style: context.supplierLabel().copyWith(
-                  color: colors.accent,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+            SupplierPortalAvatar(displayName: name, size: 36, fontSize: 14),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(

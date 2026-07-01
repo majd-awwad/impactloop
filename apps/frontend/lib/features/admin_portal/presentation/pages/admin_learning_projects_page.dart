@@ -812,7 +812,7 @@ class _ProjectThumbnail extends StatelessWidget {
             : Image.network(
                 resolved,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Icon(
+                errorBuilder: (_, _, _) => Icon(
                   Icons.broken_image_outlined,
                   color: palette.textMuted,
                 ),
@@ -1174,7 +1174,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                                   height: 180,
                                   width: double.infinity,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const SizedBox(
+                                  errorBuilder: (_, _, _) => const SizedBox(
                                     height: 120,
                                     child: Center(
                                       child: Text('Image unavailable'),

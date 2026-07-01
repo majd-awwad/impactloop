@@ -10,15 +10,19 @@ import {
   getSupplierMaterial,
   getSupplierMaterials,
   getSupplierProfile,
+  getSupplierProfileFollowers,
   updateSupplierMaterial,
   updateSupplierProfile,
+  updateSupplierProfileImages,
 } from "./supplier.service.js";
 import { validateIdempotencyKey } from "../../services/idempotency.service.js";
 import type {
   CreateSupplierMaterialInput,
   SupplierMaterialsQuery,
+  SupplierFollowersQuery,
   UpdateSupplierMaterialInput,
   UpdateSupplierProfileInput,
+  UpdateSupplierProfileImagesInput,
 } from "./supplier.validation.js";
 
 export const getDashboard = async (
@@ -39,6 +43,18 @@ export const getProfile = async (
   res.json(successResponse("Supplier profile loaded", profile));
 };
 
+export const getProfileFollowers = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const followers = await getSupplierProfileFollowers(
+    req.auth!.sub,
+    readValidatedQuery<SupplierFollowersQuery>(req),
+  );
+
+  res.json(successResponse('Supplier followers loaded', followers));
+};
+
 export const patchProfile = async (
   req: Request,
   res: Response,
@@ -49,6 +65,18 @@ export const patchProfile = async (
   );
 
   res.json(successResponse("Supplier profile updated", profile));
+};
+
+export const patchProfileImages = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const profile = await updateSupplierProfileImages(
+    req.auth!.sub,
+    req.body as UpdateSupplierProfileImagesInput,
+  );
+
+  res.json(successResponse("Supplier profile images updated", profile));
 };
 
 export const getMaterials = async (

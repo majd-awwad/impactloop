@@ -114,18 +114,18 @@ void main() {
           adminAuditLogsListProvider.overrideWith(
             (ref) async => const AdminAuditLogsListResponse(
               items: [],
-              pagination: const AdminAuditLogsPagination(
+              pagination: AdminAuditLogsPagination(
                 page: 1,
                 limit: 20,
                 total: 0,
                 totalPages: 1,
               ),
-              filterOptions: const AdminAuditLogFilterOptions(
+              filterOptions: AdminAuditLogFilterOptions(
                 actions: [],
                 targetTypes: [],
                 actors: [],
               ),
-              summary: const AdminAuditLogSummary(
+              summary: AdminAuditLogSummary(
                 total: 0,
                 today: 0,
                 thisWeek: 0,
