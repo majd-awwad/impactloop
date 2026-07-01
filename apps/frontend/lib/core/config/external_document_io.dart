@@ -1,0 +1,1 @@
+void openExternalDocumentUrl(String url) {}

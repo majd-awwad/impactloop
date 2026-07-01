@@ -9,6 +9,9 @@ import {
 import { seedSupplierReservations } from './seeds/seed-supplier-reservations.js';
 import { seedSupplierMaterials } from './seeds/seed-supplier-materials.js';
 import { seedSupplierNotifications } from './seeds/seed-supplier-notifications.js';
+import { seedAdmin } from './seeds/seed-admin.js';
+import { seedAdminDashboard } from './seeds/seed-admin-dashboard.js';
+import { seedSupplierVerifications } from './seeds/seed-supplier-verifications.js';
 
 type SeedCategoryInput = {
   key: string;
@@ -1788,6 +1791,9 @@ const main = async () => {
   const supplierReservationSeedResult = await seedSupplierReservations(prisma);
   const supplierMyMaterialsSeedResult = await seedSupplierMaterials(prisma);
   await seedSupplierNotifications(prisma);
+  const adminSeedResult = await seedAdmin(prisma);
+  const adminDashboardSeedResult = await seedAdminDashboard(prisma);
+  const supplierVerificationSeedResult = await seedSupplierVerifications(prisma);
 
   console.log(
     JSON.stringify(
@@ -1808,6 +1814,9 @@ const main = async () => {
         materialTaxonomyCategoriesSeeded: taxonomyCategoriesSeeded,
         supplierReservationSeed: supplierReservationSeedResult,
         supplierMyMaterialsSeed: supplierMyMaterialsSeedResult,
+        adminSeed: adminSeedResult,
+        adminDashboardSeed: adminDashboardSeedResult,
+        supplierVerificationSeed: supplierVerificationSeedResult,
         command: 'npm run seed',
       },
       null,

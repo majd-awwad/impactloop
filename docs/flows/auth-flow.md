@@ -55,7 +55,7 @@ Same as Flow A but intent **Share materials** → `/complete-supplier-profile` �
 1. Intent **Do both** → `/complete-learner-profile?intent=both`.
 2. Learner step saves draft only → `/complete-supplier-profile`.
 3. Supplier step → single `register` with both profiles and roles `[LEARNER, SUPPLIER]`.
-4. Redirect: `postAuthRouteForUser` → `/supplier` (supplier role wins).
+4. Redirect: `postAuthRouteForUser` → `/admin` if `ADMIN` role present, else `/supplier` when supplier role present.
 
 ---
 

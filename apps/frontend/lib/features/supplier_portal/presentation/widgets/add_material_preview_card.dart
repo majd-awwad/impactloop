@@ -23,6 +23,7 @@ class AddMaterialPreviewCard extends StatelessWidget {
     required this.quantity,
     required this.unit,
     required this.isFree,
+    required this.deliveryAllowed,
     this.price,
     this.pickupLabel,
     this.coverImageUrl,
@@ -36,6 +37,7 @@ class AddMaterialPreviewCard extends StatelessWidget {
   final String quantity;
   final String unit;
   final bool isFree;
+  final bool deliveryAllowed;
   final String? price;
   final String? pickupLabel;
   final String? coverImageUrl;
@@ -99,6 +101,10 @@ class AddMaterialPreviewCard extends StatelessWidget {
           ),
           if (pickupLabel != null && pickupLabel!.isNotEmpty)
             _PreviewRow(label: context.s.pickupSectionTitle, value: pickupLabel!),
+          _PreviewRow(
+            label: context.s.deliveryAllowed,
+            value: deliveryAllowed ? context.s.yes : context.s.no,
+          ),
           if (!isFree && priceStatus != null) ...[
             const SizedBox(height: AppSpacing.md),
             Container(

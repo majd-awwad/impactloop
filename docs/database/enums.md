@@ -90,7 +90,7 @@ Used by: `OrganizationProfile.organizationType`
 
 ## `VerificationDocumentStatus`
 
-`PENDING`, `VERIFIED`, `REJECTED`
+`PENDING`, `VERIFIED`, `REJECTED`, `CHANGES_REQUESTED`
 
 Used by: `OrganizationProfile.verificationDocumentStatus`
 
@@ -122,11 +122,35 @@ Used by: `Reservation.pickupType`
 
 ## `DeliveryStatus`
 
-`WAITING_FOR_DRIVER`, `DRIVER_ASSIGNED`, `PICKED_UP`, `ON_THE_WAY`, `DELIVERED`, `CANCELLED`, `FAILED_PICKUP`
+`WAITING_FOR_DRIVER`, `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`, `DELIVERED`, `CANCELLED`, `FAILED_PICKUP`, `FAILED_DELIVERY`
 
-Used by: `Reservation.deliveryStatus`
+Used by: `Delivery.status`, `DeliveryStatusHistory.oldStatus`, `DeliveryStatusHistory.newStatus`, legacy `Reservation.deliveryStatus`
 
-**Note:** No delivery workflow API mounted yet — enum exists on model only.
+Active delivery statuses: `WAITING_FOR_DRIVER`, `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`.
+
+---
+
+## `DriverProfileStatus`
+
+`ACTIVE`, `INACTIVE`, `SUSPENDED`
+
+Used by: `DriverProfile.status`
+
+---
+
+## `DriverAvailabilityStatus`
+
+`OFFLINE`, `AVAILABLE`, `ON_DELIVERY`
+
+Used by: `DriverProfile.availability`
+
+---
+
+## `DeliveryAssignmentStatus`
+
+`ACTIVE`, `RELEASED`, `CANCELLED`
+
+Used by: `DeliveryAssignment.status`
 
 ---
 
@@ -167,6 +191,14 @@ Used by: `PriceRuleRequest.status`, `CategoryRequest.status`
 `SUCCESS`, `FAILED`, `SKIPPED`, `PENDING_REVIEW`
 
 Used by: `AiPriceLookupLog.status`
+
+---
+
+## `IdempotencyStatus`
+
+`IN_PROGRESS`, `SUCCEEDED`, `FAILED`
+
+Used by: `IdempotencyRecord.status`
 
 ---
 

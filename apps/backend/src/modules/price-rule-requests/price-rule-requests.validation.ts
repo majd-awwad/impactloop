@@ -23,24 +23,28 @@ export const createPriceRuleRequestSchema = z
   })
   .superRefine((data, ctx) => {
     const hasKnownMaterial = Boolean(data.materialTypeId?.trim());
-    const hasUnknownMaterial =
-      Boolean(data.materialName?.trim()) &&
-      Boolean(data.categoryId?.trim()) &&
-      Boolean(data.unit?.trim());
+    const hasCategoryId = Boolean(data.categoryId?.trim());
 
-    if (!hasKnownMaterial && !hasUnknownMaterial) {
+    if (!hasCategoryId) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Please select a valid category before submitting price review.',
+        path: ['categoryId'],
+      });
+    }
+
+    if (hasKnownMaterial) {
+      return;
+    }
+
+    const hasUnknownMaterial =
+      Boolean(data.materialName?.trim()) && Boolean(data.unit?.trim());
+
+    if (!hasUnknownMaterial) {
       ctx.addIssue({
         code: 'custom',
         message:
           'Provide materialTypeId or materialName with categoryId and unit.',
-        path: ['materialTypeId'],
-      });
-    }
-
-    if (hasKnownMaterial && hasUnknownMaterial) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Provide either materialTypeId or unknown material fields.',
         path: ['materialTypeId'],
       });
     }

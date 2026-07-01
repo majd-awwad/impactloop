@@ -91,8 +91,8 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 |---------|-------------|-------------|------------------------|
 | Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Partial** — forgot-password UI not built |
 | Material discovery | [features/material-discovery.md](features/material-discovery.md) | [flows/material-discovery-flow.md](flows/material-discovery-flow.md) | **Implemented** |
-| Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** — material read/create; supplier reservations only; no learner create |
-| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — Flutter **mock-only**; `GET /api/learning-projects` **backend-only** until wired |
+| Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** — material read/create/edit/delete; supplier reservations; delivery complete guarded backend-only |
+| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed (`/learning`, `/learning/:id`, Home spotlight); add-draft mock-only; legacy mock file for disabled AI/add-draft only |
 
 ### Phase 2B — supporting features
 
@@ -102,22 +102,22 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Locations | [features/locations.md](features/locations.md) | — | **Partial** — reverse geocode + profile/material usage; public redaction **Needs verification** |
 | Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Backend-only** — no admin portal or Flutter accept UI |
 | Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static UI; no API |
-| Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — suggested materials **API-backed**; learning spotlight **mock-only** |
+| Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — suggested materials + learning spotlight **API-backed** |
 
 ### Phase 2C — gaps and open questions
 
 | Area | Feature doc | Flow doc(s) | Ship status (summary) |
 |------|-------------|-------------|------------------------|
 | Open questions (index) | [09-open-questions.md](09-open-questions.md) | — | Unresolved / **Needs verification** across features |
-| Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner create + UI **not implemented**; supplier workflow **Partial** |
-| Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Schema-only** / **not implemented** |
+| Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner create/read + material detail status **Partial**; supplier workflow **Partial** |
+| Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Partial** — learner request/status/tracking summary/map marker UI and driver jobs/status/manual ping UI; realtime tracking stream not implemented |
 | AI material matching agent | [features/ai-agent.md](features/ai-agent.md) | [flows/ai-material-matching-flow.md](flows/ai-material-matching-flow.md) | **Not implemented** (distinct from price suggestion **Partial**) |
 | Admin portal | [features/admin.md](features/admin.md) | — | **Not implemented** — `POST /api/invitations` **Backend-only** only |
 | Moderator portal | [features/moderator.md](features/moderator.md) | — | **Not implemented** |
 
 Gap docs are stubs — see [09-open-questions.md](09-open-questions.md) before implementing.
 
-**Not documented as implemented:** learner reservation create, delivery workflow, AI material matching agent, admin portal, moderator portal (unless code changes prove otherwise).
+**Not documented as implemented:** learner reservation cancel, live tracking UI, AI material matching agent, admin portal, moderator portal (unless code changes prove otherwise).
 
 ADRs (`docs/adr/`) — accepted architecture decisions.
 

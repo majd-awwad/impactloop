@@ -1,10 +1,10 @@
 # Home (Learner) Feature
 
-**Sources inspected:** `apps/frontend/lib/features/home/`, `apps/frontend/lib/app/router/app_router.dart`, `home_suggested_materials_provider.dart`, `learning_spotlight_section.dart`, `docs/08-implementation-status.md`, `docs/features/material-discovery.md`, `docs/features/learning-hub.md`
+**Sources inspected:** `apps/frontend/lib/features/home/`, `apps/frontend/lib/app/router/app_router.dart`, `home_suggested_materials_provider.dart`, `learning_spotlight_section.dart`, `auth_navigation.dart`, `docs/08-implementation-status.md`, `docs/features/material-discovery.md`, `docs/features/learning-hub.md`
 
 ## Purpose
 
-Authenticated **learner dashboard** at `/home`: welcome hero, quick actions, suggested materials preview, learning spotlight, and placeholder sections for future reservations, delivery, impact, and AI helper.
+Authenticated **learner dashboard** at `/home`: welcome hero, quick actions, suggested materials preview, learning spotlight preview, activity updates, and demoted placeholders for impact and AI helper.
 
 Requires login (router guard).
 
@@ -14,23 +14,28 @@ Requires login (router guard).
 |---------|--------|-------------|
 | Route `/home` | **Implemented** | `HomePage` → `LearnerHomePage` |
 | Welcome hero + greeting | **Implemented** | **API-backed** — `authControllerProvider` user `displayName` |
-| Quick actions | **Partial** | Browse materials (**API-backed** route); Learning Hub route is available, but the catalog/cards are mock-only until frontend API integration is completed; supplier onboarding + my activity **disabled** (“Coming soon”) |
+| Quick actions | **Partial** | Materials and My Reservations use live routes/APIs; Learning Hub catalog is API-backed; supplier CTA is active but learner self-upgrade API is **not** complete |
 | Suggested materials | **Implemented** | **API-backed** — `GET /api/materials` via `ApiMaterialDiscoveryRepository`, first 4 items |
-| Learning spotlight | **Mock-only** | `learning_hub_mock_data.dart` — **not** `GET /api/learning-projects` |
-| Future activity (reservations, saved projects, delivery) | **Frontend-only** | Placeholder cards; snackbar “connected later” |
-| Impact snapshot | **Frontend-only** | Empty placeholder copy |
-| AI material helper | **Not implemented** | Coming soon card only |
+| Learning spotlight | **Implemented** | **API-backed** — `GET /api/learning-projects` via `learningProjectsProvider` (limit 2) |
+| Activity updates | **Partial** | Delivery/reservation entry links to `/learner/reservations`; saved projects remain Coming Soon |
+| Coming later (impact + AI) | **Frontend-only** | Empty / Coming Soon placeholders — no learner-facing APIs |
 
-**Not documented as implemented:** learner reservation creation, delivery tracking, saved projects, AI agent, impact analytics.
+**Not documented as implemented:** learner reservation cancel, saved projects, AI agent, learner impact analytics, existing-account supplier role upgrade.
 
 ## Main user flow
 
 1. Learner logs in → redirect `/home` (role-dependent routing in `app_router.dart`).
 2. Page loads suggested materials from discovery API.
-3. Learning spotlight shows 2 mock projects from learning hub mock data.
+3. Learning spotlight loads up to 2 published projects from `learningProjectsProvider` (`GET /api/learning-projects`, `page=1`, `limit=2`).
 4. User taps **Browse Materials** → `/materials` (live API discovery).
-5. User taps **Explore Learning Hub** → `/learning` (Learning Hub route is available, but the catalog/cards are mock-only until frontend API integration is completed).
-6. Disabled cards show info snackbars for future features.
+5. User taps **Explore Learning Hub** → `/learning` (API-backed catalog).
+6. User taps **My Reservations** (Quick actions) → `/learner/reservations` (live reservation + delivery request/status).
+7. User taps **Track reservations and delivery** (Activity updates) → `/learner/reservations` (same destination, delivery-focused copy).
+8. User taps **Become a supplier** → `supplierEntryRouteForUser(user)`:
+   - Supplier role → `/supplier/profile`
+   - Learner-only → `/supplier/onboarding` (status page; self-upgrade API pending)
+   - Unauthenticated defensive path → `/register?intent=supplier`
+9. Disabled / Coming Soon cards show info snackbars for saved projects, impact, and AI helper.
 
 ## Frontend files
 
@@ -40,9 +45,9 @@ Requires login (router guard).
 | Page | `presentation/pages/learner_home_page.dart` |
 | Providers | `application/home_suggested_materials_provider.dart` |
 | Widgets | `suggested_materials_section.dart`, `learning_spotlight_section.dart`, `home_action_card.dart`, `coming_soon_card.dart`, `empty_activity_card.dart`, `home_section_header.dart` |
-| Shared | `shared/widgets/materials/app_material_card.dart`, `entry_nav_bar.dart` |
-| Cross-feature | `material_discovery/data/api_material_discovery_repository.dart`, `learning_hub/data/learning_hub_mock_data.dart` |
-| Router | `app/router/app_router.dart` — `/home` |
+| Shared nav helper | `auth/application/auth_navigation.dart` — `supplierEntryRouteForUser`, `learnerReservationsRoute` |
+| Cross-feature | `material_discovery/data/api_material_discovery_repository.dart`, `learning_hub/application/learning_hub_providers.dart` |
+| Router | `app/router/app_router.dart` — `/home`, `/learner/reservations` |
 
 ## Backend files
 
@@ -60,8 +65,9 @@ No dedicated `/api/home` or learner dashboard endpoint.
 | Method | Path | Section |
 |--------|------|---------|
 | GET | `/api/materials` | Suggested materials (**Implemented**) |
-| GET | `/api/learning-projects` | **Not wired** to learning spotlight |
-| POST | `/api/reservations` | **Not implemented** — future activity placeholders |
+| GET | `/api/learning-projects` | Learning spotlight (**Implemented**) — first 2 published projects |
+| POST | `/api/reservations` | **Implemented MVP** — used from material detail, not home |
+| GET | `/api/reservations/my` | My Reservations (**Implemented MVP**) — home links only |
 
 ## Database tables
 
@@ -77,13 +83,13 @@ No home-specific tables.
 
 ## Known gaps / Needs verification
 
-- Learning spotlight subtitle explicitly says Learning Hub “remains UI-only” — keep in sync when [learning-hub](learning-hub.md) integrates API.
-- “Become a supplier” on home disabled — suppliers register via `/register` with SUPPLIER intent elsewhere; **Needs verification** of intended learner→supplier path.
+- Existing learner-to-supplier role upgrade API is **not implemented**. `/supplier/onboarding` is a status/next-action page, not a completed self-upgrade flow.
 - Suggested materials uses unfiltered discovery list (first 4) — no personalization API.
-- Supplier users may be redirected away from `/home` — see router role rules.
+- Supplier users may land on `/supplier` after login via `postAuthRouteForUser` but can still open `/home` manually.
 
 ## Related docs
 
 - [Material discovery](material-discovery.md)
 - [Learning hub](learning-hub.md)
+- [Reservations](reservations.md)
 - [Landing](landing.md) — public entry, no auth

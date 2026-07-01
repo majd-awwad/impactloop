@@ -32,6 +32,14 @@ class AuthRepository {
     return result.user;
   }
 
+  Future<User> establishSession({
+    required AuthTokens tokens,
+    required User user,
+  }) async {
+    await _persistSession(tokens, user);
+    return user;
+  }
+
   Future<User> restoreSession() async {
     try {
       await refresh();

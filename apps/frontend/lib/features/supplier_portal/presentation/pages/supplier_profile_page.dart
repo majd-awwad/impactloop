@@ -468,6 +468,7 @@ class _SupplierProfileContentState
         const SizedBox(height: AppSpacing.lg),
         SupplierVerificationCard(
           status: supplier?.verificationStatus ?? 'UNVERIFIED',
+          adminNote: supplier?.verificationAdminNote,
         ),
         const SizedBox(height: AppSpacing.lg),
         SupplierLocationPrivacyCard(
@@ -652,19 +653,24 @@ class _SupplierProfileContentState
       await ref.read(supplierProfileRepositoryProvider).updateProfile(request);
       final refreshed = await ref.refresh(supplierProfileProvider.future);
       ref.invalidate(supplierDashboardProvider);
-      if (mounted) {
-        _applyProfile(refreshed);
-        setState(() {
-          _isSaving = false;
-          _isEditing = false;
-          _locationButtonState = SupplierLocationButtonState.idle;
-        });
-        showSupplierInfoSnackBar(context, context.s.profileUpdated);
+      if (!mounted) {
+        return;
       }
+      _applyProfile(refreshed);
+      setState(() {
+        _isSaving = false;
+        _isEditing = false;
+        _locationButtonState = SupplierLocationButtonState.idle;
+      });
+      showSupplierInfoSnackBar(context, context.s.profileUpdated);
     } on ApiException catch (error) {
-      _showSaveError(error.message);
+      if (mounted) {
+        _showSaveError(error.message);
+      }
     } catch (_) {
-      _showSaveError(context.s.profileCouldNotSave);
+      if (mounted) {
+        _showSaveError(context.s.profileCouldNotSave);
+      }
     }
   }
 

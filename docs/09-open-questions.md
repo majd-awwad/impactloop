@@ -44,7 +44,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 | `POST /api/price-rule-requests` — should route require `SUPPLIER` role? | **Needs verification** | [api-catalog](backend/api-catalog.md), [materials-listing](features/materials-listing.md) |
 | Which location fields are on public material DTOs — consistent redaction on list and detail? | **Partially resolved** — list/detail return `city`/`area` only; `visibility` enforcement still open | [material-discovery-flow](flows/material-discovery-flow.md), [locations](features/locations.md) |
 | Is discovery pagination exposed in Flutter UI? | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md), [material-discovery](features/material-discovery.md) |
-| Does material detail increment `materials.views_count`? | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md) |
+| Does material detail increment `materials.views_count`? | **Resolved** — yes on successful `GET /api/materials/:id`; exposed as `viewsCount` in public DTO | [material-discovery-flow](flows/material-discovery-flow.md) |
 | Server-side filter parity with client-side discovery chips? | **Needs verification** | [material-discovery](features/material-discovery.md) |
 | Network error UI path on discovery page | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md) |
 | Single-item 404 when material not publicly visible | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md) |
@@ -57,7 +57,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 |----------|--------|--------|
 | Are all public API paths consistent on omitting lat/lng/address? | **Needs verification** | [locations](features/locations.md), `materials.service.ts` |
 | Is `visibility` / `ORDER_ONLY` enforced beyond storage? | **Needs verification** | [locations](features/locations.md), `supplier.validation.ts` |
-| When should precise location reveal to learner (post-reservation)? | Open — learner reserve **not implemented** | [locations](features/locations.md), [reservations](features/reservations.md) |
+| When should precise location reveal to learner after accepted reservation? | Open — precise pickup reveal **not implemented** | [locations](features/locations.md), [reservations](features/reservations.md) |
 
 ---
 
@@ -65,8 +65,8 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 | Question | Status | Source |
 |----------|--------|--------|
-| How are PENDING reservations created without learner `POST /api/reservations`? | Open (seed/dev only today) | [supplier-reservation-flow](flows/supplier-reservation-flow.md), `seed-supplier-reservations.ts` |
-| Should accept set `materials.status` to `RESERVED` (requirements say yes)? | **Needs verification** / gap vs `01-requirements.md` | [supplier-reservation-flow](flows/supplier-reservation-flow.md), `supplier-reservations.repository.ts` |
+| Should learner reservation create be idempotent for same learner/material after rejected/cancelled/expired history? | Open — MVP rejects active duplicates only | [learner-reservation-flow](flows/learner-reservation-flow.md) |
+| Should future inventory support partial allocation instead of whole-material hold? | Open — MVP exclusive reservation only | [learner-reservation-flow](flows/learner-reservation-flow.md) |
 | Notification generation on reservation state changes? | Open | [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
 | Pickup window validation schema — exact rules? | **Needs verification** | [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
 | Cancel/expiry flows for reservations? | **Not implemented** | [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
@@ -77,10 +77,15 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 | Question | Status | Source |
 |----------|--------|--------|
-| Target Flutter repository pattern (`LearningHubRepository` vs feature data layer)? | Open | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
-| Map API `difficulty` enum to localized labels? | Open | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
-| Gate or remove mock data during API integration? | Open | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
-| Will ratings come from API or remain mock? | Open | [learning-hub](features/learning-hub.md) |
+| Target Flutter repository pattern (`LearningHubRepository` + Riverpod providers)? | **Resolved** — `ApiLearningHubRepository`, `learning_hub_providers.dart`, override in `main.dart` | [learning-hub](features/learning-hub.md), [state-management](frontend/state-management.md) |
+| Map API `difficulty` enum to localized labels? | **Resolved** — `LearningHubApiMapper.mapDifficultyLabel` | [learning-hub](features/learning-hub.md) |
+| Remove mock data from list/detail/home spotlight? | **Resolved** — API-backed; mock file retained for add-draft/disabled AI legacy only | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
+| Show fake ratings on API-backed pages? | **Resolved** — hidden when `ratingSummary` is null; backend currently always null | [learning-hub](features/learning-hub.md) |
+| Project submission/review workflow (draft → pending → published)? | **Not implemented** — no POST/submit/approve APIs | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md), `learning-projects.routes.ts` |
+| Learning project ratings/reviews model and API? | **Not implemented** — `reviews` table is reservation-scoped; no PROJECT target type | [learning-hub](features/learning-hub.md) |
+| AI material matching for project components? | **Not implemented** | [ai-agent](features/ai-agent.md) |
+| Open external project links in browser (`url_launcher`)? | Open — links display-only today | [learning-hub](features/learning-hub.md) |
+| Expose Hub search (`q`), difficulty, tag filters, or server pagination in UI? | Open — backend/repository support exists; UI not wired | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
 
 ---
 
@@ -88,7 +93,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 | Question | Status | Source |
 |----------|--------|--------|
-| Intended learner → supplier path (home “Become a supplier” disabled)? | **Needs verification** | [home-learner](features/home-learner.md) |
+| Intended learner → supplier path (home “Become a supplier” disabled)? | **Resolved** — active CTA via `supplierEntryRouteForUser` | [home-learner](features/home-learner.md) |
 | Dual-role users: always land on `/supplier` when SUPPLIER present? | **Needs verification** | [routes-map](frontend/routes-map.md) |
 | Landing feature cards link to `/register` not `/materials` — intentional? | Documented | [landing](features/landing.md) |
 
@@ -98,7 +103,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 | Question | Status | Source |
 |----------|--------|--------|
-| Driver profile model — `reservations.driver_profile_id` has no `DriverProfile` table? | **Needs verification** | [tables-catalog](database/tables-catalog.md), `schema.prisma` |
+| Driver profile model — `reservations.driver_profile_id` has no `DriverProfile` table? | **Resolved** — `DriverProfile` exists; `reservations.driver_profile_id` is legacy compatibility, `deliveries.assigned_driver_profile_id` is the real relation | [tables-catalog](database/tables-catalog.md), `schema.prisma` |
 | Delivery cost calculation and who sets `delivery_cost`? | Open — **not implemented** | [delivery](features/delivery.md) |
 | AI material matching credit model — roadmap tables not in schema | **Not implemented** | [ai-agent](features/ai-agent.md), `05-roadmap.md` |
 

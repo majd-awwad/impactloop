@@ -1,0 +1,317 @@
+import type { DeliveryStatus } from '../../generated/prisma/client.js';
+import { AppError } from '../../utils/app-error.js';
+
+import * as repository from './admin-deliveries.repository.js';
+import type { AdminDeliveriesListQuery } from './admin-deliveries.validation.js';
+
+type OwnerWithSupplier = {
+  id: string;
+  displayName: string;
+  email: string;
+  supplierProfile: {
+    publicName: string | null;
+    organizationProfile: { organizationName: string } | null;
+  } | null;
+};
+
+type LocationSummary = {
+  country: string;
+  city: string;
+  area: string | null;
+  addressLine?: string | null;
+};
+
+const resolveSupplierDisplayName = (owner: OwnerWithSupplier) =>
+  owner.supplierProfile?.organizationProfile?.organizationName?.trim() ||
+  owner.supplierProfile?.publicName?.trim() ||
+  owner.displayName;
+
+const formatLocationLabel = (location: LocationSummary | null | undefined) => {
+  if (!location) return null;
+  const parts = [location.area, location.city, location.country]
+    .map((part) => part?.trim())
+    .filter((part) => part && part.length > 0);
+  return parts.length > 0 ? parts.join(', ') : null;
+};
+
+const deliveryStatusLabel = (status: DeliveryStatus) =>
+  status.replaceAll('_', ' ').toLowerCase();
+
+type TimelineEvent = {
+  key: string;
+  label: string;
+  timestamp: string | null;
+  note: string | null;
+};
+
+const buildTimelineEvents = (
+  delivery: repository.AdminDeliveryDetailRecord,
+): TimelineEvent[] => {
+  const events: TimelineEvent[] = [
+    {
+      key: 'requested',
+      label: 'Delivery requested',
+      timestamp: delivery.requestedAt.toISOString(),
+      note: delivery.learnerNote,
+    },
+    {
+      key: 'assigned',
+      label: 'Driver accepted',
+      timestamp: delivery.assignedAt?.toISOString() ?? null,
+      note: null,
+    },
+    {
+      key: 'arrived_pickup',
+      label: 'Driver arrived at pickup location',
+      timestamp: delivery.arrivedPickupAt?.toISOString() ?? null,
+      note: null,
+    },
+    {
+      key: 'picked_up',
+      label: 'Driver picked up material',
+      timestamp: delivery.pickedUpAt?.toISOString() ?? null,
+      note: null,
+    },
+    {
+      key: 'on_the_way',
+      label: 'Driver started route / left pickup',
+      timestamp: delivery.onTheWayAt?.toISOString() ?? null,
+      note: delivery.driverNote,
+    },
+    {
+      key: 'arrived_dropoff',
+      label: 'Driver arrived at dropoff',
+      timestamp: delivery.arrivedDropoffAt?.toISOString() ?? null,
+      note: null,
+    },
+    {
+      key: 'delivered',
+      label: 'Driver delivered order',
+      timestamp: delivery.deliveredAt?.toISOString() ?? null,
+      note: null,
+    },
+  ];
+
+  if (delivery.cancelledAt) {
+    events.push({
+      key: 'cancelled',
+      label: 'Delivery cancelled',
+      timestamp: delivery.cancelledAt.toISOString(),
+      note: delivery.failureReason,
+    });
+  }
+
+  if (delivery.failedAt) {
+    events.push({
+      key: 'failed',
+      label: 'Delivery failed',
+      timestamp: delivery.failedAt.toISOString(),
+      note: delivery.failureReason,
+    });
+  }
+
+  for (const history of delivery.statusHistory) {
+    events.push({
+      key: `history-${history.id}`,
+      label: `Status changed to ${deliveryStatusLabel(history.newStatus)}`,
+      timestamp: history.createdAt.toISOString(),
+      note: history.note,
+    });
+  }
+
+  return events
+    .filter((event) => event.timestamp != null)
+    .sort((a, b) => {
+      const aTime = a.timestamp ? Date.parse(a.timestamp) : 0;
+      const bTime = b.timestamp ? Date.parse(b.timestamp) : 0;
+      return aTime - bTime;
+    });
+};
+
+const mapListItem = (delivery: repository.AdminDeliveryListRecord) => ({
+  id: delivery.id,
+  status: delivery.status,
+  requestedAt: delivery.requestedAt.toISOString(),
+  assignedAt: delivery.assignedAt?.toISOString() ?? null,
+  pickedUpAt: delivery.pickedUpAt?.toISOString() ?? null,
+  deliveredAt: delivery.deliveredAt?.toISOString() ?? null,
+  reservation: {
+    id: delivery.reservation.id,
+    materialTitle: delivery.reservation.material.title,
+  },
+  material: {
+    id: delivery.reservation.material.id,
+    title: delivery.reservation.material.title,
+  },
+  learner: {
+    id: delivery.reservation.requester.id,
+    displayName: delivery.reservation.requester.displayName,
+    email: delivery.reservation.requester.email,
+  },
+  supplier: {
+    id: delivery.reservation.owner.id,
+    displayName: resolveSupplierDisplayName(delivery.reservation.owner),
+    email: delivery.reservation.owner.email,
+  },
+  driver: delivery.assignedDriverProfile
+    ? {
+        id: delivery.assignedDriverProfile.id,
+        displayName: delivery.assignedDriverProfile.displayName,
+        email: delivery.assignedDriverProfile.user.email,
+      }
+    : null,
+  pickupArea: formatLocationLabel(delivery.pickupLocation),
+  dropoffArea: formatLocationLabel(delivery.dropoffLocation),
+});
+
+const decimalToNumber = (value: unknown): number | null => {
+  if (value == null) return null;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'object' && value != null && 'toNumber' in value) {
+    return (value as { toNumber: () => number }).toNumber();
+  }
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const mapLocationDetail = (
+  location: repository.AdminDeliveryDetailRecord['pickupLocation'],
+) => ({
+  label: formatLocationLabel(location),
+  country: location.country,
+  city: location.city,
+  area: location.area,
+  addressLine: location.addressLine,
+  latitude: decimalToNumber(location.latitude),
+  longitude: decimalToNumber(location.longitude),
+  isApproximate: location.isApproximate,
+});
+
+const mapDetail = (delivery: repository.AdminDeliveryDetailRecord) => {
+  const locationPings = delivery.locationPings.map((ping) => ({
+    id: ping.id,
+    capturedAt: ping.capturedAt.toISOString(),
+    latitude: decimalToNumber(ping.latitude),
+    longitude: decimalToNumber(ping.longitude),
+    accuracyMeters: decimalToNumber(ping.accuracyMeters),
+  }));
+
+  return {
+    id: delivery.id,
+    status: delivery.status,
+    requestedAt: delivery.requestedAt.toISOString(),
+    assignedAt: delivery.assignedAt?.toISOString() ?? null,
+    arrivedPickupAt: delivery.arrivedPickupAt?.toISOString() ?? null,
+    pickedUpAt: delivery.pickedUpAt?.toISOString() ?? null,
+    onTheWayAt: delivery.onTheWayAt?.toISOString() ?? null,
+    arrivedDropoffAt: delivery.arrivedDropoffAt?.toISOString() ?? null,
+    deliveredAt: delivery.deliveredAt?.toISOString() ?? null,
+    cancelledAt: delivery.cancelledAt?.toISOString() ?? null,
+    failedAt: delivery.failedAt?.toISOString() ?? null,
+    learnerNote: delivery.learnerNote,
+    driverNote: delivery.driverNote,
+    failureReason: delivery.failureReason,
+    reservation: {
+      id: delivery.reservation.id,
+      status: delivery.reservation.status,
+      quantityRequested: Number(delivery.reservation.quantityRequested),
+      unit: delivery.reservation.material.unit,
+      pickupWindowStart:
+        delivery.reservation.pickupWindowStart?.toISOString() ?? null,
+      pickupWindowEnd:
+        delivery.reservation.pickupWindowEnd?.toISOString() ?? null,
+      supplierNote: delivery.reservation.supplierNote,
+    },
+    material: {
+      id: delivery.reservation.material.id,
+      title: delivery.reservation.material.title,
+    },
+    learner: {
+      id: delivery.reservation.requester.id,
+      displayName: delivery.reservation.requester.displayName,
+      email: delivery.reservation.requester.email,
+      phone: delivery.reservation.requester.phone,
+    },
+    supplier: {
+      id: delivery.reservation.owner.id,
+      displayName: resolveSupplierDisplayName(delivery.reservation.owner),
+      email: delivery.reservation.owner.email,
+    },
+    driver: delivery.assignedDriverProfile
+      ? {
+          id: delivery.assignedDriverProfile.id,
+          displayName: delivery.assignedDriverProfile.displayName,
+          email: delivery.assignedDriverProfile.user.email,
+          phone: delivery.assignedDriverProfile.phone,
+          acceptedAt:
+            delivery.assignments[0]?.acceptedAt?.toISOString() ?? null,
+        }
+      : null,
+    pickup: {
+      supplierName: resolveSupplierDisplayName(delivery.reservation.owner),
+      location: mapLocationDetail(delivery.pickupLocation),
+      pickupWindowStart:
+        delivery.reservation.pickupWindowStart?.toISOString() ?? null,
+      pickupWindowEnd:
+        delivery.reservation.pickupWindowEnd?.toISOString() ?? null,
+      supplierNote: delivery.reservation.supplierNote,
+      arrivedAt: delivery.arrivedPickupAt?.toISOString() ?? null,
+      pickedUpAt: delivery.pickedUpAt?.toISOString() ?? null,
+    },
+    dropoff: {
+      learnerName: delivery.reservation.requester.displayName,
+      location: mapLocationDetail(delivery.dropoffLocation),
+      deliveryNotes: delivery.learnerNote,
+      arrivedAt: delivery.arrivedDropoffAt?.toISOString() ?? null,
+      deliveredAt: delivery.deliveredAt?.toISOString() ?? null,
+    },
+    timeline: buildTimelineEvents(delivery),
+    locationHistory: {
+      count: locationPings.length,
+      items: locationPings,
+    },
+  };
+};
+
+export const listAdminDeliveries = async (query: AdminDeliveriesListQuery) => {
+  const [summary, result] = await Promise.all([
+    repository.countAdminDeliveriesSummary(),
+    repository.listAdminDeliveries(query),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(result.total / query.limit));
+
+  return {
+    summary,
+    items: result.items.map(mapListItem),
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+      totalPages,
+    },
+    filterOptions: {
+      statuses: [
+        'WAITING_FOR_DRIVER',
+        'DRIVER_ASSIGNED',
+        'ARRIVED_PICKUP',
+        'PICKED_UP',
+        'ON_THE_WAY',
+        'ARRIVED_DROPOFF',
+        'DELIVERED',
+        'CANCELLED',
+        'FAILED_PICKUP',
+        'FAILED_DELIVERY',
+      ],
+    },
+  };
+};
+
+export const getAdminDeliveryById = async (id: string) => {
+  const delivery = await repository.findAdminDeliveryById(id);
+  if (!delivery) {
+    throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+  }
+
+  return mapDetail(delivery);
+};

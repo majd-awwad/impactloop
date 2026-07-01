@@ -1,25 +1,34 @@
 import '../data/models/user.dart';
+import '../../supplier_portal/application/supplier_verification_gate.dart';
+import 'auth_route_helpers.dart';
 
-const rootRoute = '/';
-const loginRoute = '/login';
-const registerRoute = '/register';
-const authCheckingRoute = '/auth/checking';
-const supplierPortalRoute = '/supplier';
-const homeRoute = '/home';
-
-bool userHasRole(User? user, String role) {
-  if (user == null) {
-    return false;
-  }
-
-  final normalizedRole = role.trim().toUpperCase();
-  return user.roles.any((item) => item.trim().toUpperCase() == normalizedRole);
-}
-
-bool userHasSupplierRole(User? user) => userHasRole(user, 'SUPPLIER');
+export 'auth_route_helpers.dart';
 
 String postAuthRouteForUser(User user) {
-  return userHasSupplierRole(user) ? supplierPortalRoute : homeRoute;
+  if (userHasAdminRole(user)) {
+    return adminPortalRoute;
+  }
+
+  if (userHasSupplierRole(user)) {
+    final gate = supplierVerificationGateRoute(
+      supplierType: user.supplierProfile?.supplierType,
+      verificationStatus: user.supplierProfile?.verificationStatus,
+    );
+    if (gate != null) {
+      return gate;
+    }
+    return supplierPortalRoute;
+  }
+
+  if (userHasDriverRole(user)) {
+    return driverPortalRoute;
+  }
+
+  if (userHasRole(user, 'MODERATOR')) {
+    return homeRoute;
+  }
+
+  return homeRoute;
 }
 
 String sanitizeRedirectTarget(String? from, {String fallback = rootRoute}) {

@@ -1,23 +1,31 @@
-import assert from 'node:assert/strict';
-import { after, before, describe, test } from 'node:test';
+import assert from "node:assert/strict";
+import { after, before, describe, test } from "node:test";
 
-import { prisma } from '../../database/prisma.js';
-import { hashPassword } from '../../utils/password.js';
+import { prisma } from "../../database/prisma.js";
+import { hashPassword } from "../../utils/password.js";
 
 import {
   createSupplierMaterial,
+  createSupplierMaterialIdempotent,
   deleteSupplierMaterial,
   getSupplierMaterial,
   getSupplierMaterials,
   updateSupplierMaterial,
-} from './supplier.service.js';
-import { AppError } from '../../utils/app-error.js';
+} from "./supplier.service.js";
+import { AppError } from "../../utils/app-error.js";
 import {
+  SUPPLIER_CREATE_MATERIAL_SCOPE,
+  runIdempotentOperation,
+  validateIdempotencyKey,
+} from "../../services/idempotency.service.js";
+import { postMaterial } from "./supplier.controller.js";
+import {
+  type CreateSupplierMaterialInput,
   createSupplierMaterialSchema,
   updateSupplierMaterialSchema,
-} from './supplier.validation.js';
+} from "./supplier.validation.js";
 
-const TEST_MARKER = '[test-supplier-materials]';
+const TEST_MARKER = "[test-supplier-materials]";
 
 type TestContext = {
   supplierId: string;
@@ -31,23 +39,23 @@ type TestContext = {
 };
 
 async function createSupplierUser(emailSuffix: string) {
-  const passwordHash = await hashPassword('TestPassword123!');
+  const passwordHash = await hashPassword("TestPassword123!");
 
   return prisma.user.create({
     data: {
       displayName: `${TEST_MARKER} supplier ${emailSuffix}`,
       email: `${TEST_MARKER}-${emailSuffix}-${Date.now()}@impactloop.test`,
       passwordHash,
-      accountStatus: 'ACTIVE',
+      accountStatus: "ACTIVE",
       emailVerifiedAt: new Date(),
       roles: {
-        create: [{ role: 'SUPPLIER', isPrimary: true }],
+        create: [{ role: "SUPPLIER", isPrimary: true }],
       },
       supplierProfile: {
         create: {
-          supplierType: 'INDIVIDUAL_SUPPLIER',
+          supplierType: "INDIVIDUAL_SUPPLIER",
           publicName: `${TEST_MARKER} Workshop ${emailSuffix}`,
-          verificationStatus: 'VERIFIED',
+          verificationStatus: "VERIFIED",
         },
       },
     },
@@ -60,11 +68,11 @@ async function createMaterial(
   ownerId: string,
   title: string,
   status:
-    | 'AVAILABLE'
-    | 'PENDING_RESERVATION'
-    | 'RESERVED'
-    | 'REUSED'
-    | 'UNAVAILABLE' = 'AVAILABLE',
+    | "AVAILABLE"
+    | "PENDING_RESERVATION"
+    | "RESERVED"
+    | "REUSED"
+    | "UNAVAILABLE" = "AVAILABLE",
   isFree = false,
 ) {
   const profile = await prisma.supplierProfile.findUnique({
@@ -80,11 +88,11 @@ async function createMaterial(
       locationId: ctx.locationId,
       title: `${TEST_MARKER} ${title}`,
       description: `${TEST_MARKER} ${title} description`,
-      materialType: 'Test material',
+      materialType: "Test material",
       quantity: 2,
-      unit: 'piece',
-      condition: 'GOOD',
-      sourceType: 'WORKSHOP_SURPLUS',
+      unit: "piece",
+      condition: "GOOD",
+      sourceType: "WORKSHOP_SURPLUS",
       status,
       isFree,
       price: isFree ? null : 15,
@@ -115,6 +123,9 @@ async function cleanup(ctx: TestContext) {
   }
 
   if (ctx.createdUserIds.length) {
+    await prisma.idempotencyRecord.deleteMany({
+      where: { userId: { in: ctx.createdUserIds } },
+    });
     await prisma.userRoleAssignment.deleteMany({
       where: { userId: { in: ctx.createdUserIds } },
     });
@@ -127,7 +138,7 @@ async function cleanup(ctx: TestContext) {
   }
 }
 
-describe('getSupplierMaterials', () => {
+describe("getSupplierMaterials", () => {
   const defaultQuery = {
     page: 1,
     limit: 100,
@@ -135,43 +146,43 @@ describe('getSupplierMaterials', () => {
   } as const;
 
   const ctx: TestContext = {
-    supplierId: '',
-    otherSupplierId: '',
-    categoryId: '',
-    locationId: '',
+    supplierId: "",
+    otherSupplierId: "",
+    categoryId: "",
+    locationId: "",
     createdMaterialIds: [],
     createdUserIds: [],
     createdReservationIds: [],
-    learnerId: '',
+    learnerId: "",
   };
 
   before(async () => {
     const category = await prisma.category.findFirst({
-      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      where: { categoryType: { in: ["MATERIAL", "BOTH"] } },
       select: { id: true },
     });
 
-    assert.ok(category, 'Expected at least one material category');
+    assert.ok(category, "Expected at least one material category");
 
     const location = await prisma.location.create({
       data: {
-        country: 'Palestine',
-        city: 'Nablus',
+        country: "Palestine",
+        city: "Nablus",
         area: TEST_MARKER,
-        visibility: 'PUBLIC_APPROXIMATE',
+        visibility: "PUBLIC_APPROXIMATE",
         isApproximate: true,
       },
       select: { id: true },
     });
 
-    const supplier = await createSupplierUser('primary');
-    const otherSupplier = await createSupplierUser('other');
+    const supplier = await createSupplierUser("primary");
+    const otherSupplier = await createSupplierUser("other");
     const learner = await prisma.user.findFirst({
-      where: { roles: { some: { role: 'LEARNER' } } },
+      where: { roles: { some: { role: "LEARNER" } } },
       select: { id: true },
     });
 
-    assert.ok(learner, 'Expected at least one learner user');
+    assert.ok(learner, "Expected at least one learner user");
 
     ctx.categoryId = category.id;
     ctx.locationId = location.id;
@@ -184,7 +195,7 @@ describe('getSupplierMaterials', () => {
       await createMaterial(ctx, ctx.supplierId, `owned-${index}`);
     }
 
-    await createMaterial(ctx, ctx.otherSupplierId, 'other-supplier');
+    await createMaterial(ctx, ctx.otherSupplierId, "other-supplier");
   });
 
   after(async () => {
@@ -192,21 +203,19 @@ describe('getSupplierMaterials', () => {
     await prisma.location.deleteMany({ where: { id: ctx.locationId } });
   });
 
-  test('returns only materials owned by the supplier', async () => {
+  test("returns only materials owned by the supplier", async () => {
     const result = await getSupplierMaterials(ctx.supplierId, {
       ...defaultQuery,
     });
 
     assert.ok(result.items.length >= 11);
+    assert.ok(result.items.every((item) => item.title.includes(TEST_MARKER)));
     assert.ok(
-      result.items.every((item) => item.title.includes(TEST_MARKER)),
-    );
-    assert.ok(
-      result.items.every((item) => !item.title.includes('other-supplier')),
+      result.items.every((item) => !item.title.includes("other-supplier")),
     );
   });
 
-  test('paginates results', async () => {
+  test("paginates results", async () => {
     const page1 = await getSupplierMaterials(ctx.supplierId, {
       ...defaultQuery,
       limit: 5,
@@ -226,52 +235,43 @@ describe('getSupplierMaterials', () => {
     assert.notEqual(page1.items[0]?.id, page2.items[0]?.id);
   });
 
-  test('filters by status', async () => {
-    await createMaterial(
-      ctx,
-      ctx.supplierId,
-      'reserved-item',
-      'RESERVED',
-    );
+  test("filters by status", async () => {
+    await createMaterial(ctx, ctx.supplierId, "reserved-item", "RESERVED");
 
     const result = await getSupplierMaterials(ctx.supplierId, {
       ...defaultQuery,
-      status: 'RESERVED',
+      status: "RESERVED",
     });
 
     assert.ok(result.items.length >= 1);
-    assert.ok(result.items.every((item) => item.status === 'RESERVED'));
+    assert.ok(result.items.every((item) => item.status === "RESERVED"));
   });
 
-  test('searches by title', async () => {
-    await createMaterial(ctx, ctx.supplierId, 'unique-search-term');
+  test("searches by title", async () => {
+    await createMaterial(ctx, ctx.supplierId, "unique-search-term");
 
     const result = await getSupplierMaterials(ctx.supplierId, {
       ...defaultQuery,
-      search: 'unique-search-term',
+      search: "unique-search-term",
     });
 
     assert.equal(result.items.length, 1);
     assert.match(result.items[0]!.title, /unique-search-term/);
   });
 
-  test('filters by categoryId', async () => {
+  test("filters by categoryId", async () => {
     const secondCategory = await prisma.category.findFirst({
       where: {
-        categoryType: { in: ['MATERIAL', 'BOTH'] },
+        categoryType: { in: ["MATERIAL", "BOTH"] },
         id: { not: ctx.categoryId },
       },
       select: { id: true },
     });
 
-    assert.ok(secondCategory, 'Expected a second material category');
+    assert.ok(secondCategory, "Expected a second material category");
 
-    await createMaterial(ctx, ctx.supplierId, 'category-a');
-    const categorized = await createMaterial(
-      ctx,
-      ctx.supplierId,
-      'category-b',
-    );
+    await createMaterial(ctx, ctx.supplierId, "category-a");
+    const categorized = await createMaterial(ctx, ctx.supplierId, "category-b");
     await prisma.material.update({
       where: { id: categorized.id },
       data: { categoryId: secondCategory.id },
@@ -287,26 +287,24 @@ describe('getSupplierMaterials', () => {
       filtered.items.every((item) => item.category?.id === secondCategory.id),
     );
     assert.ok(filtered.categories.some((category) => category.count > 0));
-    assert.ok(
-      filtered.categoryFacets.some((category) => category.count > 0),
-    );
+    assert.ok(filtered.categoryFacets.some((category) => category.count > 0));
   });
 
-  test('categoryFacets reflect supplier-owned materials only', async () => {
+  test("categoryFacets reflect supplier-owned materials only", async () => {
     const secondCategory = await prisma.category.findFirst({
       where: {
-        categoryType: { in: ['MATERIAL', 'BOTH'] },
+        categoryType: { in: ["MATERIAL", "BOTH"] },
         id: { not: ctx.categoryId },
       },
       select: { id: true },
     });
 
-    assert.ok(secondCategory, 'Expected a second material category');
+    assert.ok(secondCategory, "Expected a second material category");
 
     const otherMaterial = await createMaterial(
       ctx,
       ctx.otherSupplierId,
-      'other-supplier-only',
+      "other-supplier-only",
     );
     await prisma.material.update({
       where: { id: otherMaterial.id },
@@ -333,9 +331,9 @@ describe('getSupplierMaterials', () => {
     }
   });
 
-  test('filters by isFree', async () => {
-    await createMaterial(ctx, ctx.supplierId, 'paid-item', 'AVAILABLE', false);
-    await createMaterial(ctx, ctx.supplierId, 'free-item', 'AVAILABLE', true);
+  test("filters by isFree", async () => {
+    await createMaterial(ctx, ctx.supplierId, "paid-item", "AVAILABLE", false);
+    await createMaterial(ctx, ctx.supplierId, "free-item", "AVAILABLE", true);
 
     const freeResult = await getSupplierMaterials(ctx.supplierId, {
       ...defaultQuery,
@@ -346,18 +344,14 @@ describe('getSupplierMaterials', () => {
     assert.ok(freeResult.items.every((item) => item.isFree));
   });
 
-  test('includes images in list items', async () => {
-    const material = await createMaterial(
-      ctx,
-      ctx.supplierId,
-      'with-image',
-    );
+  test("includes images in list items", async () => {
+    const material = await createMaterial(ctx, ctx.supplierId, "with-image");
 
     await prisma.materialImage.create({
       data: {
         materialId: material.id,
         imageUrl:
-          'https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&w=1200&q=80',
+          "https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&w=1200&q=80",
         sortOrder: 0,
         isCover: true,
       },
@@ -365,7 +359,7 @@ describe('getSupplierMaterials', () => {
 
     const result = await getSupplierMaterials(ctx.supplierId, {
       ...defaultQuery,
-      search: 'with-image',
+      search: "with-image",
     });
 
     assert.equal(result.items.length, 1);
@@ -373,23 +367,23 @@ describe('getSupplierMaterials', () => {
     assert.ok(result.items[0]!.images[0]!.imageUrl.length > 0);
   });
 
-  test('includes delete eligibility in list items', async () => {
+  test("includes delete eligibility in list items", async () => {
     const available = await createMaterial(
       ctx,
       ctx.supplierId,
-      'delete-eligible',
-      'AVAILABLE',
+      "delete-eligible",
+      "AVAILABLE",
     );
     const reused = await createMaterial(
       ctx,
       ctx.supplierId,
-      'delete-blocked-reused',
-      'REUSED',
+      "delete-blocked-reused",
+      "REUSED",
     );
 
     const result = await getSupplierMaterials(ctx.supplierId, {
       ...defaultQuery,
-      search: 'delete-',
+      search: "delete-",
     });
 
     const availableItem = result.items.find((item) => item.id === available.id);
@@ -403,54 +397,85 @@ describe('getSupplierMaterials', () => {
 
     assert.ok(reusedItem);
     assert.equal(reusedItem.canDelete, false);
-    assert.equal(reusedItem.deleteBlockedReason, 'REUSED_HISTORY');
+    assert.equal(reusedItem.deleteBlockedReason, "REUSED_HISTORY");
     assert.equal(reusedItem.canEdit, false);
-    assert.equal(reusedItem.editBlockedReason, 'REUSED_HISTORY');
+    assert.equal(reusedItem.editBlockedReason, "REUSED_HISTORY");
   });
 });
 
-describe('createSupplierMaterial', () => {
+describe("createSupplierMaterial", () => {
   const ctx: TestContext = {
-    supplierId: '',
-    otherSupplierId: '',
-    categoryId: '',
-    locationId: '',
+    supplierId: "",
+    otherSupplierId: "",
+    categoryId: "",
+    locationId: "",
     createdMaterialIds: [],
     createdUserIds: [],
     createdReservationIds: [],
-    learnerId: '',
+    learnerId: "",
   };
 
   before(async () => {
     const category = await prisma.category.findFirst({
-      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      where: { categoryType: { in: ["MATERIAL", "BOTH"] } },
       select: { id: true },
     });
     const location = await prisma.location.create({
       data: {
-        country: 'Palestine',
-        city: 'Nablus',
+        country: "Palestine",
+        city: "Nablus",
         area: `${TEST_MARKER}-create`,
-        visibility: 'PRIVATE',
+        visibility: "PRIVATE",
         isApproximate: true,
       },
       select: { id: true },
     });
-    const supplier = await createSupplierUser('create');
+    const supplier = await createSupplierUser("create");
+    const otherSupplier = await createSupplierUser("create-other");
 
     assert.ok(category);
     ctx.categoryId = category.id;
     ctx.locationId = location.id;
     ctx.supplierId = supplier.id;
+    ctx.otherSupplierId = otherSupplier.id;
     ctx.createdUserIds.push(supplier.id);
+    ctx.createdUserIds.push(otherSupplier.id);
 
     await prisma.supplierProfile.update({
       where: { userId: supplier.id },
       data: {
-        supplierType: 'WORKSHOP',
+        supplierType: "WORKSHOP",
         defaultPickupLocationId: location.id,
       },
     });
+    await prisma.supplierProfile.update({
+      where: { userId: otherSupplier.id },
+      data: {
+        supplierType: "WORKSHOP",
+        defaultPickupLocationId: location.id,
+      },
+    });
+  });
+
+  const buildCreatePayload = (
+    title: string,
+    overrides: Partial<CreateSupplierMaterialInput> = {},
+  ): CreateSupplierMaterialInput => ({
+    materialName: "Unmatched create material",
+    title: `${TEST_MARKER} ${title}`,
+    description: `${TEST_MARKER} ${title} description`,
+    categoryId: ctx.categoryId,
+    quantity: 1,
+    unit: "piece",
+    condition: "GOOD",
+    isFree: true,
+    price: null,
+    currency: "NIS",
+    pickupAllowed: true,
+    deliveryAllowed: false,
+    imageUrls: [`/uploads/materials/${title}.jpg`],
+    useDefaultPickupLocation: true,
+    ...overrides,
   });
 
   after(async () => {
@@ -458,7 +483,9 @@ describe('createSupplierMaterial', () => {
       where: { id: { in: ctx.createdMaterialIds } },
       select: { locationId: true },
     });
-    const materialLocationIds = materials.map((material) => material.locationId);
+    const materialLocationIds = materials.map(
+      (material) => material.locationId,
+    );
 
     await cleanup(ctx);
     await prisma.location.deleteMany({
@@ -470,23 +497,26 @@ describe('createSupplierMaterial', () => {
     });
   });
 
-  test('requires at least one material image in create schema', () => {
+  test("requires at least one material image in create schema", () => {
     const basePayload = {
-      materialName: 'Test material',
-      title: 'Reusable test material',
-      description: 'Reusable test material description.',
+      materialName: "Test material",
+      title: "Reusable test material",
+      description: "Reusable test material description.",
       categoryId: ctx.categoryId,
       quantity: 1,
-      unit: 'piece',
-      condition: 'GOOD',
+      unit: "piece",
+      condition: "GOOD",
       isFree: true,
       price: null,
-      currency: 'NIS',
+      currency: "NIS",
       pickupAllowed: true,
       deliveryAllowed: false,
     };
 
-    assert.equal(createSupplierMaterialSchema.safeParse(basePayload).success, false);
+    assert.equal(
+      createSupplierMaterialSchema.safeParse(basePayload).success,
+      false,
+    );
     assert.equal(
       createSupplierMaterialSchema.safeParse({
         ...basePayload,
@@ -497,28 +527,349 @@ describe('createSupplierMaterial', () => {
     assert.equal(
       createSupplierMaterialSchema.safeParse({
         ...basePayload,
-        imageUrls: ['/uploads/materials/test-create.jpg'],
+        imageUrls: ["/uploads/materials/test-create.jpg"],
       }).success,
       true,
     );
   });
 
-  test('derives source type from supplier profile and ignores client value', async () => {
+  test("requires a valid idempotency key for supplier material create requests", () => {
+    assert.throws(
+      () => validateIdempotencyKey(undefined),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.equal(error.code, "VALIDATION_ERROR");
+        return true;
+      },
+    );
+
+    assert.throws(
+      () => validateIdempotencyKey("unsafe key with spaces"),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.equal(error.code, "VALIDATION_ERROR");
+        return true;
+      },
+    );
+  });
+
+  test("post material controller rejects missing idempotency key before create", async () => {
+    await assert.rejects(
+      () =>
+        postMaterial(
+          {
+            get: () => undefined,
+            auth: { sub: ctx.supplierId },
+            body: buildCreatePayload("missing-key-controller"),
+          } as never,
+          {} as never,
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.equal(error.code, "VALIDATION_ERROR");
+        return true;
+      },
+    );
+  });
+
+  test("creates one material and reuses the same response for repeated idempotency key", async () => {
+    const key = `test-create-${Date.now()}-same-key`;
+    const payload = buildCreatePayload("idempotent-same-key");
+
+    const first = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      payload,
+      key,
+    );
+    const second = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      payload,
+      key,
+    );
+    ctx.createdMaterialIds.push(first.response.id);
+
+    assert.equal(first.replayed, false);
+    assert.equal(second.replayed, true);
+    assert.equal(second.response.id, first.response.id);
+
+    const count = await prisma.material.count({
+      where: { title: payload.title },
+    });
+    assert.equal(count, 1);
+  });
+
+  test("two rapid same-key creates do not create duplicate materials", async () => {
+    const key = `test-create-${Date.now()}-rapid`;
+    const payload = buildCreatePayload("idempotent-rapid");
+
+    const results = await Promise.allSettled([
+      createSupplierMaterialIdempotent(ctx.supplierId, payload, key),
+      createSupplierMaterialIdempotent(ctx.supplierId, payload, key),
+    ]);
+
+    const fulfilled = results.filter(
+      (
+        result,
+      ): result is PromiseFulfilledResult<
+        Awaited<ReturnType<typeof createSupplierMaterialIdempotent>>
+      > => result.status === "fulfilled",
+    );
+
+    for (const result of fulfilled) {
+      if (!ctx.createdMaterialIds.includes(result.value.response.id)) {
+        ctx.createdMaterialIds.push(result.value.response.id);
+      }
+    }
+
+    const rejected = results.filter(
+      (result): result is PromiseRejectedResult => result.status === "rejected",
+    );
+
+    for (const result of rejected) {
+      assert.ok(result.reason instanceof AppError);
+      assert.equal(result.reason.statusCode, 409);
+    }
+
+    const materialIds = new Set(
+      fulfilled.map((result) => result.value.response.id),
+    );
+    assert.ok(fulfilled.length >= 1);
+    assert.ok(materialIds.size <= 1);
+
+    const count = await prisma.material.count({
+      where: { title: payload.title },
+    });
+    assert.equal(count, 1);
+  });
+
+  test("rejects the same idempotency key with a different payload", async () => {
+    const key = `test-create-${Date.now()}-different-payload`;
+    const payload = buildCreatePayload("idempotent-original");
+    const first = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      payload,
+      key,
+    );
+    ctx.createdMaterialIds.push(first.response.id);
+
+    await assert.rejects(
+      () =>
+        createSupplierMaterialIdempotent(
+          ctx.supplierId,
+          buildCreatePayload("idempotent-changed"),
+          key,
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.equal(error.code, "IDEMPOTENCY_KEY_REUSED");
+        return true;
+      },
+    );
+  });
+
+  test("failed create rolls back idempotency success and allows a corrected retry with same key", async () => {
+    const key = `test-create-${Date.now()}-failed`;
+    const payload = buildCreatePayload("idempotent-failed", {
+      categoryId: "missing-category",
+    });
+
+    await assert.rejects(
+      () => createSupplierMaterialIdempotent(ctx.supplierId, payload, key),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 404);
+        return true;
+      },
+    );
+
+    await assert.rejects(
+      () => createSupplierMaterialIdempotent(ctx.supplierId, payload, key),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 404);
+        return true;
+      },
+    );
+
+    const record = await prisma.idempotencyRecord.findUnique({
+      where: {
+        userId_scope_key: {
+          userId: ctx.supplierId,
+          scope: SUPPLIER_CREATE_MATERIAL_SCOPE,
+          key,
+        },
+      },
+    });
+    assert.equal(record, null);
+
+    const corrected = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      buildCreatePayload("idempotent-failed-corrected"),
+      key,
+    );
+    ctx.createdMaterialIds.push(corrected.response.id);
+
+    assert.equal(corrected.replayed, false);
+  });
+
+  test("post-insert failure rolls back material and idempotency record before retry", async () => {
+    const key = `test-create-${Date.now()}-post-insert-failure`;
+    const title = `${TEST_MARKER} idempotent-post-insert-failure`;
+
+    await assert.rejects(
+      () =>
+        runIdempotentOperation<{ id: string }>({
+          userId: ctx.supplierId,
+          scope: SUPPLIER_CREATE_MATERIAL_SCOPE,
+          key,
+          payload: { title },
+          resourceType: "MATERIAL",
+          getResourceId: (material: { id: string }) => material.id,
+          handler: async (tx) => {
+            const material = await tx.material.create({
+              data: {
+                ownerId: ctx.supplierId,
+                categoryId: ctx.categoryId,
+                locationId: ctx.locationId,
+                title,
+                description: `${title} description`,
+                materialType: "Test material",
+                quantity: 1,
+                unit: "piece",
+                condition: "GOOD",
+                sourceType: "WORKSHOP_SURPLUS",
+                status: "AVAILABLE",
+                isFree: true,
+                price: null,
+              },
+              select: { id: true },
+            });
+            throw new AppError(
+              `Simulated failure after ${material.id}`,
+              500,
+              "TEST_FAILURE",
+            );
+          },
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, "TEST_FAILURE");
+        return true;
+      },
+    );
+
+    assert.equal(await prisma.material.count({ where: { title } }), 0);
+    assert.equal(
+      await prisma.idempotencyRecord.findUnique({
+        where: {
+          userId_scope_key: {
+            userId: ctx.supplierId,
+            scope: SUPPLIER_CREATE_MATERIAL_SCOPE,
+            key,
+          },
+        },
+      }),
+      null,
+    );
+
+    const created = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      buildCreatePayload("idempotent-post-insert-failure"),
+      key,
+    );
+    ctx.createdMaterialIds.push(created.response.id);
+    assert.equal(created.replayed, false);
+  });
+
+  test("image urls are part of the idempotency request hash", async () => {
+    const key = `test-create-${Date.now()}-images`;
+    const payload = buildCreatePayload("idempotent-images");
+    const first = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      payload,
+      key,
+    );
+    ctx.createdMaterialIds.push(first.response.id);
+
+    await assert.rejects(
+      () =>
+        createSupplierMaterialIdempotent(
+          ctx.supplierId,
+          {
+            ...payload,
+            imageUrls: ["/uploads/materials/idempotent-images-other.jpg"],
+          },
+          key,
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, "IDEMPOTENCY_KEY_REUSED");
+        return true;
+      },
+    );
+  });
+
+  test("different users can use the same idempotency key independently", async () => {
+    const key = `test-create-${Date.now()}-multi-user`;
+    const first = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      buildCreatePayload("idempotent-user-a"),
+      key,
+    );
+    const second = await createSupplierMaterialIdempotent(
+      ctx.otherSupplierId,
+      buildCreatePayload("idempotent-user-b"),
+      key,
+    );
+    ctx.createdMaterialIds.push(first.response.id, second.response.id);
+
+    assert.notEqual(first.response.id, second.response.id);
+  });
+
+  test("same user can reuse a key in a different idempotency scope", async () => {
+    const key = `test-create-${Date.now()}-scope`;
+    await prisma.idempotencyRecord.create({
+      data: {
+        userId: ctx.supplierId,
+        scope: "OTHER_TEST_SCOPE",
+        key,
+        requestHash: "test-hash",
+        status: "SUCCEEDED",
+        responseJson: { ok: true },
+      },
+    });
+
+    const created = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      buildCreatePayload("idempotent-scope"),
+      key,
+    );
+    ctx.createdMaterialIds.push(created.response.id);
+
+    assert.equal(created.replayed, false);
+  });
+
+  test("derives source type from supplier profile and ignores client value", async () => {
     const material = await createSupplierMaterial(ctx.supplierId, {
-      materialName: 'Unmatched create material',
+      materialName: "Unmatched create material",
       title: `${TEST_MARKER} create source derivation`,
       description: `${TEST_MARKER} create source derivation description`,
       categoryId: ctx.categoryId,
       quantity: 1,
-      unit: 'piece',
-      condition: 'GOOD',
-      sourceType: 'FACTORY_SURPLUS',
+      unit: "piece",
+      condition: "GOOD",
+      sourceType: "FACTORY_SURPLUS",
       isFree: true,
       price: null,
-      currency: 'NIS',
+      currency: "NIS",
       pickupAllowed: true,
       deliveryAllowed: false,
-      imageUrls: ['/uploads/materials/test-create-source.jpg'],
+      imageUrls: ["/uploads/materials/test-create-source.jpg"],
+      useDefaultPickupLocation: true,
     });
     ctx.createdMaterialIds.push(material.id);
 
@@ -527,61 +878,64 @@ describe('createSupplierMaterial', () => {
       select: { sourceType: true, images: true, locationId: true },
     });
 
-    assert.equal(persisted?.sourceType, 'WORKSHOP_SURPLUS');
+    assert.equal(persisted?.sourceType, "WORKSHOP_SURPLUS");
     assert.equal(persisted?.images.length, 1);
     assert.notEqual(persisted?.locationId, ctx.locationId);
   });
 
-  test('rejects organization pickup override attempts', async () => {
+  test("rejects organization pickup override attempts", async () => {
     await assert.rejects(
       () =>
         createSupplierMaterial(ctx.supplierId, {
-          materialName: 'Org override material',
+          materialName: "Org override material",
           title: `${TEST_MARKER} org pickup override`,
           description: `${TEST_MARKER} org pickup override description`,
           categoryId: ctx.categoryId,
           quantity: 1,
-          unit: 'piece',
-          condition: 'GOOD',
+          unit: "piece",
+          condition: "GOOD",
           isFree: true,
           price: null,
-          currency: 'NIS',
+          currency: "NIS",
           pickupAllowed: true,
           deliveryAllowed: false,
-          imageUrls: ['/uploads/materials/test-org-override.jpg'],
+          imageUrls: ["/uploads/materials/test-org-override.jpg"],
           useDefaultPickupLocation: false,
           pickupLocation: {
-            country: 'Palestine',
-            city: 'Ramallah',
-            area: 'Downtown',
-            visibility: 'ORDER_ONLY',
+            country: "Palestine",
+            city: "Ramallah",
+            area: "Downtown",
+            visibility: "ORDER_ONLY",
             isApproximate: true,
           },
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 400);
-        assert.equal(error.details?.reason, 'ORG_PICKUP_OVERRIDE_NOT_ALLOWED');
+        assert.equal(
+          (error.details as { reason?: string } | undefined)?.reason,
+          "ORG_PICKUP_OVERRIDE_NOT_ALLOWED",
+        );
         return true;
       },
     );
   });
 
-  test('copies profile pickup into a new material location row for organization suppliers', async () => {
+  test("copies profile pickup into a new material location row for organization suppliers", async () => {
     const material = await createSupplierMaterial(ctx.supplierId, {
-      materialName: 'Org copied pickup material',
+      materialName: "Org copied pickup material",
       title: `${TEST_MARKER} org copied pickup`,
       description: `${TEST_MARKER} org copied pickup description`,
       categoryId: ctx.categoryId,
       quantity: 1,
-      unit: 'piece',
-      condition: 'GOOD',
+      unit: "piece",
+      condition: "GOOD",
       isFree: true,
       price: null,
-      currency: 'NIS',
+      currency: "NIS",
       pickupAllowed: true,
       deliveryAllowed: false,
-      imageUrls: ['/uploads/materials/test-org-copy.jpg'],
+      imageUrls: ["/uploads/materials/test-org-copy.jpg"],
       useDefaultPickupLocation: true,
     });
     ctx.createdMaterialIds.push(material.id);
@@ -601,42 +955,183 @@ describe('createSupplierMaterial', () => {
     assert.notEqual(persisted?.locationId, ctx.locationId);
     assert.equal(materialLocation?.city, profileLocation?.city);
     assert.equal(materialLocation?.area, profileLocation?.area);
-    assert.equal(materialLocation?.locationType, 'MATERIAL_PICKUP');
+    assert.equal(materialLocation?.locationType, "MATERIAL_PICKUP");
+  });
+
+  test("publishes paid material with approved price rule request when price is within max", async () => {
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: `${TEST_MARKER} custom paid widget`,
+        normalizedMaterialName: "custom-paid-widget",
+        unit: "piece",
+        supplierPriceNis: 15,
+        categoryId: ctx.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: "REJECTED",
+        aiSuggestedMaxUnitPriceNis: 21,
+      },
+    });
+
+    const material = await createSupplierMaterial(ctx.supplierId, {
+      materialName: `${TEST_MARKER} custom paid widget`,
+      title: `${TEST_MARKER} approved price rule publish`,
+      description: `${TEST_MARKER} approved price rule publish description`,
+      categoryId: ctx.categoryId,
+      quantity: 1,
+      unit: "piece",
+      condition: "GOOD",
+      isFree: false,
+      price: 15,
+      currency: "NIS",
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ["/uploads/materials/test-approved-price-rule.jpg"],
+      useDefaultPickupLocation: true,
+      sourcePriceRuleRequestId: priceRuleRequest.id,
+    });
+    ctx.createdMaterialIds.push(material.id);
+
+    assert.equal(material.price, 15);
+    assert.equal(material.maxAllowedPriceAtCheck, 21);
+
+    const updatedRequest = await prisma.priceRuleRequest.findUnique({
+      where: { id: priceRuleRequest.id },
+      select: { publishedMaterialId: true },
+    });
+    assert.equal(updatedRequest?.publishedMaterialId, material.id);
+
+    await prisma.priceRuleRequest.delete({
+      where: { id: priceRuleRequest.id },
+    });
+  });
+
+  test("publishes paid material at exact approved max price", async () => {
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: `${TEST_MARKER} boundary price widget`,
+        normalizedMaterialName: "boundary-price-widget",
+        unit: "piece",
+        supplierPriceNis: 21,
+        categoryId: ctx.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: "APPROVED",
+        aiSuggestedMaxUnitPriceNis: 21,
+      },
+    });
+
+    const material = await createSupplierMaterial(ctx.supplierId, {
+      materialName: `${TEST_MARKER} boundary price widget`,
+      title: `${TEST_MARKER} boundary price publish`,
+      description: `${TEST_MARKER} boundary price publish description`,
+      categoryId: ctx.categoryId,
+      quantity: 1,
+      unit: "piece",
+      condition: "GOOD",
+      isFree: false,
+      price: 21,
+      currency: "NIS",
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ["/uploads/materials/test-boundary-price.jpg"],
+      useDefaultPickupLocation: true,
+      sourcePriceRuleRequestId: priceRuleRequest.id,
+    });
+    ctx.createdMaterialIds.push(material.id);
+
+    assert.equal(material.price, 21);
+    assert.equal(material.maxAllowedPriceAtCheck, 21);
+
+    await prisma.priceRuleRequest.delete({
+      where: { id: priceRuleRequest.id },
+    });
+  });
+
+  test("rejects paid material above approved max price with clear message", async () => {
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: `${TEST_MARKER} over max widget`,
+        normalizedMaterialName: "over-max-widget",
+        unit: "piece",
+        supplierPriceNis: 22,
+        categoryId: ctx.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: "REJECTED",
+        aiSuggestedMaxUnitPriceNis: 21,
+      },
+    });
+
+    await assert.rejects(
+      () =>
+        createSupplierMaterial(ctx.supplierId, {
+          materialName: `${TEST_MARKER} over max widget`,
+          title: `${TEST_MARKER} over max publish`,
+          description: `${TEST_MARKER} over max publish description`,
+          categoryId: ctx.categoryId,
+          quantity: 1,
+          unit: "piece",
+          condition: "GOOD",
+          isFree: false,
+          price: 22,
+          currency: "NIS",
+          pickupAllowed: true,
+          deliveryAllowed: false,
+          imageUrls: ["/uploads/materials/test-over-max.jpg"],
+          useDefaultPickupLocation: true,
+          sourcePriceRuleRequestId: priceRuleRequest.id,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.match(
+          error.message,
+          /Maximum allowed price is 21 NIS per piece/,
+        );
+        assert.equal(
+          (error.details as { reason?: string } | undefined)?.reason,
+          "PRICE_TOO_HIGH",
+        );
+        return true;
+      },
+    );
+
+    await prisma.priceRuleRequest.delete({
+      where: { id: priceRuleRequest.id },
+    });
   });
 });
 
-describe('createSupplierMaterial pickup for individual suppliers', () => {
+describe("createSupplierMaterial pickup for individual suppliers", () => {
   const ctx: TestContext = {
-    supplierId: '',
-    otherSupplierId: '',
-    categoryId: '',
-    locationId: '',
+    supplierId: "",
+    otherSupplierId: "",
+    categoryId: "",
+    locationId: "",
     createdMaterialIds: [],
     createdUserIds: [],
     createdReservationIds: [],
-    learnerId: '',
+    learnerId: "",
   };
 
   before(async () => {
     const category = await prisma.category.findFirst({
-      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      where: { categoryType: { in: ["MATERIAL", "BOTH"] } },
       select: { id: true },
     });
     const location = await prisma.location.create({
       data: {
-        country: 'Palestine',
-        city: 'Nablus',
+        country: "Palestine",
+        city: "Nablus",
         area: `${TEST_MARKER}-individual-create`,
-        addressLine: 'Campus gate',
+        addressLine: "Campus gate",
         latitude: 32.2211,
         longitude: 35.2544,
-        visibility: 'ORDER_ONLY',
+        visibility: "ORDER_ONLY",
         isApproximate: true,
-        locationType: 'PICKUP_POINT',
+        locationType: "PICKUP_POINT",
       },
       select: { id: true },
     });
-    const supplier = await createSupplierUser('individual-create');
+    const supplier = await createSupplierUser("individual-create");
 
     assert.ok(category);
     ctx.categoryId = category.id;
@@ -647,7 +1142,7 @@ describe('createSupplierMaterial pickup for individual suppliers', () => {
     await prisma.supplierProfile.update({
       where: { userId: supplier.id },
       data: {
-        supplierType: 'INDIVIDUAL_SUPPLIER',
+        supplierType: "INDIVIDUAL_SUPPLIER",
         defaultPickupLocationId: location.id,
       },
     });
@@ -658,7 +1153,9 @@ describe('createSupplierMaterial pickup for individual suppliers', () => {
       where: { id: { in: ctx.createdMaterialIds } },
       select: { locationId: true },
     });
-    const materialLocationIds = materials.map((material) => material.locationId);
+    const materialLocationIds = materials.map(
+      (material) => material.locationId,
+    );
 
     await cleanup(ctx);
     await prisma.location.deleteMany({
@@ -670,21 +1167,21 @@ describe('createSupplierMaterial pickup for individual suppliers', () => {
     });
   });
 
-  test('copies default pickup when useDefaultPickupLocation is true', async () => {
+  test("copies default pickup when useDefaultPickupLocation is true", async () => {
     const material = await createSupplierMaterial(ctx.supplierId, {
-      materialName: 'Individual default pickup material',
+      materialName: "Individual default pickup material",
       title: `${TEST_MARKER} individual default pickup`,
       description: `${TEST_MARKER} individual default pickup description`,
       categoryId: ctx.categoryId,
       quantity: 1,
-      unit: 'piece',
-      condition: 'GOOD',
+      unit: "piece",
+      condition: "GOOD",
       isFree: true,
       price: null,
-      currency: 'NIS',
+      currency: "NIS",
       pickupAllowed: true,
       deliveryAllowed: false,
-      imageUrls: ['/uploads/materials/test-individual-default.jpg'],
+      imageUrls: ["/uploads/materials/test-individual-default.jpg"],
       useDefaultPickupLocation: true,
     });
     ctx.createdMaterialIds.push(material.id);
@@ -698,32 +1195,32 @@ describe('createSupplierMaterial pickup for individual suppliers', () => {
     assert.notEqual(persisted?.locationId, ctx.locationId);
   });
 
-  test('creates a new material pickup location when override is provided', async () => {
+  test("creates a new material pickup location when override is provided", async () => {
     const material = await createSupplierMaterial(ctx.supplierId, {
-      materialName: 'Individual override pickup material',
+      materialName: "Individual override pickup material",
       title: `${TEST_MARKER} individual override pickup`,
       description: `${TEST_MARKER} individual override pickup description`,
       categoryId: ctx.categoryId,
       quantity: 1,
-      unit: 'piece',
-      condition: 'GOOD',
+      unit: "piece",
+      condition: "GOOD",
       isFree: true,
       price: null,
-      currency: 'NIS',
+      currency: "NIS",
       pickupAllowed: true,
       deliveryAllowed: false,
-      imageUrls: ['/uploads/materials/test-individual-override.jpg'],
+      imageUrls: ["/uploads/materials/test-individual-override.jpg"],
       useDefaultPickupLocation: false,
       pickupLocation: {
-        country: 'Palestine',
-        city: 'Jenin',
-        area: 'City center',
-        addressLine: 'Near library',
+        country: "Palestine",
+        city: "Jenin",
+        area: "City center",
+        addressLine: "Near library",
         latitude: 32.4607,
         longitude: 35.3006,
-        visibility: 'ORDER_ONLY',
+        visibility: "ORDER_ONLY",
         isApproximate: true,
-        locationType: 'MATERIAL_PICKUP',
+        locationType: "MATERIAL_PICKUP",
       },
     });
     ctx.createdMaterialIds.push(material.id);
@@ -738,43 +1235,43 @@ describe('createSupplierMaterial pickup for individual suppliers', () => {
 
     assert.ok(persisted?.locationId);
     assert.notEqual(persisted?.locationId, ctx.locationId);
-    assert.equal(materialLocation?.city, 'Jenin');
-    assert.equal(materialLocation?.area, 'City center');
-    assert.equal(materialLocation?.addressLine, 'Near library');
+    assert.equal(materialLocation?.city, "Jenin");
+    assert.equal(materialLocation?.area, "City center");
+    assert.equal(materialLocation?.addressLine, "Near library");
   });
 });
 
-describe('createSupplierMaterial public location redaction', () => {
+describe("createSupplierMaterial public location redaction", () => {
   const ctx: TestContext = {
-    supplierId: '',
-    otherSupplierId: '',
-    categoryId: '',
-    locationId: '',
+    supplierId: "",
+    otherSupplierId: "",
+    categoryId: "",
+    locationId: "",
     createdMaterialIds: [],
     createdUserIds: [],
     createdReservationIds: [],
-    learnerId: '',
+    learnerId: "",
   };
 
   before(async () => {
     const category = await prisma.category.findFirst({
-      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      where: { categoryType: { in: ["MATERIAL", "BOTH"] } },
       select: { id: true },
     });
     const location = await prisma.location.create({
       data: {
-        country: 'Palestine',
-        city: 'Nablus',
+        country: "Palestine",
+        city: "Nablus",
         area: `${TEST_MARKER}-public-redaction`,
-        addressLine: 'Secret address line',
+        addressLine: "Secret address line",
         latitude: 32.2211,
         longitude: 35.2544,
-        visibility: 'PRIVATE',
+        visibility: "PRIVATE",
         isApproximate: true,
       },
       select: { id: true },
     });
-    const supplier = await createSupplierUser('public-redaction');
+    const supplier = await createSupplierUser("public-redaction");
 
     assert.ok(category);
     ctx.categoryId = category.id;
@@ -785,7 +1282,7 @@ describe('createSupplierMaterial public location redaction', () => {
     await prisma.supplierProfile.update({
       where: { userId: supplier.id },
       data: {
-        supplierType: 'INDIVIDUAL_SUPPLIER',
+        supplierType: "INDIVIDUAL_SUPPLIER",
         defaultPickupLocationId: location.id,
       },
     });
@@ -796,7 +1293,9 @@ describe('createSupplierMaterial public location redaction', () => {
       where: { id: { in: ctx.createdMaterialIds } },
       select: { locationId: true },
     });
-    const materialLocationIds = materials.map((material) => material.locationId);
+    const materialLocationIds = materials.map(
+      (material) => material.locationId,
+    );
 
     await cleanup(ctx);
     await prisma.location.deleteMany({
@@ -808,65 +1307,67 @@ describe('createSupplierMaterial public location redaction', () => {
     });
   });
 
-  test('public material detail exposes city and area only', async () => {
-    const { getMaterialById } = await import('../materials/materials.service.js');
+  test("public material detail exposes city and area only", async () => {
+    const { getMaterialById } =
+      await import("../materials/materials.service.js");
 
     const material = await createSupplierMaterial(ctx.supplierId, {
-      materialName: 'Public redaction material',
+      materialName: "Public redaction material",
       title: `${TEST_MARKER} public redaction`,
       description: `${TEST_MARKER} public redaction description`,
       categoryId: ctx.categoryId,
       quantity: 1,
-      unit: 'piece',
-      condition: 'GOOD',
+      unit: "piece",
+      condition: "GOOD",
       isFree: true,
       price: null,
-      currency: 'NIS',
+      currency: "NIS",
       pickupAllowed: true,
       deliveryAllowed: false,
-      imageUrls: ['/uploads/materials/test-public-redaction.jpg'],
+      imageUrls: ["/uploads/materials/test-public-redaction.jpg"],
+      useDefaultPickupLocation: true,
     });
     ctx.createdMaterialIds.push(material.id);
 
     const publicMaterial = await getMaterialById(material.id);
 
-    assert.equal(publicMaterial.city, 'Nablus');
+    assert.equal(publicMaterial.city, "Nablus");
     assert.equal(publicMaterial.area, `${TEST_MARKER}-public-redaction`);
-    assert.equal('latitude' in publicMaterial, false);
-    assert.equal('longitude' in publicMaterial, false);
-    assert.equal('addressLine' in publicMaterial, false);
+    assert.equal("latitude" in publicMaterial, false);
+    assert.equal("longitude" in publicMaterial, false);
+    assert.equal("addressLine" in publicMaterial, false);
   });
 });
 
-describe('getSupplierMaterial', () => {
+describe("getSupplierMaterial", () => {
   const ctx: TestContext = {
-    supplierId: '',
-    otherSupplierId: '',
-    categoryId: '',
-    locationId: '',
+    supplierId: "",
+    otherSupplierId: "",
+    categoryId: "",
+    locationId: "",
     createdMaterialIds: [],
     createdUserIds: [],
     createdReservationIds: [],
-    learnerId: '',
+    learnerId: "",
   };
 
   before(async () => {
     const category = await prisma.category.findFirst({
-      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      where: { categoryType: { in: ["MATERIAL", "BOTH"] } },
       select: { id: true },
     });
     const location = await prisma.location.create({
       data: {
-        country: 'Palestine',
-        city: 'Nablus',
+        country: "Palestine",
+        city: "Nablus",
         area: `${TEST_MARKER}-single`,
-        visibility: 'PUBLIC_APPROXIMATE',
+        visibility: "PUBLIC_APPROXIMATE",
         isApproximate: true,
       },
       select: { id: true },
     });
-    const supplier = await createSupplierUser('single');
-    const otherSupplier = await createSupplierUser('single-other');
+    const supplier = await createSupplierUser("single");
+    const otherSupplier = await createSupplierUser("single-other");
 
     assert.ok(category);
     ctx.categoryId = category.id;
@@ -880,12 +1381,12 @@ describe('getSupplierMaterial', () => {
     await cleanup(ctx);
   });
 
-  test('returns owned material by id', async () => {
+  test("returns owned material by id", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
-      'single-owned',
-      'AVAILABLE',
+      "single-owned",
+      "AVAILABLE",
     );
 
     const result = await getSupplierMaterial(ctx.supplierId, material.id);
@@ -896,12 +1397,12 @@ describe('getSupplierMaterial', () => {
     assert.ok(Array.isArray(result.images));
   });
 
-  test('rejects another supplier material', async () => {
+  test("rejects another supplier material", async () => {
     const material = await createMaterial(
       ctx,
       ctx.otherSupplierId,
-      'single-other',
-      'AVAILABLE',
+      "single-other",
+      "AVAILABLE",
     );
 
     await assert.rejects(
@@ -915,37 +1416,37 @@ describe('getSupplierMaterial', () => {
   });
 });
 
-describe('updateSupplierMaterial', () => {
+describe("updateSupplierMaterial", () => {
   const ctx: TestContext = {
-    supplierId: '',
-    otherSupplierId: '',
-    categoryId: '',
-    locationId: '',
+    supplierId: "",
+    otherSupplierId: "",
+    categoryId: "",
+    locationId: "",
     createdMaterialIds: [],
     createdUserIds: [],
     createdReservationIds: [],
-    learnerId: '',
+    learnerId: "",
   };
 
   before(async () => {
     const category = await prisma.category.findFirst({
-      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      where: { categoryType: { in: ["MATERIAL", "BOTH"] } },
       select: { id: true },
     });
     const location = await prisma.location.create({
       data: {
-        country: 'Palestine',
-        city: 'Nablus',
+        country: "Palestine",
+        city: "Nablus",
         area: `${TEST_MARKER}-update`,
-        visibility: 'PUBLIC_APPROXIMATE',
+        visibility: "PUBLIC_APPROXIMATE",
         isApproximate: true,
       },
       select: { id: true },
     });
-    const supplier = await createSupplierUser('update');
-    const otherSupplier = await createSupplierUser('update-other');
+    const supplier = await createSupplierUser("update");
+    const otherSupplier = await createSupplierUser("update-other");
     const learner = await prisma.user.findFirst({
-      where: { roles: { some: { role: 'LEARNER' } } },
+      where: { roles: { some: { role: "LEARNER" } } },
       select: { id: true },
     });
 
@@ -963,12 +1464,12 @@ describe('updateSupplierMaterial', () => {
     await cleanup(ctx);
   });
 
-  test('updates safe editable fields for owned material', async () => {
+  test("updates safe editable fields for owned material", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
-      'editable-item',
-      'AVAILABLE',
+      "editable-item",
+      "AVAILABLE",
     );
 
     const before = await prisma.material.findUnique({
@@ -980,19 +1481,19 @@ describe('updateSupplierMaterial', () => {
       title: `${TEST_MARKER} Updated title`,
       description: `${TEST_MARKER} Updated description`,
       quantity: 7,
-      unit: 'packs',
-      condition: 'LIKE_NEW',
+      unit: "packs",
+      condition: "LIKE_NEW",
       pickupAllowed: false,
       deliveryAllowed: false,
-      pickupNotes: 'Ring bell on arrival',
-      suggestedUses: 'Student robotics kits',
+      pickupNotes: "Ring bell on arrival",
+      suggestedUses: "Student robotics kits",
     });
 
     assert.equal(updated.title, `${TEST_MARKER} Updated title`);
     assert.equal(updated.quantity, 7);
-    assert.equal(updated.unit, 'packs');
-    assert.equal(updated.condition, 'LIKE_NEW');
-    assert.equal(updated.pickupNotes, 'Ring bell on arrival');
+    assert.equal(updated.unit, "packs");
+    assert.equal(updated.condition, "LIKE_NEW");
+    assert.equal(updated.pickupNotes, "Ring bell on arrival");
 
     const after = await prisma.material.findUnique({
       where: { id: material.id },
@@ -1002,22 +1503,22 @@ describe('updateSupplierMaterial', () => {
     assert.deepEqual(after, before);
   });
 
-  test('rejects editing another supplier material', async () => {
+  test("rejects editing another supplier material", async () => {
     const material = await createMaterial(
       ctx,
       ctx.otherSupplierId,
-      'not-editable',
-      'AVAILABLE',
+      "not-editable",
+      "AVAILABLE",
     );
 
     await assert.rejects(
       () =>
         updateSupplierMaterial(ctx.supplierId, material.id, {
-          title: 'Hacked',
-          description: 'Hacked',
+          title: "Hacked",
+          description: "Hacked",
           quantity: 1,
-          unit: 'piece',
-          condition: 'GOOD',
+          unit: "piece",
+          condition: "GOOD",
           pickupAllowed: true,
           deliveryAllowed: false,
         }),
@@ -1029,13 +1530,13 @@ describe('updateSupplierMaterial', () => {
     );
   });
 
-  test('rejects invalid quantity in request schema', () => {
+  test("rejects invalid quantity in request schema", () => {
     const result = updateSupplierMaterialSchema.safeParse({
-      title: 'Valid title',
-      description: 'Valid description',
+      title: "Valid title",
+      description: "Valid description",
       quantity: 0,
-      unit: 'piece',
-      condition: 'GOOD',
+      unit: "piece",
+      condition: "GOOD",
       pickupAllowed: true,
       deliveryAllowed: false,
     });
@@ -1043,12 +1544,12 @@ describe('updateSupplierMaterial', () => {
     assert.equal(result.success, false);
   });
 
-  test('does not create duplicate material on update', async () => {
+  test("does not create duplicate material on update", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
-      'no-duplicate',
-      'AVAILABLE',
+      "no-duplicate",
+      "AVAILABLE",
     );
 
     const countBefore = await prisma.material.count({
@@ -1059,8 +1560,8 @@ describe('updateSupplierMaterial', () => {
       title: `${TEST_MARKER} no-duplicate-updated`,
       description: `${TEST_MARKER} no-duplicate description`,
       quantity: 4,
-      unit: 'pack',
-      condition: 'GOOD',
+      unit: "pack",
+      condition: "GOOD",
       pickupAllowed: true,
       deliveryAllowed: false,
     });
@@ -1072,12 +1573,12 @@ describe('updateSupplierMaterial', () => {
     assert.equal(countBefore, countAfter);
   });
 
-  test('read-only fields remain unchanged after update', async () => {
+  test("read-only fields remain unchanged after update", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
-      'readonly-check',
-      'AVAILABLE',
+      "readonly-check",
+      "AVAILABLE",
       false,
     );
 
@@ -1089,7 +1590,6 @@ describe('updateSupplierMaterial', () => {
         isFree: true,
         price: true,
         locationId: true,
-        deliveryAllowed: true,
       },
     });
 
@@ -1097,12 +1597,12 @@ describe('updateSupplierMaterial', () => {
       title: `${TEST_MARKER} readonly-updated`,
       description: `${TEST_MARKER} readonly description`,
       quantity: 9,
-      unit: 'kit',
-      condition: 'USED',
+      unit: "kit",
+      condition: "USED",
       pickupAllowed: false,
       deliveryAllowed: true,
-      pickupNotes: 'Updated notes',
-      suggestedUses: 'Updated uses',
+      pickupNotes: "Updated notes",
+      suggestedUses: "Updated uses",
     });
 
     const after = await prisma.material.findUnique({
@@ -1117,104 +1617,143 @@ describe('updateSupplierMaterial', () => {
       },
     });
 
-    assert.deepEqual(after, before);
-    assert.equal(after?.deliveryAllowed, false);
+    assert.deepEqual(
+      {
+        ownerId: after?.ownerId,
+        categoryId: after?.categoryId,
+        isFree: after?.isFree,
+        price: after?.price,
+        locationId: after?.locationId,
+      },
+      before,
+    );
+    assert.equal(after?.deliveryAllowed, true);
   });
 
-  test('updates UNAVAILABLE material with no blocking reservations', async () => {
+  test("updates UNAVAILABLE material with no blocking reservations", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
-      'edit-unavailable',
-      'UNAVAILABLE',
+      "edit-unavailable",
+      "UNAVAILABLE",
     );
 
     const updated = await updateSupplierMaterial(ctx.supplierId, material.id, {
       title: `${TEST_MARKER} unavailable-updated`,
       description: `${TEST_MARKER} unavailable description`,
       quantity: 3,
-      unit: 'piece',
-      condition: 'GOOD',
+      unit: "piece",
+      condition: "GOOD",
       pickupAllowed: true,
       deliveryAllowed: false,
     });
 
     assert.equal(updated.title, `${TEST_MARKER} unavailable-updated`);
-    assert.equal(updated.status, 'UNAVAILABLE');
+    assert.equal(updated.status, "UNAVAILABLE");
     assert.equal(updated.canEdit, true);
   });
 
-  test('rejects edit for PENDING_RESERVATION status', async () => {
+  test("allows edit for PENDING_RESERVATION when quantity is not below held amount", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
-      'edit-pending',
-      'PENDING_RESERVATION',
+      "edit-pending",
+      "PENDING_RESERVATION",
     );
+
+    const updated = await updateSupplierMaterial(ctx.supplierId, material.id, {
+      title: `${TEST_MARKER} pending-updated`,
+      description: "Updated while partially held",
+      quantity: 5,
+      unit: "piece",
+      condition: "GOOD",
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    });
+
+    assert.equal(updated.title, `${TEST_MARKER} pending-updated`);
+    assert.equal(updated.status, "PENDING_RESERVATION");
+    assert.equal(updated.canEdit, true);
+  });
+
+  test("allows edit for RESERVED when quantity is not below held amount", async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      "edit-reserved",
+      "RESERVED",
+    );
+
+    const updated = await updateSupplierMaterial(ctx.supplierId, material.id, {
+      title: `${TEST_MARKER} reserved-updated`,
+      description: "Updated while reserved",
+      quantity: 5,
+      unit: "piece",
+      condition: "GOOD",
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    });
+
+    assert.equal(updated.title, `${TEST_MARKER} reserved-updated`);
+    assert.equal(updated.status, "RESERVED");
+    assert.equal(updated.canEdit, true);
+  });
+
+  test("rejects edit when quantity is below active held amount", async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      "edit-below-held",
+      "AVAILABLE",
+    );
+
+    const reservation = await prisma.reservation.create({
+      data: {
+        materialId: material.id,
+        requesterId: ctx.learnerId,
+        ownerId: ctx.supplierId,
+        quantityRequested: 3,
+        status: "PENDING",
+      },
+    });
+    ctx.createdReservationIds.push(reservation.id);
 
     await assert.rejects(
       () =>
         updateSupplierMaterial(ctx.supplierId, material.id, {
-          title: 'Blocked',
-          description: 'Blocked description',
-          quantity: 1,
-          unit: 'piece',
-          condition: 'GOOD',
+          title: "Blocked",
+          description: "Quantity too low",
+          quantity: 2,
+          unit: "piece",
+          condition: "GOOD",
           pickupAllowed: true,
           deliveryAllowed: false,
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
-        assert.equal(error.statusCode, 409);
-        assert.match(error.message, /cannot edit/i);
+        assert.equal(error.statusCode, 400);
+        assert.match(error.message, /held by active reservations/i);
         return true;
       },
     );
   });
 
-  test('rejects edit for RESERVED status', async () => {
+  test("rejects edit for REUSED status", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
-      'edit-reserved',
-      'RESERVED',
+      "edit-reused",
+      "REUSED",
     );
 
     await assert.rejects(
       () =>
         updateSupplierMaterial(ctx.supplierId, material.id, {
-          title: 'Blocked',
-          description: 'Blocked description',
+          title: "Blocked",
+          description: "Blocked description",
           quantity: 1,
-          unit: 'piece',
-          condition: 'GOOD',
-          pickupAllowed: true,
-          deliveryAllowed: false,
-        }),
-      (error: unknown) => {
-        assert.ok(error instanceof AppError);
-        assert.equal(error.statusCode, 409);
-        return true;
-      },
-    );
-  });
-
-  test('rejects edit for REUSED status', async () => {
-    const material = await createMaterial(
-      ctx,
-      ctx.supplierId,
-      'edit-reused',
-      'REUSED',
-    );
-
-    await assert.rejects(
-      () =>
-        updateSupplierMaterial(ctx.supplierId, material.id, {
-          title: 'Blocked',
-          description: 'Blocked description',
-          quantity: 1,
-          unit: 'piece',
-          condition: 'GOOD',
+          unit: "piece",
+          condition: "GOOD",
           pickupAllowed: true,
           deliveryAllowed: false,
         }),
@@ -1227,7 +1766,7 @@ describe('updateSupplierMaterial', () => {
     );
   });
 
-  test('rejects edit when blocking reservation history exists', async () => {
+  test('rejects edit when completed reservation history exists but allows valid quantity', async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
@@ -1247,58 +1786,50 @@ describe('updateSupplierMaterial', () => {
     });
     ctx.createdReservationIds.push(reservation.id);
 
-    await assert.rejects(
-      () =>
-        updateSupplierMaterial(ctx.supplierId, material.id, {
-          title: 'Blocked',
-          description: 'Blocked description',
-          quantity: 1,
-          unit: 'piece',
-          condition: 'GOOD',
-          pickupAllowed: true,
-          deliveryAllowed: false,
-        }),
-      (error: unknown) => {
-        assert.ok(error instanceof AppError);
-        assert.equal(error.statusCode, 409);
-        assert.match(error.message, /cannot edit/i);
-        return true;
-      },
-    );
+    const updated = await updateSupplierMaterial(ctx.supplierId, material.id, {
+      title: 'Updated after completed reservation',
+      description: 'Updated description',
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    });
+    assert.equal(updated.title, 'Updated after completed reservation');
   });
 });
 
-describe('deleteSupplierMaterial', () => {
+describe("deleteSupplierMaterial", () => {
   const ctx: TestContext = {
-    supplierId: '',
-    otherSupplierId: '',
-    categoryId: '',
-    locationId: '',
+    supplierId: "",
+    otherSupplierId: "",
+    categoryId: "",
+    locationId: "",
     createdMaterialIds: [],
     createdUserIds: [],
     createdReservationIds: [],
-    learnerId: '',
+    learnerId: "",
   };
 
   before(async () => {
     const category = await prisma.category.findFirst({
-      where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      where: { categoryType: { in: ["MATERIAL", "BOTH"] } },
       select: { id: true },
     });
     const location = await prisma.location.create({
       data: {
-        country: 'Palestine',
-        city: 'Nablus',
+        country: "Palestine",
+        city: "Nablus",
         area: `${TEST_MARKER}-delete`,
-        visibility: 'PUBLIC_APPROXIMATE',
+        visibility: "PUBLIC_APPROXIMATE",
         isApproximate: true,
       },
       select: { id: true },
     });
-    const supplier = await createSupplierUser('delete');
-    const otherSupplier = await createSupplierUser('delete-other');
+    const supplier = await createSupplierUser("delete");
+    const otherSupplier = await createSupplierUser("delete-other");
     const learner = await prisma.user.findFirst({
-      where: { roles: { some: { role: 'LEARNER' } } },
+      where: { roles: { some: { role: "LEARNER" } } },
       select: { id: true },
     });
 
@@ -1317,12 +1848,12 @@ describe('deleteSupplierMaterial', () => {
     await cleanup(ctx);
   });
 
-  test('deletes AVAILABLE material without reservation history', async () => {
+  test("deletes AVAILABLE material without reservation history", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
-      'delete-available',
-      'AVAILABLE',
+      "delete-available",
+      "AVAILABLE",
     );
 
     await deleteSupplierMaterial(ctx.supplierId, material.id);
@@ -1337,12 +1868,12 @@ describe('deleteSupplierMaterial', () => {
     );
   });
 
-  test('rejects REUSED material', async () => {
+  test("rejects REUSED material", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
-      'delete-reused',
-      'REUSED',
+      "delete-reused",
+      "REUSED",
     );
 
     await assert.rejects(
@@ -1356,12 +1887,12 @@ describe('deleteSupplierMaterial', () => {
     );
   });
 
-  test('rejects material with completed reservation history', async () => {
+  test("rejects material with completed reservation history", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
-      'delete-with-completed',
-      'AVAILABLE',
+      "delete-with-completed",
+      "AVAILABLE",
     );
 
     const reservation = await prisma.reservation.create({
@@ -1370,7 +1901,7 @@ describe('deleteSupplierMaterial', () => {
         requesterId: ctx.learnerId,
         ownerId: ctx.supplierId,
         quantityRequested: 1,
-        status: 'COMPLETED',
+        status: "COMPLETED",
         completedAt: new Date(),
       },
     });

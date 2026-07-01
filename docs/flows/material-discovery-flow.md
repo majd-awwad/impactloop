@@ -13,37 +13,37 @@ User navigates to **Material Discovery** (`/materials`) or opens a shared materi
 ### User path
 
 1. Open `/materials`.
-2. See hero, stats, search, category chips, quick filters, grid of cards.
-3. Optionally type search or change filters (local).
-4. Tap material → detail route.
+2. See hero, search, category chips (from API), quick filters, sort, condition, city/area fields, and material grid.
+3. Change search or filters → debounced or immediate backend refetch from page 1.
+4. Tap **Load more** to append the next page.
+5. Tap material → detail route.
 
 ### Frontend path
 
-`MaterialsDiscoveryPage.initState` → `ApiMaterialDiscoveryRepository.getMaterials()` → `GET /api/materials` → unwrap `data.items` → `MaterialDiscoveryApiMapper` → `MaterialsDiscoveryView(materials)`.
+`MaterialsDiscoveryPage` loads categories via `materialCategoriesProvider` and materials via `ApiMaterialDiscoveryRepository.fetchMaterials(query)` → `GET /api/materials` with query params → `MaterialDiscoveryApiMapper` → `MaterialsDiscoveryView`.
 
-Client filter: `_filteredMaterials` in `materials_discovery_view.dart` (search string, category index, quick filter index).
+Filter changes rebuild `MaterialDiscoveryQuery` and refetch page 1. Load more increments `page` and appends items.
 
 ### Backend path
 
-`listMaterials` → `materials.repository` query with category active + status in allowed set.
+`listMaterials` → `materials.repository` with Prisma filters (`q`, `categoryId`, `condition`, `status`, `priceType`, `deliveryAvailable`, `pickupAllowed`, `city`, `area`, `sort`, `page`, `limit`).
 
 ### Database changes
 
-**None** (read-only). `views_count` increment — **Needs verification** on detail only.
+**None** on list reads.
 
 ### Success state
 
-Grid renders `AppMaterialCard` rows; tap calls `onMaterialTap` → `context.go('/materials/$id')`.
+Grid renders `AppMaterialCard` rows with optional **Popular** badge when `viewsCount >= 10`.
 
 ### Error states
 
-- Network/API error → error UI in page — **Needs verification** of exact widget path.
+- Network/API error → centered error message when no cached results.
 - Empty list → empty state copy from `material_discovery_content.dart`.
-- Active filters with no matches → filtered empty state.
 
 ### Files involved
 
-`materials_discovery_page.dart`, `api_material_discovery_repository.dart`, `material_discovery_api_mapper.dart`, `materials_discovery_view.dart`, `app_material_card.dart`, `materials.controller.ts`, `materials.repository.ts`
+`materials_discovery_page.dart`, `api_material_discovery_repository.dart`, `material_discovery_api_mapper.dart`, `materials_discovery_view.dart`, `material_search_filters.dart`, `app_material_card.dart`, `materials.controller.ts`, `materials.repository.ts`
 
 ---
 
@@ -53,58 +53,39 @@ Grid renders `AppMaterialCard` rows; tap calls `onMaterialTap` → `context.go('
 
 User opens `/materials/:id` or lands from home suggested materials.
 
-### User path
-
-View images, description, condition, price, status, supplier area summary → back to list.
-
 ### Frontend path
 
-`MaterialDetailsPage` → `getMaterialById(id)` → `GET /api/materials/:id` → mapper → detail layout.
+`MaterialDetailsPage` → `getMaterialById(id)` → `GET /api/materials/:id` → mapper → detail layout. Reserve CTA unchanged.
 
 ### Backend path
 
-`getMaterial` by id with same visibility rules as list — **Needs verification** for single-item 404 when not public.
+`getMaterial` loads public material, increments `viewsCount`, returns DTO with city/area only.
 
 ### Database changes
 
-Read-only.
+Read + `viewsCount` increment on successful detail fetch.
 
 ### Success state
 
-Detail renders; 404 → null material handling in page.
-
-### Error states
-
-`ApiException` 404 → treated as null in repository (`getMaterialById`).
-
-### Files involved
-
-`material_details_page.dart`, `api_material_discovery_repository.dart`, `materials.controller.ts`
+Detail renders views count; Popular badge when threshold met; location privacy panel explains map is future work.
 
 ---
 
-## Flow — Mock repository (tests / fallback)
+## Location privacy panel
 
-### Status
-
-`MockMaterialDiscoveryRepository` + `mock_materials.dart` exist; **not** default in production page (default is API).
-
-### Trigger
-
-Pass `repository:` override into `MaterialsDiscoveryPage` / `MaterialDetailsPage` (tests).
+`DiscoveryLocationPrivacyPanel` replaces the old map placeholder. Copy states map browsing is coming later and public results show city/area until reservation acceptance.
 
 ---
 
 ## Not implemented
 
-- **Learner reservation** from detail screen — no `POST /api/reservations`.
-- **Server-side search** from discovery filters.
-- **Live map** distance browse.
+- Real public map pins.
+- Distance / nearest-first browse.
+- Similar materials.
+- Account-wide saved materials.
 
 ---
 
 ## Open questions
 
-- Which location fields are returned on public material DTOs?
-- Is pagination exposed in the Flutter UI?
-- Does detail view increment `materials.views_count`?
+None for this slice. Bilingual material fields remain a future schema/API improvement.

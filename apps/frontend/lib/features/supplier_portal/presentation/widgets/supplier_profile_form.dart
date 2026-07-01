@@ -589,7 +589,7 @@ class _FormActions extends StatelessWidget {
       runSpacing: AppSpacing.sm,
       children: [
         saveButton,
-        if (cancelButton != null) cancelButton,
+        ?cancelButton,
       ],
     );
   }

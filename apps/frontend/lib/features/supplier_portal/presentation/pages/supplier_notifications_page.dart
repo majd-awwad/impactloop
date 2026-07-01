@@ -12,11 +12,27 @@ import '../widgets/supplier_notification_filter_chips.dart';
 
 const _contentMaxWidth = 960.0;
 
-class SupplierNotificationsPage extends ConsumerWidget {
+class SupplierNotificationsPage extends ConsumerStatefulWidget {
   const SupplierNotificationsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SupplierNotificationsPage> createState() =>
+      _SupplierNotificationsPageState();
+}
+
+class _SupplierNotificationsPageState
+    extends ConsumerState<SupplierNotificationsPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.invalidate(supplierNotificationsProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final filter = ref.watch(supplierNotificationFilterProvider);
     final notificationsAsync = ref.watch(supplierNotificationsProvider);
     final compact =

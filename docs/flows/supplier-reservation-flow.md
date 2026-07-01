@@ -6,7 +6,7 @@
 
 Supplier opens **Incoming requests** (`/supplier/reservations`) or arrives via notification deep link (`?tab=&focus=`).
 
-**Prerequisite:** `reservations` rows must already exist. **Learner create reservation API is not implemented** — current data typically from **database seed** (`seed-supplier-reservations.ts`).
+**Prerequisite:** `reservations` rows can come from the learner `POST /api/reservations` MVP flow or database seed data.
 
 ---
 
@@ -30,7 +30,7 @@ Read-only.
 
 ### Success state
 
-List renders `SupplierIncomingRequest` cards.
+List renders `SupplierIncomingRequest` cards. Each reservation DTO includes `deliveryRequested`, nullable `activeDelivery` (`id`, `status`), and `canSupplierComplete`. The supplier UI uses `canSupplierComplete` instead of guessing whether the complete action is allowed.
 
 ### Error states
 
@@ -58,17 +58,16 @@ Confirm pickup start/end → reservation accepted → moves to accepted tab / pi
 
 - `reservations.status`: `PENDING` → `ACCEPTED`
 - Set `pickupWindowStart`, `pickupWindowEnd`, `supplierNote`, `acceptedAt`
+- `materials.status`: `PENDING_RESERVATION` → `RESERVED`
 - Insert `reservation_status_history` (RESERVATION group)
-
-**Note:** Does **not** update `materials.status` in this transaction (only **complete** sets `REUSED`).
 
 ### Database changes
 
-Update `reservations`; insert `reservation_status_history`.
+Update `reservations`; update `materials`; insert `reservation_status_history`.
 
 ### Success state
 
-Returns mapped reservation DTO; providers invalidated (`incomingRequestsProvider`, `pickupScheduleProvider`).
+Returns mapped reservation DTO; providers invalidated (`incomingRequestsProvider`, supplier notifications, supplier dashboard, pickup schedule, pickup schedule summary).
 
 ### Error states
 
@@ -90,11 +89,15 @@ Supplier taps **Decline** → optional reason.
 
 ### Backend path
 
-`reservations.status` → `REJECTED`; `rejectionReason`, `rejectedAt`; history row.
+`reservations.status` → `REJECTED`; `rejectionReason`, `rejectedAt`; history row. The material returns to `AVAILABLE` when no other active reservation exists for that material.
 
 ### Database changes
 
-Update `reservations`; insert history.
+Update `reservations`; update `materials`; insert history.
+
+### Frontend invalidation
+
+Decline invalidates incoming requests, supplier notifications, supplier dashboard, pickup schedule, and pickup schedule summary.
 
 ### Error states
 
@@ -106,7 +109,7 @@ Update `reservations`; insert history.
 
 ### Trigger
 
-Supplier marks pickup complete (incoming requests or pickup schedule UI).
+Supplier marks self-pickup complete (incoming requests or pickup schedule UI). Delivery reservations do not show the manual complete action; they show delivery status copy such as “Delivery requested”, “Driver assigned”, “On the way”, or “Delivered”.
 
 ### Frontend path
 
@@ -118,7 +121,10 @@ Transaction:
 
 - `reservations.status`: `ACCEPTED` → `COMPLETED`; `completedAt`
 - History: ACCEPTED → COMPLETED
-- `materials.status` → `REUSED`; `reusedAt`; `reusedByReservationId`
+- `material.quantity` decreases by `quantityRequested`
+- `materials.status` → `AVAILABLE` if quantity remains, else `REUSED` with `reusedAt` and `reusedByReservationId`
+
+If the reservation has `deliveryRequested` or any `Delivery` row, supplier complete returns `409 CONFLICT`. Delivery reservations complete only through the assigned driver `DELIVERED` transition. The supplier UI maps this stale/race conflict to: “This reservation is handled by delivery. The driver will mark it completed.”
 
 ### Database changes
 
@@ -126,7 +132,11 @@ Update `reservations` + `materials`; insert history.
 
 ### Success state
 
-Reservation completed; material marked reused.
+Reservation completed; material quantity decremented; material marked `REUSED` only when depleted.
+
+### Frontend invalidation
+
+Complete invalidates incoming requests, supplier notifications, supplier dashboard, pickup schedule, and pickup schedule summary.
 
 ### Error states
 
@@ -144,17 +154,15 @@ Reservation completed; material marked reused.
 
 ## Not implemented
 
-- Learner `POST /api/reservations`
-- Delivery request / driver assignment (`deliveryRequested`, `deliveryStatus` on schema)
+- Learner reservation cancel
+- Flutter delivery request / driver assignment UI
 - Cancel/expiry flows in UI
-- Material status `RESERVED` on accept — **Needs verification**
+- Multi-reservation queues / partial inventory allocation
 
 ---
 
 ## Open questions
 
-- How are new PENDING reservations created in production without learner API?
-- Should accept also set `materials.status` to `RESERVED`?
 - Notification generation when reservation state changes?
 
 ### Files involved

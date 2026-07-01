@@ -16,7 +16,10 @@ Current Riverpod and data-flow inventory. This documents existing code organizat
 - `apps/frontend/lib/features/health/application/health_controller.dart`
 - `apps/frontend/lib/features/health/data/health_remote_data_source.dart`
 - `apps/frontend/lib/features/home/application/home_suggested_materials_provider.dart`
+- `apps/frontend/lib/features/reservations/application/reservation_create_controller.dart`
+- `apps/frontend/lib/features/reservations/application/my_reservations_provider.dart`
 - `apps/frontend/lib/features/materials/application/material_listing_providers.dart`
+- `apps/frontend/lib/features/materials/data/material_listing_data_providers.dart`
 - `apps/frontend/lib/features/materials/data/material_listing_repository.dart`
 - `apps/frontend/lib/features/supplier_portal/application/supplier_my_materials_providers.dart`
 - `apps/frontend/lib/features/supplier_portal/data/supplier_dashboard_repository.dart`
@@ -47,7 +50,7 @@ The intended feature-first direction is visible, but not perfectly consistent: s
 |------|------------------|-----|
 | `Provider<T>` | `apiClientProvider`, `authRepositoryProvider`, `materialListingRepositoryProvider`, supplier repository/API providers | Dependency construction and synchronous derived values. |
 | `NotifierProvider<Notifier, State>` | `authControllerProvider`, `registrationDraftProvider`, `appSettingsProvider`, supplier filters/query providers | Mutable app/session/form/query state. |
-| `FutureProvider<T>` | `materialCategoriesProvider`, `materialListingPolicyProvider`, `supplierDashboardProvider`, `supplierProfileProvider` | Async loads with `AsyncValue`. |
+| `FutureProvider<T>` | `materialCategoriesProvider`, `discoveryMaterialCategoriesProvider`, `materialListingPolicyProvider`, `supplierDashboardProvider`, `supplierProfileProvider` | Async loads with `AsyncValue`. |
 | `FutureProvider.autoDispose<T>` | `healthStatusProvider`, `homeSuggestedMaterialsProvider`, `supplierMyMaterialsProvider`, incoming requests, pickup schedule, notifications | Screen-bound async loads that may be disposed. |
 | `FutureProvider.family<T, Arg>` | `materialTypesSearchProvider`, `supplierMyMaterialByIdProvider` | Parameterized async reads. |
 
@@ -115,7 +118,11 @@ Examples:
 
 - `healthStatusProvider` fetches backend health.
 - `homeSuggestedMaterialsProvider` loads material discovery results and takes the first four.
-- `materialCategoriesProvider`, `materialListingPolicyProvider`, and `categoryRequestsProvider` load add-material support data.
+- `learningProjectsProvider`, `learningProjectProvider`, and `projectCategoriesProvider` load Learning Hub list/detail/category data from `/api/learning-projects` and `/api/categories?type=PROJECT`.
+- `materialCategoriesProvider`, `discoveryMaterialCategoriesProvider`, `materialListingPolicyProvider`, and `categoryRequestsProvider` load shared materials data. Supplier add-material uses the full category list; discovery browse uses `discoveryMaterialCategoriesProvider` (`discoveryOnly=true`); admin approvals uses `materialCategoriesProvider`.
+- `reservationCreateControllerProvider` submits learner reservation requests from material detail and exposes loading/error state for the Reserve button.
+- `myReservationsProvider` loads `GET /api/reservations/my` for the learner reservation page and material-detail reservation state.
+- `learnerDeliveriesProvider` and `learnerDeliveryProvider` load learner delivery status from `/api/deliveries`; `deliveryRequestControllerProvider` submits accepted-reservation delivery requests.
 - `supplierMyMaterialsProvider` checks auth, watches query state, then fetches supplier materials.
 - Supplier dashboard/profile/request/schedule/notification providers load supplier portal data.
 
@@ -136,12 +143,14 @@ These providers keep UI selection state separate from the async data providers t
 Current repository providers live mostly in feature `data/` files:
 
 - Auth: `authRepositoryProvider`
-- Materials listing: `materialListingRepositoryProvider`
+- Materials listing: `materialListingRepositoryProvider` in `material_listing_data_providers.dart`
 - Supplier dashboard: `supplierDashboardRepositoryProvider`
 - Supplier profile: `supplierProfileRepositoryProvider`
 - Supplier requests: `supplierRequestsRepositoryProvider`
 - Supplier pickup schedule: `supplierPickupScheduleRepositoryProvider`
 - Supplier my materials: `supplierMyMaterialsRepositoryProvider`
+- Learning Hub: `learningHubRepositoryProvider` (overridden in `main.dart`; widget tests use `emptyLearningHubRepository` from `test/support/learning_hub_test_support.dart`)
+- Home suggested materials preview: `homeMaterialDiscoveryRepositoryProvider`
 
 Repository providers should construct API clients and expose feature operations. Widgets should not instantiate API clients directly.
 
@@ -175,6 +184,8 @@ Examples:
 - Accepting/declining requests invalidates `incomingRequestsProvider`.
 - Completing requests invalidates incoming requests and pickup schedule providers.
 - Supplier material changes invalidate supplier material/dashboard/notification providers.
+- Creating a learner reservation refreshes the material detail future and invalidates `homeSuggestedMaterialsProvider` plus `myReservationsProvider`; discovery list refresh remains page-local because material discovery currently owns its own `Future`.
+- Supplier accept/decline/complete invalidates incoming requests, supplier notifications, supplier dashboard, pickup schedule, and pickup schedule summary providers.
 - Retry buttons invalidate the failed async provider.
 
 Keep invalidation close to the mutation that changes server state.
@@ -182,6 +193,7 @@ Keep invalidation close to the mutation that changes server state.
 ## Remaining Inconsistencies
 
 - Supplier portal providers are split between `application/` and `presentation/controllers/`.
-- `material_discovery` has repository classes but no central provider for all pages.
+- `material_discovery` has repository classes but no central provider for list/detail fetch; it **does** use `discoveryMaterialCategoriesProvider` from `features/materials` for category chips only.
+- `features/materials` is data-only (no routes). Public browse routes `/materials` and `/materials/:id` are registered on `material_discovery` pages; supplier routes `/supplier/materials/*` are on `supplier_portal`.
 - Some form submit flows call repository/helper functions directly from widgets after validation; this is current practice but should remain thin.
-- Learning hub remains mock-data oriented and was not found using application providers in the inspected paths.
+- Learning hub uses shared `CategoriesApi` for `PROJECT` categories via `categoriesApiProvider` injected into `ApiLearningHubRepository`.

@@ -1109,9 +1109,11 @@ class SupplierL10n {
       );
   String get deliveryAllowed => t('Delivery allowed', 'التوصيل مسموح');
   String get deliveryAllowedSubtitle => t(
-        'Delivery workflow is coming later.',
-        'سير عمل التوصيل قادم لاحقاً.',
+        'Learners can request internal delivery after you accept a reservation.',
+        'يمكن للمتعلمين طلب التوصيل الداخلي بعد قبولك للحجز.',
       );
+  String get yes => t('Yes', 'نعم');
+  String get no => t('No', 'لا');
   String get pickupNotes => t('Pickup notes', 'ملاحظات الاستلام');
   String get pickupNotesHint =>
       t('Pickup near campus.', 'الاستلام قرب الحرم الجامعي.');
@@ -1181,9 +1183,13 @@ class SupplierL10n {
         'VERIFIED' => t('Verified', 'موثّق'),
         'PENDING' => t('Pending verification', 'بانتظار التحقق'),
         'REJECTED' => t('Rejected', 'مرفوض'),
+        'CHANGES_REQUESTED' => t('Changes requested', 'طلب تعديلات'),
         'NOT_REQUIRED' => t('Not required', 'غير مطلوب'),
         _ => value,
       };
+
+  String get verificationAdminNoteLabel =>
+      t('Admin note', 'ملاحظة المسؤول');
 
   // —— Shared widgets ——
   String get close => t('Close', 'إغلاق');
