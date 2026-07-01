@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/supplier_incoming_request.dart';
 import '../../data/supplier_requests_api_repository.dart';
+import '../../application/supplier_portal_session.dart';
 import 'supplier_dashboard_providers.dart';
 import 'supplier_notifications_providers.dart';
 import 'supplier_pickup_schedule_providers.dart';
@@ -25,6 +26,7 @@ final incomingRequestTabProvider =
 
 final incomingRequestsProvider =
     FutureProvider.autoDispose<List<SupplierIncomingRequest>>((ref) async {
+      watchSupplierPortalSessionFromRef(ref);
       final tab = ref.watch(incomingRequestTabProvider);
       return ref
           .read(supplierRequestsRepositoryProvider)

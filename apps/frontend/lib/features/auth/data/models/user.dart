@@ -25,6 +25,7 @@ class LearnerProfile {
 
 class SupplierProfile {
   const SupplierProfile({
+    this.id,
     required this.supplierType,
     required this.publicName,
     this.description,
@@ -35,6 +36,7 @@ class SupplierProfile {
     this.verificationDocumentName,
   });
 
+  final String? id;
   final String supplierType;
   final String publicName;
   final String? description;
@@ -46,6 +48,7 @@ class SupplierProfile {
 
   factory SupplierProfile.fromJson(Map<String, dynamic> json) {
     return SupplierProfile(
+      id: json['id'] as String?,
       supplierType: json['supplierType'] as String? ?? '',
       publicName: json['publicName'] as String? ?? '',
       description: json['description'] as String?,

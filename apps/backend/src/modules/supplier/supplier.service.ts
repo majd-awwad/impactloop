@@ -15,6 +15,8 @@ import {
 } from "./dto/supplier-dashboard.dto.js";
 
 import { AppError } from "../../utils/app-error.js";
+import { env } from "../../config/env.js";
+import { prisma } from "../../database/prisma.js";
 import { decimalToNumber } from "../../utils/decimal.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import * as categoriesRepository from "../categories/categories.repository.js";
@@ -32,6 +34,10 @@ import {
   SUPPLIER_CREATE_MATERIAL_SCOPE,
 } from "../../services/idempotency.service.js";
 import * as supplierRepository from "./supplier.repository.js";
+import {
+  buildSupplierMaterialWhere,
+  resolveSupplierContext,
+} from "./supplier-material-scope.js";
 import { assertSupplierCanPublishMaterials } from "../supplier-verification/supplier-verification.service.js";
 import {
   getHeldQuantitiesByMaterialIds,
@@ -293,8 +299,10 @@ const buildRecentActivity = (
 export const getSupplierDashboard = async (
   userId: string,
 ): Promise<SupplierDashboardDto> => {
-  const supplierProfile =
-    await supplierRepository.findSupplierProfileForDashboard(userId);
+  const scope = await resolveSupplierContext(userId);
+  const supplierProfile = scope.supplierProfileId
+    ? await supplierRepository.findSupplierProfileForDashboard(userId)
+    : null;
 
   const [
     materialGroups,
@@ -307,16 +315,38 @@ export const getSupplierDashboard = async (
     recentNotifications,
     recentReservations,
   ] = await Promise.all([
-    supplierRepository.countMaterialsByStatus(userId),
+    supplierRepository.countMaterialsByStatus(scope),
     supplierRepository.countReservationsByStatus(userId),
-    supplierRepository.aggregateReusedMaterials(userId),
+    supplierRepository.aggregateReusedMaterials(scope),
     supplierRepository.aggregateSupplierReviews(userId),
     supplierRepository.countUnreadNotifications(userId),
-    supplierRepository.findRecentMaterials(userId),
+    supplierRepository.findRecentMaterials(scope),
     supplierRepository.findUpcomingPickups(userId),
     supplierRepository.findRecentNotifications(userId),
     supplierRepository.findRecentReservationsForActivity(userId),
   ]);
+
+  if (env.nodeEnv !== "production") {
+    const [ownerCount, profileCount, scopedCount] = await Promise.all([
+      prisma.material.count({ where: { ownerId: userId } }),
+      scope.supplierProfileId
+        ? prisma.material.count({
+            where: { supplierProfileId: scope.supplierProfileId },
+          })
+        : Promise.resolve(0),
+      prisma.material.count({ where: buildSupplierMaterialWhere(scope) }),
+    ]);
+
+    console.debug("[supplier-dashboard]", {
+      userId,
+      supplierProfileId: scope.supplierProfileId,
+      ownerCount,
+      profileCount,
+      scopedCount,
+      materialStatsTotal: supplierRepository.foldMaterialStatusCounts(materialGroups)
+        .total,
+    });
+  }
 
   const materialStats =
     supplierRepository.foldMaterialStatusCounts(materialGroups);
@@ -930,10 +960,11 @@ const mapSupplierProfileResponse = (
 export const getSupplierProfile = async (
   userId: string,
 ): Promise<SupplierProfileResponseDto> => {
+  const scope = await resolveSupplierContext(userId);
   const record =
     await supplierRepository.findSupplierProfileDetailsByUserId(userId);
 
-  const supplierProfileId = record?.supplierProfile?.id ?? null;
+  const supplierProfileId = scope.supplierProfileId;
 
   const [
     materialsSummary,
@@ -943,14 +974,14 @@ export const getSupplierProfile = async (
     latestFollowers,
     materialsPreview,
   ] = await Promise.all([
-    supplierRepository.findSupplierMaterialsSummary(userId),
+    supplierRepository.findSupplierMaterialsSummary(scope),
     supplierRepository.countSupplierReservationsTotal(userId),
-    supplierRepository.countTotalLikesForSupplier(userId),
-    supplierRepository.countTotalViewsForSupplier(userId),
+    supplierRepository.countTotalLikesForSupplier(scope),
+    supplierRepository.countTotalViewsForSupplier(scope),
     supplierProfileId
       ? supplierRepository.listLatestSupplierFollowers(supplierProfileId, 5)
       : Promise.resolve([]),
-    supplierRepository.findSupplierMaterialsPreview(userId, 4),
+    supplierRepository.findSupplierMaterialsPreview(scope, 4),
   ]);
 
   const previewIds = materialsPreview.map((material) => material.id);
@@ -1235,10 +1266,11 @@ export const getSupplierMaterials = async (
   userId: string,
   query: SupplierMaterialsQuery,
 ) => {
+  const scope = await resolveSupplierContext(userId);
   const [result, summary, categories] = await Promise.all([
-    supplierRepository.findSupplierMaterials(userId, query),
-    supplierRepository.findSupplierMaterialsSummary(userId),
-    supplierRepository.findSupplierMaterialCategories(userId),
+    supplierRepository.findSupplierMaterials(scope, query),
+    supplierRepository.findSupplierMaterialsSummary(scope),
+    supplierRepository.findSupplierMaterialCategories(scope),
   ]);
 
   const blockingReservationCounts =
@@ -1277,8 +1309,9 @@ export const getSupplierMaterial = async (
   userId: string,
   materialId: string,
 ) => {
+  const scope = await resolveSupplierContext(userId);
   const material = await supplierRepository.findSupplierOwnedMaterialById(
-    userId,
+    scope,
     materialId,
   );
 
@@ -1297,8 +1330,9 @@ export const updateSupplierMaterial = async (
   materialId: string,
   input: UpdateSupplierMaterialInput,
 ) => {
+  const scope = await resolveSupplierContext(userId);
   const material = await supplierRepository.findSupplierOwnedMaterialById(
-    userId,
+    scope,
     materialId,
   );
 
@@ -1327,7 +1361,7 @@ export const updateSupplierMaterial = async (
   }
 
   const updated = await supplierRepository.updateSupplierOwnedMaterial(
-    userId,
+    scope,
     materialId,
     {
       title: input.title,
@@ -1353,8 +1387,9 @@ export const deleteSupplierMaterial = async (
   userId: string,
   materialId: string,
 ) => {
+  const scope = await resolveSupplierContext(userId);
   const material = await supplierRepository.findSupplierOwnedMaterialById(
-    userId,
+    scope,
     materialId,
   );
 

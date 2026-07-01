@@ -34,7 +34,7 @@ Conventions for response shape: [04-api-conventions.md](../04-api-conventions.md
 | POST | `/api/auth/become-supplier` | Bearer JWT | `auth/auth.routes.ts` |
 | POST | `/api/auth/switch-role` | Bearer JWT | `auth/auth.routes.ts` |
 
-`GET /api/auth/me` returns `{ user }` including `roles`, `activeRole`, `canSwitchToLearner`, `canSwitchToSupplier`, `defaultPortalRoute`, profile summaries, `phoneVerifiedAt`, and `lastLoginAt` when present.
+`GET /api/auth/me` returns `{ user }` including `roles`, `activeRole`, `canSwitchToLearner`, `canSwitchToSupplier`, `defaultPortalRoute`, profile summaries (including `supplierProfile.id` when present), `phoneVerifiedAt`, and `lastLoginAt` when present.
 
 `POST /api/auth/become-supplier` adds `SUPPLIER` role and creates a supplier profile on the same account when missing; keeps existing `LEARNER` role; sets `activeRole` to `SUPPLIER`. Response matches login/register: new `accessToken`, optional `refreshToken`, and updated `user` so JWT roles stay in sync.
 

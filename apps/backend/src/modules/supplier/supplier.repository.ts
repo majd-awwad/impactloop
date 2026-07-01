@@ -7,6 +7,11 @@ import type {
 
 import { prisma } from "../../database/prisma.js";
 import type { UpdateSupplierProfileInput } from "./supplier.validation.js";
+import {
+  buildSupplierMaterialWhere,
+  resolveSupplierProfileForUser,
+  type SupplierMaterialScope,
+} from "./supplier-material-scope.js";
 
 type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
 
@@ -19,8 +24,14 @@ const decimalToNumber = (value: { toNumber(): number } | number): number => {
 };
 
 export const findSupplierProfileForDashboard = async (userId: string) => {
+  const profile = await resolveSupplierProfileForUser(userId);
+
+  if (!profile) {
+    return null;
+  }
+
   return prisma.supplierProfile.findUnique({
-    where: { userId },
+    where: { id: profile.id },
     include: {
       defaultPickupLocation: true,
       organizationProfile: true,
@@ -29,8 +40,14 @@ export const findSupplierProfileForDashboard = async (userId: string) => {
 };
 
 export const findSupplierProfileForMaterialCreate = async (userId: string) => {
+  const profile = await resolveSupplierProfileForUser(userId);
+
+  if (!profile) {
+    return null;
+  }
+
   return prisma.supplierProfile.findUnique({
-    where: { userId },
+    where: { id: profile.id },
     include: {
       defaultPickupLocation: true,
     },
@@ -119,11 +136,11 @@ export const listSupplierFollowers = async (input: {
 };
 
 export const findSupplierMaterialsPreview = async (
-  ownerId: string,
+  scope: SupplierMaterialScope,
   limit = 4,
 ) => {
   return prisma.material.findMany({
-    where: { ownerId },
+    where: buildSupplierMaterialWhere(scope),
     orderBy: { createdAt: 'desc' },
     take: limit,
     include: {
@@ -182,15 +199,15 @@ export const countReservationsByMaterialIds = async (materialIds: string[]) => {
   return new Map(groups.map((group) => [group.materialId, group._count._all]));
 };
 
-export const countTotalLikesForSupplier = async (ownerId: string) => {
+export const countTotalLikesForSupplier = async (scope: SupplierMaterialScope) => {
   return prisma.materialLike.count({
-    where: { material: { ownerId } },
+    where: { material: buildSupplierMaterialWhere(scope) },
   });
 };
 
-export const countTotalViewsForSupplier = async (ownerId: string) => {
+export const countTotalViewsForSupplier = async (scope: SupplierMaterialScope) => {
   return prisma.materialView.count({
-    where: { material: { ownerId } },
+    where: { material: buildSupplierMaterialWhere(scope) },
   });
 };
 
@@ -422,10 +439,10 @@ export const updateSupplierProfileImages = async (
   });
 };
 
-export const countMaterialsByStatus = async (ownerId: string) => {
+export const countMaterialsByStatus = async (scope: SupplierMaterialScope) => {
   return prisma.material.groupBy({
     by: ["status"],
-    where: { ownerId },
+    where: buildSupplierMaterialWhere(scope),
     _count: { _all: true },
   });
 };
@@ -438,9 +455,11 @@ export const countReservationsByStatus = async (ownerId: string) => {
   });
 };
 
-export const aggregateReusedMaterials = async (ownerId: string) => {
+export const aggregateReusedMaterials = async (scope: SupplierMaterialScope) => {
   return prisma.material.aggregate({
-    where: { ownerId, status: "REUSED" },
+    where: {
+      AND: [buildSupplierMaterialWhere(scope), { status: "REUSED" }],
+    },
     _count: { _all: true },
     _sum: { quantity: true },
   });
@@ -476,7 +495,7 @@ const supplierMaterialListInclude = {
 } satisfies Prisma.MaterialInclude;
 
 const buildSupplierMaterialsWhere = (
-  ownerId: string,
+  scope: SupplierMaterialScope,
   query: {
     search?: string;
     status?: MaterialStatus;
@@ -485,22 +504,24 @@ const buildSupplierMaterialsWhere = (
     condition?: MaterialCondition;
   },
 ): Prisma.MaterialWhereInput => {
-  const where: Prisma.MaterialWhereInput = { ownerId };
+  const andConditions: Prisma.MaterialWhereInput[] = [
+    buildSupplierMaterialWhere(scope),
+  ];
 
   if (query.status) {
-    where.status = query.status;
+    andConditions.push({ status: query.status });
   }
 
   if (query.isFree !== undefined) {
-    where.isFree = query.isFree;
+    andConditions.push({ isFree: query.isFree });
   }
 
   if (query.categoryId) {
-    where.categoryId = query.categoryId;
+    andConditions.push({ categoryId: query.categoryId });
   }
 
   if (query.condition) {
-    where.condition = query.condition;
+    andConditions.push({ condition: query.condition });
   }
 
   if (query.search) {
@@ -529,14 +550,16 @@ const buildSupplierMaterialsWhere = (
       searchConditions.push({ status: statusCandidate });
     }
 
-    where.OR = searchConditions;
+    andConditions.push({ OR: searchConditions });
   }
 
-  return where;
+  return andConditions.length === 1
+    ? andConditions[0]!
+    : { AND: andConditions };
 };
 
 export const findSupplierMaterials = async (
-  ownerId: string,
+  scope: SupplierMaterialScope,
   query: {
     page: number;
     limit: number;
@@ -547,7 +570,7 @@ export const findSupplierMaterials = async (
     condition?: MaterialCondition;
   },
 ) => {
-  const where = buildSupplierMaterialsWhere(ownerId, query);
+  const where = buildSupplierMaterialsWhere(scope, query);
   const skip = (query.page - 1) * query.limit;
 
   const [items, total] = await Promise.all([
@@ -564,8 +587,15 @@ export const findSupplierMaterials = async (
   return { items, total };
 };
 
-export const findSupplierMaterialsSummary = async (ownerId: string) => {
-  const baseWhere = { ownerId };
+export const findSupplierMaterialsSummary = async (
+  scope: SupplierMaterialScope,
+) => {
+  const baseWhere = buildSupplierMaterialWhere(scope);
+
+  const countWith = (extra: Prisma.MaterialWhereInput) =>
+    prisma.material.count({
+      where: { AND: [baseWhere, extra] },
+    });
 
   const [
     total,
@@ -578,27 +608,13 @@ export const findSupplierMaterialsSummary = async (ownerId: string) => {
     paid,
   ] = await Promise.all([
     prisma.material.count({ where: baseWhere }),
-    prisma.material.count({
-      where: { ...baseWhere, status: "AVAILABLE" },
-    }),
-    prisma.material.count({
-      where: { ...baseWhere, status: "PENDING_RESERVATION" },
-    }),
-    prisma.material.count({
-      where: { ...baseWhere, status: "RESERVED" },
-    }),
-    prisma.material.count({
-      where: { ...baseWhere, status: "REUSED" },
-    }),
-    prisma.material.count({
-      where: { ...baseWhere, status: "UNAVAILABLE" },
-    }),
-    prisma.material.count({
-      where: { ...baseWhere, isFree: true },
-    }),
-    prisma.material.count({
-      where: { ...baseWhere, isFree: false },
-    }),
+    countWith({ status: "AVAILABLE" }),
+    countWith({ status: "PENDING_RESERVATION" }),
+    countWith({ status: "RESERVED" }),
+    countWith({ status: "REUSED" }),
+    countWith({ status: "UNAVAILABLE" }),
+    countWith({ isFree: true }),
+    countWith({ isFree: false }),
   ]);
 
   return {
@@ -613,10 +629,12 @@ export const findSupplierMaterialsSummary = async (ownerId: string) => {
   };
 };
 
-export const findSupplierMaterialCategories = async (ownerId: string) => {
+export const findSupplierMaterialCategories = async (
+  scope: SupplierMaterialScope,
+) => {
   const groups = await prisma.material.groupBy({
     by: ["categoryId"],
-    where: { ownerId },
+    where: buildSupplierMaterialWhere(scope),
     _count: { id: true },
   });
 
@@ -651,11 +669,13 @@ export const findSupplierMaterialCategories = async (ownerId: string) => {
 };
 
 export const findSupplierOwnedMaterialById = async (
-  ownerId: string,
+  scope: SupplierMaterialScope,
   materialId: string,
 ) => {
   return prisma.material.findFirst({
-    where: { id: materialId, ownerId },
+    where: {
+      AND: [{ id: materialId }, buildSupplierMaterialWhere(scope)],
+    },
     include: supplierMaterialListInclude,
   });
 };
@@ -691,7 +711,7 @@ export const countBlockingReservationsForMaterial = async (
 };
 
 export const updateSupplierOwnedMaterial = async (
-  ownerId: string,
+  scope: SupplierMaterialScope,
   materialId: string,
   data: {
     title: string;
@@ -706,7 +726,9 @@ export const updateSupplierOwnedMaterial = async (
   },
 ) => {
   const existing = await prisma.material.findFirst({
-    where: { id: materialId, ownerId },
+    where: {
+      AND: [{ id: materialId }, buildSupplierMaterialWhere(scope)],
+    },
     select: { id: true },
   });
 
@@ -727,9 +749,12 @@ export const deleteSupplierOwnedMaterial = async (materialId: string) => {
   });
 };
 
-export const findRecentMaterials = async (ownerId: string, limit = 3) => {
+export const findRecentMaterials = async (
+  scope: SupplierMaterialScope,
+  limit = 3,
+) => {
   return prisma.material.findMany({
-    where: { ownerId },
+    where: buildSupplierMaterialWhere(scope),
     orderBy: { createdAt: "desc" },
     take: limit,
     include: {

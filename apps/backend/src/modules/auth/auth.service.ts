@@ -46,6 +46,7 @@ export type LearnerProfileSummary = {
 };
 
 export type SupplierProfileSummary = {
+  id: string;
   supplierType: string;
   publicName: string;
   description: string | null;
@@ -152,6 +153,7 @@ const toUserSummary = (
       : null,
     supplierProfile: user.supplierProfile
       ? {
+          id: user.supplierProfile.id,
           supplierType: user.supplierProfile.supplierType ?? '',
           publicName: user.supplierProfile.publicName ?? '',
           description: user.supplierProfile.description,
