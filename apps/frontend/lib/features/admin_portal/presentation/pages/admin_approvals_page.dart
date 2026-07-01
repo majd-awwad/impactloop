@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
@@ -71,11 +72,51 @@ final adminApprovalsPriceRequestsProvider = FutureProvider.autoDispose((ref) {
       );
 });
 
-class AdminApprovalsPage extends ConsumerWidget {
-  const AdminApprovalsPage({super.key});
+class AdminApprovalsPage extends ConsumerStatefulWidget {
+  const AdminApprovalsPage({super.key, this.initialStatus});
+
+  final String? initialStatus;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminApprovalsPage> createState() => _AdminApprovalsPageState();
+}
+
+class _AdminApprovalsPageState extends ConsumerState<AdminApprovalsPage> {
+  var _appliedInitialStatus = false;
+
+  static const _validStatusFilters = {
+    'PENDING',
+    'APPROVED',
+    'REJECTED',
+    'ALL',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+  }
+
+  @override
+  void didUpdateWidget(AdminApprovalsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialStatus != widget.initialStatus) {
+      _appliedInitialStatus = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+    }
+  }
+
+  void _applyInitialStatusIfNeeded() {
+    if (!mounted || _appliedInitialStatus) return;
+    final raw = widget.initialStatus?.trim().toUpperCase();
+    if (raw == null || raw.isEmpty) return;
+    _appliedInitialStatus = true;
+    if (!_validStatusFilters.contains(raw)) return;
+    ref.read(_approvalsFiltersProvider.notifier).setStatus(raw);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final filters = ref.watch(_approvalsFiltersProvider);
 
@@ -278,6 +319,7 @@ class _FiltersRowState extends ConsumerState<_FiltersRow> {
         ref.read(_approvalsFiltersProvider.notifier).reset();
         ref.invalidate(adminApprovalsCategoryRequestsProvider);
         ref.invalidate(adminApprovalsPriceRequestsProvider);
+        context.go('/admin/approvals');
       },
       child: const Text('Reset'),
     );

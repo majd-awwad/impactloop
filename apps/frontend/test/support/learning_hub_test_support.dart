@@ -34,4 +34,18 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
   Future<List<MaterialCategory>> fetchProjectCategories() async {
     return const [];
   }
+
+  @override
+  Future<void> submitProjectForReview({
+    required String title,
+    required String shortDescription,
+    required String description,
+    required String categoryId,
+    required String difficulty,
+    List<Map<String, dynamic>>? requiredComponents,
+    List<Map<String, dynamic>>? steps,
+    List<Map<String, dynamic>>? links,
+  }) async {
+    return;
+  }
 }

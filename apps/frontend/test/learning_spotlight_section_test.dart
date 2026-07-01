@@ -204,4 +204,18 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
 
   @override
   Future<List<MaterialCategory>> fetchProjectCategories() async => const [];
+
+  @override
+  Future<void> submitProjectForReview({
+    required String title,
+    required String shortDescription,
+    required String description,
+    required String categoryId,
+    required String difficulty,
+    List<Map<String, dynamic>>? requiredComponents,
+    List<Map<String, dynamic>>? steps,
+    List<Map<String, dynamic>>? links,
+  }) async {
+    return;
+  }
 }

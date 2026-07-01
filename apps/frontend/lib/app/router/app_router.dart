@@ -46,8 +46,12 @@ import '../../features/supplier_portal/presentation/shell/supplier_shell.dart';
 import '../../features/admin_portal/presentation/pages/admin_access_denied_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_invitations_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_overview_page.dart';
-import '../../features/admin_portal/presentation/pages/admin_placeholder_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_audit_logs_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_deliveries_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_learning_projects_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_reservations_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_impact_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_materials_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_people_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_supplier_verification_page.dart';
@@ -545,12 +549,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/users',
             builder: (context, state) => AdminPeoplePage(
+              initialRole: state.uri.queryParameters['role'],
               initialTab: state.uri.queryParameters['tab'],
             ),
           ),
           GoRoute(
             path: '/admin/suppliers',
-            redirect: (context, state) => '/admin/users?tab=SUPPLIERS',
+            redirect: (context, state) => '/admin/users?role=SUPPLIER',
           ),
           GoRoute(
             path: '/admin/supplier-verification',
@@ -559,25 +564,43 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/materials',
-            builder: (context, state) => const AdminMaterialsPage(),
+            builder: (context, state) => AdminMaterialsPage(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
           GoRoute(
             path: '/admin/approvals',
-            builder: (context, state) => const AdminApprovalsPage(),
+            builder: (context, state) => AdminApprovalsPage(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
           GoRoute(
             path: '/admin/invitations',
-            builder: (context, state) => const AdminInvitationsPage(),
+            builder: (context, state) => AdminInvitationsPage(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
           GoRoute(
             path: '/admin/impact',
-            builder: (context, state) =>
-                const AdminPlaceholderPage(title: 'Impact Analytics'),
+            builder: (context, state) => const AdminImpactPage(),
           ),
           GoRoute(
             path: '/admin/audit-logs',
-            builder: (context, state) =>
-                const AdminPlaceholderPage(title: 'Audit Logs'),
+            builder: (context, state) => const AdminAuditLogsPage(),
+          ),
+          GoRoute(
+            path: '/admin/reservations',
+            builder: (context, state) => const AdminReservationsPage(),
+          ),
+          GoRoute(
+            path: '/admin/deliveries',
+            builder: (context, state) => AdminDeliveriesPage(
+              initialOpenDeliveryId: state.uri.queryParameters['open'],
+            ),
+          ),
+          GoRoute(
+            path: '/admin/learning-projects',
+            builder: (context, state) => const AdminLearningProjectsPage(),
           ),
         ],
       ),

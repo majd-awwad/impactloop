@@ -106,8 +106,11 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/admin/materials` | `AdminMaterialsPage` | admin | Materials moderation + reports |
 | `/admin/approvals` | `AdminApprovalsPage` | admin | Category + price approvals |
 | `/admin/invitations` | `AdminInvitationsPage` | admin | Admin invitation management |
-| `/admin/impact` | `AdminPlaceholderPage` | admin | Placeholder |
-| `/admin/audit-logs` | `AdminPlaceholderPage` | admin | Placeholder |
+| `/admin/impact` | `AdminImpactPage` | admin | Reuse + estimated CO₂ analytics from dashboard API |
+| `/admin/audit-logs` | `AdminAuditLogsPage` | admin | Paginated `admin_activity_logs` with backend filters, summary stats, actor/date filters, details dialog |
+| `/admin/reservations` | `AdminReservationsPage` | admin | Read-only platform reservations monitor with filters, summary stats, detail dialog |
+| `/admin/deliveries` | `AdminDeliveriesPage` | admin | Read-only delivery lifecycle monitor with timeline/location history, filters, detail dialog |
+| `/admin/learning-projects` | `AdminLearningProjectsPage` | admin | Learning Hub project moderation: summary stats, filters, review detail dialog, approve/reject/hide/archive actions |
 
 ## Admin shell navigation
 
@@ -123,6 +126,9 @@ From `admin_sidebar.dart`:
 | Invitations | `/admin/invitations` |
 | Impact Analytics | `/admin/impact` |
 | Audit Logs | `/admin/audit-logs` |
+| Reservations | `/admin/reservations` |
+| Deliveries | `/admin/deliveries` |
+| Learning Projects | `/admin/learning-projects` |
 
 ## Supplier shell navigation
 

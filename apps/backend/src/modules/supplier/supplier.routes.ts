@@ -11,16 +11,20 @@ import {
   getMaterial,
   getMaterials,
   getProfile,
+  getProfileFollowers,
   patchMaterial,
   patchProfile,
+  patchProfileImages,
   postMaterial,
 } from './supplier.controller.js';
 import {
   createSupplierMaterialSchema,
   supplierMaterialIdParamSchema,
+  supplierFollowersQuerySchema,
   supplierMaterialsQuerySchema,
   updateSupplierMaterialSchema,
   updateSupplierProfileSchema,
+  updateSupplierProfileImagesSchema,
 } from './supplier.validation.js';
 import { categoryRequestsRouter } from '../category-requests/category-requests.routes.js';
 import { supplierPriceRuleRequestsRouter } from '../price-rule-requests/price-rule-requests.supplier.routes.js';
@@ -50,6 +54,22 @@ supplierRouter.patch(
   requireRoles('SUPPLIER'),
   validate(updateSupplierProfileSchema),
   asyncHandler(patchProfile),
+);
+
+supplierRouter.patch(
+  '/profile/images',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(updateSupplierProfileImagesSchema),
+  asyncHandler(patchProfileImages),
+);
+
+supplierRouter.get(
+  '/profile/followers',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(supplierFollowersQuerySchema, 'query'),
+  asyncHandler(getProfileFollowers),
 );
 
 supplierRouter.get(

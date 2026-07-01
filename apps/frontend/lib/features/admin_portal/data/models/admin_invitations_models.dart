@@ -11,10 +11,16 @@ class AdminInvitationCreator {
 
   factory AdminInvitationCreator.fromJson(Map<String, dynamic> json) {
     return AdminInvitationCreator(
-      id: json['id'] as String,
+      id: json['id'] as String? ?? '',
       displayName: json['displayName'] as String? ?? '',
       email: json['email'] as String? ?? '',
     );
+  }
+
+  String get label {
+    if (displayName.isEmpty) return email;
+    if (email.isEmpty) return displayName;
+    return '$displayName ($email)';
   }
 }
 
@@ -27,9 +33,12 @@ class AdminInvitationItem {
     required this.expiresAt,
     this.sentAt,
     this.usedAt,
+    this.acceptedAt,
+    this.revokedAt,
     this.sendError,
     required this.createdAt,
     this.createdBy,
+    this.canCopyLink = false,
   });
 
   final String id;
@@ -39,30 +48,44 @@ class AdminInvitationItem {
   final DateTime expiresAt;
   final DateTime? sentAt;
   final DateTime? usedAt;
+  final DateTime? acceptedAt;
+  final DateTime? revokedAt;
   final String? sendError;
   final DateTime createdAt;
   final AdminInvitationCreator? createdBy;
+  final bool canCopyLink;
+
+  bool get isActivePending => canCopyLink;
 
   factory AdminInvitationItem.fromJson(Map<String, dynamic> json) {
     return AdminInvitationItem(
-      id: json['id'] as String,
+      id: json['id'] as String? ?? '',
       recipientEmail: json['recipientEmail'] as String? ?? '',
       role: json['role'] as String? ?? '',
       status: json['status'] as String? ?? 'PENDING',
-      expiresAt: DateTime.parse(json['expiresAt'] as String),
+      expiresAt: DateTime.tryParse(json['expiresAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
       sentAt: json['sentAt'] == null
           ? null
-          : DateTime.parse(json['sentAt'] as String),
+          : DateTime.tryParse(json['sentAt'] as String),
       usedAt: json['usedAt'] == null
           ? null
-          : DateTime.parse(json['usedAt'] as String),
+          : DateTime.tryParse(json['usedAt'] as String),
+      acceptedAt: json['acceptedAt'] == null
+          ? null
+          : DateTime.tryParse(json['acceptedAt'] as String),
+      revokedAt: json['revokedAt'] == null
+          ? null
+          : DateTime.tryParse(json['revokedAt'] as String),
       sendError: json['sendError'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
       createdBy: json['createdBy'] is Map<String, dynamic>
           ? AdminInvitationCreator.fromJson(
               json['createdBy'] as Map<String, dynamic>,
             )
           : null,
+      canCopyLink: json['canCopyLink'] as bool? ?? false,
     );
   }
 }
@@ -76,9 +99,12 @@ class AdminInvitationCreateResult extends AdminInvitationItem {
     required super.expiresAt,
     super.sentAt,
     super.usedAt,
+    super.acceptedAt,
+    super.revokedAt,
     super.sendError,
     required super.createdAt,
     super.createdBy,
+    super.canCopyLink,
     required this.sendStatus,
     required this.inviteLink,
     required this.emailProvider,
@@ -98,9 +124,12 @@ class AdminInvitationCreateResult extends AdminInvitationItem {
       expiresAt: base.expiresAt,
       sentAt: base.sentAt,
       usedAt: base.usedAt,
+      acceptedAt: base.acceptedAt,
+      revokedAt: base.revokedAt,
       sendError: base.sendError,
       createdAt: base.createdAt,
       createdBy: base.createdBy,
+      canCopyLink: base.canCopyLink,
       sendStatus: json['sendStatus'] as String? ?? 'PENDING',
       inviteLink: json['inviteLink'] as String? ?? '',
       emailProvider: json['emailProvider'] as String? ?? 'mock',
@@ -127,4 +156,16 @@ class AdminInvitationCreateRequest {
         'expiresInMinutes': expiresInMinutes,
         if (note != null && note!.trim().isNotEmpty) 'note': note,
       };
+}
+
+class AdminInvitationLinkResult {
+  const AdminInvitationLinkResult({required this.invitationUrl});
+
+  final String invitationUrl;
+
+  factory AdminInvitationLinkResult.fromJson(Map<String, dynamic> json) {
+    return AdminInvitationLinkResult(
+      invitationUrl: json['invitationUrl'] as String? ?? '',
+    );
+  }
 }

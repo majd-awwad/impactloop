@@ -1,7 +1,16 @@
 import type { ReservationStatus } from '../../generated/prisma/client.js';
 
+import {
+  listRecentAdminActivity,
+  type AdminActivityItemDto,
+} from './admin-activity-log.js';
 import * as adminRepository from './admin.repository.js';
 import { estimateCo2KgFromReusedMaterials } from './admin-impact-estimator.js';
+import {
+  countPendingSupplierVerificationsForDashboard,
+  listSupplierVerificationDashboardPreview,
+  type SupplierVerificationDashboardPreviewItem,
+} from '../admin-supplier-verifications/admin-supplier-verifications.service.js';
 
 export type AdminDashboardResponse = {
   summary: {
@@ -48,8 +57,9 @@ export type AdminDashboardResponse = {
     expiresAt: string;
     createdAt: string;
   }[];
-  supplierVerificationPreview: unknown[];
-  recentActivity: unknown[];
+  supplierVerificationPendingCount: number;
+  supplierVerificationPreview: SupplierVerificationDashboardPreviewItem[];
+  recentActivity: AdminActivityItemDto[];
 };
 
 const monthKey = (date: Date): string => {
@@ -93,8 +103,12 @@ export const buildAdminDashboard = async (): Promise<AdminDashboardResponse> => 
     reuseByMonthCounts,
     pendingCategoryRequests,
     pendingPriceRequests,
+    pendingMaterialReports,
+    supplierVerifications,
     totalReservations,
     reusedMaterialsForCo2,
+    supplierVerificationPreview,
+    recentActivity,
   ] = await Promise.all([
     adminRepository.countUsers(),
     adminRepository.countSuppliersByRole(),
@@ -112,8 +126,12 @@ export const buildAdminDashboard = async (): Promise<AdminDashboardResponse> => 
     adminRepository.groupReuseByMonth(reuseWindowStart),
     adminRepository.countPendingCategoryRequests(),
     adminRepository.countPendingPriceRequests(),
+    adminRepository.countPendingMaterialReports(),
+    countPendingSupplierVerificationsForDashboard(),
     adminRepository.countTotalReservations(),
     adminRepository.listReusedMaterialsForCo2Estimate(),
+    listSupplierVerificationDashboardPreview(5),
+    listRecentAdminActivity(5),
   ]);
 
   const reuseByMonthMap = new Map<string, number>();
@@ -126,10 +144,9 @@ export const buildAdminDashboard = async (): Promise<AdminDashboardResponse> => 
     count: reuseByMonthMap.get(key) ?? 0,
   }));
 
-  // This phase does not implement supplier verification workflow or reports schema.
-  const supplierVerifications = 0;
-  const reports = 0;
-  const pendingApprovals = supplierVerifications + pendingCategoryRequests + pendingPriceRequests + reports;
+  const reports = pendingMaterialReports;
+  const pendingApprovals =
+    supplierVerifications + pendingCategoryRequests + pendingPriceRequests + reports;
 
   const co2Estimate = estimateCo2KgFromReusedMaterials(reusedMaterialsForCo2);
   const reuseCompletionRate =
@@ -145,9 +162,7 @@ export const buildAdminDashboard = async (): Promise<AdminDashboardResponse> => 
       availableMaterials,
       pendingApprovals,
       activeInvitations,
-      // "completedReuse" uses material reuse (source of truth: materials.status=REUSED).
       completedReuse: reusedMaterials,
-      // No driver_profiles table exists; use DRIVER role count.
       activeDrivers,
     },
     pendingActions: {
@@ -172,8 +187,8 @@ export const buildAdminDashboard = async (): Promise<AdminDashboardResponse> => 
     materialsByCategory,
     reservationStatusBreakdown,
     recentInvitations: await adminRepository.listRecentInvitations(5),
-    supplierVerificationPreview: [],
-    recentActivity: [],
+    supplierVerificationPendingCount: supplierVerifications,
+    supplierVerificationPreview,
+    recentActivity,
   };
 };
-

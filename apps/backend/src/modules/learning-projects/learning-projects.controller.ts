@@ -9,8 +9,12 @@ import { successResponse } from '../../utils/api-response.js';
 import {
   getLearningProjectById,
   getLearningProjects,
+  submitLearningProjectForReview,
 } from './learning-projects.service.js';
-import type { LearningProjectsQuery } from './learning-projects.validation.js';
+import type {
+  LearningProjectsQuery,
+  SubmitLearningProjectInput,
+} from './learning-projects.validation.js';
 
 export const listLearningProjects = async (
   req: Request,
@@ -31,4 +35,14 @@ export const getLearningProject = async (
   const project = await getLearningProjectById(id);
 
   res.json(successResponse('Learning project fetched successfully', project));
+};
+
+export const submitLearningProject = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const body = req.body as SubmitLearningProjectInput;
+  const userId = req.auth!.sub;
+  const result = await submitLearningProjectForReview(userId, body);
+  res.status(201).json(successResponse(result.message, result));
 };

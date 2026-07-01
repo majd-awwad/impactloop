@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/models/admin_dashboard_models.dart';
 import '../l10n/admin_l10n.dart';
@@ -14,6 +15,8 @@ class AdminKpiCard extends StatelessWidget {
     required this.icon,
     required this.accent,
     this.badge,
+    this.onTap,
+    this.helperMaxLines = 2,
   });
 
   final String label;
@@ -22,6 +25,8 @@ class AdminKpiCard extends StatelessWidget {
   final IconData icon;
   final Color accent;
   final String? badge;
+  final VoidCallback? onTap;
+  final int helperMaxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +36,7 @@ class AdminKpiCard extends StatelessWidget {
         ? 'No additional details'
         : helper.trim();
 
-    return Container(
+    final card = Container(
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -63,70 +68,95 @@ class AdminKpiCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: accent.withValues(
-                                  alpha: palette.isDark ? 0.18 : 0.12,
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: accent.withValues(alpha: 0.22),
-                                ),
+                      Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: accent.withValues(
+                                alpha: palette.isDark ? 0.18 : 0.12,
                               ),
-                              child: Icon(icon, color: accent, size: 19),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: accent.withValues(alpha: 0.22),
+                              ),
                             ),
-                            const Spacer(),
-                            if (badge != null)
-                              Container(
-                                padding:
-                                    const EdgeInsetsDirectional.symmetric(
-                                  horizontal: 7,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: accent.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  badge!,
-                                  style: _badgeStyle(accent),
-                                ),
+                            child: Icon(icon, color: accent, size: 19),
+                          ),
+                          const Spacer(),
+                          if (onTap != null)
+                            Icon(
+                              Icons.arrow_forward,
+                              size: 16,
+                              color: palette.textSecondary,
+                            ),
+                          if (badge != null) ...[
+                            if (onTap != null) const SizedBox(width: 6),
+                            Container(
+                              padding:
+                                  const EdgeInsetsDirectional.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
                               ),
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                badge!,
+                                style: _badgeStyle(accent),
+                              ),
+                            ),
                           ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          displayValue,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AdminTypography.kpiValue(palette),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AdminTypography.kpiLabel(palette),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          displayHelper,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AdminTypography.kpiHelper(palette),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        displayValue,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AdminTypography.kpiValue(palette),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AdminTypography.kpiLabel(palette),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        displayHelper,
+                        maxLines: helperMaxLines,
+                        overflow: TextOverflow.ellipsis,
+                        style: AdminTypography.kpiHelper(palette),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
+            ],
             ),
           ),
+        ),
+      ),
+    );
+
+    if (onTap == null) {
+      return card;
+    }
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          hoverColor: accent.withValues(alpha: palette.isDark ? 0.08 : 0.05),
+          splashColor: accent.withValues(alpha: 0.1),
+          child: card,
         ),
       ),
     );
@@ -168,6 +198,7 @@ class AdminKpiGrid extends StatelessWidget {
         helper: l.hintUsers,
         icon: Icons.people_outline,
         accent: palette.blue,
+        onTap: () => context.go('/admin/users'),
       ),
       AdminKpiCard(
         label: l.statSuppliers,
@@ -175,6 +206,7 @@ class AdminKpiGrid extends StatelessWidget {
         helper: l.hintSuppliers,
         icon: Icons.storefront_outlined,
         accent: palette.amber,
+        onTap: () => context.go('/admin/users?role=SUPPLIER'),
       ),
       AdminKpiCard(
         label: l.statMaterials,
@@ -182,6 +214,7 @@ class AdminKpiGrid extends StatelessWidget {
         helper: l.hintMaterials,
         icon: Icons.inventory_2_outlined,
         accent: palette.primaryTeal,
+        onTap: () => context.go('/admin/materials'),
       ),
       AdminKpiCard(
         label: l.statAvailableMaterials,
@@ -189,6 +222,7 @@ class AdminKpiGrid extends StatelessWidget {
         helper: l.hintAvailableMaterials,
         icon: Icons.check_circle_outline,
         accent: palette.green,
+        onTap: () => context.go('/admin/materials?status=AVAILABLE'),
       ),
       AdminKpiCard(
         label: l.statPendingApprovals,
@@ -199,6 +233,7 @@ class AdminKpiGrid extends StatelessWidget {
         badge: dashboard.summary.pendingApprovals > 0
             ? l.t('Pending', 'معلّق')
             : null,
+        onTap: () => context.go('/admin/approvals?status=PENDING'),
       ),
       AdminKpiCard(
         label: l.statActiveInvitations,
@@ -206,6 +241,7 @@ class AdminKpiGrid extends StatelessWidget {
         helper: l.hintActiveInvitations,
         icon: Icons.mail_outline,
         accent: palette.blue,
+        onTap: () => context.go('/admin/invitations?status=PENDING'),
       ),
       AdminKpiCard(
         label: l.statCompletedReuse,
@@ -213,14 +249,17 @@ class AdminKpiGrid extends StatelessWidget {
         helper: l.hintCompletedReuse,
         icon: Icons.autorenew,
         accent: palette.green,
+        onTap: () => context.go('/admin/materials?status=REUSED'),
       ),
       AdminKpiCard(
         label: l.estimatedCo2Avoided,
         value: _fmtCo2Kg(dashboard.impact.estimatedCo2Kg),
-        helper: l.estimatedCo2Helper,
+        helper: l.estimatedCo2ShortHelper,
         icon: Icons.eco_outlined,
         accent: palette.brightTeal,
         badge: l.estimatedBadge,
+        helperMaxLines: 1,
+        onTap: () => context.go('/admin/impact'),
       ),
     ];
 

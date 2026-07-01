@@ -69,6 +69,10 @@ export const countPendingPriceRequests = async (): Promise<number> => {
   return prisma.priceRuleRequest.count({ where: { status: 'PENDING' } });
 };
 
+export const countPendingMaterialReports = async (): Promise<number> => {
+  return prisma.materialReport.count({ where: { status: 'PENDING' } });
+};
+
 export const countTotalReservations = async (): Promise<number> => {
   return prisma.reservation.count();
 };

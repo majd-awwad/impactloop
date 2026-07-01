@@ -47,12 +47,12 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `uploads` | **Implemented** | Profile images + supplier material images + verification documents |
 | `profile` | **Implemented** | Authenticated user + learner profile PATCH |
 | `locations` | **Partial** | Reverse geocode only — no CRUD locations API |
-| `learning-projects` | **Implemented** | Read list + detail |
+| `learning-projects` | **Implemented** | Public read list + detail (`PUBLISHED` only); learner `POST /submit` → `PENDING_REVIEW`; admin moderation module |
 | `invitations` | **Implemented** | Admin email invitations (mock/SMTP), validate/accept API, unified `driver_profiles` |
 | `reservations` | **Partial** | Learner create/cancel + my reservations read with post-acceptance `pickupLocationFull`; partial-quantity holds; learner delivery request route mounted |
 | `deliveries` | **Partial** | Learner delivery request/read backed by `deliveries`; Flutter learner request/status UI, latest ping summary, and polling map marker exist; driver jobs/status UI exists; no realtime stream |
 | `driver` | **Partial** | Driver available/active jobs, accept, status updates, foreground auto-location sharing on active delivery detail page, and manual location pings; no background GPS |
-| `admin` | **Partial** | Dashboard + invitations + supplier verification review + approvals + materials moderation + people management; other admin pages placeholder |
+| `admin` | **Partial** | Dashboard + invitations + supplier verification + approvals + materials moderation + people management + impact analytics + audit logs + reservations/deliveries monitoring (read-only); other admin pages placeholder |
 | `supplier` | **Implemented** | Dashboard, profile, materials |
 | `category-requests` | **Implemented** | Under `/api/supplier` |
 | `price-rule-requests` | **Implemented** | Create + supplier drafts |
@@ -83,7 +83,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `reservations` | **Partial** | `POST/PATCH /api/reservations`, `GET /api/reservations/my` (incl. `pickupLocationFull` after accept/complete), delivery request route | Partial-quantity reserve UI + PENDING cancel + My Reservations pickup address reveal | [reservations.md](features/reservations.md) |
 | `deliveries` | **Partial** | `/api/deliveries/my`, `/api/deliveries/:id`, `POST /api/reservations/:id/delivery` | Learner delivery request dialog/status page/latest ping summary/polling map marker; driver jobs/status portal with foreground auto-location sharing on active delivery detail; no realtime stream | [delivery.md](features/delivery.md) |
 | `driver_portal` | **Partial** | `/api/driver/deliveries/*` | Driver job board, accept action, active delivery detail, ordered status updates, foreground auto-location sharing on detail page, manual location ping; no live map/background pings | [delivery.md](features/delivery.md) |
-| `learning_hub` | **Partial** | `GET /api/learning-projects` + categories | List/detail + Home spotlight API-backed; add-draft mock-only; AI disabled; ratings hidden | [learning-hub.md](features/learning-hub.md) |
+| `learning_hub` | **Partial** | `GET /api/learning-projects` + categories; `POST /api/learning-projects/submit` | List/detail + Home spotlight API-backed; add-draft submits for review; admin moderation at `/admin/learning-projects`; AI disabled; ratings hidden | [learning-hub.md](features/learning-hub.md) |
 | `profile` | **Implemented** | `/api/profile`, `/api/uploads/profile-image` | Profile hub + edit/security pages | — |
 | `supplier_portal` | **Partial** | `/api/supplier/*` + verification submit/status | API repositories; material CRUD with lifecycle + **org verification gating** (pending/rejected/changes block Add Material) | — |
 

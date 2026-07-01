@@ -97,6 +97,36 @@ class ApiLearningHubRepository implements LearningProjectRepository {
     return _categoriesApi.fetchProjectCategories();
   }
 
+  @override
+  Future<void> submitProjectForReview({
+    required String title,
+    required String shortDescription,
+    required String description,
+    required String categoryId,
+    required String difficulty,
+    List<Map<String, dynamic>>? requiredComponents,
+    List<Map<String, dynamic>>? steps,
+    List<Map<String, dynamic>>? links,
+  }) async {
+    await unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/submit',
+        data: {
+          'title': title,
+          'shortDescription': shortDescription,
+          'description': description,
+          'categoryId': categoryId,
+          'difficulty': difficulty,
+          if (requiredComponents != null && requiredComponents.isNotEmpty)
+            'requiredComponents': requiredComponents,
+          if (steps != null && steps.isNotEmpty) 'steps': steps,
+          if (links != null && links.isNotEmpty) 'links': links,
+        },
+      ),
+      (json) => json,
+    );
+  }
+
   static int? _intFromDynamic(Object? value) {
     if (value is int) {
       return value;

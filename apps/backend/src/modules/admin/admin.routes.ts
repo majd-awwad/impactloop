@@ -12,6 +12,8 @@ import {
 
 import {
   createAdminInvitation,
+  getAdminInvitation,
+  issueAdminInvitationLink,
   listAdminInvitations,
   resendAdminInvitation,
   revokeAdminInvitation,
@@ -31,6 +33,8 @@ import {
   supplierVerificationIdParamSchema,
 } from '../admin-supplier-verifications/admin-supplier-verifications.validation.js';
 import { getAdminDashboard } from './admin.controller.js';
+import { listAdminAuditLogs } from './admin-audit-logs.controller.js';
+import { adminAuditLogsListQuerySchema } from './admin-audit-logs.validation.js';
 import {
   approveAdminCategoryRequest,
   approveAdminPriceRequest,
@@ -87,6 +91,37 @@ import {
   adminPeopleUserIdParamSchema,
   suspendUserSchema,
 } from '../admin-people/admin-people.validation.js';
+import {
+  getAdminReservationHandler,
+  listAdminReservationsHandler,
+} from '../admin-reservations/admin-reservations.controller.js';
+import {
+  adminReservationIdParamSchema,
+  adminReservationsListQuerySchema,
+} from '../admin-reservations/admin-reservations.validation.js';
+import {
+  getAdminDeliveryHandler,
+  listAdminDeliveriesHandler,
+} from '../admin-deliveries/admin-deliveries.controller.js';
+import {
+  adminDeliveriesListQuerySchema,
+  adminDeliveryIdParamSchema,
+} from '../admin-deliveries/admin-deliveries.validation.js';
+import {
+  approveAdminLearningProjectHandler,
+  archiveAdminLearningProjectHandler,
+  getAdminLearningProjectHandler,
+  hideAdminLearningProjectHandler,
+  listAdminLearningProjectsHandler,
+  rejectAdminLearningProjectHandler,
+  requestChangesAdminLearningProjectHandler,
+  restoreAdminLearningProjectHandler,
+} from '../admin-learning-projects/admin-learning-projects.controller.js';
+import {
+  adminLearningProjectIdParamSchema,
+  adminLearningProjectsListQuerySchema,
+  moderationReasonSchema,
+} from '../admin-learning-projects/admin-learning-projects.validation.js';
 
 export const adminRouter = Router();
 
@@ -98,10 +133,26 @@ adminRouter.get(
 );
 
 adminRouter.get(
+  '/audit-logs',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminAuditLogsListQuerySchema, 'query'),
+  asyncHandler(listAdminAuditLogs),
+);
+
+adminRouter.get(
   '/invitations',
   authMiddleware,
   requireRoles('ADMIN'),
   asyncHandler(listAdminInvitations),
+);
+
+adminRouter.get(
+  '/invitations/:id',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(invitationIdParamSchema, 'params'),
+  asyncHandler(getAdminInvitation),
 );
 
 adminRouter.post(
@@ -110,6 +161,14 @@ adminRouter.post(
   requireRoles('ADMIN'),
   validate(adminCreateInvitationSchema),
   asyncHandler(createAdminInvitation),
+);
+
+adminRouter.post(
+  '/invitations/:id/issue-link',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(invitationIdParamSchema, 'params'),
+  asyncHandler(issueAdminInvitationLink),
 );
 
 adminRouter.post(
@@ -360,5 +419,105 @@ adminRouter.patch(
   requireRoles('ADMIN'),
   validate(adminPeopleUserIdParamSchema, 'params'),
   asyncHandler(reactivateAdminPerson),
+);
+
+adminRouter.get(
+  '/reservations',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminReservationsListQuerySchema, 'query'),
+  asyncHandler(listAdminReservationsHandler),
+);
+
+adminRouter.get(
+  '/reservations/:id',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminReservationIdParamSchema, 'params'),
+  asyncHandler(getAdminReservationHandler),
+);
+
+adminRouter.get(
+  '/deliveries',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveriesListQuerySchema, 'query'),
+  asyncHandler(listAdminDeliveriesHandler),
+);
+
+adminRouter.get(
+  '/deliveries/:id',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveryIdParamSchema, 'params'),
+  asyncHandler(getAdminDeliveryHandler),
+);
+
+adminRouter.get(
+  '/learning-projects',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectsListQuerySchema, 'query'),
+  asyncHandler(listAdminLearningProjectsHandler),
+);
+
+adminRouter.get(
+  '/learning-projects/:id',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  asyncHandler(getAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/approve',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  asyncHandler(approveAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/request-changes',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  validate(moderationReasonSchema),
+  asyncHandler(requestChangesAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/reject',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  validate(moderationReasonSchema),
+  asyncHandler(rejectAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/hide',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  validate(moderationReasonSchema),
+  asyncHandler(hideAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/restore',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  asyncHandler(restoreAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/archive',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  validate(moderationReasonSchema),
+  asyncHandler(archiveAdminLearningProjectHandler),
 );
 

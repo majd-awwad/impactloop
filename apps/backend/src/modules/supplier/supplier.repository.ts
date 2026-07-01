@@ -59,6 +59,141 @@ export const findSupplierProfileDetailsByUserId = async (userId: string) => {
   });
 };
 
+export const countSupplierFollowers = async (supplierProfileId: string) => {
+  return prisma.supplierFollower.count({
+    where: { supplierProfileId },
+  });
+};
+
+export const listLatestSupplierFollowers = async (
+  supplierProfileId: string,
+  limit = 5,
+) => {
+  return prisma.supplierFollower.findMany({
+    where: { supplierProfileId },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: {
+      followerUser: {
+        select: {
+          id: true,
+          displayName: true,
+          email: true,
+          profileImageUrl: true,
+        },
+      },
+    },
+  });
+};
+
+export const listSupplierFollowers = async (input: {
+  supplierProfileId: string;
+  page: number;
+  limit: number;
+}) => {
+  const skip = (input.page - 1) * input.limit;
+
+  const [items, total] = await Promise.all([
+    prisma.supplierFollower.findMany({
+      where: { supplierProfileId: input.supplierProfileId },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: input.limit,
+      include: {
+        followerUser: {
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+            profileImageUrl: true,
+          },
+        },
+      },
+    }),
+    prisma.supplierFollower.count({
+      where: { supplierProfileId: input.supplierProfileId },
+    }),
+  ]);
+
+  return { items, total };
+};
+
+export const findSupplierMaterialsPreview = async (
+  ownerId: string,
+  limit = 4,
+) => {
+  return prisma.material.findMany({
+    where: { ownerId },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: {
+      category: {
+        select: { id: true, nameEn: true, nameAr: true },
+      },
+      location: {
+        select: { city: true, area: true },
+      },
+      images: {
+        where: { isCover: true },
+        take: 1,
+        orderBy: { sortOrder: 'asc' },
+      },
+    },
+  });
+};
+
+export const countSupplierReservationsTotal = async (ownerId: string) => {
+  return prisma.reservation.count({ where: { ownerId } });
+};
+
+export const countLikesByMaterialIds = async (materialIds: string[]) => {
+  if (materialIds.length === 0) return new Map<string, number>();
+
+  const groups = await prisma.materialLike.groupBy({
+    by: ['materialId'],
+    where: { materialId: { in: materialIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(groups.map((group) => [group.materialId, group._count._all]));
+};
+
+export const countViewsByMaterialIds = async (materialIds: string[]) => {
+  if (materialIds.length === 0) return new Map<string, number>();
+
+  const groups = await prisma.materialView.groupBy({
+    by: ['materialId'],
+    where: { materialId: { in: materialIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(groups.map((group) => [group.materialId, group._count._all]));
+};
+
+export const countReservationsByMaterialIds = async (materialIds: string[]) => {
+  if (materialIds.length === 0) return new Map<string, number>();
+
+  const groups = await prisma.reservation.groupBy({
+    by: ['materialId'],
+    where: { materialId: { in: materialIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(groups.map((group) => [group.materialId, group._count._all]));
+};
+
+export const countTotalLikesForSupplier = async (ownerId: string) => {
+  return prisma.materialLike.count({
+    where: { material: { ownerId } },
+  });
+};
+
+export const countTotalViewsForSupplier = async (ownerId: string) => {
+  return prisma.materialView.count({
+    where: { material: { ownerId } },
+  });
+};
+
 export const isOrganizationSupplierType = (supplierType: string): boolean => {
   return (
     supplierType === "WORKSHOP" ||
@@ -262,6 +397,28 @@ export const upsertSupplierProfileDetails = async (
         },
       },
     });
+  });
+};
+
+export const updateSupplierProfileImages = async (
+  userId: string,
+  input: { avatarImageUrl?: string | null; coverImageUrl?: string | null },
+) => {
+  const data: {
+    avatarImageUrl?: string | null;
+    coverImageUrl?: string | null;
+  } = {};
+
+  if (input.avatarImageUrl !== undefined) {
+    data.avatarImageUrl = input.avatarImageUrl;
+  }
+  if (input.coverImageUrl !== undefined) {
+    data.coverImageUrl = input.coverImageUrl;
+  }
+
+  return prisma.supplierProfile.update({
+    where: { userId },
+    data,
   });
 };
 

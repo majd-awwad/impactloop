@@ -114,6 +114,7 @@ class SupplierMyMaterial {
     this.suggestedUses,
     required this.images,
     required this.viewsCount,
+    required this.likesCount,
     required this.createdAt,
     required this.updatedAt,
     required this.canDelete,
@@ -141,6 +142,7 @@ class SupplierMyMaterial {
   final String? suggestedUses;
   final List<SupplierMyMaterialsImage> images;
   final int viewsCount;
+  final int likesCount;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool canDelete;
@@ -194,6 +196,7 @@ class SupplierMyMaterial {
               .toList(growable: false)
           : const [],
       viewsCount: (json['viewsCount'] as num?)?.toInt() ?? 0,
+      likesCount: (json['likesCount'] as num?)?.toInt() ?? 0,
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),

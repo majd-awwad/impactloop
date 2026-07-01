@@ -5,6 +5,12 @@ import type { AdminPeopleListQuery } from './admin-people.validation.js';
 
 const elevatedRoles: UserRole[] = ['SUPPLIER', 'DRIVER', 'MODERATOR', 'ADMIN'];
 
+const moderatorSelect = {
+  id: true,
+  displayName: true,
+  email: true,
+} as const;
+
 const userListInclude = {
   roles: {
     select: {
@@ -28,7 +34,17 @@ const userListInclude = {
       transportationType: true,
     },
   },
+  suspendedBy: {
+    select: moderatorSelect,
+  },
+  reactivatedBy: {
+    select: moderatorSelect,
+  },
 } satisfies Prisma.UserInclude;
+
+export type AdminPeopleUserRecord = Prisma.UserGetPayload<{
+  include: typeof userListInclude;
+}>;
 
 const roleFilterMap: Record<
   Exclude<AdminPeopleListQuery['tab'], 'ALL' | 'LEARNERS'>,
@@ -159,6 +175,38 @@ export const countActiveAdmins = async () =>
         },
       },
     },
+  });
+
+export const suspendUserAccount = async (input: {
+  userId: string;
+  actorId: string;
+  reason: string;
+}) =>
+  prisma.user.update({
+    where: { id: input.userId },
+    data: {
+      accountStatus: 'SUSPENDED',
+      suspensionReason: input.reason,
+      suspendedAt: new Date(),
+      suspendedById: input.actorId,
+      reactivatedAt: null,
+      reactivatedById: null,
+    },
+    include: userListInclude,
+  });
+
+export const reactivateUserAccount = async (input: {
+  userId: string;
+  actorId: string;
+}) =>
+  prisma.user.update({
+    where: { id: input.userId },
+    data: {
+      accountStatus: 'ACTIVE',
+      reactivatedAt: new Date(),
+      reactivatedById: input.actorId,
+    },
+    include: userListInclude,
   });
 
 export const updateUserAccountStatus = async (
