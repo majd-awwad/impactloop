@@ -107,7 +107,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Same-account learner/supplier role switching | **Implemented** | `activeRole` on `users`, `POST /api/auth/switch-role`, `POST /api/auth/become-supplier`, portal switch UI |
 | Forgot / reset password | **Implemented** | Backend: `auth.routes.ts`; Flutter: `/forgot-password` and `/reset-password` |
 | Role invitations (DRIVER/MODERATOR/ADMIN) | **Implemented** | Admin email invitations + `/invite/accept` registration; `EMAIL_PROVIDER=mock` or SMTP |
-| Material discovery (public) | **Implemented** | Backend + Flutter |
+| Material discovery (public) | **Implemented** | Backend + Flutter, including material view tracking and learner material likes |
 | Supplier list/create/update/delete materials | **Implemented** | Create is idempotent with required `Idempotency-Key`; edit/delete gated by status + reservation history |
 | Supplier reservations workflow | **Partial** | Supplier list/accept/decline/self-pickup complete; delivery reservations show driver-delivery status instead of supplier complete — [reservations.md](features/reservations.md), [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
 | Learner reservation status UX | **Partial** | Partial-quantity reserve/cancel, material `availableQuantity`, `/learner/reservations` with delivery request/status — [reservations.md](features/reservations.md), [learner-reservation-flow](flows/learner-reservation-flow.md) |
@@ -191,7 +191,7 @@ Unresolved risks and **Needs verification** items: [09-open-questions.md](09-ope
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** |
 | Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed; add-draft/AI/ratings/review pending |
 
-**Not covered as implemented:** AI agent, moderator portal, saved/liked/followed content, build checklist, project submission/review, realtime driver tracking stream, reservation expiry, and reservation detail page remain pending.
+**Not covered as implemented:** AI agent, moderator portal, saved projects, followed content, project likes, build checklist, project submission/review, realtime driver tracking stream, reservation expiry, and reservation detail page remain pending.
 
 ### Phase 2B supporting docs (code-derived)
 

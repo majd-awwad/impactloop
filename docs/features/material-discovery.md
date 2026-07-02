@@ -6,20 +6,21 @@
 
 Public browse and detail view of surplus materials available for reuse. Guests and authenticated users can search, filter, paginate, and open material details without logging in.
 
-**Not in current shipped scope:** real public map pins, distance/nearest sort, similar materials, material-to-project suggestions, account-wide saved materials, likes, and follows.
+**Not in current shipped scope:** real public map pins, distance/nearest sort, similar materials, material-to-project suggestions, account-wide saved materials, project likes, and follows.
 
 ## Current status
 
 | Layer | Status | Notes |
 |-------|--------|-------|
-| Backend `materials` (read) | **Implemented** | Server-side filters, pagination, `viewsCount`, `sort=newest\|popular` |
+| Backend `materials` (read) | **Implemented** | Server-side filters, pagination, `viewsCount`, `likesCount`, `isLiked`, `sort=newest\|popular` |
 | Flutter `material_discovery` | **Implemented** | API-backed filters, Load more pagination, categories from API |
 | Client search/filters | **Implemented** | Debounced refetch to `GET /api/materials` |
 | Nearby map | **Not implemented** | Replaced with honest location/privacy panel |
 | Learner reserve from detail | **Partial** | Quantity dialog + `POST /api/reservations`; see [reservations.md](reservations.md) |
+| Learner material likes | **Implemented** | Detail-page optimistic like toggle + read-only list/home/related-card counts |
 | Report material | **Implemented** | Detail page only; unchanged in this slice |
 
-List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, `pickupAllowed`, `imageUrl` / `primaryImageUrl` (URL or object-key reference only — never binary blobs in PostgreSQL), and approximate `city`/`area` only.
+List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, `likesCount`, `isLiked`, `pickupAllowed`, `imageUrl` / `primaryImageUrl` (URL or object-key reference only — never binary blobs in PostgreSQL), and approximate `city`/`area` only.
 
 ## Images
 
@@ -42,8 +43,9 @@ List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, 
 2. Page loads categories (`GET /api/categories?type=MATERIAL&rootOnly=true&discoveryOnly=true`) and materials (`GET /api/materials` with query params).
 3. Search/filters debounce or apply immediately → backend refetch from page 1.
 4. **Load more** appends the next page when available.
-5. Tap card → `/materials/:id` → `GET /api/materials/:id` (increments `viewsCount`).
-6. Popular badge shows only when `viewsCount >= 10` (total detail views, not unique visitors).
+5. Tap card → `/materials/:id` → `GET /api/materials/:id` (writes `material_views` and increments `viewsCount` once per authenticated user/material; guest opens count per request).
+6. Authenticated learners can like/unlike the material on detail (`POST`/`DELETE /api/materials/:id/like`); own-material likes are allowed.
+7. Popular badge shows only when `viewsCount >= 10`.
 
 ## Frontend files
 
@@ -74,7 +76,9 @@ List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, 
 | Method | Path | Auth | Used by discovery UI |
 |--------|------|------|----------------------|
 | GET | `/api/materials` | Public | Yes — filters + pagination |
-| GET | `/api/materials/:id` | Public | Yes — increments `viewsCount` |
+| GET | `/api/materials/:id` | Public | Yes — records material views |
+| POST | `/api/materials/:id/like` | JWT + LEARNER | Yes — detail like toggle |
+| DELETE | `/api/materials/:id/like` | JWT + LEARNER | Yes — detail unlike toggle |
 | GET | `/api/categories?discoveryOnly=true` | Public | Yes — discovery category chips only |
 | GET | `/api/categories` | Public | Supplier/admin category pickers (unfiltered) |
 | GET | `/api/materials/listing-policy` | Public | No (supplier listing) |
@@ -93,6 +97,6 @@ List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, 
 - Bilingual material titles/descriptions (backend has single `title`/`description` today).
 - Real map with privacy-safe approximate pins.
 - Distance / nearest-first sort.
-- Similar materials, saved materials, likes, follows, and supplier/category follow signals.
+- Similar materials, saved materials, follows, project likes, and supplier/category follow signals.
 - "Projects you can build with this material" suggestions.
 - Database `isPublic` category flag to replace discovery name-pattern filtering.

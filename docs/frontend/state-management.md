@@ -121,6 +121,7 @@ Examples:
 - `learningProjectsProvider`, `learningProjectProvider`, and `projectCategoriesProvider` load Learning Hub list/detail/category data from `/api/learning-projects` and `/api/categories?type=PROJECT`.
 - `materialCategoriesProvider`, `discoveryMaterialCategoriesProvider`, `materialListingPolicyProvider`, and `categoryRequestsProvider` load shared materials data. Supplier add-material uses the full category list; discovery browse uses `discoveryMaterialCategoriesProvider` (`discoveryOnly=true`); admin approvals uses `materialCategoriesProvider`.
 - `reservationCreateControllerProvider` submits learner reservation requests from material detail and exposes loading/error state for the Reserve button.
+- Material detail uses `MaterialDiscoveryRepository` for `getMaterialById`, `likeMaterial`, and `unlikeMaterial`; the like toggle keeps optimistic widget-local state without replacing the page future and invalidates `homeSuggestedMaterialsProvider` after successful mutation.
 - `myReservationsProvider` loads `GET /api/reservations/my` for the learner reservation page and material-detail reservation state.
 - `learnerDeliveriesProvider` and `learnerDeliveryProvider` load learner delivery status from `/api/deliveries`; `deliveryRequestControllerProvider` submits accepted-reservation delivery requests.
 - `supplierMyMaterialsProvider` checks auth, watches query state, then fetches supplier materials.
@@ -185,9 +186,10 @@ Examples:
 - Accepting/declining requests invalidates `incomingRequestsProvider`.
 - Completing requests invalidates incoming requests and pickup schedule providers.
 - Supplier material changes invalidate supplier material/dashboard/notification providers.
-- Creating a learner reservation refreshes the material detail future and invalidates `homeSuggestedMaterialsProvider` plus `myReservationsProvider`; discovery list refresh remains page-local because material discovery currently owns its own `Future`.
+- Creating a learner reservation invalidates `homeSuggestedMaterialsProvider` plus `myReservationsProvider` and keeps the material detail page in place with a post-submit CTA; discovery list refresh remains page-local because material discovery currently owns its own `Future`.
 - Supplier accept/decline/complete invalidates incoming requests, supplier notifications, supplier dashboard, pickup schedule, and pickup schedule summary providers.
 - Retry buttons invalidate the failed async provider.
+- `myReservationsProvider` and `learnerDeliveriesProvider` keep successful data alive briefly after the last listener detaches, reducing repeated fetches when navigating between material detail and learner reservation surfaces. Mutations still invalidate them explicitly.
 
 Keep invalidation close to the mutation that changes server state.
 

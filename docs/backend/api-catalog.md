@@ -108,17 +108,21 @@ Optional query `discoveryOnly=true` applies discovery name filtering and dedupe 
 | POST | `/api/materials/price-check` | Bearer JWT | `materials/materials.routes.ts` |
 
 **`POST /api/materials/price-check`:** Paid listings require `condition`. Response includes `baseMaxPrice`, `selectedCondition`, `conditionMultiplier`, `adjustedMaxPrice`, `submittedPrice`, `isWithinAdjustedRange`, and `source` (`RULE` | `AI` | `ADMIN_REVIEW`). Supplier-facing `maxAllowedPrice` is the condition-adjusted max, not the raw rule/AI base.
-| GET | `/api/materials` | Public | `materials/materials.routes.ts` |
-| GET | `/api/materials/:id` | Public | `materials/materials.routes.ts` |
+| GET | `/api/materials` | Public, optional Bearer JWT | `materials/materials.routes.ts` |
+| GET | `/api/materials/:id` | Public, optional Bearer JWT | `materials/materials.routes.ts` |
+| POST | `/api/materials/:id/like` | Bearer JWT | `materials/materials.routes.ts` |
+| DELETE | `/api/materials/:id/like` | Bearer JWT | `materials/materials.routes.ts` |
 | POST | `/api/materials/:id/reports` | Bearer JWT | `materials/materials.routes.ts` |
 
 **Note:** Material **creation** is not on this router. Suppliers create via `POST /api/supplier/materials`.
 
 **`POST /api/materials/:id/reports` body:** `{ reason: MaterialReportReason, note?: string }` — `note` required when `reason=OTHER`. Duplicate pending report by same user/material returns 409. Public discovery excludes `UNAVAILABLE` materials (default list status `AVAILABLE`).
 
-**`GET /api/materials` query:** `q`, `categoryId`, `condition`, `status` (default `AVAILABLE`), `priceType` (`FREE` \| `PAID` \| `ANY`, default `ANY`), `deliveryAvailable`, `pickupAllowed`, `city`, `area`, `sort` (`newest` \| `popular`, default `newest`), `page`, `limit`. Response: `{ items, pagination: { page, limit, total, totalPages } }`. Public item fields include `quantity`, `availableQuantity`, `unit`, `city`, `area`, `pickupAllowed`, `deliveryAvailable`, `viewsCount`; no `addressLine` / `latitude` / `longitude`.
+**`GET /api/materials` query:** `q`, `categoryId`, `condition`, `status` (default `AVAILABLE`), `priceType` (`FREE` \| `PAID` \| `ANY`, default `ANY`), `deliveryAvailable`, `pickupAllowed`, `city`, `area`, `sort` (`newest` \| `popular`, default `newest`), `page`, `limit`. Response: `{ items, pagination: { page, limit, total, totalPages } }`. Public item fields include `quantity`, `availableQuantity`, `unit`, `city`, `area`, `pickupAllowed`, `deliveryAvailable`, `viewsCount`, `likesCount`, and `isLiked` (`false` without authenticated viewer); no `addressLine` / `latitude` / `longitude`.
 
-**`GET /api/materials/:id`:** increments `viewsCount` on each successful public detail read (`404` does not increment). `viewsCount` is a total detail-view counter, not unique visitors. Same public field redaction as list items.
+**`GET /api/materials/:id`:** creates a `material_views` row and increments `viewsCount` on successful detail reads (`404` does not increment). Authenticated requests attach `viewerUserId` and are counted once per user/material; repeat opens by the same authenticated user return the existing count. Guest requests store a null viewer and are counted per request because there is no anonymous identity. Same public field redaction as list items.
+
+**`POST /api/materials/:id/like` / `DELETE /api/materials/:id/like`:** Learner-only material like toggle. Both operations are idempotent. Response (`data`): `{ materialId, likesCount, isLiked }`. Liking own material is allowed.
 
 ## Reservations — `/api/reservations`
 

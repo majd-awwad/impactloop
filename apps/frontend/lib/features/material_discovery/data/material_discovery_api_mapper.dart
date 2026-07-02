@@ -47,6 +47,8 @@ class MaterialDiscoveryApiMapper {
     final reserveBlockReason = _nullableString(json['reserveBlockReason']);
     final ratingSummary = _numberFromDynamic(json['ratingSummary']);
     final viewsCount = _intFromDynamic(json['viewsCount']) ?? 0;
+    final likesCount = _intFromDynamic(json['likesCount']) ?? 0;
+    final isLiked = json['isLiked'] == true;
 
     final conditionMeta = _conditionMeta(condition);
     final statusMeta = _statusMeta(
@@ -119,6 +121,8 @@ class MaterialDiscoveryApiMapper {
               ar: _formatCompactNumber(ratingSummary),
             ),
       viewsCount: viewsCount,
+      likesCount: likesCount,
+      isLiked: isLiked,
       postedAt: _dateTimeFromDynamic(json['createdAt']),
       pickupNotes: pickupNotes,
       suggestedUses: suggestedUses,

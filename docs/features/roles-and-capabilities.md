@@ -41,12 +41,13 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Public landing page.
 - Public material browse, search, filters, pagination, and detail pages.
 - Public learning hub browse/detail pages for published projects.
-- Material detail views increment `viewsCount`.
+- Material detail views create `MaterialView` engagement rows; authenticated users count once per material.
+- Public material cards/details show material like counts.
 - Public material location is redacted to city/area only.
 
 **Planned / future:**
 
-- Public project/material engagement signals beyond views, such as public likes.
+- Public project engagement signals beyond views, such as project likes.
 - Guest prompts for login when trying to save, like, reserve, follow, or start a build.
 - Public supplier profile pages beyond the supplier summary already shown on material details.
 
@@ -65,6 +66,7 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Authenticated learner home route.
 - Home suggested materials and learning spotlight are API-backed, but not personalized yet.
 - Material browse/search/filter/detail.
+- Learner material likes from material detail, with counts visible on detail, discovery cards, home suggestions, and related material cards.
 - Material reservation with quantity, note, and pickup/delivery preference at reservation/delivery flow boundaries.
 - Learner reservation list, pending cancel, status display, and accepted self-pickup address reveal.
 - Internal delivery request/status page for accepted delivery-enabled reservations.
@@ -79,7 +81,7 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 **Planned / future:**
 
 - Personalized home sections based on interests, city/area, price preference, followed suppliers/categories, saved projects, and reservation/build history.
-- Save material, save project, like material, like project, follow supplier, follow category.
+- Save material, save project, like project, follow supplier, follow category.
 - Project to materials matching.
 - Material to projects discovery.
 - Build checklist with `Available`, `Missing`, `Alternative`, `Already owned`, and `Reserved` states.
@@ -109,15 +111,15 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 
 **Partial:**
 
-- Dashboard has operational counts and activity, but deeper demand insights are limited.
+- Dashboard/profile surfaces include material views and likes as demand signals, but deeper demand insights are limited.
 - AI support is focused on price references; AI category/use/description suggestions are not a complete shipped assistant.
 - Related projects for a supplier material are not implemented as a product surface.
 
 **Planned / future:**
 
 - Supplier followers and followed-supplier recommendations.
-- Saves/likes per material as demand signals.
-- Supplier insights for views, likes, saves, reservations, category demand, and materials learners request.
+- Saves per material as demand signals.
+- Supplier insights for saves, reservations, category demand, and materials learners request.
 - "This material can be used in these projects" guidance for supplier listings.
 - Richer AI support for description, category, likely uses, and pricing explanations.
 
@@ -219,13 +221,13 @@ The team wants engagement signals to improve recommendations and measure interes
 
 **Implemented now:**
 
-- `viewsCount` on material detail.
+- `viewsCount` on material detail plus row-backed `MaterialView` analytics, with authenticated users counted once per material.
+- Material likes.
 - Material reports.
 - Reservation and delivery activity.
 
 **Planned / future:**
 
-- Likes.
 - Saves.
 - Follows.
 - Project start/build progress.

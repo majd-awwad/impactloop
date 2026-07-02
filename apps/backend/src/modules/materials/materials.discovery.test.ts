@@ -5,7 +5,12 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
 
-import { getMaterialById, getMaterials } from './materials.service.js';
+import {
+  getMaterialById,
+  getMaterials,
+  likeMaterialById,
+  unlikeMaterialById,
+} from './materials.service.js';
 import { materialsQuerySchema } from './materials.validation.js';
 
 const TEST_MARKER = '[test-materials-discovery]';
@@ -40,6 +45,27 @@ async function createSupplierUser(suffix: string) {
           publicName: `${TEST_MARKER} supplier ${suffix}`,
           verificationStatus: 'VERIFIED',
         },
+      },
+    },
+    select: { id: true },
+  });
+}
+
+async function createLearnerUser(suffix: string) {
+  const passwordHash = await hashPassword('TestPassword123!');
+
+  return prisma.user.create({
+    data: {
+      displayName: `${TEST_MARKER} learner ${suffix}`,
+      email: `${TEST_MARKER}-learner-${suffix}-${Date.now()}@impactloop.test`,
+      passwordHash,
+      accountStatus: 'ACTIVE',
+      emailVerifiedAt: new Date(),
+      roles: {
+        create: [{ role: 'LEARNER', isPrimary: true }],
+      },
+      learnerProfile: {
+        create: { learnerType: 'STUDENT', skillLevel: 'BEGINNER' },
       },
     },
     select: { id: true },
@@ -373,6 +399,96 @@ describe('public material discovery', () => {
 
     const second = await getMaterialById(material.id);
     assert.equal(second.viewsCount, 5);
+
+    const viewRows = await prisma.materialView.count({
+      where: { materialId: material.id },
+    });
+    assert.equal(viewRows, 2);
+  });
+
+  test('authenticated material detail records viewer and liked state', async () => {
+    const unique = `${TEST_MARKER}-viewer-${Date.now()}`;
+    const material = await createMaterial(ctx, {
+      title: `${unique} viewer stock`,
+    });
+    const learner = await createLearnerUser(`viewer-${Date.now()}`);
+    ctx.createdUserIds.push(learner.id);
+
+    await likeMaterialById(material.id, learner.id);
+
+    const detail = await getMaterialById(material.id, {
+      sub: learner.id,
+      roles: ['LEARNER'],
+    });
+
+    assert.equal(detail.likesCount, 1);
+    assert.equal(detail.isLiked, true);
+    assert.equal(detail.viewsCount, 1);
+
+    const repeatDetail = await getMaterialById(material.id, {
+      sub: learner.id,
+      roles: ['LEARNER'],
+    });
+
+    assert.equal(repeatDetail.viewsCount, 1);
+
+    const trackedViews = await prisma.materialView.findMany({
+      where: { materialId: material.id, viewerUserId: learner.id },
+    });
+    assert.equal(trackedViews.length, 1);
+  });
+
+  test('material likes are idempotent and exposed on list/detail', async () => {
+    const unique = `${TEST_MARKER}-likes-${Date.now()}`;
+    const material = await createMaterial(ctx, {
+      title: `${unique} liked stock`,
+    });
+    const learner = await createLearnerUser(`likes-${Date.now()}`);
+    ctx.createdUserIds.push(learner.id);
+
+    const liked = await likeMaterialById(material.id, learner.id);
+    const likedAgain = await likeMaterialById(material.id, learner.id);
+    assert.equal(liked.likesCount, 1);
+    assert.equal(likedAgain.likesCount, 1);
+    assert.equal(likedAgain.isLiked, true);
+
+    const authenticatedList = await getMaterials(
+      {
+        page: 1,
+        limit: 20,
+        q: unique,
+        status: 'AVAILABLE',
+        priceType: 'ANY',
+        sort: 'newest',
+      },
+      { sub: learner.id, roles: ['LEARNER'] },
+    );
+    const authenticatedItem = authenticatedList.items.find(
+      (item) => item.id === material.id,
+    );
+    assert.ok(authenticatedItem);
+    assert.equal(authenticatedItem?.likesCount, 1);
+    assert.equal(authenticatedItem?.isLiked, true);
+
+    const publicList = await getMaterials({
+      page: 1,
+      limit: 20,
+      q: unique,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      sort: 'newest',
+    });
+    const publicItem = publicList.items.find((item) => item.id === material.id);
+    assert.ok(publicItem);
+    assert.equal(publicItem?.likesCount, 1);
+    assert.equal(publicItem?.isLiked, false);
+
+    const unliked = await unlikeMaterialById(material.id, learner.id);
+    const unlikedAgain = await unlikeMaterialById(material.id, learner.id);
+    assert.equal(unliked.likesCount, 0);
+    assert.equal(unliked.isLiked, false);
+    assert.equal(unlikedAgain.likesCount, 0);
+    assert.equal(unlikedAgain.isLiked, false);
   });
 
   test('missing material detail does not increment viewsCount', async () => {

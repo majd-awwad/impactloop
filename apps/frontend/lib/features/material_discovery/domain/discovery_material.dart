@@ -41,6 +41,8 @@ class DiscoveryMaterial {
     this.galleryImages = const [],
     this.ratingLabel,
     this.viewsCount = 0,
+    this.likesCount = 0,
+    this.isLiked = false,
     this.postedAt,
     this.pickupNotes,
     this.suggestedUses,
@@ -82,6 +84,8 @@ class DiscoveryMaterial {
   final List<DiscoveryMaterialImage> galleryImages;
   final LocalizedText? ratingLabel;
   final int viewsCount;
+  final int likesCount;
+  final bool isLiked;
   final DateTime? postedAt;
   final String? pickupNotes;
   final String? suggestedUses;
@@ -91,6 +95,56 @@ class DiscoveryMaterial {
   final String? reserveBlockReason;
 
   bool get isPopular => viewsCount >= materialPopularViewsThreshold;
+
+  DiscoveryMaterial copyWith({
+    int? viewsCount,
+    int? likesCount,
+    bool? isLiked,
+  }) {
+    return DiscoveryMaterial(
+      id: id,
+      status: status,
+      quantity: quantity,
+      availableQuantity: availableQuantity,
+      unit: unit,
+      title: title,
+      description: description,
+      category: category,
+      categoryId: categoryId,
+      city: city,
+      area: area,
+      conditionLabel: conditionLabel,
+      conditionTone: conditionTone,
+      statusLabel: statusLabel,
+      statusTone: statusTone,
+      quantityLabel: quantityLabel,
+      priceLabel: priceLabel,
+      locationLabel: locationLabel,
+      availabilityLabel: availabilityLabel,
+      deliveryAvailable: deliveryAvailable,
+      pickupAllowed: pickupAllowed,
+      isFree: isFree,
+      supplierName: supplierName,
+      supplierSubtitle: supplierSubtitle,
+      supplierType: supplierType,
+      supplierVerified: supplierVerified,
+      heroIconData: heroIconData,
+      cardGradient: cardGradient,
+      imageUrl: imageUrl,
+      galleryImages: galleryImages,
+      ratingLabel: ratingLabel,
+      viewsCount: viewsCount ?? this.viewsCount,
+      likesCount: likesCount ?? this.likesCount,
+      isLiked: isLiked ?? this.isLiked,
+      postedAt: postedAt,
+      pickupNotes: pickupNotes,
+      suggestedUses: suggestedUses,
+      sourceType: sourceType,
+      isOwnMaterial: isOwnMaterial,
+      canReserve: canReserve,
+      reserveBlockReason: reserveBlockReason,
+    );
+  }
 
   List<DiscoveryMaterialImage> get resolvedGalleryImages {
     if (galleryImages.isNotEmpty) {
