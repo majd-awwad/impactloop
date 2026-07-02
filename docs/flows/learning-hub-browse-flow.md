@@ -70,7 +70,7 @@ Navigation to `/learning/:id` where `:id` is a backend UUID.
 
 ### User path
 
-View title, summary/description, cover/first image, required components, steps, links, and disabled AI panel.
+View title, summary/description, cover/first image, required components, steps, clickable safe project links, and disabled AI panel.
 
 Ratings are **hidden** when backend `ratingSummary` is null (current API always returns null).
 
@@ -94,7 +94,7 @@ Read-only.
 
 ### Success state
 
-Detail sections render from API DTOs (components, steps, links, images).
+Detail sections render from API DTOs (components, steps, links, images). Project links use `url_launcher` for valid `http`/`https` URLs; invalid or missing URLs render disabled.
 
 ### Error states
 
@@ -197,7 +197,6 @@ Hub “Load more” is client-side pagination within the first fetched page, not
 - Learner booking materials from project components
 - AI material matching (`ai-agent` module)
 - Learning project ratings/reviews (API returns `ratingSummary: null`; no project review target type)
-- Clickable external links (`url_launcher` not wired — display-only URLs)
 - Server-side page navigation
 - Admin/moderator project review UI
 
@@ -205,4 +204,4 @@ Hub “Load more” is client-side pagination within the first fetched page, not
 
 ## Open questions
 
-See [09-open-questions.md](../09-open-questions.md) — Learning hub section for submission workflow, ratings model, AI matching, external links, and server-side pagination UI.
+See [09-open-questions.md](../09-open-questions.md) — Learning hub section for submission workflow, ratings model, AI matching, and server-side pagination UI.

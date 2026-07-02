@@ -16,6 +16,7 @@ Browse educational project ideas (components, steps, links) for inspiration. **L
 | Add draft page | **Mock-only** | Interactive form; **no submit API** |
 | AI panel on detail | **Frontend-only** | `disabled_ai_panel.dart` — placeholder |
 | Ratings on cards/detail | **Partial** | Hidden when backend `ratingSummary` is null (current API returns null) |
+| Project links | **Implemented** | Detail links open safe `http`/`https` URLs through `url_launcher`; invalid/missing URLs are disabled |
 | AI material agent | **Not implemented** | No `ai-agent` module |
 
 Product intent from role planning: the learning hub should eventually support project-to-material matching, material coverage, missing materials, alternatives, already-owned markers, saved projects, likes, and start-build/checklist flows. These are planned/future unless code changes prove otherwise.
@@ -28,7 +29,7 @@ Product intent from role planning: the learning hub should eventually support pr
 2. Page loads published projects from `GET /api/learning-projects` via `learningProjectsProvider`.
 3. Category chips filter by `categoryId` using `GET /api/categories?type=PROJECT`; search, difficulty, and tag filters use the existing learning projects query params.
 4. First list item is shown as featured; remaining items render in the grid.
-5. Tap project → `/learning/:id` → `learningProjectProvider(id)` loads detail from `GET /api/learning-projects/:id`.
+5. Tap project → `/learning/:id` → `learningProjectProvider(id)` loads detail from `GET /api/learning-projects/:id`; existing project links can be opened when they contain valid `http`/`https` URLs.
 6. Optional: `/learning/add-draft` — mock form only; submit does not persist.
 7. Home `/home` learning spotlight loads up to 2 published projects via `learningProjectsProvider`.
 
@@ -84,7 +85,6 @@ Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. 
 - Add-draft page remains mock-only (no submit API).
 - Project IDs are backend UUIDs; old mock slug bookmarks will not resolve.
 - `ratingSummary` is currently null in backend responses — rating UI stays hidden.
-- Project links are display-only (`url_launcher` not in dependencies).
 - Project submission / moderator review — **not implemented** in Flutter; draft page is mock.
 - AI material matching — **not implemented**.
 - Save project, like project, follow project/category, start build, build checklist, and available/missing/alternative material coverage — **not implemented**.

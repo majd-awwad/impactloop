@@ -12,10 +12,15 @@ class RatingBreakdown {
 }
 
 class ProjectLinkItem {
-  const ProjectLinkItem({required this.label, required this.urlLabel});
+  const ProjectLinkItem({
+    required this.label,
+    required this.urlLabel,
+    this.url,
+  });
 
   final LocalizedText label;
   final LocalizedText urlLabel;
+  final String? url;
 }
 
 class ProjectStep {

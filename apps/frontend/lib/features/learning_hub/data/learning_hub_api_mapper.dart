@@ -193,6 +193,7 @@ class LearningHubApiMapper {
           return ProjectLinkItem(
             label: LocalizedText(en: labelText, ar: labelText),
             urlLabel: LocalizedText(en: url, ar: url),
+            url: url,
           );
         })
         .toList(growable: false);
