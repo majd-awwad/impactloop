@@ -1,6 +1,6 @@
 # Material Discovery Flow
 
-**Sources inspected:** `materials_discovery_page.dart`, `material_details_page.dart`, `api_material_discovery_repository.dart`, `materials_discovery_view.dart`, `materials.service.ts`, `materials.repository.ts`
+**Sources inspected:** `material_discovery_providers.dart`, `materials_discovery_page.dart`, `material_details_page.dart`, `api_material_discovery_repository.dart`, `materials_discovery_view.dart`, `materials.service.ts`, `materials.repository.ts`
 
 ## Trigger
 
@@ -20,7 +20,7 @@ User navigates to **Material Discovery** (`/materials`) or opens a shared materi
 
 ### Frontend path
 
-`MaterialsDiscoveryPage` loads categories via `materialCategoriesProvider` and materials via `ApiMaterialDiscoveryRepository.fetchMaterials(query)` → `GET /api/materials` with query params and optional auth → `MaterialDiscoveryApiMapper` → `MaterialsDiscoveryView`.
+`MaterialsDiscoveryPage` loads categories via `materialCategoriesProvider` and materials via `materialDiscoveryRepositoryProvider` → `ApiMaterialDiscoveryRepository.fetchMaterials(query)` → `GET /api/materials` with query params and optional auth → `MaterialDiscoveryApiMapper` → `MaterialsDiscoveryView`.
 
 Filter changes rebuild `MaterialDiscoveryQuery` and refetch page 1. Load more increments `page` and appends items.
 
@@ -45,7 +45,7 @@ Grid renders `AppMaterialCard` rows with optional **Popular** badge when `viewsC
 
 ### Files involved
 
-`materials_discovery_page.dart`, `api_material_discovery_repository.dart`, `material_discovery_api_mapper.dart`, `materials_discovery_view.dart`, `material_search_filters.dart`, `app_material_card.dart`, `materials.controller.ts`, `materials.repository.ts`
+`material_discovery_providers.dart`, `materials_discovery_page.dart`, `api_material_discovery_repository.dart`, `material_discovery_api_mapper.dart`, `materials_discovery_view.dart`, `material_search_filters.dart`, `app_material_card.dart`, `materials.controller.ts`, `materials.repository.ts`
 
 ---
 

@@ -121,7 +121,7 @@ Examples:
 - `learningProjectsProvider`, `learningProjectProvider`, and `projectCategoriesProvider` load Learning Hub list/detail/category data from `/api/learning-projects` and `/api/categories?type=PROJECT`.
 - `materialCategoriesProvider`, `discoveryMaterialCategoriesProvider`, `materialListingPolicyProvider`, and `categoryRequestsProvider` load shared materials data. Supplier add-material uses the full category list; discovery browse uses `discoveryMaterialCategoriesProvider` (`discoveryOnly=true`); admin approvals uses `materialCategoriesProvider`.
 - `reservationCreateControllerProvider` submits learner reservation requests from material detail and exposes loading/error state for the Reserve button.
-- Material detail uses `MaterialDiscoveryRepository` for `getMaterialById`, `likeMaterial`, and `unlikeMaterial`; the like toggle keeps optimistic widget-local state without replacing the page future and invalidates `homeSuggestedMaterialsProvider` after successful mutation.
+- Material discovery list/detail and Home suggested materials use `materialDiscoveryRepositoryProvider` for `fetchMaterials`, `getMaterialById`, `likeMaterial`, and `unlikeMaterial`; the detail like toggle keeps optimistic widget-local state without replacing the page future and invalidates `homeSuggestedMaterialsProvider` after successful mutation.
 - `myReservationsProvider` loads `GET /api/reservations/my` for the learner reservation page and material-detail reservation state.
 - `learnerDeliveriesProvider` and `learnerDeliveryProvider` load learner delivery status from `/api/deliveries`; `deliveryRequestControllerProvider` submits accepted-reservation delivery requests.
 - `supplierMyMaterialsProvider` checks auth, watches query state, then fetches supplier materials.
@@ -151,12 +151,11 @@ Current repository providers live mostly in feature `data/` files:
 - Supplier pickup schedule: `supplierPickupScheduleRepositoryProvider`
 - Supplier my materials: `supplierMyMaterialsRepositoryProvider`
 - Learning Hub: `learningHubRepositoryProvider` (overridden in `main.dart`; widget tests use `emptyLearningHubRepository` from `test/support/learning_hub_test_support.dart`)
-- Home suggested materials preview: `homeMaterialDiscoveryRepositoryProvider`
+- Material discovery: `materialDiscoveryRepositoryProvider`
+- Home suggested materials preview: `homeMaterialDiscoveryRepositoryProvider` delegates to `materialDiscoveryRepositoryProvider`
 - Profile updates: `profileRepositoryProvider` (`features/profile/application/profile_providers.dart`)
 
 Repository providers should construct API clients and expose feature operations. Widgets should not instantiate API clients directly.
-
-Current exception: `material_discovery` pages directly instantiate `ApiMaterialDiscoveryRepository(ref.read(apiClientProvider))` instead of using an application/provider wrapper. Treat that as current code reality, not the preferred pattern for new work.
 
 ## Where New State Belongs
 
@@ -196,7 +195,7 @@ Keep invalidation close to the mutation that changes server state.
 ## Remaining Inconsistencies
 
 - Supplier portal providers are split between `application/` and `presentation/controllers/`.
-- `material_discovery` has repository classes but no central provider for list/detail fetch; it **does** use `discoveryMaterialCategoriesProvider` from `features/materials` for category chips only.
+- `material_discovery` owns `materialDiscoveryRepositoryProvider` for list/detail/engagement repository access and uses `discoveryMaterialCategoriesProvider` from `features/materials` for category chips.
 - `features/materials` is data-only (no routes). Public browse routes `/materials` and `/materials/:id` are registered on `material_discovery` pages; supplier routes `/supplier/materials/*` are on `supplier_portal`.
 - Some form submit flows call repository/helper functions directly from widgets after validation; this is current practice but should remain thin.
 - Learning hub uses shared `CategoriesApi` for `PROJECT` categories via `categoriesApiProvider` injected into `ApiLearningHubRepository`.

@@ -8,7 +8,6 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/errors/api_exception.dart';
-import '../../../../core/network/api_client.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
@@ -27,7 +26,7 @@ import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
 import '../../../reservations/data/models/learner_reservation.dart';
 import '../../../reservations/presentation/reservation_create_error_message.dart';
-import '../../data/api_material_discovery_repository.dart';
+import '../../application/material_discovery_providers.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_query.dart';
 import '../../domain/material_discovery_repository.dart';
@@ -74,9 +73,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
   @override
   void initState() {
     super.initState();
-    _defaultRepository = ApiMaterialDiscoveryRepository(
-      ref.read(apiClientProvider),
-    );
+    _defaultRepository = ref.read(materialDiscoveryRepositoryProvider);
     _activeRepository = widget.repository ?? _defaultRepository;
     _materialFuture = _activeRepository.getMaterialById(widget.materialId);
   }
@@ -2261,9 +2258,7 @@ class _RelatedMaterialsStripState extends ConsumerState<_RelatedMaterialsStrip> 
 
   Future<void> _loadMaterials() async {
     try {
-      final repository = ApiMaterialDiscoveryRepository(
-        ref.read(apiClientProvider),
-      );
+      final repository = ref.read(materialDiscoveryRepositoryProvider);
       final result = await repository.fetchMaterials(widget.query);
       final materials = result.items
           .where((item) => item.id != widget.excludeMaterialId)

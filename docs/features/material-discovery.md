@@ -36,7 +36,7 @@ List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, 
 - When `discoveryOnly=true`, the **backend** filters out internal/test/admin-looking names (bracketed labels, `test`, `admin`, `approvals`) and dedupes by normalized English label (`category-discovery-filter.ts`). There is **no** client-side category filtering in production discovery UI.
 - Supplier/admin listing flows use `materialCategoriesProvider` (same endpoint **without** `discoveryOnly`) and receive the full active category list.
 - Discovery UI shows a compact row: **All**, up to 8 visible categories (`discoveryVisibleCategoryCount` in `material_discovery_constants.dart`), and **More** for the rest in a constrained scroll panel.
-- Material list filtering still uses `categoryId` server-side via `ApiMaterialDiscoveryRepository`.
+- Material list filtering still uses `categoryId` server-side through `materialDiscoveryRepositoryProvider` and `ApiMaterialDiscoveryRepository`.
 
 ## Main user flow
 
@@ -62,6 +62,7 @@ Detail states:
 
 | Area | Path |
 |------|------|
+| Providers | `application/material_discovery_providers.dart` — `materialDiscoveryRepositoryProvider` |
 | Domain | `domain/discovery_material.dart`, `material_discovery_query.dart`, `material_discovery_result.dart`, `material_discovery_repository.dart`, `material_discovery_constants.dart` |
 | Shared data (categories only) | `features/materials/application/material_listing_providers.dart` — `discoveryMaterialCategoriesProvider`; `features/materials/data/categories_api.dart` and `models/category.dart` |
 | Data | `data/api_material_discovery_repository.dart`, `material_discovery_api_mapper.dart`, `mock_material_discovery_repository.dart` |
