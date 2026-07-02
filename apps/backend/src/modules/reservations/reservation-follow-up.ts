@@ -38,7 +38,8 @@ export const resolveReservationFollowUp = (input: {
   if (
     input.status === 'REJECTED' ||
     input.status === 'CANCELLED' ||
-    input.status === 'EXPIRED'
+    input.status === 'EXPIRED' ||
+    input.status === 'AWAITING_LEARNER_CONFIRMATION'
   ) {
     return {
       pickupWindowStatus: 'NONE',
@@ -84,7 +85,11 @@ export const resolveReservationFollowUp = (input: {
 };
 
 export const reservationAllowsMessaging = (status: ReservationStatus) => {
-  return status === 'PENDING' || status === 'ACCEPTED';
+  return (
+    status === 'PENDING' ||
+    status === 'ACCEPTED' ||
+    status === 'AWAITING_LEARNER_CONFIRMATION'
+  );
 };
 
 export const RESERVATION_MESSAGE_MAX_LENGTH = 1000;

@@ -33,12 +33,12 @@ final incomingRequestsProvider =
           .fetchIncomingRequests(tab);
     });
 
-Future<void> acceptIncomingRequest(
+Future<SupplierIncomingRequest> acceptIncomingRequest(
   WidgetRef ref, {
   required String requestId,
   required SupplierPickupWindow pickupWindow,
 }) async {
-  await ref
+  final updated = await ref
       .read(supplierRequestsRepositoryProvider)
       .acceptRequest(requestId, pickupWindow);
   ref.invalidate(incomingRequestsProvider);
@@ -46,6 +46,7 @@ Future<void> acceptIncomingRequest(
   ref.invalidate(supplierDashboardProvider);
   ref.invalidate(pickupScheduleProvider);
   ref.invalidate(pickupScheduleSummaryProvider);
+  return updated;
 }
 
 Future<void> declineIncomingRequest(

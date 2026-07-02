@@ -7,6 +7,7 @@ import { prisma } from '../../database/prisma.js';
 
 export const ACTIVE_HOLD_STATUSES = [
   'PENDING',
+  'AWAITING_LEARNER_CONFIRMATION',
   'ACCEPTED',
 ] as const satisfies readonly ReservationStatus[];
 

@@ -8,11 +8,13 @@ Current MVP status for material reservations.
 
 - Learner creates reservation → `PENDING` with `quantityRequested` and reserve-time `fulfillmentMethod` (`PICKUP` or `DELIVERY`).
 - Pickup reservations store learner preferred pickup windows; delivery reservations store preferred delivery windows, delivery address text, safe drop-off preference, and optional delivery note. No `Delivery` row is created at reservation time.
-- Supplier accepts or rejects; on accept sets pickup window.
+- Supplier accepts or rejects pending reservations. Accept does **not** complete the reservation; it confirms or proposes scheduling and keeps the quantity hold.
+- Pickup accept: supplier supplies pickup window. Matching a learner preferred window → `ACCEPTED` with confirmed `pickupWindowStart/End`. Non-matching proposal → `AWAITING_LEARNER_CONFIRMATION` with `supplierProposedPickupWindowStart/End`.
+- Delivery accept: supplier supplies driver pickup window from supplier only. Backend trims/confirms a delivery window using a 60-minute buffer after supplier pickup end. Feasible → `ACCEPTED`, stores supplier pickup + confirmed delivery windows, sets `deliveryRequested`, creates `Delivery` `WAITING_FOR_DRIVER`. Infeasible → `AWAITING_LEARNER_CONFIRMATION` with `schedulingConflictReason` (no delivery row).
 - Multiple learners may hold different quantities from the same listing while stock remains.
 - Same learner may hold only one open (`PENDING` or `ACCEPTED`) reservation per material.
 - `material.quantity` is remaining physical stock; active holds are summed from open reservations.
-- `availableQuantity = material.quantity - sum(quantityRequested for PENDING/ACCEPTED)`.
+- `availableQuantity = material.quantity - sum(quantityRequested for PENDING/AWAITING_LEARNER_CONFIRMATION/ACCEPTED)`.
 - Material stays publicly `AVAILABLE` while `availableQuantity > 0`.
 - Material becomes `REUSED` only when remaining quantity reaches `0` after completion/delivery.
 - Learner may cancel only while reservation is `PENDING`.
@@ -30,7 +32,7 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 | Material discovery/detail `availableQuantity` | **Implemented** | Public browse/detail DTO field |
 | Learner reserve UI | **Implemented** | Material detail quantity + pickup/delivery fulfillment dialog |
 | Learner “My Reservations” UI | **Partial** | Quantity + PENDING cancel + self-pickup pickup address after accept/complete; no detail page |
-| Supplier list/accept/decline/complete | **Partial** | Partial-quantity completion subtracts stock; delivery complete guarded |
+| Supplier list/accept/decline/complete | **Partial** | Fulfillment-aware accept (pickup match/propose, delivery scheduling); awaiting-confirmation status; partial-quantity completion subtracts stock; delivery complete guarded |
 | Delivery learner UI | **Partial** | Request/status/tracking summary exists |
 **Overall:** **Partial**. Partial-quantity holds, learner PENDING cancel, quantity-aware reserve UI, and post-acceptance self-pickup address reveal are implemented. Expiry, notifications, QR, reservation detail page, pickup map, and saved dropoff addresses remain pending.
 
@@ -74,7 +76,7 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 ## Status Transitions
 
 - `material.quantity` = remaining physical stock (decremented on supplier complete or driver `DELIVERED`).
-- Holds = sum of `quantityRequested` for `PENDING` + `ACCEPTED` reservations.
+- Holds = sum of `quantityRequested` for `PENDING` + `AWAITING_LEARNER_CONFIRMATION` + `ACCEPTED` reservations.
 - `availableQuantity = material.quantity - holds` (also exposed on material list/detail APIs).
 - Create hold: validates against `availableQuantity`; keeps material `AVAILABLE` when stock remains; may set `PENDING_RESERVATION` / `RESERVED` only when all stock is held.
 - Cancel / decline / reject: releases hold and recomputes material status; does not decrement `material.quantity`.

@@ -192,21 +192,24 @@ class _SupplierIncomingRequestsPageState
   ) async {
     final pickupWindow = await AcceptIncomingRequestDialog.show(
       context,
-      materialTitle: request.materialTitle,
-      learnerName: request.learnerName,
+      request: request,
     );
     if (pickupWindow == null || !context.mounted) {
       return;
     }
 
     try {
-      await acceptIncomingRequest(
+      final updated = await acceptIncomingRequest(
         ref,
         requestId: request.id,
         pickupWindow: pickupWindow,
       );
       if (!context.mounted) return;
-      showSupplierInfoSnackBar(context, context.s.requestAccepted);
+      final message =
+          updated.status == SupplierIncomingRequestStatus.awaitingConfirmation
+          ? context.s.requestAwaitingConfirmation
+          : context.s.requestAccepted;
+      showSupplierInfoSnackBar(context, message);
       ref
           .read(incomingRequestTabProvider.notifier)
           .selectTab(SupplierIncomingRequestTab.accepted);

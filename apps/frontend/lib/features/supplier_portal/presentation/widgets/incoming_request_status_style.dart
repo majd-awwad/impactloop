@@ -24,6 +24,7 @@ class IncomingRequestStatusStyle {
     return switch (status) {
       SupplierIncomingRequestStatus.pending => _pending,
       SupplierIncomingRequestStatus.accepted => _accepted,
+      SupplierIncomingRequestStatus.awaitingConfirmation => _accepted,
       SupplierIncomingRequestStatus.declined => _declined,
       SupplierIncomingRequestStatus.completed => _completed,
     };

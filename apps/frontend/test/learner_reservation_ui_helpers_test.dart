@@ -113,4 +113,50 @@ void main() {
       isFalse,
     );
   });
+
+  test('reservationStatusLabel maps awaiting confirmation', () {
+    expect(
+      reservationStatusLabel('AWAITING_LEARNER_CONFIRMATION'),
+      'Awaiting your confirmation',
+    );
+  });
+
+  test('reservationMatchesStatusFilter includes awaiting confirmation in active', () {
+    final awaiting = LearnerReservation.fromJson({
+      'id': 'res-awaiting',
+      'status': 'AWAITING_LEARNER_CONFIRMATION',
+      'quantityRequested': 1,
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'material': {
+        'id': 'mat-1',
+        'title': 'Wood panels',
+        'materialType': 'Wood',
+        'status': 'AVAILABLE',
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+
+    expect(
+      reservationMatchesStatusFilter(
+        awaiting,
+        LearnerReservationStatusFilter.active,
+      ),
+      isTrue,
+    );
+    expect(
+      reservationMatchesStatusFilter(
+        awaiting,
+        LearnerReservationStatusFilter.needsAction,
+      ),
+      isTrue,
+    );
+    expect(
+      reservationMatchesStatusFilter(
+        awaiting,
+        LearnerReservationStatusFilter.all,
+      ),
+      isTrue,
+    );
+  });
 }

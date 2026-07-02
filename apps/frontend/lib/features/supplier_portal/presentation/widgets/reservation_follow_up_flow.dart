@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'accept_incoming_request_dialog.dart';
@@ -15,8 +16,15 @@ Future<void> handleReschedulePickup(
 }) async {
   final pickupWindow = await AcceptIncomingRequestDialog.show(
     context,
-    materialTitle: materialTitle,
-    learnerName: learnerName,
+    request: SupplierIncomingRequest(
+      id: reservationId,
+      materialTitle: materialTitle,
+      learnerName: learnerName,
+      quantityRequested: 1,
+      unit: 'piece',
+      status: SupplierIncomingRequestStatus.accepted,
+      requestedAt: DateTime.now(),
+    ),
     dialogTitle: context.s.reschedulePickupTitle,
     submitLabel: context.s.reschedulePickupAction,
   );

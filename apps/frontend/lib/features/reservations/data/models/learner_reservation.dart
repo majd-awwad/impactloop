@@ -239,6 +239,8 @@ class LearnerReservation {
 
   bool get isPending => status == 'PENDING';
   bool get isAccepted => status == 'ACCEPTED';
+  bool get isAwaitingConfirmation =>
+      status == 'AWAITING_LEARNER_CONFIRMATION';
   bool get isRejected => status == 'REJECTED';
   bool get isCompleted => status == 'COMPLETED';
   bool get isCancelled => status == 'CANCELLED';

@@ -257,6 +257,10 @@ export const requestDeliveryForReservation = async (
         return { outcome: 'INVALID_STATUS' as const };
       }
 
+      if (reservation.fulfillmentMethod === 'DELIVERY') {
+        return { outcome: 'INVALID_STATUS' as const };
+      }
+
       if (!reservation.material.deliveryAllowed) {
         return { outcome: 'DELIVERY_NOT_ALLOWED' as const };
       }

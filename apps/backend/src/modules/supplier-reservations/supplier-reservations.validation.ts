@@ -13,6 +13,7 @@ const pickupWindowSchema = z
     pickupWindowStart: z.iso.datetime(),
     pickupWindowEnd: z.iso.datetime(),
     supplierNote: z.string().trim().max(1000).optional(),
+    selectedPreferredWindowIndex: z.number().int().min(0).optional(),
   })
   .superRefine((value, ctx) => {
     const start = new Date(value.pickupWindowStart);
@@ -31,6 +32,15 @@ const pickupWindowSchema = z
       ctx.addIssue({
         code: 'custom',
         message: 'Pickup end time must be after start time.',
+        path: ['pickupWindowEnd'],
+      });
+      return;
+    }
+
+    if (end.getTime() <= Date.now()) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Supplier window end must be in the future.',
         path: ['pickupWindowEnd'],
       });
     }

@@ -48,6 +48,19 @@ function pickupReservationPayload(
   };
 }
 
+async function acceptWithLearnerPreferredWindow(
+  supplierId: string,
+  reservation: Awaited<ReturnType<typeof createReservation>>,
+) {
+  const window = reservation.learnerPreferredPickupWindows[0];
+  assert.ok(window, 'preferred pickup window required');
+
+  return acceptSupplierReservation(supplierId, reservation.id, {
+    pickupWindowStart: window.start,
+    pickupWindowEnd: window.end,
+  });
+}
+
 function deliveryReservationPayload(
   materialId: string,
   quantityRequested: number,
@@ -635,11 +648,7 @@ describe('createReservation', () => {
 
     assert.equal((await getMaterialById(material.id)).availableQuantity, 5);
 
-    const now = new Date();
-    await acceptSupplierReservation(ctx.supplierId, reservation.id, {
-      pickupWindowStart: now.toISOString(),
-      pickupWindowEnd: new Date(now.getTime() + 3_600_000).toISOString(),
-    });
+    await acceptWithLearnerPreferredWindow(ctx.supplierId, reservation);
 
     assert.equal((await getMaterialById(material.id)).availableQuantity, 5);
 

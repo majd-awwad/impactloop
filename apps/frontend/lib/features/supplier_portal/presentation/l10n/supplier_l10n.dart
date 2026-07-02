@@ -797,6 +797,8 @@ class SupplierL10n {
       );
   String get tabPending => t('Pending', 'معلق');
   String get tabAccepted => t('Accepted', 'مقبول');
+  String get tabAwaitingConfirmation =>
+      t('Awaiting confirmation', 'في انتظار التأكيد');
   String get tabDeclined => t('Declined', 'مرفوض');
   String get tabCompleted => filterCompleted;
   String get noRequests => t('No requests yet.', 'لا توجد طلبات بعد.');
@@ -862,6 +864,8 @@ class SupplierL10n {
       switch (status) {
         SupplierIncomingRequestStatus.pending => tabPending,
         SupplierIncomingRequestStatus.accepted => tabAccepted,
+        SupplierIncomingRequestStatus.awaitingConfirmation =>
+          tabAwaitingConfirmation,
         SupplierIncomingRequestStatus.declined => tabDeclined,
         SupplierIncomingRequestStatus.completed => tabCompleted,
       };
@@ -1462,6 +1466,63 @@ class SupplierL10n {
       );
   String get reasonOptional => t('Reason (optional)', 'السبب (اختياري)');
   String get pickupDate => t('Pickup date', 'تاريخ الاستلام');
+  String get confirmPickupWindowLabel =>
+      t('Pickup window', 'نافذة الاستلام');
+  String get driverPickupWindowFromSupplier => t(
+        'Driver pickup window from supplier',
+        'نافذة استلام السائق من المورد',
+      );
+  String get deliveryAcceptExplanation => t(
+        'By accepting, you agree to hand the material to the driver during this pickup window. We will check this against the learner’s preferred delivery windows.',
+        'بالقبول، توافق على تسليم المادة للسائق خلال نافذة الاستلام هذه. سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.',
+      );
+  String get deliverySchedulingPreviewIntro => t(
+        'We will check this against the learner’s preferred delivery windows.',
+        'سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.',
+      );
+  String deliveryEarliestAfterPickupLabel(String time) => t(
+        'Earliest delivery after pickup: $time',
+        'أقرب توصيل بعد الاستلام: $time',
+      );
+  String deliveryConfirmedWindowLabel(String window) => t(
+        'Confirmed learner delivery window: $window',
+        'نافذة التوصيل المؤكدة للمتعلم: $window',
+      );
+  String get deliveryNoFeasibleWindowPreview => t(
+        'No feasible learner delivery window. This will wait for learner confirmation.',
+        'لا توجد نافذة توصيل مناسبة للمتعلم. سينتظر هذا تأكيد المتعلم.',
+      );
+  String get pickupPreferredWindowSelectedHint => t(
+        'Selected learner preferred window',
+        'تم اختيار نافذة الاستلام المفضلة للمتعلم',
+      );
+  String get pickupCustomWindowHint => t(
+        'Custom proposed window',
+        'نافذة مقترحة مخصصة',
+      );
+  String get learnerPreferredPickupWindows => t(
+        'Learner preferred pickup windows',
+        'نوافذ الاستلام المفضلة للمتعلم',
+      );
+  String get learnerPreferredDeliveryWindows => t(
+        'Learner preferred delivery windows',
+        'نوافذ التوصيل المفضلة للمتعلم',
+      );
+  String get safeDropoffAllowed =>
+      t('Safe drop-off allowed', 'الإسقاط الآمن مسموح');
+  String get safeDropoffNotAllowed =>
+      t('Safe drop-off not allowed', 'الإسقاط الآمن غير مسموح');
+  String get deliveryNoteLabel => t('Delivery note', 'ملاحظة التوصيل');
+  String get awaitingProposedTimeConfirmation => t(
+        'Waiting for learner to confirm proposed time',
+        'في انتظار تأكيد المتعلم للوقت المقترح',
+      );
+  String get awaitingSchedulingConflictConfirmation => t(
+        'Scheduling conflict — waiting for learner confirmation',
+        'تعارض في الجدولة — في انتظار تأكيد المتعلم',
+      );
+  String get requestAwaitingConfirmation =>
+      t('Request submitted — awaiting learner confirmation', 'تم إرسال الطلب — في انتظار تأكيد المتعلم');
   String get startTime => t('Start time', 'وقت البداية');
   String get endTime => t('End time', 'وقت النهاية');
   String get pickupNoteOptional =>

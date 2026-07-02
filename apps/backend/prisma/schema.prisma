@@ -115,6 +115,7 @@ enum VerificationDocumentStatus {
 
 enum ReservationStatus {
   PENDING
+  AWAITING_LEARNER_CONFIRMATION
   ACCEPTED
   REJECTED
   CANCELLED
@@ -843,6 +844,14 @@ model Reservation {
   status            ReservationStatus          @default(PENDING)
   pickupWindowStart DateTime?                  @map("pickup_window_start")
   pickupWindowEnd   DateTime?                  @map("pickup_window_end")
+  supplierProposedPickupWindowStart DateTime?    @map("supplier_proposed_pickup_window_start")
+  supplierProposedPickupWindowEnd   DateTime?    @map("supplier_proposed_pickup_window_end")
+  supplierPickupWindowStart DateTime?            @map("supplier_pickup_window_start")
+  supplierPickupWindowEnd   DateTime?            @map("supplier_pickup_window_end")
+  confirmedDeliveryWindowStart DateTime?         @map("confirmed_delivery_window_start")
+  confirmedDeliveryWindowEnd   DateTime?         @map("confirmed_delivery_window_end")
+  earliestDeliveryStart DateTime?                @map("earliest_delivery_start")
+  schedulingConflictReason String?               @map("scheduling_conflict_reason")
   pickupType        PickupType                 @default(SELF_PICKUP) @map("pickup_type")
   supplierNote      String?                    @map("supplier_note")
   rejectionReason   String?                    @map("rejection_reason")

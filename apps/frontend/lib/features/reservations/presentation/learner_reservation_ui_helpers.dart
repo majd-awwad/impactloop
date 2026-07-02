@@ -8,6 +8,7 @@ import '../data/models/reservation_preferred_window.dart';
 enum LearnerReservationStatusFilter {
   all,
   active,
+  needsAction,
   pending,
   accepted,
   completed,
@@ -21,6 +22,8 @@ extension LearnerReservationStatusFilterX on LearnerReservationStatusFilter {
         return 'All';
       case LearnerReservationStatusFilter.active:
         return 'Active';
+      case LearnerReservationStatusFilter.needsAction:
+        return 'Needs action';
       case LearnerReservationStatusFilter.pending:
         return 'Pending';
       case LearnerReservationStatusFilter.accepted:
@@ -41,7 +44,11 @@ bool reservationMatchesStatusFilter(
     case LearnerReservationStatusFilter.all:
       return true;
     case LearnerReservationStatusFilter.active:
-      return reservation.isPending || reservation.isAccepted;
+      return reservation.isPending ||
+          reservation.isAccepted ||
+          reservation.isAwaitingConfirmation;
+    case LearnerReservationStatusFilter.needsAction:
+      return reservation.isAwaitingConfirmation;
     case LearnerReservationStatusFilter.pending:
       return reservation.isPending;
     case LearnerReservationStatusFilter.accepted:
@@ -82,6 +89,13 @@ class LearnerReservationStatusStyle {
           chipForeground: colors.warningText,
           chipBorder: colors.warningBorder,
         );
+      case 'AWAITING_LEARNER_CONFIRMATION':
+        return LearnerReservationStatusStyle(
+          accentColor: colors.primary.withValues(alpha: 0.85),
+          chipBackground: colors.primarySoft,
+          chipForeground: colors.primary,
+          chipBorder: colors.primary.withValues(alpha: 0.35),
+        );
       case 'ACCEPTED':
       case 'COMPLETED':
         return LearnerReservationStatusStyle(
@@ -120,6 +134,8 @@ String reservationStatusLabel(String status) {
   switch (status) {
     case 'PENDING':
       return 'Pending supplier response';
+    case 'AWAITING_LEARNER_CONFIRMATION':
+      return 'Awaiting your confirmation';
     case 'ACCEPTED':
       return 'Accepted / Ready for pickup';
     case 'REJECTED':
@@ -234,6 +250,10 @@ String? formatPickupWindow(LearnerReservation reservation) {
 String? reservationStatusMessage(LearnerReservation reservation) {
   if (reservation.isPending) {
     return 'Waiting for supplier response.';
+  }
+
+  if (reservation.isAwaitingConfirmation) {
+    return 'The supplier proposed a schedule that needs your confirmation.';
   }
 
   if (reservation.isAccepted) {

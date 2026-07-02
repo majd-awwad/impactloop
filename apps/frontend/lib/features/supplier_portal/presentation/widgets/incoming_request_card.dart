@@ -11,7 +11,7 @@ import 'reservation_follow_up_actions.dart';
 
 const _noteAreaHeight = 48.0;
 const _footerHeight = 52.0;
-const _pendingCardHeight = 268.0;
+const _pendingCardHeight = 360.0;
 
 String formatIncomingRequestDateTime(DateTime value) {
   final local = value.toLocal();
@@ -80,11 +80,13 @@ class IncomingRequestCard extends StatelessWidget {
     final isPending = request.status == SupplierIncomingRequestStatus.pending;
     final isDeclined = request.status == SupplierIncomingRequestStatus.declined;
     final isAccepted = request.status == SupplierIncomingRequestStatus.accepted;
+    final isAwaiting =
+        request.status == SupplierIncomingRequestStatus.awaitingConfirmation;
     final isCompleted =
         request.status == SupplierIncomingRequestStatus.completed;
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
-    final pendingHeight = compact ? 312.0 : _pendingCardHeight;
+    final pendingHeight = compact ? 404.0 : _pendingCardHeight;
 
     return Opacity(
       opacity: isDeclined ? 0.78 : 1,
@@ -158,8 +160,12 @@ class IncomingRequestCard extends StatelessWidget {
               quantity:
                   '${_formatQuantity(request.quantityRequested)} ${request.unit}',
               requestedAt: formatIncomingRequestDateTime(request.requestedAt),
-              pickupPreference: request.pickupPreference ?? l.selfPickup,
+              pickupPreference: request.fulfillmentSummary,
             ),
+            if (isPending) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _FulfillmentDetails(request: request),
+            ],
             const SizedBox(height: AppSpacing.sm),
             _LearnerNoteSlot(note: request.learnerNote),
             if (request.latestMessage != null)
@@ -180,6 +186,16 @@ class IncomingRequestCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
                 child: _PickupFooter(window: request.pickupWindow!),
+              ),
+            if (isAwaiting)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: _AwaitingConfirmationFooter(
+                  message: request.schedulingConflictReason != null &&
+                          request.schedulingConflictReason!.trim().isNotEmpty
+                      ? l.awaitingSchedulingConflictConfirmation
+                      : l.awaitingProposedTimeConfirmation,
+                ),
               ),
             if (isAccepted &&
                 request.hasDelivery &&
@@ -363,6 +379,113 @@ class _MetaItem extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FulfillmentDetails extends StatelessWidget {
+  const _FulfillmentDetails({required this.request});
+
+  final SupplierIncomingRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final windows = request.isDeliveryFulfillment
+        ? request.learnerPreferredDeliveryWindows
+        : request.learnerPreferredPickupWindows;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (windows.isNotEmpty) ...[
+          Text(
+            request.isDeliveryFulfillment
+                ? l.learnerPreferredDeliveryWindows
+                : l.learnerPreferredPickupWindows,
+            style: context.supplierLabel().copyWith(fontSize: 12),
+          ),
+          const SizedBox(height: 4),
+          ...windows.map(
+            (window) => Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text(
+                formatPickupWindowShort(
+                  SupplierPickupWindow(start: window.start, end: window.end),
+                ),
+                style: context.supplierBody().copyWith(
+                  fontSize: 12,
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+        ],
+        if (request.isDeliveryFulfillment &&
+            request.deliveryAddressText?.trim().isNotEmpty == true) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            request.deliveryAddressText!.trim(),
+            style: context.supplierBody().copyWith(
+              fontSize: 12,
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
+        if (request.isDeliveryFulfillment) ...[
+          const SizedBox(height: 4),
+          Text(
+            request.safeDropoffAllowed
+                ? l.safeDropoffAllowed
+                : l.safeDropoffNotAllowed,
+            style: context.supplierBody().copyWith(
+              fontSize: 12,
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
+        if (request.isDeliveryFulfillment &&
+            request.reservationDeliveryNote?.trim().isNotEmpty == true) ...[
+          const SizedBox(height: 4),
+          Text(
+            '${l.deliveryNoteLabel}: ${request.reservationDeliveryNote!.trim()}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: context.supplierBody().copyWith(
+              fontSize: 12,
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _AwaitingConfirmationFooter extends StatelessWidget {
+  const _AwaitingConfirmationFooter({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.accentSoft.withValues(alpha: 0.16),
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Text(
+          message,
+          style: context.supplierBody().copyWith(
+            fontSize: 13,
+            color: colors.textPrimary,
+          ),
+        ),
+      ),
     );
   }
 }

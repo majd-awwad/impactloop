@@ -56,7 +56,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `supplier` | **Implemented** | Dashboard, profile, materials |
 | `category-requests` | **Implemented** | Under `/api/supplier` |
 | `price-rule-requests` | **Implemented** | Create + supplier drafts |
-| `supplier-reservations` | **Partial** | Supplier accept/decline/self-pickup complete; overdue follow-up (reschedule/cancel/no-show report); reservation messages; delivery reservations expose delivery summary and hide supplier complete action |
+| `supplier-reservations` | **Partial** | Supplier fulfillment-aware accept (pickup match/propose, delivery scheduling + delivery row on feasible accept); `AWAITING_LEARNER_CONFIRMATION` hold; accept/decline/self-pickup complete; overdue follow-up; reservation messages; delivery reservations expose delivery summary and hide supplier complete action |
 | `supplier-notifications` | **Implemented** | Derived supplier inbox |
 | `supplier-verification` | **Implemented** | Supplier verification submit/status support for organization suppliers |
 

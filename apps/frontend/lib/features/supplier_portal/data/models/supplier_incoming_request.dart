@@ -1,8 +1,15 @@
 import '../../../reservations/data/models/reservation_message.dart';
+import '../../../reservations/data/models/reservation_preferred_window.dart';
 
 enum SupplierIncomingRequestTab { pending, accepted, declined, completed }
 
-enum SupplierIncomingRequestStatus { pending, accepted, declined, completed }
+enum SupplierIncomingRequestStatus {
+  pending,
+  accepted,
+  awaitingConfirmation,
+  declined,
+  completed,
+}
 
 extension SupplierIncomingRequestTabLabels on SupplierIncomingRequestTab {
   String get label {
@@ -65,6 +72,8 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
         return 'Pending';
       case SupplierIncomingRequestStatus.accepted:
         return 'Accepted';
+      case SupplierIncomingRequestStatus.awaitingConfirmation:
+        return 'Awaiting confirmation';
       case SupplierIncomingRequestStatus.declined:
         return 'Declined';
       case SupplierIncomingRequestStatus.completed:
@@ -79,6 +88,8 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
         return SupplierIncomingRequestStatus.pending;
       case 'ACCEPTED':
         return SupplierIncomingRequestStatus.accepted;
+      case 'AWAITING_LEARNER_CONFIRMATION':
+        return SupplierIncomingRequestStatus.awaitingConfirmation;
       case 'REJECTED':
       case 'CANCELLED':
       case 'EXPIRED':
@@ -96,6 +107,8 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
         return 'PENDING';
       case SupplierIncomingRequestStatus.accepted:
         return 'ACCEPTED';
+      case SupplierIncomingRequestStatus.awaitingConfirmation:
+        return 'AWAITING_LEARNER_CONFIRMATION';
       case SupplierIncomingRequestStatus.declined:
         return 'REJECTED';
       case SupplierIncomingRequestStatus.completed:
@@ -109,17 +122,21 @@ class SupplierPickupWindow {
     required this.start,
     required this.end,
     this.note,
+    this.selectedPreferredWindowIndex,
   });
 
   final DateTime start;
   final DateTime end;
   final String? note;
+  final int? selectedPreferredWindowIndex;
 
   factory SupplierPickupWindow.fromJson(Map<String, dynamic> json) {
     return SupplierPickupWindow(
       start: DateTime.parse(json['pickupWindowStart'] as String),
       end: DateTime.parse(json['pickupWindowEnd'] as String),
       note: json['supplierNote'] as String?,
+      selectedPreferredWindowIndex:
+          json['selectedPreferredWindowIndex'] as int?,
     );
   }
 
@@ -128,6 +145,8 @@ class SupplierPickupWindow {
       'pickupWindowStart': start.toUtc().toIso8601String(),
       'pickupWindowEnd': end.toUtc().toIso8601String(),
       if (note != null && note!.isNotEmpty) 'supplierNote': note,
+      if (selectedPreferredWindowIndex != null)
+        'selectedPreferredWindowIndex': selectedPreferredWindowIndex,
     };
   }
 }
@@ -183,6 +202,17 @@ class SupplierIncomingRequest {
     required this.unit,
     required this.status,
     required this.requestedAt,
+    this.fulfillmentMethod = 'PICKUP',
+    this.fulfillmentLabel,
+    this.learnerPreferredPickupWindows = const [],
+    this.learnerPreferredDeliveryWindows = const [],
+    this.deliveryAddressText,
+    this.safeDropoffAllowed = false,
+    this.reservationDeliveryNote,
+    this.supplierProposedPickupWindow,
+    this.supplierPickupWindow,
+    this.confirmedDeliveryWindow,
+    this.schedulingConflictReason,
     this.deliveryRequested = false,
     this.activeDelivery,
     this.canSupplierComplete = false,
@@ -210,6 +240,17 @@ class SupplierIncomingRequest {
   final String unit;
   final SupplierIncomingRequestStatus status;
   final DateTime requestedAt;
+  final String fulfillmentMethod;
+  final String? fulfillmentLabel;
+  final List<ReservationPreferredWindow> learnerPreferredPickupWindows;
+  final List<ReservationPreferredWindow> learnerPreferredDeliveryWindows;
+  final String? deliveryAddressText;
+  final bool safeDropoffAllowed;
+  final String? reservationDeliveryNote;
+  final SupplierPickupWindow? supplierProposedPickupWindow;
+  final SupplierPickupWindow? supplierPickupWindow;
+  final SupplierPickupWindow? confirmedDeliveryWindow;
+  final String? schedulingConflictReason;
   final bool deliveryRequested;
   final SupplierReservationDeliverySummary? activeDelivery;
   final bool canSupplierComplete;
@@ -228,6 +269,23 @@ class SupplierIncomingRequest {
   final ReservationMessage? latestMessage;
 
   bool get hasDelivery => deliveryRequested || activeDelivery != null;
+
+  bool get isDeliveryFulfillment => fulfillmentMethod.toUpperCase() == 'DELIVERY';
+
+  bool get isPickupFulfillment => !isDeliveryFulfillment;
+
+  String get fulfillmentSummary =>
+      fulfillmentLabel ??
+      (isDeliveryFulfillment ? 'Delivery selected' : 'Pickup selected');
+
+  String get awaitingConfirmationMessage {
+    if (schedulingConflictReason != null &&
+        schedulingConflictReason!.trim().isNotEmpty) {
+      return 'Scheduling conflict — waiting for learner confirmation';
+    }
+
+    return 'Waiting for learner to confirm proposed time';
+  }
 
   String get deliveryStatusLabel =>
       activeDelivery?.statusLabel ?? 'Delivery requested';
@@ -294,6 +352,9 @@ class SupplierIncomingRequest {
     }
 
     final pickupType = json['pickupType'] as String?;
+    final fulfillmentMethod =
+        json['fulfillmentMethod'] as String? ?? 'PICKUP';
+    final fulfillmentLabel = json['fulfillmentLabel'] as String?;
     final deliveryRequested = json['deliveryRequested'] as bool? ?? false;
     final activeDeliveryJson = json['activeDelivery'];
     final activeDelivery = activeDeliveryJson is Map
@@ -303,11 +364,43 @@ class SupplierIncomingRequest {
         : null;
     String? preference = json['pickupPreference'] as String?;
     if (preference == null || preference.isEmpty) {
+      preference = fulfillmentLabel;
+    }
+    if (preference == null || preference.isEmpty) {
       if (deliveryRequested) {
         preference = 'Delivery requested';
       } else if (pickupType == 'SELF_PICKUP') {
         preference = 'Self pickup';
       }
+    }
+
+    List<ReservationPreferredWindow> parsePreferredWindows(String key) {
+      final raw = json[key];
+      if (raw is! List) {
+        return const [];
+      }
+
+      return raw
+          .whereType<Map>()
+          .map(
+            (item) => ReservationPreferredWindow.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList(growable: false);
+    }
+
+    SupplierPickupWindow? parseWindow(String startKey, String endKey) {
+      final start = json[startKey] as String?;
+      final end = json[endKey] as String?;
+      if (start == null || end == null) {
+        return null;
+      }
+
+      return SupplierPickupWindow(
+        start: DateTime.parse(start),
+        end: DateTime.parse(end),
+      );
     }
 
     final status = SupplierIncomingRequestStatusLabels.fromApiValue(
@@ -348,6 +441,30 @@ class SupplierIncomingRequest {
       requestedAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
+      fulfillmentMethod: fulfillmentMethod,
+      fulfillmentLabel: fulfillmentLabel,
+      learnerPreferredPickupWindows: parsePreferredWindows(
+        'learnerPreferredPickupWindows',
+      ),
+      learnerPreferredDeliveryWindows: parsePreferredWindows(
+        'learnerPreferredDeliveryWindows',
+      ),
+      deliveryAddressText: json['deliveryAddressText'] as String?,
+      safeDropoffAllowed: json['safeDropoffAllowed'] as bool? ?? false,
+      reservationDeliveryNote: json['deliveryNote'] as String?,
+      supplierProposedPickupWindow: parseWindow(
+        'supplierProposedPickupWindowStart',
+        'supplierProposedPickupWindowEnd',
+      ),
+      supplierPickupWindow: parseWindow(
+        'supplierPickupWindowStart',
+        'supplierPickupWindowEnd',
+      ),
+      confirmedDeliveryWindow: parseWindow(
+        'confirmedDeliveryWindowStart',
+        'confirmedDeliveryWindowEnd',
+      ),
+      schedulingConflictReason: json['schedulingConflictReason'] as String?,
       deliveryRequested: deliveryRequested,
       activeDelivery: activeDelivery,
       canSupplierComplete: canSupplierComplete,

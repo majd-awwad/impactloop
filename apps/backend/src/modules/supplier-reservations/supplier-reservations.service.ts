@@ -13,6 +13,10 @@ import {
   resolveReservationFollowUp,
 } from '../reservations/reservation-follow-up.js';
 import * as supplierReservationsRepository from './supplier-reservations.repository.js';
+import {
+  mapPreferredWindowsForResponse,
+  resolvePreferredWindowByIndex,
+} from './supplier-reservation-scheduling.js';
 import type {
   AcceptSupplierReservationInput,
   CancelSupplierReservationInput,
@@ -23,21 +27,29 @@ import type {
   CreateReservationMessageInput,
 } from './supplier-reservations.validation.js';
 
-const tabToReservationStatus = (
+const tabToReservationStatuses = (
   status: NonNullable<ListSupplierReservationsQuery['status']>,
-): ReservationStatus => {
+): ReservationStatus[] => {
   switch (status) {
     case 'pending':
-      return 'PENDING';
+      return ['PENDING'];
     case 'accepted':
-      return 'ACCEPTED';
+      return ['ACCEPTED', 'AWAITING_LEARNER_CONFIRMATION'];
     case 'declined':
-      return 'REJECTED';
+      return ['REJECTED'];
     case 'completed':
-      return 'COMPLETED';
+      return ['COMPLETED'];
     default:
-      return 'PENDING';
+      return ['PENDING'];
   }
+};
+
+const mapFulfillmentLabel = (fulfillmentMethod: string): string => {
+  if (fulfillmentMethod === 'DELIVERY') {
+    return 'Delivery selected';
+  }
+
+  return 'Pickup selected';
 };
 
 const pickMaterialImageUrl = (
@@ -124,6 +136,32 @@ export const mapSupplierReservation = (
       reservation.pickupType,
       reservation.deliveryRequested,
     ),
+    fulfillmentMethod: reservation.fulfillmentMethod,
+    fulfillmentLabel: mapFulfillmentLabel(reservation.fulfillmentMethod),
+    learnerPreferredPickupWindows: mapPreferredWindowsForResponse(
+      reservation.learnerPreferredPickupWindows,
+    ),
+    learnerPreferredDeliveryWindows: mapPreferredWindowsForResponse(
+      reservation.learnerPreferredDeliveryWindows,
+    ),
+    deliveryAddressText: reservation.deliveryAddressText,
+    safeDropoffAllowed: reservation.safeDropoffAllowed,
+    deliveryNote: reservation.deliveryNote,
+    supplierProposedPickupWindowStart:
+      reservation.supplierProposedPickupWindowStart?.toISOString() ?? null,
+    supplierProposedPickupWindowEnd:
+      reservation.supplierProposedPickupWindowEnd?.toISOString() ?? null,
+    supplierPickupWindowStart:
+      reservation.supplierPickupWindowStart?.toISOString() ?? null,
+    supplierPickupWindowEnd:
+      reservation.supplierPickupWindowEnd?.toISOString() ?? null,
+    confirmedDeliveryWindowStart:
+      reservation.confirmedDeliveryWindowStart?.toISOString() ?? null,
+    confirmedDeliveryWindowEnd:
+      reservation.confirmedDeliveryWindowEnd?.toISOString() ?? null,
+    earliestDeliveryStart:
+      reservation.earliestDeliveryStart?.toISOString() ?? null,
+    schedulingConflictReason: reservation.schedulingConflictReason,
     deliveryRequested: reservation.deliveryRequested,
     activeDelivery: latestDelivery
       ? {
@@ -134,6 +172,7 @@ export const mapSupplierReservation = (
     canSupplierComplete:
       supplierReservationsRepository.supplierCanCompleteReservation({
         status: reservation.status,
+        fulfillmentMethod: reservation.fulfillmentMethod,
         deliveryRequested: reservation.deliveryRequested,
         hasDelivery,
       }),
@@ -164,14 +203,14 @@ export const listSupplierReservations = async (
   ownerId: string,
   query: ListSupplierReservationsQuery,
 ) => {
-  const status = query.status
-    ? tabToReservationStatus(query.status)
+  const statuses = query.status
+    ? tabToReservationStatuses(query.status)
     : undefined;
 
   const reservations =
     await supplierReservationsRepository.findSupplierReservations(
       ownerId,
-      status,
+      statuses,
     );
 
   const latestMessages = await findLatestReservationMessagesByReservationIds(
@@ -193,12 +232,90 @@ export const acceptSupplierReservation = async (
   reservationId: string,
   input: AcceptSupplierReservationInput,
 ) => {
+  const existing =
+    await supplierReservationsRepository.findSupplierReservationForOwner(
+      ownerId,
+      reservationId,
+    );
+
+  if (!existing) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  let pickupWindowStart = new Date(input.pickupWindowStart);
+  let pickupWindowEnd = new Date(input.pickupWindowEnd);
+
+  if (input.selectedPreferredWindowIndex != null) {
+    if (existing.fulfillmentMethod !== 'PICKUP') {
+      throw new AppError(
+        'Preferred window index is only supported for pickup reservations.',
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+
+    const selectedWindow = resolvePreferredWindowByIndex(
+      existing.learnerPreferredPickupWindows,
+      input.selectedPreferredWindowIndex,
+    );
+
+    if (!selectedWindow) {
+      throw new AppError(
+        'Selected preferred pickup window is invalid.',
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+
+    pickupWindowStart = selectedWindow.start;
+    pickupWindowEnd = selectedWindow.end;
+  }
+
+  if (pickupWindowEnd.getTime() <= Date.now()) {
+    throw new AppError(
+      'Supplier window end must be in the future.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if (existing.fulfillmentMethod === 'DELIVERY') {
+    if (!existing.material.deliveryAllowed) {
+      throw new AppError(
+        'This material does not allow delivery.',
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+
+    if (!existing.deliveryAddressText?.trim()) {
+      throw new AppError(
+        'Delivery address is required.',
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+
+    const learnerDeliveryWindows = mapPreferredWindowsForResponse(
+      existing.learnerPreferredDeliveryWindows,
+    );
+
+    if (!learnerDeliveryWindows.length) {
+      throw new AppError(
+        'Learner delivery windows are required.',
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+  }
+
   const result = await supplierReservationsRepository.acceptSupplierReservation({
     reservationId,
     ownerId,
-    pickupWindowStart: new Date(input.pickupWindowStart),
-    pickupWindowEnd: new Date(input.pickupWindowEnd),
+    pickupWindowStart,
+    pickupWindowEnd,
     supplierNote: input.supplierNote,
+    selectedPreferredWindowIndex: input.selectedPreferredWindowIndex,
   });
 
   if (!result) {
