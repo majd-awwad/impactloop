@@ -213,17 +213,52 @@ export const findMaterials = async (query: MaterialsQuery) => {
   return { items, total };
 };
 
-export const incrementMaterialViewsCount = async (id: string) => {
-  return prisma.material.update({
-    where: { id },
-    data: {
-      viewsCount: {
-        increment: 1,
+export const recordMaterialView = async (
+  id: string,
+  viewerUserId?: string,
+  viewSource = 'detail',
+) => {
+  return prisma.$transaction(async (tx) => {
+    if (viewerUserId) {
+      const existingView = await tx.materialView.findFirst({
+        where: {
+          materialId: id,
+          viewerUserId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (existingView) {
+        return tx.material.findUniqueOrThrow({
+          where: { id },
+          select: {
+            viewsCount: true,
+          },
+        });
+      }
+    }
+
+    await tx.materialView.create({
+      data: {
+        materialId: id,
+        viewerUserId: viewerUserId ?? null,
+        viewSource,
       },
-    },
-    select: {
-      viewsCount: true,
-    },
+    });
+
+    return tx.material.update({
+      where: { id },
+      data: {
+        viewsCount: {
+          increment: 1,
+        },
+      },
+      select: {
+        viewsCount: true,
+      },
+    });
   });
 };
 
@@ -242,5 +277,91 @@ export const findMaterialById = async (id: string) => {
       },
     },
     include: materialDetailInclude,
+  });
+};
+
+export const findPublicMaterialById = async (id: string) => {
+  return prisma.material.findFirst({
+    where: {
+      id,
+      status: {
+        in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'],
+      },
+      category: {
+        isActive: true,
+        categoryType: {
+          in: ['MATERIAL', 'BOTH'],
+        },
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+};
+
+export const countLikesByMaterialIds = async (materialIds: string[]) => {
+  if (materialIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const groups = await prisma.materialLike.groupBy({
+    by: ['materialId'],
+    where: { materialId: { in: materialIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(groups.map((group) => [group.materialId, group._count._all]));
+};
+
+export const findLikedMaterialIds = async (
+  userId: string | undefined,
+  materialIds: string[],
+) => {
+  if (!userId || materialIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const likes = await prisma.materialLike.findMany({
+    where: {
+      userId,
+      materialId: { in: materialIds },
+    },
+    select: {
+      materialId: true,
+    },
+  });
+
+  return new Set(likes.map((like) => like.materialId));
+};
+
+export const setMaterialLiked = async (materialId: string, userId: string) => {
+  await prisma.materialLike.upsert({
+    where: {
+      materialId_userId: {
+        materialId,
+        userId,
+      },
+    },
+    create: {
+      materialId,
+      userId,
+    },
+    update: {},
+  });
+};
+
+export const unsetMaterialLiked = async (materialId: string, userId: string) => {
+  await prisma.materialLike.deleteMany({
+    where: {
+      materialId,
+      userId,
+    },
+  });
+};
+
+export const countLikesForMaterial = async (materialId: string) => {
+  return prisma.materialLike.count({
+    where: { materialId },
   });
 };

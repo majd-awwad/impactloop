@@ -25,21 +25,21 @@ extension RegistrationWizardStepLabels on RegistrationWizardStep {
 
   String get subtitle => switch (this) {
     RegistrationWizardStep.account =>
-      'Choose how you want to use ImpactLoop and create your sign-in details.',
+      'Choose your account type and create your sign-in details.',
     RegistrationWizardStep.interests =>
-      'Pick topics you care about so we can tailor your experience.',
+      'Pick broad topics you care about so suggestions fit your needs.',
     RegistrationWizardStep.goals =>
-      'What do you want to get out of ImpactLoop?',
+      'Choose the outcomes that match this account type.',
     RegistrationWizardStep.location =>
-      'Where will you browse or share materials?',
+      'Set the general city and area needed for this flow.',
     RegistrationWizardStep.learnerBasics =>
       'Tell us a little about your learning background.',
     RegistrationWizardStep.supplierBasics =>
-      'Set up how others will see you as a supplier.',
+      'Set up the supplier identity shown on material listings.',
     RegistrationWizardStep.verification =>
-      'Upload proof of your organization for verification.',
+      'Upload organization proof when this supplier type requires it.',
     RegistrationWizardStep.review =>
-      'Review your details, then create your account.',
+      'Review the details for this account type before creating it.',
   };
 }
 

@@ -44,7 +44,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 | `POST /api/price-rule-requests` — should route require `SUPPLIER` role? | **Needs verification** | [api-catalog](backend/api-catalog.md), [materials-listing](features/materials-listing.md) |
 | Which location fields are on public material DTOs — consistent redaction on list and detail? | **Partially resolved** — list/detail return `city`/`area` only; `visibility` enforcement still open | [material-discovery-flow](flows/material-discovery-flow.md), [locations](features/locations.md) |
 | Is discovery pagination exposed in Flutter UI? | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md), [material-discovery](features/material-discovery.md) |
-| Does material detail increment `materials.views_count`? | **Resolved** — yes on successful `GET /api/materials/:id`; exposed as `viewsCount` in public DTO | [material-discovery-flow](flows/material-discovery-flow.md) |
+| Does material detail increment `materials.views_count`? | **Resolved** — yes on successful `GET /api/materials/:id`; authenticated viewers count once per user/material, guests count per request; also writes `material_views`; exposed as `viewsCount` in public DTO | [material-discovery-flow](flows/material-discovery-flow.md) |
 | Server-side filter parity with client-side discovery chips? | **Needs verification** | [material-discovery](features/material-discovery.md) |
 | Network error UI path on discovery page | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md) |
 | Single-item 404 when material not publicly visible | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md) |

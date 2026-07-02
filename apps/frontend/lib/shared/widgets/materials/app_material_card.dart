@@ -30,6 +30,9 @@ class AppMaterialCard extends StatelessWidget {
     required this.gradientColors,
     this.imageUrl,
     this.ratingLabel,
+    this.viewsCount = 0,
+    this.likesCount = 0,
+    this.isLiked = false,
     this.showPopularBadge = false,
     this.onTap,
     this.trailing,
@@ -54,6 +57,9 @@ class AppMaterialCard extends StatelessWidget {
   final List<Color> gradientColors;
   final String? imageUrl;
   final String? ratingLabel;
+  final int viewsCount;
+  final int likesCount;
+  final bool isLiked;
   final bool showPopularBadge;
   final VoidCallback? onTap;
   final Widget? trailing;
@@ -88,6 +94,9 @@ class AppMaterialCard extends StatelessWidget {
             gradientColors: gradientColors,
             imageUrl: imageUrl,
             ratingLabel: ratingLabel,
+            viewsCount: viewsCount,
+            likesCount: likesCount,
+            isLiked: isLiked,
             showPopularBadge: showPopularBadge,
             onTap: onTap,
             trailing: trailing,
@@ -120,6 +129,9 @@ class ImpactMaterialGridCard extends StatefulWidget {
     required this.gradientColors,
     this.imageUrl,
     this.ratingLabel,
+    this.viewsCount = 0,
+    this.likesCount = 0,
+    this.isLiked = false,
     this.showPopularBadge = false,
     this.onTap,
     this.trailing,
@@ -144,6 +156,9 @@ class ImpactMaterialGridCard extends StatefulWidget {
   final List<Color> gradientColors;
   final String? imageUrl;
   final String? ratingLabel;
+  final int viewsCount;
+  final int likesCount;
+  final bool isLiked;
   final bool showPopularBadge;
   final VoidCallback? onTap;
   final Widget? trailing;
@@ -184,6 +199,9 @@ class ImpactMaterialCompactCard extends StatelessWidget {
     required this.gradientColors,
     this.imageUrl,
     this.ratingLabel,
+    this.viewsCount = 0,
+    this.likesCount = 0,
+    this.isLiked = false,
     this.showPopularBadge = false,
     this.onTap,
     this.trailing,
@@ -206,6 +224,9 @@ class ImpactMaterialCompactCard extends StatelessWidget {
   final List<Color> gradientColors;
   final String? imageUrl;
   final String? ratingLabel;
+  final int viewsCount;
+  final int likesCount;
+  final bool isLiked;
   final bool showPopularBadge;
   final VoidCallback? onTap;
   final Widget? trailing;
@@ -305,6 +326,12 @@ class ImpactMaterialCompactCard extends StatelessWidget {
                                     isFree: isFree,
                                   ),
                                 ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              _CompactEngagementBadge(
+                                viewsCount: viewsCount,
+                                likesCount: likesCount,
+                                isLiked: isLiked,
                               ),
                               const SizedBox(width: AppSpacing.sm),
                               _CompactViewAffordance(color: palette.mint),
@@ -592,6 +619,9 @@ class _ImpactMaterialGridCardState extends State<ImpactMaterialGridCard> {
                       gradientColors: widget.gradientColors,
                       fallbackIcon: widget.fallbackIcon,
                       hovered: _hovered,
+                      viewsCount: widget.viewsCount,
+                      likesCount: widget.likesCount,
+                      isLiked: widget.isLiked,
                     ),
                     Expanded(
                       child: _GridCardContent(
@@ -627,6 +657,9 @@ class _GridCardMedia extends StatefulWidget {
     required this.gradientColors,
     required this.fallbackIcon,
     required this.hovered,
+    required this.viewsCount,
+    required this.likesCount,
+    required this.isLiked,
   });
 
   final String category;
@@ -636,6 +669,9 @@ class _GridCardMedia extends StatefulWidget {
   final List<Color> gradientColors;
   final IconData fallbackIcon;
   final bool hovered;
+  final int viewsCount;
+  final int likesCount;
+  final bool isLiked;
 
   @override
   State<_GridCardMedia> createState() => _GridCardMediaState();
@@ -732,7 +768,12 @@ class _GridCardMediaState extends State<_GridCardMedia> {
             PositionedDirectional(
               top: AppSpacing.sm,
               end: AppSpacing.sm,
-              child: _DisabledSaveButton(isDark: isDark),
+              child: _EngagementCountBadge(
+                viewsCount: widget.viewsCount,
+                likesCount: widget.likesCount,
+                isLiked: widget.isLiked,
+                isDark: isDark,
+              ),
             ),
             PositionedDirectional(
               end: AppSpacing.sm,
@@ -945,30 +986,128 @@ class _OverlayChip extends StatelessWidget {
   }
 }
 
-class _DisabledSaveButton extends StatelessWidget {
-  const _DisabledSaveButton({required this.isDark});
+class _EngagementCountBadge extends StatelessWidget {
+  const _EngagementCountBadge({
+    required this.viewsCount,
+    required this.likesCount,
+    required this.isLiked,
+    required this.isDark,
+  });
 
+  final int viewsCount;
+  final int likesCount;
+  final bool isLiked;
   final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final foreground = isLiked ? palette.mint : palette.textMuted;
 
     return Tooltip(
-      message: 'Save is not available yet',
+      message: isLiked ? 'Liked by you' : 'Material likes',
       child: Container(
-        width: 34,
-        height: 34,
+        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+        padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           color: palette.cardSurface.withValues(alpha: isDark ? 0.68 : 0.84),
-          shape: BoxShape.circle,
+          borderRadius: AppRadius.pillAll,
           border: Border.all(color: palette.borderSubtle),
         ),
-        child: Icon(
-          Icons.favorite_border_rounded,
-          color: palette.textMuted,
-          size: 18,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (viewsCount > 0) ...[
+              Icon(Icons.visibility_outlined, color: palette.textMuted, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                '$viewsCount',
+                style: AppTextStyles.label(context).copyWith(
+                  color: palette.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Icon(
+              isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              color: foreground,
+              size: 17,
+            ),
+            if (likesCount > 0) ...[
+              const SizedBox(width: 4),
+              Text(
+                '$likesCount',
+                style: AppTextStyles.label(context).copyWith(
+                  color: foreground,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
+              ),
+            ],
+          ],
         ),
+      ),
+    );
+  }
+}
+
+class _CompactEngagementBadge extends StatelessWidget {
+  const _CompactEngagementBadge({
+    required this.viewsCount,
+    required this.likesCount,
+    required this.isLiked,
+  });
+
+  final int viewsCount;
+  final int likesCount;
+  final bool isLiked;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final foreground = isLiked ? palette.mint : palette.textMuted;
+
+    return Tooltip(
+      message: isLiked ? 'Liked by you' : 'Material likes',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (viewsCount > 0) ...[
+            Icon(Icons.visibility_outlined, color: palette.textMuted, size: 14),
+            const SizedBox(width: 3),
+            Text(
+              '$viewsCount',
+              style: AppTextStyles.label(context).copyWith(
+                color: palette.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                height: 1,
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Icon(
+            isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            color: foreground,
+            size: 14,
+          ),
+          if (likesCount > 0) ...[
+            const SizedBox(width: 3),
+            Text(
+              '$likesCount',
+              style: AppTextStyles.label(context).copyWith(
+                color: foreground,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                height: 1,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -9,8 +9,10 @@ import { successResponse } from '../../utils/api-response.js';
 import {
   checkMaterialPrice,
   getListingPolicy,
+  likeMaterialById,
   getMaterialById,
   getMaterials,
+  unlikeMaterialById,
 } from './materials.service.js';
 import type {
   MaterialsQuery,
@@ -37,7 +39,10 @@ export const listMaterials = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const materials = await getMaterials(readValidatedQuery<MaterialsQuery>(req));
+  const materials = await getMaterials(
+    readValidatedQuery<MaterialsQuery>(req),
+    req.auth,
+  );
 
   res.json(successResponse('Materials fetched successfully', materials));
 };
@@ -50,4 +55,24 @@ export const getMaterial = async (
   const material = await getMaterialById(id, req.auth);
 
   res.json(successResponse('Material fetched successfully', material));
+};
+
+export const likeMaterial = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const result = await likeMaterialById(id, req.auth!.sub);
+
+  res.json(successResponse('Material liked successfully', result));
+};
+
+export const unlikeMaterial = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const result = await unlikeMaterialById(id, req.auth!.sub);
+
+  res.json(successResponse('Material unliked successfully', result));
 };

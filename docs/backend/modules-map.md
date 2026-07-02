@@ -217,13 +217,13 @@ Mount order: `apps/backend/src/app.ts`
 
 ## `materials`
 
-**Purpose:** Public material discovery (list/detail), listing policy, authenticated price check before listing.
+**Purpose:** Public material discovery (list/detail), listing policy, authenticated price check before listing, and learner material engagement (views/likes).
 
 **Key files:** `materials.routes.ts`, `materials.controller.ts`, `materials.service.ts`, `materials.repository.ts`, `materials.validation.ts`, `materials.price.test.ts`
 
 **Constants:** `apps/backend/src/constants/material-listing-policy.ts`
 
-**Prisma:** `Material`, `MaterialImage`, `MaterialTag`
+**Prisma:** `Material`, `MaterialImage`, `MaterialTag`, `MaterialView`, `MaterialLike`
 
 ---
 

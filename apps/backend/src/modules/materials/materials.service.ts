@@ -479,6 +479,10 @@ const mapMaterial = (
     createdAt: Date;
   },
   heldQuantity = toDecimal(0),
+  engagement: {
+    likesCount?: number;
+    isLiked?: boolean;
+  } = {},
 ) => {
   const quantity = toDecimal(material.quantity);
   const availableQuantity = computeAvailableQuantity(quantity, heldQuantity);
@@ -509,6 +513,8 @@ const mapMaterial = (
     supplierName: resolveSupplierName(material),
     ratingSummary: null,
     viewsCount: material.viewsCount,
+    likesCount: engagement.likesCount ?? 0,
+    isLiked: engagement.isLiked ?? false,
     createdAt: material.createdAt.toISOString(),
   };
 };
@@ -606,15 +612,25 @@ const buildMaterialReserveEnrichment = async (
   };
 };
 
-export const getMaterials = async (query: MaterialsQuery) => {
+export const getMaterials = async (
+  query: MaterialsQuery,
+  viewer?: AccessTokenPayload,
+) => {
   const result = await materialsRepository.findMaterials(query);
-  const heldByMaterialId = await getHeldQuantitiesByMaterialIds(
-    result.items.map((item) => item.id),
-  );
+  const materialIds = result.items.map((item) => item.id);
+  const [heldByMaterialId, likesByMaterialId, likedMaterialIds] =
+    await Promise.all([
+      getHeldQuantitiesByMaterialIds(materialIds),
+      materialsRepository.countLikesByMaterialIds(materialIds),
+      materialsRepository.findLikedMaterialIds(viewer?.sub, materialIds),
+    ]);
 
   return {
     items: result.items.map((item) =>
-      mapMaterial(item, heldByMaterialId.get(item.id) ?? toDecimal(0)),
+      mapMaterial(item, heldByMaterialId.get(item.id) ?? toDecimal(0), {
+        likesCount: likesByMaterialId.get(item.id) ?? 0,
+        isLiked: likedMaterialIds.has(item.id),
+      }),
     ),
     pagination: {
       page: query.page,
@@ -635,15 +651,25 @@ export const getMaterialById = async (
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
 
-  const incremented = await materialsRepository.incrementMaterialViewsCount(
-    material.id,
-  );
-
-  const heldByMaterialId = await getHeldQuantitiesByMaterialIds([material.id]);
+  const [incremented, heldByMaterialId, likesByMaterialId, likedMaterialIds] =
+    await Promise.all([
+      materialsRepository.recordMaterialView(
+        material.id,
+        viewer?.sub,
+        'material_detail',
+      ),
+      getHeldQuantitiesByMaterialIds([material.id]),
+      materialsRepository.countLikesByMaterialIds([material.id]),
+      materialsRepository.findLikedMaterialIds(viewer?.sub, [material.id]),
+    ]);
   const heldQuantity = heldByMaterialId.get(material.id) ?? toDecimal(0);
   const mappedMaterial = mapMaterial(
     { ...material, viewsCount: incremented.viewsCount },
     heldQuantity,
+    {
+      likesCount: likesByMaterialId.get(material.id) ?? 0,
+      isLiked: likedMaterialIds.has(material.id),
+    },
   );
   const detailFields = mapMaterialDetailFields(material);
 
@@ -664,6 +690,40 @@ export const getMaterialById = async (
     ...mappedMaterial,
     ...detailFields,
     ...reserveEnrichment,
+  };
+};
+
+export const likeMaterialById = async (id: string, userId: string) => {
+  const material = await materialsRepository.findPublicMaterialById(id);
+
+  if (!material) {
+    throw new AppError('Material not found', 404, 'NOT_FOUND');
+  }
+
+  await materialsRepository.setMaterialLiked(id, userId);
+  const likesCount = await materialsRepository.countLikesForMaterial(id);
+
+  return {
+    materialId: id,
+    likesCount,
+    isLiked: true,
+  };
+};
+
+export const unlikeMaterialById = async (id: string, userId: string) => {
+  const material = await materialsRepository.findPublicMaterialById(id);
+
+  if (!material) {
+    throw new AppError('Material not found', 404, 'NOT_FOUND');
+  }
+
+  await materialsRepository.unsetMaterialLiked(id, userId);
+  const likesCount = await materialsRepository.countLikesForMaterial(id);
+
+  return {
+    materialId: id,
+    likesCount,
+    isLiked: false,
   };
 };
 

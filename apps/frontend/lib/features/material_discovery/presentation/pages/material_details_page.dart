@@ -67,7 +67,9 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
   late final MaterialDiscoveryRepository _defaultRepository;
   late MaterialDiscoveryRepository _activeRepository;
   late Future<DiscoveryMaterial?> _materialFuture;
+  DiscoveryMaterial? _materialOverride;
   bool _showReservationStatusCta = false;
+  bool _isLikeUpdating = false;
 
   @override
   void initState() {
@@ -88,6 +90,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
         _activeRepository != nextRepository) {
       _activeRepository = nextRepository;
       _showReservationStatusCta = false;
+      _materialOverride = null;
       _materialFuture = _activeRepository.getMaterialById(widget.materialId);
     }
   }
@@ -125,7 +128,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
           );
         }
 
-        final material = snapshot.data;
+        final material = _materialOverride ?? snapshot.data;
         if (material == null) {
           return _SimpleStateScaffold(
             child: Text(
@@ -144,10 +147,78 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
         return _MaterialDetailsLoadedContent(
           material: material,
           showReservationStatusCta: _showReservationStatusCta,
+          isLikeUpdating: _isLikeUpdating,
           onReserve: () => _handleReserve(material),
+          onToggleLike: () => _handleToggleLike(material),
         );
       },
     );
+  }
+
+  Future<void> _handleToggleLike(DiscoveryMaterial material) async {
+    final authState = ref.read(authControllerProvider);
+
+    if (authState.status != AuthStatus.authenticated) {
+      final from = Uri.encodeQueryComponent('/materials/${material.id}');
+      context.go('/login?from=$from');
+      return;
+    }
+
+    if (authState.user?.hasRole('LEARNER') != true) {
+      showInfoSnackBar(context, 'Use a learner account to like materials.');
+      return;
+    }
+
+    if (_isLikeUpdating) {
+      return;
+    }
+
+    final shouldLike = !material.isLiked;
+    final optimisticLikes = shouldLike
+        ? material.likesCount + 1
+        : (material.likesCount > 0 ? material.likesCount - 1 : 0);
+    final optimisticMaterial = material.copyWith(
+      likesCount: optimisticLikes,
+      isLiked: shouldLike,
+    );
+
+    setState(() {
+      _isLikeUpdating = true;
+      _materialOverride = optimisticMaterial;
+    });
+
+    try {
+      final engagement = shouldLike
+          ? await _activeRepository.likeMaterial(material.id)
+          : await _activeRepository.unlikeMaterial(material.id);
+
+      if (!mounted) {
+        return;
+      }
+
+      ref.invalidate(homeSuggestedMaterialsProvider);
+      setState(() {
+        _materialOverride = optimisticMaterial.copyWith(
+          likesCount: engagement.likesCount,
+          isLiked: engagement.isLiked,
+        );
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _materialOverride = material;
+      });
+      showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLikeUpdating = false;
+        });
+      }
+    }
   }
 
   Future<void> _handleReserve(DiscoveryMaterial material) async {
@@ -193,7 +264,6 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
     ref.invalidate(homeSuggestedMaterialsProvider);
     setState(() {
       _showReservationStatusCta = true;
-      _materialFuture = _activeRepository.getMaterialById(widget.materialId);
     });
     showInfoSnackBar(context, 'Reservation request sent to the supplier.');
   }
@@ -203,20 +273,27 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
   const _MaterialDetailsLoadedContent({
     required this.material,
     required this.showReservationStatusCta,
+    required this.isLikeUpdating,
     required this.onReserve,
+    required this.onToggleLike,
   });
 
   final DiscoveryMaterial material;
   final bool showReservationStatusCta;
+  final bool isLikeUpdating;
   final VoidCallback onReserve;
+  final VoidCallback onToggleLike;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
     final reserveState = ref.watch(reservationCreateControllerProvider);
-    final myReservationsState =
+    final shouldLoadReservationDetails =
         authState.status == AuthStatus.authenticated &&
-            authState.user?.hasRole('LEARNER') == true
+        authState.user?.hasRole('LEARNER') == true &&
+        material.reserveBlockReason == 'OPEN_RESERVATION_EXISTS' &&
+        !showReservationStatusCta;
+    final myReservationsState = shouldLoadReservationDetails
         ? ref.watch(myReservationsProvider)
         : null;
     final learnerReservation = myReservationsState?.maybeWhen(
@@ -235,7 +312,8 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
       material: material,
       authState: authState,
       isSubmitting: reserveState.isLoading,
-      isLoadingReservation: myReservationsState?.isLoading == true,
+      isLoadingReservation:
+          myReservationsState?.isLoading == true && material.canReserve == null,
       showReservationStatusCta: showReservationStatusCta,
       learnerReservation: learnerReservation,
     );
@@ -301,6 +379,8 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                                       material: material,
                                       includeHeader: false,
                                       compactDetailsLayout: true,
+                                      isLikeUpdating: isLikeUpdating,
+                                      onToggleLike: onToggleLike,
                                     ),
                                   ),
                                   const SizedBox(width: _materialDetailsSectionGap),
@@ -326,7 +406,11 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                                 compact: true,
                               ),
                               const SizedBox(height: AppSpacing.md),
-                              _MaterialSummaryPanel(material: material),
+                              _MaterialSummaryPanel(
+                                material: material,
+                                isLikeUpdating: isLikeUpdating,
+                                onToggleLike: onToggleLike,
+                              ),
                               const SizedBox(height: AppSpacing.md),
                               _ReservationPanel(
                                 material: material,
@@ -598,9 +682,15 @@ class _MaterialDetailsGallery extends StatelessWidget {
 }
 
 class _MaterialSummaryPanel extends StatelessWidget {
-  const _MaterialSummaryPanel({required this.material});
+  const _MaterialSummaryPanel({
+    required this.material,
+    required this.isLikeUpdating,
+    required this.onToggleLike,
+  });
 
   final DiscoveryMaterial material;
+  final bool isLikeUpdating;
+  final VoidCallback onToggleLike;
 
   @override
   Widget build(BuildContext context) {
@@ -616,12 +706,25 @@ class _MaterialSummaryPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            material.title.resolve(context),
-            style: AppTextStyles.title(
-              context,
-            ).copyWith(color: palette.textPrimary),
-            textAlign: TextAlign.start,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  material.title.resolve(context),
+                  style: AppTextStyles.title(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                  textAlign: TextAlign.start,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _MaterialLikeButton(
+                isLiked: material.isLiked,
+                isLoading: isLikeUpdating,
+                onPressed: onToggleLike,
+              ),
+            ],
           ),
           if (showDescription) ...[
             const SizedBox(height: AppSpacing.sm),
@@ -652,18 +755,129 @@ class _MaterialSummaryPanel extends StatelessWidget {
               ),
             ],
           ),
-          if (material.viewsCount > 0) ...[
+          if (material.viewsCount > 0 || material.likesCount > 0) ...[
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              LocalizedText(
-                en: '${material.viewsCount} views',
-                ar: '${material.viewsCount} مشاهدة',
-              ).resolve(context),
-              style: AppTextStyles.label(
-                context,
-              ).copyWith(color: palette.textMuted),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
+              children: [
+                _EngagementChip(
+                  icon: Icons.visibility_outlined,
+                  label: LocalizedText(
+                    en: '${material.viewsCount} views',
+                    ar: '${material.viewsCount} مشاهدة',
+                  ).resolve(context),
+                ),
+                _EngagementChip(
+                  icon: material.isLiked
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  label: LocalizedText(
+                    en: '${material.likesCount} likes',
+                    ar: '${material.likesCount} إعجاب',
+                  ).resolve(context),
+                  highlighted: material.isLiked,
+                ),
+              ],
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MaterialLikeButton extends StatelessWidget {
+  const _MaterialLikeButton({
+    required this.isLiked,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  final bool isLiked;
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final foreground = isLiked ? Colors.white : palette.mint;
+    final background = isLiked
+        ? palette.mint
+        : palette.mint.withValues(alpha: 0.10);
+
+    return Tooltip(
+      message: isLiked ? 'Unlike material' : 'Like material',
+      child: SizedBox(
+        width: 42,
+        height: 42,
+        child: IconButton(
+          onPressed: isLoading ? null : onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: background,
+            foregroundColor: foreground,
+            disabledBackgroundColor: background.withValues(alpha: 0.6),
+            disabledForegroundColor: foreground.withValues(alpha: 0.6),
+            side: BorderSide(color: palette.borderSubtle),
+          ),
+          icon: isLoading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: foreground,
+                  ),
+                )
+              : Icon(
+                  isLiked
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EngagementChip extends StatelessWidget {
+  const _EngagementChip({
+    required this.icon,
+    required this.label,
+    this.highlighted = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final foreground = highlighted ? palette.mint : palette.textMuted;
+
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: palette.panelSurface,
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: foreground),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            label,
+            style: AppTextStyles.label(context).copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -1214,11 +1428,15 @@ String _formatPostedDate(DateTime value) {
 class _DetailsMainColumn extends StatelessWidget {
   const _DetailsMainColumn({
     required this.material,
+    required this.isLikeUpdating,
+    required this.onToggleLike,
     this.includeHeader = true,
     this.compactDetailsLayout = false,
   });
 
   final DiscoveryMaterial material;
+  final bool isLikeUpdating;
+  final VoidCallback onToggleLike;
   final bool includeHeader;
   final bool compactDetailsLayout;
 
@@ -1233,7 +1451,11 @@ class _DetailsMainColumn extends StatelessWidget {
         ],
         _MaterialDetailsGallery(material: material),
         const SizedBox(height: _materialDetailsSectionGap),
-        _MaterialSummaryPanel(material: material),
+        _MaterialSummaryPanel(
+          material: material,
+          isLikeUpdating: isLikeUpdating,
+          onToggleLike: onToggleLike,
+        ),
         const SizedBox(height: _materialDetailsSectionGap),
         _MaterialDetailsPanel(
           material: material,
@@ -2028,6 +2250,9 @@ class _RelatedMaterialCompactCard extends StatelessWidget {
       ratingLabel: material.isPopular
           ? null
           : material.ratingLabel?.resolve(context),
+      viewsCount: material.viewsCount,
+      likesCount: material.likesCount,
+      isLiked: material.isLiked,
       showPopularBadge: material.isPopular,
       fallbackIcon: material.heroIconData,
       onTap: () => context.go('/materials/${material.id}'),

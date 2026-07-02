@@ -20,7 +20,7 @@ Public signup and login for **LEARNER** and **SUPPLIER** roles, session bootstra
 ## Main user flow
 
 1. Guest opens `/register` or `/login`.
-2. **Register:** `/register` collects account details, intent (learner / supplier / both), onboarding interests/goals, optional learner location, learner basics, supplier basics, supplier pickup area when sharing materials, and supplier verification document only for organization supplier types. It then calls `POST /api/auth/register`. Organization supplier verification upload/submission happens inside the same wizard after the authenticated session is created.
+2. **Register:** `/register` collects account details, intent (learner / supplier / both), role-aware onboarding options, optional learner location, learner basics, supplier basics, supplier pickup area when sharing materials, and supplier verification document only for organization supplier types. Learner and dual-role flows show broad interest pills for general project/material preferences; goals are specialized for learner, supplier, or dual-role intent. It then calls `POST /api/auth/register`. Organization supplier verification upload/submission happens inside the same wizard after the authenticated session is created.
 3. **Login:** email/password → `POST /api/auth/login` → same redirect rule.
 4. **Session restore:** app/router sends unknown auth to `/auth/checking` → `AuthController.bootstrapSession()` → refresh + `/me`.
 5. **Authenticated request refresh:** shared Dio requests attach the in-memory access token. If an eligible request receives 401, the auth interceptor uses a bare refresh client to call `/api/auth/refresh`, updates the token holder/storage, and retries the original request once.

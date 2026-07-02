@@ -119,7 +119,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 
 Gap docs are stubs — see [09-open-questions.md](09-open-questions.md) before implementing.
 
-**Not documented as implemented:** live realtime tracking stream, AI material matching agent, moderator portal, saved/liked/followed content, project build checklist, and project submission/review workflow (unless code changes prove otherwise).
+**Not documented as implemented:** live realtime tracking stream, AI material matching agent, moderator portal, saved/followed content, project likes, project build checklist, and project submission/review workflow (unless code changes prove otherwise).
 
 ADRs (`docs/adr/`) — accepted architecture decisions.
 

@@ -1,4 +1,5 @@
 import '../domain/discovery_material.dart';
+import '../domain/material_engagement.dart';
 import '../domain/material_discovery_query.dart';
 import '../domain/material_discovery_repository.dart';
 import '../domain/material_discovery_result.dart';
@@ -70,5 +71,27 @@ class MockMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
   @override
   Future<DiscoveryMaterial?> getMaterialById(String id) async {
     return mockMaterialById(id);
+  }
+
+  @override
+  Future<MaterialEngagement> likeMaterial(String id) async {
+    final material = mockMaterialById(id);
+
+    return MaterialEngagement(
+      materialId: id,
+      likesCount: (material?.likesCount ?? 0) + 1,
+      isLiked: true,
+    );
+  }
+
+  @override
+  Future<MaterialEngagement> unlikeMaterial(String id) async {
+    final material = mockMaterialById(id);
+
+    return MaterialEngagement(
+      materialId: id,
+      likesCount: material?.likesCount ?? 0,
+      isLiked: false,
+    );
   }
 }

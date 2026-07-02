@@ -265,6 +265,9 @@ class _MaterialsResultsGrid extends StatelessWidget {
                 ratingLabel: material.isPopular
                     ? null
                     : material.ratingLabel?.resolve(context),
+                viewsCount: material.viewsCount,
+                likesCount: material.likesCount,
+                isLiked: material.isLiked,
                 showPopularBadge: material.isPopular,
                 fallbackIcon: material.heroIconData,
                 onTap: onMaterialTap == null
@@ -319,6 +322,9 @@ class _MaterialsResultsGrid extends StatelessWidget {
                 ratingLabel: material.isPopular
                     ? null
                     : material.ratingLabel?.resolve(context),
+                viewsCount: material.viewsCount,
+                likesCount: material.likesCount,
+                isLiked: material.isLiked,
                 showPopularBadge: material.isPopular,
                 fallbackIcon: material.heroIconData,
                 variant: effectiveCardVariant,

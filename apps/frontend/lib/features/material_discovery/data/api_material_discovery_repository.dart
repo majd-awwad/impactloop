@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_response.dart';
 import '../domain/discovery_material.dart';
+import '../domain/material_engagement.dart';
 import '../domain/material_discovery_query.dart';
 import '../domain/material_discovery_repository.dart';
 import '../domain/material_discovery_result.dart';
@@ -114,5 +115,21 @@ class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
 
       rethrow;
     }
+  }
+
+  @override
+  Future<MaterialEngagement> likeMaterial(String id) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>('$_basePath/$id/like'),
+      MaterialEngagement.fromJson,
+    );
+  }
+
+  @override
+  Future<MaterialEngagement> unlikeMaterial(String id) {
+    return unwrapApiResponse(
+      _client.delete<Map<String, dynamic>>('$_basePath/$id/like'),
+      MaterialEngagement.fromJson,
+    );
   }
 }
