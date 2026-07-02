@@ -5,15 +5,24 @@ import { readValidatedParams, readValidatedQuery } from '../../middlewares/valid
 
 import {
   acceptSupplierReservation,
+  cancelSupplierAcceptedReservation,
   completeSupplierReservation,
+  createSupplierReservationMessage,
   declineSupplierReservation,
+  listSupplierReservationMessages,
   listSupplierReservations,
+  rescheduleSupplierReservation,
+  submitSupplierNoShowReport,
 } from './supplier-reservations.service.js';
 import type {
   AcceptSupplierReservationInput,
+  CancelSupplierReservationInput,
+  CreateReservationMessageInput,
   DeclineSupplierReservationInput,
   ListSupplierReservationsQuery,
+  RescheduleSupplierReservationInput,
   ReservationIdParams,
+  SubmitNoShowReportInput,
 } from './supplier-reservations.validation.js';
 
 export const listSupplierReservationsHandler = async (
@@ -64,4 +73,70 @@ export const completeSupplierReservationHandler = async (
   const reservation = await completeSupplierReservation(req.auth!.sub, id);
 
   res.json(successResponse('Reservation completed.', reservation));
+};
+
+export const rescheduleSupplierReservationHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<ReservationIdParams>(req);
+  const reservation = await rescheduleSupplierReservation(
+    req.auth!.sub,
+    id,
+    req.body as RescheduleSupplierReservationInput,
+  );
+
+  res.json(successResponse('Pickup rescheduled.', reservation));
+};
+
+export const cancelSupplierAcceptedReservationHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<ReservationIdParams>(req);
+  const reservation = await cancelSupplierAcceptedReservation(
+    req.auth!.sub,
+    id,
+    req.body as CancelSupplierReservationInput,
+  );
+
+  res.json(successResponse('Reservation cancelled.', reservation));
+};
+
+export const submitSupplierNoShowReportHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<ReservationIdParams>(req);
+  const report = await submitSupplierNoShowReport(
+    req.auth!.sub,
+    id,
+    req.body as SubmitNoShowReportInput,
+  );
+
+  res.json(successResponse('No-show report submitted.', report));
+};
+
+export const listSupplierReservationMessagesHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<ReservationIdParams>(req);
+  const messages = await listSupplierReservationMessages(req.auth!.sub, id);
+
+  res.json(successResponse('Reservation messages loaded.', { messages }));
+};
+
+export const createSupplierReservationMessageHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<ReservationIdParams>(req);
+  const message = await createSupplierReservationMessage(
+    req.auth!.sub,
+    id,
+    req.body as CreateReservationMessageInput,
+  );
+
+  res.json(successResponse('Message sent.', message));
 };

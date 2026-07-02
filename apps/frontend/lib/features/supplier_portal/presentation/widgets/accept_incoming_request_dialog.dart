@@ -12,21 +12,29 @@ class AcceptIncomingRequestDialog extends StatefulWidget {
     super.key,
     required this.materialTitle,
     required this.learnerName,
+    this.dialogTitle,
+    this.submitLabel,
   });
 
   final String materialTitle;
   final String learnerName;
+  final String? dialogTitle;
+  final String? submitLabel;
 
   static Future<SupplierPickupWindow?> show(
     BuildContext context, {
     required String materialTitle,
     required String learnerName,
+    String? dialogTitle,
+    String? submitLabel,
   }) {
     return showDialog<SupplierPickupWindow>(
       context: context,
       builder: (context) => AcceptIncomingRequestDialog(
         materialTitle: materialTitle,
         learnerName: learnerName,
+        dialogTitle: dialogTitle,
+        submitLabel: submitLabel,
       ),
     );
   }
@@ -85,7 +93,7 @@ class _AcceptIncomingRequestDialogState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    context.s.acceptRequest,
+                    widget.dialogTitle ?? context.s.acceptRequest,
                     style: context.supplierTitle().copyWith(
                       fontSize: 20,
                     ),
@@ -184,7 +192,7 @@ class _AcceptIncomingRequestDialogState
                             foregroundColor: colors.textOnAccent,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          child: Text(context.s.acceptRequest),
+                          child: Text(widget.submitLabel ?? context.s.acceptRequest),
                         ),
                       ),
                     ],

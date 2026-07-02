@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_theme_colors.dart';
 import '../data/models/learner_reservation.dart';
+import '../data/models/reservation_preferred_window.dart';
 
 enum LearnerReservationStatusFilter {
   all,
@@ -134,6 +135,71 @@ String reservationStatusLabel(String status) {
   }
 }
 
+String formatFulfillmentMethodLabel(LearnerReservation reservation) {
+  return reservation.isDeliveryFulfillment ? 'Delivery' : 'Pickup';
+}
+
+String? formatPreferredWindowsSummary(LearnerReservation reservation) {
+  final windows = reservation.isDeliveryFulfillment
+      ? reservation.learnerPreferredDeliveryWindows
+      : reservation.learnerPreferredPickupWindows;
+
+  if (windows.isEmpty) {
+    return null;
+  }
+
+  final prefix =
+      reservation.isDeliveryFulfillment ? 'Preferred delivery' : 'Preferred pickup';
+  final dateFormat = DateFormat('MMM d');
+  final timeFormat = DateFormat('h:mm a');
+
+  String formatWindow(ReservationPreferredWindow window) {
+    final start = window.start.toLocal();
+    final end = window.end.toLocal();
+    final sameDay = start.year == end.year &&
+        start.month == end.month &&
+        start.day == end.day;
+
+    if (sameDay) {
+      return '${dateFormat.format(start)}, '
+          '${timeFormat.format(start)} – ${timeFormat.format(end)}';
+    }
+
+    return '${dateFormat.format(start)}, ${timeFormat.format(start)} – '
+        '${dateFormat.format(end)}, ${timeFormat.format(end)}';
+  }
+
+  final first = formatWindow(windows.first);
+  if (windows.length == 1) {
+    return '$prefix: $first';
+  }
+
+  return '$prefix: $first (+${windows.length - 1} more)';
+}
+
+String? formatDeliveryAddressSummary(LearnerReservation reservation) {
+  if (!reservation.isDeliveryFulfillment) {
+    return null;
+  }
+
+  final address = reservation.deliveryAddressText?.trim();
+  if (address == null || address.isEmpty) {
+    return null;
+  }
+
+  return 'Delivery address: $address';
+}
+
+String? formatSafeDropoffSummary(LearnerReservation reservation) {
+  if (!reservation.isDeliveryFulfillment || reservation.safeDropoffAllowed == null) {
+    return null;
+  }
+
+  return reservation.safeDropoffAllowed == true
+      ? 'Safe drop-off allowed'
+      : 'Safe drop-off not allowed';
+}
+
 String formatReservationDate(DateTime value) {
   return DateFormat.yMMMd().format(value.toLocal());
 }
@@ -171,6 +237,10 @@ String? reservationStatusMessage(LearnerReservation reservation) {
   }
 
   if (reservation.isAccepted) {
+    if (reservation.isOverdue || reservation.needsFollowUp) {
+      return 'Pickup window passed. Please contact the supplier or wait for follow-up.';
+    }
+
     return reservation.supplierNote?.trim().isNotEmpty == true
         ? reservation.supplierNote
         : 'Reservation accepted. Follow the pickup window from the supplier.';
@@ -229,6 +299,12 @@ String formatDeliveryAvailability(
 }) {
   if (hasDeliveryRecord) {
     return 'Delivery in progress';
+  }
+
+  if (reservation.isDeliveryFulfillment) {
+    return reservation.isPending
+        ? 'Delivery selected at reservation'
+        : 'Delivery reservation';
   }
 
   if (reservation.deliveryRequested) {

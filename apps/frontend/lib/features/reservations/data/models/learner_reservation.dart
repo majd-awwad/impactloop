@@ -1,5 +1,8 @@
 import '../../../../core/config/api_config.dart';
 
+import 'reservation_message.dart';
+import 'reservation_preferred_window.dart';
+
 class LearnerReservationPickupLocation {
   const LearnerReservationPickupLocation({    this.country,
     required this.city,
@@ -133,8 +136,19 @@ class LearnerReservation {
     this.rejectionReason,
     this.pickupLocationFull,
     this.deliveryRequested = false,
+    this.fulfillmentMethod = 'PICKUP',
+    this.learnerPreferredPickupWindows = const [],
+    this.learnerPreferredDeliveryWindows = const [],
+    this.deliveryAddressText,
+    this.safeDropoffAllowed,
+    this.deliveryNote,
     required this.material,
     required this.supplier,
+    this.isOverdue = false,
+    this.needsFollowUp = false,
+    this.pickupWindowStatus,
+    this.canSendMessage = false,
+    this.latestMessage,
   });
 
   final String id;
@@ -149,8 +163,19 @@ class LearnerReservation {
   final String? rejectionReason;
   final LearnerReservationPickupLocation? pickupLocationFull;
   final bool deliveryRequested;
+  final String fulfillmentMethod;
+  final List<ReservationPreferredWindow> learnerPreferredPickupWindows;
+  final List<ReservationPreferredWindow> learnerPreferredDeliveryWindows;
+  final String? deliveryAddressText;
+  final bool? safeDropoffAllowed;
+  final String? deliveryNote;
   final LearnerReservationMaterial material;
   final LearnerReservationSupplier supplier;
+  final bool isOverdue;
+  final bool needsFollowUp;
+  final String? pickupWindowStatus;
+  final bool canSendMessage;
+  final ReservationMessage? latestMessage;
 
   factory LearnerReservation.fromJson(Map<String, dynamic> json) {
     final materialJson = json['material'];
@@ -180,6 +205,16 @@ class LearnerReservation {
           ? LearnerReservationPickupLocation.fromJson(pickupLocationJson)
           : null,
       deliveryRequested: json['deliveryRequested'] == true,
+      fulfillmentMethod: json['fulfillmentMethod'] as String? ?? 'PICKUP',
+      learnerPreferredPickupWindows: _parsePreferredWindows(
+        json['learnerPreferredPickupWindows'],
+      ),
+      learnerPreferredDeliveryWindows: _parsePreferredWindows(
+        json['learnerPreferredDeliveryWindows'],
+      ),
+      deliveryAddressText: json['deliveryAddressText'] as String?,
+      safeDropoffAllowed: json['safeDropoffAllowed'] as bool?,
+      deliveryNote: json['deliveryNote'] as String?,
       material: LearnerReservationMaterial.fromJson(
         materialJson is Map<String, dynamic>
             ? materialJson
@@ -190,6 +225,15 @@ class LearnerReservation {
             ? supplierJson
             : const <String, dynamic>{},
       ),
+      isOverdue: json['isOverdue'] == true,
+      needsFollowUp: json['needsFollowUp'] == true,
+      pickupWindowStatus: json['pickupWindowStatus'] as String?,
+      canSendMessage: json['canSendMessage'] == true,
+      latestMessage: json['latestMessage'] is Map
+          ? ReservationMessage.fromJson(
+              Map<String, dynamic>.from(json['latestMessage'] as Map),
+            )
+          : null,
     );
   }
 
@@ -200,11 +244,29 @@ class LearnerReservation {
   bool get isCancelled => status == 'CANCELLED';
   bool get isExpired => status == 'EXPIRED';
 
+  bool get isPickupFulfillment => fulfillmentMethod == 'PICKUP';
+  bool get isDeliveryFulfillment => fulfillmentMethod == 'DELIVERY';
+
+  static List<ReservationPreferredWindow> _parsePreferredWindows(Object? value) {
+    if (value is! List) {
+      return const [];
+    }
+
+    return value
+        .whereType<Map>()
+        .map((entry) => ReservationPreferredWindow.fromJson(
+              Map<String, dynamic>.from(entry),
+            ))
+        .toList();
+  }
+
   bool get hasRevealedPickupLocation =>
       pickupLocationFull != null &&
       pickupLocationFull!.formattedAddress.isNotEmpty &&
       (isAccepted || isCompleted);
 
   bool shouldShowSelfPickupAddress({required bool hasDeliveryRecord}) =>
-      hasRevealedPickupLocation && !deliveryRequested && !hasDeliveryRecord;
+      hasRevealedPickupLocation &&
+      isPickupFulfillment &&
+      !hasDeliveryRecord;
 }

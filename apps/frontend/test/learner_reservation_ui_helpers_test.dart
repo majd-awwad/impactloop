@@ -29,6 +29,59 @@ void main() {
     expect(text, contains('–'));
   });
 
+  test('formatDeliveryAvailability reflects reserve-time delivery choice', () {
+    final reservation = LearnerReservation.fromJson({
+      'id': 'res-1',
+      'status': 'PENDING',
+      'quantityRequested': 1,
+      'fulfillmentMethod': 'DELIVERY',
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'material': {
+        'id': 'mat-1',
+        'title': 'Wood panels',
+        'materialType': 'Wood',
+        'status': 'AVAILABLE',
+        'deliveryAllowed': true,
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+
+    expect(
+      formatDeliveryAvailability(reservation),
+      'Delivery selected at reservation',
+    );
+  });
+
+  test('formatPreferredWindowsSummary renders pickup windows', () {
+    final reservation = LearnerReservation.fromJson({
+      'id': 'res-1',
+      'status': 'PENDING',
+      'quantityRequested': 1,
+      'fulfillmentMethod': 'PICKUP',
+      'learnerPreferredPickupWindows': [
+        {
+          'start': '2026-06-27T07:00:00.000Z',
+          'end': '2026-06-27T13:00:00.000Z',
+        },
+      ],
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'material': {
+        'id': 'mat-1',
+        'title': 'Wood panels',
+        'materialType': 'Wood',
+        'status': 'AVAILABLE',
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+
+    final summary = formatPreferredWindowsSummary(reservation);
+
+    expect(summary, isNotNull);
+    expect(summary, contains('Preferred pickup'));
+  });
+
   test('reservationMatchesStatusFilter groups cancelled terminal states', () {
     final cancelled = LearnerReservation.fromJson({
       'id': 'res-1',

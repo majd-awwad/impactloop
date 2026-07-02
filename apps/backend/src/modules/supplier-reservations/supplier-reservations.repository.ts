@@ -9,6 +9,7 @@ import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
 } from '../reservations/reservations.quantity.js';
+import { resolveReservationFollowUp } from '../reservations/reservation-follow-up.js';
 
 const reservationInclude = {
   material: {
@@ -37,6 +38,16 @@ const reservationInclude = {
   _count: {
     select: {
       deliveries: true,
+    },
+  },
+  noShowReports: {
+    select: {
+      id: true,
+      targetUserId: true,
+      targetRole: true,
+      status: true,
+      reasonCode: true,
+      createdAt: true,
     },
   },
 } satisfies Prisma.ReservationInclude;
@@ -250,5 +261,224 @@ export const completeSupplierReservation = async (input: {
     });
 
     return { conflict: false as const, reservation };
+  });
+};
+
+export const rescheduleSupplierReservation = async (input: {
+  reservationId: string;
+  ownerId: string;
+  pickupWindowStart: Date;
+  pickupWindowEnd: Date;
+  supplierNote?: string;
+  followUpMessage?: string;
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.reservation.findFirst({
+      where: {
+        id: input.reservationId,
+        ownerId: input.ownerId,
+      },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    if (existing.status !== 'ACCEPTED') {
+      return { conflict: true as const, reservation: existing };
+    }
+
+    const supplierNote = input.supplierNote?.trim() || existing.supplierNote;
+    const reservation = await tx.reservation.update({
+      where: { id: existing.id },
+      data: {
+        pickupWindowStart: input.pickupWindowStart,
+        pickupWindowEnd: input.pickupWindowEnd,
+        supplierNote,
+      },
+      include: reservationInclude,
+    });
+
+    await tx.reservationStatusHistory.create({
+      data: {
+        reservationId: reservation.id,
+        statusGroup: 'RESERVATION',
+        oldStatus: 'ACCEPTED',
+        newStatus: 'ACCEPTED',
+        changedBy: input.ownerId,
+        note: 'Pickup window rescheduled by supplier',
+      },
+    });
+
+    if (input.followUpMessage?.trim()) {
+      await tx.reservationMessage.create({
+        data: {
+          reservationId: reservation.id,
+          senderUserId: input.ownerId,
+          body: input.followUpMessage.trim(),
+        },
+      });
+    }
+
+    return { conflict: false as const, reservation };
+  });
+};
+
+export const cancelSupplierAcceptedReservation = async (input: {
+  reservationId: string;
+  ownerId: string;
+  reason?: string;
+}) => {
+  return runSerializableTransaction(async (tx) => {
+    const existing = await tx.reservation.findFirst({
+      where: {
+        id: input.reservationId,
+        ownerId: input.ownerId,
+      },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    if (existing.status !== 'ACCEPTED') {
+      return { conflict: true as const, reservation: existing };
+    }
+
+    const followUp = resolveReservationFollowUp({
+      status: existing.status,
+      pickupWindowStart: existing.pickupWindowStart,
+      pickupWindowEnd: existing.pickupWindowEnd,
+    });
+
+    if (!followUp.isOverdue) {
+      return { notOverdue: true as const, reservation: existing };
+    }
+
+    const deliveryCount = await tx.delivery.count({
+      where: { reservationId: existing.id },
+    });
+
+    if (deliveryCount > 0 || existing.deliveryRequested) {
+      return { deliveryBlocked: true as const, reservation: existing };
+    }
+
+    const now = new Date();
+    const reason = input.reason?.trim() || 'Cancelled by supplier after overdue pickup window';
+
+    const reservation = await tx.reservation.update({
+      where: { id: existing.id },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: now,
+        rejectionReason: reason,
+      },
+      include: reservationInclude,
+    });
+
+    await tx.reservationStatusHistory.create({
+      data: {
+        reservationId: reservation.id,
+        statusGroup: 'RESERVATION',
+        oldStatus: 'ACCEPTED',
+        newStatus: 'CANCELLED',
+        changedBy: input.ownerId,
+        note: reason,
+      },
+    });
+
+    await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+
+    return { conflict: false as const, reservation };
+  });
+};
+
+export const createSupplierNoShowReport = async (input: {
+  reservationId: string;
+  ownerId: string;
+  reasonCode: 'LEARNER_DID_NOT_ARRIVE' | 'DRIVER_DID_NOT_ARRIVE' | 'NO_RESPONSE_AFTER_PICKUP_WINDOW' | 'OTHER';
+  note?: string;
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.reservation.findFirst({
+      where: {
+        id: input.reservationId,
+        ownerId: input.ownerId,
+      },
+      include: {
+        deliveries: {
+          select: {
+            assignedDriverProfileId: true,
+            assignedDriverProfile: {
+              select: { userId: true },
+            },
+          },
+          orderBy: { requestedAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    if (existing.status !== 'ACCEPTED') {
+      return { conflict: true as const };
+    }
+
+    const followUp = resolveReservationFollowUp({
+      status: existing.status,
+      pickupWindowStart: existing.pickupWindowStart,
+      pickupWindowEnd: existing.pickupWindowEnd,
+    });
+
+    if (!followUp.isOverdue) {
+      return { windowNotEnded: true as const };
+    }
+
+    const latestDelivery = existing.deliveries[0] ?? null;
+    let targetUserId = existing.requesterId;
+    let targetRole: 'LEARNER' | 'DRIVER' = 'LEARNER';
+
+    if (existing.deliveryRequested || latestDelivery) {
+      const driverUserId = latestDelivery?.assignedDriverProfile?.userId;
+      if (driverUserId) {
+        targetUserId = driverUserId;
+        targetRole = 'DRIVER';
+      } else if (input.reasonCode === 'DRIVER_DID_NOT_ARRIVE') {
+        return { driverNotAssigned: true as const };
+      }
+    } else if (input.reasonCode === 'DRIVER_DID_NOT_ARRIVE') {
+      return { driverNotAssigned: true as const };
+    }
+
+    const duplicate = await tx.noShowReport.findUnique({
+      where: {
+        reservationId_targetUserId: {
+          reservationId: existing.id,
+          targetUserId,
+        },
+      },
+    });
+
+    if (duplicate) {
+      return { duplicate: true as const, report: duplicate };
+    }
+
+    const report = await tx.noShowReport.create({
+      data: {
+        reservationId: existing.id,
+        reporterUserId: input.ownerId,
+        targetUserId,
+        targetRole,
+        reasonCode: input.reasonCode,
+        note: input.note?.trim() || null,
+        pickupWindowStart: existing.pickupWindowStart,
+        pickupWindowEnd: existing.pickupWindowEnd,
+      },
+    });
+
+    return { report };
   });
 };

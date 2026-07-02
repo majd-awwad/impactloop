@@ -7,6 +7,7 @@ import '../../../../core/config/api_config.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'incoming_request_status_style.dart';
+import 'reservation_follow_up_actions.dart';
 
 const _noteAreaHeight = 48.0;
 const _footerHeight = 52.0;
@@ -57,6 +58,9 @@ class IncomingRequestCard extends StatelessWidget {
     this.onAccept,
     this.onDecline,
     this.onMarkCompleted,
+    this.onReschedule,
+    this.onCancel,
+    this.onReportNoShow,
     this.isCompleting = false,
   });
 
@@ -64,6 +68,9 @@ class IncomingRequestCard extends StatelessWidget {
   final VoidCallback? onAccept;
   final VoidCallback? onDecline;
   final VoidCallback? onMarkCompleted;
+  final VoidCallback? onReschedule;
+  final VoidCallback? onCancel;
+  final VoidCallback? onReportNoShow;
   final bool isCompleting;
 
   @override
@@ -124,6 +131,10 @@ class IncomingRequestCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
+                          if (isAccepted && request.isOverdue) ...[
+                            _FollowUpBadge(label: l.overdueBadge),
+                            const SizedBox(width: AppSpacing.xs),
+                          ],
                           _StatusBadge(status: request.status),
                         ],
                       ),
@@ -151,6 +162,19 @@ class IncomingRequestCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             _LearnerNoteSlot(note: request.learnerNote),
+            if (request.latestMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(
+                  '${request.latestMessage!.sender.displayName}: ${request.latestMessage!.body}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.supplierBody().copyWith(
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ),
             if (isPending) const Spacer(),
             if ((isAccepted || isCompleted) && request.pickupWindow != null)
               Padding(
@@ -166,12 +190,14 @@ class IncomingRequestCard extends StatelessWidget {
                   statusLabel: request.deliveryStatusLabel,
                 ),
               ),
-            if (isDeclined &&
-                request.declineReason != null &&
-                request.declineReason!.trim().isNotEmpty)
+            if (isDeclined)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: _DeclineFooter(reason: request.declineReason!.trim()),
+                child: _DeclineFooter(
+                  reason: request.declineReason?.trim().isNotEmpty == true
+                      ? request.declineReason!.trim()
+                      : l.noDeclineReasonProvided,
+                ),
               ),
             if (isPending) ...[
               const SizedBox(height: AppSpacing.md),
@@ -187,6 +213,7 @@ class IncomingRequestCard extends StatelessWidget {
               ),
             ],
             if (isAccepted &&
+                !request.isOverdue &&
                 request.canSupplierComplete &&
                 onMarkCompleted != null) ...[
               const SizedBox(height: AppSpacing.md),
@@ -221,6 +248,23 @@ class IncomingRequestCard extends StatelessWidget {
                           ),
                         ),
                 ),
+              ),
+            ],
+            if (isAccepted && request.isOverdue) ...[
+              const SizedBox(height: AppSpacing.md),
+              ReservationFollowUpActions(
+                isOverdue: request.isOverdue,
+                canMarkCompleted: request.canSupplierComplete,
+                canReschedule: request.canSupplierReschedule,
+                canCancel: request.canSupplierCancelOverdue,
+                canReportNoShow: request.canSupplierReportNoShow,
+                hasNoShowReport: request.noShowReport != null,
+                isBusy: isCompleting,
+                compact: compact,
+                onMarkCompleted: onMarkCompleted,
+                onReschedule: onReschedule,
+                onCancel: onCancel,
+                onReportNoShow: onReportNoShow,
               ),
             ],
           ],
@@ -626,6 +670,33 @@ class _DeclineButton extends StatelessWidget {
         size: _IncomingRequestActionButtonMetrics.iconSize,
       ),
       label: Text(context.s.decline),
+    );
+  }
+}
+
+class _FollowUpBadge extends StatelessWidget {
+  const _FollowUpBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: colors.amberAccent.withValues(alpha: 0.18),
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: colors.amberAccent.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        label,
+        style: context.supplierChip().copyWith(
+          fontSize: 10,
+          color: colors.textPrimary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }

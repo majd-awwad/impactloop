@@ -91,3 +91,50 @@ Future<SupplierIncomingRequest> completeIncomingRequest(
   ref.invalidate(pickupScheduleSummaryProvider);
   return result;
 }
+
+void _invalidateReservationFollowUp(WidgetRef ref) {
+  ref.invalidate(incomingRequestsProvider);
+  ref.invalidate(supplierNotificationsProvider);
+  ref.invalidate(supplierDashboardProvider);
+  ref.invalidate(pickupScheduleProvider);
+  ref.invalidate(pickupScheduleSummaryProvider);
+}
+
+Future<void> rescheduleIncomingRequest(
+  WidgetRef ref, {
+  required String requestId,
+  required SupplierPickupWindow pickupWindow,
+  String? messageToLearner,
+}) async {
+  await ref.read(supplierRequestsRepositoryProvider).rescheduleRequest(
+        requestId,
+        pickupWindow,
+        messageToLearner: messageToLearner,
+      );
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> cancelIncomingRequest(
+  WidgetRef ref, {
+  required String requestId,
+  String? reason,
+}) async {
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .cancelAcceptedRequest(requestId, reason: reason);
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> reportNoShowForRequest(
+  WidgetRef ref, {
+  required String requestId,
+  required String reasonCode,
+  String? note,
+}) async {
+  await ref.read(supplierRequestsRepositoryProvider).submitNoShowReport(
+        requestId,
+        reasonCode: reasonCode,
+        note: note,
+      );
+  _invalidateReservationFollowUp(ref);
+}

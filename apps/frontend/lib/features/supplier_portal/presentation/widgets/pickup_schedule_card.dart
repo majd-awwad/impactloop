@@ -4,7 +4,9 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
+import '../../data/pickup_schedule_grouping.dart';
 import '../theme/supplier_theme_extension.dart';
+import 'reservation_follow_up_actions.dart';
 import 'pickup_schedule_status_style.dart';
 
 class PickupScheduleCard extends StatelessWidget {
@@ -14,6 +16,9 @@ class PickupScheduleCard extends StatelessWidget {
     required this.groupKind,
     this.onViewDetails,
     this.onMarkCompleted,
+    this.onReschedule,
+    this.onCancel,
+    this.onReportNoShow,
     this.isCompleting = false,
   });
 
@@ -21,6 +26,9 @@ class PickupScheduleCard extends StatelessWidget {
   final PickupScheduleGroupKind groupKind;
   final VoidCallback? onViewDetails;
   final VoidCallback? onMarkCompleted;
+  final VoidCallback? onReschedule;
+  final VoidCallback? onCancel;
+  final VoidCallback? onReportNoShow;
   final bool isCompleting;
 
   @override
@@ -30,9 +38,14 @@ class PickupScheduleCard extends StatelessWidget {
     final style = PickupScheduleStatusStyle.forItem(item, groupKind);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
-    final times = _timeParts(item, l.scheduleDone);
+    final windowLabel = item.pickupWindow != null
+        ? formatPickupScheduleCardWindow(item.pickupWindow!)
+        : item.isCompleted
+        ? l.scheduleDone
+        : '—';
     final note = _displayNote(item);
     final showMarkCompleted =
+        !item.isOverdue &&
         item.status == SupplierPickupScheduleStatus.accepted &&
         item.canSupplierComplete &&
         onMarkCompleted != null;
@@ -63,28 +76,17 @@ class PickupScheduleCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
-                    width: compact ? 52 : 60,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          times.$1,
-                          style: context.supplierTitle().copyWith(
-                            fontSize: compact ? 15 : 16,
-                            fontWeight: FontWeight.w700,
-                            color: style.foreground,
-                            height: 1.1,
-                          ),
-                        ),
-                        Text(
-                          times.$2,
-                          style: context.supplierLabel().copyWith(
-                            fontSize: compact ? 13 : 14,
-                            color: colors.textMuted,
-                            height: 1.1,
-                          ),
-                        ),
-                      ],
+                    width: compact ? 92 : 108,
+                    child: Text(
+                      windowLabel,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.supplierTitle().copyWith(
+                        fontSize: compact ? 13 : 14,
+                        fontWeight: FontWeight.w700,
+                        color: style.foreground,
+                        height: 1.25,
+                      ),
                     ),
                   ),
                   Container(
@@ -114,6 +116,10 @@ class PickupScheduleCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: AppSpacing.xs),
+                            if (item.isOverdue) ...[
+                              _FollowUpBadge(label: l.overdueBadge),
+                              const SizedBox(width: AppSpacing.xs),
+                            ],
                             _StatusBadge(status: item.status, style: style),
                           ],
                         ),
@@ -138,6 +144,18 @@ class PickupScheduleCard extends StatelessWidget {
                               fontSize: 12,
                               color: colors.textPrimary.withValues(alpha: 0.78),
                               height: 1.3,
+                            ),
+                          ),
+                        ],
+                        if (item.latestMessage != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '${item.latestMessage!.sender.displayName}: ${item.latestMessage!.body}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.supplierBody().copyWith(
+                              fontSize: 12,
+                              color: colors.textSecondary,
                             ),
                           ),
                         ],
@@ -194,24 +212,26 @@ class PickupScheduleCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               _DeliveryStatusPanel(statusLabel: item.deliveryStatusLabel),
             ],
+            if (item.isOverdue) ...[
+              const SizedBox(height: AppSpacing.sm),
+              ReservationFollowUpActions(
+                isOverdue: item.isOverdue,
+                canMarkCompleted: item.canSupplierComplete,
+                canReschedule: item.canSupplierReschedule,
+                canCancel: item.canSupplierCancelOverdue,
+                canReportNoShow: item.canSupplierReportNoShow,
+                hasNoShowReport: item.noShowReport != null,
+                isBusy: isCompleting,
+                onMarkCompleted: onMarkCompleted,
+                onReschedule: onReschedule,
+                onCancel: onCancel,
+                onReportNoShow: onReportNoShow,
+              ),
+            ],
           ],
         ),
       ),
     );
-  }
-
-  (String, String) _timeParts(
-    SupplierPickupScheduleItem item,
-    String doneLabel,
-  ) {
-    final window = item.pickupWindow;
-    if (window == null) {
-      return item.isCompleted ? (doneLabel, '') : ('—', '');
-    }
-
-    final start = window.start.toLocal();
-    final end = window.end.toLocal();
-    return (_formatClock(start), _formatClock(end));
   }
 
   String? _displayNote(SupplierPickupScheduleItem item) {
@@ -224,10 +244,6 @@ class PickupScheduleCard extends StatelessWidget {
       return learnerMessage;
     }
     return null;
-  }
-
-  String _formatClock(DateTime value) {
-    return '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
   }
 }
 
@@ -268,6 +284,33 @@ class _DeliveryStatusPanel extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FollowUpBadge extends StatelessWidget {
+  const _FollowUpBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: colors.amberAccent.withValues(alpha: 0.18),
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: colors.amberAccent.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        label,
+        style: context.supplierChip().copyWith(
+          fontSize: 10,
+          color: colors.textPrimary,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

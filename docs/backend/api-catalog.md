@@ -127,11 +127,15 @@ Optional query `discoveryOnly=true` applies discovery name filtering and dedupe 
 | GET | `/api/reservations/my` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
 | POST | `/api/reservations` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
 | PATCH | `/api/reservations/:id/cancel` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
+| GET | `/api/reservations/:id/messages` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
+| POST | `/api/reservations/:id/messages` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
 | POST | `/api/reservations/:id/delivery` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` + `deliveries` |
 
-`GET /api/reservations/my` returns the authenticated learner's reservations newest first. Items include reservation status, `quantityRequested`, message, timestamps, safe material summary (including `unit` and approximate `city`/`area`), `material.deliveryAllowed`, `deliveryRequested`, supplier display name, pickup window fields, supplier note, rejection reason, and nullable `pickupLocationFull`. `pickupLocationFull` is populated only when the reservation status is `ACCEPTED` or `COMPLETED`; it is `null` for `PENDING`, `REJECTED`, `CANCELLED`, and `EXPIRED`. When present, `pickupLocationFull` includes `country`, `city`, `area`, `addressLine`, `latitude`, `longitude`, and `isApproximate` using the same decimal-to-number JSON convention as other location DTOs. Public material discovery endpoints continue to expose only approximate city/area.
+`GET /api/reservations/my` returns the authenticated learner's reservations newest first. Items include reservation status, `quantityRequested`, `fulfillmentMethod` (`PICKUP` | `DELIVERY`), learner preferred pickup/delivery window arrays (`{ start, end }` ISO datetimes), delivery address snapshot fields (`deliveryAddressText`, `safeDropoffAllowed`, `deliveryNote`), message, timestamps, safe material summary (including `unit` and approximate `city`/`area`), `material.deliveryAllowed`, legacy `deliveryRequested`, supplier display name, supplier-confirmed pickup window fields, supplier note, rejection reason, derived follow-up fields (`pickupWindowStatus`, `isOverdue`, `needsFollowUp`, `canSendMessage`, nullable `latestMessage`), and nullable `pickupLocationFull`. Overdue is derived when status is `ACCEPTED`, pickup window end is in the past, and the reservation is not completed/cancelled/declined; overdue does **not** auto-complete or release material. `pickupLocationFull` is populated only when the reservation status is `ACCEPTED` or `COMPLETED`; it is `null` for `PENDING`, `REJECTED`, `CANCELLED`, and `EXPIRED`. When present, `pickupLocationFull` includes `country`, `city`, `area`, `addressLine`, `latitude`, `longitude`, and `isApproximate` using the same decimal-to-number JSON convention as other location DTOs. Public material discovery endpoints continue to expose only approximate city/area.
 
-`POST /api/reservations` creates a partial-quantity hold for an available material. Body: `{ materialId, quantityRequested, message? }`. The transaction validates `quantityRequested` against computed `availableQuantity`, blocks a second open reservation by the same learner on the same material, creates a `PENDING` reservation, writes status history, and recomputes material status. Material stays `AVAILABLE` while stock remains reservable.
+`GET/POST /api/reservations/:id/messages` expose reservation-scoped text follow-up (max 1000 chars) for participants on `PENDING`/`ACCEPTED` reservations only; not a general messenger.
+
+`POST /api/reservations` creates a partial-quantity hold for an available material. Body requires `materialId`, `quantityRequested`, and `fulfillmentMethod` (`PICKUP` | `DELIVERY`). For `PICKUP`, include at least one `learnerPreferredPickupWindows` entry (`{ start, end }` ISO datetimes). For `DELIVERY`, include at least one `learnerPreferredDeliveryWindows` entry, `deliveryAddressText`, and `safeDropoffAllowed`; optional `deliveryNote`. Optional `message` remains supported. Validation requires window end after start and in the future. The transaction validates `quantityRequested` against computed `availableQuantity`, rejects fulfillment methods the material does not allow, blocks a second open reservation by the same learner on the same material, creates a `PENDING` reservation (no `Delivery` row yet), writes status history, and recomputes material status. Material stays `AVAILABLE` while stock remains reservable.
 
 `PATCH /api/reservations/:id/cancel` cancels a learner-owned `PENDING` reservation, sets `CANCELLED`, writes status history, and releases the held quantity. `ACCEPTED` / terminal statuses return `409 CONFLICT`.
 
@@ -202,6 +206,10 @@ Public list/detail return only `PUBLISHED` projects. Learner submit creates `PEN
 | GET | `/api/admin/audit-logs` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/reservations` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/reservations/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/no-show-reports` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| GET | `/api/admin/no-show-reports/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/no-show-reports/:id/verify` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/no-show-reports/:id/reject` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/deliveries` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/deliveries/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/learning-projects` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
@@ -368,10 +376,17 @@ Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must s
 | PATCH | `/api/supplier/reservations/:id/accept` | `supplier-reservations/supplier-reservations.routes.ts` |
 | PATCH | `/api/supplier/reservations/:id/decline` | `supplier-reservations/supplier-reservations.routes.ts` |
 | PATCH | `/api/supplier/reservations/:id/complete` | `supplier-reservations/supplier-reservations.routes.ts` |
+| PATCH | `/api/supplier/reservations/:id/reschedule` | `supplier-reservations/supplier-reservations.routes.ts` |
+| PATCH | `/api/supplier/reservations/:id/cancel` | `supplier-reservations/supplier-reservations.routes.ts` |
+| POST | `/api/supplier/reservations/:id/no-show-report` | `supplier-reservations/supplier-reservations.routes.ts` |
+| GET | `/api/supplier/reservations/:id/messages` | `supplier-reservations/supplier-reservations.routes.ts` |
+| POST | `/api/supplier/reservations/:id/messages` | `supplier-reservations/supplier-reservations.routes.ts` |
 
-`GET /api/supplier/reservations` returns supplier reservation cards by status tab. Items include material and learner summaries, `quantityRequested`, `unit`, pickup window fields, `deliveryRequested`, nullable `activeDelivery` (`id`, `status` only), and `canSupplierComplete`. `canSupplierComplete` is true only for accepted self-pickup reservations that the supplier may manually complete. Reservations with `deliveryRequested` or any `Delivery` row, including cancelled or failed delivery attempts, return false so the UI can show driver-delivery status instead of a complete button.
+`GET /api/supplier/reservations` returns supplier reservation cards by status tab. Items include material and learner summaries, `quantityRequested`, `unit`, pickup window fields, `deliveryRequested`, nullable `activeDelivery` (`id`, `status` only), derived follow-up fields (`pickupWindowStatus`, `isOverdue`, `needsFollowUp`, `canSupplierReschedule`, `canSupplierCancelOverdue`, `canSupplierReportNoShow`, `canSendMessage`, nullable `latestMessage`, nullable `noShowReport`), and `canSupplierComplete`. `canSupplierComplete` is true only for accepted self-pickup reservations that the supplier may manually complete. Reservations with `deliveryRequested` or any `Delivery` row, including cancelled or failed delivery attempts, return false so the UI can show driver-delivery status instead of a complete button.
 
 Accept keeps the held quantity and recomputes material status. Decline rejects a pending reservation and releases the hold. Complete subtracts `quantityRequested` from `material.quantity` for self-pickup; material becomes `REUSED` only when remaining quantity reaches `0`. Complete is blocked when `deliveryRequested` is true or any delivery row exists for the reservation.
+
+Overdue accepted reservations stay `ACCEPTED`; supplier may `PATCH .../reschedule` (updates pickup window, optional note/message), `PATCH .../cancel` (releases material), or `POST .../no-show-report` (admin review; one report per reservation+target; only after pickup window ends). No-show reports do not auto-suspend. Admin verify counts as a strike; at 3 verified reports the verify response includes `shouldWarnAdmin` + recommendation only.
 
 ## Endpoints documented elsewhere but **not mounted**
 

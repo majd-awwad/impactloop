@@ -9,6 +9,7 @@ import '../controllers/supplier_pickup_schedule_providers.dart';
 import '../controllers/supplier_requests_providers.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/complete_pickup_dialog.dart';
+import '../widgets/reservation_follow_up_flow.dart';
 import '../widgets/pickup_schedule_card.dart';
 import '../widgets/pickup_schedule_date_section.dart';
 import '../widgets/pickup_schedule_details_dialog.dart';
@@ -113,6 +114,41 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                                   context,
                                   item: item,
                                   groupKind: groups[i].kind,
+                                  isCompleting: completingId == item.id,
+                                  onMarkCompleted:
+                                      item.status ==
+                                              SupplierPickupScheduleStatus
+                                                  .accepted &&
+                                          item.canSupplierComplete
+                                      ? () => _handleCompletePickup(
+                                            context,
+                                            ref,
+                                            item,
+                                          )
+                                      : null,
+                                  onReschedule: item.canSupplierReschedule
+                                      ? () => handleReschedulePickup(
+                                            context,
+                                            ref,
+                                            reservationId: item.id,
+                                            materialTitle: item.materialTitle,
+                                            learnerName: item.learnerName,
+                                          )
+                                      : null,
+                                  onCancel: item.canSupplierCancelOverdue
+                                      ? () => handleCancelReservation(
+                                            context,
+                                            ref,
+                                            reservationId: item.id,
+                                          )
+                                      : null,
+                                  onReportNoShow: item.canSupplierReportNoShow
+                                      ? () => handleReportNoShow(
+                                            context,
+                                            ref,
+                                            reservationId: item.id,
+                                          )
+                                      : null,
                                 ),
                             onMarkCompleted:
                                 item.status ==
@@ -120,6 +156,29 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                                     item.canSupplierComplete
                                 ? () =>
                                       _handleCompletePickup(context, ref, item)
+                                : null,
+                            onReschedule: item.canSupplierReschedule
+                                ? () => handleReschedulePickup(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                      materialTitle: item.materialTitle,
+                                      learnerName: item.learnerName,
+                                    )
+                                : null,
+                            onCancel: item.canSupplierCancelOverdue
+                                ? () => handleCancelReservation(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                    )
+                                : null,
+                            onReportNoShow: item.canSupplierReportNoShow
+                                ? () => handleReportNoShow(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                    )
                                 : null,
                           ),
                         ),

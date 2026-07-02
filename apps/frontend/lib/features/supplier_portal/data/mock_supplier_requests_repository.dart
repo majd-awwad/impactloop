@@ -1,3 +1,4 @@
+import '../../reservations/data/models/reservation_message.dart';
 import 'models/supplier_incoming_request.dart';
 import 'supplier_requests_repository.dart';
 
@@ -75,6 +76,66 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
     );
     _requests[index] = updated;
     return updated;
+  }
+
+  @override
+  Future<SupplierIncomingRequest> rescheduleRequest(
+    String requestId,
+    SupplierPickupWindow pickupWindow, {
+    String? messageToLearner,
+  }) async {
+    final index = _requests.indexWhere((request) => request.id == requestId);
+    if (index == -1) throw StateError('Request not found');
+    final updated = _requests[index].copyWith(
+      pickupWindow: pickupWindow,
+      isOverdue: false,
+      needsFollowUp: false,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<SupplierIncomingRequest> cancelAcceptedRequest(
+    String requestId, {
+    String? reason,
+  }) async {
+    final index = _requests.indexWhere((request) => request.id == requestId);
+    if (index == -1) throw StateError('Request not found');
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.declined,
+      declineReason: reason,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<void> submitNoShowReport(
+    String requestId, {
+    required String reasonCode,
+    String? note,
+  }) async {}
+
+  @override
+  Future<List<ReservationMessage>> fetchReservationMessages(
+    String requestId,
+  ) async {
+    return const [];
+  }
+
+  @override
+  Future<ReservationMessage> sendReservationMessage(
+    String requestId,
+    String body,
+  ) async {
+    return ReservationMessage(
+      id: 'mock-message',
+      reservationId: requestId,
+      body: body,
+      createdAt: DateTime.now(),
+      sender: const ReservationMessageSender(id: 'mock', displayName: 'You'),
+    );
   }
 }
 

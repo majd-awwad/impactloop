@@ -4,6 +4,7 @@ import '../../../core/network/api_response.dart';
 import 'models/create_reservation_request.dart';
 import 'models/created_reservation.dart';
 import 'models/learner_reservation.dart';
+import 'models/reservation_message.dart';
 
 class ReservationsApi {
   const ReservationsApi(this._client);
@@ -49,6 +50,44 @@ class ReservationsApi {
         '/api/reservations/$reservationId/cancel',
       ),
       (_) {},
+    );
+  }
+
+  Future<List<ReservationMessage>> fetchReservationMessages(
+    String reservationId,
+  ) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/messages',
+      ),
+      (json) {
+        final messages = json['messages'];
+        if (messages is! List) {
+          return const <ReservationMessage>[];
+        }
+
+        return messages
+            .whereType<Map>()
+            .map(
+              (item) => ReservationMessage.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .toList(growable: false);
+      },
+    );
+  }
+
+  Future<ReservationMessage> sendReservationMessage(
+    String reservationId,
+    String body,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/messages',
+        data: {'body': body},
+      ),
+      (json) => ReservationMessage.fromJson(json),
     );
   }
 }

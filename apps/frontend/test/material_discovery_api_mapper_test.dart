@@ -32,6 +32,25 @@ void main() {
     );
   });
 
+  test('shows zero available stock when all quantity is held', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-held',
+      'title': 'Fully held stock',
+      'description': 'All pieces reserved',
+      'status': 'PENDING_RESERVATION',
+      'quantity': 10,
+      'availableQuantity': 0,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+    });
+
+    expect(material.availableQuantity, 0);
+    expect(material.quantityLabel.en, 'Available: 0 of 10 piece');
+  });
+
   test('falls back to quantity when availableQuantity is missing', () {
     final material = MaterialDiscoveryApiMapper.fromJson({
       'id': 'mat-2',

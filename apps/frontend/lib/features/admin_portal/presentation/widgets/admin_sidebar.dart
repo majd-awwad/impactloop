@@ -50,6 +50,11 @@ class AdminSidebar extends ConsumerWidget {
         '/admin/reservations',
       ),
       _NavDef(
+        'No-show reports',
+        Icons.report_outlined,
+        '/admin/no-show-reports',
+      ),
+      _NavDef(
         l.navDeliveries,
         Icons.local_shipping_outlined,
         '/admin/deliveries',

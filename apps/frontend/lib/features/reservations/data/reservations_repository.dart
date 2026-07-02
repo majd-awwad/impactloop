@@ -4,6 +4,7 @@ import '../../../core/network/api_client.dart';
 import 'models/create_reservation_request.dart';
 import 'models/created_reservation.dart';
 import 'models/learner_reservation.dart';
+import 'models/reservation_message.dart';
 import 'reservations_api.dart';
 
 final reservationsApiProvider = Provider<ReservationsApi>((ref) {
@@ -31,5 +32,18 @@ class ReservationsRepository {
 
   Future<void> cancelReservation(String reservationId) {
     return _api.cancelReservation(reservationId);
+  }
+
+  Future<List<ReservationMessage>> fetchReservationMessages(
+    String reservationId,
+  ) {
+    return _api.fetchReservationMessages(reservationId);
+  }
+
+  Future<ReservationMessage> sendReservationMessage(
+    String reservationId,
+    String body,
+  ) {
+    return _api.sendReservationMessage(reservationId, body);
   }
 }

@@ -1,3 +1,5 @@
+import '../../../reservations/data/models/reservation_message.dart';
+
 enum SupplierIncomingRequestTab { pending, accepted, declined, completed }
 
 enum SupplierIncomingRequestStatus { pending, accepted, declined, completed }
@@ -189,6 +191,15 @@ class SupplierIncomingRequest {
     this.pickupPreference,
     this.pickupWindow,
     this.declineReason,
+    this.isOverdue = false,
+    this.needsFollowUp = false,
+    this.pickupWindowStatus,
+    this.canSupplierCancelOverdue = false,
+    this.canSupplierReportNoShow = false,
+    this.canSupplierReschedule = false,
+    this.canSendMessage = false,
+    this.noShowReport,
+    this.latestMessage,
   });
 
   final String id;
@@ -206,6 +217,15 @@ class SupplierIncomingRequest {
   final String? pickupPreference;
   final SupplierPickupWindow? pickupWindow;
   final String? declineReason;
+  final bool isOverdue;
+  final bool needsFollowUp;
+  final String? pickupWindowStatus;
+  final bool canSupplierCancelOverdue;
+  final bool canSupplierReportNoShow;
+  final bool canSupplierReschedule;
+  final bool canSendMessage;
+  final Map<String, dynamic>? noShowReport;
+  final ReservationMessage? latestMessage;
 
   bool get hasDelivery => deliveryRequested || activeDelivery != null;
 
@@ -217,6 +237,15 @@ class SupplierIncomingRequest {
     SupplierPickupWindow? pickupWindow,
     bool? canSupplierComplete,
     String? declineReason,
+    bool? isOverdue,
+    bool? needsFollowUp,
+    String? pickupWindowStatus,
+    bool? canSupplierCancelOverdue,
+    bool? canSupplierReportNoShow,
+    bool? canSupplierReschedule,
+    bool? canSendMessage,
+    Map<String, dynamic>? noShowReport,
+    ReservationMessage? latestMessage,
   }) {
     return SupplierIncomingRequest(
       id: id,
@@ -234,6 +263,18 @@ class SupplierIncomingRequest {
       pickupPreference: pickupPreference,
       pickupWindow: pickupWindow ?? this.pickupWindow,
       declineReason: declineReason ?? this.declineReason,
+      isOverdue: isOverdue ?? this.isOverdue,
+      needsFollowUp: needsFollowUp ?? this.needsFollowUp,
+      pickupWindowStatus: pickupWindowStatus ?? this.pickupWindowStatus,
+      canSupplierCancelOverdue:
+          canSupplierCancelOverdue ?? this.canSupplierCancelOverdue,
+      canSupplierReportNoShow:
+          canSupplierReportNoShow ?? this.canSupplierReportNoShow,
+      canSupplierReschedule:
+          canSupplierReschedule ?? this.canSupplierReschedule,
+      canSendMessage: canSendMessage ?? this.canSendMessage,
+      noShowReport: noShowReport ?? this.noShowReport,
+      latestMessage: latestMessage ?? this.latestMessage,
     );
   }
 
@@ -316,6 +357,21 @@ class SupplierIncomingRequest {
       declineReason:
           json['rejectionReason'] as String? ??
           json['declineReason'] as String?,
+      isOverdue: json['isOverdue'] == true,
+      needsFollowUp: json['needsFollowUp'] == true,
+      pickupWindowStatus: json['pickupWindowStatus'] as String?,
+      canSupplierCancelOverdue: json['canSupplierCancelOverdue'] == true,
+      canSupplierReportNoShow: json['canSupplierReportNoShow'] == true,
+      canSupplierReschedule: json['canSupplierReschedule'] == true,
+      canSendMessage: json['canSendMessage'] == true,
+      noShowReport: json['noShowReport'] is Map
+          ? Map<String, dynamic>.from(json['noShowReport'] as Map)
+          : null,
+      latestMessage: json['latestMessage'] is Map
+          ? ReservationMessage.fromJson(
+              Map<String, dynamic>.from(json['latestMessage'] as Map),
+            )
+          : null,
     );
   }
 }

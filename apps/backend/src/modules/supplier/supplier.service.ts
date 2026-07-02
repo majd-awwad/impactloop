@@ -45,6 +45,7 @@ import {
 } from "./supplier-material-scope.js";
 import { assertSupplierCanPublishMaterials } from "../supplier-verification/supplier-verification.service.js";
 import {
+  computeAvailableQuantity,
   getHeldQuantitiesByMaterialIds,
   toDecimal,
 } from "../reservations/reservations.quantity.js";
@@ -1305,7 +1306,19 @@ const mapSupplierOwnedMaterial = (
   blockingReservationCount = 0,
   likesCount = 0,
   extras: SupplierMaterialEngagementExtras = {},
-) => ({
+  heldQuantityInput = toDecimal(0),
+) => {
+  const materialQuantity =
+    typeof material.quantity === "number"
+      ? toDecimal(material.quantity)
+      : material.quantity;
+  const heldQuantity = heldQuantityInput;
+  const availableQuantity = computeAvailableQuantity(
+    materialQuantity,
+    heldQuantity,
+  );
+
+  return {
   id: material.id,
   title: material.title,
   description: material.description,
@@ -1319,10 +1332,9 @@ const mapSupplierOwnedMaterial = (
   materialType: material.materialType,
   status: material.status,
   condition: material.condition,
-  quantity:
-    typeof material.quantity === "number"
-      ? material.quantity
-      : material.quantity.toNumber(),
+  quantity: decimalToNumber(materialQuantity),
+  heldQuantity: decimalToNumber(heldQuantity),
+  availableQuantity: decimalToNumber(availableQuantity),
   unit: material.unit,
   isFree: material.isFree,
   price: decimalToNumber(material.price),
@@ -1357,7 +1369,8 @@ const mapSupplierOwnedMaterial = (
     blockingReservationCount,
   ),
   ...resolveSupplierMaterialEditEligibility(material.status),
-});
+  };
+};
 
 const resolveSupplierMaterialStatusActions = (
   status: string,
@@ -1433,12 +1446,13 @@ export const getSupplierMaterials = async (
 
   const materialIds = result.items.map((item) => item.id);
 
-  const [blockingReservationCounts, likesByMaterial, viewsByMaterial, demandByMaterial] =
+  const [blockingReservationCounts, likesByMaterial, viewsByMaterial, demandByMaterial, heldByMaterialId] =
     await Promise.all([
       supplierRepository.countBlockingReservationsByMaterialIds(materialIds),
       supplierRepository.countLikesByMaterialIds(materialIds),
       supplierRepository.countViewsByMaterialIds(materialIds),
       supplierRepository.findReservationDemandByMaterialIds(materialIds),
+      getHeldQuantitiesByMaterialIds(materialIds),
     ]);
 
   const totalPages =
@@ -1469,6 +1483,7 @@ export const getSupplierMaterials = async (
           ...demand,
           ...statusActions,
         },
+        heldByMaterialId.get(item.id) ?? toDecimal(0),
       );
     }),
     pagination: {
@@ -1501,7 +1516,7 @@ export const getSupplierMaterial = async (
     await supplierRepository.countBlockingReservationsForMaterial(materialId);
 
   const materialIds = [materialId];
-  const [likesCount, viewsCount, demandByMaterial, activeReservationCount, reservations] =
+  const [likesCount, viewsCount, demandByMaterial, activeReservationCount, reservations, heldByMaterialId] =
     await Promise.all([
       supplierRepository
         .countLikesByMaterialIds(materialIds)
@@ -1512,6 +1527,7 @@ export const getSupplierMaterial = async (
       supplierRepository.findReservationDemandByMaterialIds(materialIds),
       supplierRepository.countActiveReservationsForMaterial(materialId),
       supplierRepository.findReservationsForSupplierMaterial(scope, materialId),
+      getHeldQuantitiesByMaterialIds(materialIds),
     ]);
 
   const demand = demandByMaterial.get(materialId) ?? {
@@ -1526,12 +1542,18 @@ export const getSupplierMaterial = async (
   );
 
   return {
-    ...mapSupplierOwnedMaterial(material, blockingReservationCount, likesCount, {
-      viewsCount,
+    ...mapSupplierOwnedMaterial(
+      material,
+      blockingReservationCount,
       likesCount,
-      ...demand,
-      ...statusActions,
-    }),
+      {
+        viewsCount,
+        likesCount,
+        ...demand,
+        ...statusActions,
+      },
+      heldByMaterialId.get(materialId) ?? toDecimal(0),
+    ),
     reservations: reservations.map((reservation) =>
       mapMaterialReservationSummary(reservation, material.unit),
     ),
@@ -1593,7 +1615,13 @@ export const updateSupplierMaterial = async (
     throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
-  return mapSupplierOwnedMaterial(updated, blockingReservationCount);
+  return mapSupplierOwnedMaterial(
+    updated,
+    blockingReservationCount,
+    0,
+    {},
+    heldQuantity,
+  );
 };
 
 export const deleteSupplierMaterial = async (

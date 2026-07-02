@@ -6,7 +6,8 @@ Current MVP status for material reservations.
 
 ## Intended Purpose
 
-- Learner creates reservation → `PENDING` with `quantityRequested`.
+- Learner creates reservation → `PENDING` with `quantityRequested` and reserve-time `fulfillmentMethod` (`PICKUP` or `DELIVERY`).
+- Pickup reservations store learner preferred pickup windows; delivery reservations store preferred delivery windows, delivery address text, safe drop-off preference, and optional delivery note. No `Delivery` row is created at reservation time.
 - Supplier accepts or rejects; on accept sets pickup window.
 - Multiple learners may hold different quantities from the same listing while stock remains.
 - Same learner may hold only one open (`PENDING` or `ACCEPTED`) reservation per material.
@@ -23,11 +24,11 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 | Layer | Status | Evidence |
 |-------|--------|----------|
 | Database `reservations` + `reservation_status_history` | **Implemented** | Existing schema; `quantityRequested` already present |
-| Learner `POST /api/reservations` | **Implemented** | Partial-quantity holds + per-learner open-reservation guard |
+| Learner `POST /api/reservations` | **Implemented** | Partial-quantity holds, fulfillment choice, preferred windows, per-learner open-reservation guard |
 | Learner `PATCH /api/reservations/:id/cancel` | **Implemented** | PENDING-only cancel releases hold |
 | Learner `GET /api/reservations/my` | **Implemented** | Includes `quantityRequested`, `material.unit`, approximate `material.city`/`area`, and `pickupLocationFull` after accept/complete |
 | Material discovery/detail `availableQuantity` | **Implemented** | Public browse/detail DTO field |
-| Learner reserve UI | **Implemented** | Material detail quantity dialog |
+| Learner reserve UI | **Implemented** | Material detail quantity + pickup/delivery fulfillment dialog |
 | Learner “My Reservations” UI | **Partial** | Quantity + PENDING cancel + self-pickup pickup address after accept/complete; no detail page |
 | Supplier list/accept/decline/complete | **Partial** | Partial-quantity completion subtracts stock; delivery complete guarded |
 | Delivery learner UI | **Partial** | Request/status/tracking summary exists |

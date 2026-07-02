@@ -10,6 +10,8 @@ export const ACTIVE_HOLD_STATUSES = [
   'ACCEPTED',
 ] as const satisfies readonly ReservationStatus[];
 
+/** Reservation statuses that reduce public availableQuantity. COMPLETED consumes stock instead. */
+
 const isPrismaCode = (error: unknown, code: string) =>
   typeof error === 'object' &&
   error !== null &&

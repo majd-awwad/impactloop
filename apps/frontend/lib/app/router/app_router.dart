@@ -51,6 +51,7 @@ import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart
 import '../../features/admin_portal/presentation/pages/admin_audit_logs_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_deliveries_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_learning_projects_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_no_show_reports_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_reservations_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_impact_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_materials_page.dart';
@@ -647,6 +648,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/reservations',
             builder: (context, state) => const AdminReservationsPage(),
+          ),
+          GoRoute(
+            path: '/admin/no-show-reports',
+            builder: (context, state) => const AdminNoShowReportsPage(),
           ),
           GoRoute(
             path: '/admin/deliveries',

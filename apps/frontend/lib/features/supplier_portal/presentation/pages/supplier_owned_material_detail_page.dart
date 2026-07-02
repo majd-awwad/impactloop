@@ -241,9 +241,11 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
         const SizedBox(height: AppSpacing.lg),
         _InfoRow(
           label: SupplierMaterialLabelHelper.resolveText(
-            SupplierMaterialLabelHelper.quantityLabel(
-              material.quantity,
-              material.unit,
+            SupplierMaterialLabelHelper.stockLabel(
+              quantity: material.quantity,
+              availableQuantity:
+                  material.availableQuantity ?? material.quantity,
+              unit: material.unit,
             ),
             isArabic,
           ),

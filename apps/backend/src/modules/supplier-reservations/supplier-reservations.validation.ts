@@ -8,7 +8,7 @@ export type ListSupplierReservationsQuery = z.infer<
   typeof listSupplierReservationsQuerySchema
 >;
 
-export const acceptSupplierReservationSchema = z
+const pickupWindowSchema = z
   .object({
     pickupWindowStart: z.iso.datetime(),
     pickupWindowEnd: z.iso.datetime(),
@@ -36,8 +36,46 @@ export const acceptSupplierReservationSchema = z
     }
   });
 
+export const acceptSupplierReservationSchema = pickupWindowSchema;
+
 export type AcceptSupplierReservationInput = z.infer<
   typeof acceptSupplierReservationSchema
+>;
+
+export const rescheduleSupplierReservationSchema = pickupWindowSchema.extend({
+  messageToLearner: z.string().trim().max(1000).optional(),
+});
+
+export type RescheduleSupplierReservationInput = z.infer<
+  typeof rescheduleSupplierReservationSchema
+>;
+
+export const cancelSupplierReservationSchema = z.object({
+  reason: z.string().trim().max(1000).optional(),
+});
+
+export type CancelSupplierReservationInput = z.infer<
+  typeof cancelSupplierReservationSchema
+>;
+
+export const submitNoShowReportSchema = z.object({
+  reasonCode: z.enum([
+    'LEARNER_DID_NOT_ARRIVE',
+    'DRIVER_DID_NOT_ARRIVE',
+    'NO_RESPONSE_AFTER_PICKUP_WINDOW',
+    'OTHER',
+  ]),
+  note: z.string().trim().max(1000).optional(),
+});
+
+export type SubmitNoShowReportInput = z.infer<typeof submitNoShowReportSchema>;
+
+export const createReservationMessageSchema = z.object({
+  body: z.string().trim().min(1).max(1000),
+});
+
+export type CreateReservationMessageInput = z.infer<
+  typeof createReservationMessageSchema
 >;
 
 export const declineSupplierReservationSchema = z.object({

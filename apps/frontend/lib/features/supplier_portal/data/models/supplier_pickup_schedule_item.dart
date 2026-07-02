@@ -1,4 +1,5 @@
 import 'supplier_incoming_request.dart';
+import '../../../reservations/data/models/reservation_message.dart';
 
 enum SupplierPickupScheduleFilter { today, upcoming, completed, all }
 
@@ -68,6 +69,15 @@ class SupplierPickupScheduleItem {
     this.deliveryRequested = false,
     this.activeDelivery,
     this.canSupplierComplete = false,
+    this.isOverdue = false,
+    this.needsFollowUp = false,
+    this.pickupWindowStatus,
+    this.canSupplierCancelOverdue = false,
+    this.canSupplierReportNoShow = false,
+    this.canSupplierReschedule = false,
+    this.canSendMessage = false,
+    this.noShowReport,
+    this.latestMessage,
     this.materialImageUrl,
     this.pickupWindow,
     this.supplierNote,
@@ -86,6 +96,15 @@ class SupplierPickupScheduleItem {
   final bool deliveryRequested;
   final SupplierReservationDeliverySummary? activeDelivery;
   final bool canSupplierComplete;
+  final bool isOverdue;
+  final bool needsFollowUp;
+  final String? pickupWindowStatus;
+  final bool canSupplierCancelOverdue;
+  final bool canSupplierReportNoShow;
+  final bool canSupplierReschedule;
+  final bool canSendMessage;
+  final Map<String, dynamic>? noShowReport;
+  final ReservationMessage? latestMessage;
   final SupplierPickupWindow? pickupWindow;
   final String? supplierNote;
   final String? learnerMessage;
@@ -155,6 +174,7 @@ class SupplierPickupScheduleItem {
       pickupWindow = SupplierPickupWindow(
         start: DateTime.parse(start),
         end: DateTime.parse(end),
+        note: json['supplierNote'] as String?,
       );
     }
 
@@ -192,6 +212,21 @@ class SupplierPickupScheduleItem {
       deliveryRequested: deliveryRequested,
       activeDelivery: activeDelivery,
       canSupplierComplete: canSupplierComplete,
+      isOverdue: json['isOverdue'] == true,
+      needsFollowUp: json['needsFollowUp'] == true,
+      pickupWindowStatus: json['pickupWindowStatus'] as String?,
+      canSupplierCancelOverdue: json['canSupplierCancelOverdue'] == true,
+      canSupplierReportNoShow: json['canSupplierReportNoShow'] == true,
+      canSupplierReschedule: json['canSupplierReschedule'] == true,
+      canSendMessage: json['canSendMessage'] == true,
+      noShowReport: json['noShowReport'] is Map
+          ? Map<String, dynamic>.from(json['noShowReport'] as Map)
+          : null,
+      latestMessage: json['latestMessage'] is Map
+          ? ReservationMessage.fromJson(
+              Map<String, dynamic>.from(json['latestMessage'] as Map),
+            )
+          : null,
       pickupWindow: pickupWindow,
       supplierNote: json['supplierNote'] as String?,
       learnerMessage: json['message'] as String?,

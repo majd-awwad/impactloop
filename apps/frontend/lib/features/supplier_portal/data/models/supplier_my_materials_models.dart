@@ -162,6 +162,8 @@ class SupplierMyMaterial {
     required this.status,
     required this.condition,
     required this.quantity,
+    this.heldQuantity,
+    this.availableQuantity,
     required this.unit,
     required this.isFree,
     this.price,
@@ -198,6 +200,8 @@ class SupplierMyMaterial {
   final String status;
   final String condition;
   final double quantity;
+  final double? heldQuantity;
+  final double? availableQuantity;
   final String unit;
   final bool isFree;
   final double? price;
@@ -249,6 +253,8 @@ class SupplierMyMaterial {
       status: json['status'] as String? ?? 'AVAILABLE',
       condition: json['condition'] as String? ?? 'GOOD',
       quantity: (json['quantity'] as num?)?.toDouble() ?? 0,
+      heldQuantity: (json['heldQuantity'] as num?)?.toDouble(),
+      availableQuantity: (json['availableQuantity'] as num?)?.toDouble(),
       unit: json['unit'] as String? ?? '',
       isFree: json['isFree'] == true,
       price: (json['price'] as num?)?.toDouble(),

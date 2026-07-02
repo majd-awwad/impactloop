@@ -8,10 +8,13 @@ import { asyncHandler } from '../../utils/async-handler.js';
 import {
   cancelReservationHandler,
   createReservationHandler,
+  createLearnerReservationMessageHandler,
+  listLearnerReservationMessagesHandler,
   listMyReservationsHandler,
 } from './reservations.controller.js';
 import {
   createReservationSchema,
+  createReservationMessageSchema,
   reservationIdParamsSchema,
 } from './reservations.validation.js';
 import { requestDeliveryForReservationHandler } from '../deliveries/deliveries.controller.js';
@@ -42,6 +45,23 @@ reservationsRouter.patch(
   requireRoles('LEARNER'),
   validate(reservationIdParamsSchema, 'params'),
   asyncHandler(cancelReservationHandler),
+);
+
+reservationsRouter.get(
+  '/:id/messages',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(listLearnerReservationMessagesHandler),
+);
+
+reservationsRouter.post(
+  '/:id/messages',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(createReservationMessageSchema),
+  asyncHandler(createLearnerReservationMessageHandler),
 );
 
 reservationsRouter.post(

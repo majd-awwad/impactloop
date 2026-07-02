@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../reservations/data/models/reservation_message.dart';
 import 'models/supplier_incoming_request.dart';
 import 'supplier_requests_api.dart';
 import 'supplier_requests_repository.dart';
@@ -48,5 +49,58 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
   @override
   Future<SupplierIncomingRequest> completeRequest(String requestId) {
     return _api.completeRequest(requestId);
+  }
+
+  @override
+  Future<SupplierIncomingRequest> rescheduleRequest(
+    String requestId,
+    SupplierPickupWindow pickupWindow, {
+    String? messageToLearner,
+  }) {
+    return _api.rescheduleRequest(
+      requestId,
+      pickupWindow,
+      messageToLearner: messageToLearner,
+    );
+  }
+
+  @override
+  Future<SupplierIncomingRequest> cancelAcceptedRequest(
+    String requestId, {
+    String? reason,
+  }) {
+    return _api.cancelAcceptedRequest(requestId, reason: reason);
+  }
+
+  @override
+  Future<void> submitNoShowReport(
+    String requestId, {
+    required String reasonCode,
+    String? note,
+  }) {
+    return _api.submitNoShowReport(
+      requestId,
+      reasonCode: reasonCode,
+      note: note,
+    );
+  }
+
+  @override
+  Future<List<ReservationMessage>> fetchReservationMessages(
+    String requestId,
+  ) async {
+    final messages = await _api.fetchReservationMessages(requestId);
+    return messages
+        .map((item) => ReservationMessage.fromJson(item))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<ReservationMessage> sendReservationMessage(
+    String requestId,
+    String body,
+  ) async {
+    final message = await _api.sendReservationMessage(requestId, body);
+    return ReservationMessage.fromJson(message);
   }
 }

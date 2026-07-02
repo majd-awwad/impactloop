@@ -1397,6 +1397,53 @@ class SupplierL10n {
   String photosCount(int count, int max) =>
       t('$count/$max photos', '$count/$max صور');
   String get pickupDetails => t('Pickup details', 'تفاصيل الاستلام');
+  String get sendMessageAction => t('Send message', 'إرسال رسالة');
+  String get pickupWindowPassedWarning => t(
+        'Pickup window passed. Choose a follow-up action.',
+        'انتهت نافذة الاستلام. اختر إجراء متابعة.',
+      );
+  String get reschedulePickupAction =>
+      t('Reschedule pickup', 'إعادة جدولة الاستلام');
+  String get cancelReservationAction =>
+      t('Cancel reservation', 'إلغاء الحجز');
+  String get reportNoShowAction => t('Report no-show', 'الإبلاغ عن عدم حضور');
+  String get noShowReportSubmitted => t(
+        'No-show report already submitted for this reservation.',
+        'تم إرسال بلاغ عدم الحضور لهذا الحجز بالفعل.',
+      );
+  String get followUpMessagesTitle =>
+      t('Follow-up messages', 'رسائل المتابعة');
+  String get noFollowUpMessagesYet => t(
+        'No follow-up messages yet.',
+        'لا توجد رسائل متابعة بعد.',
+      );
+  String get followUpMessageHint => t(
+        'Write a short follow-up message…',
+        'اكتب رسالة متابعة قصيرة…',
+      );
+  String get messagesLoadFailed => t(
+        'Could not load messages.',
+        'تعذر تحميل الرسائل.',
+      );
+  String get messageSendFailed =>
+      t('Could not send message.', 'تعذر إرسال الرسالة.');
+  String get needsFollowUpBadge =>
+      t('Needs follow-up', 'يحتاج متابعة');
+  String get overdueBadge => t('Overdue', 'متأخر');
+  String get reschedulePickupTitle =>
+      t('Reschedule pickup', 'إعادة جدولة الاستلام');
+  String get cancelReservationTitle =>
+      t('Cancel reservation', 'إلغاء الحجز');
+  String get cancelReservationMessage => t(
+        'This will cancel the reservation and release the material.',
+        'سيؤدي هذا إلى إلغاء الحجز وإتاحة المادة.',
+      );
+  String get reportNoShowTitle =>
+      t('Report no-show', 'الإبلاغ عن عدم حضور');
+  String get reportNoShowMessage => t(
+        'Submit a no-show report for admin review. This does not suspend the learner automatically.',
+        'أرسل بلاغ عدم حضور لمراجعة المسؤول. هذا لا يؤدي إلى تعليق حساب المتعلم تلقائياً.',
+      );
   String get completePickupTitle =>
       t('Mark pickup as completed?', 'تحديد الاستلام كمكتمل؟');
   String get completePickupMessage => t(
@@ -1539,6 +1586,22 @@ class SupplierL10n {
   String get statusLabel => t('Status', 'الحالة');
   String get dateLabel => t('Date', 'التاريخ');
   String get timeLabel => t('Time', 'الوقت');
+  String get pickupWindowSectionTitle =>
+      t('Pickup window', 'نافذة الاستلام');
+  String get materialRequestSectionTitle =>
+      t('Material & request', 'المادة والطلب');
+  String pickupWindowRangeLabel(String range) =>
+      t('Pickup window: $range', 'نافذة الاستلام: $range');
+  String get pickupInstructionsLabel =>
+      t('Instructions', 'التعليمات');
+  String get noPickupInstructions => t(
+        'No pickup instructions.',
+        'لا توجد تعليمات استلام.',
+      );
+  String get noDeclineReasonProvided => t(
+        'No decline reason provided.',
+        'لم يُقدَّم سبب للرفض.',
+      );
   String get completedLabel => t('Completed', 'مكتمل');
   String get supplierNoteLabel => t('Supplier note', 'ملاحظة المورد');
   String get learnerMessageLabel => t('Learner message', 'رسالة المتعلم');

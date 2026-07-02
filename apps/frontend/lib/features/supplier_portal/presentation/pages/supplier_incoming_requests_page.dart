@@ -10,6 +10,7 @@ import '../theme/supplier_theme_extension.dart';
 import '../widgets/accept_incoming_request_dialog.dart';
 import '../widgets/complete_pickup_dialog.dart';
 import '../widgets/decline_incoming_request_dialog.dart';
+import '../widgets/reservation_follow_up_flow.dart';
 import '../widgets/incoming_request_card.dart';
 import '../widgets/incoming_request_filter_chips.dart';
 import '../widgets/supplier_feedback.dart';
@@ -154,6 +155,29 @@ class _SupplierIncomingRequestsPageState
                   request.status == SupplierIncomingRequestStatus.accepted &&
                       request.canSupplierComplete
                   ? () => _handleComplete(context, ref, request)
+                  : null,
+              onReschedule: request.canSupplierReschedule
+                  ? () => handleReschedulePickup(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                        materialTitle: request.materialTitle,
+                        learnerName: request.learnerName,
+                      )
+                  : null,
+              onCancel: request.canSupplierCancelOverdue
+                  ? () => handleCancelReservation(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
+              onReportNoShow: request.canSupplierReportNoShow
+                  ? () => handleReportNoShow(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
                   : null,
             ),
           ),

@@ -117,11 +117,30 @@ export const findLearnerReservations = async (requesterId: string) => {
   });
 };
 
+export const findLearnerReservationById = async (
+  requesterId: string,
+  reservationId: string,
+) => {
+  return prisma.reservation.findFirst({
+    where: {
+      id: reservationId,
+      requesterId,
+    },
+    include: learnerReservationListInclude,
+  });
+};
+
 export const createLearnerReservation = async (input: {
   requesterId: string;
   materialId: string;
   quantityRequested: number;
   message?: string;
+  fulfillmentMethod: 'PICKUP' | 'DELIVERY';
+  learnerPreferredPickupWindows?: { start: string; end: string }[];
+  learnerPreferredDeliveryWindows?: { start: string; end: string }[];
+  deliveryAddressText?: string;
+  safeDropoffAllowed?: boolean;
+  deliveryNote?: string;
 }) => {
   return runSerializableTransaction(async (tx) => {
     const material = await tx.material.findUnique({
@@ -130,6 +149,8 @@ export const createLearnerReservation = async (input: {
         id: true,
         ownerId: true,
         status: true,
+        pickupAllowed: true,
+        deliveryAllowed: true,
       },
     });
 
@@ -143,6 +164,14 @@ export const createLearnerReservation = async (input: {
 
     if (material.status === 'UNAVAILABLE' || material.status === 'REUSED') {
       return { outcome: 'UNAVAILABLE' as const };
+    }
+
+    if (input.fulfillmentMethod === 'PICKUP' && !material.pickupAllowed) {
+      return { outcome: 'PICKUP_NOT_ALLOWED' as const };
+    }
+
+    if (input.fulfillmentMethod === 'DELIVERY' && !material.deliveryAllowed) {
+      return { outcome: 'DELIVERY_NOT_ALLOWED' as const };
     }
 
     const quantityState = await getMaterialQuantityState(tx, material.id);
@@ -180,6 +209,7 @@ export const createLearnerReservation = async (input: {
     }
 
     const message = input.message?.trim() || null;
+    const deliveryNote = input.deliveryNote?.trim() || null;
 
     const reservation = await tx.reservation.create({
       data: {
@@ -188,6 +218,25 @@ export const createLearnerReservation = async (input: {
         ownerId: material.ownerId,
         quantityRequested: requestedQuantity,
         message,
+        fulfillmentMethod: input.fulfillmentMethod,
+        learnerPreferredPickupWindows:
+          input.fulfillmentMethod === 'PICKUP'
+            ? input.learnerPreferredPickupWindows
+            : null,
+        learnerPreferredDeliveryWindows:
+          input.fulfillmentMethod === 'DELIVERY'
+            ? input.learnerPreferredDeliveryWindows
+            : null,
+        deliveryAddressText:
+          input.fulfillmentMethod === 'DELIVERY'
+            ? input.deliveryAddressText?.trim() ?? null
+            : null,
+        safeDropoffAllowed:
+          input.fulfillmentMethod === 'DELIVERY'
+            ? input.safeDropoffAllowed ?? null
+            : null,
+        deliveryNote:
+          input.fulfillmentMethod === 'DELIVERY' ? deliveryNote : null,
         status: 'PENDING',
       },
       include: reservationInclude,
