@@ -307,8 +307,8 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
                       ar: 'إضافة مسودة مشروع',
                     ),
                     subtitle: const LocalizedText(
-                      en: 'Build a polished draft for review. This mock form is editable and interactive, but it does not submit data yet.',
-                      ar: 'أنشئ مسودة مشروع جاهزة للمراجعة. هذا النموذج التجريبي قابل للتحرير والتفاعل لكنه لا يرسل أي بيانات بعد.',
+                      en: 'Build a polished draft and submit it for admin review.',
+                      ar: 'أنشئ مسودة مشروع مكتملة وأرسلها لمراجعة الإدارة.',
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),

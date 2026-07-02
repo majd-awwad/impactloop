@@ -134,7 +134,8 @@ _RouteAccessLevel _routeAccessForPath(String path) {
     return _RouteAccessLevel.admin;
   }
 
-  if (path == '/learner/reservations' ||
+  if (path == '/learning/add-draft' ||
+      path == '/learner/reservations' ||
       path.startsWith('/learner/deliveries/')) {
     return _RouteAccessLevel.learner;
   }
@@ -286,6 +287,7 @@ String? _resolveSupplierVerificationRedirect(
 
 bool _isLearnerPortalHomePath(String path) {
   return path == '/home' ||
+      path == '/learning/add-draft' ||
       path == '/learner/reservations' ||
       path.startsWith('/learner/deliveries/');
 }

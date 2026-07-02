@@ -38,7 +38,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 |-------|-------|----------------|
 | **public** | Most routes (landing, materials, learning, auth pages, register deprecated fallbacks) | No login required |
 | **authenticated** | `/home`, `/profile`, `/profile/*`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
-| **learner** | `/learner/reservations`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
+| **learner** | `/learning/add-draft`, `/learner/reservations`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
 | **driver** | `/driver`, `/driver/*` | Requires login + `DRIVER` role; non-drivers redirect to `/home` |
 | **admin** | `/admin`, `/admin/*` (except access-denied) | Requires login + `ADMIN` role |
@@ -50,7 +50,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 1. **Auth unknown** → redirect to `/auth/checking?from=<destination>`
 2. **Protected route + unauthenticated** → `/login?from=<destination>`
 3. **Supplier route without SUPPLIER role** → `/supplier/access-denied` (except `/supplier/onboarding`, which is authenticated-only)
-4. **Active portal mismatch** — authenticated users with `activeRole=SUPPLIER` are redirected from learner home/reservations to `/supplier`; users with `activeRole=LEARNER` are redirected from supplier portal routes to `/home` (except onboarding/verification routes)
+4. **Active portal mismatch** — authenticated users with `activeRole=SUPPLIER` are redirected from learner home/reservations/add-draft to `/supplier`; users with `activeRole=LEARNER` are redirected from supplier portal routes to `/home` (except onboarding/verification routes)
 5. **Post-auth landing** uses `activeRole` from `/api/auth/me` (not role priority alone)
 6. **Driver route without DRIVER role** → `/home`
 7. **Admin route without ADMIN role** → `/admin/access-denied`
@@ -76,7 +76,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline, latest driver ping summary, and page-scoped polling map marker when tracking coordinates are allowed |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
 | `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, and category filters; add-draft submits for review; AI remains disabled |
-| `/learning/add-draft` | `LearningAddDraftPage` | public | Learner project submission form; posts to `/api/learning-projects/submit` |
+| `/learning/add-draft` | `LearningAddDraftPage` | learner | Learner project submission form; posts to `/api/learning-projects/submit` |
 | `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail |
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default |
 | `/materials/:id` | `MaterialDetailsPage` | public | API-backed default |
