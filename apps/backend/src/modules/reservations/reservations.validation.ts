@@ -100,3 +100,27 @@ export const createReservationMessageSchema = z.object({
 export type CreateReservationMessageInput = z.infer<
   typeof createReservationMessageSchema
 >;
+
+export const learnerConfirmationSchema = z
+  .object({
+    action: z.enum([
+      'ACCEPT_PROPOSED_PICKUP',
+      'SUBMIT_DELIVERY_WINDOW',
+      'CANCEL',
+    ]),
+    deliveryWindow: preferredWindowSchema.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.action === 'SUBMIT_DELIVERY_WINDOW' &&
+      !value.deliveryWindow
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Delivery window is required for this action.',
+        path: ['deliveryWindow'],
+      });
+    }
+  });
+
+export type LearnerConfirmationInput = z.infer<typeof learnerConfirmationSchema>;

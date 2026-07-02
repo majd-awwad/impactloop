@@ -53,6 +53,30 @@ class ReservationsApi {
     );
   }
 
+  Future<LearnerReservation> resolveLearnerConfirmation({
+    required String reservationId,
+    required String action,
+    DateTime? deliveryWindowStart,
+    DateTime? deliveryWindowEnd,
+  }) {
+    final payload = <String, dynamic>{'action': action};
+
+    if (deliveryWindowStart != null && deliveryWindowEnd != null) {
+      payload['deliveryWindow'] = {
+        'start': deliveryWindowStart.toUtc().toIso8601String(),
+        'end': deliveryWindowEnd.toUtc().toIso8601String(),
+      };
+    }
+
+    return unwrapApiResponse(
+      _client.patch<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/learner-confirmation',
+        data: payload,
+      ),
+      LearnerReservation.fromJson,
+    );
+  }
+
   Future<List<ReservationMessage>> fetchReservationMessages(
     String reservationId,
   ) {

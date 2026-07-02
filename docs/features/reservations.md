@@ -17,7 +17,8 @@ Current MVP status for material reservations.
 - `availableQuantity = material.quantity - sum(quantityRequested for PENDING/AWAITING_LEARNER_CONFIRMATION/ACCEPTED)`.
 - Material stays publicly `AVAILABLE` while `availableQuantity > 0`.
 - Material becomes `REUSED` only when remaining quantity reaches `0` after completion/delivery.
-- Learner may cancel only while reservation is `PENDING`.
+- Learner may cancel while reservation is `PENDING` or `AWAITING_LEARNER_CONFIRMATION` (via cancel route or learner-confirmation `CANCEL` action).
+- Learner resolves `AWAITING_LEARNER_CONFIRMATION` via `PATCH /api/reservations/:id/learner-confirmation`: accept proposed pickup, submit a new delivery window, or cancel.
 
 Reservation is the booking layer. Future build-checklist states such as `Available`, `Missing`, `Alternative`, `Already owned`, and `Reserved` should integrate with reservations, but the checklist itself belongs to future Learning Hub / AI matching work.
 
@@ -27,11 +28,12 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 |-------|--------|----------|
 | Database `reservations` + `reservation_status_history` | **Implemented** | Existing schema; `quantityRequested` already present |
 | Learner `POST /api/reservations` | **Implemented** | Partial-quantity holds, fulfillment choice, preferred windows, per-learner open-reservation guard |
-| Learner `PATCH /api/reservations/:id/cancel` | **Implemented** | PENDING-only cancel releases hold |
+| Learner `PATCH /api/reservations/:id/cancel` | **Implemented** | PENDING or AWAITING cancel releases hold |
+| Learner `PATCH /api/reservations/:id/learner-confirmation` | **Implemented** | Accept proposed pickup, submit delivery window, or cancel while awaiting confirmation |
 | Learner `GET /api/reservations/my` | **Implemented** | Includes `quantityRequested`, `material.unit`, approximate `material.city`/`area`, and `pickupLocationFull` after accept/complete |
 | Material discovery/detail `availableQuantity` | **Implemented** | Public browse/detail DTO field |
 | Learner reserve UI | **Implemented** | Material detail quantity + pickup/delivery fulfillment dialog |
-| Learner “My Reservations” UI | **Partial** | Quantity + PENDING cancel + self-pickup pickup address after accept/complete; no detail page |
+| Learner “My Reservations” UI | **Partial** | Quantity + PENDING cancel + awaiting-confirmation panel (accept proposed pickup / submit delivery window / cancel) + self-pickup pickup address after accept/complete; no detail page |
 | Supplier list/accept/decline/complete | **Partial** | Fulfillment-aware accept (pickup match/propose, delivery scheduling); awaiting-confirmation status; partial-quantity completion subtracts stock; delivery complete guarded |
 | Delivery learner UI | **Partial** | Request/status/tracking summary exists |
 **Overall:** **Partial**. Partial-quantity holds, learner PENDING cancel, quantity-aware reserve UI, and post-acceptance self-pickup address reveal are implemented. Expiry, notifications, QR, reservation detail page, pickup map, and saved dropoff addresses remain pending.
@@ -100,7 +102,7 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 - Public material discovery (`GET /api/materials`, `GET /api/materials/:id`) exposes only approximate `city` and `area`.
 - `GET /api/reservations/my` keeps the same approximate material fields for all statuses.
 - `deliveryRequested` is included on learner reservation list items so the UI can hide self-pickup instructions when delivery is in progress, even if the deliveries list has not loaded yet.
-- `pickupLocationFull` (country, city, area, address line, coordinates, `isApproximate`) is returned only for learner-owned reservations in `ACCEPTED` or `COMPLETED` status; it is `null` for `PENDING`, `REJECTED`, `CANCELLED`, and `EXPIRED`. The My Reservations UI shows the pickup address panel only for self-pickup reservations without `deliveryRequested` and without a loaded delivery row.
+- `pickupLocationFull` (country, city, area, address line, coordinates, `isApproximate`) is returned only for learner-owned reservations in `ACCEPTED` or `COMPLETED` status; it is `null` for `PENDING`, `AWAITING_LEARNER_CONFIRMATION`, `REJECTED`, `CANCELLED`, and `EXPIRED`. The My Reservations UI shows the pickup address panel only for self-pickup reservations without `deliveryRequested` and without a loaded delivery row.
 - Delivery route exact pickup/dropoff locations remain on learner-owned or assigned-driver delivery APIs only.
 
 ## Legacy data and dev DB cleanup

@@ -12,8 +12,12 @@ import {
   resolveReservationFollowUp,
 } from './reservation-follow-up.js';
 import * as reservationsRepository from './reservations.repository.js';
-import type { CreateReservationInput } from './reservations.validation.js';
-import type { CreateReservationMessageInput } from './reservations.validation.js';
+import { resolveLearnerConfirmation as resolveLearnerConfirmationInRepository } from './reservations.learner-confirmation.repository.js';
+import type {
+  CreateReservationInput,
+  CreateReservationMessageInput,
+  LearnerConfirmationInput,
+} from './reservations.validation.js';
 
 const PICKUP_LOCATION_REVEAL_STATUSES = new Set(['ACCEPTED', 'COMPLETED']);
 
@@ -128,6 +132,7 @@ const mapLearnerReservation = (
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
   });
+  const latestDelivery = reservation.deliveries[0] ?? null;
 
   return {
     id: reservation.id,
@@ -148,9 +153,30 @@ const mapLearnerReservation = (
     updatedAt: reservation.updatedAt.toISOString(),
     pickupWindowStart: reservation.pickupWindowStart?.toISOString() ?? null,
     pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
+    supplierProposedPickupWindowStart:
+      reservation.supplierProposedPickupWindowStart?.toISOString() ?? null,
+    supplierProposedPickupWindowEnd:
+      reservation.supplierProposedPickupWindowEnd?.toISOString() ?? null,
+    supplierPickupWindowStart:
+      reservation.supplierPickupWindowStart?.toISOString() ?? null,
+    supplierPickupWindowEnd:
+      reservation.supplierPickupWindowEnd?.toISOString() ?? null,
+    confirmedDeliveryWindowStart:
+      reservation.confirmedDeliveryWindowStart?.toISOString() ?? null,
+    confirmedDeliveryWindowEnd:
+      reservation.confirmedDeliveryWindowEnd?.toISOString() ?? null,
+    earliestDeliveryStart:
+      reservation.earliestDeliveryStart?.toISOString() ?? null,
+    schedulingConflictReason: reservation.schedulingConflictReason,
     supplierNote: reservation.supplierNote,
     rejectionReason: reservation.rejectionReason,
     deliveryRequested: reservation.deliveryRequested,
+    activeDelivery: latestDelivery
+      ? {
+          id: latestDelivery.id,
+          status: latestDelivery.status,
+        }
+      : null,
     pickupWindowStatus: followUp.pickupWindowStatus,
     isOverdue: followUp.isOverdue,
     needsFollowUp: followUp.needsFollowUp,
@@ -293,7 +319,7 @@ export const cancelReservation = async (
       throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
     case 'INVALID_STATUS':
       throw new AppError(
-        'Only pending reservations can be cancelled.',
+        'Only pending or awaiting-confirmation reservations can be cancelled.',
         409,
         'CONFLICT',
       );
@@ -367,4 +393,117 @@ export const createLearnerReservationMessage = async (
   });
 
   return mapReservationMessage(message);
+};
+
+const mapLearnerReservationById = async (
+  requesterId: string,
+  reservationId: string,
+) => {
+  const reservation = await reservationsRepository.findLearnerReservationById(
+    requesterId,
+    reservationId,
+  );
+
+  if (!reservation) {
+    return null;
+  }
+
+  const latestMessages = await findLatestReservationMessagesByReservationIds([
+    reservation.id,
+  ]);
+
+  return mapLearnerReservation(
+    reservation,
+    latestMessages.has(reservation.id)
+      ? mapReservationMessage(latestMessages.get(reservation.id)!)
+      : null,
+  );
+};
+
+export const resolveLearnerConfirmation = async (
+  requesterId: string,
+  reservationId: string,
+  input: LearnerConfirmationInput,
+) => {
+  const result = await resolveLearnerConfirmationInRepository({
+    requesterId,
+    reservationId,
+    action: input.action,
+    deliveryWindow:
+      input.deliveryWindow == null
+        ? undefined
+        : {
+            start: new Date(input.deliveryWindow.start),
+            end: new Date(input.deliveryWindow.end),
+          },
+  });
+
+  switch (result.outcome) {
+    case 'ACCEPTED':
+    case 'CANCELLED': {
+      const reservation = await mapLearnerReservationById(
+        requesterId,
+        reservationId,
+      );
+
+      if (!reservation) {
+        throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+      }
+
+      return reservation;
+    }
+    case 'NOT_FOUND':
+      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    case 'INVALID_STATUS':
+      throw new AppError(
+        'Only reservations awaiting learner confirmation can be resolved.',
+        409,
+        'CONFLICT',
+      );
+    case 'INVALID_ACTION':
+      throw new AppError(
+        'This action is not valid for the reservation fulfillment method.',
+        400,
+        'VALIDATION_ERROR',
+      );
+    case 'MISSING_PROPOSED_PICKUP':
+      throw new AppError(
+        'Supplier proposed pickup window is missing.',
+        409,
+        'CONFLICT',
+      );
+    case 'MISSING_SUPPLIER_PICKUP':
+      throw new AppError(
+        'Supplier pickup window is missing.',
+        409,
+        'CONFLICT',
+      );
+    case 'MISSING_DELIVERY_ADDRESS':
+      throw new AppError('Delivery address is missing.', 409, 'CONFLICT');
+    case 'MISSING_DELIVERY_WINDOW':
+      throw new AppError(
+        'Delivery window is required.',
+        400,
+        'VALIDATION_ERROR',
+      );
+    case 'DELIVERY_EXISTS':
+      throw new AppError(
+        'This reservation already has a delivery record.',
+        409,
+        'CONFLICT',
+      );
+    case 'INFEASIBLE_DELIVERY_WINDOW':
+      throw new AppError(
+        result.reason ??
+          'The selected delivery window is not feasible after the supplier pickup window and delivery buffer.',
+        422,
+        'VALIDATION_ERROR',
+      );
+    default:
+      throw new AppError(
+        'Unable to resolve reservation confirmation.',
+        500,
+        'INTERNAL_ERROR',
+      );
+  }
 };

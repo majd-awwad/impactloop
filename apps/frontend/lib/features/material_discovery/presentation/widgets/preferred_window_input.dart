@@ -73,12 +73,14 @@ class PreferredWindowInput extends StatelessWidget {
     required this.enabled,
     required this.onChanged,
     this.label = 'Preferred windows',
+    this.allowMultipleWindows = true,
   });
 
   final List<PreferredWindowDraft> windows;
   final bool enabled;
   final ValueChanged<List<PreferredWindowDraft>> onChanged;
   final String label;
+  final bool allowMultipleWindows;
 
   void _updateWindow(int index, PreferredWindowDraft window) {
     final next = [...windows];
@@ -124,15 +126,17 @@ class PreferredWindowInput extends StatelessWidget {
             onRemove: () => _removeWindow(index),
           ),
         ],
-        const SizedBox(height: AppSpacing.sm),
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: TextButton.icon(
-            onPressed: enabled ? _addWindow : null,
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Add another window'),
+        if (allowMultipleWindows) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              onPressed: enabled ? _addWindow : null,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Add another window'),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

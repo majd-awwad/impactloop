@@ -303,4 +303,66 @@ void main() {
     expect(json['learnerPreferredPickupWindows'], hasLength(1));
     expect(json.containsKey('deliveryAddressText'), isFalse);
   });
+
+  test('LearnerReservation parses awaiting confirmation scheduling fields', () {
+    final reservation = LearnerReservation.fromJson({
+      'id': 'res-awaiting',
+      'status': 'AWAITING_LEARNER_CONFIRMATION',
+      'quantityRequested': 1,
+      'fulfillmentMethod': 'DELIVERY',
+      'supplierPickupWindowStart': '2026-06-27T07:00:00.000Z',
+      'supplierPickupWindowEnd': '2026-06-27T09:00:00.000Z',
+      'learnerPreferredDeliveryWindows': [
+        {
+          'start': '2026-06-27T05:00:00.000Z',
+          'end': '2026-06-27T06:00:00.000Z',
+        },
+      ],
+      'earliestDeliveryStart': '2026-06-27T10:00:00.000Z',
+      'schedulingConflictReason': 'No overlap after delivery buffer',
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'material': {
+        'id': 'mat-1',
+        'title': 'Wood panels',
+        'materialType': 'Wood',
+        'status': 'AVAILABLE',
+        'unit': 'sheet',
+        'deliveryAllowed': true,
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+
+    expect(reservation.isAwaitingConfirmation, isTrue);
+    expect(reservation.supplierPickupWindowStart, isNotNull);
+    expect(reservation.earliestDeliveryStart, isNotNull);
+    expect(
+      reservation.schedulingConflictReason,
+      'No overlap after delivery buffer',
+    );
+  });
+
+  test('LearnerReservation parses supplier proposed pickup fields', () {
+    final reservation = LearnerReservation.fromJson({
+      'id': 'res-pickup-awaiting',
+      'status': 'AWAITING_LEARNER_CONFIRMATION',
+      'quantityRequested': 1,
+      'fulfillmentMethod': 'PICKUP',
+      'supplierProposedPickupWindowStart': '2026-06-28T07:00:00.000Z',
+      'supplierProposedPickupWindowEnd': '2026-06-28T09:00:00.000Z',
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'material': {
+        'id': 'mat-1',
+        'title': 'Wood panels',
+        'materialType': 'Wood',
+        'status': 'AVAILABLE',
+        'unit': 'sheet',
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+
+    expect(reservation.supplierProposedPickupWindowStart, isNotNull);
+    expect(reservation.supplierProposedPickupWindowEnd, isNotNull);
+  });
 }

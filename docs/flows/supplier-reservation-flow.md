@@ -163,7 +163,7 @@ Complete invalidates incoming requests, supplier notifications, supplier dashboa
 
 ## Not implemented
 
-- Learner confirmation UI for `AWAITING_LEARNER_CONFIRMATION` (Phase 3)
+- Handover codes and completion verification (Phase 4)
 - Handover codes, issue reports, driver failed pickup/delivery flows
 - Learner reservation cancel beyond PENDING
 - Flutter delivery request / driver assignment UI

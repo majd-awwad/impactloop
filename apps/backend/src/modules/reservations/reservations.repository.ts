@@ -83,6 +83,14 @@ const learnerReservationListInclude = {
       },
     },
   },
+  deliveries: {
+    select: {
+      id: true,
+      status: true,
+    },
+    orderBy: { requestedAt: 'desc' },
+    take: 1,
+  },
 } satisfies Prisma.ReservationInclude;
 
 const learnerCancelInclude = {
@@ -280,7 +288,10 @@ export const cancelLearnerReservation = async (input: {
       return { outcome: 'NOT_FOUND' as const };
     }
 
-    if (existing.status !== 'PENDING') {
+    if (
+      existing.status !== 'PENDING' &&
+      existing.status !== 'AWAITING_LEARNER_CONFIRMATION'
+    ) {
       return { outcome: 'INVALID_STATUS' as const, status: existing.status };
     }
 
@@ -307,7 +318,7 @@ export const cancelLearnerReservation = async (input: {
       data: {
         reservationId: reservation.id,
         statusGroup: 'RESERVATION',
-        oldStatus: 'PENDING',
+        oldStatus: existing.status,
         newStatus: 'CANCELLED',
         changedBy: input.requesterId,
         note: 'Cancelled by learner',

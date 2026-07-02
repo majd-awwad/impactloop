@@ -19,6 +19,7 @@ import '../../application/my_reservations_provider.dart';
 import '../../application/reservation_cancel_controller.dart';
 import '../../data/models/learner_reservation.dart';
 import '../learner_reservation_ui_helpers.dart';
+import '../widgets/learner_awaiting_confirmation_panel.dart';
 import '../widgets/learner_reservation_messages_panel.dart';
 
 const _learnerReservationsMaxWidth = 920.0;
@@ -587,7 +588,10 @@ class _ReservationStatusRow extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _ReservationStatusChip(
-          label: reservationStatusLabel(reservation.status),
+          label: reservationStatusLabel(
+            reservation.status,
+            fulfillmentMethod: reservation.fulfillmentMethod,
+          ),
           background: statusStyle.chipBackground,
           foreground: statusStyle.chipForeground,
           border: statusStyle.chipBorder,
@@ -814,6 +818,7 @@ class _ReservationCardSummaryLines extends StatelessWidget {
     final showFollowUpMessages =
         reservation.isAccepted &&
         (reservation.canSendMessage || reservation.latestMessage != null);
+    final showAwaitingConfirmation = reservation.isAwaitingConfirmation;
     final compact = MediaQuery.sizeOf(context).width < 720;
 
     return Column(
@@ -900,6 +905,10 @@ class _ReservationCardSummaryLines extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+        if (showAwaitingConfirmation) ...[
+          const SizedBox(height: 12),
+          LearnerAwaitingConfirmationPanel(reservation: reservation),
+        ],
         if (showPickupInfo) ...[
           if (reservation.isOverdue) ...[
             const SizedBox(height: 12),
@@ -949,13 +958,12 @@ class _ReservationCardActions extends ConsumerWidget {
       desktopRail: desktopColumn,
     );
 
-    final viewDelivery = delivery != null
-        ? _ReservationActionButton(
-            label: 'View delivery',
-            onPressed: () => context.go('/learner/deliveries/${delivery!.id}'),
-            desktopRail: desktopColumn,
-          )
-        : null;
+    final viewDelivery = _resolveDeliveryAction(
+      reservation: reservation,
+      delivery: delivery,
+      desktopColumn: desktopColumn,
+      onNavigate: (deliveryId) => context.go('/learner/deliveries/$deliveryId'),
+    );
 
     final cancelRequest = reservation.isPending
         ? _ReservationActionButton(
@@ -1052,6 +1060,24 @@ class _ReservationCardActions extends ConsumerWidget {
       ref.read(cancellingReservationIdProvider.notifier).setCancelling(null);
     }
   }
+}
+
+_ReservationActionButton? _resolveDeliveryAction({
+  required LearnerReservation reservation,
+  required LearnerDelivery? delivery,
+  required bool desktopColumn,
+  required ValueChanged<String> onNavigate,
+}) {
+  final deliveryId = delivery?.id ?? reservation.activeDelivery?.id;
+  if (deliveryId == null) {
+    return null;
+  }
+
+  return _ReservationActionButton(
+    label: 'View delivery',
+    onPressed: () => onNavigate(deliveryId),
+    desktopRail: desktopColumn,
+  );
 }
 
 class _ReservationActionButton extends StatelessWidget {

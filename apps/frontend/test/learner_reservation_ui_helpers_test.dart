@@ -117,7 +117,14 @@ void main() {
   test('reservationStatusLabel maps awaiting confirmation', () {
     expect(
       reservationStatusLabel('AWAITING_LEARNER_CONFIRMATION'),
-      'Awaiting your confirmation',
+      'Needs your confirmation',
+    );
+  });
+
+  test('reservationStatusLabel maps accepted delivery fulfillment', () {
+    expect(
+      reservationStatusLabel('ACCEPTED', fulfillmentMethod: 'DELIVERY'),
+      'Accepted / Ready for delivery',
     );
   });
 

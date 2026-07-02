@@ -11,10 +11,12 @@ import {
   createLearnerReservationMessageHandler,
   listLearnerReservationMessagesHandler,
   listMyReservationsHandler,
+  resolveLearnerConfirmationHandler,
 } from './reservations.controller.js';
 import {
   createReservationSchema,
   createReservationMessageSchema,
+  learnerConfirmationSchema,
   reservationIdParamsSchema,
 } from './reservations.validation.js';
 import { requestDeliveryForReservationHandler } from '../deliveries/deliveries.controller.js';
@@ -45,6 +47,15 @@ reservationsRouter.patch(
   requireRoles('LEARNER'),
   validate(reservationIdParamsSchema, 'params'),
   asyncHandler(cancelReservationHandler),
+);
+
+reservationsRouter.patch(
+  '/:id/learner-confirmation',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(learnerConfirmationSchema),
+  asyncHandler(resolveLearnerConfirmationHandler),
 );
 
 reservationsRouter.get(

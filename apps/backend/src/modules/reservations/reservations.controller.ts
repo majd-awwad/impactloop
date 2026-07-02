@@ -8,10 +8,12 @@ import {
   createLearnerReservationMessage,
   listLearnerReservationMessages,
   listMyReservations,
+  resolveLearnerConfirmation,
 } from './reservations.service.js';
 import type {
   CreateReservationInput,
   CreateReservationMessageInput,
+  LearnerConfirmationInput,
 } from './reservations.validation.js';
 
 export const createReservationHandler = async (
@@ -72,4 +74,17 @@ export const createLearnerReservationMessageHandler = async (
   );
 
   res.json(successResponse('Message sent.', message));
+};
+
+export const resolveLearnerConfirmationHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const reservation = await resolveLearnerConfirmation(
+    req.auth!.sub,
+    req.params.id as string,
+    req.body as LearnerConfirmationInput,
+  );
+
+  res.json(successResponse('Reservation updated.', reservation));
 };

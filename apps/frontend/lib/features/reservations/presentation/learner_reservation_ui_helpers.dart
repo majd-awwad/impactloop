@@ -130,14 +130,19 @@ class LearnerReservationStatusStyle {
   }
 }
 
-String reservationStatusLabel(String status) {
+String reservationStatusLabel(
+  String status, {
+  String? fulfillmentMethod,
+}) {
   switch (status) {
     case 'PENDING':
       return 'Pending supplier response';
     case 'AWAITING_LEARNER_CONFIRMATION':
-      return 'Awaiting your confirmation';
+      return 'Needs your confirmation';
     case 'ACCEPTED':
-      return 'Accepted / Ready for pickup';
+      return fulfillmentMethod == 'DELIVERY'
+          ? 'Accepted / Ready for delivery'
+          : 'Accepted / Ready for pickup';
     case 'REJECTED':
       return 'Rejected';
     case 'COMPLETED':
@@ -218,6 +223,112 @@ String? formatSafeDropoffSummary(LearnerReservation reservation) {
 
 String formatReservationDate(DateTime value) {
   return DateFormat.yMMMd().format(value.toLocal());
+}
+
+String formatPreferredWindowRange(
+  ReservationPreferredWindow window, {
+  String prefix = '',
+}) {
+  final dateFormat = DateFormat('MMM d');
+  final timeFormat = DateFormat('h:mm a');
+  final start = window.start.toLocal();
+  final end = window.end.toLocal();
+  final sameDay = start.year == end.year &&
+      start.month == end.month &&
+      start.day == end.day;
+
+  final range = sameDay
+      ? '${dateFormat.format(start)}, '
+          '${timeFormat.format(start)} – ${timeFormat.format(end)}'
+      : '${dateFormat.format(start)}, ${timeFormat.format(start)} – '
+          '${dateFormat.format(end)}, ${timeFormat.format(end)}';
+
+  if (prefix.isEmpty) {
+    return range;
+  }
+
+  return '$prefix: $range';
+}
+
+String? formatDateTimeRange({
+  required String prefix,
+  DateTime? start,
+  DateTime? end,
+}) {
+  if (start == null) {
+    return null;
+  }
+
+  return formatPreferredWindowRange(
+    ReservationPreferredWindow(start: start, end: end ?? start),
+    prefix: prefix,
+  );
+}
+
+String? formatAwaitingPickupPreferredSummary(LearnerReservation reservation) {
+  if (reservation.learnerPreferredPickupWindows.isEmpty) {
+    return null;
+  }
+
+  return formatPreferredWindowRange(
+    reservation.learnerPreferredPickupWindows.first,
+    prefix: 'Your preferred pickup',
+  );
+}
+
+String? formatAwaitingPickupProposedSummary(LearnerReservation reservation) {
+  if (reservation.supplierProposedPickupWindowStart == null ||
+      reservation.supplierProposedPickupWindowEnd == null) {
+    return null;
+  }
+
+  return formatPreferredWindowRange(
+    ReservationPreferredWindow(
+      start: reservation.supplierProposedPickupWindowStart!,
+      end: reservation.supplierProposedPickupWindowEnd!,
+    ),
+    prefix: 'Supplier proposed pickup',
+  );
+}
+
+String? formatAwaitingDeliverySupplierPickupSummary(
+  LearnerReservation reservation,
+) {
+  return formatDateTimeRange(
+    prefix: 'Supplier driver pickup window',
+    start: reservation.supplierPickupWindowStart,
+    end: reservation.supplierPickupWindowEnd,
+  );
+}
+
+String? formatAwaitingDeliveryEarliestSummary(LearnerReservation reservation) {
+  if (reservation.earliestDeliveryStart == null) {
+    return null;
+  }
+
+  final earliest = reservation.earliestDeliveryStart!.toLocal();
+  return 'Earliest possible delivery: '
+      '${DateFormat('MMM d, h:mm a').format(earliest)}';
+}
+
+String? formatAwaitingDeliveryPreferredSummary(LearnerReservation reservation) {
+  if (reservation.learnerPreferredDeliveryWindows.isEmpty) {
+    return null;
+  }
+
+  return formatPreferredWindowRange(
+    reservation.learnerPreferredDeliveryWindows.first,
+    prefix: 'Your previous preferred delivery',
+  );
+}
+
+String? formatSchedulingConflictReason(LearnerReservation reservation) {
+  final reason = reservation.schedulingConflictReason?.trim();
+  if (reason == null || reason.isEmpty) {
+    return null;
+  }
+
+  return 'Scheduling conflict: $reason';
 }
 
 String? formatPickupWindow(LearnerReservation reservation) {
@@ -322,6 +433,12 @@ String formatDeliveryAvailability(
   }
 
   if (reservation.isDeliveryFulfillment) {
+    if (reservation.isAccepted) {
+      return reservation.activeDelivery != null
+          ? 'Delivery scheduled'
+          : 'Delivery reservation';
+    }
+
     return reservation.isPending
         ? 'Delivery selected at reservation'
         : 'Delivery reservation';

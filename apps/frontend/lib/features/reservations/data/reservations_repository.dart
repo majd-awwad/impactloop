@@ -34,6 +34,20 @@ class ReservationsRepository {
     return _api.cancelReservation(reservationId);
   }
 
+  Future<LearnerReservation> resolveLearnerConfirmation({
+    required String reservationId,
+    required String action,
+    DateTime? deliveryWindowStart,
+    DateTime? deliveryWindowEnd,
+  }) {
+    return _api.resolveLearnerConfirmation(
+      reservationId: reservationId,
+      action: action,
+      deliveryWindowStart: deliveryWindowStart,
+      deliveryWindowEnd: deliveryWindowEnd,
+    );
+  }
+
   Future<List<ReservationMessage>> fetchReservationMessages(
     String reservationId,
   ) {

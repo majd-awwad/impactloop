@@ -122,6 +122,23 @@ class LearnerReservationSupplier {
   }
 }
 
+class LearnerReservationActiveDelivery {
+  const LearnerReservationActiveDelivery({
+    required this.id,
+    required this.status,
+  });
+
+  final String id;
+  final String status;
+
+  factory LearnerReservationActiveDelivery.fromJson(Map<String, dynamic> json) {
+    return LearnerReservationActiveDelivery(
+      id: json['id'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+    );
+  }
+}
+
 class LearnerReservation {
   const LearnerReservation({
     required this.id,
@@ -132,6 +149,15 @@ class LearnerReservation {
     required this.updatedAt,
     this.pickupWindowStart,
     this.pickupWindowEnd,
+    this.supplierProposedPickupWindowStart,
+    this.supplierProposedPickupWindowEnd,
+    this.supplierPickupWindowStart,
+    this.supplierPickupWindowEnd,
+    this.confirmedDeliveryWindowStart,
+    this.confirmedDeliveryWindowEnd,
+    this.earliestDeliveryStart,
+    this.schedulingConflictReason,
+    this.activeDelivery,
     this.supplierNote,
     this.rejectionReason,
     this.pickupLocationFull,
@@ -159,6 +185,15 @@ class LearnerReservation {
   final DateTime updatedAt;
   final DateTime? pickupWindowStart;
   final DateTime? pickupWindowEnd;
+  final DateTime? supplierProposedPickupWindowStart;
+  final DateTime? supplierProposedPickupWindowEnd;
+  final DateTime? supplierPickupWindowStart;
+  final DateTime? supplierPickupWindowEnd;
+  final DateTime? confirmedDeliveryWindowStart;
+  final DateTime? confirmedDeliveryWindowEnd;
+  final DateTime? earliestDeliveryStart;
+  final String? schedulingConflictReason;
+  final LearnerReservationActiveDelivery? activeDelivery;
   final String? supplierNote;
   final String? rejectionReason;
   final LearnerReservationPickupLocation? pickupLocationFull;
@@ -199,6 +234,33 @@ class LearnerReservation {
       pickupWindowEnd: DateTime.tryParse(
         json['pickupWindowEnd'] as String? ?? '',
       ),
+      supplierProposedPickupWindowStart: DateTime.tryParse(
+        json['supplierProposedPickupWindowStart'] as String? ?? '',
+      ),
+      supplierProposedPickupWindowEnd: DateTime.tryParse(
+        json['supplierProposedPickupWindowEnd'] as String? ?? '',
+      ),
+      supplierPickupWindowStart: DateTime.tryParse(
+        json['supplierPickupWindowStart'] as String? ?? '',
+      ),
+      supplierPickupWindowEnd: DateTime.tryParse(
+        json['supplierPickupWindowEnd'] as String? ?? '',
+      ),
+      confirmedDeliveryWindowStart: DateTime.tryParse(
+        json['confirmedDeliveryWindowStart'] as String? ?? '',
+      ),
+      confirmedDeliveryWindowEnd: DateTime.tryParse(
+        json['confirmedDeliveryWindowEnd'] as String? ?? '',
+      ),
+      earliestDeliveryStart: DateTime.tryParse(
+        json['earliestDeliveryStart'] as String? ?? '',
+      ),
+      schedulingConflictReason: json['schedulingConflictReason'] as String?,
+      activeDelivery: json['activeDelivery'] is Map
+          ? LearnerReservationActiveDelivery.fromJson(
+              Map<String, dynamic>.from(json['activeDelivery'] as Map),
+            )
+          : null,
       supplierNote: json['supplierNote'] as String?,
       rejectionReason: json['rejectionReason'] as String?,
       pickupLocationFull: pickupLocationJson is Map<String, dynamic>
