@@ -1,10 +1,15 @@
 import * as categoriesRepository from './categories.repository.js';
+import { filterPublicDiscoveryCategories } from './category-discovery-filter.js';
 import type { CategoriesQuery } from './categories.validation.js';
 
 export const getCategories = async (query: CategoriesQuery) => {
   const categories = await categoriesRepository.findPublicCategories(query);
 
-  return categories.map((category) => ({
+  const visibleCategories = query.discoveryOnly
+    ? filterPublicDiscoveryCategories(categories)
+    : categories;
+
+  return visibleCategories.map((category) => ({
     id: category.id,
     nameEn: category.nameEn,
     nameAr: category.nameAr,

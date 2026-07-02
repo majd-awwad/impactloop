@@ -111,6 +111,21 @@ export const updateSupplierProfileSchema = z
     }
   });
 
+export const updateSupplierProfileImagesSchema = z
+  .object({
+    avatarImageUrl: materialImageUrlSchema.optional().nullable(),
+    coverImageUrl: materialImageUrlSchema.optional().nullable(),
+  })
+  .refine(
+    (data) =>
+      data.avatarImageUrl !== undefined || data.coverImageUrl !== undefined,
+    { message: 'At least one image URL is required' },
+  );
+
+export type UpdateSupplierProfileImagesInput = z.infer<
+  typeof updateSupplierProfileImagesSchema
+>;
+
 export type UpdateSupplierProfileInput = z.infer<
   typeof updateSupplierProfileSchema
 >;
@@ -129,7 +144,7 @@ export const createSupplierMaterialSchema = z
     price: z.number().nonnegative().optional().nullable(),
     currency: z.literal('NIS').default('NIS'),
     pickupAllowed: z.boolean().default(true),
-    deliveryAllowed: z.literal(false).default(false),
+    deliveryAllowed: z.boolean().default(false),
     pickupNotes: z.string().trim().max(500).optional().nullable(),
     suggestedUses: z.string().trim().max(1000).optional().nullable(),
     imageUrls: z.array(materialImageUrlSchema).min(1).max(5),
@@ -185,6 +200,10 @@ export const supplierMaterialIdParamSchema = z.object({
   id: z.string().trim().min(1),
 });
 
+export const supplierFollowersQuerySchema = paginationQuerySchema.extend({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 export const updateSupplierMaterialSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().min(1).max(5000),
@@ -200,3 +219,5 @@ export const updateSupplierMaterialSchema = z.object({
 export type UpdateSupplierMaterialInput = z.infer<
   typeof updateSupplierMaterialSchema
 >;
+
+export type SupplierFollowersQuery = z.infer<typeof supplierFollowersQuerySchema>;

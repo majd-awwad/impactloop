@@ -1,4 +1,5 @@
 import 'supplier_dashboard_activity.dart';
+import 'supplier_dashboard_insights.dart';
 import 'supplier_dashboard_material.dart';
 import 'supplier_dashboard_pickup.dart';
 import 'supplier_dashboard_stats.dart';
@@ -97,6 +98,9 @@ class SupplierDashboard {
     required this.recentMaterials,
     required this.upcomingPickups,
     required this.recentActivity,
+    required this.recentReservationRequests,
+    this.mostViewedMaterial,
+    required this.highDemandMaterials,
   });
 
   final bool hasSupplierProfile;
@@ -106,9 +110,13 @@ class SupplierDashboard {
   final List<SupplierDashboardMaterial> recentMaterials;
   final List<SupplierDashboardPickup> upcomingPickups;
   final List<SupplierDashboardActivity> recentActivity;
+  final List<SupplierRecentReservationRequest> recentReservationRequests;
+  final SupplierDashboardMaterialInsight? mostViewedMaterial;
+  final List<SupplierDashboardMaterialInsight> highDemandMaterials;
 
   factory SupplierDashboard.fromJson(Map<String, dynamic> json) {
     final supplierJson = json['supplier'];
+    final mostViewedJson = json['mostViewedMaterial'];
 
     return SupplierDashboard(
       hasSupplierProfile: json['hasSupplierProfile'] as bool? ?? false,
@@ -131,6 +139,19 @@ class SupplierDashboard {
           .whereType<Map<String, dynamic>>()
           .map(SupplierDashboardActivity.fromJson)
           .toList(),
+      recentReservationRequests:
+          (json['recentReservationRequests'] as List<dynamic>? ?? const [])
+              .whereType<Map<String, dynamic>>()
+              .map(SupplierRecentReservationRequest.fromJson)
+              .toList(),
+      mostViewedMaterial: mostViewedJson is Map<String, dynamic>
+          ? SupplierDashboardMaterialInsight.fromJson(mostViewedJson)
+          : null,
+      highDemandMaterials:
+          (json['highDemandMaterials'] as List<dynamic>? ?? const [])
+              .whereType<Map<String, dynamic>>()
+              .map(SupplierDashboardMaterialInsight.fromJson)
+              .toList(),
     );
   }
 }

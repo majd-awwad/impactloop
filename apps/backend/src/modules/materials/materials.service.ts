@@ -3,18 +3,29 @@ import type { MaterialCondition } from '../../generated/prisma/client.js';
 import {
   DEFAULT_CURRENCY,
   DEFAULT_CURRENCY_SYMBOL,
-  MATERIAL_CONDITION_FACTORS,
+  applyConditionPriceMultiplier,
+  conditionPriceMultiplier,
 } from '../../constants/material-condition-factors.js';
 import { MATERIAL_LISTING_POLICY } from '../../constants/material-listing-policy.js';
+import { prisma } from '../../database/prisma.js';
 import {
   mapMatchedReferenceDto,
   matchMaterialReference,
 } from '../../services/material-reference-matching.service.js';
 import { AppError } from '../../utils/app-error.js';
 import { decimalToNumber, roundCurrency } from '../../utils/decimal.js';
+import type { AccessTokenPayload } from '../../utils/jwt.js';
 import { isOtherCategory } from '../categories/categories.repository.js';
 import * as categoriesRepository from '../categories/categories.repository.js';
 import * as materialTypesRepository from '../material-types/material-types.repository.js';
+import {
+  ACTIVE_HOLD_STATUSES,
+  computeAvailableQuantity,
+  decimalToNumber as quantityDecimalToNumber,
+  getHeldQuantitiesByMaterialIds,
+  toDecimal,
+} from '../reservations/reservations.quantity.js';
+import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
 
 import * as materialsRepository from './materials.repository.js';
 import type {
@@ -50,6 +61,15 @@ export type PriceCheckResult = {
   currency: string;
   currencySymbol: string;
   maxAllowedPrice?: number | null;
+  baseMaxPrice?: number | null;
+  baseSuggestedPrice?: number | null;
+  selectedCondition?: MaterialCondition;
+  conditionMultiplier?: number;
+  adjustedSuggestedPrice?: number | null;
+  adjustedMaxPrice?: number | null;
+  submittedPrice?: number | null;
+  isWithinAdjustedRange?: boolean;
+  source?: 'RULE' | 'AI' | 'ADMIN_REVIEW' | null;
   priceRuleId?: string | null;
   materialTypeId?: string | null;
   matchedReference?: MatchedReferenceDto | null;
@@ -58,29 +78,67 @@ export type PriceCheckResult = {
   message: string;
 };
 
+const buildConditionPriceBreakdown = (
+  input: PriceCheckInput,
+  baseMaxPrice: number,
+  source: 'RULE' | 'AI' | 'ADMIN_REVIEW',
+) => {
+  const multiplier = conditionPriceMultiplier(input.condition);
+  const adjustedMaxPrice = applyConditionPriceMultiplier(
+    baseMaxPrice,
+    input.condition,
+  );
+
+  return {
+    baseMaxPrice,
+    baseSuggestedPrice: baseMaxPrice,
+    selectedCondition: input.condition,
+    conditionMultiplier: multiplier,
+    adjustedSuggestedPrice: adjustedMaxPrice,
+    adjustedMaxPrice,
+    submittedPrice: input.price ?? null,
+    isWithinAdjustedRange:
+      input.price != null ? input.price <= adjustedMaxPrice : undefined,
+    source,
+    maxAllowedPrice: adjustedMaxPrice,
+  };
+};
+
+const formatConditionLabel = (condition: MaterialCondition) =>
+  condition
+    .toLowerCase()
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
 export const getListingPolicy = () => MATERIAL_LISTING_POLICY;
 
 const buildAllowedResult = (
-  maxAllowedPrice: number | null,
+  input: PriceCheckInput,
+  baseMaxPrice: number,
   priceRuleId: string | null = null,
   materialTypeId: string | null = null,
   matchedReference: MatchedReferenceDto | null = null,
+  source: 'RULE' | 'AI' | 'ADMIN_REVIEW' = 'RULE',
 ): PriceCheckResult => ({
   allowed: true,
   currency: DEFAULT_CURRENCY,
   currencySymbol: DEFAULT_CURRENCY_SYMBOL,
-  maxAllowedPrice,
   priceRuleId,
   materialTypeId,
   matchedReference,
   candidates: [],
   message: 'Price verified.',
+  ...buildConditionPriceBreakdown(input, baseMaxPrice, source),
 });
 
 const buildBlockedResult = (
   reason: PriceCheckReason,
   message: string,
   options: {
+    input?: PriceCheckInput;
+    baseMaxPrice?: number | null;
+    source?: 'RULE' | 'AI' | 'ADMIN_REVIEW' | null;
     maxAllowedPrice?: number | null;
     priceRuleId?: string | null;
     materialTypeId?: string | null;
@@ -93,13 +151,22 @@ const buildBlockedResult = (
   reason,
   currency: DEFAULT_CURRENCY,
   currencySymbol: DEFAULT_CURRENCY_SYMBOL,
-  maxAllowedPrice: options.maxAllowedPrice ?? null,
   priceRuleId: options.priceRuleId ?? null,
   materialTypeId: options.materialTypeId ?? null,
   matchedReference: options.matchedReference ?? null,
   approvedUnit: options.approvedUnit ?? null,
   candidates: options.candidates ?? [],
   message,
+  ...(options.input != null && options.baseMaxPrice != null
+    ? buildConditionPriceBreakdown(
+        options.input,
+        options.baseMaxPrice,
+        options.source ?? 'RULE',
+      )
+    : {
+        maxAllowedPrice: options.maxAllowedPrice ?? null,
+        source: options.source ?? null,
+      }),
 });
 
 export const calculateMaxAllowedPrice = (input: {
@@ -108,7 +175,7 @@ export const calculateMaxAllowedPrice = (input: {
   quantity: number;
   condition: MaterialCondition;
 }): number | null => {
-  const conditionFactor = MATERIAL_CONDITION_FACTORS[input.condition];
+  const conditionFactor = conditionPriceMultiplier(input.condition);
   const candidateCaps: number[] = [];
 
   if (input.maxAllowedUnitPriceNis != null) {
@@ -271,14 +338,19 @@ const runPriceRuleCheck = async (
     );
   }
 
-  const maxAllowedPrice = calculateMaxAllowedPrice({
+  const baseMaxPrice = calculateMaxAllowedPrice({
     maxAllowedUnitPriceNis: decimalToNumber(activeRule.maxAllowedUnitPriceNis),
     maxAllowedTotalPriceNis: decimalToNumber(activeRule.maxAllowedTotalPriceNis),
     quantity: input.quantity,
-    condition: input.condition,
+    condition: 'NEW',
   });
 
-  if (maxAllowedPrice == null) {
+  const maxAllowedPrice =
+    baseMaxPrice == null
+      ? null
+      : applyConditionPriceMultiplier(baseMaxPrice, input.condition);
+
+  if (maxAllowedPrice == null || baseMaxPrice == null) {
     return buildBlockedResult(
       'PRICE_RULE_INVALID',
       'This material has an invalid active price reference.',
@@ -298,11 +370,14 @@ const runPriceRuleCheck = async (
 
   if (input.price > maxAllowedPrice) {
     const unitLabel = activeRule.unit;
+    const conditionLabel = formatConditionLabel(input.condition);
     return buildBlockedResult(
       'PRICE_TOO_HIGH',
-      `Maximum allowed price per ${unitLabel} is ${maxAllowedPrice} NIS.`,
+      `The entered price is above the recommended maximum for this condition. Base max: ${baseMaxPrice} NIS, condition: ${conditionLabel}, adjusted max: ${maxAllowedPrice} NIS.`,
       {
-        maxAllowedPrice,
+        input,
+        baseMaxPrice,
+        source: 'RULE',
         materialTypeId: materialType.id,
         matchedReference,
         approvedUnit: unitLabel,
@@ -311,20 +386,22 @@ const runPriceRuleCheck = async (
   }
 
   return buildAllowedResult(
-    maxAllowedPrice,
+    input,
+    baseMaxPrice,
     activeRule.id,
     materialType.id,
     matchedReference,
+    'RULE',
   );
 };
 
-const resolveSupplierName = (material: Awaited<
-  ReturnType<typeof materialsRepository.findMaterialById>
->) => {
-  if (!material) {
-    return null;
-  }
-
+const resolveSupplierName = (material: {
+  supplierProfile: {
+    publicName: string | null;
+    user: { displayName: string };
+  } | null;
+  owner: { displayName: string };
+}) => {
   return (
     material.supplierProfile?.publicName ??
     material.supplierProfile?.user.displayName ??
@@ -333,39 +410,212 @@ const resolveSupplierName = (material: Awaited<
   );
 };
 
+const resolvePrimaryImageUrl = (material: {
+  images: { imageUrl: string; isCover?: boolean }[];
+}) => {
+  const cover = material.images.find((image) => image.isCover);
+  return cover?.imageUrl ?? material.images[0]?.imageUrl ?? null;
+};
+
+type PublicMaterialImageRecord = {
+  id: string;
+  imageUrl: string;
+  sortOrder: number;
+  isCover: boolean;
+  createdAt: Date;
+};
+
+const mapPublicMaterialImages = (images: PublicMaterialImageRecord[]) => {
+  const sorted = [...images].sort((left, right) => {
+    if (left.isCover !== right.isCover) {
+      return left.isCover ? -1 : 1;
+    }
+
+    if (left.sortOrder !== right.sortOrder) {
+      return left.sortOrder - right.sortOrder;
+    }
+
+    return left.createdAt.getTime() - right.createdAt.getTime();
+  });
+
+  return sorted.map((image, index) => ({
+    id: image.id,
+    url: image.imageUrl,
+    isCover: image.isCover,
+    isPrimary: image.isCover || index === 0,
+    sortOrder: image.sortOrder,
+  }));
+};
+
 const mapMaterial = (
-  material: NonNullable<
-    Awaited<ReturnType<typeof materialsRepository.findMaterialById>>
-  >,
-) => ({
-  id: material.id,
-  title: material.title,
-  description: material.description,
-  category: {
-    id: material.category.id,
-    nameEn: material.category.nameEn,
-    nameAr: material.category.nameAr,
+  material: {
+    id: string;
+    title: string;
+    description: string;
+    category: {
+      id: string;
+      nameEn: string;
+      nameAr: string;
+    };
+    condition: MaterialCondition;
+    status: string;
+    quantity: Parameters<typeof toDecimal>[0];
+    unit: string;
+    isFree: boolean;
+    price: Parameters<typeof decimalToNumber>[0] | null;
+    location: {
+      city: string;
+      area: string | null;
+    };
+    deliveryAllowed: boolean;
+    pickupAllowed: boolean;
+    images: { imageUrl: string }[];
+    supplierProfile: {
+      publicName: string | null;
+      user: { displayName: string };
+    } | null;
+    owner: { displayName: string };
+    viewsCount: number;
+    createdAt: Date;
   },
-  condition: material.condition,
-  status: material.status,
-  quantity: decimalToNumber(material.quantity),
-  unit: material.unit,
-  isFree: material.isFree,
-  price: material.price == null ? null : decimalToNumber(material.price),
-  city: material.location.city,
-  area: material.location.area,
-  deliveryAvailable: material.deliveryAllowed,
-  imageUrl: material.images[0]?.imageUrl ?? null,
-  supplierName: resolveSupplierName(material),
-  ratingSummary: null,
-  createdAt: material.createdAt.toISOString(),
+  heldQuantity = toDecimal(0),
+) => {
+  const quantity = toDecimal(material.quantity);
+  const availableQuantity = computeAvailableQuantity(quantity, heldQuantity);
+  const primaryImageUrl = resolvePrimaryImageUrl(material);
+
+  return {
+    id: material.id,
+    title: material.title,
+    description: material.description,
+    category: {
+      id: material.category.id,
+      nameEn: material.category.nameEn,
+      nameAr: material.category.nameAr,
+    },
+    condition: material.condition,
+    status: material.status,
+    quantity: quantityDecimalToNumber(quantity),
+    availableQuantity: quantityDecimalToNumber(availableQuantity),
+    unit: material.unit,
+    isFree: material.isFree,
+    price: material.price == null ? null : decimalToNumber(material.price),
+    city: material.location.city,
+    area: material.location.area,
+    deliveryAvailable: material.deliveryAllowed,
+    pickupAllowed: material.pickupAllowed,
+    imageUrl: primaryImageUrl,
+    primaryImageUrl,
+    supplierName: resolveSupplierName(material),
+    ratingSummary: null,
+    viewsCount: material.viewsCount,
+    createdAt: material.createdAt.toISOString(),
+  };
+};
+
+export type MaterialReserveBlockReason =
+  | 'OWN_MATERIAL'
+  | 'NOT_LEARNER'
+  | 'UNAVAILABLE'
+  | 'OPEN_RESERVATION_EXISTS';
+
+type MaterialDetailRecord = NonNullable<
+  Awaited<ReturnType<typeof materialsRepository.findMaterialById>>
+>;
+
+const resolvePublicSupplierVerified = (
+  supplierProfile: MaterialDetailRecord['supplierProfile'],
+) => {
+  if (!supplierProfile?.verificationStatus) {
+    return false;
+  }
+
+  const status = normalizeSupplierVerificationStatus(
+    supplierProfile.verificationStatus,
+  );
+
+  return status === 'APPROVED' || status === 'NOT_REQUIRED';
+};
+
+const mapMaterialDetailFields = (material: MaterialDetailRecord) => ({
+  pickupNotes: material.pickupNotes?.trim() || null,
+  suggestedUses: material.suggestedUses?.trim() || null,
+  sourceType: material.sourceType,
+  supplierType: material.supplierProfile?.supplierType ?? null,
+  supplierVerified: resolvePublicSupplierVerified(material.supplierProfile),
+  images: mapPublicMaterialImages(material.images),
 });
+
+const buildMaterialReserveEnrichment = async (
+  material: MaterialDetailRecord,
+  availableQuantity: number,
+  viewer: AccessTokenPayload,
+) => {
+  const isOwnMaterial = material.ownerId === viewer.sub;
+
+  if (isOwnMaterial) {
+    return {
+      isOwnMaterial: true as const,
+      canReserve: false as const,
+      reserveBlockReason: 'OWN_MATERIAL' as const,
+    };
+  }
+
+  const isLearner = viewer.roles.includes('LEARNER');
+  if (!isLearner) {
+    return {
+      isOwnMaterial: false as const,
+      canReserve: false as const,
+      reserveBlockReason: 'NOT_LEARNER' as const,
+    };
+  }
+
+  const isAvailable =
+    availableQuantity > 0 &&
+    material.status !== 'REUSED' &&
+    material.status !== 'UNAVAILABLE';
+
+  if (!isAvailable) {
+    return {
+      isOwnMaterial: false as const,
+      canReserve: false as const,
+      reserveBlockReason: 'UNAVAILABLE' as const,
+    };
+  }
+
+  const openLearnerReservationCount = await prisma.reservation.count({
+    where: {
+      materialId: material.id,
+      requesterId: viewer.sub,
+      status: { in: [...ACTIVE_HOLD_STATUSES] },
+    },
+  });
+
+  if (openLearnerReservationCount > 0) {
+    return {
+      isOwnMaterial: false as const,
+      canReserve: false as const,
+      reserveBlockReason: 'OPEN_RESERVATION_EXISTS' as const,
+    };
+  }
+
+  return {
+    isOwnMaterial: false as const,
+    canReserve: true as const,
+    reserveBlockReason: null,
+  };
+};
 
 export const getMaterials = async (query: MaterialsQuery) => {
   const result = await materialsRepository.findMaterials(query);
+  const heldByMaterialId = await getHeldQuantitiesByMaterialIds(
+    result.items.map((item) => item.id),
+  );
 
   return {
-    items: result.items.map(mapMaterial),
+    items: result.items.map((item) =>
+      mapMaterial(item, heldByMaterialId.get(item.id) ?? toDecimal(0)),
+    ),
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -375,14 +625,46 @@ export const getMaterials = async (query: MaterialsQuery) => {
   };
 };
 
-export const getMaterialById = async (id: string) => {
+export const getMaterialById = async (
+  id: string,
+  viewer?: AccessTokenPayload,
+) => {
   const material = await materialsRepository.findMaterialById(id);
 
   if (!material) {
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
 
-  return mapMaterial(material);
+  const incremented = await materialsRepository.incrementMaterialViewsCount(
+    material.id,
+  );
+
+  const heldByMaterialId = await getHeldQuantitiesByMaterialIds([material.id]);
+  const heldQuantity = heldByMaterialId.get(material.id) ?? toDecimal(0);
+  const mappedMaterial = mapMaterial(
+    { ...material, viewsCount: incremented.viewsCount },
+    heldQuantity,
+  );
+  const detailFields = mapMaterialDetailFields(material);
+
+  if (!viewer) {
+    return {
+      ...mappedMaterial,
+      ...detailFields,
+    };
+  }
+
+  const reserveEnrichment = await buildMaterialReserveEnrichment(
+    material,
+    mappedMaterial.availableQuantity,
+    viewer,
+  );
+
+  return {
+    ...mappedMaterial,
+    ...detailFields,
+    ...reserveEnrichment,
+  };
 };
 
 export const checkMaterialPrice = async (
@@ -514,7 +796,7 @@ export const resolveMaterialReferenceForCreate = async (input: {
   }
 
   throw new AppError(
-    'We could not verify this paid material yet. Submit it for review.',
+    'This paid material needs admin price review before publishing.',
     400,
     'VALIDATION_ERROR',
     {

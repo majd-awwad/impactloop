@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
@@ -8,23 +9,20 @@ import '../../data/supplier_location_service.dart';
 import '../../data/models/reverse_geocode_result.dart';
 import '../../data/models/supplier_profile.dart';
 import '../../data/models/update_supplier_profile_request.dart';
+import '../../data/supplier_profile_image_helper.dart';
 import '../../data/supplier_profile_repository.dart';
 import '../controllers/supplier_dashboard_providers.dart';
 import '../controllers/supplier_profile_providers.dart';
 import '../theme/supplier_theme_extension.dart';
-import '../widgets/profile_completion_card.dart';
-import '../widgets/supplier_account_security_card.dart';
 import '../widgets/supplier_feedback.dart';
-import '../widgets/supplier_location_privacy_card.dart';
 import '../widgets/supplier_location_input_mode.dart';
-import '../widgets/supplier_pickup_map.dart';
-import '../widgets/supplier_pickup_map_preview.dart';
+import '../widgets/supplier_profile_edit_settings.dart';
 import '../widgets/supplier_profile_form.dart';
-import '../widgets/supplier_profile_identity_card.dart';
-import '../widgets/supplier_profile_preview_card.dart';
+import '../../../materials/data/material_listing_data_providers.dart';
+import '../widgets/supplier_pickup_map.dart';
+import '../widgets/supplier_profile_view_widgets.dart';
 import '../widgets/supplier_reverse_geocode_state.dart';
 import '../widgets/supplier_type_selector.dart';
-import '../widgets/supplier_verification_card.dart';
 
 class SupplierProfilePage extends ConsumerWidget {
   const SupplierProfilePage({super.key});
@@ -79,6 +77,9 @@ class _SupplierProfileContentState
   late bool _useSeparateBusinessLocation;
   bool _isEditing = false;
   bool _isSaving = false;
+  bool _isUploadingAvatar = false;
+  bool _isUploadingCover = false;
+  int _profileTabIndex = 0;
   int _draftTick = 0;
   double? _latitude;
   double? _longitude;
@@ -356,34 +357,6 @@ class _SupplierProfileContentState
     super.dispose();
   }
 
-  SupplierProfileDraft get _draft {
-    final usesCoordinateSource = _locationInputMode ==
-            SupplierLocationInputMode.currentLocation &&
-        _locationCapturedThisSession &&
-        _latitude != null &&
-        _longitude != null;
-
-    return SupplierProfileDraft(
-      publicName: _publicNameController.text,
-      supplierType: _supplierType,
-      description: _descriptionController.text,
-      country: _countryController.text,
-      city: _cityController.text,
-      area: _areaController.text,
-      visibility: _visibility,
-      latitude: _latitude,
-      longitude: _longitude,
-      usesCurrentLocationCoordinates: usesCoordinateSource,
-    );
-  }
-
-  bool get _hasAutofilledOrEditedAddress {
-    return _countryController.text.trim().isNotEmpty ||
-        _cityController.text.trim().isNotEmpty ||
-        _areaController.text.trim().isNotEmpty ||
-        _addressLineController.text.trim().isNotEmpty;
-  }
-
   String? _locationStatusMessage(SupplierL10n l) {
     if (_locationButtonState == SupplierLocationButtonState.loading) {
       return l.gettingLocation;
@@ -409,201 +382,317 @@ class _SupplierProfileContentState
     return null;
   }
 
+  Future<void> _uploadProfileImage(SupplierProfileImageKind kind) async {
+    if (_isUploadingAvatar || _isUploadingCover) {
+      return;
+    }
+
+    setState(() {
+      if (kind == SupplierProfileImageKind.avatar) {
+        _isUploadingAvatar = true;
+      } else {
+        _isUploadingCover = true;
+      }
+    });
+
+    try {
+      final helper = SupplierProfileImageHelper(
+        ref.read(supplierProfileRepositoryProvider),
+        ref.read(materialListingRepositoryProvider),
+      );
+      await helper.pickUploadAndSave(kind);
+      final _ = await ref.refresh(supplierProfileProvider.future);
+      if (!mounted) {
+        return;
+      }
+      showSupplierInfoSnackBar(
+        context,
+        kind == SupplierProfileImageKind.avatar
+            ? 'Profile photo updated'
+            : 'Cover image updated',
+      );
+    } on ApiException catch (error) {
+      if (mounted) {
+        showSupplierErrorSnackBar(context, error.message);
+      }
+    } catch (_) {
+      if (mounted) {
+        showSupplierErrorSnackBar(context, context.s.profileCouldNotSave);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingAvatar = false;
+          _isUploadingCover = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = context.s;
     final profile = widget.profile;
-    final supplier = profile.supplier;
     final isWide = MediaQuery.sizeOf(context).width >= 1024;
-    final draft = _isEditing ? _draft : null;
-    // Trigger rebuild when draft fields change during edit mode.
-    final _ = _draftTick;
-    final activeLatitude = _isEditing
-        ? _latitude
-        : supplier?.defaultPickupLocation?.latitude;
-    final activeLongitude = _isEditing
-        ? _longitude
-        : supplier?.defaultPickupLocation?.longitude;
-    final useCoordinateMapLabel = _isEditing &&
-        _locationInputMode == SupplierLocationInputMode.currentLocation &&
-        _locationCapturedThisSession &&
-        activeLatitude != null &&
-        activeLongitude != null &&
-        !_hasAutofilledOrEditedAddress;
-    final mapCityLabel = useCoordinateMapLabel
-        ? ''
-        : (draft?.city ?? supplier?.defaultPickupLocation?.city ?? '');
-    final mapAreaLabel = useCoordinateMapLabel
-        ? null
-        : (draft?.area ?? supplier?.defaultPickupLocation?.area);
 
-    final previewLocationLabel = useCoordinateMapLabel
-        ? l.currentLocationLabel
-        : null;
-
-    final preview = SupplierProfilePreviewCard(
-      publicName: draft?.publicName ??
-          (supplier?.publicName.isNotEmpty == true
-              ? supplier!.publicName
-              : profile.user.displayName),
-      supplierType: draft?.supplierType ?? supplier?.supplierType ?? _supplierType,
-      verificationStatus: supplier?.verificationStatus ?? 'UNVERIFIED',
-      description: draft?.description ?? supplier?.description,
-      city: useCoordinateMapLabel
-          ? null
-          : (draft?.city ?? supplier?.defaultPickupLocation?.city),
-      area: useCoordinateMapLabel
-          ? null
-          : (draft?.area ?? supplier?.defaultPickupLocation?.area),
-      country: useCoordinateMapLabel
-          ? null
-          : (draft?.country ?? supplier?.defaultPickupLocation?.country),
-      visibility: draft?.visibility ?? supplier?.defaultPickupLocation?.visibility,
-      locationSummaryOverride: previewLocationLabel,
-    );
-
-    final sideColumn = Column(
-      children: [
-        ProfileCompletionCard(profile: profile, draft: draft),
-        const SizedBox(height: AppSpacing.lg),
-        SupplierVerificationCard(
-          status: supplier?.verificationStatus ?? 'UNVERIFIED',
+    if (_isEditing) {
+      return SingleChildScrollView(
+        padding: context.supplierDecorations.pagePadding(compact: !isWide),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (profile.hasSupplierProfile) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l.editSupplierProfile,
+                      style: context.supplierTitle(),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _isSaving
+                        ? null
+                        : () {
+                            _applyProfile(profile);
+                            setState(() => _isEditing = false);
+                          },
+                    child: Text(l.cancel),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+            ],
+            SupplierProfileForm(
+              formKey: _formKey,
+              isSaving: _isSaving,
+              hasExistingProfile: profile.hasSupplierProfile,
+              publicNameController: _publicNameController,
+              descriptionController: _descriptionController,
+              countryController: _countryController,
+              cityController: _cityController,
+              areaController: _areaController,
+              addressLineController: _addressLineController,
+              supplierType: _supplierType,
+              visibility: _visibility,
+              isApproximate: _isApproximate,
+              organizationNameController: _organizationNameController,
+              contactPersonController: _contactPersonController,
+              workingDaysController: _workingDaysController,
+              workingFromController: _workingFromController,
+              workingToController: _workingToController,
+              useSeparateBusinessLocation: _useSeparateBusinessLocation,
+              businessCountryController: _businessCountryController,
+              businessCityController: _businessCityController,
+              businessAreaController: _businessAreaController,
+              businessAddressLineController: _businessAddressLineController,
+              onSupplierTypeChanged: (value) => setState(() {
+                _supplierType = value;
+              }),
+              onVisibilityChanged: (value) => setState(() {
+                _visibility = value;
+              }),
+              onApproximateChanged: (value) => setState(() {
+                _isApproximate = value;
+              }),
+              onSeparateBusinessLocationChanged: (value) => setState(() {
+                _useSeparateBusinessLocation = value;
+              }),
+              onFieldChanged: () => setState(() => _draftTick++),
+              onCancel: profile.hasSupplierProfile
+                  ? () {
+                      _applyProfile(profile);
+                      setState(() => _isEditing = false);
+                    }
+                  : null,
+              onSave: _saveProfile,
+              locationInputMode: _locationInputMode,
+              locationCapturedThisSession: _locationCapturedThisSession,
+              reverseGeocodeState: _reverseGeocodeState,
+              locationStatusMessage: _locationStatusMessage(l),
+              onPickupAddressFieldChanged: _onPickupAddressFieldChanged,
+              onLocationInputModeChanged: _onLocationInputModeChanged,
+              showMapInForm: true,
+              showLocationButton: true,
+              latitude: _latitude,
+              longitude: _longitude,
+              locationButtonState: _locationButtonState,
+              onUseCurrentLocation: _captureCurrentLocation,
+            ),
+            if (profile.hasSupplierProfile) ...[
+              const SizedBox(height: AppSpacing.xl),
+              SupplierProfileEditSettings(
+                onChangeAvatar: () =>
+                    _uploadProfileImage(SupplierProfileImageKind.avatar),
+                onChangeCover: () =>
+                    _uploadProfileImage(SupplierProfileImageKind.cover),
+                isUploadingAvatar: _isUploadingAvatar,
+                isUploadingCover: _isUploadingCover,
+              ),
+            ],
+          ],
         ),
-        const SizedBox(height: AppSpacing.lg),
-        SupplierLocationPrivacyCard(
-          visibility: draft?.visibility ?? supplier?.defaultPickupLocation?.visibility,
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        SupplierPickupMapPreview(
-          city: mapCityLabel,
-          area: mapAreaLabel,
-          country: useCoordinateMapLabel
-              ? null
-              : (draft?.country ?? supplier?.defaultPickupLocation?.country),
-          visibility:
-              draft?.visibility ?? supplier?.defaultPickupLocation?.visibility,
-          latitude: activeLatitude,
-          longitude: activeLongitude,
-          showUseLocationButton: _isEditing && isWide,
-          locationButtonState: _locationButtonState,
-          onUseCurrentLocation: _captureCurrentLocation,
-          showCoordinateDetails: _isEditing,
-          showCoordinatesAsLabel: useCoordinateMapLabel,
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        const SupplierAccountSecurityCard(),
-      ],
-    );
+      );
+    }
 
-    final mainColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (!_isEditing && profile.hasSupplierProfile) ...[
-          SupplierProfileIdentityCard(
-            profile: profile,
-            onEdit: () => setState(() => _isEditing = true),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          preview,
-          if (!isWide) ...[
+    if (!profile.hasSupplierProfile) {
+      return SingleChildScrollView(
+        padding: context.supplierDecorations.pagePadding(compact: !isWide),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l.profileIntroNoProfile, style: context.supplierBody()),
             const SizedBox(height: AppSpacing.lg),
-            SupplierPickupMap(
-              latitude: supplier?.defaultPickupLocation?.latitude,
-              longitude: supplier?.defaultPickupLocation?.longitude,
-              fallbackCity: supplier?.defaultPickupLocation?.city,
-              fallbackArea: supplier?.defaultPickupLocation?.area,
-              fallbackCountry: supplier?.defaultPickupLocation?.country,
-              visibility: supplier?.defaultPickupLocation?.visibility,
+            SupplierProfileForm(
+              formKey: _formKey,
+              isSaving: _isSaving,
+              hasExistingProfile: false,
+              publicNameController: _publicNameController,
+              descriptionController: _descriptionController,
+              countryController: _countryController,
+              cityController: _cityController,
+              areaController: _areaController,
+              addressLineController: _addressLineController,
+              supplierType: _supplierType,
+              visibility: _visibility,
+              isApproximate: _isApproximate,
+              organizationNameController: _organizationNameController,
+              contactPersonController: _contactPersonController,
+              workingDaysController: _workingDaysController,
+              workingFromController: _workingFromController,
+              workingToController: _workingToController,
+              useSeparateBusinessLocation: _useSeparateBusinessLocation,
+              businessCountryController: _businessCountryController,
+              businessCityController: _businessCityController,
+              businessAreaController: _businessAreaController,
+              businessAddressLineController: _businessAddressLineController,
+              onSupplierTypeChanged: (value) => setState(() {
+                _supplierType = value;
+              }),
+              onVisibilityChanged: (value) => setState(() {
+                _visibility = value;
+              }),
+              onApproximateChanged: (value) => setState(() {
+                _isApproximate = value;
+              }),
+              onSeparateBusinessLocationChanged: (value) => setState(() {
+                _useSeparateBusinessLocation = value;
+              }),
+              onFieldChanged: () => setState(() => _draftTick++),
+              onCancel: null,
+              onSave: _saveProfile,
+              locationInputMode: _locationInputMode,
+              locationCapturedThisSession: _locationCapturedThisSession,
+              reverseGeocodeState: _reverseGeocodeState,
+              locationStatusMessage: _locationStatusMessage(l),
+              onPickupAddressFieldChanged: _onPickupAddressFieldChanged,
+              onLocationInputModeChanged: _onLocationInputModeChanged,
+              showMapInForm: true,
+              showLocationButton: true,
+              latitude: _latitude,
+              longitude: _longitude,
+              locationButtonState: _locationButtonState,
+              onUseCurrentLocation: _captureCurrentLocation,
             ),
           ],
-          const SizedBox(height: AppSpacing.lg),
-        ],
-        if (_isEditing) ...[
-          if (profile.hasSupplierProfile) ...[
-            preview,
-            const SizedBox(height: AppSpacing.lg),
-          ],
-          SupplierProfileForm(
-            formKey: _formKey,
-            isSaving: _isSaving,
-            hasExistingProfile: profile.hasSupplierProfile,
-            publicNameController: _publicNameController,
-            descriptionController: _descriptionController,
-            countryController: _countryController,
-            cityController: _cityController,
-            areaController: _areaController,
-            addressLineController: _addressLineController,
-            supplierType: _supplierType,
-            visibility: _visibility,
-            isApproximate: _isApproximate,
-            organizationNameController: _organizationNameController,
-            contactPersonController: _contactPersonController,
-            workingDaysController: _workingDaysController,
-            workingFromController: _workingFromController,
-            workingToController: _workingToController,
-            useSeparateBusinessLocation: _useSeparateBusinessLocation,
-            businessCountryController: _businessCountryController,
-            businessCityController: _businessCityController,
-            businessAreaController: _businessAreaController,
-            businessAddressLineController: _businessAddressLineController,
-            onSupplierTypeChanged: (value) => setState(() {
-              _supplierType = value;
-            }),
-            onVisibilityChanged: (value) => setState(() {
-              _visibility = value;
-            }),
-            onApproximateChanged: (value) => setState(() {
-              _isApproximate = value;
-            }),
-            onSeparateBusinessLocationChanged: (value) => setState(() {
-              _useSeparateBusinessLocation = value;
-            }),
-            onFieldChanged: () => setState(() => _draftTick++),
-            onCancel: profile.hasSupplierProfile
-                ? () {
-                    _applyProfile(profile);
-                    setState(() => _isEditing = false);
-                  }
-                : null,
-            onSave: _saveProfile,
-            locationInputMode: _locationInputMode,
-            locationCapturedThisSession: _locationCapturedThisSession,
-            reverseGeocodeState: _reverseGeocodeState,
-            locationStatusMessage: _locationStatusMessage(l),
-            onPickupAddressFieldChanged: _onPickupAddressFieldChanged,
-            onLocationInputModeChanged: _onLocationInputModeChanged,
-            showMapInForm: !isWide,
-            showLocationButton: !isWide,
-            latitude: _latitude,
-            longitude: _longitude,
-            locationButtonState: _locationButtonState,
-            onUseCurrentLocation: _captureCurrentLocation,
-          ),
-        ],
-      ],
-    );
+        ),
+      );
+    }
 
     return SingleChildScrollView(
       padding: context.supplierDecorations.pagePadding(compact: !isWide),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _PageIntro(hasProfile: profile.hasSupplierProfile),
+          SupplierProfileHeader(
+            profile: profile,
+            onEdit: () => setState(() => _isEditing = true),
+            onChangeAvatar: () =>
+                _uploadProfileImage(SupplierProfileImageKind.avatar),
+            onChangeCover: () =>
+                _uploadProfileImage(SupplierProfileImageKind.cover),
+            isUploadingAvatar: _isUploadingAvatar,
+            isUploadingCover: _isUploadingCover,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SupplierProfileStatsBar(
+            stats: profile.stats,
+            isWide: isWide,
+            onFollowersTap: profile.stats.followersCount > 0
+                ? () => _showFollowersDialog(context, profile)
+                : null,
+          ),
           const SizedBox(height: AppSpacing.xl),
-          if (isWide)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(flex: 3, child: mainColumn),
-                const SizedBox(width: AppSpacing.lg),
-                Expanded(flex: 2, child: sideColumn),
-              ],
-            )
-          else ...[
-            mainColumn,
-            const SizedBox(height: AppSpacing.xl),
-            sideColumn,
-          ],
+          SupplierProfileTabBar(
+            selectedIndex: _profileTabIndex,
+            onSelected: (index) => setState(() => _profileTabIndex = index),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          switch (_profileTabIndex) {
+            0 => ProfileOverviewTab(
+                profile: profile,
+                onViewAllMaterials: () => context.go('/supplier/materials'),
+                onAddMaterial: () => context.go('/supplier/materials/new'),
+              ),
+            1 => ProfileFollowersTab(
+                followersCount: profile.stats.followersCount,
+                followers: profile.latestFollowers,
+                onViewAll: profile.stats.followersCount > 0
+                    ? () => _showFollowersDialog(context, profile)
+                    : null,
+              ),
+            2 => ProfileDetailsSection(profile: profile),
+            _ => const SizedBox.shrink(),
+          },
+        ],
+      ),
+    );
+  }
+
+  void _showFollowersDialog(
+    BuildContext context,
+    SupplierProfileResponse profile,
+  ) {
+    final followers = profile.latestFollowers;
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Followers (${profile.stats.followersCount})'),
+        content: SizedBox(
+          width: 420,
+          child: followers.isEmpty
+              ? const Text('No followers yet.')
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final follower in followers)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          child: Text(
+                            (follower.displayName.isNotEmpty
+                                    ? follower.displayName
+                                    : follower.email)
+                                .characters
+                                .first
+                                .toUpperCase(),
+                          ),
+                        ),
+                        title: Text(
+                          follower.displayName.isNotEmpty
+                              ? follower.displayName
+                              : follower.email,
+                        ),
+                        subtitle: Text(follower.email),
+                      ),
+                  ],
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
@@ -652,19 +741,24 @@ class _SupplierProfileContentState
       await ref.read(supplierProfileRepositoryProvider).updateProfile(request);
       final refreshed = await ref.refresh(supplierProfileProvider.future);
       ref.invalidate(supplierDashboardProvider);
-      if (mounted) {
-        _applyProfile(refreshed);
-        setState(() {
-          _isSaving = false;
-          _isEditing = false;
-          _locationButtonState = SupplierLocationButtonState.idle;
-        });
-        showSupplierInfoSnackBar(context, context.s.profileUpdated);
+      if (!mounted) {
+        return;
       }
+      _applyProfile(refreshed);
+      setState(() {
+        _isSaving = false;
+        _isEditing = false;
+        _locationButtonState = SupplierLocationButtonState.idle;
+      });
+      showSupplierInfoSnackBar(context, context.s.profileUpdated);
     } on ApiException catch (error) {
-      _showSaveError(error.message);
+      if (mounted) {
+        _showSaveError(error.message);
+      }
     } catch (_) {
-      _showSaveError(context.s.profileCouldNotSave);
+      if (mounted) {
+        _showSaveError(context.s.profileCouldNotSave);
+      }
     }
   }
 
@@ -732,33 +826,6 @@ class _SupplierProfileContentState
 
     setState(() => _isSaving = false);
     showSupplierErrorSnackBar(context, message);
-  }
-}
-
-class _PageIntro extends StatelessWidget {
-  const _PageIntro({required this.hasProfile});
-
-  final bool hasProfile;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = context.s;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: context.supplierDecorations.profileGlassCard,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l.supplierProfileTitle, style: context.supplierDisplay()),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            hasProfile ? l.profileIntroHasProfile : l.profileIntroNoProfile,
-            style: context.supplierBody(),
-          ),
-        ],
-      ),
-    );
   }
 }
 

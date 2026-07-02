@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../core/auth/auth_interceptor.dart';
 import '../../../core/network/api_response.dart';
 import 'models/auth_tokens.dart';
+import 'models/become_supplier_request.dart';
 import 'models/register_request.dart';
 import 'models/user.dart';
 
@@ -60,6 +61,24 @@ class AuthApi {
     );
   }
 
+  Future<({AuthTokens tokens, User user})> becomeSupplier(
+    BecomeSupplierRequest request,
+  ) {
+    return _postAuthSession(
+      '$_authBasePath/become-supplier',
+      data: request.toJson(),
+    );
+  }
+
+  Future<({AuthTokens tokens, User user})> switchRole({
+    required String activeRole,
+  }) {
+    return _postAuthSession(
+      '$_authBasePath/switch-role',
+      data: {'activeRole': activeRole.trim().toUpperCase()},
+    );
+  }
+
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -73,6 +92,33 @@ class AuthApi {
           'newPassword': newPassword,
           'confirmNewPassword': confirmNewPassword,
         },
+      ),
+    );
+  }
+
+  Future<void> forgotPassword({required String email}) {
+    return unwrapApiVoidResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_authBasePath/forgot-password',
+        data: {'email': email.trim()},
+        options: Options(
+          extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
+        ),
+      ),
+    );
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) {
+    return unwrapApiVoidResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_authBasePath/reset-password',
+        data: {'token': token, 'newPassword': newPassword},
+        options: Options(
+          extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
+        ),
       ),
     );
   }

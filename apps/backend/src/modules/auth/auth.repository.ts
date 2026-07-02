@@ -2,6 +2,7 @@ import type {
   AuthTokenType,
   LearnerProfile,
   Location,
+  OrganizationProfile,
   SupplierProfile,
   User,
   UserRole,
@@ -10,15 +11,15 @@ import type {
 
 import { prisma } from '../../database/prisma.js';
 
-import {
-  DEFAULT_PICKUP_COUNTRY,
-  parsePickupArea,
-} from './pickup-area.js';
+import { DEFAULT_PICKUP_COUNTRY, parsePickupArea } from './pickup-area.js';
+import { resolveActiveRoleForRegistration } from './role-capabilities.js';
+import { normalizeSupplierTypeInput, resolveInitialVerificationStatus } from './supplier-type.js';
 
 export type UserWithRoles = User & { roles: UserRoleAssignment[] };
 
 export type SupplierProfileWithLocation = SupplierProfile & {
   defaultPickupLocation: Location | null;
+  organizationProfile: OrganizationProfile | null;
 };
 
 export type UserWithRolesAndProfiles = User & {
@@ -35,6 +36,9 @@ export type UserEmailIdentity = {
 export type PasswordResetTokenRecord = {
   id: string;
   userId: string;
+  user: {
+    email: string;
+  };
 };
 
 export type RefreshTokenWithUser = {
@@ -62,12 +66,23 @@ export type RegisterOnboardingInput = {
   };
 };
 
+export type BecomeSupplierInput = {
+  userId: string;
+  supplierType: string;
+  publicName: string;
+  description?: string;
+  pickupArea: string;
+  workingHours?: string;
+  pickupNotes?: string;
+};
+
 const userWithRolesAndProfilesInclude = {
   roles: true,
   learnerProfile: true,
   supplierProfile: {
     include: {
       defaultPickupLocation: true,
+      organizationProfile: true,
     },
   },
 } as const;
@@ -103,12 +118,15 @@ export const createUserWithOnboarding = async (
     : null;
 
   return prisma.$transaction(async (tx) => {
+    const activeRole = resolveActiveRoleForRegistration(input.roles);
+
     return tx.user.create({
       data: {
         displayName: input.displayName,
         email: input.email,
         phone: input.phone,
         passwordHash: input.passwordHash,
+        activeRole,
         roles: {
           create: roleCreates,
         },
@@ -128,9 +146,14 @@ export const createUserWithOnboarding = async (
           ? {
               supplierProfile: {
                 create: {
-                  supplierType: input.supplierProfile.supplierType,
+                  supplierType: normalizeSupplierTypeInput(
+                    input.supplierProfile.supplierType,
+                  ),
                   publicName: input.supplierProfile.publicName,
                   description: input.supplierProfile.description,
+                  verificationStatus: resolveInitialVerificationStatus(
+                    input.supplierProfile.supplierType,
+                  ),
                   defaultPickupLocation: {
                     create: {
                       country: DEFAULT_PICKUP_COUNTRY,
@@ -274,6 +297,11 @@ export const findActivePasswordResetToken = async (
     select: {
       id: true,
       userId: true,
+      user: {
+        select: {
+          email: true,
+        },
+      },
     },
   });
 };
@@ -283,14 +311,24 @@ export const completePasswordReset = async (input: {
   userId: string;
   passwordHash: string;
 }): Promise<void> => {
+  const usedAt = new Date();
+
   await prisma.$transaction([
     prisma.authToken.update({
       where: { id: input.tokenId },
-      data: { usedAt: new Date() },
+      data: { usedAt },
     }),
     prisma.user.update({
       where: { id: input.userId },
       data: { passwordHash: input.passwordHash },
+    }),
+    prisma.authToken.updateMany({
+      where: {
+        userId: input.userId,
+        tokenType: 'REFRESH_TOKEN',
+        usedAt: null,
+      },
+      data: { usedAt },
     }),
   ]);
 };
@@ -314,5 +352,129 @@ export const updateUserPasswordHash = async (input: {
   await prisma.user.update({
     where: { id: input.userId },
     data: { passwordHash: input.passwordHash },
+  });
+};
+
+export const setUserActiveRole = async (
+  userId: string,
+  activeRole: UserRole,
+): Promise<UserWithRolesAndProfiles> => {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { activeRole },
+    include: userWithRolesAndProfilesInclude,
+  });
+};
+
+export const ensureUserRole = async (
+  userId: string,
+  role: UserRole,
+): Promise<void> => {
+  await prisma.userRoleAssignment.upsert({
+    where: {
+      userId_role: {
+        userId,
+        role,
+      },
+    },
+    create: {
+      userId,
+      role,
+      isPrimary: false,
+    },
+    update: {},
+  });
+};
+
+export const becomeSupplierForUser = async (
+  input: BecomeSupplierInput,
+): Promise<UserWithRolesAndProfiles> => {
+  const parsedPickupArea = parsePickupArea(input.pickupArea);
+  const normalizedSupplierType = normalizeSupplierTypeInput(input.supplierType);
+
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.user.findUnique({
+      where: { id: input.userId },
+      include: {
+        roles: true,
+        supplierProfile: true,
+      },
+    });
+
+    if (!existing) {
+      throw new Error('User not found');
+    }
+
+    const existingProfiles = await tx.supplierProfile.findMany({
+      where: { userId: input.userId },
+      select: { id: true },
+    });
+
+    if (existing.supplierProfile || existingProfiles.length > 0) {
+      await tx.userRoleAssignment.upsert({
+        where: {
+          userId_role: {
+            userId: input.userId,
+            role: 'SUPPLIER',
+          },
+        },
+        create: {
+          userId: input.userId,
+          role: 'SUPPLIER',
+          isPrimary: false,
+        },
+        update: {},
+      });
+
+      return tx.user.update({
+        where: { id: input.userId },
+        data: { activeRole: 'SUPPLIER' },
+        include: userWithRolesAndProfilesInclude,
+      });
+    }
+
+    await tx.userRoleAssignment.upsert({
+      where: {
+        userId_role: {
+          userId: input.userId,
+          role: 'SUPPLIER',
+        },
+      },
+      create: {
+        userId: input.userId,
+        role: 'SUPPLIER',
+        isPrimary: false,
+      },
+      update: {},
+    });
+
+    const pickupLocation = await tx.location.create({
+      data: {
+        country: DEFAULT_PICKUP_COUNTRY,
+        city: parsedPickupArea.city,
+        area: parsedPickupArea.area,
+        isApproximate: true,
+        visibility: 'PRIVATE',
+      },
+    });
+
+    await tx.supplierProfile.create({
+      data: {
+        userId: input.userId,
+        supplierType: normalizedSupplierType,
+        publicName: input.publicName,
+        description: input.description,
+        verificationStatus: resolveInitialVerificationStatus(
+          input.supplierType,
+        ),
+        defaultPickupLocationId: pickupLocation.id,
+      },
+    });
+
+    return tx.user.update({
+      where: { id: input.userId },
+      data: { activeRole: 'SUPPLIER' },
+      include: userWithRolesAndProfilesInclude,
+    });
   });
 };

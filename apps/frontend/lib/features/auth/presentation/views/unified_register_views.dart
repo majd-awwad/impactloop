@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../models/registration_intent.dart';
 import '../widgets/auth_entry_branding_panel.dart';
 import '../widgets/auth_form_card.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_shell.dart';
-import '../widgets/unified_register_form.dart';
+import '../widgets/registration_wizard.dart';
 import 'register_footer.dart';
 
 class UnifiedRegisterView extends StatelessWidget {
-  const UnifiedRegisterView({super.key});
+  const UnifiedRegisterView({super.key, this.initialIntent});
+
+  final RegistrationIntent? initialIntent;
 
   @override
   Widget build(BuildContext context) {
@@ -27,9 +30,9 @@ class UnifiedRegisterView extends StatelessWidget {
                 'Tell us how you want to use ImpactLoop and set up your profile in one step.',
           ),
           const SizedBox(height: AppSpacing.lg),
-          const AuthFormCard(
-            footer: RegisterFooter(),
-            child: UnifiedRegisterForm(),
+          AuthFormCard(
+            footer: const RegisterFooter(),
+            child: RegistrationWizard(initialIntent: initialIntent),
           ),
         ],
       ),

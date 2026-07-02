@@ -15,6 +15,7 @@ class SupplierVerificationBadge extends StatelessWidget {
     final background = switch (status.toUpperCase()) {
       'VERIFIED' => colors.accentSoft,
       'REJECTED' => colors.error.withValues(alpha: 0.18),
+      'CHANGES_REQUESTED' => colors.amberAccent.withValues(alpha: 0.18),
       'NOT_REQUIRED' => colors.chipUnselected,
       _ => colors.chipSelected,
     };
@@ -22,6 +23,7 @@ class SupplierVerificationBadge extends StatelessWidget {
     final foreground = switch (status.toUpperCase()) {
       'VERIFIED' => colors.accent,
       'REJECTED' => colors.error,
+      'CHANGES_REQUESTED' => colors.amberAccent,
       _ => colors.textSecondary,
     };
 

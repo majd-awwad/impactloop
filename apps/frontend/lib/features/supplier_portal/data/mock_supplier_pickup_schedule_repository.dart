@@ -33,6 +33,7 @@ class MockSupplierPickupScheduleRepository
         unit: 'piece',
         status: SupplierPickupScheduleStatus.accepted,
         pickupType: 'Self pickup',
+        canSupplierComplete: true,
         pickupWindow: SupplierPickupWindow(
           start: today.add(const Duration(hours: 10)),
           end: today.add(const Duration(hours: 12)),
@@ -50,6 +51,7 @@ class MockSupplierPickupScheduleRepository
         unit: 'kg',
         status: SupplierPickupScheduleStatus.accepted,
         pickupType: 'Self pickup',
+        canSupplierComplete: true,
         pickupWindow: SupplierPickupWindow(
           start: tomorrow.add(const Duration(hours: 13)),
           end: tomorrow.add(const Duration(hours: 15)),
@@ -64,6 +66,7 @@ class MockSupplierPickupScheduleRepository
         unit: 'kg',
         status: SupplierPickupScheduleStatus.accepted,
         pickupType: 'Self pickup',
+        canSupplierComplete: true,
         pickupWindow: SupplierPickupWindow(
           start: futureDate.add(const Duration(hours: 9)),
           end: futureDate.add(const Duration(hours: 11)),

@@ -4,6 +4,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../auth/application/auth_controller.dart';
 import '../data/models/supplier_my_materials_models.dart';
 import '../data/supplier_my_materials_repository.dart';
+import 'supplier_portal_session.dart';
 
 class SupplierMyMaterialsQueryNotifier extends Notifier<SupplierMyMaterialsQuery> {
   @override
@@ -25,6 +26,7 @@ final supplierMyMaterialsQueryProvider = NotifierProvider<
 
 final supplierMyMaterialsProvider =
     FutureProvider.autoDispose<SupplierMyMaterialsListResult>((ref) async {
+  watchSupplierPortalSessionFromRef(ref);
   final auth = ref.watch(authControllerProvider);
 
   if (!auth.isAuthenticated) {

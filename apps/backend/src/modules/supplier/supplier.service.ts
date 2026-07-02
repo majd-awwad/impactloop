@@ -1,60 +1,90 @@
 import type {
   RecentActivityDto,
   SupplierDashboardDto,
-} from './dto/supplier-dashboard.dto.js';
+} from "./dto/supplier-dashboard.dto.js";
 import type {
   SupplierOrganizationProfileDto,
   SupplierProfileDetailsDto,
   SupplierProfileLocationDto,
   SupplierProfileResponseDto,
-} from './dto/supplier-profile.dto.js';
+} from "./dto/supplier-profile.dto.js";
 
 import {
   emptyDashboardStats,
   normalizeVerificationStatus,
-} from './dto/supplier-dashboard.dto.js';
+} from "./dto/supplier-dashboard.dto.js";
 
-import { AppError } from '../../utils/app-error.js';
-import { decimalToNumber } from '../../utils/decimal.js';
-import * as categoriesRepository from '../categories/categories.repository.js';
-import * as categoryRequestsRepository from '../category-requests/category-requests.repository.js';
-import * as priceRuleRequestsRepository from '../price-rule-requests/price-rule-requests.repository.js';
-import { resolveApprovedMaxUnitPriceNis } from '../price-rule-requests/price-rule-request-pricing.js';
-import { checkMaterialPrice, resolveMaterialReferenceForCreate } from '../materials/materials.service.js';
-import * as supplierRepository from './supplier.repository.js';
+import { AppError } from "../../utils/app-error.js";
+import { env } from "../../config/env.js";
+import { prisma } from "../../database/prisma.js";
+import { decimalToNumber } from "../../utils/decimal.js";
+import type { Prisma } from "../../generated/prisma/client.js";
+import * as categoriesRepository from "../categories/categories.repository.js";
+import * as categoryRequestsRepository from "../category-requests/category-requests.repository.js";
+import * as priceRuleRequestsRepository from "../price-rule-requests/price-rule-requests.repository.js";
+import { evaluateApprovedPriceRuleRequest } from "../price-rule-requests/price-rule-request-pricing.js";
+import {
+  checkMaterialPrice,
+  resolveMaterialReferenceForCreate,
+} from "../materials/materials.service.js";
+import * as materialTypesRepository from "../material-types/material-types.repository.js";
+import { matchMaterialReference } from "../../services/material-reference-matching.service.js";
+import {
+  runIdempotentOperation,
+  SUPPLIER_CREATE_MATERIAL_SCOPE,
+} from "../../services/idempotency.service.js";
+import * as supplierRepository from "./supplier.repository.js";
+import {
+  assertCanMarkMaterialUnavailable,
+  assertCanRestoreMaterial,
+  getMaterialModerationPolicy,
+} from "../admin-materials/admin-materials.moderation-policy.js";
+import {
+  buildSupplierMaterialWhere,
+  resolveSupplierContext,
+} from "./supplier-material-scope.js";
+import { assertSupplierCanPublishMaterials } from "../supplier-verification/supplier-verification.service.js";
+import {
+  getHeldQuantitiesByMaterialIds,
+  toDecimal,
+} from "../reservations/reservations.quantity.js";
 import type {
   CreateSupplierMaterialInput,
+  SupplierFollowersQuery,
   SupplierMaterialsQuery,
   UpdateSupplierMaterialInput,
   UpdateSupplierProfileInput,
-} from './supplier.validation.js';
+  UpdateSupplierProfileImagesInput,
+} from "./supplier.validation.js";
 
 const MISSING_PROFILE_MESSAGE =
-  'Complete your supplier profile to start listing materials.';
+  "Complete your supplier profile to start listing materials.";
 
 const MISSING_PICKUP_LOCATION_MESSAGE =
-  'Add a default pickup location before listing materials.';
+  "Add a default pickup location before listing materials.";
 
 const ORG_PICKUP_OVERRIDE_MESSAGE =
-  'Organization suppliers must use the profile pickup location for all listings.';
+  "Organization suppliers must use the profile pickup location for all listings.";
 
 type SupplierProfileForMaterialCreate = NonNullable<
-  Awaited<ReturnType<typeof supplierRepository.findSupplierProfileForMaterialCreate>>
+  Awaited<
+    ReturnType<typeof supplierRepository.findSupplierProfileForMaterialCreate>
+  >
 >;
 
 const assertOrganizationPickupPolicy = (
   input: CreateSupplierMaterialInput,
   supplierType: string | null,
 ) => {
-  if (!supplierRepository.isOrganizationSupplierType(supplierType ?? '')) {
+  if (!supplierRepository.isOrganizationSupplierType(supplierType ?? "")) {
     return;
   }
 
   const useDefaultPickupLocation = input.useDefaultPickupLocation ?? true;
 
   if (!useDefaultPickupLocation || input.pickupLocation != null) {
-    throw new AppError(ORG_PICKUP_OVERRIDE_MESSAGE, 400, 'VALIDATION_ERROR', {
-      reason: 'ORG_PICKUP_OVERRIDE_NOT_ALLOWED',
+    throw new AppError(ORG_PICKUP_OVERRIDE_MESSAGE, 400, "VALIDATION_ERROR", {
+      reason: "ORG_PICKUP_OVERRIDE_NOT_ALLOWED",
     });
   }
 };
@@ -62,6 +92,7 @@ const assertOrganizationPickupPolicy = (
 const resolveMaterialPickupLocationId = async (
   supplierProfile: SupplierProfileForMaterialCreate,
   input: CreateSupplierMaterialInput,
+  tx?: Prisma.TransactionClient,
 ): Promise<string> => {
   const defaultLocation = supplierProfile.defaultPickupLocation;
   const useDefaultPickupLocation = input.useDefaultPickupLocation ?? true;
@@ -70,37 +101,52 @@ const resolveMaterialPickupLocationId = async (
     throw new AppError(
       MISSING_PICKUP_LOCATION_MESSAGE,
       400,
-      'VALIDATION_ERROR',
+      "VALIDATION_ERROR",
     );
   }
 
   assertOrganizationPickupPolicy(input, supplierProfile.supplierType);
 
-  if (supplierRepository.isOrganizationSupplierType(supplierProfile.supplierType ?? '')) {
-    return supplierRepository.copyLocationRow(defaultLocation, 'MATERIAL_PICKUP');
+  if (
+    supplierRepository.isOrganizationSupplierType(
+      supplierProfile.supplierType ?? "",
+    )
+  ) {
+    return supplierRepository.copyLocationRow(
+      defaultLocation,
+      "MATERIAL_PICKUP",
+      tx,
+    );
   }
 
   if (useDefaultPickupLocation || !input.pickupLocation) {
-    return supplierRepository.copyLocationRow(defaultLocation, 'MATERIAL_PICKUP');
+    return supplierRepository.copyLocationRow(
+      defaultLocation,
+      "MATERIAL_PICKUP",
+      tx,
+    );
   }
 
-  return supplierRepository.createMaterialPickupLocation(input.pickupLocation);
+  return supplierRepository.createMaterialPickupLocation(
+    input.pickupLocation,
+    tx,
+  );
 };
 
 const deriveMaterialSourceType = (supplierType: string | null) => {
   switch (supplierType) {
-    case 'WORKSHOP':
-      return 'WORKSHOP_SURPLUS' as const;
-    case 'FACTORY':
-      return 'FACTORY_SURPLUS' as const;
-    case 'EDUCATIONAL_INSTITUTION':
-      return 'EDUCATIONAL_INSTITUTION' as const;
-    case 'INDIVIDUAL_SUPPLIER':
+    case "WORKSHOP":
+      return "WORKSHOP_SURPLUS" as const;
+    case "FACTORY":
+      return "FACTORY_SURPLUS" as const;
+    case "EDUCATIONAL_INSTITUTION":
+      return "EDUCATIONAL_INSTITUTION" as const;
+    case "INDIVIDUAL_SUPPLIER":
       // TODO: MVP fallback. Revisit when the source enum can distinguish individual suppliers.
-      return 'STUDENT_LEFTOVER' as const;
-    case 'STUDENT_SUPPLIER':
+      return "STUDENT_LEFTOVER" as const;
+    case "STUDENT_SUPPLIER":
     default:
-      return 'STUDENT_LEFTOVER' as const;
+      return "STUDENT_LEFTOVER" as const;
   }
 };
 
@@ -109,20 +155,21 @@ const assertSourceRequestPublishable = async (
   input: CreateSupplierMaterialInput,
 ) => {
   if (input.sourceCategoryRequestId) {
-    const request = await categoryRequestsRepository.findCategoryRequestByIdForOwner(
-      input.sourceCategoryRequestId,
-      userId,
-    );
+    const request =
+      await categoryRequestsRepository.findCategoryRequestByIdForOwner(
+        input.sourceCategoryRequestId,
+        userId,
+      );
 
     if (!request) {
-      throw new AppError('Category request not found', 404, 'NOT_FOUND');
+      throw new AppError("Category request not found", 404, "NOT_FOUND");
     }
 
     if (request.publishedMaterialId) {
       throw new AppError(
-        'This listing was already completed.',
+        "This listing was already completed.",
         409,
-        'CONFLICT',
+        "CONFLICT",
       );
     }
   }
@@ -135,26 +182,35 @@ const assertSourceRequestPublishable = async (
       );
 
     if (!request) {
-      throw new AppError('Price rule request not found', 404, 'NOT_FOUND');
+      throw new AppError("Price rule request not found", 404, "NOT_FOUND");
     }
 
     if (request.publishedMaterialId) {
       throw new AppError(
-        'This listing was already completed.',
+        "This listing was already completed.",
         409,
-        'CONFLICT',
+        "CONFLICT",
       );
     }
 
     if (!input.isFree && input.price != null) {
-      const maxAllowed = resolveApprovedMaxUnitPriceNis(request);
-      if (maxAllowed != null && input.price > maxAllowed) {
-        const unit = request.unit ?? request.materialType?.defaultUnit ?? 'unit';
+      const acceptance = evaluateApprovedPriceRuleRequest(
+        request,
+        input.price,
+        input.condition,
+      );
+      if (acceptance.ok === false && acceptance.reason === "PRICE_TOO_HIGH") {
+        const unit =
+          request.unit ?? request.materialType?.defaultUnit ?? "unit";
         throw new AppError(
-          `Unit price must be ${maxAllowed} NIS or less.`,
+          `Maximum allowed price is ${acceptance.maxAllowed} NIS per ${unit}.`,
           400,
-          'VALIDATION_ERROR',
-          { maxAllowedPrice: maxAllowed, approvedUnit: unit },
+          "VALIDATION_ERROR",
+          {
+            maxAllowedPrice: acceptance.maxAllowed,
+            approvedUnit: unit,
+            reason: "PRICE_TOO_HIGH",
+          },
         );
       }
     }
@@ -164,11 +220,13 @@ const assertSourceRequestPublishable = async (
 const markSourceRequestPublished = async (
   materialId: string,
   input: CreateSupplierMaterialInput,
+  tx?: Prisma.TransactionClient,
 ) => {
   if (input.sourceCategoryRequestId) {
     await categoryRequestsRepository.markCategoryRequestPublished({
       id: input.sourceCategoryRequestId,
       materialId,
+      client: tx,
     });
   }
 
@@ -176,13 +234,16 @@ const markSourceRequestPublished = async (
     await priceRuleRequestsRepository.markPriceRuleRequestPublished({
       id: input.sourcePriceRuleRequestId,
       materialId,
+      client: tx,
     });
   }
 };
 
-const mapCreatedMaterial = (material: Awaited<
-  ReturnType<typeof supplierRepository.createSupplierMaterial>
->) => ({
+const mapCreatedMaterial = (
+  material: Awaited<
+    ReturnType<typeof supplierRepository.createSupplierMaterial>
+  >,
+) => ({
   id: material.id,
   title: material.title,
   status: material.status,
@@ -209,6 +270,8 @@ const mapCreatedMaterial = (material: Awaited<
   createdAt: material.createdAt.toISOString(),
 });
 
+type CreatedSupplierMaterialDto = ReturnType<typeof mapCreatedMaterial>;
+
 const buildRecentActivity = (
   notifications: Awaited<
     ReturnType<typeof supplierRepository.findRecentNotifications>
@@ -219,7 +282,7 @@ const buildRecentActivity = (
 ): RecentActivityDto[] => {
   const notificationItems: RecentActivityDto[] = notifications.map((item) => ({
     id: item.id,
-    type: 'NOTIFICATION',
+    type: "NOTIFICATION",
     title: item.title,
     body: item.body,
     createdAt: item.createdAt.toISOString(),
@@ -227,7 +290,7 @@ const buildRecentActivity = (
 
   const reservationItems: RecentActivityDto[] = reservations.map((item) => ({
     id: item.id,
-    type: 'RESERVATION',
+    type: "RESERVATION",
     title: `Reservation ${item.status.toLowerCase()}`,
     body: item.material.title,
     createdAt: item.createdAt.toISOString(),
@@ -236,7 +299,8 @@ const buildRecentActivity = (
   return [...notificationItems, ...reservationItems]
     .sort(
       (left, right) =>
-        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+        new Date(right.createdAt).getTime() -
+        new Date(left.createdAt).getTime(),
     )
     .slice(0, 3);
 };
@@ -244,8 +308,10 @@ const buildRecentActivity = (
 export const getSupplierDashboard = async (
   userId: string,
 ): Promise<SupplierDashboardDto> => {
-  const supplierProfile =
-    await supplierRepository.findSupplierProfileForDashboard(userId);
+  const scope = await resolveSupplierContext(userId);
+  const supplierProfile = scope.supplierProfileId
+    ? await supplierRepository.findSupplierProfileForDashboard(userId)
+    : null;
 
   const [
     materialGroups,
@@ -257,17 +323,53 @@ export const getSupplierDashboard = async (
     upcomingPickups,
     recentNotifications,
     recentReservations,
+    totalViews,
+    totalLikes,
+    followersCount,
+    scheduledPickups,
+    mostViewedMaterial,
+    highDemandMaterials,
   ] = await Promise.all([
-    supplierRepository.countMaterialsByStatus(userId),
+    supplierRepository.countMaterialsByStatus(scope),
     supplierRepository.countReservationsByStatus(userId),
-    supplierRepository.aggregateReusedMaterials(userId),
+    supplierRepository.aggregateReusedMaterials(scope),
     supplierRepository.aggregateSupplierReviews(userId),
     supplierRepository.countUnreadNotifications(userId),
-    supplierRepository.findRecentMaterials(userId),
+    supplierRepository.findRecentMaterials(scope),
     supplierRepository.findUpcomingPickups(userId),
     supplierRepository.findRecentNotifications(userId),
     supplierRepository.findRecentReservationsForActivity(userId),
+    supplierRepository.countTotalViewsForSupplier(scope),
+    supplierRepository.countTotalLikesForSupplier(scope),
+    scope.supplierProfileId
+      ? supplierRepository.countSupplierFollowers(scope.supplierProfileId)
+      : Promise.resolve(0),
+    supplierRepository.countScheduledPickups(userId),
+    supplierRepository.findMostViewedMaterial(scope),
+    supplierRepository.findHighDemandMaterials(scope),
   ]);
+
+  if (env.nodeEnv !== "production") {
+    const [ownerCount, profileCount, scopedCount] = await Promise.all([
+      prisma.material.count({ where: { ownerId: userId } }),
+      scope.supplierProfileId
+        ? prisma.material.count({
+            where: { supplierProfileId: scope.supplierProfileId },
+          })
+        : Promise.resolve(0),
+      prisma.material.count({ where: buildSupplierMaterialWhere(scope) }),
+    ]);
+
+    console.debug("[supplier-dashboard]", {
+      userId,
+      supplierProfileId: scope.supplierProfileId,
+      ownerCount,
+      profileCount,
+      scopedCount,
+      materialStatsTotal: supplierRepository.foldMaterialStatusCounts(materialGroups)
+        .total,
+    });
+  }
 
   const materialStats =
     supplierRepository.foldMaterialStatusCounts(materialGroups);
@@ -288,14 +390,58 @@ export const getSupplierDashboard = async (
     notifications: {
       unread: unreadNotifications,
     },
+    engagement: {
+      totalViews,
+      totalLikes,
+      followersCount,
+    },
+    operational: {
+      scheduledPickups,
+      activeMaterials: materialStats.available,
+    },
   };
+
+  const recentReservationRequestsDto: SupplierDashboardDto['recentReservationRequests'] =
+    [];
+
+  const mostViewedMaterialDto =
+    totalViews > 0 && mostViewedMaterial
+      ? {
+          id: mostViewedMaterial.material.id,
+          title: mostViewedMaterial.material.title,
+          status: mostViewedMaterial.material.status,
+          categoryName: mostViewedMaterial.material.category?.nameEn ?? null,
+          coverImageUrl:
+            mostViewedMaterial.material.images[0]?.imageUrl ?? null,
+          viewsCount: mostViewedMaterial.viewsCount,
+          demandCount: 0,
+        }
+      : null;
+
+  const highDemandMaterialIds = highDemandMaterials.map(
+    ({ material }) => material.id,
+  );
+  const highDemandViewCounts =
+    await supplierRepository.countViewsByMaterialIds(highDemandMaterialIds);
+
+  const highDemandMaterialsDto = highDemandMaterials.map(
+    ({ material, demandCount }) => ({
+      id: material.id,
+      title: material.title,
+      status: material.status,
+      categoryName: material.category?.nameEn ?? null,
+      coverImageUrl: material.images[0]?.imageUrl ?? null,
+      viewsCount: highDemandViewCounts.get(material.id) ?? 0,
+      demandCount,
+    }),
+  );
 
   const recentMaterialsDto = recentMaterials.map((material) => ({
     id: material.id,
     title: material.title,
     status: material.status,
     quantity:
-      typeof material.quantity === 'number'
+      typeof material.quantity === "number"
         ? material.quantity
         : material.quantity.toNumber(),
     unit: material.unit,
@@ -310,7 +456,7 @@ export const getSupplierDashboard = async (
     materialTitle: pickup.material.title,
     requesterName: pickup.requester.displayName,
     quantityRequested:
-      typeof pickup.quantityRequested === 'number'
+      typeof pickup.quantityRequested === "number"
         ? pickup.quantityRequested
         : pickup.quantityRequested.toNumber(),
     pickupWindowStart: pickup.pickupWindowStart?.toISOString() ?? null,
@@ -330,6 +476,9 @@ export const getSupplierDashboard = async (
       recentMaterials: recentMaterialsDto,
       upcomingPickups: upcomingPickupsDto,
       recentActivity,
+      recentReservationRequests: recentReservationRequestsDto,
+      mostViewedMaterial: mostViewedMaterialDto,
+      highDemandMaterials: highDemandMaterialsDto,
     };
   }
 
@@ -345,10 +494,8 @@ export const getSupplierDashboard = async (
 
   const organization = supplierProfile.organizationProfile
     ? {
-        organizationName:
-          supplierProfile.organizationProfile.organizationName,
-        organizationType:
-          supplierProfile.organizationProfile.organizationType,
+        organizationName: supplierProfile.organizationProfile.organizationName,
+        organizationType: supplierProfile.organizationProfile.organizationType,
       }
     : null;
 
@@ -357,8 +504,8 @@ export const getSupplierDashboard = async (
     supplier: {
       id: supplierProfile.id,
       userId: supplierProfile.userId,
-      publicName: supplierProfile.publicName ?? '',
-      supplierType: supplierProfile.supplierType ?? '',
+      publicName: supplierProfile.publicName ?? "",
+      supplierType: supplierProfile.supplierType ?? "",
       description: supplierProfile.description,
       verificationStatus: normalizeVerificationStatus(
         supplierProfile.verificationStatus,
@@ -370,31 +517,41 @@ export const getSupplierDashboard = async (
     recentMaterials: recentMaterialsDto,
     upcomingPickups: upcomingPickupsDto,
     recentActivity,
+    recentReservationRequests: recentReservationRequestsDto,
+    mostViewedMaterial: mostViewedMaterialDto,
+    highDemandMaterials: highDemandMaterialsDto,
   };
 };
 
 export const createSupplierMaterial = async (
   userId: string,
   input: CreateSupplierMaterialInput,
+  tx?: Prisma.TransactionClient,
 ) => {
   const supplierProfile =
     await supplierRepository.findSupplierProfileForMaterialCreate(userId);
 
   if (!supplierProfile) {
-    throw new AppError(MISSING_PROFILE_MESSAGE, 400, 'VALIDATION_ERROR');
+    throw new AppError(MISSING_PROFILE_MESSAGE, 400, "VALIDATION_ERROR");
   }
+
+  assertSupplierCanPublishMaterials({
+    supplierType: supplierProfile.supplierType,
+    verificationStatus: supplierProfile.verificationStatus,
+  });
 
   if (!supplierProfile.defaultPickupLocationId) {
     throw new AppError(
       MISSING_PICKUP_LOCATION_MESSAGE,
       400,
-      'VALIDATION_ERROR',
+      "VALIDATION_ERROR",
     );
   }
 
   const materialLocationId = await resolveMaterialPickupLocationId(
     supplierProfile,
     input,
+    tx,
   );
 
   await assertSourceRequestPublishable(userId, input);
@@ -405,7 +562,7 @@ export const createSupplierMaterial = async (
   );
 
   if (!requestedCategory) {
-    throw new AppError('Category not found', 404, 'NOT_FOUND');
+    throw new AppError("Category not found", 404, "NOT_FOUND");
   }
 
   const requestedOtherCategory = categoriesRepository.isOtherCategory(
@@ -416,9 +573,9 @@ export const createSupplierMaterial = async (
   if (input.isFree) {
     if (input.price != null && input.price > 0) {
       throw new AppError(
-        'Free listings cannot include a price.',
+        "Free listings cannot include a price.",
         400,
-        'VALIDATION_ERROR',
+        "VALIDATION_ERROR",
       );
     }
 
@@ -447,26 +604,136 @@ export const createSupplierMaterial = async (
       sourceType,
       isFree: true,
       price: null,
-      currency: 'NIS',
+      currency: "NIS",
       pickupAllowed: input.pickupAllowed,
-      deliveryAllowed: false,
+      deliveryAllowed: input.deliveryAllowed,
       pickupNotes: input.pickupNotes ?? null,
       suggestedUses: input.suggestedUses ?? null,
       imageUrls: input.imageUrls,
+      client: tx,
     });
 
-    await markSourceRequestPublished(material.id, input);
+    await markSourceRequestPublished(material.id, input, tx);
 
     return mapCreatedMaterial(material);
   }
 
   if (requestedOtherCategory) {
     throw new AppError(
-      'Paid listings need a reviewed category/material. Submit this material for review before publishing.',
+      "Paid listings need a reviewed category/material. Submit this material for review before publishing.",
       400,
-      'VALIDATION_ERROR',
-      { reason: 'PAID_OTHER_NOT_ALLOWED' },
+      "VALIDATION_ERROR",
+      { reason: "PAID_OTHER_NOT_ALLOWED" },
     );
+  }
+
+  if (input.sourcePriceRuleRequestId && input.price != null) {
+    const priceRuleRequest =
+      await priceRuleRequestsRepository.findPriceRuleRequestByIdForOwner(
+        input.sourcePriceRuleRequestId,
+        userId,
+      );
+
+    if (!priceRuleRequest) {
+      throw new AppError("Price rule request not found", 404, "NOT_FOUND");
+    }
+
+    const acceptance = evaluateApprovedPriceRuleRequest(
+      priceRuleRequest,
+      input.price,
+      input.condition,
+    );
+
+    if (acceptance.ok) {
+      const approvedUnit =
+        priceRuleRequest.unit ??
+        priceRuleRequest.materialType?.defaultUnit ??
+        null;
+      if (
+        approvedUnit &&
+        input.unit.trim().toLowerCase() !== approvedUnit.trim().toLowerCase()
+      ) {
+        throw new AppError(
+          `Please use the approved unit (${approvedUnit}) for this material.`,
+          400,
+          "VALIDATION_ERROR",
+          { reason: "UNIT_MISMATCH", approvedUnit },
+        );
+      }
+
+      let materialType = priceRuleRequest.materialType?.id
+        ? await materialTypesRepository.findMaterialTypeById(
+            priceRuleRequest.materialType.id,
+          )
+        : null;
+      if (!materialType?.isActive) {
+        const matchResult = await matchMaterialReference({
+          materialName,
+          categoryId: input.categoryId,
+        });
+        if (matchResult.status === "MATCHED") {
+          materialType = await materialTypesRepository.findMaterialTypeById(
+            matchResult.materialType.id,
+          );
+          if (!materialType?.isActive) {
+            materialType = null;
+          }
+        } else {
+          materialType = null;
+        }
+      }
+
+      const displayMaterialType = materialType?.nameEn ?? materialName;
+      const material = await supplierRepository.createSupplierMaterial({
+        ownerId: userId,
+        supplierProfileId: supplierProfile.id,
+        categoryId: materialType?.categoryId ?? input.categoryId,
+        locationId: materialLocationId,
+        title: input.title,
+        description: input.description,
+        materialType: displayMaterialType,
+        materialTypeId:
+          materialType?.id ?? priceRuleRequest.materialTypeId ?? null,
+        customMaterialType: materialType ? null : materialName,
+        quantity: input.quantity,
+        unit: input.unit,
+        condition: input.condition,
+        sourceType,
+        isFree: false,
+        price: input.price,
+        currency: "NIS",
+        pickupAllowed: input.pickupAllowed,
+        deliveryAllowed: input.deliveryAllowed,
+        pickupNotes: input.pickupNotes ?? null,
+        suggestedUses: input.suggestedUses ?? null,
+        priceRuleId: null,
+        priceCheckedAt: new Date(),
+        maxAllowedPriceAtCheck: acceptance.maxAllowed,
+        imageUrls: input.imageUrls,
+        client: tx,
+      });
+
+      await markSourceRequestPublished(material.id, input, tx);
+
+      return mapCreatedMaterial(material);
+    }
+
+    if (acceptance.reason === "PRICE_TOO_HIGH") {
+      const unit =
+        priceRuleRequest.unit ??
+        priceRuleRequest.materialType?.defaultUnit ??
+        "unit";
+      throw new AppError(
+        `Maximum allowed price is ${acceptance.maxAllowed} NIS per ${unit}.`,
+        400,
+        "VALIDATION_ERROR",
+        {
+          maxAllowedPrice: acceptance.maxAllowed,
+          approvedUnit: unit,
+          reason: "PRICE_TOO_HIGH",
+        },
+      );
+    }
   }
 
   const resolved = await resolveMaterialReferenceForCreate({
@@ -479,10 +746,10 @@ export const createSupplierMaterial = async (
 
   if (!materialType) {
     throw new AppError(
-      'We could not verify this paid material yet. Submit it for review.',
+      "This paid material needs admin price review before publishing.",
       400,
-      'VALIDATION_ERROR',
-      { reason: 'MATERIAL_REVIEW_REQUIRED' },
+      "VALIDATION_ERROR",
+      { reason: "MATERIAL_REVIEW_REQUIRED" },
     );
   }
 
@@ -498,7 +765,7 @@ export const createSupplierMaterial = async (
   });
 
   if (!priceCheck.allowed) {
-    throw new AppError(priceCheck.message, 400, 'VALIDATION_ERROR', {
+    throw new AppError(priceCheck.message, 400, "VALIDATION_ERROR", {
       reason: priceCheck.reason,
       maxAllowedPrice: priceCheck.maxAllowedPrice,
       matchedReference: priceCheck.matchedReference,
@@ -523,20 +790,37 @@ export const createSupplierMaterial = async (
     sourceType,
     isFree: false,
     price: input.price,
-    currency: 'NIS',
+    currency: "NIS",
     pickupAllowed: input.pickupAllowed,
-    deliveryAllowed: false,
+    deliveryAllowed: input.deliveryAllowed,
     pickupNotes: input.pickupNotes ?? null,
     suggestedUses: input.suggestedUses ?? null,
     priceRuleId: priceCheck.priceRuleId ?? null,
     priceCheckedAt: new Date(),
     maxAllowedPriceAtCheck: priceCheck.maxAllowedPrice ?? null,
     imageUrls: input.imageUrls,
+    client: tx,
   });
 
-  await markSourceRequestPublished(material.id, input);
+  await markSourceRequestPublished(material.id, input, tx);
 
   return mapCreatedMaterial(material);
+};
+
+export const createSupplierMaterialIdempotent = async (
+  userId: string,
+  input: CreateSupplierMaterialInput,
+  idempotencyKey: string,
+) => {
+  return runIdempotentOperation<CreatedSupplierMaterialDto>({
+    userId,
+    scope: SUPPLIER_CREATE_MATERIAL_SCOPE,
+    key: idempotencyKey,
+    payload: input,
+    resourceType: "MATERIAL",
+    getResourceId: (material) => material.id,
+    handler: (tx) => createSupplierMaterial(userId, input, tx),
+  });
 };
 
 export const getEmptySupplierDashboard = (): SupplierDashboardDto => ({
@@ -546,20 +830,25 @@ export const getEmptySupplierDashboard = (): SupplierDashboardDto => ({
   recentMaterials: [],
   upcomingPickups: [],
   recentActivity: [],
+  recentReservationRequests: [],
+  mostViewedMaterial: null,
+  highDemandMaterials: [],
 });
 
-const mapLocation = (location: {
-  id: string;
-  country: string;
-  city: string;
-  area: string | null;
-  addressLine: string | null;
-  latitude: { toNumber(): number } | number | null;
-  longitude: { toNumber(): number } | number | null;
-  visibility: string | null;
-  isApproximate: boolean;
-  locationType: string | null;
-} | null): SupplierProfileLocationDto | null => {
+const mapLocation = (
+  location: {
+    id: string;
+    country: string;
+    city: string;
+    area: string | null;
+    addressLine: string | null;
+    latitude: { toNumber(): number } | number | null;
+    longitude: { toNumber(): number } | number | null;
+    visibility: string | null;
+    isApproximate: boolean;
+    locationType: string | null;
+  } | null,
+): SupplierProfileLocationDto | null => {
   if (!location) {
     return null;
   }
@@ -573,13 +862,13 @@ const mapLocation = (location: {
     latitude:
       location.latitude == null
         ? null
-        : typeof location.latitude === 'number'
+        : typeof location.latitude === "number"
           ? location.latitude
           : location.latitude.toNumber(),
     longitude:
       location.longitude == null
         ? null
-        : typeof location.longitude === 'number'
+        : typeof location.longitude === "number"
           ? location.longitude
           : location.longitude.toNumber(),
     visibility: location.visibility,
@@ -588,27 +877,31 @@ const mapLocation = (location: {
   };
 };
 
-const mapOrganizationProfile = (organization: {
-  id: string;
-  organizationName: string;
-  organizationType: string;
-  contactPersonName: string | null;
-  workingDays: unknown;
-  workingHours: unknown;
-  verificationDocumentStatus: string | null;
-  businessLocation: {
+const mapOrganizationProfile = (
+  organization: {
     id: string;
-    country: string;
-    city: string;
-    area: string | null;
-    addressLine: string | null;
-    latitude: { toNumber(): number } | number | null;
-    longitude: { toNumber(): number } | number | null;
-    visibility: string | null;
-    isApproximate: boolean;
-    locationType: string | null;
-  } | null;
-} | null): SupplierOrganizationProfileDto | null => {
+    organizationName: string;
+    organizationType: string;
+    contactPersonName: string | null;
+    workingDays: unknown;
+    workingHours: unknown;
+    verificationDocumentStatus: string | null;
+    verificationDocumentUrl: string | null;
+    verificationDocumentName: string | null;
+    businessLocation: {
+      id: string;
+      country: string;
+      city: string;
+      area: string | null;
+      addressLine: string | null;
+      latitude: { toNumber(): number } | number | null;
+      longitude: { toNumber(): number } | number | null;
+      visibility: string | null;
+      isApproximate: boolean;
+      locationType: string | null;
+    } | null;
+  } | null,
+): SupplierOrganizationProfileDto | null => {
   if (!organization) {
     return null;
   }
@@ -621,8 +914,24 @@ const mapOrganizationProfile = (organization: {
     workingDays: organization.workingDays,
     workingHours: organization.workingHours,
     verificationDocumentStatus: organization.verificationDocumentStatus,
+    verificationDocumentUrl: organization.verificationDocumentUrl,
+    verificationDocumentName: organization.verificationDocumentName,
     businessLocation: mapLocation(organization.businessLocation),
   };
+};
+
+const resolveSupplierVerificationAdminNote = (
+  verificationStatus: string,
+  adminNote: string | null | undefined,
+): string | null => {
+  const normalized = normalizeVerificationStatus(verificationStatus);
+
+  if (normalized !== "REJECTED" && normalized !== "CHANGES_REQUESTED") {
+    return null;
+  }
+
+  const trimmed = adminNote?.trim();
+  return trimmed ? trimmed : null;
 };
 
 const mapSupplierProfile = (supplierProfile: {
@@ -630,7 +939,11 @@ const mapSupplierProfile = (supplierProfile: {
   publicName: string | null;
   supplierType: string | null;
   description: string | null;
+  coverImageUrl: string | null;
+  avatarImageUrl: string | null;
   verificationStatus: string;
+  verificationAdminNote?: string | null;
+  verificationReviewedAt?: Date | null;
   defaultPickupLocation: {
     id: string;
     country: string;
@@ -651,6 +964,8 @@ const mapSupplierProfile = (supplierProfile: {
     workingDays: unknown;
     workingHours: unknown;
     verificationDocumentStatus: string | null;
+    verificationDocumentUrl: string | null;
+    verificationDocumentName: string | null;
     businessLocation: {
       id: string;
       country: string;
@@ -667,10 +982,20 @@ const mapSupplierProfile = (supplierProfile: {
 }): SupplierProfileDetailsDto => {
   return {
     id: supplierProfile.id,
-    publicName: supplierProfile.publicName ?? '',
-    supplierType: supplierProfile.supplierType ?? '',
+    publicName: supplierProfile.publicName ?? "",
+    supplierType: supplierProfile.supplierType ?? "",
     description: supplierProfile.description,
-    verificationStatus: supplierProfile.verificationStatus,
+    coverImageUrl: supplierProfile.coverImageUrl,
+    avatarImageUrl: supplierProfile.avatarImageUrl,
+    verificationStatus: normalizeVerificationStatus(
+      supplierProfile.verificationStatus,
+    ),
+    verificationAdminNote: resolveSupplierVerificationAdminNote(
+      supplierProfile.verificationStatus,
+      supplierProfile.verificationAdminNote,
+    ),
+    verificationReviewedAt:
+      supplierProfile.verificationReviewedAt?.toISOString() ?? null,
     defaultPickupLocation: mapLocation(supplierProfile.defaultPickupLocation),
     organizationProfile: mapOrganizationProfile(
       supplierProfile.organizationProfile,
@@ -678,11 +1003,18 @@ const mapSupplierProfile = (supplierProfile: {
   };
 };
 
-const mapSupplierProfileResponse = (record: Awaited<
-  ReturnType<typeof supplierRepository.findSupplierProfileDetailsByUserId>
->): SupplierProfileResponseDto => {
+const mapSupplierProfileResponse = (
+  record: Awaited<
+    ReturnType<typeof supplierRepository.findSupplierProfileDetailsByUserId>
+  >,
+  extras: {
+    stats: SupplierProfileResponseDto['stats'];
+    latestFollowers: SupplierProfileResponseDto['latestFollowers'];
+    materialsPreview: SupplierProfileResponseDto['materialsPreview'];
+  },
+): SupplierProfileResponseDto => {
   if (!record) {
-    throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    throw new AppError("User not found", 404, "USER_NOT_FOUND");
   }
 
   return {
@@ -696,34 +1028,186 @@ const mapSupplierProfileResponse = (record: Awaited<
     supplier: record.supplierProfile
       ? mapSupplierProfile(record.supplierProfile)
       : null,
+    stats: extras.stats,
+    latestFollowers: extras.latestFollowers,
+    materialsPreview: extras.materialsPreview,
   };
 };
 
 export const getSupplierProfile = async (
   userId: string,
 ): Promise<SupplierProfileResponseDto> => {
-  const record = await supplierRepository.findSupplierProfileDetailsByUserId(
-    userId,
-  );
+  const scope = await resolveSupplierContext(userId);
+  const record =
+    await supplierRepository.findSupplierProfileDetailsByUserId(userId);
 
-  return mapSupplierProfileResponse(record);
+  const supplierProfileId = scope.supplierProfileId;
+
+  const [
+    materialsSummary,
+    totalReservations,
+    totalLikes,
+    totalViews,
+    latestFollowers,
+    materialsPreview,
+  ] = await Promise.all([
+    supplierRepository.findSupplierMaterialsSummary(scope),
+    supplierRepository.countSupplierReservationsTotal(userId),
+    supplierRepository.countTotalLikesForSupplier(scope),
+    supplierRepository.countTotalViewsForSupplier(scope),
+    supplierProfileId
+      ? supplierRepository.listLatestSupplierFollowers(supplierProfileId, 5)
+      : Promise.resolve([]),
+    supplierRepository.findSupplierMaterialsPreview(scope, 4),
+  ]);
+
+  const previewIds = materialsPreview.map((material) => material.id);
+  const [likesByMaterial, viewsByMaterial, reservationsByMaterial, followersCount] =
+    await Promise.all([
+      supplierRepository.countLikesByMaterialIds(previewIds),
+      supplierRepository.countViewsByMaterialIds(previewIds),
+      supplierRepository.countReservationsByMaterialIds(previewIds),
+      supplierProfileId
+        ? supplierRepository.countSupplierFollowers(supplierProfileId)
+        : Promise.resolve(0),
+    ]);
+
+  const materialsPreviewDto = materialsPreview.map((material) => ({
+    id: material.id,
+    title: material.title,
+    imageUrl: material.images[0]?.imageUrl ?? null,
+    category: material.category
+      ? {
+          id: material.category.id,
+          nameEn: material.category.nameEn,
+          nameAr: material.category.nameAr,
+        }
+      : null,
+    status: material.status,
+    condition: material.condition,
+    isFree: material.isFree,
+    price: decimalToNumber(material.price),
+    currency: material.currency,
+    quantity:
+      typeof material.quantity === 'number'
+        ? material.quantity
+        : material.quantity.toNumber(),
+    unit: material.unit,
+    location: material.location
+      ? {
+          city: material.location.city,
+          area: material.location.area,
+        }
+      : null,
+    pickupNotes: material.pickupNotes,
+    pickupAllowed: material.pickupAllowed,
+    deliveryAllowed: material.deliveryAllowed,
+    createdAt: material.createdAt.toISOString(),
+    viewsCount: viewsByMaterial.get(material.id) ?? 0,
+    likesCount: likesByMaterial.get(material.id) ?? 0,
+    reservationsCount: reservationsByMaterial.get(material.id) ?? 0,
+  }));
+
+  const latestFollowersDto = latestFollowers.map((row) => ({
+    user: {
+      id: row.followerUser.id,
+      displayName: row.followerUser.displayName,
+      email: row.followerUser.email,
+      profileImageUrl: row.followerUser.profileImageUrl,
+    },
+    followedAt: row.createdAt.toISOString(),
+  }));
+
+  const stats = {
+    materialsCount: materialsSummary.total,
+    availableMaterialsCount: materialsSummary.available,
+    reusedMaterialsCount: materialsSummary.reused,
+    followersCount,
+    totalViews,
+    totalLikes,
+    totalReservations,
+  };
+
+  return mapSupplierProfileResponse(record, {
+    stats,
+    latestFollowers: latestFollowersDto,
+    materialsPreview: materialsPreviewDto,
+  });
+};
+
+export const getSupplierProfileFollowers = async (
+  userId: string,
+  query: SupplierFollowersQuery,
+) => {
+  const record =
+    await supplierRepository.findSupplierProfileDetailsByUserId(userId);
+  const supplierProfileId = record?.supplierProfile?.id ?? null;
+
+  if (!supplierProfileId) {
+    return {
+      items: [],
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total: 0,
+        totalPages: 0,
+      },
+    };
+  }
+
+  const result = await supplierRepository.listSupplierFollowers({
+    supplierProfileId,
+    page: query.page,
+    limit: query.limit,
+  });
+
+  const totalPages =
+    result.total === 0 ? 0 : Math.ceil(result.total / query.limit);
+
+  return {
+    items: result.items.map((row) => ({
+      user: {
+        id: row.followerUser.id,
+        displayName: row.followerUser.displayName,
+        email: row.followerUser.email,
+        profileImageUrl: row.followerUser.profileImageUrl,
+      },
+      followedAt: row.createdAt.toISOString(),
+    })),
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+      totalPages,
+    },
+  };
 };
 
 export const updateSupplierProfile = async (
   userId: string,
   input: UpdateSupplierProfileInput,
 ): Promise<SupplierProfileResponseDto> => {
-  const record = await supplierRepository.upsertSupplierProfileDetails(
-    userId,
-    input,
-  );
+  await supplierRepository.upsertSupplierProfileDetails(userId, input);
+  return getSupplierProfile(userId);
+};
 
-  return mapSupplierProfileResponse(record);
+export const updateSupplierProfileImages = async (
+  userId: string,
+  input: UpdateSupplierProfileImagesInput,
+): Promise<SupplierProfileResponseDto> => {
+  const existing =
+    await supplierRepository.findSupplierProfileDetailsByUserId(userId);
+  if (!existing) {
+    throw new AppError('Create your supplier profile first.', 404, 'NOT_FOUND');
+  }
+
+  await supplierRepository.updateSupplierProfileImages(userId, input);
+  return getSupplierProfile(userId);
 };
 
 export type SupplierMaterialMutationBlockedReason =
-  | 'REUSED_HISTORY'
-  | 'ACTIVE_REQUESTS';
+  | "REUSED_HISTORY"
+  | "ACTIVE_REQUESTS";
 
 export type SupplierMaterialDeleteBlockedReason =
   SupplierMaterialMutationBlockedReason;
@@ -732,16 +1216,16 @@ export type SupplierMaterialEditBlockedReason =
   SupplierMaterialMutationBlockedReason;
 
 export const DELETE_REUSED_MATERIAL_MESSAGE =
-  'Cannot delete reused material history.';
+  "Cannot delete reused material history.";
 
 export const DELETE_ACTIVE_REQUESTS_MESSAGE =
-  'Cannot delete a material with active requests.';
+  "Cannot delete a material with active requests.";
 
 export const EDIT_REUSED_MATERIAL_MESSAGE =
-  'Cannot edit reused material history.';
+  "Cannot edit reused material history.";
 
 export const EDIT_ACTIVE_REQUESTS_MESSAGE =
-  'Cannot edit a material with active requests or blocked status.';
+  "Cannot edit a material with active requests or blocked status.";
 
 const resolveSupplierMaterialMutationEligibility = (
   status: string,
@@ -750,20 +1234,20 @@ const resolveSupplierMaterialMutationEligibility = (
   canMutate: boolean;
   blockedReason: SupplierMaterialMutationBlockedReason | null;
 } => {
-  if (status === 'REUSED') {
-    return { canMutate: false, blockedReason: 'REUSED_HISTORY' };
+  if (status === "REUSED") {
+    return { canMutate: false, blockedReason: "REUSED_HISTORY" };
   }
 
-  if (status === 'PENDING_RESERVATION' || status === 'RESERVED') {
-    return { canMutate: false, blockedReason: 'ACTIVE_REQUESTS' };
+  if (status === "PENDING_RESERVATION" || status === "RESERVED") {
+    return { canMutate: false, blockedReason: "ACTIVE_REQUESTS" };
   }
 
-  if (status !== 'AVAILABLE' && status !== 'UNAVAILABLE') {
-    return { canMutate: false, blockedReason: 'ACTIVE_REQUESTS' };
+  if (status !== "AVAILABLE" && status !== "UNAVAILABLE") {
+    return { canMutate: false, blockedReason: "ACTIVE_REQUESTS" };
   }
 
   if (blockingReservationCount > 0) {
-    return { canMutate: false, blockedReason: 'ACTIVE_REQUESTS' };
+    return { canMutate: false, blockedReason: "ACTIVE_REQUESTS" };
   }
 
   return { canMutate: true, blockedReason: null };
@@ -789,29 +1273,38 @@ export const resolveSupplierMaterialDeleteEligibility = (
 
 export const resolveSupplierMaterialEditEligibility = (
   status: string,
-  blockingReservationCount: number,
 ): {
   canEdit: boolean;
   editBlockedReason: SupplierMaterialEditBlockedReason | null;
 } => {
-  const eligibility = resolveSupplierMaterialMutationEligibility(
-    status,
-    blockingReservationCount,
-  );
+  if (status === 'REUSED') {
+    return { canEdit: false, editBlockedReason: 'REUSED_HISTORY' };
+  }
 
-  return {
-    canEdit: eligibility.canMutate,
-    editBlockedReason: eligibility.blockedReason,
-  };
+  return { canEdit: true, editBlockedReason: null };
 };
 
 type SupplierOwnedMaterialRecord = Awaited<
   ReturnType<typeof supplierRepository.findSupplierMaterials>
->['items'][number];
+>["items"][number];
+
+type SupplierMaterialEngagementExtras = {
+  viewsCount?: number;
+  likesCount?: number;
+  pendingReservationsCount?: number;
+  reservedReservationsCount?: number;
+  reservationsCount?: number;
+  demandScore?: number;
+  canMarkUnavailable?: boolean;
+  canRestoreAvailable?: boolean;
+  statusActionBlockedReason?: string | null;
+};
 
 const mapSupplierOwnedMaterial = (
   material: SupplierOwnedMaterialRecord,
   blockingReservationCount = 0,
+  likesCount = 0,
+  extras: SupplierMaterialEngagementExtras = {},
 ) => ({
   id: material.id,
   title: material.title,
@@ -827,7 +1320,7 @@ const mapSupplierOwnedMaterial = (
   status: material.status,
   condition: material.condition,
   quantity:
-    typeof material.quantity === 'number'
+    typeof material.quantity === "number"
       ? material.quantity
       : material.quantity.toNumber(),
   unit: material.unit,
@@ -848,44 +1341,136 @@ const mapSupplierOwnedMaterial = (
     isCover: image.isCover,
     sortOrder: image.sortOrder,
   })),
-  viewsCount: material.viewsCount,
+  viewsCount: extras.viewsCount ?? material.viewsCount,
+  likesCount: extras.likesCount ?? likesCount,
+  pendingReservationsCount: extras.pendingReservationsCount ?? 0,
+  reservedReservationsCount: extras.reservedReservationsCount ?? 0,
+  reservationsCount: extras.reservationsCount ?? 0,
+  demandScore: extras.demandScore ?? 0,
+  canMarkUnavailable: extras.canMarkUnavailable ?? false,
+  canRestoreAvailable: extras.canRestoreAvailable ?? false,
+  statusActionBlockedReason: extras.statusActionBlockedReason ?? null,
   createdAt: material.createdAt.toISOString(),
   updatedAt: material.updatedAt.toISOString(),
   ...resolveSupplierMaterialDeleteEligibility(
     material.status,
     blockingReservationCount,
   ),
-  ...resolveSupplierMaterialEditEligibility(
-    material.status,
-    blockingReservationCount,
-  ),
+  ...resolveSupplierMaterialEditEligibility(material.status),
 });
+
+const resolveSupplierMaterialStatusActions = (
+  status: string,
+  activeReservationCount: number,
+) => {
+  const policy = getMaterialModerationPolicy(status);
+  let statusActionBlockedReason = policy.lockReason;
+
+  if (activeReservationCount > 0) {
+    statusActionBlockedReason =
+      "This action is not available while the material has active reservations.";
+  }
+
+  const canMarkUnavailable =
+    policy.canMarkUnavailable && activeReservationCount === 0;
+  const canRestoreAvailable =
+    policy.canRestore && activeReservationCount === 0;
+
+  return {
+    canMarkUnavailable,
+    canRestoreAvailable,
+    statusActionBlockedReason,
+  };
+};
+
+const mapMaterialReservationSummary = (
+  reservation: supplierRepository.SupplierMaterialReservationRecord,
+  unit: string,
+) => {
+  const latestDelivery = reservation.deliveries[0] ?? null;
+
+  return {
+    id: reservation.id,
+    status: reservation.status,
+    quantityRequested: Number(reservation.quantityRequested),
+    unit,
+    message: reservation.message,
+    pickupType: reservation.pickupType,
+    deliveryRequested: reservation.deliveryRequested,
+    pickupPreference: reservation.deliveryRequested
+      ? "Delivery requested"
+      : reservation.pickupType === "SELF_PICKUP"
+        ? "Self pickup"
+        : reservation.pickupType,
+    pickupWindowStart: reservation.pickupWindowStart?.toISOString() ?? null,
+    pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
+    activeDelivery: latestDelivery
+      ? {
+          id: latestDelivery.id,
+          status: latestDelivery.status,
+        }
+      : null,
+    learner: {
+      id: reservation.requester.id,
+      displayName: reservation.requester.displayName,
+    },
+    createdAt: reservation.createdAt.toISOString(),
+    canReview: reservation.status === "PENDING",
+    canOpen: true,
+  };
+};
 
 export const getSupplierMaterials = async (
   userId: string,
   query: SupplierMaterialsQuery,
 ) => {
+  const scope = await resolveSupplierContext(userId);
   const [result, summary, categories] = await Promise.all([
-    supplierRepository.findSupplierMaterials(userId, query),
-    supplierRepository.findSupplierMaterialsSummary(userId),
-    supplierRepository.findSupplierMaterialCategories(userId),
+    supplierRepository.findSupplierMaterials(scope, query),
+    supplierRepository.findSupplierMaterialsSummary(scope),
+    supplierRepository.findSupplierMaterialCategories(scope),
   ]);
 
-  const blockingReservationCounts =
-    await supplierRepository.countBlockingReservationsByMaterialIds(
-      result.items.map((item) => item.id),
-    );
+  const materialIds = result.items.map((item) => item.id);
+
+  const [blockingReservationCounts, likesByMaterial, viewsByMaterial, demandByMaterial] =
+    await Promise.all([
+      supplierRepository.countBlockingReservationsByMaterialIds(materialIds),
+      supplierRepository.countLikesByMaterialIds(materialIds),
+      supplierRepository.countViewsByMaterialIds(materialIds),
+      supplierRepository.findReservationDemandByMaterialIds(materialIds),
+    ]);
 
   const totalPages =
     result.total === 0 ? 0 : Math.ceil(result.total / query.limit);
 
   return {
-    items: result.items.map((item) =>
-      mapSupplierOwnedMaterial(
+    items: result.items.map((item) => {
+      const demand = demandByMaterial.get(item.id) ?? {
+        pendingReservationsCount: 0,
+        reservedReservationsCount: 0,
+        reservationsCount: 0,
+        demandScore: 0,
+      };
+      const activeReservationCount =
+        demand.pendingReservationsCount + demand.reservedReservationsCount;
+      const statusActions = resolveSupplierMaterialStatusActions(
+        item.status,
+        activeReservationCount,
+      );
+
+      return mapSupplierOwnedMaterial(
         item,
         blockingReservationCounts.get(item.id) ?? 0,
-      ),
-    ),
+        likesByMaterial.get(item.id) ?? 0,
+        {
+          viewsCount: viewsByMaterial.get(item.id) ?? 0,
+          likesCount: likesByMaterial.get(item.id) ?? 0,
+          ...demand,
+          ...statusActions,
+        },
+      );
+    }),
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -898,20 +1483,59 @@ export const getSupplierMaterials = async (
   };
 };
 
-export const getSupplierMaterial = async (userId: string, materialId: string) => {
+export const getSupplierMaterial = async (
+  userId: string,
+  materialId: string,
+) => {
+  const scope = await resolveSupplierContext(userId);
   const material = await supplierRepository.findSupplierOwnedMaterialById(
-    userId,
+    scope,
     materialId,
   );
 
   if (!material) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
   const blockingReservationCount =
     await supplierRepository.countBlockingReservationsForMaterial(materialId);
 
-  return mapSupplierOwnedMaterial(material, blockingReservationCount);
+  const materialIds = [materialId];
+  const [likesCount, viewsCount, demandByMaterial, activeReservationCount, reservations] =
+    await Promise.all([
+      supplierRepository
+        .countLikesByMaterialIds(materialIds)
+        .then((map) => map.get(materialId) ?? 0),
+      supplierRepository
+        .countViewsByMaterialIds(materialIds)
+        .then((map) => map.get(materialId) ?? 0),
+      supplierRepository.findReservationDemandByMaterialIds(materialIds),
+      supplierRepository.countActiveReservationsForMaterial(materialId),
+      supplierRepository.findReservationsForSupplierMaterial(scope, materialId),
+    ]);
+
+  const demand = demandByMaterial.get(materialId) ?? {
+    pendingReservationsCount: 0,
+    reservedReservationsCount: 0,
+    reservationsCount: 0,
+    demandScore: 0,
+  };
+  const statusActions = resolveSupplierMaterialStatusActions(
+    material.status,
+    activeReservationCount,
+  );
+
+  return {
+    ...mapSupplierOwnedMaterial(material, blockingReservationCount, likesCount, {
+      viewsCount,
+      likesCount,
+      ...demand,
+      ...statusActions,
+    }),
+    reservations: reservations.map((reservation) =>
+      mapMaterialReservationSummary(reservation, material.unit),
+    ),
+  };
 };
 
 export const updateSupplierMaterial = async (
@@ -919,34 +1543,38 @@ export const updateSupplierMaterial = async (
   materialId: string,
   input: UpdateSupplierMaterialInput,
 ) => {
+  const scope = await resolveSupplierContext(userId);
   const material = await supplierRepository.findSupplierOwnedMaterialById(
-    userId,
+    scope,
     materialId,
   );
 
   if (!material) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
   const blockingReservationCount =
     await supplierRepository.countBlockingReservationsForMaterial(materialId);
-  const eligibility = resolveSupplierMaterialEditEligibility(
-    material.status,
-    blockingReservationCount,
-  );
+  const eligibility = resolveSupplierMaterialEditEligibility(material.status);
 
   if (!eligibility.canEdit) {
+    throw new AppError(EDIT_REUSED_MATERIAL_MESSAGE, 409, "CONFLICT");
+  }
+
+  const heldByMaterialId = await getHeldQuantitiesByMaterialIds([materialId]);
+  const heldQuantity = heldByMaterialId.get(materialId) ?? toDecimal(0);
+  const nextQuantity = toDecimal(input.quantity);
+
+  if (nextQuantity.lt(heldQuantity)) {
     throw new AppError(
-      eligibility.editBlockedReason === 'REUSED_HISTORY'
-        ? EDIT_REUSED_MATERIAL_MESSAGE
-        : EDIT_ACTIVE_REQUESTS_MESSAGE,
-      409,
-      'CONFLICT',
+      "Quantity cannot be less than the amount currently held by active reservations.",
+      400,
+      "VALIDATION_ERROR",
     );
   }
 
   const updated = await supplierRepository.updateSupplierOwnedMaterial(
-    userId,
+    scope,
     materialId,
     {
       title: input.title,
@@ -955,14 +1583,14 @@ export const updateSupplierMaterial = async (
       unit: input.unit,
       condition: input.condition,
       pickupAllowed: input.pickupAllowed,
-      deliveryAllowed: false,
+      deliveryAllowed: input.deliveryAllowed,
       pickupNotes: input.pickupNotes ?? null,
       suggestedUses: input.suggestedUses ?? null,
     },
   );
 
   if (!updated) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
   return mapSupplierOwnedMaterial(updated, blockingReservationCount);
@@ -972,13 +1600,14 @@ export const deleteSupplierMaterial = async (
   userId: string,
   materialId: string,
 ) => {
+  const scope = await resolveSupplierContext(userId);
   const material = await supplierRepository.findSupplierOwnedMaterialById(
-    userId,
+    scope,
     materialId,
   );
 
   if (!material) {
-    throw new AppError('Material not found', 404, 'NOT_FOUND');
+    throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
   const blockingReservationCount =
@@ -990,13 +1619,71 @@ export const deleteSupplierMaterial = async (
 
   if (!eligibility.canDelete) {
     throw new AppError(
-      eligibility.deleteBlockedReason === 'REUSED_HISTORY'
+      eligibility.deleteBlockedReason === "REUSED_HISTORY"
         ? DELETE_REUSED_MATERIAL_MESSAGE
         : DELETE_ACTIVE_REQUESTS_MESSAGE,
       409,
-      'CONFLICT',
+      "CONFLICT",
     );
   }
 
   await supplierRepository.deleteSupplierOwnedMaterial(materialId);
+};
+
+export const markSupplierMaterialUnavailable = async (
+  userId: string,
+  materialId: string,
+) => {
+  const scope = await resolveSupplierContext(userId);
+  const material = await supplierRepository.findSupplierOwnedMaterialById(
+    scope,
+    materialId,
+  );
+
+  if (!material) {
+    throw new AppError("Material not found", 404, "NOT_FOUND");
+  }
+
+  await assertCanMarkMaterialUnavailable(materialId, material.status);
+
+  const updated = await supplierRepository.updateSupplierOwnedMaterialStatus(
+    scope,
+    materialId,
+    "UNAVAILABLE",
+  );
+
+  if (!updated) {
+    throw new AppError("Material not found", 404, "NOT_FOUND");
+  }
+
+  return getSupplierMaterial(userId, materialId);
+};
+
+export const restoreSupplierMaterialAvailable = async (
+  userId: string,
+  materialId: string,
+) => {
+  const scope = await resolveSupplierContext(userId);
+  const material = await supplierRepository.findSupplierOwnedMaterialById(
+    scope,
+    materialId,
+  );
+
+  if (!material) {
+    throw new AppError("Material not found", 404, "NOT_FOUND");
+  }
+
+  assertCanRestoreMaterial(material.status);
+
+  const updated = await supplierRepository.updateSupplierOwnedMaterialStatus(
+    scope,
+    materialId,
+    "AVAILABLE",
+  );
+
+  if (!updated) {
+    throw new AppError("Material not found", 404, "NOT_FOUND");
+  }
+
+  return getSupplierMaterial(userId, materialId);
 };

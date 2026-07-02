@@ -1,25 +1,36 @@
 import '../data/models/user.dart';
+import '../../supplier_portal/application/supplier_verification_gate.dart';
+import 'auth_route_helpers.dart';
+import 'portal_navigation.dart';
 
-const rootRoute = '/';
-const loginRoute = '/login';
-const registerRoute = '/register';
-const authCheckingRoute = '/auth/checking';
-const supplierPortalRoute = '/supplier';
-const homeRoute = '/home';
-
-bool userHasRole(User? user, String role) {
-  if (user == null) {
-    return false;
-  }
-
-  final normalizedRole = role.trim().toUpperCase();
-  return user.roles.any((item) => item.trim().toUpperCase() == normalizedRole);
-}
-
-bool userHasSupplierRole(User? user) => userHasRole(user, 'SUPPLIER');
+export 'auth_route_helpers.dart';
+export 'portal_navigation.dart';
 
 String postAuthRouteForUser(User user) {
-  return userHasSupplierRole(user) ? supplierPortalRoute : homeRoute;
+  if (userHasAdminRole(user) && user.activeRole.trim().toUpperCase() == 'ADMIN') {
+    return adminPortalRoute;
+  }
+
+  if (userHasDriverRole(user) && user.activeRole.trim().toUpperCase() == 'DRIVER') {
+    return driverPortalRoute;
+  }
+
+  if (user.isSupplierMode && userHasSupplierRole(user)) {
+    final gate = supplierVerificationGateRoute(
+      supplierType: user.supplierProfile?.supplierType,
+      verificationStatus: user.supplierProfile?.verificationStatus,
+    );
+    if (gate != null) {
+      return gate;
+    }
+    return supplierOverviewRoute;
+  }
+
+  if (userHasRole(user, 'MODERATOR')) {
+    return homeRoute;
+  }
+
+  return portalRouteForActiveRole(user);
 }
 
 String sanitizeRedirectTarget(String? from, {String fallback = rootRoute}) {
@@ -44,7 +55,9 @@ String sanitizeRedirectTarget(String? from, {String fallback = rootRoute}) {
 
   if (path == authCheckingRoute ||
       path == loginRoute ||
-      path == registerRoute) {
+      path == registerRoute ||
+      path == forgotPasswordRoute ||
+      path == resetPasswordRoute) {
     return fallback;
   }
 

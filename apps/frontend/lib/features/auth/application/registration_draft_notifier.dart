@@ -39,6 +39,21 @@ class RegistrationDraftNotifier extends Notifier<RegistrationDraft> {
     state = state.copyWith(supplierProfile: profile);
   }
 
+  void setOnboardingInterests(List<String> interests) {
+    state = state.copyWith(onboardingInterests: interests);
+  }
+
+  void setOnboardingGoals(List<String> goals) {
+    state = state.copyWith(onboardingGoals: goals);
+  }
+
+  void setOnboardingLocation({required String city, required String area}) {
+    state = state.copyWith(
+      onboardingCity: city.trim(),
+      onboardingArea: area.trim(),
+    );
+  }
+
   RegisterRequest? toRegisterRequest() {
     try {
       return RegisterRequest.fromDraft(state);

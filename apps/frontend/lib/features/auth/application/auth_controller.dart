@@ -2,7 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_session_refresh.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../supplier_portal/application/supplier_portal_refresh.dart';
 import '../data/auth_repository.dart';
+import '../data/models/auth_tokens.dart';
+import '../data/models/become_supplier_request.dart';
 import '../data/models/register_request.dart';
 import '../data/models/user.dart';
 import 'auth_providers.dart';
@@ -145,16 +148,18 @@ class AuthController extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final user = await _repository.login(email: email, password: password);
+      await _repository.login(email: email, password: password);
+      final freshUser = await _repository.me();
 
       state = AuthState(
-        user: user,
+        user: freshUser,
         accessToken: _repository.accessToken,
         isLoading: false,
         hasBootstrapped: true,
       );
+      invalidateSupplierPortalProviders(ref);
 
-      return user;
+      return freshUser;
     } on ApiException catch (error) {
       state = state.copyWith(isLoading: false, error: error);
       rethrow;
@@ -163,6 +168,39 @@ class AuthController extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false, error: apiError);
       throw apiError;
     }
+  }
+
+  Future<User> establishAuthenticatedSession({
+    required AuthTokens tokens,
+    required User user,
+  }) async {
+    final establishedUser = await _repository.establishSession(
+      tokens: tokens,
+      user: user,
+    );
+
+    state = AuthState(
+      user: establishedUser,
+      accessToken: _repository.accessToken,
+      isLoading: false,
+      hasBootstrapped: true,
+    );
+
+    return establishedUser;
+  }
+
+  Future<void> refreshCurrentUser() async {
+    final user = await _repository.me();
+    state = state.copyWith(user: user);
+  }
+
+  void syncAuthenticatedUser(User user) {
+    state = AuthState(
+      user: user,
+      accessToken: _repository.accessToken,
+      isLoading: false,
+      hasBootstrapped: true,
+    );
   }
 
   Future<String> refresh() async {
@@ -193,6 +231,7 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       await _repository.logout();
+      invalidateSupplierPortalProviders(ref);
       state = const AuthState(isLoading: false, hasBootstrapped: true);
       return null;
     } on ApiException catch (error) {
@@ -223,6 +262,54 @@ class AuthController extends Notifier<AuthState> {
       );
 
       return user;
+    } on ApiException catch (error) {
+      state = state.copyWith(isLoading: false, error: error);
+      rethrow;
+    } catch (error) {
+      final apiError = normalizeApiException(error);
+      state = state.copyWith(isLoading: false, error: apiError);
+      throw apiError;
+    }
+  }
+
+  Future<User> becomeSupplier(BecomeSupplierRequest request) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      await _repository.becomeSupplier(request);
+      final freshUser = await _repository.me();
+      state = AuthState(
+        user: freshUser,
+        accessToken: _repository.accessToken,
+        isLoading: false,
+        hasBootstrapped: true,
+      );
+      invalidateSupplierPortalProviders(ref);
+      return freshUser;
+    } on ApiException catch (error) {
+      state = state.copyWith(isLoading: false, error: error);
+      rethrow;
+    } catch (error) {
+      final apiError = normalizeApiException(error);
+      state = state.copyWith(isLoading: false, error: apiError);
+      throw apiError;
+    }
+  }
+
+  Future<User> switchActiveRole(String activeRole) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      await _repository.switchActiveRole(activeRole);
+      final freshUser = await _repository.me();
+      state = AuthState(
+        user: freshUser,
+        accessToken: _repository.accessToken,
+        isLoading: false,
+        hasBootstrapped: true,
+      );
+      invalidateSupplierPortalProviders(ref);
+      return freshUser;
     } on ApiException catch (error) {
       state = state.copyWith(isLoading: false, error: error);
       rethrow;

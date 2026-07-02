@@ -45,6 +45,8 @@ class CategoryRequestDraftResponse {
     required this.isSuggestion,
     this.approvedCategoryId,
     this.approvedCategory,
+    this.suggestedCategoryId,
+    this.suggestedCategory,
     this.listingDraftJson,
   });
 
@@ -55,6 +57,8 @@ class CategoryRequestDraftResponse {
   final bool isSuggestion;
   final String? approvedCategoryId;
   final CategoryRequestApprovedCategory? approvedCategory;
+  final String? suggestedCategoryId;
+  final CategoryRequestApprovedCategory? suggestedCategory;
   final Map<String, dynamic>? listingDraftJson;
 
   factory CategoryRequestDraftResponse.fromJson(Map<String, dynamic> json) {
@@ -68,6 +72,12 @@ class CategoryRequestDraftResponse {
       approvedCategory: json['approvedCategory'] is Map<String, dynamic>
           ? CategoryRequestApprovedCategory.fromJson(
               Map<String, dynamic>.from(json['approvedCategory'] as Map),
+            )
+          : null,
+      suggestedCategoryId: json['suggestedCategoryId'] as String?,
+      suggestedCategory: json['suggestedCategory'] is Map<String, dynamic>
+          ? CategoryRequestApprovedCategory.fromJson(
+              Map<String, dynamic>.from(json['suggestedCategory'] as Map),
             )
           : null,
       listingDraftJson: json['listingDraftJson'] is Map<String, dynamic>

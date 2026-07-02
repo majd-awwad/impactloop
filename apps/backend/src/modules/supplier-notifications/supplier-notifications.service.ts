@@ -1,8 +1,12 @@
 import { normalizeSearchText } from '../../utils/normalize-search-text.js';
 import { decimalToNumber } from '../../utils/decimal.js';
 
+import * as categoriesRepository from '../categories/categories.repository.js';
 import * as categoryRequestsRepository from '../category-requests/category-requests.repository.js';
-import { resolveApprovedMaxUnitPriceNis } from '../price-rule-requests/price-rule-request-pricing.js';
+import {
+  resolveFinalAllowedMaxUnitPriceNis,
+  formatNisPrice,
+} from '../price-rule-requests/price-rule-request-pricing.js';
 import * as priceRuleRequestsRepository from '../price-rule-requests/price-rule-requests.repository.js';
 import { mapSupplierReservation } from '../supplier-reservations/supplier-reservations.service.js';
 import * as supplierReservationsRepository from '../supplier-reservations/supplier-reservations.repository.js';
@@ -55,8 +59,37 @@ export type SupplierNotificationsSummary = {
 
 const formatUnitLabel = (unit: string | null | undefined) => unit?.trim() || 'unit';
 
-const formatMaxUnitPriceBody = (unit: string | null | undefined, max: number) =>
-  `Maximum allowed price per ${formatUnitLabel(unit)} is ${max} NIS.`;
+const formatConditionLabel = (
+  condition: import('../../generated/prisma/client.js').MaterialCondition,
+) => {
+  switch (condition) {
+    case 'NEW':
+      return 'New';
+    case 'LIKE_NEW':
+      return 'Like new';
+    case 'GOOD':
+      return 'Good';
+    case 'USED':
+      return 'Used';
+    case 'NEEDS_REPAIR':
+      return 'Needs repair';
+    default:
+      return condition;
+  }
+};
+
+const formatMaxUnitPriceBody = (
+  unit: string | null | undefined,
+  max: number,
+  condition?: import('../../generated/prisma/client.js').MaterialCondition | null,
+) => {
+  const priceLabel = formatNisPrice(max);
+  if (condition != null) {
+    return `Maximum allowed price for ${formatConditionLabel(condition)} condition is ${priceLabel} NIS.`;
+  }
+
+  return `Maximum allowed price per ${formatUnitLabel(unit)} is ${priceLabel} NIS.`;
+};
 
 const extractDraftTitle = (listingDraftJson: unknown): string => {
   if (
@@ -111,6 +144,33 @@ const sortNotifications = (notifications: SupplierActionNotification[]) => {
   });
 };
 
+const suggestedCategoryPrefix = 'Suggested category:';
+
+const resolveCategoryRejectionBody = async (
+  body: string,
+): Promise<string> => {
+  const trimmed = body.trim();
+  if (!trimmed.startsWith(suggestedCategoryPrefix)) {
+    return body;
+  }
+
+  const firstLine = trimmed.split('\n')[0] ?? '';
+  const raw = firstLine.replace(suggestedCategoryPrefix, '').trim();
+  if (!raw) {
+    return `${suggestedCategoryPrefix} Unknown category\n${trimmed}`;
+  }
+
+  // If it already looks like a name (not a cuid), keep it.
+  const looksLikeCuid = raw.startsWith('c') && raw.length >= 18;
+  if (!looksLikeCuid) {
+    return trimmed;
+  }
+
+  const category = await categoriesRepository.findCategoryById(raw);
+  const readableName = category?.nameEn?.trim() || 'Unknown category';
+  return trimmed.replace(firstLine, `${suggestedCategoryPrefix} ${readableName}`);
+};
+
 const mapCategoryRequestNotification = (
   request: Awaited<
     ReturnType<typeof categoryRequestsRepository.listCategoryRequestsWithDrafts>
@@ -162,7 +222,7 @@ const mapCategoryRequestNotification = (
         ? `Use ${approvedCategoryName} for this listing.`
         : `${request.requestedName} was approved. Continue your listing.`,
       status: 'APPROVED',
-      createdAt: request.createdAt.toISOString(),
+      createdAt: request.updatedAt.toISOString(),
       actionNeeded: hasDraft && approvedCategoryId != null,
       isCompleted: false,
       actionLabel: hasDraft ? 'Continue listing' : null,
@@ -187,9 +247,9 @@ const mapCategoryRequestNotification = (
       title: 'Category rejected',
       body:
         request.moderatorNote?.trim() ||
-        'Your requested category was not approved. Choose an existing category and continue.',
+        'Your category request was rejected. Suggested category: Unknown category\nReason: Not provided.',
       status: 'REJECTED',
-      createdAt: request.createdAt.toISOString(),
+      createdAt: request.updatedAt.toISOString(),
       actionNeeded: hasDraft,
       isCompleted: false,
       actionLabel: hasDraft ? 'Edit listing' : null,
@@ -230,13 +290,16 @@ const mapCategoryRequestNotification = (
   };
 };
 
-const mapPriceRuleRequestNotification = (
+export const mapPriceRuleRequestNotification = (
   request: Awaited<
     ReturnType<typeof priceRuleRequestsRepository.listPriceRuleRequestsForSupplier>
   >[number],
 ): SupplierActionNotification => {
   const unit = request.unit ?? request.materialType?.defaultUnit ?? null;
-  const maxAllowedUnitPriceNis = resolveApprovedMaxUnitPriceNis(request);
+  const maxAllowedUnitPriceNis = resolveFinalAllowedMaxUnitPriceNis(
+    request,
+    request.condition,
+  );
   const supplierRequestedUnitPriceNis = decimalToNumber(request.supplierPriceNis);
   const materialLabel =
     request.materialName ??
@@ -275,7 +338,7 @@ const mapPriceRuleRequestNotification = (
   if (request.status === 'APPROVED') {
     const maxBody =
       maxAllowedUnitPriceNis != null
-        ? `${formatMaxUnitPriceBody(unit, maxAllowedUnitPriceNis)} Continue your listing and set the unit price at or below this amount.`
+        ? `${formatMaxUnitPriceBody(unit, maxAllowedUnitPriceNis, request.condition)} Continue your listing and set the unit price at or below this amount.`
         : 'Continue your listing with the approved price limit.';
 
     return {
@@ -285,7 +348,7 @@ const mapPriceRuleRequestNotification = (
       title: 'Price limit approved',
       body: maxBody,
       status: 'APPROVED',
-      createdAt: request.createdAt.toISOString(),
+      createdAt: request.updatedAt.toISOString(),
       actionNeeded: hasDraft,
       isCompleted: false,
       actionLabel: hasDraft ? 'Continue listing' : null,
@@ -305,7 +368,7 @@ const mapPriceRuleRequestNotification = (
   if (request.status === 'REJECTED') {
     const maxBody =
       maxAllowedUnitPriceNis != null
-        ? `Your requested unit price is above the allowed limit. ${formatMaxUnitPriceBody(unit, maxAllowedUnitPriceNis)}`
+        ? `Your requested unit price is above the allowed limit. ${formatMaxUnitPriceBody(unit, maxAllowedUnitPriceNis, request.condition)}`
         : request.moderatorNote?.trim() ||
           'Your requested unit price needs adjustment before you can publish.';
 
@@ -316,7 +379,7 @@ const mapPriceRuleRequestNotification = (
       title: 'Price needs adjustment',
       body: maxBody,
       status: 'REJECTED',
-      createdAt: request.createdAt.toISOString(),
+      createdAt: request.updatedAt.toISOString(),
       actionNeeded: hasDraft,
       isCompleted: false,
       actionLabel: hasDraft ? 'Edit price' : null,
@@ -411,6 +474,14 @@ export const listSupplierActionNotifications = async (userId: string) => {
       .map(mapSupplierReservation)
       .map(mapReservationNotification),
   ];
+
+  // Ensure rejected category notifications never show raw IDs.
+  await Promise.all(
+    notifications.map(async (notification) => {
+      if (notification.kind !== 'CATEGORY_REJECTED') return;
+      notification.body = await resolveCategoryRejectionBody(notification.body);
+    }),
+  );
 
   sortNotifications(notifications);
 

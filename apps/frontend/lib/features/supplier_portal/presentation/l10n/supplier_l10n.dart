@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/format/nis_price_format.dart';
 import '../../data/models/supplier_action_notification.dart';
 import '../theme/supplier_locale_scope.dart';
 import '../../data/models/supplier_incoming_request.dart';
@@ -116,6 +117,38 @@ class SupplierL10n {
         'Try clearing filters or adjusting your search.',
         'جرّب مسح التصفية أو تعديل البحث.',
       );
+  String get likesLabel => t('Likes', 'الإعجابات');
+  String get engagementSectionTitle => t('Engagement', 'التفاعل');
+  String get reservationsSectionTitle =>
+      t('Reservations for this material', 'حجوزات هذه المادة');
+  String get demandSectionTitle => t('Demand indicators', 'مؤشرات الطلب');
+  String get noMaterialReservationsYet => t(
+        'No reservations for this material yet.',
+        'لا توجد حجوزات لهذه المادة بعد.',
+      );
+  String get noActiveDemandYet => t(
+        'No active demand yet.',
+        'لا يوجد طلب نشط بعد.',
+      );
+  String get activeDemandLabel => t('Active demand', 'طلب نشط');
+  String get markUnavailableAction =>
+      t('Mark unavailable', 'تعليم كغير متاحة');
+  String get restoreAvailableAction =>
+      t('Restore available', 'إعادة إلى متاحة');
+  String materialRequestsBadge(int count) => t(
+        '$count request${count == 1 ? '' : 's'}',
+        count == 1 ? 'طلب واحد' : '$count طلبات',
+      );
+  String get highDemandBadge => t('High demand', 'طلب مرتفع');
+  String get openReservationActionLabel =>
+      t('Open reservation', 'فتح الحجز');
+  String get pendingReservationsLabel =>
+      t('Pending reservations', 'حجوزات قيد الانتظار');
+  String get reservedReservationsLabel =>
+      t('Reserved reservations', 'حجوزات مقبولة');
+  String get totalActiveRequestsLabel =>
+      t('Total active requests', 'إجمالي الطلبات النشطة');
+  String get demandScoreLabel => t('Demand score', 'درجة الطلب');
   String materialsResultCount(int count) => t(
         '$count material${count == 1 ? '' : 's'} shown',
         count == 1 ? 'مادة واحدة معروضة' : '$count مواد معروضة',
@@ -300,7 +333,83 @@ class SupplierL10n {
   String get statScheduledPickups =>
       t('Scheduled pickups', 'عمليات الاستلام المجدولة');
   String get statReusedMaterials => t('Reused materials', 'المواد المعاد استخدامها');
+  String get statTotalMaterials => t('Total materials', 'إجمالي المواد');
+  String get statAvailableMaterials => t('Available materials', 'المواد المتاحة');
+  String get statReservedMaterials => t('Reserved materials', 'المواد المحجوزة');
+  String get statTotalViews => statTotalMaterialViews;
+  String get statTotalLikes => statTotalMaterialLikes;
+  String get statTotalMaterialViews =>
+      t('Total material views', 'إجمالي مشاهدات المواد');
+  String get statTotalMaterialLikes =>
+      t('Total material likes', 'إجمالي إعجابات المواد');
+  String get statFollowers => t('Followers', 'المتابعون');
+  String get recentReservationRequestsTitle =>
+      t('Recent reservation requests', 'طلبات الحجز الأخيرة');
+  String get noReservationRequestsYet =>
+      t('No reservation requests yet.', 'لا توجد طلبات حجز بعد.');
+  String get mostViewedMaterialTitle =>
+      t('Most viewed material', 'المادة الأكثر مشاهدة');
+  String get supplierEngagementTitle =>
+      t('Supplier engagement', 'تفاعل المورد');
+  String get engagementTotalsLabel =>
+      t('Account totals', 'إجماليات الحساب');
+  String get noViewedMaterialsYet =>
+      t('No viewed materials yet.', 'لا توجد مواد بمشاهدات بعد.');
+  String get highDemandMaterialsTitle =>
+      t('High demand materials', 'مواد ذات طلب مرتفع');
+  String get highDemandMaterialsSubtitle => t(
+        'Materials with active reservation interest.',
+        'مواد لديها اهتمام حجز نشط.',
+      );
+  String get noHighDemandMaterialsYet =>
+      t('No high-demand materials yet.', 'لا توجد مواد ذات طلب مرتفع بعد.');
+  String activeRequestsLabel(int count) => t(
+        '$count active request${count == 1 ? '' : 's'}',
+        '$count ${count == 1 ? 'طلب نشط' : 'طلبات نشطة'}',
+      );
+  String get viewAllRequests => t('View all requests', 'عرض كل الطلبات');
+  String get unknownRequester => t('Unknown learner', 'متعلم غير معروف');
   String get operationsSnapshot => t('Operations snapshot', 'لمحة تشغيلية');
+  String reservationRequestMeta(
+    String requester,
+    String status,
+    String date,
+    double quantity,
+  ) =>
+      t(
+        '$requester · $status · $date · qty $quantity',
+        '$requester · $status · $date · الكمية $quantity',
+      );
+  String viewsCountLabel(int count) =>
+      t('$count views', '$count مشاهدة');
+  String demandCountLabel(int demand, int views) => t(
+        '$demand reservation${demand == 1 ? '' : 's'} · $views views',
+        '$demand ${demand == 1 ? 'حجز' : 'حجوزات'} · $views مشاهدة',
+      );
+  String get selectConditionBeforePriceVerify => t(
+        'Select material condition before verifying the price.',
+        'اختر حالة المادة قبل التحقق من السعر.',
+      );
+  String conditionAdjustedMaxMessage(
+    String currencySymbol,
+    String baseMax,
+    String conditionLabel,
+    String adjustedMax,
+  ) =>
+      t(
+        'Reference max: $currencySymbol$baseMax · Condition: $conditionLabel · Adjusted max: $currencySymbol$adjustedMax',
+        'الحد الأقصى المرجعي: $currencySymbol$baseMax · الحالة: $conditionLabel · الحد المعدّل: $currencySymbol$adjustedMax',
+      );
+  String get strongDemandInsight =>
+      t('Some materials are getting strong demand.', 'بعض المواد تحظى بطلب قوي.');
+  String get improveEngagementInsight => t(
+        'Your materials are getting views. Improve titles/images to increase engagement.',
+        'موادك تحصل على مشاهدات. حسّن العناوين/الصور لزيادة التفاعل.',
+      );
+  String get addFirstMaterialInsight => t(
+        'Add your first material to start receiving requests.',
+        'أضف أول مادة لك لتبدأ في تلقي الطلبات.',
+      );
   String get reservationStatus => t('Reservation status', 'حالة الحجوزات');
   String get materialsStatus => t('Materials status', 'حالة المواد');
   String get quickActions => t('Quick actions', 'إجراءات سريعة');
@@ -468,7 +577,10 @@ class SupplierL10n {
 
   String get notificationCompleted => filterCompleted;
   String maxPriceLabel(double max, String unit) =>
-      t('Max ${max.toStringAsFixed(0)} NIS/$unit', 'الحد ${max.toStringAsFixed(0)} ₪/$unit');
+      t(
+        'Max ${formatNisAmount(max)} NIS/$unit',
+        'الحد ${formatNisAmount(max)} ₪/$unit',
+      );
 
   String get editListingAction => t('Edit listing', 'تعديل الإدراج');
   String get editPriceAction => t('Edit price', 'تعديل السعر');
@@ -1109,9 +1221,11 @@ class SupplierL10n {
       );
   String get deliveryAllowed => t('Delivery allowed', 'التوصيل مسموح');
   String get deliveryAllowedSubtitle => t(
-        'Delivery workflow is coming later.',
-        'سير عمل التوصيل قادم لاحقاً.',
+        'Learners can request internal delivery after you accept a reservation.',
+        'يمكن للمتعلمين طلب التوصيل الداخلي بعد قبولك للحجز.',
       );
+  String get yes => t('Yes', 'نعم');
+  String get no => t('No', 'لا');
   String get pickupNotes => t('Pickup notes', 'ملاحظات الاستلام');
   String get pickupNotesHint =>
       t('Pickup near campus.', 'الاستلام قرب الحرم الجامعي.');
@@ -1181,9 +1295,13 @@ class SupplierL10n {
         'VERIFIED' => t('Verified', 'موثّق'),
         'PENDING' => t('Pending verification', 'بانتظار التحقق'),
         'REJECTED' => t('Rejected', 'مرفوض'),
+        'CHANGES_REQUESTED' => t('Changes requested', 'طلب تعديلات'),
         'NOT_REQUIRED' => t('Not required', 'غير مطلوب'),
         _ => value,
       };
+
+  String get verificationAdminNoteLabel =>
+      t('Admin note', 'ملاحظة المسؤول');
 
   // —— Shared widgets ——
   String get close => t('Close', 'إغلاق');

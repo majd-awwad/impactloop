@@ -58,4 +58,22 @@ class SupplierMyMaterialsApi {
       ),
     );
   }
+
+  Future<SupplierMyMaterial> markMaterialUnavailable(String materialId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/supplier/materials/$materialId/mark-unavailable',
+      ),
+      SupplierMyMaterial.fromJson,
+    );
+  }
+
+  Future<SupplierMyMaterial> restoreMaterialAvailable(String materialId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/supplier/materials/$materialId/restore-available',
+      ),
+      SupplierMyMaterial.fromJson,
+    );
+  }
 }

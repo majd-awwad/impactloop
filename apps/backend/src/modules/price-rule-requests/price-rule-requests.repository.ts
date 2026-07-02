@@ -1,6 +1,8 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { Prisma } from "../../generated/prisma/client.js";
 
-import { prisma } from '../../database/prisma.js';
+import { prisma } from "../../database/prisma.js";
+
+type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
 
 export const findPendingKnownPriceRuleRequest = async (input: {
   materialTypeId: string;
@@ -10,9 +12,9 @@ export const findPendingKnownPriceRuleRequest = async (input: {
     where: {
       materialTypeId: input.materialTypeId,
       requestedByUserId: input.requestedByUserId,
-      status: 'PENDING',
+      status: "PENDING",
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       status: true,
@@ -33,9 +35,9 @@ export const findPendingUnknownPriceRuleRequest = async (input: {
       categoryId: input.categoryId,
       unit: input.unit,
       requestedByUserId: input.requestedByUserId,
-      status: 'PENDING',
+      status: "PENDING",
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       status: true,
@@ -53,7 +55,7 @@ export const createKnownPriceRuleRequest = async (input: {
     data: {
       materialTypeId: input.materialTypeId,
       requestedByUserId: input.requestedByUserId,
-      status: 'PENDING',
+      status: "PENDING",
       listingDraftJson: input.listingDraftJson ?? undefined,
     },
     select: {
@@ -80,11 +82,12 @@ export const createUnknownPriceRuleRequest = async (input: {
       normalizedMaterialName: input.normalizedMaterialName,
       categoryId: input.categoryId,
       unit: input.unit,
-      condition: input.condition as Prisma.PriceRuleRequestCreateInput['condition'],
+      condition:
+        input.condition as Prisma.PriceRuleRequestCreateInput["condition"],
       quantity: input.quantity ?? null,
       supplierPriceNis: input.supplierPriceNis ?? null,
       requestedByUserId: input.requestedByUserId,
-      status: 'PENDING',
+      status: "PENDING",
       listingDraftJson: input.listingDraftJson ?? undefined,
     },
     select: {
@@ -108,8 +111,9 @@ export const updatePriceRuleRequestAiResult = async (input: {
       aiSuggestedUnit: input.aiSuggestedUnit ?? null,
       aiSuggestedMaxUnitPriceNis: input.aiSuggestedMaxUnitPriceNis ?? null,
       aiSuggestedMaxTotalPriceNis: input.aiSuggestedMaxTotalPriceNis ?? null,
-      aiSuggestedAliasesJson:
-        input.aiSuggestedAliasesJson as Prisma.InputJsonValue | undefined,
+      aiSuggestedAliasesJson: input.aiSuggestedAliasesJson as
+        | Prisma.InputJsonValue
+        | undefined,
       aiResultJson: input.aiResultJson as Prisma.InputJsonValue | undefined,
     },
     select: {
@@ -128,11 +132,11 @@ export const findPendingAiProposedPriceRule = async (input: {
     where: {
       materialTypeId: input.materialTypeId,
       unit: input.unit,
-      sourceType: 'AI_PROPOSED',
-      status: 'PENDING_REVIEW',
+      sourceType: "AI_PROPOSED",
+      status: "PENDING_REVIEW",
       isActive: false,
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       status: true,
@@ -153,12 +157,12 @@ export const createAiProposedPriceRule = async (input: {
   return prisma.materialPriceRule.create({
     data: {
       materialTypeId: input.materialTypeId,
-      currency: 'NIS',
+      currency: "NIS",
       unit: input.unit,
       maxAllowedUnitPriceNis: input.maxAllowedUnitPriceNis,
       maxAllowedTotalPriceNis: input.maxAllowedTotalPriceNis,
-      sourceType: 'AI_PROPOSED',
-      status: 'PENDING_REVIEW',
+      sourceType: "AI_PROPOSED",
+      status: "PENDING_REVIEW",
       isActive: false,
       confidence: input.confidence,
       sourceNote: input.sourceNote,
@@ -179,7 +183,7 @@ export const listPriceRuleRequestsForSupplier = async (userId: string) => {
       category: { select: { id: true, nameEn: true } },
       materialType: { select: { id: true, nameEn: true, defaultUnit: true } },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 };
 
@@ -212,8 +216,9 @@ export const updatePriceRuleRequestDraftJson = async (input: {
 export const markPriceRuleRequestPublished = async (input: {
   id: string;
   materialId: string;
+  client?: PrismaClientLike;
 }) => {
-  return prisma.priceRuleRequest.update({
+  return (input.client ?? prisma).priceRuleRequest.update({
     where: { id: input.id },
     data: {
       publishedMaterialId: input.materialId,

@@ -1,45 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
-import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
-import '../../data/learning_hub_mock_data.dart';
+import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project.dart';
+import '../theme/learning_project_visuals.dart';
+import '../theme/learning_ui_palette.dart';
 import '../widgets/disabled_ai_panel.dart';
-import '../widgets/mock_rating_summary_card.dart';
 import '../widgets/project_components_section.dart';
 import '../widgets/project_link_list.dart';
 import '../widgets/project_steps_timeline.dart';
 
-class LearningProjectDetailsPage extends StatelessWidget {
+class LearningProjectDetailsPage extends ConsumerWidget {
   const LearningProjectDetailsPage({super.key, required this.projectId});
 
   final String projectId;
 
   @override
-  Widget build(BuildContext context) {
-    final project = learningProjectById(projectId);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final projectAsync = ref.watch(learningProjectProvider(projectId));
     final palette = LearningUiPalette.of(context);
-
-    if (project == null) {
-      return Scaffold(
-        backgroundColor: palette.pageBackground,
-        body: Center(
-          child: Text(
-            const LocalizedText(
-              en: 'Project not found',
-              ar: 'المشروع غير موجود',
-            ).resolve(context),
-            style: AppTextStyles.title(
-              context,
-            ).copyWith(color: palette.textPrimary),
-          ),
-        ),
-      );
-    }
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -49,54 +33,105 @@ class LearningProjectDetailsPage extends StatelessWidget {
           children: [
             const EntryNavBar(homeRoute: '/home'),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsetsDirectional.only(
-                  bottom: AppSpacing.xl,
+              child: projectAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stackTrace) => _DetailsStatePanel(
+                  icon: Icons.cloud_off_outlined,
+                  title: const LocalizedText(
+                    en: 'Unable to load project',
+                    ar: 'تعذر تحميل المشروع',
+                  ),
+                  subtitle: const LocalizedText(
+                    en: 'Check that the backend is running, then try again.',
+                    ar: 'تحقق من تشغيل الخادم ثم حاول مرة أخرى.',
+                  ),
+                  actionLabel: const LocalizedText(
+                    en: 'Try again',
+                    ar: 'حاول مرة أخرى',
+                  ),
+                  onAction: () =>
+                      ref.invalidate(learningProjectProvider(projectId)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _DetailsHero(project: project),
-                    Transform.translate(
-                      offset: const Offset(0, -34),
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.symmetric(
-                          horizontal: AppSpacing.md,
-                        ),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 1400),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _DetailsSummaryCard(project: project),
-                                const SizedBox(height: AppSpacing.lg),
-                                ProjectComponentsSection(
-                                  components: project.components,
-                                ),
-                                const SizedBox(height: AppSpacing.lg),
-                                const DisabledAiPanel(),
-                                const SizedBox(height: AppSpacing.lg),
-                                ProjectStepsTimeline(steps: project.steps),
-                                const SizedBox(height: AppSpacing.lg),
-                                ProjectLinkList(links: project.links),
-                                const SizedBox(height: AppSpacing.lg),
-                                MockRatingSummaryCard(
-                                  project: project,
-                                  breakdown: mockBreakdownFor(project),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                data: (project) {
+                  if (project == null) {
+                    return _DetailsStatePanel(
+                      icon: Icons.search_off_outlined,
+                      title: const LocalizedText(
+                        en: 'Project not found',
+                        ar: 'المشروع غير موجود',
                       ),
-                    ),
-                  ],
-                ),
+                      subtitle: const LocalizedText(
+                        en: 'This project may be unpublished or no longer available.',
+                        ar: 'قد يكون هذا المشروع غير منشور أو لم يعد متاحاً.',
+                      ),
+                      actionLabel: const LocalizedText(
+                        en: 'Back to Learning Hub',
+                        ar: 'العودة إلى مركز التعلم',
+                      ),
+                      onAction: () => context.go('/learning'),
+                    );
+                  }
+
+                  return _ProjectDetailsBody(project: project);
+                },
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ProjectDetailsBody extends StatelessWidget {
+  const _ProjectDetailsBody({required this.project});
+
+  final LearningProject project;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _DetailsHero(project: project),
+          Transform.translate(
+            offset: const Offset(0, -34),
+            child: Padding(
+              padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.md,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1400),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _DetailsSummaryCard(project: project),
+                      const SizedBox(height: AppSpacing.lg),
+                      if (project.components.isNotEmpty) ...[
+                        ProjectComponentsSection(
+                          components: project.components,
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+                      const DisabledAiPanel(),
+                      if (project.steps.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.lg),
+                        ProjectStepsTimeline(steps: project.steps),
+                      ],
+                      if (project.links.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.lg),
+                        ProjectLinkList(links: project.links),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -110,13 +145,10 @@ class _DetailsHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
-    final colors = AppThemeColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasImage =
         project.imageUrl != null && project.imageUrl!.trim().isNotEmpty;
-    final fallbackGradient = isDark
-        ? projectGradient(project)
-        : [palette.heroStart, palette.heroAccent, palette.heroEnd];
+    final fallbackGradient = projectGradient(project);
     final screenWidth = MediaQuery.sizeOf(context).width;
     final heroHeight = screenWidth >= 1100
         ? 380.0
@@ -131,11 +163,9 @@ class _DetailsHero extends StatelessWidget {
           gradient: LinearGradient(
             begin: AlignmentDirectional.topStart,
             end: AlignmentDirectional.bottomEnd,
-            colors: project.id == 'wireless-charger'
-                ? isDark
-                      ? const [learningPurpleStart, learningPurpleEnd]
-                      : [colors.purpleStart, colors.purpleEnd]
-                : fallbackGradient,
+            colors: isDark
+                ? fallbackGradient
+                : [palette.heroStart, palette.heroAccent, palette.heroEnd],
           ),
         ),
         child: Stack(
@@ -237,6 +267,7 @@ class _DetailsSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final longDescription = project.longDescription;
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
@@ -273,6 +304,18 @@ class _DetailsSummaryCard extends StatelessWidget {
                 ).copyWith(color: palette.textSecondary),
                 textAlign: TextAlign.start,
               ),
+              if (longDescription != null &&
+                  longDescription.resolve(context) !=
+                      project.summary.resolve(context)) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  longDescription.resolve(context),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary, height: 1.45),
+                  textAlign: TextAlign.start,
+                ),
+              ],
             ],
           );
 
@@ -285,12 +328,16 @@ class _DetailsSummaryCard extends StatelessWidget {
                 dark: true,
               ),
               _DetailsChip(label: project.duration.resolve(context)),
-              _DetailsChip(label: project.componentCountLabel.resolve(context)),
-              _DetailsChip(
-                label:
-                    '${project.ratingValue.toStringAsFixed(1)} (${project.ratingCount})',
-                accent: true,
-              ),
+              if (project.componentCountLabel.en.trim().isNotEmpty)
+                _DetailsChip(
+                  label: project.componentCountLabel.resolve(context),
+                ),
+              if (project.hasRatings)
+                _DetailsChip(
+                  label:
+                      '${project.ratingValue.toStringAsFixed(1)} (${project.ratingCount})',
+                  accent: true,
+                ),
             ],
           );
 
@@ -355,6 +402,65 @@ class _DetailsChip extends StatelessWidget {
       child: Text(
         label,
         style: AppTextStyles.label(context).copyWith(color: foreground),
+      ),
+    );
+  }
+}
+
+class _DetailsStatePanel extends StatelessWidget {
+  const _DetailsStatePanel({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final LocalizedText title;
+  final LocalizedText subtitle;
+  final LocalizedText? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 40, color: palette.textSecondary),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                title.resolve(context),
+                style: AppTextStyles.title(
+                  context,
+                ).copyWith(color: palette.textPrimary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                subtitle.resolve(context),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: AppSpacing.lg),
+                OutlinedButton(
+                  onPressed: onAction,
+                  child: Text(actionLabel!.resolve(context)),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

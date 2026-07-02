@@ -31,6 +31,7 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
     final updated = _requests[index].copyWith(
       status: SupplierIncomingRequestStatus.accepted,
       pickupWindow: pickupWindow,
+      canSupplierComplete: true,
     );
     _requests[index] = updated;
     return updated;
@@ -70,6 +71,7 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
 
     final updated = current.copyWith(
       status: SupplierIncomingRequestStatus.completed,
+      canSupplierComplete: false,
     );
     _requests[index] = updated;
     return updated;
@@ -108,6 +110,7 @@ final List<SupplierIncomingRequest> _seedRequests = [
     unit: 'piece',
     status: SupplierIncomingRequestStatus.accepted,
     requestedAt: DateTime.now().subtract(const Duration(days: 2)),
+    canSupplierComplete: true,
     pickupPreference: 'Self pickup',
     pickupWindow: SupplierPickupWindow(
       start: DateTime.now().add(const Duration(days: 1, hours: 10)),

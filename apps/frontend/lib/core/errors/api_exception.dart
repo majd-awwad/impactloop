@@ -45,6 +45,10 @@ class ApiException implements Exception {
       case 'CONFLICT':
         return 'An account with that email or phone already exists.';
       case 'VALIDATION_ERROR':
+        final firstIssue = fieldIssues.isNotEmpty ? fieldIssues.first.message : null;
+        if (firstIssue != null && firstIssue.isNotEmpty) {
+          return firstIssue;
+        }
         return message;
       case 'UNAUTHENTICATED':
         return 'Your session has expired. Please sign in again.';

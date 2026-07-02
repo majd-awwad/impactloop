@@ -1,8 +1,14 @@
-import type {
+import {
   Prisma,
-  ReservationStatus,
+  type ReservationStatus,
 } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
+
+import {
+  applyReservationCompletionToMaterial,
+  recomputeAndUpdateMaterialStatus,
+  runSerializableTransaction,
+} from '../reservations/reservations.quantity.js';
 
 const reservationInclude = {
   material: {
@@ -20,11 +26,40 @@ const reservationInclude = {
       profileImageUrl: true,
     },
   },
+  deliveries: {
+    select: {
+      id: true,
+      status: true,
+    },
+    orderBy: { requestedAt: 'desc' as const },
+    take: 1,
+  },
+  _count: {
+    select: {
+      deliveries: true,
+    },
+  },
 } satisfies Prisma.ReservationInclude;
 
 export type SupplierReservationRecord = Prisma.ReservationGetPayload<{
   include: typeof reservationInclude;
 }>;
+
+export const supplierCanCompleteReservation = (input: {
+  status: ReservationStatus;
+  deliveryRequested: boolean;
+  hasDelivery: boolean;
+}) => {
+  if (input.status !== 'ACCEPTED') {
+    return false;
+  }
+
+  if (input.deliveryRequested || input.hasDelivery) {
+    return false;
+  }
+
+  return true;
+};
 
 export const findSupplierReservations = async (
   ownerId: string,
@@ -90,13 +125,6 @@ export const acceptSupplierReservation = async (input: {
       include: reservationInclude,
     });
 
-    await tx.material.update({
-      where: { id: existing.materialId },
-      data: {
-        status: 'RESERVED',
-      },
-    });
-
     await tx.reservationStatusHistory.create({
       data: {
         reservationId: reservation.id,
@@ -107,6 +135,8 @@ export const acceptSupplierReservation = async (input: {
         note: supplierNote ?? 'Accepted by supplier',
       },
     });
+
+    await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
     return { conflict: false as const, reservation };
   });
@@ -145,22 +175,6 @@ export const declineSupplierReservation = async (input: {
       include: reservationInclude,
     });
 
-    const activeReservationCount = await tx.reservation.count({
-      where: {
-        materialId: existing.materialId,
-        status: { in: ['PENDING', 'ACCEPTED', 'COMPLETED'] },
-      },
-    });
-
-    if (activeReservationCount === 0) {
-      await tx.material.update({
-        where: { id: existing.materialId },
-        data: {
-          status: 'AVAILABLE',
-        },
-      });
-    }
-
     await tx.reservationStatusHistory.create({
       data: {
         reservationId: reservation.id,
@@ -172,6 +186,8 @@ export const declineSupplierReservation = async (input: {
       },
     });
 
+    await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+
     return { conflict: false as const, reservation };
   });
 };
@@ -180,7 +196,7 @@ export const completeSupplierReservation = async (input: {
   reservationId: string;
   ownerId: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  return runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
@@ -193,6 +209,14 @@ export const completeSupplierReservation = async (input: {
     }
 
     if (existing.status !== 'ACCEPTED') {
+      return { conflict: true as const, reservation: existing };
+    }
+
+    const deliveryCount = await tx.delivery.count({
+      where: { reservationId: existing.id },
+    });
+
+    if (existing.deliveryRequested || deliveryCount > 0) {
       return { conflict: true as const, reservation: existing };
     }
 
@@ -218,13 +242,11 @@ export const completeSupplierReservation = async (input: {
       },
     });
 
-    await tx.material.update({
-      where: { id: existing.materialId },
-      data: {
-        status: 'REUSED',
-        reusedAt: now,
-        reusedByReservationId: reservation.id,
-      },
+    await applyReservationCompletionToMaterial(tx, {
+      materialId: existing.materialId,
+      reservationId: reservation.id,
+      quantityRequested: existing.quantityRequested,
+      completedAt: now,
     });
 
     return { conflict: false as const, reservation };

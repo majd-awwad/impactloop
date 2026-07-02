@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
-import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
@@ -181,16 +180,29 @@ class _LoginFormState extends ConsumerState<LoginForm> {
               return null;
             },
           ),
-          if (_formError != null) AppInlineError(message: _formError!),
-          const SizedBox(height: AppSpacing.sm),
+          if (_formError != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            AppInlineError(message: _formError!),
+          ],
+          const SizedBox(height: AppSpacing.xs),
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: Alignment.centerRight,
             child: TextButton(
+              style: TextButton.styleFrom(
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: AppSpacing.xs,
+                ),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
               onPressed: () {
-                showInfoSnackBar(
-                  context,
-                  'Forgot password screen coming soon.',
-                );
+                final email = _emailController.text.trim();
+                final target = email.isEmpty
+                    ? forgotPasswordRoute
+                    : '$forgotPasswordRoute?email=${Uri.encodeQueryComponent(email)}';
+                context.go(target);
               },
               child: Text(
                 'Forgot password?',
@@ -201,7 +213,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           AuthPrimaryButton(
             label: 'Sign in',
             isLoading: _isSubmitting,

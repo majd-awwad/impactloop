@@ -1,15 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../materials/application/material_listing_providers.dart';
+import '../../../materials/data/models/category.dart';
 import '../../data/api_material_discovery_repository.dart';
 import '../../domain/discovery_material.dart';
+import '../../domain/material_discovery_list_merge.dart';
+import '../../domain/material_discovery_query.dart';
 import '../../domain/material_discovery_repository.dart';
+import '../../domain/material_discovery_result.dart';
+import '../material_discovery_content.dart';
 import '../views/materials_discovery_view.dart';
 
 class MaterialsDiscoveryPage extends ConsumerStatefulWidget {
@@ -22,11 +31,33 @@ class MaterialsDiscoveryPage extends ConsumerStatefulWidget {
       _MaterialsDiscoveryPageState();
 }
 
-class _MaterialsDiscoveryPageState
-    extends ConsumerState<MaterialsDiscoveryPage> {
+class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage> {
+  static const _debounceDuration = Duration(milliseconds: 300);
+
   late final MaterialDiscoveryRepository _defaultRepository;
   late MaterialDiscoveryRepository _activeRepository;
-  late Future<List<DiscoveryMaterial>> _materialsFuture;
+
+  final _searchController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _areaController = TextEditingController();
+
+  Timer? _debounceTimer;
+  MaterialDiscoveryQuery _query = const MaterialDiscoveryQuery();
+  List<DiscoveryMaterial> _materials = [];
+  MaterialDiscoveryPagination? _pagination;
+  bool _isLoading = true;
+  bool _isRefetching = false;
+  bool _isLoadingMore = false;
+  String? _errorMessage;
+  int _fetchGeneration = 0;
+  int _lastCategoryCount = 0;
+  bool _pendingCategoryRefetch = false;
+
+  int _selectedCategoryIndex = 0;
+  int _selectedQuickFilterIndex = 0;
+  int _selectedSortIndex = 0;
+  int _selectedConditionIndex = 0;
+  String _searchValue = '';
 
   @override
   void initState() {
@@ -35,7 +66,7 @@ class _MaterialsDiscoveryPageState
       ref.read(apiClientProvider),
     );
     _activeRepository = widget.repository ?? _defaultRepository;
-    _materialsFuture = _activeRepository.getMaterials();
+    _fetchMaterials(reset: true);
   }
 
   @override
@@ -45,13 +76,243 @@ class _MaterialsDiscoveryPageState
     if (oldWidget.repository != widget.repository ||
         _activeRepository != nextRepository) {
       _activeRepository = nextRepository;
-      _materialsFuture = _activeRepository.getMaterials();
+      _fetchMaterials(reset: true);
     }
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    _cityController.dispose();
+    _areaController.dispose();
+    super.dispose();
+  }
+
+  bool _hasActiveFilters(List<MaterialCategory> categories) {
+    return _buildQuery(categories: categories).hasActiveFilters;
+  }
+
+  MaterialDiscoveryQuery _buildQuery({
+    required List<MaterialCategory> categories,
+    int? page,
+  }) {
+    final categoryId = _selectedCategoryIndex == 0 ||
+            categories.isEmpty ||
+            _selectedCategoryIndex - 1 >= categories.length
+        ? null
+        : categories[_selectedCategoryIndex - 1].id;
+
+    final quickFilter = _selectedQuickFilterIndex;
+    final priceType = switch (quickFilter) {
+      1 => 'FREE',
+      2 => 'PAID',
+      _ => 'ANY',
+    };
+    final deliveryAvailable = quickFilter == 3 ? true : null;
+    final pickupAllowed = quickFilter == 4 ? true : null;
+
+    final condition = materialConditionFilters[_selectedConditionIndex].value;
+    final sort = _selectedSortIndex == 1 ? 'popular' : 'newest';
+
+    return MaterialDiscoveryQuery(
+      q: _searchController.text.trim().isEmpty
+          ? null
+          : _searchController.text.trim(),
+      categoryId: categoryId,
+      condition: condition,
+      priceType: priceType,
+      deliveryAvailable: deliveryAvailable,
+      pickupAllowed: pickupAllowed,
+      city: _cityController.text.trim().isEmpty
+          ? null
+          : _cityController.text.trim(),
+      area: _areaController.text.trim().isEmpty
+          ? null
+          : _areaController.text.trim(),
+      sort: sort,
+      page: page ?? 1,
+    );
+  }
+
+  void _scheduleRefetch(List<MaterialCategory> categories) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(_debounceDuration, () {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _query = _buildQuery(categories: categories);
+      });
+      _fetchMaterials(reset: true);
+    });
+  }
+
+  void _maybeRefetchForLoadedCategories(List<MaterialCategory> categories) {
+    final categoriesJustLoaded =
+        _lastCategoryCount == 0 && categories.isNotEmpty;
+    _lastCategoryCount = categories.length;
+
+    if (!categoriesJustLoaded ||
+        _selectedCategoryIndex == 0 ||
+        _pendingCategoryRefetch) {
+      return;
+    }
+
+    _pendingCategoryRefetch = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _query = _buildQuery(categories: categories);
+      });
+      _fetchMaterials(reset: true).whenComplete(() {
+        _pendingCategoryRefetch = false;
+      });
+    });
+  }
+
+  void _releaseFetchLoadingIfLatest(int requestGeneration) {
+    if (!mounted || requestGeneration != _fetchGeneration) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = false;
+      _isRefetching = false;
+      _isLoadingMore = false;
+    });
+  }
+
+  Future<void> _fetchMaterials({required bool reset}) async {
+    final requestGeneration = ++_fetchGeneration;
+    final query = _query;
+
+    if (reset) {
+      setState(() {
+        if (_materials.isEmpty) {
+          _isLoading = true;
+          _errorMessage = null;
+        } else {
+          _isRefetching = true;
+        }
+      });
+    } else {
+      setState(() {
+        _isLoadingMore = true;
+      });
+    }
+
+    try {
+      final result = await _activeRepository.fetchMaterials(query);
+
+      if (!mounted ||
+          !shouldApplyDiscoveryFetchResult(
+            requestGeneration: requestGeneration,
+            latestGeneration: _fetchGeneration,
+          )) {
+        return;
+      }
+
+      setState(() {
+        _materials = mergeDiscoveryMaterials(
+          reset: reset,
+          current: _materials,
+          incoming: result.items,
+        );
+        _pagination = result.pagination;
+        _isLoading = false;
+        _isRefetching = false;
+        _isLoadingMore = false;
+        _errorMessage = null;
+      });
+    } catch (_) {
+      if (!mounted ||
+          !shouldApplyDiscoveryFetchResult(
+            requestGeneration: requestGeneration,
+            latestGeneration: _fetchGeneration,
+          )) {
+        return;
+      }
+
+      setState(() {
+        _isLoading = false;
+        _isRefetching = false;
+        _isLoadingMore = false;
+        _errorMessage = 'Unable to load materials right now.';
+      });
+    } finally {
+      _releaseFetchLoadingIfLatest(requestGeneration);
+    }
+  }
+
+  void _loadMore(List<MaterialCategory> categories) {
+    final pagination = _pagination;
+    if (pagination == null || !pagination.hasMore || _isLoadingMore) {
+      return;
+    }
+
+    setState(() {
+      _query = _buildQuery(
+        categories: categories,
+        page: pagination.page + 1,
+      );
+    });
+    _fetchMaterials(reset: false);
+  }
+
+  void _clearFilters(List<MaterialCategory> categories) {
+    _debounceTimer?.cancel();
+    _searchController.clear();
+    _cityController.clear();
+    _areaController.clear();
+    setState(() {
+      _searchValue = '';
+      _selectedCategoryIndex = 0;
+      _selectedQuickFilterIndex = 0;
+      _selectedSortIndex = 0;
+      _selectedConditionIndex = 0;
+      _query = _buildQuery(categories: categories);
+    });
+    _fetchMaterials(reset: true);
+  }
+
+  void _applyImmediateFilter(
+    List<MaterialCategory> categories,
+    VoidCallback updateSelection,
+  ) {
+    _debounceTimer?.cancel();
+    setState(updateSelection);
+    setState(() {
+      _query = _buildQuery(categories: categories);
+    });
+    _fetchMaterials(reset: true);
+  }
+
+  void _retryFetch(List<MaterialCategory> categories) {
+    final shouldReset = _query.page <= 1;
+    setState(() {
+      _query = _buildQuery(
+        categories: categories,
+        page: _query.page,
+      );
+    });
+    _fetchMaterials(reset: shouldReset);
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final categoriesAsync = ref.watch(discoveryMaterialCategoriesProvider);
+    final categories = categoriesAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => const <MaterialCategory>[],
+    );
+
+    _maybeRefetchForLoadedCategories(categories);
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -65,49 +326,91 @@ class _MaterialsDiscoveryPageState
               homeRoute: '/',
             ),
             Expanded(
-              child: FutureBuilder<List<DiscoveryMaterial>>(
-                future: _materialsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) {
-                    return _CenteredState(
-                      child: CircularProgressIndicator(color: palette.mint),
-                    );
-                  }
+              child: () {
+                if (_isLoading && _materials.isEmpty) {
+                  return _CenteredState(
+                    child: CircularProgressIndicator(color: palette.mint),
+                  );
+                }
 
-                  if (snapshot.hasError) {
-                    return const _CenteredState(
-                      child: _StateMessage(
-                        text: LocalizedText(
-                          en: 'Unable to load materials right now.',
-                          ar: 'تعذر تحميل المواد حالياً.',
+                if (_errorMessage != null && _materials.isEmpty) {
+                  return _CenteredState(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _StateMessage(
+                          text: LocalizedText(
+                            en: _errorMessage!,
+                            ar: 'تعذر تحميل المواد حالياً.',
+                          ),
                         ),
-                      ),
-                    );
-                  }
-
-                  final materials =
-                      snapshot.data ?? const <DiscoveryMaterial>[];
-
-                  return SingleChildScrollView(
-                    padding: const EdgeInsetsDirectional.fromSTEB(
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.xl,
-                    ),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1400),
-                        child: MaterialsDiscoveryView(
-                          materials: materials,
-                          onMaterialTap: (material) =>
-                              context.go('/materials/${material.id}'),
+                        const SizedBox(height: AppSpacing.md),
+                        FilledButton(
+                          onPressed: () => _retryFetch(categories),
+                          child: const Text('Try again'),
                         ),
-                      ),
+                      ],
                     ),
                   );
-                },
-              ),
+                }
+
+                return SingleChildScrollView(
+                  padding: appMobileAwareScrollPadding(context),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1400),
+                      child: MaterialsDiscoveryView(
+                        materials: _materials,
+                        pagination: _pagination,
+                        categories: categories,
+                        searchController: _searchController,
+                        cityController: _cityController,
+                        areaController: _areaController,
+                        searchValue: _searchValue,
+                        selectedCategoryIndex: _selectedCategoryIndex,
+                        selectedQuickFilterIndex: _selectedQuickFilterIndex,
+                        selectedSortIndex: _selectedSortIndex,
+                        selectedConditionIndex: _selectedConditionIndex,
+                        hasActiveFilters: _hasActiveFilters(categories),
+                        isRefetching: _isRefetching,
+                        isLoadingMore: _isLoadingMore,
+                        refetchErrorMessage: _materials.isNotEmpty
+                            ? _errorMessage
+                            : null,
+                        onRetryRefetch: _materials.isNotEmpty
+                            ? () => _retryFetch(categories)
+                            : null,
+                        onSearchChanged: (value) {
+                          setState(() => _searchValue = value);
+                          _scheduleRefetch(categories);
+                        },
+                        onCityChanged: (_) => _scheduleRefetch(categories),
+                        onAreaChanged: (_) => _scheduleRefetch(categories),
+                        onCategorySelected: (index) => _applyImmediateFilter(
+                          categories,
+                          () => _selectedCategoryIndex = index,
+                        ),
+                        onQuickFilterSelected: (index) => _applyImmediateFilter(
+                          categories,
+                          () => _selectedQuickFilterIndex = index,
+                        ),
+                        onSortSelected: (index) => _applyImmediateFilter(
+                          categories,
+                          () => _selectedSortIndex = index,
+                        ),
+                        onConditionSelected: (index) => _applyImmediateFilter(
+                          categories,
+                          () => _selectedConditionIndex = index,
+                        ),
+                        onClearFilters: () => _clearFilters(categories),
+                        onLoadMore: () => _loadMore(categories),
+                        onMaterialTap: (material) =>
+                            context.go('/materials/${material.id}'),
+                      ),
+                    ),
+                  ),
+                );
+              }(),
             ),
           ],
         ),

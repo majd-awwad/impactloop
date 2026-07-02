@@ -4,6 +4,7 @@ Current Flutter widget reuse inventory. Prefer documented shared/app widgets bef
 
 **Inspected source files:**
 - `apps/frontend/lib/app/widgets/entry_nav_bar.dart`
+- `apps/frontend/lib/app/widgets/app_mobile_bottom_nav_bar.dart`
 - `apps/frontend/lib/app/widgets/hero_workshop_visual.dart`
 - `apps/frontend/lib/app/widgets/impact_loop_logo.dart`
 - `apps/frontend/lib/app/widgets/nav_pill_menu.dart`
@@ -37,7 +38,8 @@ Theme details are documented in [07-theme-system.md](../07-theme-system.md). Sta
 
 | Widget/helper | File | Current purpose |
 |---------------|------|-----------------|
-| `AppTextField` | `app_text_field.dart` | Themed single-line or controlled multiline `TextFormField`; supports validation, forced error text, autofill, submit, and change callbacks. |
+| `AppTextField` | `app_text_field.dart` | Themed single-line or controlled multiline `TextFormField`; supports validation, forced error text, autofill, submit, change callbacks, and optional `suffixIcon`. |
+| `AppPasswordField` | `app_password_field.dart` | Password variant of `AppTextField` with per-field visibility toggle (or optional shared `obscureOverride` / `onToggleVisibility`), tooltip, and semantic labels. |
 | `AppFieldGap` | `app_text_field.dart` | Standard vertical field gap using `AppSpacing.md`. |
 | `AppTextArea` | `app_text_area.dart` | Themed multiline text field with label, hint, validation, forced error text, and callbacks. |
 | `AppDropdownField<T>` | `app_dropdown_field.dart` | Themed `DropdownButtonFormField` using generic values and forced error text. |
@@ -46,6 +48,7 @@ Theme details are documented in [07-theme-system.md](../07-theme-system.md). Sta
 | `AppInlineError` | `app_inline_error.dart` | Inline body-small error text using `Theme.of(context).colorScheme.error`. |
 | `showErrorSnackBar` | `app_feedback.dart` | Error snackbar using normalized API-friendly message text. |
 | `showInfoSnackBar` | `app_feedback.dart` | Informational snackbar. |
+| `UserAvatar` | `user_avatar.dart` | Circular user avatar from `profileImageUrl` with `ApiConfig.resolveMediaUrl`; falls back to display-name initial on empty URL or image load error. |
 
 No `showSuccessSnackBar` exists in current code.
 
@@ -55,7 +58,9 @@ No `showSuccessSnackBar` exists in current code.
 
 | Widget/type | File | Current purpose |
 |-------------|------|-----------------|
-| `AppMaterialCard` | `app_material_card.dart` | Material card for discovery-shaped material data. It accepts display-ready values, callbacks, optional image URL, optional trailing widget, variant, fallback icon, and media height override. |
+| `ImpactMaterialGridCard` | `app_material_card.dart` | Compact marketplace-style public material grid card. It accepts display-ready material values, optional image URL, tap callback, variant, fallback icon, and renders image-first media, category/price overlays, plain metadata rows, one status badge, and a details affordance. |
+| `ImpactMaterialCompactCard` | `app_material_card.dart` | Mobile-first horizontal public material card. It accepts the same display-ready values as the grid card and uses a small left media block, concise metadata, price/status badges, and a details arrow for narrow layouts. |
+| `AppMaterialCard` | `app_material_card.dart` | Backward-compatible wrapper around `ImpactMaterialGridCard` for existing discovery-shaped material card call sites. |
 | `AppMaterialCardVariant` | `app_material_card.dart` | `standard` and `compact` card sizing. |
 | `MaterialStatusBadge` / `MaterialStatusBadgeTone` | `material_status_badge.dart` | Available/reserved/reused/draft status badge. |
 | `MaterialConditionBadge` / `MaterialConditionBadgeTone` | `material_condition_badge.dart` | Like-new/good/fair/mixed condition badge. |
@@ -70,7 +75,8 @@ No `showSuccessSnackBar` exists in current code.
 
 | Widget | File | Current purpose |
 |--------|------|-----------------|
-| `EntryNavBar` | `entry_nav_bar.dart` | Consumer top nav for landing/entry surfaces. It watches auth/settings state and includes theme/language controls. |
+| `EntryNavBar` | `entry_nav_bar.dart` | Consumer top nav for landing/entry surfaces. It watches auth/settings state. Desktop/tablet surfaces keep top navigation and utility controls; phone widths use a compact logo + account/menu app bar with theme/language inside the menu. |
+| `AppMobileNavigationShell` / `AppMobileBottomNavBar` / `appMobileAwareScrollPadding` | `app_mobile_bottom_nav_bar.dart` | Phone-only shell and floating bottom navigation for primary learner/public destinations (`Home`, `Materials`, `Learning`, `Reservations`, `Profile`) plus a helper that adds safe bottom padding to scrollable pages. The shell returns the child unchanged at tablet/desktop widths. |
 | `ImpactLoopLogo` | `impact_loop_logo.dart` | Brand mark/wordmark with optional colors and compact mode. |
 | `HeroWorkshopVisual` | `hero_workshop_visual.dart` | Landing hero visual using landing assets/palette. App-level but landing-oriented. |
 | `NavPillMenu<T>` | `nav_pill_menu.dart` | Generic pill-style menu for selecting one value from a typed list. |
@@ -201,7 +207,7 @@ Keep the widget inside a feature when:
 ## Reuse Rules
 
 - Reuse `AppTextField`, `AppTextArea`, `AppDropdownField`, `AppPrimaryButton`, `AppLinkButton`, `AppInlineError`, and snackbar helpers before creating feature form controls.
-- Reuse `AppMaterialCard` and material badges for public/discovery-shaped material displays.
+- Reuse `ImpactMaterialGridCard` for tablet/desktop public material grids, `ImpactMaterialCompactCard` for narrow mobile lists, and material badges for public/discovery-shaped material displays. Existing `AppMaterialCard` call sites can remain as compatibility wrappers.
 - Do not import supplier widgets into learner/public features.
 - Do not import auth widgets into non-auth features.
 - Do not add API calls to reusable widgets.

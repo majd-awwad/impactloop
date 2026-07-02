@@ -75,13 +75,36 @@ const buildMaterialsWhere = (
     where.deliveryAllowed = query.deliveryAvailable;
   }
 
+  const locationFilters: Prisma.LocationWhereInput[] = [];
+
   if (query.city) {
-    where.location = {
+    locationFilters.push({
       city: {
         contains: query.city,
         mode: 'insensitive',
       },
+    });
+  }
+
+  if (query.area) {
+    locationFilters.push({
+      area: {
+        contains: query.area,
+        mode: 'insensitive',
+      },
+    });
+  }
+
+  if (locationFilters.length === 1) {
+    where.location = locationFilters[0];
+  } else if (locationFilters.length > 1) {
+    where.location = {
+      AND: locationFilters,
     };
+  }
+
+  if (query.pickupAllowed !== undefined) {
+    where.pickupAllowed = query.pickupAllowed;
   }
 
   if (query.priceType === 'FREE') {
@@ -116,13 +139,8 @@ const materialInclude = {
     },
   },
   images: {
-    where: {
-      isCover: true,
-    },
+    orderBy: [{ isCover: 'desc' }, { sortOrder: 'asc' }],
     take: 1,
-    orderBy: {
-      sortOrder: 'asc' as const,
-    },
   },
   supplierProfile: {
     select: {
@@ -141,6 +159,42 @@ const materialInclude = {
   },
 } satisfies Prisma.MaterialInclude;
 
+const materialDetailInclude = {
+  ...materialInclude,
+  images: {
+    orderBy: [{ isCover: 'desc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }],
+    select: {
+      id: true,
+      imageUrl: true,
+      sortOrder: true,
+      isCover: true,
+      createdAt: true,
+    },
+  },
+  supplierProfile: {
+    select: {
+      publicName: true,
+      supplierType: true,
+      verificationStatus: true,
+      user: {
+        select: {
+          displayName: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.MaterialInclude;
+
+const buildMaterialsOrderBy = (
+  sort: MaterialsQuery['sort'],
+): Prisma.MaterialOrderByWithRelationInput[] => {
+  if (sort === 'popular') {
+    return [{ viewsCount: 'desc' }, { createdAt: 'desc' }];
+  }
+
+  return [{ createdAt: 'desc' }];
+};
+
 export const findMaterials = async (query: MaterialsQuery) => {
   const where = buildMaterialsWhere(query);
   const skip = (query.page - 1) * query.limit;
@@ -149,9 +203,7 @@ export const findMaterials = async (query: MaterialsQuery) => {
     prisma.material.findMany({
       where,
       include: materialInclude,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: buildMaterialsOrderBy(query.sort),
       skip,
       take: query.limit,
     }),
@@ -159,6 +211,20 @@ export const findMaterials = async (query: MaterialsQuery) => {
   ]);
 
   return { items, total };
+};
+
+export const incrementMaterialViewsCount = async (id: string) => {
+  return prisma.material.update({
+    where: { id },
+    data: {
+      viewsCount: {
+        increment: 1,
+      },
+    },
+    select: {
+      viewsCount: true,
+    },
+  });
 };
 
 export const findMaterialById = async (id: string) => {
@@ -175,6 +241,6 @@ export const findMaterialById = async (id: string) => {
         },
       },
     },
-    include: materialInclude,
+    include: materialDetailInclude,
   });
 };

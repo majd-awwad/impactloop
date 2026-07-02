@@ -17,8 +17,9 @@ Locations are **created/updated inline** through supplier profile PATCH and refe
 | Locations CRUD API | **Not implemented** | No `GET/POST/PATCH /api/locations` |
 | Supplier profile location | **Implemented** | `defaultPickupLocation` on `PATCH /api/supplier/profile` |
 | Material create location | **Implemented** | Copies profile default or optional per-material override (individual/student only); never reuses profile row |
-| Public discovery location fields | **Partial** | API returns `city` + `area` only — no lat/lng/address |
-| Public redaction / visibility enforcement | **Needs verification** | `visibility`, `isApproximate` stored; public `mapMaterial` does not expose coordinates but redaction rules not centrally documented in code |
+| Public discovery location fields | **Implemented** | API returns `city` + `area` only — no lat/lng/address |
+| Post-acceptance pickup reveal (learner) | **Implemented** | `GET /api/reservations/my` returns `pickupLocationFull` for `ACCEPTED`/`COMPLETED` only |
+| Public redaction / visibility enforcement | **Implemented** | Public `mapMaterial` omits coordinates/address; reservation reveal is status-gated |
 
 ## Main user flow
 
@@ -96,13 +97,13 @@ Public material discovery:
 - `supplier_pickup_map.dart`, `supplier_pickup_map_preview.dart` — supplier portal only
 - `HeroWorkshopVisual` / landing — unrelated to locations API
 
-## Known gaps / Needs verification
+## Known gaps / future work
 
-- **Public redaction:** Public materials API omits coordinates/address on list/detail (`mapMaterial`). `visibility` / `ORDER_ONLY` is stored but not enforced on public reads — **Needs verification** beyond create-time copy behavior.
-- No learner-facing precise location reveal after reservation (reservation create is implemented, reveal is not).
-- No dedicated locations list/manage API for learners or drivers.
+- No `user_saved_locations` or learner location CRUD API.
+- No distance sorting or nearest-first material discovery.
+- No current-location delivery request from device GPS.
 - Reverse geocode requires external Nominatim — env/network dependent (`reverse-geocoding.service.ts`).
-- Delivery pickup/dropoff location fields on `reservations` — schema only; **not implemented** in API/UI.
+- Legacy delivery pickup/dropoff fields on `reservations` remain compatibility fields; developed delivery pickup/dropoff locations are copied onto `deliveries` and exposed only through learner-owned or assigned-driver delivery APIs.
 
 ## Related docs
 

@@ -20,7 +20,7 @@ impactloop/
         config/
         database/
         middlewares/
-        modules/            # 15 feature modules (see below)
+        modules/            # 24 feature modules (see below)
         services/           # cross-module services (AI price, geocoding)
         utils/
         constants/
@@ -29,22 +29,29 @@ impactloop/
         app/                # app shell, router, theme, widgets
         core/               # network, auth, config, errors
         shared/             # shared models and widgets
-        features/           # 10 feature folders (see below)
+        features/           # 14 feature folders (see below)
   docs/
   .cursor/                  # rules and skills
 ```
 
 **Note:** `docs/02-architecture.md` previously listed a root `database/` folder and many unbuilt modules. That structure is **aspirational** — see [08-implementation-status.md](08-implementation-status.md).
 
-## Backend modules (15)
+## Backend modules (24)
 
 Derived **only** from `apps/backend/src/modules/`:
 
 | Folder | Mounted in `app.ts` | Role (from routes/files) |
 |--------|---------------------|---------------------------|
+| `admin` | `/api/admin` | Admin dashboard, invitations, and parent router for admin operations |
+| `admin-approvals` | `/api/admin/approvals/*` via `admin` | Category and price request review actions |
+| `admin-materials` | `/api/admin/materials*`, `/api/admin/material-reports*` via `admin` | Material moderation and material report review |
+| `admin-people` | `/api/admin/people*` via `admin` | People list, summaries, suspend/reactivate |
+| `admin-supplier-verifications` | `/api/admin/supplier-verifications*` via `admin` | Organization supplier verification review |
 | `auth` | `/api/auth` | Register, login, tokens, `/me`, password flows |
 | `categories` | `/api/categories` | List categories |
 | `category-requests` | `/api/supplier/category-requests` | Supplier category requests + listing drafts |
+| `deliveries` | `/api/deliveries` (+ learner request under `/api/reservations/:id/delivery`) | Learner delivery request/read API |
+| `driver` | `/api/driver` | Internal driver jobs, assignment, status updates, location pings |
 | `health` | `/health` | Health check |
 | `invitations` | `/api/invitations` | Admin role invitations + accept |
 | `learning-projects` | `/api/learning-projects` | Public read list/detail |
@@ -52,10 +59,12 @@ Derived **only** from `apps/backend/src/modules/`:
 | `material-types` | `/api/material-types` | Search types + price rules |
 | `materials` | `/api/materials` | Public discovery read + listing policy + price check |
 | `price-rule-requests` | `/api/price-rule-requests`, `/api/supplier/price-rule-requests` | Create + supplier list/draft |
+| `profile` | `/api/profile` | Authenticated user/profile updates |
 | `reservations` | `/api/reservations` | Learner material reservation create/read |
 | `supplier` | `/api/supplier` | Dashboard, profile, supplier materials |
 | `supplier-notifications` | `/api/supplier/notifications` | Supplier action notifications list |
 | `supplier-reservations` | `/api/supplier/reservations` | Supplier reservation list/accept/decline/complete |
+| `supplier-verification` | Mounted through supplier/admin flows | Supplier verification submit/status support |
 | `uploads` | `/api/uploads` | Supplier material image upload |
 
 Detail: [backend/modules-map.md](backend/modules-map.md), [backend/api-catalog.md](backend/api-catalog.md)
@@ -64,23 +73,28 @@ Detail: [backend/modules-map.md](backend/modules-map.md), [backend/api-catalog.m
 
 These names appear in older docs or roadmap but **do not exist** under `apps/backend/src/modules/`:
 
-`users`, `roles`, `ai-agent`, `notifications` (general), `admin`, `moderator`, `reports`, `reviews`, `delivery`, `driver`
+`users`, `roles`, `ai-agent`, `notifications` (general), `moderator`, `reports`, `reviews`
 
-Some concerns are partially covered (e.g. reservations via learner create + `supplier-reservations`; notifications via `supplier-notifications`).
+Some concerns are partially covered (e.g. reservations via learner create + `supplier-reservations`; notifications via `supplier-notifications`; reports via `material_reports` and admin material report review, not a general reports module).
 
-## Flutter features (10)
+## Flutter features (14)
 
 Derived **only** from `apps/frontend/lib/features/`:
 
 | Feature | Primary routes | Data source (summary) |
 |---------|----------------|------------------------|
-| `auth` | `/login`, `/register`, `/auth/checking`, profile completion paths | **Partial** — API for register/login/me/change-password; forgot-password UI not built |
+| `admin_portal` | `/admin/*` | **Partial** — dashboard, invitations, approvals, supplier verification, materials moderation, people management; impact/audit placeholders |
+| `auth` | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/checking`, profile completion paths | **Implemented for auth MVP** — register/login/me/change-password/forgot-reset API and UI |
+| `deliveries` | `/learner/deliveries/:id` | **Partial** — learner delivery status/detail, latest ping summary, polling map marker |
+| `driver_portal` | `/driver/*` | **Partial** — job board, accept, active delivery detail/status/location pings |
 | `health` | `/health` | API (`/health`) |
-| `home` | `/home` | Mixed — materials via API; learning spotlight mock |
+| `home` | `/home` | **Partial** — materials and learning spotlight via API; personalization pending |
+| `invitations` | `/invite/accept` | **Implemented** — invitation validate/accept UI backed by API |
 | `landing` | `/` | Static UI |
-| `learning_hub` | `/learning`, `/learning/:id`, `/learning/add-draft` | **Partial** — backend read API exists; UI uses mock data only |
+| `learning_hub` | `/learning`, `/learning/:id`, `/learning/add-draft` | **Partial** — read path API-backed; add-draft mock-only |
 | `material_discovery` | `/materials`, `/materials/:id` | API default (`ApiMaterialDiscoveryRepository`); detail reserve CTA calls reservations data layer |
 | `materials` | (no dedicated routes) | Shared data layer for listing/taxonomy — used by supplier add material |
+| `profile` | `/profile`, `/profile/edit`, `/profile/learner/edit`, `/profile/security` | **Implemented** — account/profile/security pages |
 | `reservations` | `/learner/reservations` | Learner create/read API/repository/controllers; status page and material-detail state |
 | `supplier_portal` | `/supplier/*` shell routes | **Partial** — API-backed; material read/create/update/delete and supplier reservations |
 
@@ -88,7 +102,7 @@ Detail: [frontend/routes-map.md](frontend/routes-map.md), [08-implementation-sta
 
 ### Flutter features **not** present as folders
 
-`delivery`, `ai_agent`, `admin`, `moderator`, `reports`, `reviews`, `driver`
+`ai_agent`, `moderator`, `reports`, `reviews`
 
 ## Cross-cutting backend services
 
@@ -103,11 +117,11 @@ Not Express modules; live in `apps/backend/src/services/`:
 
 ## Database
 
-- **28** Prisma models → **28** PostgreSQL tables (see [database/schema-overview.md](database/schema-overview.md))
-- Migrations: `apps/backend/prisma/migrations/` (14 migration folders)
+- **35** Prisma models → **35** PostgreSQL tables (see [database/schema-overview.md](database/schema-overview.md))
+- Migrations: `apps/backend/prisma/migrations/` (15 migration folders)
 - Seed: `apps/backend/prisma/seed.ts` + `prisma/seeds/*`
 
-**Stale doc:** [03-database.md](03-database.md) claims 34 tables and lists tables not in schema — use `docs/database/*` instead.
+**Stale doc:** [03-database.md](03-database.md) lists tables not in schema — use `docs/database/*` instead.
 
 ## Documentation map
 
@@ -123,11 +137,11 @@ Not Express modules; live in `apps/backend/src/services/`:
 
 ### Feature & flow docs (code-derived)
 
-**Phase 2A — core:** [auth](features/auth.md), [material-discovery](features/material-discovery.md), [supplier-portal](features/supplier-portal.md), [learning-hub](features/learning-hub.md) — flows under [flows/](flows/).
+**Phase 2A — core:** [roles-and-capabilities](features/roles-and-capabilities.md), [auth](features/auth.md), [material-discovery](features/material-discovery.md), [supplier-portal](features/supplier-portal.md), [learning-hub](features/learning-hub.md) — flows under [flows/](flows/).
 
 **Phase 2B — supporting:** [materials-listing](features/materials-listing.md), [locations](features/locations.md), [invitations](features/invitations.md) + [invitation-flow](flows/invitation-flow.md), [landing](features/landing.md), [home-learner](features/home-learner.md).
 
-**Phase 2C — gaps:** [09-open-questions](09-open-questions.md), [reservations](features/reservations.md) + [learner-reservation-flow](flows/learner-reservation-flow.md), [delivery](features/delivery.md) + [delivery-flow](flows/delivery-flow.md), [ai-agent](features/ai-agent.md) + [ai-material-matching-flow](flows/ai-material-matching-flow.md), [admin](features/admin.md), [moderator](features/moderator.md).
+**Phase 2C — gaps/partials:** [09-open-questions](09-open-questions.md), [reservations](features/reservations.md) + [learner-reservation-flow](flows/learner-reservation-flow.md), [delivery](features/delivery.md) + [delivery-flow](flows/delivery-flow.md), [ai-agent](features/ai-agent.md) + [ai-material-matching-flow](flows/ai-material-matching-flow.md), [admin](features/admin.md), [moderator](features/moderator.md).
 
 Index with status summaries: [00-ai-docs-router.md](00-ai-docs-router.md#feature--flow-docs), [08-implementation-status.md](08-implementation-status.md#documentation-phase). Unresolved risks: [09-open-questions.md](09-open-questions.md).
 
@@ -135,8 +149,4 @@ Index with status summaries: [00-ai-docs-router.md](00-ai-docs-router.md#feature
 
 **Inspected:** `apps/backend/src/modules/**/*.test.ts`
 
-- `locations/locations.test.ts`
-- `supplier/supplier.materials.test.ts`
-- `materials/materials.price.test.ts`
-- `reservations/reservations.create.test.ts`
-- `supplier-reservations/supplier-reservations.complete.test.ts`
+19 backend module test files were found under `apps/backend/src/modules/`, including admin, auth, categories, deliveries, invitations, locations, materials, profile, reservations, supplier, and supplier-reservations tests.

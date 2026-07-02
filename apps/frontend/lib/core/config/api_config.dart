@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'external_document.dart';
+
 class ApiConfig {
   const ApiConfig._();
 
@@ -35,5 +37,13 @@ class ApiConfig {
     }
 
     return '$baseUrl/$url';
+  }
+
+  static void openExternalDocument(String url) {
+    final resolved = resolveMediaUrl(url);
+
+    if (kIsWeb) {
+      openExternalDocumentUrl(resolved);
+    }
   }
 }

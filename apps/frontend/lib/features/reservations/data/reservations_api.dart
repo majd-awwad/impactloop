@@ -42,4 +42,13 @@ class ReservationsApi {
       },
     );
   }
+
+  Future<void> cancelReservation(String reservationId) {
+    return unwrapApiResponse(
+      _client.patch<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/cancel',
+      ),
+      (_) {},
+    );
+  }
 }

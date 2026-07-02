@@ -1,7 +1,10 @@
 import { AppError } from '../../utils/app-error.js';
 
 import * as learningProjectsRepository from './learning-projects.repository.js';
-import type { LearningProjectsQuery } from './learning-projects.validation.js';
+import type {
+  LearningProjectsQuery,
+  SubmitLearningProjectInput,
+} from './learning-projects.validation.js';
 
 const decimalToSerializable = (value: { toNumber(): number } | number): number => {
   if (typeof value === 'number') {
@@ -120,4 +123,43 @@ export const getLearningProjectById = async (id: string) => {
   }
 
   return mapLearningProjectDetail(project);
+};
+
+export const submitLearningProjectForReview = async (
+  userId: string,
+  input: SubmitLearningProjectInput,
+) => {
+  const category = await learningProjectsRepository.findProjectCategoryForSubmit(
+    input.categoryId,
+  );
+
+  if (!category) {
+    throw new AppError(
+      'Project category not found or inactive.',
+      400,
+      'INVALID_CATEGORY',
+    );
+  }
+
+  const project = await learningProjectsRepository.createLearningProjectForReview({
+    createdBy: userId,
+    categoryId: input.categoryId,
+    title: input.title,
+    shortDescription: input.shortDescription,
+    description: input.description,
+    difficulty: input.difficulty,
+    estimatedDurationMinutes: input.estimatedDurationMinutes,
+    coverImageUrl: input.coverImageUrl,
+    requiredComponents: input.requiredComponents,
+    steps: input.steps,
+    links: input.links,
+  });
+
+  return {
+    id: project.id,
+    title: project.title,
+    status: project.status,
+    submittedAt: project.submittedAt?.toISOString() ?? null,
+    message: 'Your project was submitted for admin review.',
+  };
 };

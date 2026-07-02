@@ -9,11 +9,15 @@ class SupplierMaterialsApi {
 
   final Dio _client;
 
-  Future<CreatedMaterial> createMaterial(CreateMaterialRequest request) {
+  Future<CreatedMaterial> createMaterial(
+    CreateMaterialRequest request, {
+    required String idempotencyKey,
+  }) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '/api/supplier/materials',
         data: request.toJson(),
+        options: Options(headers: {'Idempotency-Key': idempotencyKey}),
       ),
       CreatedMaterial.fromJson,
     );

@@ -18,9 +18,23 @@ import { comparePassword, hashPassword } from '../../utils/password.js';
 
 import { generateOpaqueToken, hashToken } from '../../utils/token.js';
 
+import { checkRateLimit } from '../../middlewares/rate-limit.middleware.js';
+
 import * as authRepository from './auth.repository.js';
 
 import { formatPickupAreaLabel } from './pickup-area.js';
+import {
+  canGrantLearnerRoleOnSwitch,
+  canSwitchToLearner,
+  canSwitchToSupplier,
+  isAllowedBecomeSupplierType,
+  isBlockedLearnerPortalSwitch,
+  resolveDefaultActiveRole,
+  resolveDefaultPortalRoute,
+  type PortalRole,
+} from './role-capabilities.js';
+import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
+import { getAuthEmailProvider } from './email/index.js';
 
 import type { ChangePasswordInput, LoginInput, RegisterInput } from './auth.validation.js';
 
@@ -32,10 +46,15 @@ export type LearnerProfileSummary = {
 };
 
 export type SupplierProfileSummary = {
+  id: string;
   supplierType: string;
   publicName: string;
   description: string | null;
   pickupAreaLabel: string | null;
+  verificationStatus: string;
+  verificationAdminNote: string | null;
+  verificationSubmittedAt: string | null;
+  verificationDocumentName: string | null;
 };
 
 export type UserSummary = {
@@ -46,9 +65,15 @@ export type UserSummary = {
   accountStatus: AccountStatus;
   profileImageUrl: string | null;
   roles: UserRole[];
+  activeRole: UserRole;
+  canSwitchToLearner: boolean;
+  canSwitchToSupplier: boolean;
+  defaultPortalRoute: string;
   learnerProfile: LearnerProfileSummary | null;
   supplierProfile: SupplierProfileSummary | null;
   emailVerifiedAt: string | null;
+  phoneVerifiedAt: string | null;
+  lastLoginAt: string | null;
   createdAt: string;
 };
 
@@ -65,11 +90,16 @@ export type RefreshResult = {
 
 export type ForgotPasswordResult = {
   message: string;
-  resetToken?: string;
 };
 
 const PASSWORD_RESET_SAFE_MESSAGE =
   'If an account with that email exists, password reset instructions have been sent.';
+
+const PASSWORD_RESET_ACCOUNT_RATE_LIMIT = {
+  name: 'password-reset-account',
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+};
 
 const toUserSummary = (
   user: {
@@ -79,44 +109,85 @@ const toUserSummary = (
     phone: string | null;
     accountStatus: AccountStatus;
     profileImageUrl: string | null;
+    activeRole: UserRole | null;
     emailVerifiedAt: Date | null;
+    phoneVerifiedAt: Date | null;
+    lastLoginAt: Date | null;
     createdAt: Date;
     roles: { role: UserRole }[];
     learnerProfile?: authRepository.UserWithRolesAndProfiles['learnerProfile'];
     supplierProfile?: authRepository.UserWithRolesAndProfiles['supplierProfile'];
   },
-): UserSummary => ({
-  id: user.id,
-  displayName: user.displayName,
-  email: user.email,
-  phone: user.phone,
-  accountStatus: user.accountStatus,
-  profileImageUrl: user.profileImageUrl,
-  roles: user.roles.map((assignment) => assignment.role),
-  learnerProfile: user.learnerProfile
-    ? {
-        learnerType: user.learnerProfile.learnerType ?? '',
-        skillLevel: user.learnerProfile.skillLevel ?? '',
-        interests: user.learnerProfile.interests,
-        bio: user.learnerProfile.bio,
-      }
-    : null,
-  supplierProfile: user.supplierProfile
-    ? {
-        supplierType: user.supplierProfile.supplierType ?? '',
-        publicName: user.supplierProfile.publicName ?? '',
-        description: user.supplierProfile.description,
-        pickupAreaLabel: user.supplierProfile.defaultPickupLocation
-          ? formatPickupAreaLabel({
-              city: user.supplierProfile.defaultPickupLocation.city,
-              area: user.supplierProfile.defaultPickupLocation.area,
-            })
-          : null,
-      }
-    : null,
-  emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
-  createdAt: user.createdAt.toISOString(),
-});
+): UserSummary => {
+  const roles = user.roles.map((assignment) => assignment.role);
+  const supplierType = user.supplierProfile?.supplierType ?? null;
+  const capabilityInput = {
+    roles,
+    supplierType,
+    hasSupplierProfile: user.supplierProfile != null,
+  };
+  const activeRole = resolveDefaultActiveRole({
+    roles,
+    storedActiveRole: user.activeRole,
+  });
+
+  return {
+    id: user.id,
+    displayName: user.displayName,
+    email: user.email,
+    phone: user.phone,
+    accountStatus: user.accountStatus,
+    profileImageUrl: user.profileImageUrl,
+    roles,
+    activeRole,
+    canSwitchToLearner: canSwitchToLearner(capabilityInput),
+    canSwitchToSupplier: canSwitchToSupplier(capabilityInput),
+    defaultPortalRoute: resolveDefaultPortalRoute(activeRole),
+    learnerProfile: user.learnerProfile
+      ? {
+          learnerType: user.learnerProfile.learnerType ?? '',
+          skillLevel: user.learnerProfile.skillLevel ?? '',
+          interests: user.learnerProfile.interests,
+          bio: user.learnerProfile.bio,
+        }
+      : null,
+    supplierProfile: user.supplierProfile
+      ? {
+          id: user.supplierProfile.id,
+          supplierType: user.supplierProfile.supplierType ?? '',
+          publicName: user.supplierProfile.publicName ?? '',
+          description: user.supplierProfile.description,
+          pickupAreaLabel: user.supplierProfile.defaultPickupLocation
+            ? formatPickupAreaLabel({
+                city: user.supplierProfile.defaultPickupLocation.city,
+                area: user.supplierProfile.defaultPickupLocation.area,
+              })
+            : null,
+          verificationStatus: normalizeSupplierVerificationStatus(
+            user.supplierProfile.verificationStatus,
+          ),
+          verificationAdminNote:
+            normalizeSupplierVerificationStatus(
+              user.supplierProfile.verificationStatus,
+            ) === 'REJECTED' ||
+            normalizeSupplierVerificationStatus(
+              user.supplierProfile.verificationStatus,
+            ) === 'CHANGES_REQUESTED'
+              ? user.supplierProfile.verificationAdminNote
+              : null,
+          verificationSubmittedAt:
+            user.supplierProfile.verificationSubmittedAt?.toISOString() ?? null,
+          verificationDocumentName:
+            user.supplierProfile.organizationProfile?.verificationDocumentName ??
+            null,
+        }
+      : null,
+    emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+    phoneVerifiedAt: user.phoneVerifiedAt?.toISOString() ?? null,
+    lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+    createdAt: user.createdAt.toISOString(),
+  };
+};
 
 const assertAccountCanLogin = (accountStatus: AccountStatus): void => {
   if (accountStatus === 'SUSPENDED' || accountStatus === 'DISABLED') {
@@ -143,6 +214,49 @@ const getPasswordResetExpiry = (): Date => {
   };
 
   return new Date(Date.now() + amount * multipliers[unit]!);
+};
+
+const assertPasswordResetLinkConfig = (): void => {
+  if (!env.appPublicBaseUrl) {
+    throw new AppError(
+      'Password reset links are not configured.',
+      500,
+      'CONFIGURATION_ERROR',
+    );
+  }
+
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(env.appPublicBaseUrl);
+  } catch {
+    throw new AppError(
+      'Password reset links are not configured.',
+      500,
+      'CONFIGURATION_ERROR',
+    );
+  }
+
+  if (env.nodeEnv === 'production' && parsedUrl.protocol !== 'https:') {
+    throw new AppError(
+      'Password reset links must use HTTPS in production.',
+      500,
+      'CONFIGURATION_ERROR',
+    );
+  }
+};
+
+const buildPasswordResetLink = (token: string): string => {
+  assertPasswordResetLinkConfig();
+
+  const resetUrl = new URL('/reset-password', `${env.appPublicBaseUrl}/`);
+  resetUrl.searchParams.set('token', token);
+
+  return resetUrl.toString();
+};
+
+const logAuthEmailFailure = (event: string, error?: string): void => {
+  console.error(`[Auth email] ${event} failed`, error ?? 'Unknown email error');
 };
 
 const createAuthSession = async (
@@ -292,12 +406,14 @@ export const getAuthenticatedUser = async (
 export const requestPasswordReset = async (
   email: string,
 ): Promise<ForgotPasswordResult> => {
+  assertPasswordResetLinkConfig();
+
   const user = await authRepository.findUserEmailIdentity(email);
 
-  let resetToken: string | undefined;
-
   if (user) {
-    resetToken = generateOpaqueToken();
+    const resetToken = generateOpaqueToken();
+    const expiresAt = getPasswordResetExpiry();
+    const resetLink = buildPasswordResetLink(resetToken);
 
     await authRepository.invalidatePasswordResetTokens(user.id);
 
@@ -306,20 +422,23 @@ export const requestPasswordReset = async (
       tokenHash: hashToken(resetToken),
       tokenType: 'PASSWORD_RESET',
       target: user.email,
-      expiresAt: getPasswordResetExpiry(),
+      expiresAt,
     });
+
+    const emailResult = await getAuthEmailProvider().sendPasswordResetEmail({
+      recipientEmail: user.email,
+      resetLink,
+      expiresAt,
+    });
+
+    if (emailResult.status === 'FAILED') {
+      logAuthEmailFailure('Password reset email', emailResult.sendError);
+    }
   }
 
-  const result: ForgotPasswordResult = {
+  return {
     message: PASSWORD_RESET_SAFE_MESSAGE,
   };
-
-  if (env.nodeEnv === 'development' && resetToken) {
-    // TODO: Remove dev-only resetToken exposure once email delivery is implemented.
-    result.resetToken = resetToken;
-  }
-
-  return result;
 };
 
 export const resetPasswordWithToken = async (
@@ -338,6 +457,11 @@ export const resetPasswordWithToken = async (
     );
   }
 
+  checkRateLimit(
+    storedToken.userId,
+    PASSWORD_RESET_ACCOUNT_RATE_LIMIT,
+  );
+
   const passwordHash = await hashPassword(newPassword);
 
   await authRepository.completePasswordReset({
@@ -345,6 +469,14 @@ export const resetPasswordWithToken = async (
     userId: storedToken.userId,
     passwordHash,
   });
+
+  const emailResult = await getAuthEmailProvider().sendPasswordChangedEmail({
+    recipientEmail: storedToken.user.email,
+  });
+
+  if (emailResult.status === 'FAILED') {
+    logAuthEmailFailure('Password changed email', emailResult.sendError);
+  }
 };
 
 export const changePasswordForUser = async (
@@ -376,4 +508,123 @@ export const changePasswordForUser = async (
     userId: user.id,
     passwordHash,
   });
+};
+
+export const becomeSupplier = async (
+  userId: string,
+  input: authRepository.BecomeSupplierInput,
+): Promise<AuthResult> => {
+  const user = await authRepository.findUserByIdWithRoles(userId);
+
+  if (!user) {
+    throw new AppError('User not found', 404, 'NOT_FOUND');
+  }
+
+  if (
+    user.roles.some(
+      (assignment) =>
+        assignment.role === 'ADMIN' ||
+        assignment.role === 'DRIVER' ||
+        assignment.role === 'MODERATOR',
+    )
+  ) {
+    throw new AppError(
+      'This account cannot use the become-supplier flow',
+      403,
+      'FORBIDDEN',
+    );
+  }
+
+  if (!isAllowedBecomeSupplierType(input.supplierType)) {
+    throw new AppError(
+      'This flow only supports student or individual supplier profiles.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const descriptionParts = [
+    input.description?.trim(),
+    input.workingHours?.trim()
+      ? `Working hours: ${input.workingHours.trim()}`
+      : null,
+    input.pickupNotes?.trim()
+      ? `Pickup notes: ${input.pickupNotes.trim()}`
+      : null,
+  ].filter((part): part is string => Boolean(part && part.length > 0));
+
+  const updatedUser = await authRepository.becomeSupplierForUser({
+    userId,
+    supplierType: input.supplierType,
+    publicName: input.publicName,
+    description:
+      descriptionParts.length > 0 ? descriptionParts.join('\n\n') : undefined,
+    pickupArea: input.pickupArea,
+  });
+
+  return createAuthSession(updatedUser);
+};
+
+export const switchActiveRole = async (
+  userId: string,
+  requestedRole: PortalRole,
+): Promise<AuthResult> => {
+  const user = await authRepository.findUserByIdWithRoles(userId);
+
+  if (!user) {
+    throw new AppError('User not found', 404, 'NOT_FOUND');
+  }
+
+  const roles = user.roles.map((assignment) => assignment.role);
+  const supplierType = user.supplierProfile?.supplierType ?? null;
+  const capabilityInput = {
+    roles,
+    supplierType,
+    hasSupplierProfile: user.supplierProfile != null,
+  };
+
+  if (requestedRole === 'SUPPLIER') {
+    if (!canSwitchToSupplier(capabilityInput)) {
+      throw new AppError(
+        'Supplier portal is not available for this account',
+        403,
+        'FORBIDDEN',
+      );
+    }
+  } else if (requestedRole === 'LEARNER') {
+    if (
+      capabilityInput.hasSupplierProfile &&
+      isBlockedLearnerPortalSwitch(supplierType)
+    ) {
+      throw new AppError(
+        'Organization supplier accounts cannot switch to learner mode.',
+        403,
+        'FORBIDDEN',
+      );
+    }
+
+    if (!canSwitchToLearner(capabilityInput)) {
+      throw new AppError(
+        'Learner portal is not available for this account',
+        403,
+        'FORBIDDEN',
+      );
+    }
+
+    if (canGrantLearnerRoleOnSwitch(capabilityInput)) {
+      await authRepository.ensureUserRole(userId, 'LEARNER');
+    }
+  } else {
+    throw new AppError('Invalid active role', 400, 'VALIDATION_ERROR');
+  }
+
+  await authRepository.setUserActiveRole(userId, requestedRole);
+
+  const freshUser = await authRepository.findUserByIdWithRoles(userId);
+
+  if (!freshUser) {
+    throw new AppError('User not found', 404, 'NOT_FOUND');
+  }
+
+  return createAuthSession(freshUser);
 };

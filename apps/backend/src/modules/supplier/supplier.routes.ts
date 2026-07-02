@@ -11,21 +11,28 @@ import {
   getMaterial,
   getMaterials,
   getProfile,
+  getProfileFollowers,
+  markMaterialUnavailable,
   patchMaterial,
   patchProfile,
+  patchProfileImages,
   postMaterial,
+  restoreMaterialAvailable,
 } from './supplier.controller.js';
 import {
   createSupplierMaterialSchema,
   supplierMaterialIdParamSchema,
+  supplierFollowersQuerySchema,
   supplierMaterialsQuerySchema,
   updateSupplierMaterialSchema,
   updateSupplierProfileSchema,
+  updateSupplierProfileImagesSchema,
 } from './supplier.validation.js';
 import { categoryRequestsRouter } from '../category-requests/category-requests.routes.js';
 import { supplierPriceRuleRequestsRouter } from '../price-rule-requests/price-rule-requests.supplier.routes.js';
 import { supplierNotificationsRouter } from '../supplier-notifications/supplier-notifications.routes.js';
 import { supplierReservationsRouter } from '../supplier-reservations/supplier-reservations.routes.js';
+import { supplierVerificationRouter } from '../supplier-verification/supplier-verification.routes.js';
 
 export const supplierRouter = Router();
 
@@ -49,6 +56,22 @@ supplierRouter.patch(
   requireRoles('SUPPLIER'),
   validate(updateSupplierProfileSchema),
   asyncHandler(patchProfile),
+);
+
+supplierRouter.patch(
+  '/profile/images',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(updateSupplierProfileImagesSchema),
+  asyncHandler(patchProfileImages),
+);
+
+supplierRouter.get(
+  '/profile/followers',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(supplierFollowersQuerySchema, 'query'),
+  asyncHandler(getProfileFollowers),
 );
 
 supplierRouter.get(
@@ -92,7 +115,24 @@ supplierRouter.delete(
   asyncHandler(deleteMaterial),
 );
 
+supplierRouter.post(
+  '/materials/:id/mark-unavailable',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(supplierMaterialIdParamSchema, 'params'),
+  asyncHandler(markMaterialUnavailable),
+);
+
+supplierRouter.post(
+  '/materials/:id/restore-available',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(supplierMaterialIdParamSchema, 'params'),
+  asyncHandler(restoreMaterialAvailable),
+);
+
 supplierRouter.use('/category-requests', categoryRequestsRouter);
 supplierRouter.use('/price-rule-requests', supplierPriceRuleRequestsRouter);
 supplierRouter.use('/notifications', supplierNotificationsRouter);
 supplierRouter.use('/reservations', supplierReservationsRouter);
+supplierRouter.use('/verification', supplierVerificationRouter);

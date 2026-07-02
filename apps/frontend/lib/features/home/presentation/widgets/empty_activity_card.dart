@@ -62,6 +62,8 @@ class EmptyActivityCard extends StatelessWidget {
               letterSpacing: 0,
             ),
             textAlign: TextAlign.start,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.md),

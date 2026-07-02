@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 
 import { prisma } from '../../database/prisma.js';
+import type { DeliveryStatus } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
 
@@ -9,6 +10,7 @@ import { completeSupplierReservation } from './supplier-reservations.service.js'
 import {
   acceptSupplierReservation,
   declineSupplierReservation,
+  listSupplierReservations,
 } from './supplier-reservations.service.js';
 
 const TEST_MARKER = '[test-complete-pickup]';
@@ -72,8 +74,38 @@ async function createReservation(
   return { reservation, material };
 }
 
+async function createDelivery(
+  ctx: TestContext,
+  reservationId: string,
+  status: DeliveryStatus,
+  requestedAt = new Date(),
+) {
+  return prisma.delivery.create({
+    data: {
+      reservationId,
+      pickupLocationId: ctx.locationId,
+      dropoffLocationId: ctx.locationId,
+      requestedByUserId: ctx.learnerId,
+      status,
+      requestedAt,
+    },
+  });
+}
+
 async function cleanup(ctx: TestContext) {
   if (ctx.createdReservationIds.length) {
+    await prisma.deliveryLocationPing.deleteMany({
+      where: { delivery: { reservationId: { in: ctx.createdReservationIds } } },
+    });
+    await prisma.deliveryStatusHistory.deleteMany({
+      where: { delivery: { reservationId: { in: ctx.createdReservationIds } } },
+    });
+    await prisma.deliveryAssignment.deleteMany({
+      where: { delivery: { reservationId: { in: ctx.createdReservationIds } } },
+    });
+    await prisma.delivery.deleteMany({
+      where: { reservationId: { in: ctx.createdReservationIds } },
+    });
     await prisma.reservationStatusHistory.deleteMany({
       where: { reservationId: { in: ctx.createdReservationIds } },
     });
@@ -200,6 +232,141 @@ describe('completeSupplierReservation', () => {
     });
     assert.ok(history);
     assert.equal(history?.changedBy, ctx.supplierId);
+  });
+
+  test('supplier reservation list marks accepted self-pickup as completable', async () => {
+    const { reservation } = await createReservation(ctx, 'ACCEPTED');
+
+    const reservations = await listSupplierReservations(ctx.supplierId, {
+      status: 'accepted',
+    });
+    const listed = reservations.find((item) => item.id === reservation.id);
+
+    assert.ok(listed);
+    assert.equal(listed.deliveryRequested, false);
+    assert.equal(listed.activeDelivery, null);
+    assert.equal(listed.canSupplierComplete, true);
+  });
+
+  test('supplier reservation list exposes delivery summary and blocks supplier complete action', async () => {
+    const { reservation } = await createReservation(ctx, 'ACCEPTED');
+
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: { deliveryRequested: true },
+    });
+
+    const delivery = await createDelivery(
+      ctx,
+      reservation.id,
+      'WAITING_FOR_DRIVER',
+    );
+
+    const reservations = await listSupplierReservations(ctx.supplierId, {
+      status: 'accepted',
+    });
+    const listed = reservations.find((item) => item.id === reservation.id);
+
+    assert.ok(listed);
+    assert.equal(listed.deliveryRequested, true);
+    assert.deepEqual(listed.activeDelivery, {
+      id: delivery.id,
+      status: 'WAITING_FOR_DRIVER',
+    });
+    assert.equal(listed.canSupplierComplete, false);
+  });
+
+  test('delivery-requested reservation without delivery row is not supplier completable', async () => {
+    const { reservation } = await createReservation(ctx, 'ACCEPTED');
+
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: { deliveryRequested: true },
+    });
+
+    const reservations = await listSupplierReservations(ctx.supplierId, {
+      status: 'accepted',
+    });
+    const listed = reservations.find((item) => item.id === reservation.id);
+
+    assert.ok(listed);
+    assert.equal(listed.deliveryRequested, true);
+    assert.equal(listed.activeDelivery, null);
+    assert.equal(listed.canSupplierComplete, false);
+
+    await assert.rejects(
+      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        return true;
+      },
+    );
+  });
+
+  test('terminal delivery statuses still block supplier completion', async () => {
+    for (const status of [
+      'CANCELLED',
+      'FAILED_PICKUP',
+      'FAILED_DELIVERY',
+    ] as const) {
+      const { reservation } = await createReservation(ctx, 'ACCEPTED');
+      await createDelivery(ctx, reservation.id, status);
+
+      const reservations = await listSupplierReservations(ctx.supplierId, {
+        status: 'accepted',
+      });
+      const listed = reservations.find((item) => item.id === reservation.id);
+
+      assert.ok(listed);
+      assert.ok(listed.activeDelivery);
+      assert.equal(listed.activeDelivery.status, status);
+      assert.equal(listed.canSupplierComplete, false);
+
+      await assert.rejects(
+        () => completeSupplierReservation(ctx.supplierId, reservation.id),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.statusCode, 409);
+          return true;
+        },
+      );
+    }
+  });
+
+  test('any delivery row blocks supplier completion even when latest delivery is terminal', async () => {
+    const { reservation } = await createReservation(ctx, 'ACCEPTED');
+    const older = new Date(Date.now() - 60_000);
+    const newer = new Date();
+
+    await createDelivery(ctx, reservation.id, 'WAITING_FOR_DRIVER', older);
+    const latestDelivery = await createDelivery(
+      ctx,
+      reservation.id,
+      'CANCELLED',
+      newer,
+    );
+
+    const reservations = await listSupplierReservations(ctx.supplierId, {
+      status: 'accepted',
+    });
+    const listed = reservations.find((item) => item.id === reservation.id);
+
+    assert.ok(listed);
+    assert.deepEqual(listed.activeDelivery, {
+      id: latestDelivery.id,
+      status: 'CANCELLED',
+    });
+    assert.equal(listed.canSupplierComplete, false);
+
+    await assert.rejects(
+      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        return true;
+      },
+    );
   });
 
   test('supplier accept sets material reserved', async () => {

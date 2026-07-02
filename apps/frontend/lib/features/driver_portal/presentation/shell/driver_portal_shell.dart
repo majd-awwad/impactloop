@@ -1,0 +1,248 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../auth/application/auth_controller.dart';
+
+class DriverPortalShell extends ConsumerWidget {
+  const DriverPortalShell({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = MaterialsUiPalette.of(context);
+    final user = ref.watch(authControllerProvider).user;
+    final path = GoRouterState.of(context).matchedLocation;
+
+    return Scaffold(
+      backgroundColor: palette.pageBackground,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const EntryNavBar(
+              showSignIn: false,
+              showCreateAccount: false,
+              homeRoute: '/driver/jobs',
+            ),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 820;
+
+                  if (compact) {
+                    return Column(
+                      children: [
+                        _DriverTopTabs(currentPath: path),
+                        Expanded(child: child),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _DriverSidebar(
+                        currentPath: path,
+                        driverName: user?.displayName ?? 'Driver',
+                        email: user?.email ?? '',
+                      ),
+                      Expanded(child: child),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DriverSidebar extends StatelessWidget {
+  const _DriverSidebar({
+    required this.currentPath,
+    required this.driverName,
+    required this.email,
+  });
+
+  final String currentPath;
+  final String driverName;
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Container(
+      width: 248,
+      margin: const EdgeInsetsDirectional.fromSTEB(
+        AppSpacing.md,
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+      ),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderStrong),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Driver portal',
+            style: AppTextStyles.title(
+              context,
+            ).copyWith(color: palette.textPrimary),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Internal delivery',
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _DriverNavButton(
+            icon: Icons.local_shipping_outlined,
+            label: 'Jobs',
+            route: '/driver/jobs',
+            selected: currentPath == '/driver/jobs',
+          ),
+          const Spacer(),
+          _DriverProfileSummary(name: driverName, email: email),
+        ],
+      ),
+    );
+  }
+}
+
+class _DriverTopTabs extends StatelessWidget {
+  const _DriverTopTabs({required this.currentPath});
+
+  final String currentPath;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        0,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _DriverNavButton(
+              icon: Icons.local_shipping_outlined,
+              label: 'Jobs',
+              route: '/driver/jobs',
+              selected: currentPath == '/driver/jobs',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DriverNavButton extends StatelessWidget {
+  const _DriverNavButton({
+    required this.icon,
+    required this.label,
+    required this.route,
+    required this.selected,
+  });
+
+  final IconData icon;
+  final String label;
+  final String route;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return TextButton.icon(
+      onPressed: () => context.go(route),
+      style: TextButton.styleFrom(
+        alignment: AlignmentDirectional.centerStart,
+        foregroundColor: selected ? palette.mint : palette.textSecondary,
+        backgroundColor: selected
+            ? palette.mint.withValues(alpha: 0.12)
+            : Colors.transparent,
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+      ),
+      icon: Icon(icon),
+      label: Text(label),
+    );
+  }
+}
+
+class _DriverProfileSummary extends StatelessWidget {
+  const _DriverProfileSummary({required this.name, required this.email});
+
+  final String name;
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final initial = name.trim().isEmpty
+        ? 'D'
+        : name.characters.first.toUpperCase();
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurfaceAlt,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(child: Text(initial)),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.label(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                ),
+                if (email.isNotEmpty)
+                  Text(
+                    email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textMuted, fontSize: 12),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

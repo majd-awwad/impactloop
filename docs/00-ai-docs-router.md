@@ -9,6 +9,7 @@ Before editing code, read this file.
 - [02-architecture.md](02-architecture.md)
 - [08-implementation-status.md](08-implementation-status.md) — what is actually built
 - [09-open-questions.md](09-open-questions.md) — unresolved risks and **Needs verification** items
+- [features/roles-and-capabilities.md](features/roles-and-capabilities.md) — canonical role-scope framing with implemented vs planned capabilities
 
 ## If editing Flutter
 
@@ -89,10 +90,11 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 
 | Feature | Feature doc | Flow doc(s) | Ship status (summary) |
 |---------|-------------|-------------|------------------------|
-| Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Partial** — forgot-password UI not built |
+| Roles and capabilities | [features/roles-and-capabilities.md](features/roles-and-capabilities.md) | — | Product framing; mixes current code status with planned capabilities |
+| Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Implemented for auth MVP** — forgot/reset UI and API exist; verification enforcement needs verification |
 | Material discovery | [features/material-discovery.md](features/material-discovery.md) | [flows/material-discovery-flow.md](flows/material-discovery-flow.md) | **Implemented** |
-| Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** — material read/create/edit/delete; supplier reservations; no delivery |
-| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — Flutter **mock-only**; `GET /api/learning-projects` **backend-only** until wired |
+| Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** — material read/create/edit/delete; supplier reservations; delivery complete guarded backend-only |
+| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed (`/learning`, `/learning/:id`, Home spotlight); add-draft mock-only; legacy mock file for disabled AI/add-draft only |
 
 ### Phase 2B — supporting features
 
@@ -100,9 +102,9 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 |------|-------------|-------------|------------------------|
 | Materials listing (shared data layer) | [features/materials-listing.md](features/materials-listing.md) | — (see [supplier-material-listing-flow](flows/supplier-material-listing-flow.md)) | **Partial** — supplier create support; no update/delete |
 | Locations | [features/locations.md](features/locations.md) | — | **Partial** — reverse geocode + profile/material usage; public redaction **Needs verification** |
-| Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Backend-only** — no admin portal or Flutter accept UI |
+| Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Implemented** — admin UI + accept UI exist; email delivery depends on provider |
 | Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static UI; no API |
-| Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — suggested materials **API-backed**; learning spotlight **mock-only** |
+| Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — suggested materials + learning spotlight **API-backed** |
 
 ### Phase 2C — gaps and open questions
 
@@ -110,14 +112,14 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 |------|-------------|-------------|------------------------|
 | Open questions (index) | [09-open-questions.md](09-open-questions.md) | — | Unresolved / **Needs verification** across features |
 | Reservations (learner) | [features/reservations.md](features/reservations.md) | [flows/learner-reservation-flow.md](flows/learner-reservation-flow.md) | Learner create/read + material detail status **Partial**; supplier workflow **Partial** |
-| Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Schema-only** / **not implemented** |
+| Delivery | [features/delivery.md](features/delivery.md) | [flows/delivery-flow.md](flows/delivery-flow.md) | **Partial** — learner request/status/tracking summary/map marker UI and driver jobs/status/manual ping UI; realtime tracking stream not implemented |
 | AI material matching agent | [features/ai-agent.md](features/ai-agent.md) | [flows/ai-material-matching-flow.md](flows/ai-material-matching-flow.md) | **Not implemented** (distinct from price suggestion **Partial**) |
-| Admin portal | [features/admin.md](features/admin.md) | — | **Not implemented** — `POST /api/invitations` **Backend-only** only |
+| Admin portal | [features/admin.md](features/admin.md) | — | **Partial** — dashboard, invitations, supplier verification, approvals, materials moderation, and people management |
 | Moderator portal | [features/moderator.md](features/moderator.md) | — | **Not implemented** |
 
 Gap docs are stubs — see [09-open-questions.md](09-open-questions.md) before implementing.
 
-**Not documented as implemented:** learner reservation cancel, delivery workflow, AI material matching agent, admin portal, moderator portal (unless code changes prove otherwise).
+**Not documented as implemented:** live realtime tracking stream, AI material matching agent, moderator portal, saved/liked/followed content, project build checklist, and project submission/review workflow (unless code changes prove otherwise).
 
 ADRs (`docs/adr/`) — accepted architecture decisions.
 

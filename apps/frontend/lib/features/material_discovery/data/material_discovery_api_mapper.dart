@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config/api_config.dart';
 import '../../../shared/models/localized_text.dart';
 import '../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../shared/widgets/materials/material_status_badge.dart';
 import '../domain/discovery_material.dart';
+import '../domain/discovery_material_image.dart';
+import '../presentation/discovery_material_display.dart';
 
 class MaterialDiscoveryApiMapper {
   const MaterialDiscoveryApiMapper._();
@@ -25,59 +28,122 @@ class MaterialDiscoveryApiMapper {
     final condition = _stringOrFallback(json['condition'], fallback: 'GOOD');
     final status = _stringOrFallback(json['status'], fallback: 'AVAILABLE');
     final quantity = _numberFromDynamic(json['quantity']);
+    final availableQuantity =
+        _numberFromDynamic(json['availableQuantity']) ?? quantity;
     final unit = _stringOrFallback(json['unit'], fallback: 'items');
     final isFree = json['isFree'] == true;
     final price = _numberFromDynamic(json['price']);
     final city = _nullableString(json['city']);
     final area = _nullableString(json['area']);
     final deliveryAvailable = json['deliveryAvailable'] == true;
+    final pickupAllowed = json['pickupAllowed'] != false;
+    final pickupNotes = _nullableString(json['pickupNotes']);
+    final suggestedUses = _nullableString(json['suggestedUses']);
+    final sourceType = _nullableString(json['sourceType']);
+    final supplierType = _nullableString(json['supplierType']);
+    final supplierVerified = json['supplierVerified'] == true;
+    final isOwnMaterial = json['isOwnMaterial'] == true ? true : null;
+    final canReserve = json['canReserve'] is bool ? json['canReserve'] as bool : null;
+    final reserveBlockReason = _nullableString(json['reserveBlockReason']);
     final ratingSummary = _numberFromDynamic(json['ratingSummary']);
+    final viewsCount = _intFromDynamic(json['viewsCount']) ?? 0;
 
     final conditionMeta = _conditionMeta(condition);
-    final statusMeta = _statusMeta(status);
-    final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
+    final statusMeta = _statusMeta(
+      status,
+      availableQuantity: availableQuantity ?? 0,
+    );
+    final categoryId = _nullableString(categoryJson?['id']);
     final title = _stringOrFallback(
       json['title'],
       fallback: 'Untitled material',
     );
-    final description = _stringOrFallback(
-      json['description'],
-      fallback: 'No description available.',
+    final description = DiscoveryMaterialDisplay.sanitizedDescriptionOrFallback(
+      _stringOrFallback(
+        json['description'],
+        fallback: '',
+      ),
     );
+
+    final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
+    final supplierTypeLabel = DiscoveryMaterial.supplierTypeLabelFor(supplierType);
+    final galleryImages = _mapGalleryImages(json);
+    final imageUrl = galleryImages.isNotEmpty
+        ? galleryImages.first.url
+        : _resolveImageUrl(json);
 
     return DiscoveryMaterial(
       id: _stringOrFallback(json['id'], fallback: ''),
       status: status,
       quantity: quantity ?? 0,
+      availableQuantity: availableQuantity ?? 0,
+      unit: unit,
       // TODO: replace duplicated EN/AR title text when backend exposes bilingual fields.
       title: LocalizedText(en: title, ar: title),
       description: LocalizedText(en: description, ar: description),
       category: categoryLabel,
+      categoryId: categoryId,
+      city: city,
+      area: area,
       conditionLabel: conditionMeta.label,
       conditionTone: conditionMeta.tone,
       statusLabel: statusMeta.label,
       statusTone: statusMeta.tone,
-      quantityLabel: _quantityLabel(quantity, unit),
+      quantityLabel: _quantityLabel(
+        quantity: quantity,
+        availableQuantity: availableQuantity,
+        unit: unit,
+      ),
       priceLabel: _priceLabel(isFree: isFree, price: price),
       locationLabel: _locationLabel(city: city, area: area),
-      availabilityLabel: LocalizedText(
-        en: deliveryAvailable ? 'Delivery available' : 'Pickup only',
-        ar: deliveryAvailable ? 'التوصيل متاح' : 'استلام فقط',
+      availabilityLabel: _availabilityLabel(
+        deliveryAvailable: deliveryAvailable,
+        pickupAllowed: pickupAllowed,
       ),
       deliveryAvailable: deliveryAvailable,
+      pickupAllowed: pickupAllowed,
       isFree: isFree,
       supplierName: LocalizedText(en: supplierName, ar: supplierName),
-      supplierSubtitle: LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
+      supplierSubtitle: supplierTypeLabel ??
+          const LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
+      supplierType: supplierType,
+      supplierVerified: supplierVerified,
       heroIconData: _heroIconForCategory(categoryNameEn),
       cardGradient: _gradientForCategory(categoryNameEn),
-      imageUrl: _imageUrl(json, categoryNameEn),
+      imageUrl: imageUrl,
+      galleryImages: galleryImages,
       ratingLabel: ratingSummary == null
           ? null
           : LocalizedText(
               en: _formatCompactNumber(ratingSummary),
               ar: _formatCompactNumber(ratingSummary),
             ),
+      viewsCount: viewsCount,
+      postedAt: _dateTimeFromDynamic(json['createdAt']),
+      pickupNotes: pickupNotes,
+      suggestedUses: suggestedUses,
+      sourceType: sourceType,
+      isOwnMaterial: isOwnMaterial,
+      canReserve: canReserve,
+      reserveBlockReason: reserveBlockReason,
     );
+  }
+
+  static DateTime? _dateTimeFromDynamic(Object? value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is DateTime) {
+      return value;
+    }
+
+    final normalized = value.toString().trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    return DateTime.tryParse(normalized);
   }
 
   static Map<String, dynamic>? _asMap(Object? value) {
@@ -106,10 +172,80 @@ class MaterialDiscoveryApiMapper {
     return normalized.isEmpty ? null : normalized;
   }
 
-  static String _imageUrl(Map<String, dynamic> json, String categoryNameEn) {
-    final directImage = _nullableString(json['imageUrl']);
+  static List<DiscoveryMaterialImage> _mapGalleryImages(
+    Map<String, dynamic> json,
+  ) {
+    final images = json['images'];
+    if (images is! List) {
+      return const [];
+    }
+
+    final mapped = <DiscoveryMaterialImage>[];
+
+    for (final image in images) {
+      if (image is! Map) {
+        continue;
+      }
+
+      final imageMap = Map<String, dynamic>.from(image);
+      final url = _nullableString(imageMap['url'] ?? imageMap['imageUrl']);
+      if (url == null) {
+        continue;
+      }
+
+      mapped.add(
+        DiscoveryMaterialImage(
+          id: _stringOrFallback(imageMap['id'], fallback: url),
+          url: ApiConfig.resolveMediaUrl(url),
+          isCover: imageMap['isCover'] == true,
+          isPrimary: imageMap['isPrimary'] == true || imageMap['isCover'] == true,
+          sortOrder: _intFromDynamic(imageMap['sortOrder']) ?? mapped.length,
+        ),
+      );
+    }
+
+    if (mapped.isEmpty) {
+      return const [];
+    }
+
+    mapped.sort((left, right) {
+      if (left.isCover != right.isCover) {
+        return left.isCover ? -1 : 1;
+      }
+
+      final sortCompare = left.sortOrder.compareTo(right.sortOrder);
+      if (sortCompare != 0) {
+        return sortCompare;
+      }
+
+      return left.id.compareTo(right.id);
+    });
+
+    return mapped;
+  }
+
+  static String? _resolveImageUrl(Map<String, dynamic> json) {
+    final directImage = _nullableString(json['primaryImageUrl']) ??
+        _nullableString(json['imageUrl']);
     if (directImage != null) {
-      return directImage;
+      return ApiConfig.resolveMediaUrl(directImage);
+    }
+
+    final images = json['images'];
+    if (images is List) {
+      for (final image in images) {
+        if (image is Map) {
+          final url = _nullableString(image['url'] ?? image['imageUrl']);
+          if (url != null) {
+            return ApiConfig.resolveMediaUrl(url);
+          }
+        } else {
+          final url = _nullableString(image);
+          if (url != null) {
+            return ApiConfig.resolveMediaUrl(url);
+          }
+        }
+      }
     }
 
     final imageUrls = json['imageUrls'];
@@ -118,48 +254,34 @@ class MaterialDiscoveryApiMapper {
         if (image is Map) {
           final url = _nullableString(image['url'] ?? image['imageUrl']);
           if (url != null) {
-            return url;
+            return ApiConfig.resolveMediaUrl(url);
           }
         } else {
           final url = _nullableString(image);
           if (url != null) {
-            return url;
+            return ApiConfig.resolveMediaUrl(url);
           }
         }
       }
     }
 
-    return _fallbackImageForCategory(categoryNameEn);
+    return null;
   }
 
-  static String _fallbackImageForCategory(String categoryNameEn) {
-    final normalized = categoryNameEn.toLowerCase();
-
-    if (normalized.contains('wood')) {
-      return 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80';
+  static int? _intFromDynamic(Object? value) {
+    if (value == null) {
+      return null;
     }
 
-    if (normalized.contains('electronic') ||
-        normalized.contains('sensor') ||
-        normalized.contains('circuit')) {
-      return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
+    if (value is int) {
+      return value;
     }
 
-    if (normalized.contains('metal') || normalized.contains('steel')) {
-      return 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80';
+    if (value is num) {
+      return value.toInt();
     }
 
-    if (normalized.contains('plastic') || normalized.contains('acrylic')) {
-      return 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=1200&q=80';
-    }
-
-    if (normalized.contains('fabric') ||
-        normalized.contains('textile') ||
-        normalized.contains('denim')) {
-      return 'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=1200&q=80';
-    }
-
-    return 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80';
+    return int.tryParse(value.toString());
   }
 
   static double? _numberFromDynamic(Object? value) {
@@ -174,11 +296,26 @@ class MaterialDiscoveryApiMapper {
     return double.tryParse(value.toString());
   }
 
-  static LocalizedText _quantityLabel(double? quantity, String unit) {
-    final quantityText = quantity == null
-        ? '--'
-        : _formatCompactNumber(quantity);
-    return LocalizedText(en: '$quantityText $unit', ar: '$quantityText $unit');
+  static LocalizedText _quantityLabel({
+    required double? quantity,
+    required double? availableQuantity,
+    required String unit,
+  }) {
+    final totalText = quantity == null ? '--' : _formatCompactNumber(quantity);
+    final available = availableQuantity ?? quantity;
+
+    if (available != null &&
+        quantity != null &&
+        available < quantity &&
+        available > 0) {
+      final availableText = _formatCompactNumber(available);
+      return LocalizedText(
+        en: 'Available: $availableText of $totalText $unit',
+        ar: 'المتاح: $availableText من $totalText $unit',
+      );
+    }
+
+    return LocalizedText(en: '$totalText $unit', ar: '$totalText $unit');
   }
 
   static LocalizedText _priceLabel({
@@ -195,6 +332,37 @@ class MaterialDiscoveryApiMapper {
 
     final priceText = _formatCompactNumber(price);
     return LocalizedText(en: 'NIS $priceText', ar: '$priceText شيكل');
+  }
+
+  static LocalizedText _availabilityLabel({
+    required bool deliveryAvailable,
+    required bool pickupAllowed,
+  }) {
+    if (pickupAllowed && deliveryAvailable) {
+      return const LocalizedText(
+        en: 'Pickup and delivery available',
+        ar: 'الاستلام والتوصيل متاحان',
+      );
+    }
+
+    if (deliveryAvailable) {
+      return const LocalizedText(
+        en: 'Delivery available',
+        ar: 'التوصيل متاح',
+      );
+    }
+
+    if (pickupAllowed) {
+      return const LocalizedText(
+        en: 'Pickup only',
+        ar: 'استلام فقط',
+      );
+    }
+
+    return const LocalizedText(
+      en: 'Contact supplier for pickup options',
+      ar: 'تواصل مع المورد لخيارات الاستلام',
+    );
   }
 
   static LocalizedText _locationLabel({
@@ -249,8 +417,18 @@ class MaterialDiscoveryApiMapper {
   }
 
   static ({LocalizedText label, MaterialStatusBadgeTone tone}) _statusMeta(
-    String value,
-  ) {
+    String value, {
+    required double availableQuantity,
+  }) {
+    if (availableQuantity > 0 &&
+        value != 'REUSED' &&
+        value != 'UNAVAILABLE') {
+      return (
+        label: const LocalizedText(en: 'Available', ar: 'متاح'),
+        tone: MaterialStatusBadgeTone.available,
+      );
+    }
+
     switch (value) {
       case 'PENDING_RESERVATION':
         return (

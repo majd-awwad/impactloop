@@ -116,8 +116,8 @@ class SupplierDashboardStatCard extends StatelessWidget {
   }
 }
 
-class SupplierDashboardStatGrid extends StatelessWidget {
-  const SupplierDashboardStatGrid({
+class SupplierDashboardMainStatGrid extends StatelessWidget {
+  const SupplierDashboardMainStatGrid({
     super.key,
     required this.activeMaterials,
     required this.pendingRequests,
@@ -198,4 +198,136 @@ class SupplierDashboardStatGrid extends StatelessWidget {
     }
     return 1;
   }
+}
+
+class SupplierDashboardSecondaryMetricsRow extends StatelessWidget {
+  const SupplierDashboardSecondaryMetricsRow({
+    super.key,
+    required this.totalMaterials,
+    required this.availableMaterials,
+    required this.reservedMaterials,
+    required this.totalViews,
+    required this.totalLikes,
+    required this.followersCount,
+  });
+
+  final int totalMaterials;
+  final int availableMaterials;
+  final int reservedMaterials;
+  final int totalViews;
+  final int totalLikes;
+  final int followersCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
+    final metrics = [
+      _SecondaryMetric(
+        label: context.s.statTotalMaterials,
+        value: '$totalMaterials',
+        icon: Icons.layers_outlined,
+        accentColor: SupplierDashboardColors.totalMaterials,
+      ),
+      _SecondaryMetric(
+        label: context.s.statAvailableMaterials,
+        value: '$availableMaterials',
+        icon: Icons.check_circle_outline,
+        accentColor: SupplierDashboardColors.available,
+      ),
+      _SecondaryMetric(
+        label: context.s.statReservedMaterials,
+        value: '$reservedMaterials',
+        icon: Icons.lock_outline,
+        accentColor: SupplierDashboardColors.reserved,
+      ),
+      _SecondaryMetric(
+        label: context.s.statTotalViews,
+        value: '$totalViews',
+        icon: Icons.visibility_outlined,
+        accentColor: SupplierDashboardColors.views,
+      ),
+      _SecondaryMetric(
+        label: context.s.statTotalLikes,
+        value: '$totalLikes',
+        icon: Icons.favorite_outline,
+        accentColor: SupplierDashboardColors.likes,
+      ),
+      _SecondaryMetric(
+        label: context.s.statFollowers,
+        value: '$followersCount',
+        icon: Icons.people_outline,
+        accentColor: SupplierDashboardColors.followers,
+      ),
+    ];
+
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: metrics
+          .map(
+            (metric) => Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: colors.surfaceSolid.withValues(
+                  alpha: colors.isDark ? 0.72 : 1,
+                ),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: colors.border.withValues(
+                    alpha: colors.isDark ? 0.35 : 0.55,
+                  ),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.cardShadow,
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(metric.icon, size: 14, color: metric.accentColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    metric.value,
+                    style: context.supplierLabel().copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    metric.label,
+                    style: context.supplierBody().copyWith(
+                      fontSize: 11,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _SecondaryMetric {
+  const _SecondaryMetric({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.accentColor,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color accentColor;
 }

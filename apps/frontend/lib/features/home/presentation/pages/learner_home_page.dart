@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../auth/application/auth_navigation.dart';
 import '../widgets/coming_soon_card.dart';
 import '../widgets/empty_activity_card.dart';
 import '../widgets/home_action_card.dart';
@@ -38,12 +40,7 @@ class LearnerHomePage extends ConsumerWidget {
             const _HomeTopBar(),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsetsDirectional.fromSTEB(
-                  AppSpacing.md,
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                  AppSpacing.xl,
-                ),
+                padding: appMobileAwareScrollPadding(context),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1280),
@@ -198,6 +195,8 @@ class _WelcomeHero extends StatelessWidget {
                       context,
                     ).copyWith(color: palette.mint, letterSpacing: 0),
                     textAlign: TextAlign.start,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
@@ -212,11 +211,13 @@ class _WelcomeHero extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
-                    'Find reusable materials, explore project ideas, and keep future reservations, impact, and helper tools in one place.',
+                    'Find reusable materials, explore project ideas, and manage reservation and delivery updates from one place.',
                     style: AppTextStyles.subtitle(
                       context,
                     ).copyWith(color: palette.textSecondary, letterSpacing: 0),
                     textAlign: TextAlign.start,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               );
@@ -288,9 +289,13 @@ class _HeroActionButton extends StatelessWidget {
   }
 }
 
-class _QuickActionsSection extends StatelessWidget {
+class _QuickActionsSection extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authControllerProvider).user;
+    final isAdmin = userHasAdminRole(user);
+    final hasSupplierRole = userHasSupplierRole(user);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -299,42 +304,77 @@ class _QuickActionsSection extends StatelessWidget {
           subtitle: 'Start with the areas that are available today.',
         ),
         const SizedBox(height: AppSpacing.md),
-        _ResponsiveGrid(
-          minItemWidth: 280,
-          itemHeight: 224,
-          children: [
-            HomeActionCard(
-              icon: Icons.inventory_2_outlined,
-              title: 'Find reusable materials',
-              description: 'Search currently listed materials from suppliers.',
-              onPressed: () => context.go('/materials'),
-            ),
-            HomeActionCard(
-              icon: Icons.school_outlined,
-              title: 'Explore learning projects',
-              description: 'Open the Learning Hub project catalog.',
-              onPressed: () => context.go('/learning'),
-            ),
-            HomeActionCard(
-              icon: Icons.assignment_turned_in_outlined,
-              title: 'My Reservations',
-              description:
-                  'Track supplier responses and pickup windows for requested materials.',
-              onPressed: () => context.go('/learner/reservations'),
-            ),
-            HomeActionCard(
-              icon: Icons.storefront_outlined,
-              title: 'Become a supplier',
-              description:
-                  'Supplier onboarding is planned for learners who want to share surplus materials.',
-              badge: 'Coming soon',
-              enabled: false,
-              onPressed: () => showInfoSnackBar(
-                context,
-                'Supplier onboarding will be connected later.',
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final useCompactActions = constraints.maxWidth < 600;
+
+            final actions = [
+              if (isAdmin)
+                HomeActionCard(
+                  icon: Icons.admin_panel_settings_outlined,
+                  title: useCompactActions ? 'Admin' : 'Open Admin Portal',
+                  description: useCompactActions
+                      ? 'Review activity'
+                      : 'Review platform activity, pending actions, and impact metrics.',
+                  compact: useCompactActions,
+                  onPressed: () => context.go(adminPortalRoute),
+                ),
+              HomeActionCard(
+                icon: Icons.inventory_2_outlined,
+                title: useCompactActions
+                    ? 'Materials'
+                    : 'Find reusable materials',
+                description: useCompactActions
+                    ? 'Browse items'
+                    : 'Search currently listed materials from suppliers.',
+                compact: useCompactActions,
+                onPressed: () => context.go('/materials'),
               ),
-            ),
-          ],
+              HomeActionCard(
+                icon: Icons.school_outlined,
+                title: useCompactActions
+                    ? 'Learning'
+                    : 'Explore learning projects',
+                description: useCompactActions
+                    ? 'Explore projects'
+                    : 'Open the Learning Hub project catalog.',
+                compact: useCompactActions,
+                onPressed: () => context.go('/learning'),
+              ),
+              HomeActionCard(
+                icon: Icons.assignment_turned_in_outlined,
+                title: useCompactActions ? 'Reservations' : 'My Reservations',
+                description: useCompactActions
+                    ? 'Track pickups'
+                    : 'Track supplier responses and pickup windows for requested materials.',
+                compact: useCompactActions,
+                onPressed: () => context.go(learnerReservationsRoute),
+              ),
+              HomeActionCard(
+                icon: Icons.storefront_outlined,
+                title: useCompactActions ? 'Supplier' : 'Become a supplier',
+                description: useCompactActions
+                    ? 'Share materials'
+                    : hasSupplierRole
+                        ? 'Update your supplier profile and pickup details.'
+                        : 'Start the supplier setup path for your account.',
+                badge: useCompactActions
+                    ? null
+                    : hasSupplierRole
+                        ? 'Profile'
+                        : null,
+                compact: useCompactActions,
+                onPressed: () => context.go(supplierEntryRouteForUser(user)),
+              ),
+            ];
+
+            return _ResponsiveGrid(
+              minItemWidth: useCompactActions ? 150 : 260,
+              maxColumns: useCompactActions ? 2 : 4,
+              itemHeight: useCompactActions ? 112 : 196,
+              children: actions,
+            );
+          },
         ),
       ],
     );
@@ -348,9 +388,9 @@ class _FutureActivitySection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const HomeSectionHeader(
-          title: 'Future activity',
+          title: 'Activity updates',
           subtitle:
-              'Saved projects and delivery are placeholders; reservations are available today.',
+              'Reservation and delivery status live in My Reservations. Saved projects are not available yet.',
         ),
         const SizedBox(height: AppSpacing.md),
         _ResponsiveGrid(
@@ -358,27 +398,18 @@ class _FutureActivitySection extends StatelessWidget {
           itemHeight: 216,
           children: [
             HomeActionCard(
-              icon: Icons.assignment_turned_in_outlined,
-              title: 'My Reservations',
+              icon: Icons.local_shipping_outlined,
+              title: 'Track reservations and delivery',
               description:
-                  'View pending, accepted, rejected, and completed material reservations.',
-              onPressed: () => context.go('/learner/reservations'),
+                  'View pickup, delivery, and reservation updates from My Reservations.',
+              badge: 'Open My Reservations',
+              onPressed: () => context.go(learnerReservationsRoute),
             ),
             ComingSoonCard(
               icon: Icons.bookmark_border_rounded,
               title: 'Saved projects',
               description:
                   'Projects you save for later will appear here after saved projects are added.',
-              onTap: () => showInfoSnackBar(
-                context,
-                'This feature will be connected later.',
-              ),
-            ),
-            ComingSoonCard(
-              icon: Icons.local_shipping_outlined,
-              title: 'Delivery tracking',
-              description:
-                  'Internal delivery updates will appear here once delivery is connected to reservations.',
               onTap: () => showInfoSnackBar(
                 context,
                 'This feature will be connected later.',
@@ -394,47 +425,57 @@ class _FutureActivitySection extends StatelessWidget {
 class _FutureToolsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // TODO: Replace these placeholders with impact summary and AI helper APIs later.
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 820;
-        final impact = const EmptyActivityCard(
-          icon: Icons.eco_outlined,
-          title: 'Impact snapshot',
-          description:
-              'Your reuse impact will appear here after you complete reservations and projects.',
-        );
-        final assistant = ComingSoonCard(
-          icon: Icons.auto_awesome_outlined,
-          title: 'AI material helper',
-          description:
-              'Later, ImpactLoop can suggest materials for your project based on cost, availability, and location.',
-          onTap: () => showInfoSnackBar(
-            context,
-            'This feature will be connected later.',
-          ),
-        );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const HomeSectionHeader(
+          title: 'Coming later',
+          subtitle:
+              'Impact and AI helper features are planned but not available yet.',
+        ),
+        const SizedBox(height: AppSpacing.md),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 820;
+            const impact = EmptyActivityCard(
+              icon: Icons.eco_outlined,
+              title: 'Impact snapshot',
+              description:
+                  'Your reuse impact will appear here after you complete reservations and projects.',
+            );
+            final assistant = ComingSoonCard(
+              icon: Icons.auto_awesome_outlined,
+              title: 'AI material helper',
+              description:
+                  'Later, ImpactLoop can suggest materials for your project based on cost, availability, and location.',
+              onTap: () => showInfoSnackBar(
+                context,
+                'This feature will be connected later.',
+              ),
+            );
 
-        if (!wide) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              impact,
-              const SizedBox(height: AppSpacing.md),
-              assistant,
-            ],
-          );
-        }
+            if (!wide) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  impact,
+                  const SizedBox(height: AppSpacing.md),
+                  assistant,
+                ],
+              );
+            }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: impact),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(child: assistant),
-          ],
-        );
-      },
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Expanded(child: impact),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: assistant),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -444,11 +485,13 @@ class _ResponsiveGrid extends StatelessWidget {
     required this.children,
     this.minItemWidth = 280,
     this.itemHeight,
+    this.maxColumns = 4,
   });
 
   final List<Widget> children;
   final double minItemWidth;
   final double? itemHeight;
+  final int maxColumns;
 
   @override
   Widget build(BuildContext context) {
@@ -456,7 +499,7 @@ class _ResponsiveGrid extends StatelessWidget {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final rawColumns = (width / minItemWidth).floor();
-        final columns = rawColumns.clamp(1, 4).toInt();
+        final columns = rawColumns.clamp(1, maxColumns).toInt();
         final itemWidth = (width - ((columns - 1) * AppSpacing.md)) / columns;
 
         return Wrap(

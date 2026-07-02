@@ -40,6 +40,16 @@ export const categoriesQuerySchema = z.object({
       error: 'rootOnly must be true or false',
     }).default(false),
   ),
+  discoveryOnly: z.preprocess(
+    (value) => {
+      const parsed = parseOptionalBoolean(value);
+
+      return parsed === undefined ? value : parsed;
+    },
+    z.boolean({
+      error: 'discoveryOnly must be true or false',
+    }).default(false),
+  ),
 });
 
 export type CategoriesQuery = z.infer<typeof categoriesQuerySchema>;

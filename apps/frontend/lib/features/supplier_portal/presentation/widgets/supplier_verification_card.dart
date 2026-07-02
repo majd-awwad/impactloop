@@ -6,9 +6,14 @@ import '../../../../app/theme/app_spacing.dart';
 import 'supplier_verification_badge.dart';
 
 class SupplierVerificationCard extends StatelessWidget {
-  const SupplierVerificationCard({super.key, required this.status});
+  const SupplierVerificationCard({
+    super.key,
+    required this.status,
+    this.adminNote,
+  });
 
   final String status;
+  final String? adminNote;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +54,18 @@ class SupplierVerificationCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           SupplierVerificationBadge(status: status),
           const SizedBox(height: AppSpacing.sm),
+          if (adminNote != null && adminNote!.trim().isNotEmpty) ...[
+            Text(
+              context.s.verificationAdminNoteLabel,
+              style: context.supplierSectionTitle().copyWith(fontSize: 14),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              adminNote!.trim(),
+              style: context.supplierBody(),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
           Text(
             context.s.verificationReadOnlyNote,
             style: context.supplierBody(),

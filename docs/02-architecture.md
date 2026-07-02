@@ -19,14 +19,14 @@ impactloop/
       src/
         app.ts, server.ts
         config/, database/, middlewares/, utils/, constants/
-        modules/               # 15 modules — see modules-map.md
+        modules/               # 24 modules — see modules-map.md
         services/              # cross-cutting services
     frontend/
       lib/
         app/                   # shell, router, theme, widgets
         core/                  # network, auth, config, errors
         shared/                # shared models, widgets
-        features/              # 10 features — see project-map.md
+        features/              # 14 features — see project-map.md
   docs/
   .cursor/
 ```
@@ -58,6 +58,7 @@ From `apps/backend/src/app.ts`:
 |-------|--------|
 | `/health` | health |
 | `/api/auth` | auth |
+| `/api/profile` | profile |
 | `/api/categories` | categories |
 | `/api/material-types` | material-types |
 | `/api/price-rule-requests` | price-rule-requests |
@@ -65,22 +66,25 @@ From `apps/backend/src/app.ts`:
 | `/api/learning-projects` | learning-projects |
 | `/api/materials` | materials |
 | `/api/reservations` | reservations |
+| `/api/deliveries` | deliveries |
+| `/api/driver` | driver |
 | `/api/uploads` | uploads |
 | `/api/locations` | locations |
 | `/api/supplier` | supplier (+ nested category-requests, price-rule-requests, notifications, reservations) |
+| `/api/admin` | admin (+ nested admin operation modules) |
 
 Full endpoint list: [backend/api-catalog.md](backend/api-catalog.md)  
 Module responsibilities: [backend/modules-map.md](backend/modules-map.md)
 
-### Backend modules present (15)
+### Backend modules present (24)
 
-`auth`, `categories`, `category-requests`, `health`, `invitations`, `learning-projects`, `locations`, `material-types`, `materials`, `price-rule-requests`, `reservations`, `supplier`, `supplier-notifications`, `supplier-reservations`, `uploads`
+`admin`, `admin-approvals`, `admin-materials`, `admin-people`, `admin-supplier-verifications`, `auth`, `categories`, `category-requests`, `deliveries`, `driver`, `health`, `invitations`, `learning-projects`, `locations`, `material-types`, `materials`, `price-rule-requests`, `profile`, `reservations`, `supplier`, `supplier-notifications`, `supplier-reservations`, `supplier-verification`, `uploads`
 
 ### Backend modules **not present**
 
 These names appear in roadmap/requirements but **have no folder** under `modules/`:
 
-`users`, `roles`, `ai-agent`, `notifications`, `admin`, `moderator`, `reports`, `reviews`, `delivery`, `driver`
+`users`, `roles`, `ai-agent`, `notifications`, `moderator`, `reports`, `reviews`
 
 ### Cross-cutting services (`src/services/`)
 
@@ -105,13 +109,13 @@ These names appear in roadmap/requirements but **have no folder** under `modules
 - Widgets do not call APIs directly — repositories/providers in data/application layers
 - Adaptive layouts per feature (mobile/web views where implemented)
 
-### Features present (10)
+### Features present (14)
 
-`auth`, `health`, `home`, `landing`, `learning_hub`, `material_discovery`, `materials`, `reservations`, `supplier_portal`
+`admin_portal`, `auth`, `deliveries`, `driver_portal`, `health`, `home`, `invitations`, `landing`, `learning_hub`, `material_discovery`, `materials`, `profile`, `reservations`, `supplier_portal`
 
 ### Features **not present**
 
-`delivery`, `ai_agent`, `admin`, `moderator`, `reports`, `reviews`, `driver`
+`ai_agent`, `moderator`, `reports`, `reviews`
 
 Routes: [frontend/routes-map.md](frontend/routes-map.md)  
 Shared widgets: [frontend/reusable-widgets.md](frontend/reusable-widgets.md)
@@ -127,14 +131,14 @@ Shared widgets: [frontend/reusable-widgets.md](frontend/reusable-widgets.md)
 
 ## Database architecture
 
-- 28 Prisma models → 28 PostgreSQL tables
+- 35 Prisma models → 35 PostgreSQL tables
 - PostGIS on `locations.location`
-- No `delivery_requests` table — delivery columns on `reservations`
+- No `delivery_requests` table — delivery attempts live in `deliveries`; legacy reservation delivery columns remain
 - No `impact_logs` / `impact_summaries` tables in schema
 
 Detail: [database/schema-overview.md](database/schema-overview.md)
 
-**Note:** [03-database.md](03-database.md) is **stale** (claims 34 tables). Use `docs/database/*`.
+**Note:** [03-database.md](03-database.md) is **stale** and lists tables not in schema. Use `docs/database/*`.
 
 ## API examples (actually mounted)
 
@@ -151,6 +155,10 @@ These exist in route files today:
 - `GET /api/supplier/reservations`
 - `PATCH /api/supplier/reservations/:id/accept`
 - `GET /api/learning-projects`
+- `GET /api/admin/dashboard`
+- `GET /api/admin/invitations`
+- `GET /api/driver/deliveries/available`
+- `GET /api/deliveries/my`
 
 **Not mounted** (aspirational examples from older docs):
 

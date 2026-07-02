@@ -15,10 +15,20 @@ const materialSourceTypeSchema = z.enum([
   'EDUCATIONAL_INSTITUTION',
 ]);
 
+const pickupLocationDraftSchema = z
+  .object({
+    country: z.string().trim().max(120).optional(),
+    city: z.string().trim().max(120).optional(),
+    area: z.string().trim().max(120).optional(),
+    addressLine: z.string().trim().max(500).optional(),
+  })
+  .optional();
+
 export const listingDraftJsonSchema = z.object({
   materialName: z.string().trim().max(200).default(''),
   title: z.string().trim().max(200).default(''),
   description: z.string().trim().max(5000).default(''),
+  categoryRequestReason: z.string().trim().max(2000).nullish(),
   requestedCategoryName: z.string().trim().min(1).max(200),
   categoryId: z.string().trim().min(1).nullable().optional(),
   condition: materialConditionSchema,
@@ -33,6 +43,8 @@ export const listingDraftJsonSchema = z.object({
   pickupNotes: z.string().trim().max(2000).nullable().optional(),
   suggestedUses: z.string().trim().max(2000).nullable().optional(),
   imageUrls: z.array(z.string()).max(20).default([]),
+  useDefaultPickupLocation: z.boolean().optional(),
+  pickupLocation: pickupLocationDraftSchema,
 });
 
 export const createCategoryRequestSchema = z.object({

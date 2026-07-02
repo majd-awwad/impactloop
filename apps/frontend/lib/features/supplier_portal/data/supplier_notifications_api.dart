@@ -48,14 +48,15 @@ class SupplierNotificationsApi {
             );
 
       return SupplierNotificationsResult(
-        notifications: notifications
-            .whereType<Map>()
-            .map(
-              (item) => SupplierActionNotification.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
-            )
-            .toList(),
+        notifications: (notifications
+                .whereType<Map>()
+                .map(
+                  (item) => SupplierActionNotification.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList()
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt))),
         summary: summary,
       );
     } on ApiException {

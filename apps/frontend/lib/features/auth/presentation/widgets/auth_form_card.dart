@@ -35,12 +35,15 @@ class AuthFormCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              height: 4,
-              width: isCompact ? 56 : 72,
-              decoration: BoxDecoration(
-                color: colors.primary,
-                borderRadius: AppRadius.pillAll,
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                height: 4,
+                width: isCompact ? 56 : 72,
+                decoration: BoxDecoration(
+                  color: colors.primary,
+                  borderRadius: AppRadius.pillAll,
+                ),
               ),
             ),
             SizedBox(height: isCompact ? AppSpacing.md : AppSpacing.lg),
