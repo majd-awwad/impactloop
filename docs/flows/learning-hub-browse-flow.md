@@ -14,16 +14,21 @@ Public API returns **PUBLISHED** projects only (`learning-projects.repository.ts
 
 ### User path
 
-1. Land on Learning Hub hero + category chips + featured card + project grid.
+1. Land on Learning Hub hero + category chips + search/difficulty/tag filters + featured card + project grid.
 2. Optional: tap a category chip → list refetches with `categoryId`.
-3. Optional: tap **Load more** → reveals more items from the **current first page** (client-side chunk; does not fetch `page > 1` yet).
-4. Tap a project card → detail page at `/learning/<uuid>`.
+3. Optional: type a search term → list refetches with `q` after a short debounce.
+4. Optional: choose difficulty → list refetches with `difficulty`.
+5. Optional: tap a tag chip → list refetches with `tag`.
+6. Optional: tap **Load more** → reveals more items from the **current first page** (client-side chunk; does not fetch `page > 1` yet).
+7. Tap a project card → detail page at `/learning/<uuid>`.
 
 ### Frontend path
 
-`LearningHubPage` → `learningProjectsProvider(LearningProjectsQuery(page: 1, limit: 20, categoryId: …))` → `ApiLearningHubRepository.fetchProjects` → `LearningHubApiMapper`.
+`LearningHubPage` → `learningProjectsProvider(LearningProjectsQuery(page: 1, limit: 20, q: …, categoryId: …, difficulty: …, tag: …))` → `ApiLearningHubRepository.fetchProjects` → `LearningHubApiMapper`.
 
 Category chips → `projectCategoriesProvider` → `GET /api/categories?type=PROJECT`.
+
+Tag chips are derived from the `tags` array already returned by the project list response. There is no separate tags endpoint.
 
 Featured project = first item in API list (not a backend field).
 
@@ -48,8 +53,8 @@ Grid shows API-backed project cards with UUID ids. Hero stats use `pagination.to
 | Condition | UI |
 |-----------|-----|
 | Network/server error | “Unable to load learning projects” + **Try again** |
-| Empty published list | “No published projects yet.” |
-| Category filter returns zero | Same empty state (chips hidden until data returns) |
+| Empty published list without active filters | “No published projects yet.” |
+| Active filters return zero | “No projects match your filters” + **Clear filters** |
 
 ### Files involved
 
@@ -168,9 +173,9 @@ Fill title, summary, components, steps, links → tap submit → snackbar only (
 | `page` | Yes | Yes | Hub: always `1`; Home: `1` |
 | `limit` | Yes | Yes | Hub: `20`; Home: `2` |
 | `categoryId` | Yes | Yes | **Yes** — category chips |
-| `q` | Yes | Yes | **No** |
-| `difficulty` | Yes | Yes | **No** |
-| `tag` | Yes | Yes | **No** |
+| `q` | Yes | Yes | **Yes** — search input |
+| `difficulty` | Yes | Yes | **Yes** — Easy/Medium/Advanced chips mapped to `BEGINNER`/`INTERMEDIATE`/`ADVANCED` |
+| `tag` | Yes | Yes | **Yes** — tag chips from returned project tags |
 
 Hub “Load more” is client-side pagination within the first fetched page, not server `page > 1`.
 
@@ -193,11 +198,11 @@ Hub “Load more” is client-side pagination within the first fetched page, not
 - AI material matching (`ai-agent` module)
 - Learning project ratings/reviews (API returns `ratingSummary: null`; no project review target type)
 - Clickable external links (`url_launcher` not wired — display-only URLs)
-- Hub search (`q`), difficulty filter, tag filter, server-side page navigation
+- Server-side page navigation
 - Admin/moderator project review UI
 
 ---
 
 ## Open questions
 
-See [09-open-questions.md](../09-open-questions.md) — Learning hub section for submission workflow, ratings model, AI matching, external links, and filter/pagination UI.
+See [09-open-questions.md](../09-open-questions.md) — Learning hub section for submission workflow, ratings model, AI matching, external links, and server-side pagination UI.

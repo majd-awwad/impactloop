@@ -11,7 +11,7 @@ Browse educational project ideas (components, steps, links) for inspiration. **L
 | Layer | Status | Notes |
 |-------|--------|-------|
 | Backend `learning-projects` | **Implemented** | Public read list + detail (`PUBLISHED` only in repository) |
-| Flutter list/detail pages | **Partial** | `/learning` and `/learning/:id` use `ApiLearningHubRepository` + Riverpod providers |
+| Flutter list/detail pages | **Partial** | `/learning` and `/learning/:id` use `ApiLearningHubRepository` + Riverpod providers; browse exposes category, search, difficulty, and tag filters |
 | Home learning spotlight | **Implemented** | Reuses `learningProjectsProvider` with `limit: 2` on `/home` |
 | Add draft page | **Mock-only** | Interactive form; **no submit API** |
 | AI panel on detail | **Frontend-only** | `disabled_ai_panel.dart` — placeholder |
@@ -26,7 +26,7 @@ Product intent from role planning: the learning hub should eventually support pr
 
 1. User opens `/learning` (public).
 2. Page loads published projects from `GET /api/learning-projects` via `learningProjectsProvider`.
-3. Category chips filter by `categoryId` using `GET /api/categories?type=PROJECT`.
+3. Category chips filter by `categoryId` using `GET /api/categories?type=PROJECT`; search, difficulty, and tag filters use the existing learning projects query params.
 4. First list item is shown as featured; remaining items render in the grid.
 5. Tap project → `/learning/:id` → `learningProjectProvider(id)` loads detail from `GET /api/learning-projects/:id`.
 6. Optional: `/learning/add-draft` — mock form only; submit does not persist.
@@ -60,7 +60,7 @@ Repository filter: `status: 'PUBLISHED'` (`learning-projects.repository.ts`).
 | GET | `/api/learning-projects/:id` | Public | **Yes** — Learning Hub detail |
 | GET | `/api/categories?type=PROJECT` | Public | **Yes** — category chips |
 
-Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`.
+Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. Flutter `/learning` exposes `q`, `categoryId`, `difficulty`, and tag chips derived from tags returned in the project list response.
 
 ## Database tables
 
