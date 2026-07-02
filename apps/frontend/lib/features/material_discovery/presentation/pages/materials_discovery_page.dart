@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
@@ -335,21 +336,8 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
 
                 if (_errorMessage != null && _materials.isEmpty) {
                   return _CenteredState(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _StateMessage(
-                          text: LocalizedText(
-                            en: _errorMessage!,
-                            ar: 'تعذر تحميل المواد حالياً.',
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        FilledButton(
-                          onPressed: () => _retryFetch(categories),
-                          child: const Text('Try again'),
-                        ),
-                      ],
+                    child: _InitialLoadErrorState(
+                      onRetry: () => _retryFetch(categories),
                     ),
                   );
                 }
@@ -448,6 +436,56 @@ class _StateMessage extends StatelessWidget {
         color: MaterialsUiPalette.of(context).textPrimary,
       ),
       textAlign: TextAlign.center,
+    );
+  }
+}
+
+class _InitialLoadErrorState extends StatelessWidget {
+  const _InitialLoadErrorState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 520),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_off_outlined, size: 42, color: palette.mint),
+          const SizedBox(height: AppSpacing.md),
+          _StateMessage(
+            text: const LocalizedText(
+              en: 'Unable to load materials',
+              ar: 'تعذر تحميل المواد',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            const LocalizedText(
+              en: 'Check your connection or try again in a moment.',
+              ar: 'تحقق من الاتصال أو حاول مرة أخرى بعد قليل.',
+            ).resolve(context),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text(
+              const LocalizedText(
+                en: 'Try again',
+                ar: 'حاول مرة أخرى',
+              ).resolve(context),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

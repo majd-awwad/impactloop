@@ -15,6 +15,7 @@ Public browse and detail view of surplus materials available for reuse. Guests a
 | Backend `materials` (read) | **Implemented** | Server-side filters, pagination, `viewsCount`, `likesCount`, `isLiked`, `sort=newest\|popular` |
 | Flutter `material_discovery` | **Implemented** | API-backed filters, Load more pagination, categories from API |
 | Client search/filters | **Implemented** | Debounced refetch to `GET /api/materials` |
+| Browse/detail error states | **Implemented** | Initial load retry, filtered/no-materials empty states, detail 404 and retry/back actions |
 | Nearby map | **Not implemented** | Replaced with honest location/privacy panel |
 | Learner reserve from detail | **Partial** | Quantity dialog + `POST /api/reservations`; see [reservations.md](reservations.md) |
 | Learner material likes | **Implemented** | Detail-page optimistic like toggle + read-only list/home/related-card counts |
@@ -46,6 +47,16 @@ List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, 
 5. Tap card → `/materials/:id` → `GET /api/materials/:id` (writes `material_views` and increments `viewsCount` once per authenticated user/material; guest opens count per request).
 6. Authenticated learners can like/unlike the material on detail (`POST`/`DELETE /api/materials/:id/like`); own-material likes are allowed.
 7. Popular badge shows only when `viewsCount >= 10`.
+
+Browse states:
+- Initial network/server failure shows a centered error state with **Try again**.
+- Empty list without active filters shows “No materials available yet.”
+- Empty list with active filters/search shows “No materials matched this combination yet.”
+- Refetch failure after cached results shows an inline retry banner while keeping the current results.
+
+Detail states:
+- Backend 404 / not found maps to a material-not-found state with **Back to materials**.
+- Network/server failure maps to an error state with **Try again** and **Back to materials**.
 
 ## Frontend files
 

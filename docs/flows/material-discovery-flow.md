@@ -38,8 +38,10 @@ Grid renders `AppMaterialCard` rows with optional **Popular** badge when `viewsC
 
 ### Error states
 
-- Network/API error → centered error message when no cached results.
-- Empty list → empty state copy from `material_discovery_content.dart`.
+- Initial network/API error with no cached results → centered error state + **Try again**.
+- Refetch error with cached results → inline retry banner while current results stay visible.
+- Empty list without active filters → “No materials available yet.”
+- Empty list with active search/filters → “No materials matched this combination yet.”
 
 ### Files involved
 
@@ -70,6 +72,11 @@ Learner like/unlike uses `POST /api/materials/:id/like` and `DELETE /api/materia
 ### Success state
 
 Detail renders views and likes; Popular badge when threshold met; location privacy panel explains map is future work.
+
+### Error states
+
+- 404 / material no longer public → “Material not found” + **Back to materials**.
+- Network/server error → “Unable to load material details right now” + **Try again** and **Back to materials**.
 
 ---
 

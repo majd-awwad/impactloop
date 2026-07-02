@@ -81,6 +81,14 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
     _materialFuture = _activeRepository.getMaterialById(widget.materialId);
   }
 
+  void _retryLoadMaterial() {
+    setState(() {
+      _materialOverride = null;
+      _showReservationStatusCta = false;
+      _materialFuture = _activeRepository.getMaterialById(widget.materialId);
+    });
+  }
+
   @override
   void didUpdateWidget(covariant MaterialDetailsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -115,15 +123,27 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 
         if (snapshot.hasError) {
           return _SimpleStateScaffold(
-            child: Text(
-              const LocalizedText(
+            child: _MaterialDetailsStatePanel(
+              icon: Icons.cloud_off_outlined,
+              title: const LocalizedText(
                 en: 'Unable to load material details right now.',
                 ar: 'تعذر تحميل تفاصيل المادة حالياً.',
-              ).resolve(context),
-              style: AppTextStyles.title(
-                context,
-              ).copyWith(color: palette.textPrimary),
-              textAlign: TextAlign.center,
+              ),
+              subtitle: const LocalizedText(
+                en: 'Check your connection, then try loading this material again.',
+                ar: 'تحقق من الاتصال، ثم حاول تحميل هذه المادة مرة أخرى.',
+              ),
+              primaryActionLabel: const LocalizedText(
+                en: 'Try again',
+                ar: 'حاول مرة أخرى',
+              ),
+              primaryActionIcon: Icons.refresh_rounded,
+              onPrimaryAction: _retryLoadMaterial,
+              secondaryActionLabel: const LocalizedText(
+                en: 'Back to materials',
+                ar: 'العودة إلى المواد',
+              ),
+              onSecondaryAction: () => context.go('/materials'),
             ),
           );
         }
@@ -131,15 +151,22 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
         final material = _materialOverride ?? snapshot.data;
         if (material == null) {
           return _SimpleStateScaffold(
-            child: Text(
-              const LocalizedText(
+            child: _MaterialDetailsStatePanel(
+              icon: Icons.inventory_2_outlined,
+              title: const LocalizedText(
                 en: 'Material not found',
                 ar: 'المادة غير موجودة',
-              ).resolve(context),
-              style: AppTextStyles.title(
-                context,
-              ).copyWith(color: palette.textPrimary),
-              textAlign: TextAlign.center,
+              ),
+              subtitle: const LocalizedText(
+                en: 'This material may have been removed, reused, or made unavailable.',
+                ar: 'قد تكون هذه المادة حُذفت أو أُعيد استخدامها أو أصبحت غير متاحة.',
+              ),
+              primaryActionLabel: const LocalizedText(
+                en: 'Back to materials',
+                ar: 'العودة إلى المواد',
+              ),
+              primaryActionIcon: Icons.arrow_back_rounded,
+              onPrimaryAction: () => context.go('/materials'),
             ),
           );
         }
@@ -604,16 +631,110 @@ class _SimpleStateScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const EntryNavBar(
-          showSignIn: true,
-          showCreateAccount: true,
-          homeRoute: '/',
+    final palette = MaterialsUiPalette.of(context);
+
+    return Scaffold(
+      backgroundColor: palette.pageBackground,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const EntryNavBar(
+              showSignIn: true,
+              showCreateAccount: true,
+              homeRoute: '/',
+            ),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
+                  child: child,
+                ),
+              ),
+            ),
+          ],
         ),
-        Expanded(child: Center(child: child)),
-      ],
+      ),
+    );
+  }
+}
+
+class _MaterialDetailsStatePanel extends StatelessWidget {
+  const _MaterialDetailsStatePanel({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.primaryActionLabel,
+    required this.primaryActionIcon,
+    required this.onPrimaryAction,
+    this.secondaryActionLabel,
+    this.onSecondaryAction,
+  });
+
+  final IconData icon;
+  final LocalizedText title;
+  final LocalizedText subtitle;
+  final LocalizedText primaryActionLabel;
+  final IconData primaryActionIcon;
+  final VoidCallback onPrimaryAction;
+  final LocalizedText? secondaryActionLabel;
+  final VoidCallback? onSecondaryAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 540),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: palette.mint.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: palette.mint, size: 34),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            title.resolve(context),
+            style: AppTextStyles.title(
+              context,
+            ).copyWith(color: palette.textPrimary),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            subtitle.resolve(context),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              FilledButton.icon(
+                onPressed: onPrimaryAction,
+                icon: Icon(primaryActionIcon),
+                label: Text(primaryActionLabel.resolve(context)),
+              ),
+              if (secondaryActionLabel != null &&
+                  onSecondaryAction != null)
+                OutlinedButton(
+                  onPressed: onSecondaryAction,
+                  child: Text(secondaryActionLabel!.resolve(context)),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

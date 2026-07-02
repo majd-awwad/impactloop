@@ -171,9 +171,16 @@ class MaterialsDiscoveryView extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
             ],
             if (materials.isEmpty)
-              const _EmptyStatePanel(
-                title: materialDiscoveryEmptyTitle,
-                subtitle: materialDiscoveryEmptySubtitle,
+              _EmptyStatePanel(
+                icon: hasActiveFilters
+                    ? Icons.search_off_rounded
+                    : Icons.inventory_2_outlined,
+                title: hasActiveFilters
+                    ? materialDiscoveryEmptyTitle
+                    : materialDiscoveryNoMaterialsTitle,
+                subtitle: hasActiveFilters
+                    ? materialDiscoveryEmptySubtitle
+                    : materialDiscoveryNoMaterialsSubtitle,
               )
             else
               _MaterialsResultsGrid(
@@ -457,8 +464,13 @@ class _ResultsHeader extends StatelessWidget {
 }
 
 class _EmptyStatePanel extends StatelessWidget {
-  const _EmptyStatePanel({required this.title, required this.subtitle});
+  const _EmptyStatePanel({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
 
+  final IconData icon;
   final LocalizedText title;
   final LocalizedText subtitle;
 
@@ -482,7 +494,7 @@ class _EmptyStatePanel extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.search_off_rounded,
+              icon,
               color: palette.mint,
               size: 32,
             ),
@@ -582,7 +594,15 @@ class _RefetchErrorBanner extends StatelessWidget {
           ),
           if (onRetry != null) ...[
             const SizedBox(width: AppSpacing.sm),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(
+                const LocalizedText(
+                  en: 'Retry',
+                  ar: 'إعادة المحاولة',
+                ).resolve(context),
+              ),
+            ),
           ],
         ],
       ),
