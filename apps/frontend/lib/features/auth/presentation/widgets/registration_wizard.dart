@@ -576,20 +576,54 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   String _stepSubtitle(RegistrationWizardStep step) {
+    if (step == RegistrationWizardStep.interests) {
+      return _intent == RegistrationIntent.both
+          ? 'Choose the topics you want to learn, build, repair, or reuse around.'
+          : 'Choose broad topics you care about. These help shape project and material suggestions.';
+    }
+
+    if (step == RegistrationWizardStep.goals) {
+      return switch (_intent) {
+        RegistrationIntent.supplier =>
+          'What do you want to accomplish by sharing materials?',
+        RegistrationIntent.both =>
+          'What do you want to accomplish as both a learner and supplier?',
+        RegistrationIntent.learner ||
+        null => 'What do you want to get out of ImpactLoop?',
+      };
+    }
+
     if (step == RegistrationWizardStep.location) {
       if (_needsSupplierProfile) {
-        return 'City and area help learners understand where pickup can happen.';
+        return _intent == RegistrationIntent.both
+            ? 'Set the general pickup area for materials you share. Learner delivery details are handled later when needed.'
+            : 'Set the general pickup area for materials you share.';
       }
 
-      return 'Optional for learners. You can add precise delivery details when you reserve materials.';
+      return 'Optional for learners. Accurate pickup or delivery details are only requested during reservations.';
     }
 
     if (step == RegistrationWizardStep.supplierBasics) {
-      return 'Choose who is sharing materials. We use your full name as the public supplier name unless you change it.';
+      return 'Choose the supplier profile that matches who owns the materials and how it should appear publicly.';
     }
 
     if (step == RegistrationWizardStep.learnerBasics) {
-      return 'This helps us suggest projects that match your experience.';
+      return 'Tell us your learning context so suggestions match your experience.';
+    }
+
+    if (step == RegistrationWizardStep.verification) {
+      return 'Organization suppliers need a document so admins can review the account before publishing materials.';
+    }
+
+    if (step == RegistrationWizardStep.review) {
+      return switch (_intent) {
+        RegistrationIntent.supplier =>
+          'Review your supplier account and pickup area before creating it.',
+        RegistrationIntent.both =>
+          'Review your learner and supplier details before creating the account.',
+        RegistrationIntent.learner ||
+        null => 'Review your learner details before creating the account.',
+      };
     }
 
     return step.subtitle;
@@ -745,6 +779,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
                   _clearErrors(clearIntent: true);
                   setState(() {
                     _intent = option.$1;
+                    _selectedGoals.clear();
                     if (option.$1 == RegistrationIntent.supplier) {
                       _learnerType = null;
                       _skillLevel = null;
@@ -759,6 +794,17 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           ],
         ),
         if (_intentError != null) AppInlineError(message: _intentError!),
+        if (_intent != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _intentSetupDescription(_intent!),
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              color: AuthUiPalette.of(context).textSecondary,
+            ),
+          ),
+        ],
         if (_intent == RegistrationIntent.both) ...[
           const SizedBox(height: AppSpacing.md),
           const AuthSectionTitle(title: 'Learner profile'),
@@ -854,9 +900,20 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   Widget _buildInterestsStep() {
+    final colors = AuthUiPalette.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(
+          'Select any areas that fit your real interests. You can mix practical, creative, repair, study, and community topics.',
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.45,
+            color: colors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
         Wrap(
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
@@ -873,7 +930,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         AuthTextField(
           controller: _customInterestController,
           label: 'Add another interest (optional)',
-          hint: 'Solar energy, CNC, etc.',
+          hint: 'Cooking tools, school projects, event decor, etc.',
           textInputAction: TextInputAction.done,
           onChanged: (_) => _clearErrors(),
         ),
@@ -882,16 +939,41 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   Widget _buildGoalsStep() {
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
+    final colors = AuthUiPalette.of(context);
+    final goals = registrationGoalOptionsForIntent(_intent);
+    final helper = switch (_intent) {
+      RegistrationIntent.supplier =>
+        'These goals tune the supplier setup language. They are not required to list materials.',
+      RegistrationIntent.both =>
+        'Choose goals for both sides of your account. You can update your profile later.',
+      RegistrationIntent.learner || null =>
+        'Choose anything that describes why you are joining. You can change this later.',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final goal in registrationGoalOptions)
-          AuthIntentChip(
-            label: goal,
-            isSelected: _selectedGoals.contains(goal),
-            onTap: () => _toggleGoal(goal),
+        Text(
+          helper,
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.45,
+            color: colors.textSecondary,
           ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (final goal in goals)
+              AuthIntentChip(
+                label: goal,
+                isSelected: _selectedGoals.contains(goal),
+                onTap: () => _toggleGoal(goal),
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -904,9 +986,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          isRequired
-              ? 'Suppliers need a city and area so pickups can be planned. Exact pickup details can stay private until a reservation or delivery is arranged.'
-              : 'You can skip this for now. We will ask for accurate reservation or delivery details only when they are needed.',
+          _locationStepHelperText(isRequired),
           style: TextStyle(
             fontSize: 13,
             height: 1.45,
@@ -999,10 +1079,20 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   Widget _buildSupplierBasicsStep() {
+    final colors = AuthUiPalette.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const AuthSectionTitle(title: 'Supplier type'),
+        Text(
+          'This controls verification requirements and how your material listings are introduced to requesters.',
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.45,
+            color: colors.textSecondary,
+          ),
+        ),
         const SizedBox(height: AppSpacing.sm),
         for (final type in registrationSupplierTypes) ...[
           AuthSelectCard(
@@ -1026,11 +1116,11 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           AppInlineError(message: _supplierTypeError!),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Public name appears on your material listings and reservation messages.',
+          'Public name appears on material listings and reservation messages. Use a workshop, institution, or personal display name that requesters can recognize.',
           style: TextStyle(
             fontSize: 13,
             height: 1.45,
-            color: AuthUiPalette.of(context).textSecondary,
+            color: colors.textSecondary,
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -1047,7 +1137,8 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         AuthTextArea(
           controller: _descriptionController,
           label: 'Short description (optional)',
-          hint: 'What kinds of materials do you usually share?',
+          hint:
+              'What materials do you expect to share, and when are pickups usually easiest?',
           minLines: 2,
           maxLines: 4,
           onChanged: (_) => _clearErrors(),
@@ -1216,7 +1307,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'Goals are used to personalize your onboarding and are not sent separately to the server.',
+          _reviewHelperText(),
           style: TextStyle(fontSize: 12, color: colors.textMuted, height: 1.4),
         ),
       ],
@@ -1229,6 +1320,40 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
       RegistrationIntent.supplier => 'Share materials',
       RegistrationIntent.both => 'Do both',
       null => '',
+    };
+  }
+
+  String _intentSetupDescription(RegistrationIntent intent) {
+    return switch (intent) {
+      RegistrationIntent.learner =>
+        'You will set learner interests, goals, optional location, and learning level.',
+      RegistrationIntent.supplier =>
+        'You will set supplier goals, pickup area, supplier type, public name, and verification when needed.',
+      RegistrationIntent.both =>
+        'You will set learner interests and learning level, plus supplier pickup and profile details.',
+    };
+  }
+
+  String _locationStepHelperText(bool isRequired) {
+    if (!isRequired) {
+      return 'You can skip this for now. Reservation pickup or delivery details are collected only when they are needed.';
+    }
+
+    if (_intent == RegistrationIntent.both) {
+      return 'This is the general pickup area for materials you share. It does not expose an exact address publicly, and learner delivery details stay separate.';
+    }
+
+    return 'Suppliers need a city and area so requesters can understand pickup feasibility. Exact pickup details can stay private until a reservation or delivery is arranged.';
+  }
+
+  String _reviewHelperText() {
+    return switch (_intent) {
+      RegistrationIntent.supplier =>
+        'Supplier goals stay in onboarding only. The server receives your account, supplier profile, and pickup area.',
+      RegistrationIntent.both =>
+        'Goals stay in onboarding only. The server receives your account, learner profile, supplier profile, and pickup area.',
+      RegistrationIntent.learner || null =>
+        'Goals stay in onboarding only. The server receives your account and learner profile.',
     };
   }
 
