@@ -75,8 +75,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/learner/reservations` | `LearnerReservationsPage` | learner | Learner reservation status list |
 | `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline, latest driver ping summary, and page-scoped polling map marker when tracking coordinates are allowed |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
-| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list; add-draft/AI paths remain mock/disabled |
-| `/learning/add-draft` | `LearningAddDraftPage` | public | **Mock form** — no submit API |
+| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, and category filters; add-draft submits for review; AI remains disabled |
+| `/learning/add-draft` | `LearningAddDraftPage` | public | Learner project submission form; posts to `/api/learning-projects/submit` |
 | `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail |
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default |
 | `/materials/:id` | `MaterialDetailsPage` | public | API-backed default |

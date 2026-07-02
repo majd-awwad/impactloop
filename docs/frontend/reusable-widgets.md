@@ -165,9 +165,9 @@ Candidate for future reuse:
 
 Source: `apps/frontend/lib/features/learning_hub/presentation/widgets/`
 
-Feature widgets include project cards, hero, category chips, text helpers, component/step/link sections, disabled AI panel, and mock rating summary card.
+Feature widgets include project cards, hero, category chips, text helpers, component/step/link sections, disabled AI panel, project link list, and mock rating summary card.
 
-Do not reuse these outside learning hub yet. The learning hub remains mock-data oriented in current docs/code inventory, and widgets are coupled to learning-specific models/palette.
+Do not reuse these outside learning hub yet. The learning hub list/detail, add-draft submit flow, and admin moderation are API-backed, but these widgets are still coupled to learning-specific models/palette.
 
 ### Home And Landing
 

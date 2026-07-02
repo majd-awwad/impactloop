@@ -20,7 +20,7 @@ User navigates to **Material Discovery** (`/materials`) or opens a shared materi
 
 ### Frontend path
 
-`MaterialsDiscoveryPage` loads categories via `materialCategoriesProvider` and materials via `materialDiscoveryRepositoryProvider` → `ApiMaterialDiscoveryRepository.fetchMaterials(query)` → `GET /api/materials` with query params and optional auth → `MaterialDiscoveryApiMapper` → `MaterialsDiscoveryView`.
+`MaterialsDiscoveryPage` loads categories via `discoveryMaterialCategoriesProvider` and materials via `materialDiscoveryRepositoryProvider` → `ApiMaterialDiscoveryRepository.fetchMaterials(query)` → `GET /api/materials` with query params and optional auth → `MaterialDiscoveryApiMapper` → `MaterialsDiscoveryView`.
 
 Filter changes rebuild `MaterialDiscoveryQuery` and refetch page 1. Load more increments `page` and appends items.
 

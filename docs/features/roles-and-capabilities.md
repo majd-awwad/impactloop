@@ -71,12 +71,13 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Learner reservation list, pending cancel, status display, and accepted self-pickup address reveal.
 - Internal delivery request/status page for accepted delivery-enabled reservations.
 - Published learning project browse/detail.
+- Learner project draft submission for admin review.
 
 **Partial:**
 
 - Preferences and interests exist on profile/registration, but recommendation logic is currently simple and not a dedicated personalization engine.
 - Delivery tracking is polling/latest-ping based, not realtime.
-- Learning hub is read-only; add-draft is mock-only.
+- Learning hub remains partial: learners can browse/detail and submit drafts for admin review, but project engagement, build checklist, ratings, and AI matching are not implemented.
 
 **Planned / future:**
 
@@ -177,7 +178,7 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 
 - Moderator queue for reported materials, suspicious listings, wrong categories, inappropriate images/descriptions, project reports, material type/category requests, and price issues.
 - Hide/reject content with a moderation reason.
-- Review project submissions when project publishing is implemented.
+- Review project submissions if/when moderation is delegated from admin.
 - Clear separation between moderator permissions and admin-only permissions.
 
 **Strongest product feature:** Moderation queue for reports, price issues, category/material type requests, and content quality.
@@ -195,15 +196,16 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Supplier verification review.
 - Category and price request approval/rejection.
 - Material moderation, material reports, hide/unavailable/restore flows.
+- Learning project moderation: list/detail, approve, request changes, reject, hide, restore, and archive.
 - People management list, summary, suspend, and reactivate with safety guards.
 
 **Partial:**
 
-- Impact analytics route exists as a placeholder; overview has partial impact metrics.
-- Audit logs route exists as a placeholder.
+- Impact analytics route exists and uses dashboard-backed impact data; deeper analytics remain partial.
+- Audit logs route exists with paginated backend data, filters, summary stats, and details.
 - Delivery oversight and reservation admin management are not complete.
 - AI log viewing is not implemented.
-- Project moderation/admin publishing workflow is not implemented.
+- Project moderation is implemented for ADMIN; moderator-owned project review is not implemented.
 
 **Planned / future:**
 

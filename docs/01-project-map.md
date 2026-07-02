@@ -20,7 +20,7 @@ impactloop/
         config/
         database/
         middlewares/
-        modules/            # 24 feature modules (see below)
+        modules/            # feature modules (see below)
         services/           # cross-module services (AI price, geocoding)
         utils/
         constants/
@@ -36,7 +36,7 @@ impactloop/
 
 **Note:** `docs/02-architecture.md` previously listed a root `database/` folder and many unbuilt modules. That structure is **aspirational** — see [08-implementation-status.md](08-implementation-status.md).
 
-## Backend modules (24)
+## Backend modules
 
 Derived **only** from `apps/backend/src/modules/`:
 
@@ -44,6 +44,7 @@ Derived **only** from `apps/backend/src/modules/`:
 |--------|---------------------|---------------------------|
 | `admin` | `/api/admin` | Admin dashboard, invitations, and parent router for admin operations |
 | `admin-approvals` | `/api/admin/approvals/*` via `admin` | Category and price request review actions |
+| `admin-learning-projects` | `/api/admin/learning-projects*` via `admin` | Learning project moderation |
 | `admin-materials` | `/api/admin/materials*`, `/api/admin/material-reports*` via `admin` | Material moderation and material report review |
 | `admin-people` | `/api/admin/people*` via `admin` | People list, summaries, suspend/reactivate |
 | `admin-supplier-verifications` | `/api/admin/supplier-verifications*` via `admin` | Organization supplier verification review |
@@ -54,7 +55,7 @@ Derived **only** from `apps/backend/src/modules/`:
 | `driver` | `/api/driver` | Internal driver jobs, assignment, status updates, location pings |
 | `health` | `/health` | Health check |
 | `invitations` | `/api/invitations` | Admin role invitations + accept |
-| `learning-projects` | `/api/learning-projects` | Public read list/detail |
+| `learning-projects` | `/api/learning-projects` | Public read list/detail + learner submit |
 | `locations` | `/api/locations` | Authenticated reverse geocode |
 | `material-types` | `/api/material-types` | Search types + price rules |
 | `materials` | `/api/materials` | Public discovery read + listing policy + price check |
@@ -83,7 +84,7 @@ Derived **only** from `apps/frontend/lib/features/`:
 
 | Feature | Primary routes | Data source (summary) |
 |---------|----------------|------------------------|
-| `admin_portal` | `/admin/*` | **Partial** — dashboard, invitations, approvals, supplier verification, materials moderation, people management; impact/audit placeholders |
+| `admin_portal` | `/admin/*` | **Partial** — dashboard, invitations, approvals, supplier verification, materials moderation, learning project moderation, people management, impact/audit, and read-only operations monitors |
 | `auth` | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/checking`, profile completion paths | **Implemented for auth MVP** — register/login/me/change-password/forgot-reset API and UI |
 | `deliveries` | `/learner/deliveries/:id` | **Partial** — learner delivery status/detail, latest ping summary, polling map marker |
 | `driver_portal` | `/driver/*` | **Partial** — job board, accept, active delivery detail/status/location pings |
@@ -91,7 +92,7 @@ Derived **only** from `apps/frontend/lib/features/`:
 | `home` | `/home` | **Partial** — materials and learning spotlight via API; personalization pending |
 | `invitations` | `/invite/accept` | **Implemented** — invitation validate/accept UI backed by API |
 | `landing` | `/` | Static UI |
-| `learning_hub` | `/learning`, `/learning/:id`, `/learning/add-draft` | **Partial** — read path API-backed; add-draft mock-only |
+| `learning_hub` | `/learning`, `/learning/:id`, `/learning/add-draft` | **Partial** — read path API-backed; add-draft submits for admin review; AI/ratings/server-side page navigation pending |
 | `material_discovery` | `/materials`, `/materials/:id` | API default (`ApiMaterialDiscoveryRepository`); detail reserve CTA calls reservations data layer |
 | `materials` | (no dedicated routes) | Shared data layer for listing/taxonomy — used by supplier add material |
 | `profile` | `/profile`, `/profile/edit`, `/profile/learner/edit`, `/profile/security` | **Implemented** — account/profile/security pages |

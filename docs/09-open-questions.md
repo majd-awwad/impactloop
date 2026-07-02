@@ -42,12 +42,12 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 | When does price-rule AI write to `ai_price_lookup_logs`? | **Needs verification** | [materials-listing](features/materials-listing.md), `ai-price-lookup.repository.ts` |
 | Organization supplier: required `organization_profiles` fields on create? | Open | [supplier-material-listing-flow](flows/supplier-material-listing-flow.md) |
 | `POST /api/price-rule-requests` — should route require `SUPPLIER` role? | **Needs verification** | [api-catalog](backend/api-catalog.md), [materials-listing](features/materials-listing.md) |
-| Which location fields are on public material DTOs — consistent redaction on list and detail? | **Partially resolved** — list/detail return `city`/`area` only; `visibility` enforcement still open | [material-discovery-flow](flows/material-discovery-flow.md), [locations](features/locations.md) |
-| Is discovery pagination exposed in Flutter UI? | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md), [material-discovery](features/material-discovery.md) |
+| Which location fields are on public material DTOs — consistent redaction on list and detail? | **Resolved for discovery list/detail** — public material DTOs return `city`/`area` only; broader location visibility enforcement remains tracked under Locations | [material-discovery-flow](flows/material-discovery-flow.md), [locations](features/locations.md) |
+| Is discovery pagination exposed in Flutter UI? | **Resolved** — Load more increments `MaterialDiscoveryQuery.page` and appends results | [material-discovery-flow](flows/material-discovery-flow.md), [material-discovery](features/material-discovery.md) |
 | Does material detail increment `materials.views_count`? | **Resolved** — yes on successful `GET /api/materials/:id`; authenticated viewers count once per user/material, guests count per request; also writes `material_views`; exposed as `viewsCount` in public DTO | [material-discovery-flow](flows/material-discovery-flow.md) |
-| Server-side filter parity with client-side discovery chips? | **Needs verification** | [material-discovery](features/material-discovery.md) |
-| Network error UI path on discovery page | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md) |
-| Single-item 404 when material not publicly visible | **Needs verification** | [material-discovery-flow](flows/material-discovery-flow.md) |
+| Server-side filter parity with client-side discovery chips? | **Resolved for current discovery UI** — UI query maps to repository/API params including category, condition, status, price, delivery/pickup, city/area, sort, page, and limit | [material-discovery](features/material-discovery.md) |
+| Network error UI path on discovery page | **Resolved** — initial failures show centered retry; refetch failures keep cached results with inline retry | [material-discovery-flow](flows/material-discovery-flow.md) |
+| Single-item 404 when material not publicly visible | **Resolved** — detail maps 404/not public to “Material not found” with back action | [material-discovery-flow](flows/material-discovery-flow.md) |
 
 ---
 
@@ -79,13 +79,13 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 |----------|--------|--------|
 | Target Flutter repository pattern (`LearningHubRepository` + Riverpod providers)? | **Resolved** — `ApiLearningHubRepository`, `learning_hub_providers.dart`, override in `main.dart` | [learning-hub](features/learning-hub.md), [state-management](frontend/state-management.md) |
 | Map API `difficulty` enum to localized labels? | **Resolved** — `LearningHubApiMapper.mapDifficultyLabel` | [learning-hub](features/learning-hub.md) |
-| Remove mock data from list/detail/home spotlight? | **Resolved** — API-backed; mock file retained for add-draft/disabled AI legacy only | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
+| Remove mock data from list/detail/home spotlight? | **Resolved** — API-backed; mock file retained for disabled AI copy and unused sample catalog only | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
 | Show fake ratings on API-backed pages? | **Resolved** — hidden when `ratingSummary` is null; backend currently always null | [learning-hub](features/learning-hub.md) |
-| Project submission/review workflow (draft → pending → published)? | **Not implemented** — no POST/submit/approve APIs | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md), `learning-projects.routes.ts` |
+| Project submission/admin review workflow (draft → pending → published)? | **Resolved** — learner submit creates `PENDING_REVIEW`; `/admin/learning-projects` moderation can approve/request changes/reject/hide/restore/archive. Moderator-owned review remains not implemented. | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md), `learning-projects.routes.ts`, `admin.routes.ts`, `admin-learning-projects.*` |
 | Learning project ratings/reviews model and API? | **Not implemented** — `reviews` table is reservation-scoped; no PROJECT target type | [learning-hub](features/learning-hub.md) |
 | AI material matching for project components? | **Not implemented** | [ai-agent](features/ai-agent.md) |
-| Open external project links in browser (`url_launcher`)? | Open — links display-only today | [learning-hub](features/learning-hub.md) |
-| Expose Hub search (`q`), difficulty, tag filters, or server pagination in UI? | Open — backend/repository support exists; UI not wired | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
+| Open external project links in browser (`url_launcher`)? | **Resolved** — detail links open safe `http`/`https` URLs; invalid/missing URLs render disabled | [learning-hub](features/learning-hub.md) |
+| Expose Hub search (`q`), difficulty, tag filters, or server pagination in UI? | **Partially resolved** — search, difficulty, and tag filters are wired; server `page > 1` navigation is still not exposed | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
 
 ---
 

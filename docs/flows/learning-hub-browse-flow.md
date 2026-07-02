@@ -138,7 +138,7 @@ Same as list: `GET /api/learning-projects? page=1&limit=2`.
 
 ---
 
-## Flow — Add draft (mock only)
+## Flow — Add draft submit (`/learning/add-draft`)
 
 ### Trigger
 
@@ -146,23 +146,23 @@ User navigates to `/learning/add-draft`.
 
 ### User path
 
-Fill title, summary, components, steps, links → tap submit → snackbar only (“Project review flow will be connected later.”).
+Fill title, summary, components, steps, links → tap submit → project is sent for admin review.
 
 ### Frontend path
 
-`LearningAddDraftPage` — local controllers; imports `learning_hub_mock_data.dart` for palette re-export and legacy copy only.
+`LearningAddDraftPage` validates title/summary/category, maps difficulty to `BEGINNER` / `INTERMEDIATE` / `ADVANCED`, parses component/step/link text, then calls `learningHubRepositoryProvider.submitProjectForReview`.
 
 ### Backend path
 
-**None.** No create/submit endpoint mounted.
+`POST /api/learning-projects/submit` with JWT + `LEARNER` role. Backend validates the body and creates a `PENDING_REVIEW` project.
 
 ### Database changes
 
-**None.**
+Creates a `learning_projects` row with `status = PENDING_REVIEW`, `submittedAt`, `submittedByUserId`, plus optional components, steps, and links.
 
 ### Files involved
 
-`learning_add_draft_page.dart`, `learning_hub_mock_data.dart`, `disabled_ai_panel.dart`
+`learning_add_draft_page.dart`, `learning_hub_providers.dart`, `api_learning_hub_repository.dart`, `learning-projects.routes.ts`, `learning-projects.service.ts`, `learning-projects.repository.ts`
 
 ---
 
@@ -185,7 +185,6 @@ Hub “Load more” is client-side pagination within the first fetched page, not
 
 `learning_hub_mock_data.dart` still exists for:
 
-- Add-draft page palette/constants
 - Disabled AI panel copy
 - Unused mock catalog (`learningProjects`, `learningProjectById`, etc.) — **not** used by list/detail/home spotlight
 
@@ -193,15 +192,14 @@ Hub “Load more” is client-side pagination within the first fetched page, not
 
 ## Not implemented
 
-- Project create/submit/review workflow (backend POST + moderator approve)
 - Learner booking materials from project components
 - AI material matching (`ai-agent` module)
 - Learning project ratings/reviews (API returns `ratingSummary: null`; no project review target type)
 - Server-side page navigation
-- Admin/moderator project review UI
+- Moderator project review UI / moderator workspace
 
 ---
 
 ## Open questions
 
-See [09-open-questions.md](../09-open-questions.md) — Learning hub section for submission workflow, ratings model, AI matching, and server-side pagination UI.
+See [09-open-questions.md](../09-open-questions.md) — Learning hub section for ratings model, AI matching, moderator workspace, and server-side pagination UI.
