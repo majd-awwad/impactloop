@@ -4,6 +4,7 @@ import '../../../core/network/api_response.dart';
 import 'models/create_reservation_request.dart';
 import 'models/created_reservation.dart';
 import 'models/learner_reservation.dart';
+import 'models/reservation_message.dart';
 
 class ReservationsApi {
   const ReservationsApi(this._client);
@@ -49,6 +50,68 @@ class ReservationsApi {
         '/api/reservations/$reservationId/cancel',
       ),
       (_) {},
+    );
+  }
+
+  Future<LearnerReservation> resolveLearnerConfirmation({
+    required String reservationId,
+    required String action,
+    DateTime? deliveryWindowStart,
+    DateTime? deliveryWindowEnd,
+  }) {
+    final payload = <String, dynamic>{'action': action};
+
+    if (deliveryWindowStart != null && deliveryWindowEnd != null) {
+      payload['deliveryWindow'] = {
+        'start': deliveryWindowStart.toUtc().toIso8601String(),
+        'end': deliveryWindowEnd.toUtc().toIso8601String(),
+      };
+    }
+
+    return unwrapApiResponse(
+      _client.patch<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/learner-confirmation',
+        data: payload,
+      ),
+      LearnerReservation.fromJson,
+    );
+  }
+
+  Future<List<ReservationMessage>> fetchReservationMessages(
+    String reservationId,
+  ) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/messages',
+      ),
+      (json) {
+        final messages = json['messages'];
+        if (messages is! List) {
+          return const <ReservationMessage>[];
+        }
+
+        return messages
+            .whereType<Map>()
+            .map(
+              (item) => ReservationMessage.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .toList(growable: false);
+      },
+    );
+  }
+
+  Future<ReservationMessage> sendReservationMessage(
+    String reservationId,
+    String body,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/messages',
+        data: {'body': body},
+      ),
+      (json) => ReservationMessage.fromJson(json),
     );
   }
 }

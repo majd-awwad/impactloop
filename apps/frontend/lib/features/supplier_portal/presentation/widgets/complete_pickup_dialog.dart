@@ -1,17 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
-class CompletePickupDialog extends StatelessWidget {
+class CompletePickupDialog extends StatefulWidget {
   const CompletePickupDialog({super.key});
 
-  static Future<bool?> show(BuildContext context) {
-    return showDialog<bool>(
+  static Future<String?> show(BuildContext context) {
+    return showDialog<String>(
       context: context,
       builder: (context) => const CompletePickupDialog(),
     );
+  }
+
+  @override
+  State<CompletePickupDialog> createState() => _CompletePickupDialogState();
+}
+
+class _CompletePickupDialogState extends State<CompletePickupDialog> {
+  final _codeController = TextEditingController();
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final code = _codeController.text.trim();
+    if (!RegExp(r'^\d{6}$').hasMatch(code)) {
+      setState(() {
+        _errorText = 'Enter the 6-digit pickup code from the learner.';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(code);
   }
 
   @override
@@ -54,18 +81,37 @@ class CompletePickupDialog extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                context.s.completePickupMessage,
+                'Enter the pickup confirmation code the learner gives you when they receive the material.',
                 style: context.supplierBody().copyWith(
                   color: colors.textSecondary,
                   fontSize: 14,
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
+              TextField(
+                controller: _codeController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: 'Pickup confirmation code',
+                  counterText: '',
+                  errorText: _errorText,
+                ),
+                onChanged: (_) {
+                  if (_errorText != null) {
+                    setState(() => _errorText = null);
+                  }
+                },
+                onSubmitted: (_) => _submit(),
+              ),
+              const SizedBox(height: AppSpacing.lg),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(false),
+                      onPressed: () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: colors.textPrimary,
                         side: BorderSide(
@@ -82,7 +128,7 @@ class CompletePickupDialog extends StatelessWidget {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: FilledButton(
-                      onPressed: () => Navigator.of(context).pop(true),
+                      onPressed: _submit,
                       style: FilledButton.styleFrom(
                         backgroundColor:
                             colors.accentMuted.withValues(alpha: 0.82),

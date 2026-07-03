@@ -30,6 +30,7 @@ class SupplierMaterialCard extends StatefulWidget {
     this.imageUrl,
     this.viewsCount,
     this.likesCount,
+    this.compactBadgeLabels = const [],
     this.createdAtLabel,
     this.onTap,
     this.actions,
@@ -51,6 +52,7 @@ class SupplierMaterialCard extends StatefulWidget {
   final String? imageUrl;
   final int? viewsCount;
   final int? likesCount;
+  final List<String> compactBadgeLabels;
   final String? createdAtLabel;
   final VoidCallback? onTap;
   final List<Widget>? actions;
@@ -154,6 +156,21 @@ class _SupplierMaterialCardState extends State<SupplierMaterialCard> {
                               ],
                             ),
                           ),
+                          if (widget.compactBadgeLabels.isNotEmpty)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  for (final label in widget.compactBadgeLabels)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: _CompactBadge(label: label),
+                                    ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -262,6 +279,31 @@ class _SupplierMaterialCardState extends State<SupplierMaterialCard> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactBadge extends StatelessWidget {
+  const _CompactBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.62),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

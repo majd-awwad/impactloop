@@ -55,6 +55,12 @@ String deliveryStatusLabel(String status) {
       return 'Pickup failed';
     case 'FAILED_DELIVERY':
       return 'Delivery failed';
+    case 'DRIVER_NO_SHOW':
+      return 'Driver no-show';
+    case 'LEARNER_NO_SHOW':
+      return 'Learner no-show';
+    case 'AWAITING_RESOLUTION':
+      return 'Needs resolution';
     default:
       return status;
   }

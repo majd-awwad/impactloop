@@ -33,12 +33,12 @@ final incomingRequestsProvider =
           .fetchIncomingRequests(tab);
     });
 
-Future<void> acceptIncomingRequest(
+Future<SupplierIncomingRequest> acceptIncomingRequest(
   WidgetRef ref, {
   required String requestId,
   required SupplierPickupWindow pickupWindow,
 }) async {
-  await ref
+  final updated = await ref
       .read(supplierRequestsRepositoryProvider)
       .acceptRequest(requestId, pickupWindow);
   ref.invalidate(incomingRequestsProvider);
@@ -46,6 +46,7 @@ Future<void> acceptIncomingRequest(
   ref.invalidate(supplierDashboardProvider);
   ref.invalidate(pickupScheduleProvider);
   ref.invalidate(pickupScheduleSummaryProvider);
+  return updated;
 }
 
 Future<void> declineIncomingRequest(
@@ -80,14 +81,110 @@ final completingReservationIdProvider =
 Future<SupplierIncomingRequest> completeIncomingRequest(
   WidgetRef ref, {
   required String requestId,
+  required String confirmationCode,
 }) async {
   final result = await ref
       .read(supplierRequestsRepositoryProvider)
-      .completeRequest(requestId);
+      .completeRequest(
+        requestId,
+        confirmationCode: confirmationCode,
+      );
   ref.invalidate(incomingRequestsProvider);
   ref.invalidate(supplierNotificationsProvider);
   ref.invalidate(supplierDashboardProvider);
   ref.invalidate(pickupScheduleProvider);
   ref.invalidate(pickupScheduleSummaryProvider);
   return result;
+}
+
+void _invalidateReservationFollowUp(WidgetRef ref) {
+  ref.invalidate(incomingRequestsProvider);
+  ref.invalidate(supplierNotificationsProvider);
+  ref.invalidate(supplierDashboardProvider);
+  ref.invalidate(pickupScheduleProvider);
+  ref.invalidate(pickupScheduleSummaryProvider);
+}
+
+Future<void> rescheduleIncomingRequest(
+  WidgetRef ref, {
+  required String requestId,
+  required SupplierPickupWindow pickupWindow,
+  required String reason,
+  String? messageToLearner,
+  String? note,
+}) async {
+  await ref.read(supplierRequestsRepositoryProvider).rescheduleRequest(
+        requestId,
+        pickupWindow,
+        reason: reason,
+        messageToLearner: messageToLearner,
+        note: note,
+      );
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> acceptLearnerReschedule(
+  WidgetRef ref, {
+  required String requestId,
+}) async {
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .acceptLearnerReschedule(requestId);
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> cancelIncomingRequest(
+  WidgetRef ref, {
+  required String requestId,
+  String? reason,
+}) async {
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .cancelAcceptedRequest(requestId, reason: reason);
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> reportNoShowForRequest(
+  WidgetRef ref, {
+  required String requestId,
+  required String reasonCode,
+  String? note,
+}) async {
+  await ref.read(supplierRequestsRepositoryProvider).submitNoShowReport(
+        requestId,
+        reasonCode: reasonCode,
+        note: note,
+      );
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> markLearnerNoShowForRequest(
+  WidgetRef ref, {
+  required String requestId,
+}) async {
+  await ref.read(supplierRequestsRepositoryProvider).markLearnerNoShow(
+        requestId,
+        reason: 'LEARNER_DID_NOT_ARRIVE',
+      );
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> markDeliveryPickupExpiredForRequest(
+  WidgetRef ref, {
+  required String requestId,
+}) async {
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .markDeliveryPickupExpired(requestId);
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> markDriverNoShowForDelivery(
+  WidgetRef ref, {
+  required String deliveryId,
+}) async {
+  await ref.read(supplierRequestsRepositoryProvider).markDriverNoShow(
+        deliveryId,
+      );
+  _invalidateReservationFollowUp(ref);
 }

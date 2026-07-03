@@ -5,9 +5,18 @@ import { successResponse } from '../../utils/api-response.js';
 import {
   cancelReservation,
   createReservation,
+  createLearnerReservationMessage,
+  listLearnerReservationMessages,
   listMyReservations,
+  requestLearnerPickupReschedule,
+  resolveLearnerConfirmation,
 } from './reservations.service.js';
-import type { CreateReservationInput } from './reservations.validation.js';
+import type {
+  CreateReservationInput,
+  CreateReservationMessageInput,
+  LearnerConfirmationInput,
+  RequestPickupRescheduleInput,
+} from './reservations.validation.js';
 
 export const createReservationHandler = async (
   req: Request,
@@ -42,4 +51,55 @@ export const cancelReservationHandler = async (
   );
 
   res.json(successResponse('Reservation cancelled.', reservation));
+};
+
+export const listLearnerReservationMessagesHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const messages = await listLearnerReservationMessages(
+    req.auth!.sub,
+    req.params.id as string,
+  );
+
+  res.json(successResponse('Reservation messages loaded.', { messages }));
+};
+
+export const createLearnerReservationMessageHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const message = await createLearnerReservationMessage(
+    req.auth!.sub,
+    req.params.id as string,
+    req.body as CreateReservationMessageInput,
+  );
+
+  res.json(successResponse('Message sent.', message));
+};
+
+export const resolveLearnerConfirmationHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const reservation = await resolveLearnerConfirmation(
+    req.auth!.sub,
+    req.params.id as string,
+    req.body as LearnerConfirmationInput,
+  );
+
+  res.json(successResponse('Reservation updated.', reservation));
+};
+
+export const requestLearnerPickupRescheduleHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const reservation = await requestLearnerPickupReschedule(
+    req.auth!.sub,
+    req.params.id as string,
+    req.body as RequestPickupRescheduleInput,
+  );
+
+  res.json(successResponse('Reschedule request submitted.', reservation));
 };

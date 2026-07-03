@@ -3,6 +3,21 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { applyReservationCompletionToMaterial } from '../reservations/reservations.quantity.js';
 import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
+import {
+  canDriverMarkDeliveryFailed,
+  canDriverMarkPickupFailed,
+} from '../fulfillment-failures/fulfillment-failures.eligibility.js';
+import {
+  ensureDeliveryHandoverCodesStored,
+  verifyHandoverCode,
+} from '../../utils/handover-codes.js';
+import {
+  deliveryWindowNotStartedMessage,
+  deliveryWindowPassedMessage,
+  evaluateHandoverWindow,
+  supplierPickupWindowNotStartedMessage,
+  supplierPickupWindowPassedMessage,
+} from '../../utils/handover-timing.js';
 
 import type {
   CreateDeliveryLocationPingInput,
@@ -14,6 +29,9 @@ const terminalStatuses = [
   'CANCELLED',
   'FAILED_PICKUP',
   'FAILED_DELIVERY',
+  'DRIVER_NO_SHOW',
+  'LEARNER_NO_SHOW',
+  'AWAITING_RESOLUTION',
 ] as const satisfies readonly DeliveryStatus[];
 
 const allowedTransitions: Partial<Record<DeliveryStatus, DeliveryStatus>> = {
@@ -24,13 +42,18 @@ const allowedTransitions: Partial<Record<DeliveryStatus, DeliveryStatus>> = {
   ARRIVED_DROPOFF: 'DELIVERED',
 };
 
-const driverDeliveryInclude = {
+export const driverDeliveryInclude = {
   reservation: {
     select: {
       id: true,
       status: true,
+      fulfillmentMethod: true,
       pickupWindowStart: true,
       pickupWindowEnd: true,
+      supplierPickupWindowStart: true,
+      supplierPickupWindowEnd: true,
+      confirmedDeliveryWindowStart: true,
+      confirmedDeliveryWindowEnd: true,
       quantityRequested: true,
       material: {
         select: {
@@ -129,6 +152,25 @@ const mapAvailableDelivery = (delivery: DriverDeliveryRecord) => ({
 
 const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
   ...mapAvailableDelivery(delivery),
+  supplierPickupWindowStart:
+    delivery.reservation.supplierPickupWindowStart?.toISOString() ?? null,
+  supplierPickupWindowEnd:
+    delivery.reservation.supplierPickupWindowEnd?.toISOString() ?? null,
+  confirmedDeliveryWindowStart:
+    delivery.reservation.confirmedDeliveryWindowStart?.toISOString() ?? null,
+  confirmedDeliveryWindowEnd:
+    delivery.reservation.confirmedDeliveryWindowEnd?.toISOString() ?? null,
+  canDriverReportPickupFailed: canDriverMarkPickupFailed({
+    reservationStatus: delivery.reservation.status,
+    deliveryStatus: delivery.status,
+    supplierPickupWindowEnd: delivery.reservation.supplierPickupWindowEnd,
+  }),
+  canDriverReportDeliveryFailed: canDriverMarkDeliveryFailed({
+    reservationStatus: delivery.reservation.status,
+    deliveryStatus: delivery.status,
+    confirmedDeliveryWindowEnd:
+      delivery.reservation.confirmedDeliveryWindowEnd,
+  }),
   assignedAt: delivery.assignedAt?.toISOString() ?? null,
   arrivedPickupAt: delivery.arrivedPickupAt?.toISOString() ?? null,
   pickedUpAt: delivery.pickedUpAt?.toISOString() ?? null,
@@ -150,6 +192,9 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
   pickupLocation: mapExactLocation(delivery.pickupLocation),
   dropoffLocation: mapExactLocation(delivery.dropoffLocation),
 });
+
+export const mapDriverDeliveryForResponse = (delivery: DriverDeliveryRecord) =>
+  mapAssignedDelivery(delivery);
 
 const findActiveDriverProfile = async (
   userId: string,
@@ -315,6 +360,65 @@ export const updateDriverDeliveryStatus = async (
     }
 
     const now = new Date();
+
+    if (input.status === 'PICKED_UP' || input.status === 'DELIVERED') {
+      await ensureDeliveryHandoverCodesStored(tx, delivery.id);
+
+      const deliveryWithCodes = await tx.delivery.findUniqueOrThrow({
+        where: { id: delivery.id },
+        select: {
+          supplierHandoverCodeHash: true,
+          learnerDeliveryCodeHash: true,
+        },
+      });
+
+      const codeHash =
+        input.status === 'PICKED_UP'
+          ? deliveryWithCodes.supplierHandoverCodeHash
+          : deliveryWithCodes.learnerDeliveryCodeHash;
+
+      const codeValid = await verifyHandoverCode(
+        input.confirmationCode ?? '',
+        codeHash,
+      );
+
+      if (!codeValid) {
+        return { outcome: 'INVALID_CODE' as const };
+      }
+
+      if (input.status === 'PICKED_UP') {
+        const timing = evaluateHandoverWindow(
+          now,
+          delivery.reservation.supplierPickupWindowStart,
+          delivery.reservation.supplierPickupWindowEnd,
+        );
+
+        if (!timing.ok) {
+          if (timing.reason === 'NOT_STARTED') {
+            return { outcome: 'WINDOW_NOT_STARTED' as const };
+          }
+
+          return { outcome: 'WINDOW_EXPIRED' as const };
+        }
+      }
+
+      if (input.status === 'DELIVERED') {
+        const timing = evaluateHandoverWindow(
+          now,
+          delivery.reservation.confirmedDeliveryWindowStart,
+          delivery.reservation.confirmedDeliveryWindowEnd,
+        );
+
+        if (!timing.ok) {
+          if (timing.reason === 'NOT_STARTED') {
+            return { outcome: 'WINDOW_NOT_STARTED' as const };
+          }
+
+          return { outcome: 'WINDOW_EXPIRED' as const };
+        }
+      }
+    }
+
     const statusData: Prisma.DeliveryUpdateInput = {
       status: input.status,
       driverNote: input.note?.trim() || delivery.driverNote,
@@ -401,6 +505,28 @@ export const updateDriverDeliveryStatus = async (
       );
     case 'INVALID_TRANSITION':
       throw new AppError('Invalid delivery status transition.', 409, 'CONFLICT');
+    case 'INVALID_CODE':
+      throw new AppError(
+        'The confirmation code is incorrect.',
+        400,
+        'VALIDATION_ERROR',
+      );
+    case 'WINDOW_NOT_STARTED':
+      throw new AppError(
+        input.status === 'PICKED_UP'
+          ? supplierPickupWindowNotStartedMessage()
+          : deliveryWindowNotStartedMessage(),
+        400,
+        'VALIDATION_ERROR',
+      );
+    case 'WINDOW_EXPIRED':
+      throw new AppError(
+        input.status === 'PICKED_UP'
+          ? supplierPickupWindowPassedMessage()
+          : deliveryWindowPassedMessage(),
+        400,
+        'VALIDATION_ERROR',
+      );
     default:
       throw new AppError('Unable to update delivery.', 500, 'INTERNAL_ERROR');
   }

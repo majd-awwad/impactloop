@@ -6,16 +6,42 @@ export const deliveryIdParamsSchema = z.object({
 
 export type DeliveryIdParams = z.infer<typeof deliveryIdParamsSchema>;
 
-export const updateDriverDeliveryStatusSchema = z.object({
-  status: z.enum([
-    'ARRIVED_PICKUP',
-    'PICKED_UP',
-    'ON_THE_WAY',
-    'ARRIVED_DROPOFF',
-    'DELIVERED',
-  ]),
-  note: z.string().trim().max(1000).optional().nullable(),
-});
+export const updateDriverDeliveryStatusSchema = z
+  .object({
+    status: z.enum([
+      'ARRIVED_PICKUP',
+      'PICKED_UP',
+      'ON_THE_WAY',
+      'ARRIVED_DROPOFF',
+      'DELIVERED',
+    ]),
+    note: z.string().trim().max(1000).optional().nullable(),
+    confirmationCode: z.string().trim().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      (value.status === 'PICKED_UP' || value.status === 'DELIVERED') &&
+      !value.confirmationCode?.trim()
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Confirmation code is required for this status update.',
+        path: ['confirmationCode'],
+      });
+    }
+
+    if (
+      value.confirmationCode != null &&
+      value.confirmationCode.trim() !== '' &&
+      !/^\d{6}$/.test(value.confirmationCode.trim())
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Confirmation code must be a 6-digit number.',
+        path: ['confirmationCode'],
+      });
+    }
+  });
 
 export type UpdateDriverDeliveryStatusInput = z.infer<
   typeof updateDriverDeliveryStatusSchema

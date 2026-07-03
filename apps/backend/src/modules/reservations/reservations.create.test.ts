@@ -10,11 +10,72 @@ import {
   deleteSupplierMaterial,
   updateSupplierMaterial,
 } from '../supplier/supplier.service.js';
+import {
+  acceptSupplierReservation,
+  completeSupplierReservation,
+  declineSupplierReservation,
+} from '../supplier-reservations/supplier-reservations.service.js';
+import { getMaterialById } from '../materials/materials.service.js';
 
 import { createReservation } from './reservations.service.js';
 import { listMyReservations } from './reservations.service.js';
+import { cancelReservation } from './reservations.service.js';
+import type { CreateReservationInput } from './reservations.validation.js';
 
 const TEST_MARKER = '[test-learner-reservations]';
+
+function futurePreferredWindow(hoursFromNow = 24, durationHours = 2) {
+  const start = new Date(Date.now() + hoursFromNow * 3_600_000);
+  const end = new Date(start.getTime() + durationHours * 3_600_000);
+
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+  };
+}
+
+function pickupReservationPayload(
+  materialId: string,
+  quantityRequested: number,
+  overrides: Partial<CreateReservationInput> = {},
+): CreateReservationInput {
+  return {
+    materialId,
+    quantityRequested,
+    fulfillmentMethod: 'PICKUP',
+    learnerPreferredPickupWindows: [futurePreferredWindow()],
+    ...overrides,
+  };
+}
+
+async function acceptWithLearnerPreferredWindow(
+  supplierId: string,
+  reservation: Awaited<ReturnType<typeof createReservation>>,
+) {
+  const window = reservation.learnerPreferredPickupWindows[0];
+  assert.ok(window, 'preferred pickup window required');
+
+  return acceptSupplierReservation(supplierId, reservation.id, {
+    pickupWindowStart: window.start,
+    pickupWindowEnd: window.end,
+  });
+}
+
+function deliveryReservationPayload(
+  materialId: string,
+  quantityRequested: number,
+  overrides: Partial<CreateReservationInput> = {},
+): CreateReservationInput {
+  return {
+    materialId,
+    quantityRequested,
+    fulfillmentMethod: 'DELIVERY',
+    learnerPreferredDeliveryWindows: [futurePreferredWindow()],
+    deliveryAddressText: '12 Learner Street, Nablus',
+    safeDropoffAllowed: false,
+    ...overrides,
+  };
+}
 
 type TestContext = {
   learnerId: string;
@@ -77,6 +138,7 @@ async function createMaterial(
     | 'REUSED'
     | 'UNAVAILABLE' = 'AVAILABLE',
   quantity = 3,
+  options: { deliveryAllowed?: boolean } = {},
 ) {
   const supplierProfile = await prisma.supplierProfile.findUnique({
     where: { userId: ctx.supplierId },
@@ -98,6 +160,7 @@ async function createMaterial(
       sourceType: 'WORKSHOP_SURPLUS',
       status,
       isFree: true,
+      deliveryAllowed: options.deliveryAllowed ?? false,
     },
     select: { id: true },
   });
@@ -217,16 +280,19 @@ describe('createReservation', () => {
   test('learner can reserve part of available material and listing stays available', async () => {
     const material = await createMaterial(ctx, 'AVAILABLE', 4);
 
-    const reservation = await createReservation(ctx.learnerId, {
-      materialId: material.id,
-      quantityRequested: 2,
-      message: 'Please reserve this for my project.',
-    });
+    const reservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, 2, {
+        message: 'Please reserve this for my project.',
+      }),
+    );
     ctx.createdReservationIds.push(reservation.id);
 
     assert.equal(reservation.status, 'PENDING');
     assert.equal(reservation.material.id, material.id);
     assert.equal(reservation.quantityRequested, 2);
+    assert.equal(reservation.fulfillmentMethod, 'PICKUP');
+    assert.equal(reservation.learnerPreferredPickupWindows.length, 1);
 
     const updatedMaterial = await prisma.material.findUnique({
       where: { id: material.id },
@@ -250,10 +316,10 @@ describe('createReservation', () => {
 
     await assert.rejects(
       () =>
-        createReservation(ctx.supplierId, {
-          materialId: material.id,
-          quantityRequested: 1,
-        }),
+        createReservation(
+          ctx.supplierId,
+          pickupReservationPayload(material.id, 1),
+        ),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 400);
@@ -268,10 +334,10 @@ describe('createReservation', () => {
 
       await assert.rejects(
         () =>
-          createReservation(ctx.learnerId, {
-            materialId: material.id,
-            quantityRequested: 1,
-          }),
+          createReservation(
+            ctx.learnerId,
+            pickupReservationPayload(material.id, 1),
+          ),
         (error: unknown) => {
           assert.ok(error instanceof AppError);
           assert.equal(error.statusCode, 409);
@@ -286,10 +352,10 @@ describe('createReservation', () => {
 
     await assert.rejects(
       () =>
-        createReservation(ctx.learnerId, {
-          materialId: material.id,
-          quantityRequested: 3,
-        }),
+        createReservation(
+          ctx.learnerId,
+          pickupReservationPayload(material.id, 3),
+        ),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 400);
@@ -301,18 +367,18 @@ describe('createReservation', () => {
   test('cannot create duplicate open reservation for same learner and material', async () => {
     const material = await createMaterial(ctx);
 
-    const reservation = await createReservation(ctx.learnerId, {
-      materialId: material.id,
-      quantityRequested: 1,
-    });
+    const reservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, 1),
+    );
     ctx.createdReservationIds.push(reservation.id);
 
     await assert.rejects(
       () =>
-        createReservation(ctx.learnerId, {
-          materialId: material.id,
-          quantityRequested: 1,
-        }),
+        createReservation(
+          ctx.learnerId,
+          pickupReservationPayload(material.id, 1),
+        ),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);
@@ -324,10 +390,10 @@ describe('createReservation', () => {
   test('learner-created pending reservation blocks supplier delete but allows safe edit', async () => {
     const material = await createMaterial(ctx, 'AVAILABLE', 2);
 
-    const reservation = await createReservation(ctx.learnerId, {
-      materialId: material.id,
-      quantityRequested: 1,
-    });
+    const reservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, 1),
+    );
     ctx.createdReservationIds.push(reservation.id);
 
     const updated = await updateSupplierMaterial(ctx.supplierId, material.id, {
@@ -373,15 +439,16 @@ describe('createReservation', () => {
     const ownMaterial = await createMaterial(ctx, 'AVAILABLE', 2);
     const otherMaterial = await createMaterial(ctx, 'AVAILABLE', 2);
 
-    const ownReservation = await createReservation(ctx.learnerId, {
-      materialId: ownMaterial.id,
-      quantityRequested: 1,
-      message: 'Need it for class',
-    });
-    const otherReservation = await createReservation(ctx.otherLearnerId, {
-      materialId: otherMaterial.id,
-      quantityRequested: 1,
-    });
+    const ownReservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(ownMaterial.id, 1, {
+        message: 'Need it for class',
+      }),
+    );
+    const otherReservation = await createReservation(
+      ctx.otherLearnerId,
+      pickupReservationPayload(otherMaterial.id, 1),
+    );
     ctx.createdReservationIds.push(ownReservation.id, otherReservation.id);
 
     const reservations = await listMyReservations(ctx.learnerId);
@@ -397,6 +464,8 @@ describe('createReservation', () => {
     assert.equal(listed?.status, 'PENDING');
     assert.equal(listed?.quantityRequested, 1);
     assert.equal(listed?.message, 'Need it for class');
+    assert.equal(listed?.fulfillmentMethod, 'PICKUP');
+    assert.equal(listed?.learnerPreferredPickupWindows.length, 1);
     assert.equal(listed?.material.id, ownMaterial.id);
     assert.equal(listed?.material.status, 'AVAILABLE');
     assert.equal(listed?.material.city, 'Nablus');
@@ -418,10 +487,10 @@ describe('createReservation', () => {
       },
     });
 
-    const reservation = await createReservation(ctx.learnerId, {
-      materialId: material.id,
-      quantityRequested: 1,
-    });
+    const reservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, 1),
+    );
     ctx.createdReservationIds.push(reservation.id);
 
     const reservations = await listMyReservations(ctx.learnerId);
@@ -432,10 +501,10 @@ describe('createReservation', () => {
 
   test('accepted reservation list item includes pickup window data', async () => {
     const material = await createMaterial(ctx, 'AVAILABLE', 2);
-    const reservation = await createReservation(ctx.learnerId, {
-      materialId: material.id,
-      quantityRequested: 1,
-    });
+    const reservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, 1),
+    );
     ctx.createdReservationIds.push(reservation.id);
 
     const pickupWindowStart = new Date();
@@ -464,14 +533,14 @@ describe('createReservation', () => {
     const material = await createMaterial(ctx);
 
     const results = await Promise.allSettled([
-      createReservation(ctx.learnerId, {
-        materialId: material.id,
-        quantityRequested: 1,
-      }),
-      createReservation(ctx.learnerId, {
-        materialId: material.id,
-        quantityRequested: 1,
-      }),
+      createReservation(
+        ctx.learnerId,
+        pickupReservationPayload(material.id, 1),
+      ),
+      createReservation(
+        ctx.learnerId,
+        pickupReservationPayload(material.id, 1),
+      ),
     ]);
 
     const fulfilled = results.filter((result) => result.status === 'fulfilled');
@@ -489,6 +558,144 @@ describe('createReservation', () => {
       },
     });
     assert.equal(reservationCount, 1);
+  });
+
+  test('learner can create delivery reservation with address and preferred windows', async () => {
+    const material = await createMaterial(ctx, 'AVAILABLE', 2, {
+      deliveryAllowed: true,
+    });
+
+    const reservation = await createReservation(
+      ctx.learnerId,
+      deliveryReservationPayload(material.id, 1, {
+        deliveryNote: 'Call before arrival',
+      }),
+    );
+    ctx.createdReservationIds.push(reservation.id);
+
+    assert.equal(reservation.status, 'PENDING');
+    assert.equal(reservation.fulfillmentMethod, 'DELIVERY');
+    assert.equal(reservation.learnerPreferredDeliveryWindows.length, 1);
+    assert.equal(reservation.deliveryAddressText, '12 Learner Street, Nablus');
+    assert.equal(reservation.safeDropoffAllowed, false);
+    assert.equal(reservation.deliveryNote, 'Call before arrival');
+
+    const reservations = await listMyReservations(ctx.learnerId);
+    const listed = reservations.find((item) => item.id === reservation.id);
+
+    assert.equal(listed?.fulfillmentMethod, 'DELIVERY');
+    assert.equal(listed?.deliveryAddressText, '12 Learner Street, Nablus');
+  });
+
+  test('pending reservation holds quantity and blocks over-reservation', async () => {
+    const material = await createMaterial(ctx, 'AVAILABLE', 10);
+
+    const first = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, 5),
+    );
+    ctx.createdReservationIds.push(first.id);
+
+    let detail = await getMaterialById(material.id);
+    assert.equal(detail.quantity, 10);
+    assert.equal(detail.availableQuantity, 5);
+
+    await assert.rejects(
+      () =>
+        createReservation(
+          ctx.otherLearnerId,
+          pickupReservationPayload(material.id, 6),
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        return true;
+      },
+    );
+
+    const second = await createReservation(
+      ctx.otherLearnerId,
+      pickupReservationPayload(material.id, 5),
+    );
+    ctx.createdReservationIds.push(second.id);
+
+    detail = await getMaterialById(material.id);
+    assert.equal(detail.availableQuantity, 0);
+  });
+
+  test('cancelling pending reservation releases held quantity', async () => {
+    const material = await createMaterial(ctx, 'AVAILABLE', 10);
+    const reservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, 5),
+    );
+    ctx.createdReservationIds.push(reservation.id);
+
+    assert.equal((await getMaterialById(material.id)).availableQuantity, 5);
+
+    await cancelReservation(ctx.learnerId, reservation.id);
+
+    assert.equal((await getMaterialById(material.id)).availableQuantity, 10);
+  });
+
+  test('supplier accept keeps hold and complete consumes physical quantity once', async () => {
+    const material = await createMaterial(ctx, 'AVAILABLE', 10);
+    const reservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, 5),
+    );
+    ctx.createdReservationIds.push(reservation.id);
+
+    assert.equal((await getMaterialById(material.id)).availableQuantity, 5);
+
+    await acceptWithLearnerPreferredWindow(ctx.supplierId, reservation);
+
+    assert.equal((await getMaterialById(material.id)).availableQuantity, 5);
+
+    await completeSupplierReservation(ctx.supplierId, reservation.id);
+
+    const stored = await prisma.material.findUnique({
+      where: { id: material.id },
+      select: { quantity: true },
+    });
+    assert.equal(Number(stored?.quantity), 5);
+    assert.equal((await getMaterialById(material.id)).availableQuantity, 5);
+  });
+
+  test('supplier decline releases held quantity', async () => {
+    const material = await createMaterial(ctx, 'AVAILABLE', 10);
+    const reservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, 5),
+    );
+    ctx.createdReservationIds.push(reservation.id);
+
+    assert.equal((await getMaterialById(material.id)).availableQuantity, 5);
+
+    await declineSupplierReservation(ctx.supplierId, reservation.id, {
+      reason: 'Not available this week',
+    });
+
+    assert.equal((await getMaterialById(material.id)).availableQuantity, 10);
+  });
+
+  test('learner cannot create delivery reservation when material disallows delivery', async () => {
+    const material = await createMaterial(ctx, 'AVAILABLE', 2, {
+      deliveryAllowed: false,
+    });
+
+    await assert.rejects(
+      () =>
+        createReservation(
+          ctx.learnerId,
+          deliveryReservationPayload(material.id, 1),
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        return true;
+      },
+    );
   });
 
   test('learner role guard rejects unauthenticated and non-learner requests', async () => {

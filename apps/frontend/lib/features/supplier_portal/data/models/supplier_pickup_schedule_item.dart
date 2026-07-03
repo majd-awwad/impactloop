@@ -1,4 +1,5 @@
 import 'supplier_incoming_request.dart';
+import '../../../reservations/data/models/reservation_message.dart';
 
 enum SupplierPickupScheduleFilter { today, upcoming, completed, all }
 
@@ -68,11 +69,22 @@ class SupplierPickupScheduleItem {
     this.deliveryRequested = false,
     this.activeDelivery,
     this.canSupplierComplete = false,
+    this.isOverdue = false,
+    this.needsFollowUp = false,
+    this.pickupWindowStatus,
+    this.pickupHandoverPhase,
+    this.canSupplierCloseOverduePickup = false,
+    this.canSupplierReportAndCloseOverduePickup = false,
+    this.canSupplierReschedule = false,
+    this.canSendMessage = false,
+    this.noShowReport,
+    this.latestMessage,
     this.materialImageUrl,
     this.pickupWindow,
     this.supplierNote,
     this.learnerMessage,
     this.completedAt,
+    this.supplierHandoverCode,
   });
 
   final String id;
@@ -86,15 +98,33 @@ class SupplierPickupScheduleItem {
   final bool deliveryRequested;
   final SupplierReservationDeliverySummary? activeDelivery;
   final bool canSupplierComplete;
+  final bool isOverdue;
+  final bool needsFollowUp;
+  final String? pickupWindowStatus;
+  final String? pickupHandoverPhase;
+  final bool canSupplierCloseOverduePickup;
+  final bool canSupplierReportAndCloseOverduePickup;
+  final bool canSupplierReschedule;
+  final bool canSendMessage;
+  final Map<String, dynamic>? noShowReport;
+  final ReservationMessage? latestMessage;
   final SupplierPickupWindow? pickupWindow;
   final String? supplierNote;
   final String? learnerMessage;
   final DateTime? completedAt;
+  final String? supplierHandoverCode;
 
   bool get isCompleted => status == SupplierPickupScheduleStatus.completed;
   bool get hasDelivery => deliveryRequested || activeDelivery != null;
   String get deliveryStatusLabel =>
       activeDelivery?.statusLabel ?? 'Delivery requested';
+
+  bool get shouldShowSupplierHandoverCode =>
+      hasDelivery &&
+      !isCompleted &&
+      supplierHandoverCode != null &&
+      supplierHandoverCode!.trim().isNotEmpty &&
+      activeDelivery?.status.toUpperCase() != 'DELIVERED';
 
   DateTime? get scheduleDate {
     if (isCompleted) {
@@ -155,6 +185,7 @@ class SupplierPickupScheduleItem {
       pickupWindow = SupplierPickupWindow(
         start: DateTime.parse(start),
         end: DateTime.parse(end),
+        note: json['supplierNote'] as String?,
       );
     }
 
@@ -192,10 +223,32 @@ class SupplierPickupScheduleItem {
       deliveryRequested: deliveryRequested,
       activeDelivery: activeDelivery,
       canSupplierComplete: canSupplierComplete,
+      isOverdue: json['isOverdue'] == true,
+      needsFollowUp: json['needsFollowUp'] == true,
+      pickupWindowStatus: json['pickupWindowStatus'] as String?,
+      pickupHandoverPhase: json['pickupHandoverPhase'] as String?,
+      canSupplierCloseOverduePickup:
+          json['canSupplierCloseOverduePickup'] == true ||
+          json['canSupplierCancelOverdue'] == true,
+      canSupplierReportAndCloseOverduePickup:
+          json['canSupplierReportAndCloseOverduePickup'] == true ||
+          (json['canSupplierReportNoShow'] == true &&
+              json['noShowReport'] == null),
+      canSupplierReschedule: json['canSupplierReschedule'] == true,
+      canSendMessage: json['canSendMessage'] == true,
+      noShowReport: json['noShowReport'] is Map
+          ? Map<String, dynamic>.from(json['noShowReport'] as Map)
+          : null,
+      latestMessage: json['latestMessage'] is Map
+          ? ReservationMessage.fromJson(
+              Map<String, dynamic>.from(json['latestMessage'] as Map),
+            )
+          : null,
       pickupWindow: pickupWindow,
       supplierNote: json['supplierNote'] as String?,
       learnerMessage: json['message'] as String?,
       completedAt: completedAt,
+      supplierHandoverCode: json['supplierHandoverCode'] as String?,
     );
   }
 }

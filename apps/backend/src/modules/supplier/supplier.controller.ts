@@ -14,6 +14,8 @@ import {
   updateSupplierMaterial,
   updateSupplierProfile,
   updateSupplierProfileImages,
+  markSupplierMaterialUnavailable,
+  restoreSupplierMaterialAvailable,
 } from "./supplier.service.js";
 import { setSupplierPrivateCacheHeaders } from "./supplier-response-headers.js";
 import { validateIdempotencyKey } from "../../services/idempotency.service.js";
@@ -127,6 +129,30 @@ export const deleteMaterial = async (
   await deleteSupplierMaterial(req.auth!.sub, req.params.id as string);
 
   res.json(successResponse("Material deleted successfully.", null));
+};
+
+export const markMaterialUnavailable = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const material = await markSupplierMaterialUnavailable(
+    req.auth!.sub,
+    req.params.id as string,
+  );
+
+  res.json(successResponse("Material marked unavailable.", material));
+};
+
+export const restoreMaterialAvailable = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const material = await restoreSupplierMaterialAvailable(
+    req.auth!.sub,
+    req.params.id as string,
+  );
+
+  res.json(successResponse("Material restored to available.", material));
 };
 
 export const postMaterial = async (

@@ -308,10 +308,7 @@ class MaterialDiscoveryApiMapper {
     final totalText = quantity == null ? '--' : _formatCompactNumber(quantity);
     final available = availableQuantity ?? quantity;
 
-    if (available != null &&
-        quantity != null &&
-        available < quantity &&
-        available > 0) {
+    if (available != null && quantity != null && available < quantity) {
       final availableText = _formatCompactNumber(available);
       return LocalizedText(
         en: 'Available: $availableText of $totalText $unit',

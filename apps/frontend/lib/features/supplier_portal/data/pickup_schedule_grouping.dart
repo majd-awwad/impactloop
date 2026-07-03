@@ -11,6 +11,10 @@ String formatPickupTimeRange(SupplierPickupWindow window) {
   return '$startTime – $endTime';
 }
 
+String formatPickupScheduleCardWindow(SupplierPickupWindow window) {
+  return '${formatScheduleDateLabel(window.start)} · ${formatPickupTimeRange(window)}';
+}
+
 String formatScheduleDateLabel(DateTime date) {
   final local = DateTime(date.year, date.month, date.day);
   final today = _dateOnly(DateTime.now());

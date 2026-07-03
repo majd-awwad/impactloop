@@ -93,6 +93,65 @@ class SupplierMyMaterialsImage {
   }
 }
 
+class SupplierMaterialReservationSummary {
+  const SupplierMaterialReservationSummary({
+    required this.id,
+    required this.status,
+    required this.quantityRequested,
+    required this.unit,
+    required this.pickupPreference,
+    required this.deliveryRequested,
+    required this.createdAt,
+    required this.canReview,
+    required this.canOpen,
+    this.message,
+    this.learnerDisplayName,
+    this.pickupWindowStart,
+    this.pickupWindowEnd,
+  });
+
+  final String id;
+  final String status;
+  final double quantityRequested;
+  final String unit;
+  final String pickupPreference;
+  final bool deliveryRequested;
+  final DateTime createdAt;
+  final bool canReview;
+  final bool canOpen;
+  final String? message;
+  final String? learnerDisplayName;
+  final DateTime? pickupWindowStart;
+  final DateTime? pickupWindowEnd;
+
+  factory SupplierMaterialReservationSummary.fromJson(Map<String, dynamic> json) {
+    final learner = json['learner'];
+    return SupplierMaterialReservationSummary(
+      id: json['id'] as String? ?? '',
+      status: json['status'] as String? ?? 'PENDING',
+      quantityRequested: (json['quantityRequested'] as num?)?.toDouble() ?? 0,
+      unit: json['unit'] as String? ?? '',
+      pickupPreference: json['pickupPreference'] as String? ?? '',
+      deliveryRequested: json['deliveryRequested'] == true,
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      canReview: json['canReview'] == true,
+      canOpen: json['canOpen'] != false,
+      message: json['message'] as String?,
+      learnerDisplayName: learner is Map
+          ? learner['displayName'] as String?
+          : null,
+      pickupWindowStart: DateTime.tryParse(
+        json['pickupWindowStart'] as String? ?? '',
+      ),
+      pickupWindowEnd: DateTime.tryParse(
+        json['pickupWindowEnd'] as String? ?? '',
+      ),
+    );
+  }
+}
+
 class SupplierMyMaterial {
   const SupplierMyMaterial({
     required this.id,
@@ -103,6 +162,8 @@ class SupplierMyMaterial {
     required this.status,
     required this.condition,
     required this.quantity,
+    this.heldQuantity,
+    this.availableQuantity,
     required this.unit,
     required this.isFree,
     this.price,
@@ -115,6 +176,14 @@ class SupplierMyMaterial {
     required this.images,
     required this.viewsCount,
     required this.likesCount,
+    this.pendingReservationsCount = 0,
+    this.reservedReservationsCount = 0,
+    this.reservationsCount = 0,
+    this.demandScore = 0,
+    this.canMarkUnavailable = false,
+    this.canRestoreAvailable = false,
+    this.statusActionBlockedReason,
+    this.reservations = const [],
     required this.createdAt,
     required this.updatedAt,
     required this.canDelete,
@@ -131,6 +200,8 @@ class SupplierMyMaterial {
   final String status;
   final String condition;
   final double quantity;
+  final double? heldQuantity;
+  final double? availableQuantity;
   final String unit;
   final bool isFree;
   final double? price;
@@ -143,6 +214,14 @@ class SupplierMyMaterial {
   final List<SupplierMyMaterialsImage> images;
   final int viewsCount;
   final int likesCount;
+  final int pendingReservationsCount;
+  final int reservedReservationsCount;
+  final int reservationsCount;
+  final int demandScore;
+  final bool canMarkUnavailable;
+  final bool canRestoreAvailable;
+  final String? statusActionBlockedReason;
+  final List<SupplierMaterialReservationSummary> reservations;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool canDelete;
@@ -174,6 +253,8 @@ class SupplierMyMaterial {
       status: json['status'] as String? ?? 'AVAILABLE',
       condition: json['condition'] as String? ?? 'GOOD',
       quantity: (json['quantity'] as num?)?.toDouble() ?? 0,
+      heldQuantity: (json['heldQuantity'] as num?)?.toDouble(),
+      availableQuantity: (json['availableQuantity'] as num?)?.toDouble(),
       unit: json['unit'] as String? ?? '',
       isFree: json['isFree'] == true,
       price: (json['price'] as num?)?.toDouble(),
@@ -197,6 +278,16 @@ class SupplierMyMaterial {
           : const [],
       viewsCount: (json['viewsCount'] as num?)?.toInt() ?? 0,
       likesCount: (json['likesCount'] as num?)?.toInt() ?? 0,
+      pendingReservationsCount:
+          (json['pendingReservationsCount'] as num?)?.toInt() ?? 0,
+      reservedReservationsCount:
+          (json['reservedReservationsCount'] as num?)?.toInt() ?? 0,
+      reservationsCount: (json['reservationsCount'] as num?)?.toInt() ?? 0,
+      demandScore: (json['demandScore'] as num?)?.toInt() ?? 0,
+      canMarkUnavailable: json['canMarkUnavailable'] == true,
+      canRestoreAvailable: json['canRestoreAvailable'] == true,
+      statusActionBlockedReason: json['statusActionBlockedReason'] as String?,
+      reservations: _parseReservations(json['reservations']),
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
@@ -209,6 +300,23 @@ class SupplierMyMaterial {
       canEdit: json['canEdit'] == true,
       editBlockedReason: json['editBlockedReason'] as String?,
     );
+  }
+
+  static List<SupplierMaterialReservationSummary> _parseReservations(
+    Object? json,
+  ) {
+    if (json is! List) {
+      return const [];
+    }
+
+    return json
+        .whereType<Map>()
+        .map(
+          (item) => SupplierMaterialReservationSummary.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
+        .toList(growable: false);
   }
 }
 

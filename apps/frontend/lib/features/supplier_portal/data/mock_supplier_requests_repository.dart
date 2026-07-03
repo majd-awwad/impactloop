@@ -1,3 +1,4 @@
+import '../../reservations/data/models/reservation_message.dart';
 import 'models/supplier_incoming_request.dart';
 import 'supplier_requests_repository.dart';
 
@@ -11,10 +12,31 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
     SupplierIncomingRequestTab status,
   ) async {
     await Future<void>.delayed(const Duration(milliseconds: 350));
-    return _requests
-        .where((request) => request.status == status.status)
-        .toList()
+    return _requests.where((request) => _matchesTab(request, status)).toList()
       ..sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+  }
+
+  bool _matchesTab(
+    SupplierIncomingRequest request,
+    SupplierIncomingRequestTab tab,
+  ) {
+    switch (tab) {
+      case SupplierIncomingRequestTab.all:
+        return true;
+      case SupplierIncomingRequestTab.pending:
+        return request.status == SupplierIncomingRequestStatus.pending;
+      case SupplierIncomingRequestTab.needsLearner:
+        return request.status ==
+            SupplierIncomingRequestStatus.awaitingConfirmation;
+      case SupplierIncomingRequestTab.accepted:
+        return request.status == SupplierIncomingRequestStatus.accepted;
+      case SupplierIncomingRequestTab.declined:
+        return request.status == SupplierIncomingRequestStatus.declined;
+      case SupplierIncomingRequestTab.completed:
+        return request.status == SupplierIncomingRequestStatus.completed;
+      case SupplierIncomingRequestTab.cancelled:
+        return request.status == SupplierIncomingRequestStatus.cancelled;
+    }
   }
 
   @override
@@ -57,7 +79,10 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
   }
 
   @override
-  Future<SupplierIncomingRequest> completeRequest(String requestId) async {
+  Future<SupplierIncomingRequest> completeRequest(
+    String requestId, {
+    required String confirmationCode,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
     final index = _requests.indexWhere((request) => request.id == requestId);
     if (index == -1) {
@@ -75,6 +100,132 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
     );
     _requests[index] = updated;
     return updated;
+  }
+
+  @override
+  Future<SupplierIncomingRequest> rescheduleRequest(
+    String requestId,
+    SupplierPickupWindow pickupWindow, {
+    required String reason,
+    String? messageToLearner,
+    String? note,
+  }) async {
+    final index = _requests.indexWhere((request) => request.id == requestId);
+    if (index == -1) throw StateError('Request not found');
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.awaitingConfirmation,
+      pickupWindow: pickupWindow,
+      isOverdue: false,
+      needsFollowUp: false,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<SupplierIncomingRequest> acceptLearnerReschedule(
+    String requestId,
+  ) async {
+    final index = _requests.indexWhere((request) => request.id == requestId);
+    if (index == -1) throw StateError('Request not found');
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.accepted,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<SupplierIncomingRequest> cancelAcceptedRequest(
+    String requestId, {
+    String? reason,
+  }) async {
+    final index = _requests.indexWhere((request) => request.id == requestId);
+    if (index == -1) throw StateError('Request not found');
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.declined,
+      declineReason: reason,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<void> submitNoShowReport(
+    String requestId, {
+    required String reasonCode,
+    String? note,
+  }) async {}
+
+  @override
+  Future<SupplierIncomingRequest> markLearnerNoShow(
+    String requestId, {
+    required String reason,
+    String? note,
+  }) async {
+    final index = _requests.indexWhere((item) => item.id == requestId);
+    if (index < 0) {
+      throw StateError('Request not found');
+    }
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.noShow,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<SupplierIncomingRequest> markDeliveryPickupExpired(
+    String requestId,
+  ) async {
+    final index = _requests.indexWhere((item) => item.id == requestId);
+    if (index < 0) {
+      throw StateError('Request not found');
+    }
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.needsResolution,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<SupplierIncomingRequest> markDriverNoShow(
+    String deliveryId, {
+    String? note,
+  }) async {
+    final index = _requests.indexWhere(
+      (item) => item.activeDelivery?.id == deliveryId,
+    );
+    if (index < 0) {
+      throw StateError('Request not found');
+    }
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.needsResolution,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<List<ReservationMessage>> fetchReservationMessages(
+    String requestId,
+  ) async {
+    return const [];
+  }
+
+  @override
+  Future<ReservationMessage> sendReservationMessage(
+    String requestId,
+    String body,
+  ) async {
+    return ReservationMessage(
+      id: 'mock-message',
+      reservationId: requestId,
+      body: body,
+      createdAt: DateTime.now(),
+      sender: const ReservationMessageSender(id: 'mock', displayName: 'You'),
+    );
   }
 }
 

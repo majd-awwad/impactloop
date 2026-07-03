@@ -35,11 +35,17 @@ import {
 } from "../../services/idempotency.service.js";
 import * as supplierRepository from "./supplier.repository.js";
 import {
+  assertCanMarkMaterialUnavailable,
+  assertCanRestoreMaterial,
+  getMaterialModerationPolicy,
+} from "../admin-materials/admin-materials.moderation-policy.js";
+import {
   buildSupplierMaterialWhere,
   resolveSupplierContext,
 } from "./supplier-material-scope.js";
 import { assertSupplierCanPublishMaterials } from "../supplier-verification/supplier-verification.service.js";
 import {
+  computeAvailableQuantity,
   getHeldQuantitiesByMaterialIds,
   toDecimal,
 } from "../reservations/reservations.quantity.js";
@@ -1283,11 +1289,36 @@ type SupplierOwnedMaterialRecord = Awaited<
   ReturnType<typeof supplierRepository.findSupplierMaterials>
 >["items"][number];
 
+type SupplierMaterialEngagementExtras = {
+  viewsCount?: number;
+  likesCount?: number;
+  pendingReservationsCount?: number;
+  reservedReservationsCount?: number;
+  reservationsCount?: number;
+  demandScore?: number;
+  canMarkUnavailable?: boolean;
+  canRestoreAvailable?: boolean;
+  statusActionBlockedReason?: string | null;
+};
+
 const mapSupplierOwnedMaterial = (
   material: SupplierOwnedMaterialRecord,
   blockingReservationCount = 0,
   likesCount = 0,
-) => ({
+  extras: SupplierMaterialEngagementExtras = {},
+  heldQuantityInput = toDecimal(0),
+) => {
+  const materialQuantity =
+    typeof material.quantity === "number"
+      ? toDecimal(material.quantity)
+      : material.quantity;
+  const heldQuantity = heldQuantityInput;
+  const availableQuantity = computeAvailableQuantity(
+    materialQuantity,
+    heldQuantity,
+  );
+
+  return {
   id: material.id,
   title: material.title,
   description: material.description,
@@ -1301,10 +1332,9 @@ const mapSupplierOwnedMaterial = (
   materialType: material.materialType,
   status: material.status,
   condition: material.condition,
-  quantity:
-    typeof material.quantity === "number"
-      ? material.quantity
-      : material.quantity.toNumber(),
+  quantity: decimalToNumber(materialQuantity),
+  heldQuantity: decimalToNumber(heldQuantity),
+  availableQuantity: decimalToNumber(availableQuantity),
   unit: material.unit,
   isFree: material.isFree,
   price: decimalToNumber(material.price),
@@ -1323,8 +1353,15 @@ const mapSupplierOwnedMaterial = (
     isCover: image.isCover,
     sortOrder: image.sortOrder,
   })),
-  viewsCount: material.viewsCount,
-  likesCount,
+  viewsCount: extras.viewsCount ?? material.viewsCount,
+  likesCount: extras.likesCount ?? likesCount,
+  pendingReservationsCount: extras.pendingReservationsCount ?? 0,
+  reservedReservationsCount: extras.reservedReservationsCount ?? 0,
+  reservationsCount: extras.reservationsCount ?? 0,
+  demandScore: extras.demandScore ?? 0,
+  canMarkUnavailable: extras.canMarkUnavailable ?? false,
+  canRestoreAvailable: extras.canRestoreAvailable ?? false,
+  statusActionBlockedReason: extras.statusActionBlockedReason ?? null,
   createdAt: material.createdAt.toISOString(),
   updatedAt: material.updatedAt.toISOString(),
   ...resolveSupplierMaterialDeleteEligibility(
@@ -1332,7 +1369,69 @@ const mapSupplierOwnedMaterial = (
     blockingReservationCount,
   ),
   ...resolveSupplierMaterialEditEligibility(material.status),
-});
+  };
+};
+
+const resolveSupplierMaterialStatusActions = (
+  status: string,
+  activeReservationCount: number,
+) => {
+  const policy = getMaterialModerationPolicy(status);
+  let statusActionBlockedReason = policy.lockReason;
+
+  if (activeReservationCount > 0) {
+    statusActionBlockedReason =
+      "This action is not available while the material has active reservations.";
+  }
+
+  const canMarkUnavailable =
+    policy.canMarkUnavailable && activeReservationCount === 0;
+  const canRestoreAvailable =
+    policy.canRestore && activeReservationCount === 0;
+
+  return {
+    canMarkUnavailable,
+    canRestoreAvailable,
+    statusActionBlockedReason,
+  };
+};
+
+const mapMaterialReservationSummary = (
+  reservation: supplierRepository.SupplierMaterialReservationRecord,
+  unit: string,
+) => {
+  const latestDelivery = reservation.deliveries[0] ?? null;
+
+  return {
+    id: reservation.id,
+    status: reservation.status,
+    quantityRequested: Number(reservation.quantityRequested),
+    unit,
+    message: reservation.message,
+    pickupType: reservation.pickupType,
+    deliveryRequested: reservation.deliveryRequested,
+    pickupPreference: reservation.deliveryRequested
+      ? "Delivery requested"
+      : reservation.pickupType === "SELF_PICKUP"
+        ? "Self pickup"
+        : reservation.pickupType,
+    pickupWindowStart: reservation.pickupWindowStart?.toISOString() ?? null,
+    pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
+    activeDelivery: latestDelivery
+      ? {
+          id: latestDelivery.id,
+          status: latestDelivery.status,
+        }
+      : null,
+    learner: {
+      id: reservation.requester.id,
+      displayName: reservation.requester.displayName,
+    },
+    createdAt: reservation.createdAt.toISOString(),
+    canReview: reservation.status === "PENDING",
+    canOpen: true,
+  };
+};
 
 export const getSupplierMaterials = async (
   userId: string,
@@ -1345,26 +1444,48 @@ export const getSupplierMaterials = async (
     supplierRepository.findSupplierMaterialCategories(scope),
   ]);
 
-  const blockingReservationCounts =
-    await supplierRepository.countBlockingReservationsByMaterialIds(
-      result.items.map((item) => item.id),
-    );
+  const materialIds = result.items.map((item) => item.id);
 
-  const likesByMaterial = await supplierRepository.countLikesByMaterialIds(
-    result.items.map((item) => item.id),
-  );
+  const [blockingReservationCounts, likesByMaterial, viewsByMaterial, demandByMaterial, heldByMaterialId] =
+    await Promise.all([
+      supplierRepository.countBlockingReservationsByMaterialIds(materialIds),
+      supplierRepository.countLikesByMaterialIds(materialIds),
+      supplierRepository.countViewsByMaterialIds(materialIds),
+      supplierRepository.findReservationDemandByMaterialIds(materialIds),
+      getHeldQuantitiesByMaterialIds(materialIds),
+    ]);
 
   const totalPages =
     result.total === 0 ? 0 : Math.ceil(result.total / query.limit);
 
   return {
-    items: result.items.map((item) =>
-      mapSupplierOwnedMaterial(
+    items: result.items.map((item) => {
+      const demand = demandByMaterial.get(item.id) ?? {
+        pendingReservationsCount: 0,
+        reservedReservationsCount: 0,
+        reservationsCount: 0,
+        demandScore: 0,
+      };
+      const activeReservationCount =
+        demand.pendingReservationsCount + demand.reservedReservationsCount;
+      const statusActions = resolveSupplierMaterialStatusActions(
+        item.status,
+        activeReservationCount,
+      );
+
+      return mapSupplierOwnedMaterial(
         item,
         blockingReservationCounts.get(item.id) ?? 0,
         likesByMaterial.get(item.id) ?? 0,
-      ),
-    ),
+        {
+          viewsCount: viewsByMaterial.get(item.id) ?? 0,
+          likesCount: likesByMaterial.get(item.id) ?? 0,
+          ...demand,
+          ...statusActions,
+        },
+        heldByMaterialId.get(item.id) ?? toDecimal(0),
+      );
+    }),
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -1394,7 +1515,49 @@ export const getSupplierMaterial = async (
   const blockingReservationCount =
     await supplierRepository.countBlockingReservationsForMaterial(materialId);
 
-  return mapSupplierOwnedMaterial(material, blockingReservationCount);
+  const materialIds = [materialId];
+  const [likesCount, viewsCount, demandByMaterial, activeReservationCount, reservations, heldByMaterialId] =
+    await Promise.all([
+      supplierRepository
+        .countLikesByMaterialIds(materialIds)
+        .then((map) => map.get(materialId) ?? 0),
+      supplierRepository
+        .countViewsByMaterialIds(materialIds)
+        .then((map) => map.get(materialId) ?? 0),
+      supplierRepository.findReservationDemandByMaterialIds(materialIds),
+      supplierRepository.countActiveReservationsForMaterial(materialId),
+      supplierRepository.findReservationsForSupplierMaterial(scope, materialId),
+      getHeldQuantitiesByMaterialIds(materialIds),
+    ]);
+
+  const demand = demandByMaterial.get(materialId) ?? {
+    pendingReservationsCount: 0,
+    reservedReservationsCount: 0,
+    reservationsCount: 0,
+    demandScore: 0,
+  };
+  const statusActions = resolveSupplierMaterialStatusActions(
+    material.status,
+    activeReservationCount,
+  );
+
+  return {
+    ...mapSupplierOwnedMaterial(
+      material,
+      blockingReservationCount,
+      likesCount,
+      {
+        viewsCount,
+        likesCount,
+        ...demand,
+        ...statusActions,
+      },
+      heldByMaterialId.get(materialId) ?? toDecimal(0),
+    ),
+    reservations: reservations.map((reservation) =>
+      mapMaterialReservationSummary(reservation, material.unit),
+    ),
+  };
 };
 
 export const updateSupplierMaterial = async (
@@ -1452,7 +1615,13 @@ export const updateSupplierMaterial = async (
     throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
-  return mapSupplierOwnedMaterial(updated, blockingReservationCount);
+  return mapSupplierOwnedMaterial(
+    updated,
+    blockingReservationCount,
+    0,
+    {},
+    heldQuantity,
+  );
 };
 
 export const deleteSupplierMaterial = async (
@@ -1487,4 +1656,62 @@ export const deleteSupplierMaterial = async (
   }
 
   await supplierRepository.deleteSupplierOwnedMaterial(materialId);
+};
+
+export const markSupplierMaterialUnavailable = async (
+  userId: string,
+  materialId: string,
+) => {
+  const scope = await resolveSupplierContext(userId);
+  const material = await supplierRepository.findSupplierOwnedMaterialById(
+    scope,
+    materialId,
+  );
+
+  if (!material) {
+    throw new AppError("Material not found", 404, "NOT_FOUND");
+  }
+
+  await assertCanMarkMaterialUnavailable(materialId, material.status);
+
+  const updated = await supplierRepository.updateSupplierOwnedMaterialStatus(
+    scope,
+    materialId,
+    "UNAVAILABLE",
+  );
+
+  if (!updated) {
+    throw new AppError("Material not found", 404, "NOT_FOUND");
+  }
+
+  return getSupplierMaterial(userId, materialId);
+};
+
+export const restoreSupplierMaterialAvailable = async (
+  userId: string,
+  materialId: string,
+) => {
+  const scope = await resolveSupplierContext(userId);
+  const material = await supplierRepository.findSupplierOwnedMaterialById(
+    scope,
+    materialId,
+  );
+
+  if (!material) {
+    throw new AppError("Material not found", 404, "NOT_FOUND");
+  }
+
+  assertCanRestoreMaterial(material.status);
+
+  const updated = await supplierRepository.updateSupplierOwnedMaterialStatus(
+    scope,
+    materialId,
+    "AVAILABLE",
+  );
+
+  if (!updated) {
+    throw new AppError("Material not found", 404, "NOT_FOUND");
+  }
+
+  return getSupplierMaterial(userId, materialId);
 };

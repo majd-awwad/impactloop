@@ -4,13 +4,15 @@ import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'incoming_request_status_style.dart';
+import 'reservation_follow_up_actions.dart';
 
 const _noteAreaHeight = 48.0;
 const _footerHeight = 52.0;
-const _pendingCardHeight = 268.0;
+const _pendingCardHeight = 360.0;
 
 String formatIncomingRequestDateTime(DateTime value) {
   final local = value.toLocal();
@@ -57,6 +59,11 @@ class IncomingRequestCard extends StatelessWidget {
     this.onAccept,
     this.onDecline,
     this.onMarkCompleted,
+    this.onReschedule,
+    this.onCloseReservation,
+    this.onReportToAdmin,
+    this.onAcceptLearnerReschedule,
+    this.onProposeDifferentTime,
     this.isCompleting = false,
   });
 
@@ -64,6 +71,11 @@ class IncomingRequestCard extends StatelessWidget {
   final VoidCallback? onAccept;
   final VoidCallback? onDecline;
   final VoidCallback? onMarkCompleted;
+  final VoidCallback? onReschedule;
+  final VoidCallback? onCloseReservation;
+  final VoidCallback? onReportToAdmin;
+  final VoidCallback? onAcceptLearnerReschedule;
+  final VoidCallback? onProposeDifferentTime;
   final bool isCompleting;
 
   @override
@@ -73,11 +85,15 @@ class IncomingRequestCard extends StatelessWidget {
     final isPending = request.status == SupplierIncomingRequestStatus.pending;
     final isDeclined = request.status == SupplierIncomingRequestStatus.declined;
     final isAccepted = request.status == SupplierIncomingRequestStatus.accepted;
+    final isAwaiting =
+        request.status == SupplierIncomingRequestStatus.awaitingConfirmation;
+    final isAwaitingSupplier = request.status ==
+        SupplierIncomingRequestStatus.awaitingSupplierConfirmation;
     final isCompleted =
         request.status == SupplierIncomingRequestStatus.completed;
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
-    final pendingHeight = compact ? 312.0 : _pendingCardHeight;
+    final pendingHeight = compact ? 404.0 : _pendingCardHeight;
 
     return Opacity(
       opacity: isDeclined ? 0.78 : 1,
@@ -124,6 +140,10 @@ class IncomingRequestCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
+                          if (isAccepted && request.isOverdue) ...[
+                            _FollowUpBadge(label: l.overdueBadge),
+                            const SizedBox(width: AppSpacing.xs),
+                          ],
                           _StatusBadge(status: request.status),
                         ],
                       ),
@@ -147,15 +167,42 @@ class IncomingRequestCard extends StatelessWidget {
               quantity:
                   '${_formatQuantity(request.quantityRequested)} ${request.unit}',
               requestedAt: formatIncomingRequestDateTime(request.requestedAt),
-              pickupPreference: request.pickupPreference ?? l.selfPickup,
+              pickupPreference: request.fulfillmentSummary,
             ),
+            if (isPending) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _FulfillmentDetails(request: request),
+            ],
             const SizedBox(height: AppSpacing.sm),
             _LearnerNoteSlot(note: request.learnerNote),
+            if (request.latestMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(
+                  '${request.latestMessage!.sender.displayName}: ${request.latestMessage!.body}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.supplierBody().copyWith(
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ),
             if (isPending) const Spacer(),
             if ((isAccepted || isCompleted) && request.pickupWindow != null)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
                 child: _PickupFooter(window: request.pickupWindow!),
+              ),
+            if (isAwaiting)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: _AwaitingConfirmationFooter(
+                  message: request.schedulingConflictReason != null &&
+                          request.schedulingConflictReason!.trim().isNotEmpty
+                      ? l.awaitingSchedulingConflictConfirmation
+                      : l.awaitingProposedTimeConfirmation,
+                ),
               ),
             if (isAccepted &&
                 request.hasDelivery &&
@@ -164,14 +211,19 @@ class IncomingRequestCard extends StatelessWidget {
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
                 child: _DeliveryFooter(
                   statusLabel: request.deliveryStatusLabel,
+                  supplierHandoverCode: request.shouldShowSupplierHandoverCode
+                      ? request.supplierHandoverCode
+                      : null,
                 ),
               ),
-            if (isDeclined &&
-                request.declineReason != null &&
-                request.declineReason!.trim().isNotEmpty)
+            if (isDeclined)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: _DeclineFooter(reason: request.declineReason!.trim()),
+                child: _DeclineFooter(
+                  reason: request.declineReason?.trim().isNotEmpty == true
+                      ? request.declineReason!.trim()
+                      : l.noDeclineReasonProvided,
+                ),
               ),
             if (isPending) ...[
               const SizedBox(height: AppSpacing.md),
@@ -186,41 +238,47 @@ class IncomingRequestCard extends StatelessWidget {
                 stacked: compact,
               ),
             ],
-            if (isAccepted &&
-                request.canSupplierComplete &&
-                onMarkCompleted != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.tonal(
-                  onPressed: isCompleting ? null : onMarkCompleted,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colors.accentSoft.withValues(alpha: 0.22),
-                    foregroundColor: colors.textPrimary,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 12 : 14,
-                      vertical: compact ? 8 : 10,
-                    ),
-                    minimumSize: Size(compact ? 0 : 120, compact ? 36 : 40),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdAll,
-                    ),
+            if ((isAccepted || isAwaitingSupplier) &&
+                request.isPickupFulfillment &&
+                (request.pickupHandoverPhase != null || isAwaitingSupplier)) ...[
+              if (isAwaitingSupplier &&
+                  request.pendingRescheduleReason?.trim().isNotEmpty ==
+                      true) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Learner requested reschedule: ${request.pendingRescheduleReason!.trim()}',
+                  style: context.supplierBody().copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
-                  child: isCompleting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(
-                          l.markCompleted,
-                          style: context.supplierLabel().copyWith(
-                            fontSize: compact ? 12 : 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                 ),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              ReservationFollowUpActions(
+                pickupHandoverPhase: request.pickupHandoverPhase,
+                canMarkCompleted: request.canSupplierComplete,
+                canRequestReschedule: request.canSupplierReschedule,
+                canCloseReservation: request.canSupplierCloseOverduePickup ||
+                    request.canSupplierCloseAwaitingLearnerRequest,
+                canReportToAdmin:
+                    request.canSupplierReportAndCloseOverduePickup ||
+                    request.canSupplierReportAwaitingLearnerRequest,
+                hasAdminReport: request.noShowReport != null,
+                canAcceptLearnerReschedule:
+                    request.canSupplierAcceptLearnerReschedule,
+                canProposeDifferentTime:
+                    request.canSupplierProposeDifferentTime,
+                canCloseAwaitingLearnerRequest:
+                    request.canSupplierCloseAwaitingLearnerRequest,
+                canReportAwaitingLearnerRequest:
+                    request.canSupplierReportAwaitingLearnerRequest,
+                isBusy: isCompleting,
+                onMarkCompleted: onMarkCompleted,
+                onRequestReschedule: onReschedule,
+                onCloseReservation: onCloseReservation,
+                onReportToAdmin: onReportToAdmin,
+                onAcceptLearnerReschedule: onAcceptLearnerReschedule,
+                onProposeDifferentTime: onProposeDifferentTime,
               ),
             ],
           ],
@@ -319,6 +377,113 @@ class _MetaItem extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FulfillmentDetails extends StatelessWidget {
+  const _FulfillmentDetails({required this.request});
+
+  final SupplierIncomingRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.s;
+    final colors = context.supplierColors;
+    final windows = request.isDeliveryFulfillment
+        ? request.learnerPreferredDeliveryWindows
+        : request.learnerPreferredPickupWindows;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (windows.isNotEmpty) ...[
+          Text(
+            request.isDeliveryFulfillment
+                ? l.learnerPreferredDeliveryWindows
+                : l.learnerPreferredPickupWindows,
+            style: context.supplierLabel().copyWith(fontSize: 12),
+          ),
+          const SizedBox(height: 4),
+          ...windows.map(
+            (window) => Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text(
+                formatPickupWindowShort(
+                  SupplierPickupWindow(start: window.start, end: window.end),
+                ),
+                style: context.supplierBody().copyWith(
+                  fontSize: 12,
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+        ],
+        if (request.isDeliveryFulfillment &&
+            request.deliveryAddressText?.trim().isNotEmpty == true) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            request.deliveryAddressText!.trim(),
+            style: context.supplierBody().copyWith(
+              fontSize: 12,
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
+        if (request.isDeliveryFulfillment) ...[
+          const SizedBox(height: 4),
+          Text(
+            request.safeDropoffAllowed
+                ? l.safeDropoffAllowed
+                : l.safeDropoffNotAllowed,
+            style: context.supplierBody().copyWith(
+              fontSize: 12,
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
+        if (request.isDeliveryFulfillment &&
+            request.reservationDeliveryNote?.trim().isNotEmpty == true) ...[
+          const SizedBox(height: 4),
+          Text(
+            '${l.deliveryNoteLabel}: ${request.reservationDeliveryNote!.trim()}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: context.supplierBody().copyWith(
+              fontSize: 12,
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _AwaitingConfirmationFooter extends StatelessWidget {
+  const _AwaitingConfirmationFooter({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.accentSoft.withValues(alpha: 0.16),
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Text(
+          message,
+          style: context.supplierBody().copyWith(
+            fontSize: 13,
+            color: colors.textPrimary,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -458,9 +623,13 @@ class _DeclineFooter extends StatelessWidget {
 }
 
 class _DeliveryFooter extends StatelessWidget {
-  const _DeliveryFooter({required this.statusLabel});
+  const _DeliveryFooter({
+    required this.statusLabel,
+    this.supplierHandoverCode,
+  });
 
   final String statusLabel;
+  final String? supplierHandoverCode;
 
   @override
   Widget build(BuildContext context) {
@@ -476,36 +645,55 @@ class _DeliveryFooter extends StatelessWidget {
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.sm,
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.local_shipping_outlined, size: 18, color: colors.accent),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    statusLabel == 'Delivered'
-                        ? 'Delivered'
-                        : 'Waiting for driver delivery',
-                    style: context.supplierLabel().copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.local_shipping_outlined,
+                  size: 18,
+                  color: colors.accent,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        statusLabel == 'Delivered'
+                            ? 'Delivered'
+                            : 'Waiting for driver delivery',
+                        style: context.supplierLabel().copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        supplierHandoverCode == null
+                            ? 'The driver will complete this reservation after delivery.'
+                            : 'Give the handover code to the driver after handing over the material.',
+                        style: context.supplierBody().copyWith(
+                          color: colors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'The driver will complete this reservation after delivery.',
-                    style: context.supplierBody().copyWith(
-                      color: colors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+            if (supplierHandoverCode != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              HandoverConfirmationCodePanel(
+                code: supplierHandoverCode!,
+                instructions:
+                    'Supplier handover code for the driver at pickup:',
+              ),
+            ],
           ],
         ),
       ),
@@ -626,6 +814,33 @@ class _DeclineButton extends StatelessWidget {
         size: _IncomingRequestActionButtonMetrics.iconSize,
       ),
       label: Text(context.s.decline),
+    );
+  }
+}
+
+class _FollowUpBadge extends StatelessWidget {
+  const _FollowUpBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: colors.amberAccent.withValues(alpha: 0.18),
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: colors.amberAccent.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        label,
+        style: context.supplierChip().copyWith(
+          fontSize: 10,
+          color: colors.textPrimary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }

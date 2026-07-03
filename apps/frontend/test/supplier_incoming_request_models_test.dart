@@ -96,10 +96,123 @@ void main() {
     },
   );
 
-  test('SupplierIncomingRequestStatus maps backend rejected status', () {
+  test('SupplierIncomingRequest.fromJson parses supplierHandoverCode', () {
+    final request = SupplierIncomingRequest.fromJson({
+      'id': 'res-delivery-code',
+      'status': 'ACCEPTED',
+      'fulfillmentMethod': 'DELIVERY',
+      'quantityRequested': 1,
+      'deliveryRequested': true,
+      'supplierHandoverCode': '654321',
+      'activeDelivery': {'id': 'del-1', 'status': 'WAITING_FOR_DRIVER'},
+      'createdAt': '2026-06-17T10:30:00.000Z',
+      'material': {'title': 'Wood scraps', 'unit': 'kg'},
+      'learner': {'displayName': 'Sara'},
+    });
+
+    expect(request.supplierHandoverCode, '654321');
+    expect(request.shouldShowSupplierHandoverCode, isTrue);
+  });
+
+  test('SupplierIncomingRequest hides supplier handover code when delivered', () {
+    final request = SupplierIncomingRequest.fromJson({
+      'id': 'res-delivered',
+      'status': 'ACCEPTED',
+      'fulfillmentMethod': 'DELIVERY',
+      'quantityRequested': 1,
+      'deliveryRequested': true,
+      'supplierHandoverCode': '654321',
+      'activeDelivery': {'id': 'del-1', 'status': 'DELIVERED'},
+      'createdAt': '2026-06-17T10:30:00.000Z',
+      'material': {'title': 'Wood scraps', 'unit': 'kg'},
+      'learner': {'displayName': 'Sara'},
+    });
+
+    expect(request.shouldShowSupplierHandoverCode, isFalse);
+  });
+
+  test('SupplierIncomingRequestStatus maps awaiting confirmation', () {
     expect(
-      SupplierIncomingRequestStatusLabels.fromApiValue('REJECTED'),
-      SupplierIncomingRequestStatus.declined,
+      SupplierIncomingRequestStatusLabels.fromApiValue(
+        'AWAITING_LEARNER_CONFIRMATION',
+      ),
+      SupplierIncomingRequestStatus.awaitingConfirmation,
+    );
+  });
+
+  test('SupplierIncomingRequest.fromJson parses fulfillment fields', () {
+    final request = SupplierIncomingRequest.fromJson({
+      'id': 'res-delivery',
+      'status': 'PENDING',
+      'quantityRequested': 1,
+      'fulfillmentMethod': 'DELIVERY',
+      'fulfillmentLabel': 'Delivery selected',
+      'learnerPreferredDeliveryWindows': [
+        {
+          'start': '2026-07-10T14:00:00.000Z',
+          'end': '2026-07-10T17:00:00.000Z',
+        },
+      ],
+      'deliveryAddressText': '12 Main Street',
+      'safeDropoffAllowed': true,
+      'deliveryNote': 'Ring the bell',
+      'createdAt': '2026-06-17T10:30:00.000Z',
+      'material': {'title': 'Wood scraps', 'unit': 'kg'},
+      'learner': {'displayName': 'Sara'},
+    });
+
+    expect(request.isDeliveryFulfillment, isTrue);
+    expect(request.fulfillmentSummary, 'Delivery selected');
+    expect(request.learnerPreferredDeliveryWindows, hasLength(1));
+    expect(request.deliveryAddressText, '12 Main Street');
+    expect(request.safeDropoffAllowed, isTrue);
+    expect(request.reservationDeliveryNote, 'Ring the bell');
+  });
+
+  test('SupplierPickupWindow.toJson sends selected preferred window index', () {
+    final window = SupplierPickupWindow(
+      start: DateTime.parse('2026-07-10T14:00:00.000Z'),
+      end: DateTime.parse('2026-07-10T16:00:00.000Z'),
+      selectedPreferredWindowIndex: 0,
+    );
+
+    expect(window.toJson()['selectedPreferredWindowIndex'], 0);
+  });
+
+  test('SupplierIncomingRequest awaiting confirmation message variants', () {
+    final proposed = SupplierIncomingRequest(
+      id: 'res-awaiting',
+      materialTitle: 'Item',
+      learnerName: 'Learner',
+      quantityRequested: 1,
+      unit: 'piece',
+      status: SupplierIncomingRequestStatus.awaitingConfirmation,
+      requestedAt: DateTime.parse('2026-06-17T10:30:00.000Z'),
+      supplierProposedPickupWindow: SupplierPickupWindow(
+        start: DateTime.parse('2026-07-10T14:00:00.000Z'),
+        end: DateTime.parse('2026-07-10T16:00:00.000Z'),
+      ),
+    );
+
+    expect(
+      proposed.awaitingConfirmationMessage,
+      'Proposed pickup time — waiting for learner confirmation',
+    );
+
+    final conflict = SupplierIncomingRequest(
+      id: proposed.id,
+      materialTitle: proposed.materialTitle,
+      learnerName: proposed.learnerName,
+      quantityRequested: proposed.quantityRequested,
+      unit: proposed.unit,
+      status: proposed.status,
+      requestedAt: proposed.requestedAt,
+      schedulingConflictReason: 'No feasible delivery window',
+    );
+
+    expect(
+      conflict.awaitingConfirmationMessage,
+      'Scheduling conflict — waiting for learner confirmation',
     );
   });
 }

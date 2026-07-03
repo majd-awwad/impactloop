@@ -18,7 +18,10 @@ import '../../../deliveries/data/models/learner_delivery.dart';
 import '../../application/my_reservations_provider.dart';
 import '../../application/reservation_cancel_controller.dart';
 import '../../data/models/learner_reservation.dart';
+import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../learner_reservation_ui_helpers.dart';
+import '../widgets/learner_awaiting_confirmation_panel.dart';
+import '../widgets/learner_reservation_messages_panel.dart';
 
 const _learnerReservationsMaxWidth = 920.0;
 const _cancelDialogMaxWidth = 440.0;
@@ -280,7 +283,7 @@ class _StatusFilterChips extends StatelessWidget {
   }
 }
 
-class _ReservationCard extends StatelessWidget {
+class _ReservationCard extends ConsumerWidget {
   const _ReservationCard({
     required this.reservation,
     required this.delivery,
@@ -290,13 +293,14 @@ class _ReservationCard extends StatelessWidget {
   final LearnerDelivery? delivery;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final palette = MaterialsUiPalette.of(context);
     final statusStyle = LearnerReservationStatusStyle.forStatus(
       context,
       reservation.status,
     );
     final compact = MediaQuery.sizeOf(context).width < 720;
+    final userId = ref.watch(authControllerProvider).user?.id ?? '';
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -330,11 +334,13 @@ class _ReservationCard extends StatelessWidget {
                         reservation: reservation,
                         delivery: delivery,
                         statusStyle: statusStyle,
+                        currentUserId: userId,
                       )
                     : _ReservationCardDesktopLayout(
                         reservation: reservation,
                         delivery: delivery,
                         statusStyle: statusStyle,
+                        currentUserId: userId,
                       ),
               ),
             ),
@@ -350,11 +356,13 @@ class _ReservationCardDesktopLayout extends StatelessWidget {
     required this.reservation,
     required this.delivery,
     required this.statusStyle,
+    required this.currentUserId,
   });
 
   final LearnerReservation reservation;
   final LearnerDelivery? delivery;
   final LearnerReservationStatusStyle statusStyle;
+  final String currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -376,6 +384,7 @@ class _ReservationCardDesktopLayout extends StatelessWidget {
               reservation: reservation,
               delivery: delivery,
               statusStyle: statusStyle,
+              currentUserId: currentUserId,
             ),
           ),
           const SizedBox(width: AppSpacing.md),
@@ -396,11 +405,13 @@ class _ReservationCardMobileLayout extends StatelessWidget {
     required this.reservation,
     required this.delivery,
     required this.statusStyle,
+    required this.currentUserId,
   });
 
   final LearnerReservation reservation;
   final LearnerDelivery? delivery;
   final LearnerReservationStatusStyle statusStyle;
+  final String currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -425,6 +436,7 @@ class _ReservationCardMobileLayout extends StatelessWidget {
               child: _ReservationCardSummaryLines(
                 reservation: reservation,
                 delivery: delivery,
+                currentUserId: currentUserId,
               ),
             ),
           ],
@@ -577,12 +589,33 @@ class _ReservationStatusRow extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _ReservationStatusChip(
-          label: reservationStatusLabel(reservation.status),
+          label: learnerDeliveryPrimaryStatusLabel(
+                reservationStatus: reservation.status,
+                fulfillmentMethod: reservation.fulfillmentMethod,
+                deliveryStatus: delivery?.status,
+              ) ??
+              reservationStatusLabel(
+                reservation.status,
+                fulfillmentMethod: reservation.fulfillmentMethod,
+                deliveryStatus: delivery?.status,
+              ),
           background: statusStyle.chipBackground,
           foreground: statusStyle.chipForeground,
           border: statusStyle.chipBorder,
         ),
-        if (deliveryStyle != null)
+        if (learnerDeliverySecondaryStatusLabel(
+              reservationStatus: reservation.status,
+              fulfillmentMethod: reservation.fulfillmentMethod,
+              deliveryStatus: delivery?.status,
+            )
+            case final secondaryLabel?)
+          _ReservationStatusChip(
+            label: secondaryLabel,
+            background: deliveryStyle?.background ?? statusStyle.chipBackground,
+            foreground: deliveryStyle?.foreground ?? statusStyle.chipForeground,
+            border: deliveryStyle?.border ?? statusStyle.chipBorder,
+          )
+        else if (deliveryStyle != null)
           _ReservationStatusChip(
             label: _deliveryStatusLabel(delivery!.status),
             background: deliveryStyle.background,
@@ -686,6 +719,14 @@ class _AcceptedPickupInfoBlock extends StatelessWidget {
             icon: Icons.local_shipping_outlined,
             label: deliveryAvailability,
           ),
+          if (reservation.shouldShowSelfPickupCode) ...[
+            const SizedBox(height: AppSpacing.sm),
+            HandoverConfirmationCodePanel(
+              code: reservation.selfPickupCode!,
+              instructions:
+                  'Give this code to the supplier when you receive the material.',
+            ),
+          ],
         ],
       ),
     );
@@ -725,16 +766,44 @@ class _AcceptedPickupInfoRow extends StatelessWidget {
   }
 }
 
+class _OverdueWarningBanner extends StatelessWidget {
+  const _OverdueWarningBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: colors.warningSoft,
+        borderRadius: AppRadius.smAll,
+        border: Border.all(color: colors.warningBorder),
+      ),
+      child: Text(
+        'Pickup window passed. Please contact the supplier or wait for follow-up.',
+        style: AppTextStyles.label(context).copyWith(
+          color: colors.warningText,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
 class _ReservationCardSummary extends StatelessWidget {
   const _ReservationCardSummary({
     required this.reservation,
     required this.delivery,
     required this.statusStyle,
+    required this.currentUserId,
   });
 
   final LearnerReservation reservation;
   final LearnerDelivery? delivery;
   final LearnerReservationStatusStyle statusStyle;
+  final String currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -750,6 +819,7 @@ class _ReservationCardSummary extends StatelessWidget {
         _ReservationCardSummaryLines(
           reservation: reservation,
           delivery: delivery,
+          currentUserId: currentUserId,
         ),
       ],
     );
@@ -760,16 +830,22 @@ class _ReservationCardSummaryLines extends StatelessWidget {
   const _ReservationCardSummaryLines({
     required this.reservation,
     required this.delivery,
+    required this.currentUserId,
   });
 
   final LearnerReservation reservation;
   final LearnerDelivery? delivery;
+  final String currentUserId;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final statusMessage = reservationStatusMessage(reservation);
     final showPickupInfo = shouldShowAcceptedPickupInfo(reservation);
+    final showFollowUpMessages =
+        reservation.isAccepted &&
+        (reservation.canSendMessage || reservation.latestMessage != null);
+    final showAwaitingConfirmation = reservation.isAwaitingConfirmation;
     final compact = MediaQuery.sizeOf(context).width < 720;
 
     return Column(
@@ -803,6 +879,48 @@ class _ReservationCardSummaryLines extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Fulfillment: ${formatFulfillmentMethodLabel(reservation)}',
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w400),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (formatPreferredWindowsSummary(reservation) case final preferredWindows?) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            preferredWindows,
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w400),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+        if (formatDeliveryAddressSummary(reservation) case final deliveryAddress?) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            deliveryAddress,
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w400),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+        if (formatSafeDropoffSummary(reservation) case final safeDropoff?) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            safeDropoff,
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textMuted, fontWeight: FontWeight.w400),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
         if (statusMessage != null) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
@@ -814,11 +932,27 @@ class _ReservationCardSummaryLines extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+        if (showAwaitingConfirmation) ...[
+          const SizedBox(height: 12),
+          LearnerAwaitingConfirmationPanel(reservation: reservation),
+        ],
         if (showPickupInfo) ...[
+          if (reservation.isOverdue) ...[
+            const SizedBox(height: 12),
+            const _OverdueWarningBanner(),
+          ],
           const SizedBox(height: 12),
           _AcceptedPickupInfoBlock(
             reservation: reservation,
             hasDeliveryRecord: delivery != null,
+          ),
+        ],
+        if (showFollowUpMessages && currentUserId.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          LearnerReservationMessagesPanel(
+            reservationId: reservation.id,
+            canSendMessage: reservation.canSendMessage,
+            currentUserId: currentUserId,
           ),
         ],
       ],
@@ -851,13 +985,12 @@ class _ReservationCardActions extends ConsumerWidget {
       desktopRail: desktopColumn,
     );
 
-    final viewDelivery = delivery != null
-        ? _ReservationActionButton(
-            label: 'View delivery',
-            onPressed: () => context.go('/learner/deliveries/${delivery!.id}'),
-            desktopRail: desktopColumn,
-          )
-        : null;
+    final viewDelivery = _resolveDeliveryAction(
+      reservation: reservation,
+      delivery: delivery,
+      desktopColumn: desktopColumn,
+      onNavigate: (deliveryId) => context.go('/learner/deliveries/$deliveryId'),
+    );
 
     final cancelRequest = reservation.isPending
         ? _ReservationActionButton(
@@ -954,6 +1087,24 @@ class _ReservationCardActions extends ConsumerWidget {
       ref.read(cancellingReservationIdProvider.notifier).setCancelling(null);
     }
   }
+}
+
+_ReservationActionButton? _resolveDeliveryAction({
+  required LearnerReservation reservation,
+  required LearnerDelivery? delivery,
+  required bool desktopColumn,
+  required ValueChanged<String> onNavigate,
+}) {
+  final deliveryId = delivery?.id ?? reservation.activeDelivery?.id;
+  if (deliveryId == null) {
+    return null;
+  }
+
+  return _ReservationActionButton(
+    label: 'View delivery',
+    onPressed: () => onNavigate(deliveryId),
+    desktopRail: desktopColumn,
+  );
 }
 
 class _ReservationActionButton extends StatelessWidget {
