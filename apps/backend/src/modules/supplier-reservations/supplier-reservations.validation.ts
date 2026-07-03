@@ -1,7 +1,17 @@
 import { z } from 'zod';
 
 export const listSupplierReservationsQuerySchema = z.object({
-  status: z.enum(['pending', 'accepted', 'declined', 'completed']).optional(),
+  status: z
+    .enum([
+      'all',
+      'pending',
+      'needs_learner',
+      'accepted',
+      'declined',
+      'completed',
+      'cancelled',
+    ])
+    .optional(),
 });
 
 export type ListSupplierReservationsQuery = z.infer<
@@ -14,6 +24,8 @@ const pickupWindowSchema = z
     pickupWindowEnd: z.iso.datetime(),
     supplierNote: z.string().trim().max(1000).optional(),
     selectedPreferredWindowIndex: z.number().int().min(0).optional(),
+    proposedDeliveryWindowStart: z.iso.datetime().optional(),
+    proposedDeliveryWindowEnd: z.iso.datetime().optional(),
   })
   .superRefine((value, ctx) => {
     const start = new Date(value.pickupWindowStart);
@@ -43,6 +55,45 @@ const pickupWindowSchema = z
         message: 'Supplier window end must be in the future.',
         path: ['pickupWindowEnd'],
       });
+    }
+
+    const proposedStartRaw = value.proposedDeliveryWindowStart;
+    const proposedEndRaw = value.proposedDeliveryWindowEnd;
+    const hasProposedStart = proposedStartRaw != null;
+    const hasProposedEnd = proposedEndRaw != null;
+
+    if (hasProposedStart !== hasProposedEnd) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Proposed delivery window requires both start and end.',
+        path: ['proposedDeliveryWindowEnd'],
+      });
+      return;
+    }
+
+    if (hasProposedStart && hasProposedEnd) {
+      const proposedStart = new Date(proposedStartRaw);
+      const proposedEnd = new Date(proposedEndRaw);
+
+      if (
+        !Number.isFinite(proposedStart.getTime()) ||
+        !Number.isFinite(proposedEnd.getTime())
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Proposed delivery window dates must be valid.',
+          path: ['proposedDeliveryWindowEnd'],
+        });
+        return;
+      }
+
+      if (proposedEnd <= proposedStart) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Proposed delivery end time must be after start time.',
+          path: ['proposedDeliveryWindowEnd'],
+        });
+      }
     }
   });
 
@@ -101,3 +152,14 @@ export const reservationIdParamsSchema = z.object({
 });
 
 export type ReservationIdParams = z.infer<typeof reservationIdParamsSchema>;
+
+export const completeSupplierReservationSchema = z.object({
+  confirmationCode: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Confirmation code must be a 6-digit number.'),
+});
+
+export type CompleteSupplierReservationInput = z.infer<
+  typeof completeSupplierReservationSchema
+>;

@@ -12,6 +12,7 @@ import '../../../../shared/location/current_location_service.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
+import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../application/driver_deliveries_provider.dart';
 import '../../application/driver_delivery_action_controller.dart';
 import '../../application/driver_location_auto_ping_controller.dart';
@@ -273,6 +274,31 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
   }
 
   Future<void> _advance(String nextStatus) async {
+    String? confirmationCode;
+    if (nextStatus == 'PICKED_UP') {
+      confirmationCode = await HandoverCodeInputDialog.show(
+        context,
+        title: 'Supplier handover code',
+        message:
+            'Enter the code the supplier gives you after handing over the material.',
+        confirmLabel: 'Mark picked up',
+      );
+      if (confirmationCode == null || !mounted) {
+        return;
+      }
+    } else if (nextStatus == 'DELIVERED') {
+      confirmationCode = await HandoverCodeInputDialog.show(
+        context,
+        title: 'Learner delivery code',
+        message:
+            'Enter the code the learner gives you when they receive the material.',
+        confirmLabel: 'Mark delivered',
+      );
+      if (confirmationCode == null || !mounted) {
+        return;
+      }
+    }
+
     try {
       await ref
           .read(driverDeliveryActionControllerProvider.notifier)
@@ -280,6 +306,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             deliveryId: widget.delivery.id,
             status: nextStatus,
             note: _noteController.text,
+            confirmationCode: confirmationCode,
           );
 
       if (!mounted) {
@@ -301,6 +328,8 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
 
       final message = error.statusCode == 409
           ? 'Delivery status changed. Refresh and try the next valid action.'
+          : error.statusCode == 400
+          ? error.displayMessage
           : error.displayMessage;
       showInfoSnackBar(context, message);
     } catch (error) {

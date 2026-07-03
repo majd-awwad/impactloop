@@ -1,6 +1,12 @@
 import { Prisma, type DeliveryStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
+import {
+  buildDeliveryHandoverCodeData,
+  createDeliveryId,
+  deriveHandoverCode,
+  ensureDeliveryHandoverCodesStored,
+} from '../../utils/handover-codes.js';
 
 import type { RequestDeliveryInput } from './deliveries.validation.js';
 
@@ -37,7 +43,7 @@ const isPrismaCode = (error: unknown, code: string) =>
 const runSerializableTransaction = async <T>(
   operation: (tx: Prisma.TransactionClient) => Promise<T>,
 ) => {
-  const maxAttempts = 3;
+  const maxAttempts = 5;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
@@ -216,6 +222,11 @@ export const mapLearnerDelivery = (
     note: item.note,
     createdAt: item.createdAt.toISOString(),
   })),
+  learnerDeliveryCode: (TERMINAL_DELIVERY_STATUSES as readonly DeliveryStatus[]).includes(
+    delivery.status,
+  )
+    ? null
+    : deriveHandoverCode('learner-delivery', delivery.id),
 });
 
 export const requestDeliveryForReservation = async (
@@ -309,8 +320,13 @@ export const requestDeliveryForReservation = async (
         data: { deliveryRequested: true },
       });
 
+      const deliveryId = createDeliveryId();
+      const handoverCodes = await buildDeliveryHandoverCodeData(deliveryId);
+
       const delivery = await tx.delivery.create({
         data: {
+          id: deliveryId,
+          ...handoverCodes.data,
           reservationId: reservation.id,
           pickupLocationId: pickupLocation.id,
           dropoffLocationId: dropoffLocation.id,
@@ -378,6 +394,19 @@ export const listMyDeliveries = async (learnerId: string) => {
     orderBy: { createdAt: 'desc' },
   });
 
+  if (deliveries.length) {
+    await prisma.$transaction(async (tx) => {
+      for (const delivery of deliveries) {
+        if (
+          !delivery.supplierHandoverCodeHash ||
+          !delivery.learnerDeliveryCodeHash
+        ) {
+          await ensureDeliveryHandoverCodesStored(tx, delivery.id);
+        }
+      }
+    });
+  }
+
   return deliveries.map((delivery) => mapLearnerDelivery(delivery));
 };
 
@@ -392,6 +421,15 @@ export const getMyDelivery = async (learnerId: string, deliveryId: string) => {
 
   if (!delivery) {
     throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+  }
+
+  if (
+    !delivery.supplierHandoverCodeHash ||
+    !delivery.learnerDeliveryCodeHash
+  ) {
+    await prisma.$transaction(async (tx) => {
+      await ensureDeliveryHandoverCodesStored(tx, delivery.id);
+    });
   }
 
   return mapLearnerDelivery(delivery, { includeTrackingCoordinates: true });

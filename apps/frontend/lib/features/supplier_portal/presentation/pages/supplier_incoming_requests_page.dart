@@ -70,9 +70,12 @@ class _SupplierIncomingRequestsPageState
     }
 
     final tab = switch (tabName) {
+      'all' => SupplierIncomingRequestTab.all,
       'accepted' => SupplierIncomingRequestTab.accepted,
+      'needs_learner' || 'needslearner' => SupplierIncomingRequestTab.needsLearner,
       'declined' => SupplierIncomingRequestTab.declined,
       'completed' => SupplierIncomingRequestTab.completed,
+      'cancelled' => SupplierIncomingRequestTab.cancelled,
       _ => SupplierIncomingRequestTab.pending,
     };
 
@@ -258,7 +261,7 @@ class _SupplierIncomingRequestsPageState
     SupplierIncomingRequest request,
   ) async {
     final confirmed = await CompletePickupDialog.show(context);
-    if (confirmed != true || !context.mounted) {
+    if (confirmed == null || confirmed.trim().isEmpty || !context.mounted) {
       return;
     }
 
@@ -266,7 +269,11 @@ class _SupplierIncomingRequestsPageState
         .read(completingReservationIdProvider.notifier)
         .setCompleting(request.id);
     try {
-      await completeIncomingRequest(ref, requestId: request.id);
+      await completeIncomingRequest(
+        ref,
+        requestId: request.id,
+        confirmationCode: confirmed.trim(),
+      );
       if (!context.mounted) return;
       showSupplierInfoSnackBar(context, context.s.pickupCompleted);
       ref

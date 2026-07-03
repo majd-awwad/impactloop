@@ -35,6 +35,7 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
     required String deliveryId,
     required String status,
     String? note,
+    String? confirmationCode,
   }) async {
     state = const AsyncLoading();
 
@@ -43,7 +44,11 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
           .read(driverDeliveriesRepositoryProvider)
           .updateDeliveryStatus(
             deliveryId,
-            UpdateDriverDeliveryStatusRequest(status: status, note: note),
+            UpdateDriverDeliveryStatusRequest(
+              status: status,
+              note: note,
+              confirmationCode: confirmationCode,
+            ),
           );
       ref.invalidate(activeDriverDeliveriesProvider);
       ref.invalidate(activeDriverDeliveryProvider(delivery.id));

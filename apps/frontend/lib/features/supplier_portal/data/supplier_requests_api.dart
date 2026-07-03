@@ -15,7 +15,7 @@ class SupplierRequestsApi {
     try {
       final response = await _client.get<Map<String, dynamic>>(
         '/api/supplier/reservations',
-        queryParameters: {'status': status.name},
+        queryParameters: {'status': status.apiQueryValue},
       );
 
       final body = response.data;
@@ -90,10 +90,14 @@ class SupplierRequestsApi {
     }
   }
 
-  Future<SupplierIncomingRequest> completeRequest(String requestId) async {
+  Future<SupplierIncomingRequest> completeRequest(
+    String requestId, {
+    required String confirmationCode,
+  }) async {
     try {
       final response = await _client.patch<Map<String, dynamic>>(
         '/api/supplier/reservations/$requestId/complete',
+        data: {'confirmationCode': confirmationCode},
       );
 
       return _parseReservationResponse(response);

@@ -17,9 +17,16 @@ import {
   mapPreferredWindowsForResponse,
   resolvePreferredWindowByIndex,
 } from './supplier-reservation-scheduling.js';
+import { deriveHandoverCode } from '../../utils/handover-codes.js';
+import {
+  evaluateHandoverWindow,
+  pickupWindowExpiredMessage,
+  pickupWindowNotStartedMessage,
+} from '../../utils/handover-timing.js';
 import type {
   AcceptSupplierReservationInput,
   CancelSupplierReservationInput,
+  CompleteSupplierReservationInput,
   DeclineSupplierReservationInput,
   ListSupplierReservationsQuery,
   RescheduleSupplierReservationInput,
@@ -29,18 +36,24 @@ import type {
 
 const tabToReservationStatuses = (
   status: NonNullable<ListSupplierReservationsQuery['status']>,
-): ReservationStatus[] => {
+): ReservationStatus[] | null => {
   switch (status) {
+    case 'all':
+      return null;
     case 'pending':
       return ['PENDING'];
+    case 'needs_learner':
+      return ['AWAITING_LEARNER_CONFIRMATION'];
     case 'accepted':
-      return ['ACCEPTED', 'AWAITING_LEARNER_CONFIRMATION'];
+      return ['ACCEPTED'];
     case 'declined':
       return ['REJECTED'];
     case 'completed':
       return ['COMPLETED'];
+    case 'cancelled':
+      return ['CANCELLED'];
     default:
-      return ['PENDING'];
+      return null;
   }
 };
 
@@ -169,6 +182,12 @@ export const mapSupplierReservation = (
           status: latestDelivery.status,
         }
       : null,
+    supplierHandoverCode:
+      reservation.status === 'ACCEPTED' &&
+      reservation.fulfillmentMethod === 'DELIVERY' &&
+      latestDelivery != null
+        ? deriveHandoverCode('supplier-handover', latestDelivery.id)
+        : null,
     canSupplierComplete:
       supplierReservationsRepository.supplierCanCompleteReservation({
         status: reservation.status,
@@ -205,12 +224,12 @@ export const listSupplierReservations = async (
 ) => {
   const statuses = query.status
     ? tabToReservationStatuses(query.status)
-    : undefined;
+    : null;
 
   const reservations =
     await supplierReservationsRepository.findSupplierReservations(
       ownerId,
-      statuses,
+      statuses ?? undefined,
     );
 
   const latestMessages = await findLatestReservationMessagesByReservationIds(
@@ -246,29 +265,54 @@ export const acceptSupplierReservation = async (
   let pickupWindowEnd = new Date(input.pickupWindowEnd);
 
   if (input.selectedPreferredWindowIndex != null) {
-    if (existing.fulfillmentMethod !== 'PICKUP') {
+    if (existing.fulfillmentMethod === 'PICKUP') {
+      const selectedWindow = resolvePreferredWindowByIndex(
+        existing.learnerPreferredPickupWindows,
+        input.selectedPreferredWindowIndex,
+      );
+
+      if (!selectedWindow) {
+        throw new AppError(
+          'Selected preferred pickup window is invalid.',
+          400,
+          'VALIDATION_ERROR',
+        );
+      }
+
+      pickupWindowStart = selectedWindow.start;
+      pickupWindowEnd = selectedWindow.end;
+    } else if (existing.fulfillmentMethod === 'DELIVERY') {
+      const selectedWindow = resolvePreferredWindowByIndex(
+        existing.learnerPreferredDeliveryWindows,
+        input.selectedPreferredWindowIndex,
+      );
+
+      if (!selectedWindow) {
+        throw new AppError(
+          'Selected preferred delivery window is invalid.',
+          400,
+          'VALIDATION_ERROR',
+        );
+      }
+    } else {
       throw new AppError(
-        'Preferred window index is only supported for pickup reservations.',
+        'Preferred window index is only supported for pickup or delivery reservations.',
         400,
         'VALIDATION_ERROR',
       );
     }
+  }
 
-    const selectedWindow = resolvePreferredWindowByIndex(
-      existing.learnerPreferredPickupWindows,
-      input.selectedPreferredWindowIndex,
-    );
-
-    if (!selectedWindow) {
-      throw new AppError(
-        'Selected preferred pickup window is invalid.',
-        400,
-        'VALIDATION_ERROR',
-      );
-    }
-
-    pickupWindowStart = selectedWindow.start;
-    pickupWindowEnd = selectedWindow.end;
+  let proposedDeliveryWindow: { start: Date; end: Date } | undefined;
+  if (
+    input.proposedDeliveryWindowStart &&
+    input.proposedDeliveryWindowEnd &&
+    existing.fulfillmentMethod === 'DELIVERY'
+  ) {
+    proposedDeliveryWindow = {
+      start: new Date(input.proposedDeliveryWindowStart),
+      end: new Date(input.proposedDeliveryWindowEnd),
+    };
   }
 
   if (pickupWindowEnd.getTime() <= Date.now()) {
@@ -316,6 +360,7 @@ export const acceptSupplierReservation = async (
     pickupWindowEnd,
     supplierNote: input.supplierNote,
     selectedPreferredWindowIndex: input.selectedPreferredWindowIndex,
+    proposedDeliveryWindow,
   });
 
   if (!result) {
@@ -364,16 +409,34 @@ export const declineSupplierReservation = async (
 export const completeSupplierReservation = async (
   ownerId: string,
   reservationId: string,
+  input: CompleteSupplierReservationInput = { confirmationCode: '' },
 ) => {
   const result = await supplierReservationsRepository.completeSupplierReservation(
     {
       reservationId,
       ownerId,
+      confirmationCode: input.confirmationCode,
     },
   );
 
   if (!result) {
     throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if ('invalidCode' in result && result.invalidCode) {
+    throw new AppError(
+      'The pickup confirmation code is incorrect.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if ('windowNotStarted' in result && result.windowNotStarted) {
+    throw new AppError(pickupWindowNotStartedMessage(), 400, 'VALIDATION_ERROR');
+  }
+
+  if ('windowExpired' in result && result.windowExpired) {
+    throw new AppError(pickupWindowExpiredMessage(), 400, 'VALIDATION_ERROR');
   }
 
   if (result.conflict) {

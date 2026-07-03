@@ -237,6 +237,16 @@ class _LearnerAwaitingConfirmationPanelState
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
+            if (formatAwaitingDeliveryProposedSummary(reservation)
+                case final proposedDelivery?) ...[
+              Text(
+                proposedDelivery,
+                style: AppTextStyles.label(context).copyWith(
+                  color: palette.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+            ],
             if (formatSchedulingConflictReason(reservation)
                 case final conflict?) ...[
               Text(

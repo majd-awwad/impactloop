@@ -124,7 +124,15 @@ void main() {
   test('reservationStatusLabel maps accepted delivery fulfillment', () {
     expect(
       reservationStatusLabel('ACCEPTED', fulfillmentMethod: 'DELIVERY'),
-      'Accepted / Ready for delivery',
+      'Accepted',
+    );
+    expect(
+      learnerDeliverySecondaryStatusLabel(
+        reservationStatus: 'ACCEPTED',
+        fulfillmentMethod: 'DELIVERY',
+        deliveryStatus: 'WAITING_FOR_DRIVER',
+      ),
+      'Waiting for driver',
     );
   });
 

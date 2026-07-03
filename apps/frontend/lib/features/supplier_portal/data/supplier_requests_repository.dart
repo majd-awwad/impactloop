@@ -17,7 +17,10 @@ abstract class SupplierRequestsRepository {
     String? reason,
   });
 
-  Future<SupplierIncomingRequest> completeRequest(String requestId);
+  Future<SupplierIncomingRequest> completeRequest(
+    String requestId, {
+    required String confirmationCode,
+  });
 
   Future<SupplierIncomingRequest> rescheduleRequest(
     String requestId,

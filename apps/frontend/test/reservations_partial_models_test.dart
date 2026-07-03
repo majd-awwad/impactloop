@@ -77,6 +77,51 @@ void main() {
     expect(reservation.material.imageUrl, startsWith('http'));
   });
 
+  test('LearnerReservation parses selfPickupCode for accepted pickup', () {
+    final reservation = LearnerReservation.fromJson({
+      'id': 'res-pickup-code',
+      'status': 'ACCEPTED',
+      'fulfillmentMethod': 'PICKUP',
+      'quantityRequested': 1,
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'selfPickupCode': '123456',
+      'material': {
+        'id': 'mat-1',
+        'title': 'Wood panels',
+        'materialType': 'Wood',
+        'status': 'AVAILABLE',
+        'unit': 'sheet',
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+
+    expect(reservation.selfPickupCode, '123456');
+    expect(reservation.shouldShowSelfPickupCode, isTrue);
+  });
+
+  test('LearnerReservation hides selfPickupCode helper for pending status', () {
+    final reservation = LearnerReservation.fromJson({
+      'id': 'res-pending-code',
+      'status': 'PENDING',
+      'fulfillmentMethod': 'PICKUP',
+      'quantityRequested': 1,
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'selfPickupCode': '123456',
+      'material': {
+        'id': 'mat-1',
+        'title': 'Wood panels',
+        'materialType': 'Wood',
+        'status': 'AVAILABLE',
+        'unit': 'sheet',
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+
+    expect(reservation.shouldShowSelfPickupCode, isFalse);
+  });
+
   test('LearnerReservation exposes cancelled and expired helpers', () {
     final cancelled = LearnerReservation.fromJson({
       'id': 'res-2',

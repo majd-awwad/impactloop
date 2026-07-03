@@ -9,6 +9,12 @@ import {
   runSerializableTransaction,
   decimalToNumber,
 } from './reservations.quantity.js';
+import {
+  buildDeliveryHandoverCodeData,
+  buildSelfPickupCodeData,
+  createDeliveryId,
+  ensureSelfPickupCodeStored,
+} from '../../utils/handover-codes.js';
 
 const learnerConfirmationInclude = {
   material: {
@@ -71,8 +77,13 @@ const createDeliveryForReservation = async (
     },
   });
 
-  return tx.delivery.create({
+  const deliveryId = createDeliveryId();
+  const handoverCodes = await buildDeliveryHandoverCodeData(deliveryId);
+
+  const delivery = await tx.delivery.create({
     data: {
+      id: deliveryId,
+      ...handoverCodes.data,
       reservationId: input.reservationId,
       pickupLocationId: pickupLocation.id,
       dropoffLocationId: dropoffLocation.id,
@@ -89,6 +100,8 @@ const createDeliveryForReservation = async (
       },
     },
   });
+
+  return delivery;
 };
 
 export const resolveLearnerConfirmation = async (input: {
@@ -161,6 +174,8 @@ export const resolveLearnerConfirmation = async (input: {
         return { outcome: 'DELIVERY_EXISTS' as const };
       }
 
+      const pickupCodeData = await buildSelfPickupCodeData(existing.id);
+
       const reservation = await tx.reservation.update({
         where: { id: existing.id },
         data: {
@@ -170,6 +185,7 @@ export const resolveLearnerConfirmation = async (input: {
           supplierProposedPickupWindowStart: null,
           supplierProposedPickupWindowEnd: null,
           schedulingConflictReason: null,
+          ...pickupCodeData.data,
         },
         include: learnerConfirmationInclude,
       });
@@ -190,7 +206,7 @@ export const resolveLearnerConfirmation = async (input: {
       return { outcome: 'ACCEPTED' as const, reservation };
     }
 
-    if (existing.fulfillmentMethod !== 'DELIVERY') {
+    if (input.action !== 'SUBMIT_DELIVERY_WINDOW') {
       return { outcome: 'INVALID_ACTION' as const };
     }
 

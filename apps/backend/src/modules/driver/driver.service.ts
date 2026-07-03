@@ -3,6 +3,17 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { applyReservationCompletionToMaterial } from '../reservations/reservations.quantity.js';
 import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
+import {
+  ensureDeliveryHandoverCodesStored,
+  verifyHandoverCode,
+} from '../../utils/handover-codes.js';
+import {
+  deliveryWindowExpiredMessage,
+  deliveryWindowNotStartedMessage,
+  evaluateHandoverWindow,
+  supplierPickupWindowExpiredMessage,
+  supplierPickupWindowNotStartedMessage,
+} from '../../utils/handover-timing.js';
 
 import type {
   CreateDeliveryLocationPingInput,
@@ -315,6 +326,65 @@ export const updateDriverDeliveryStatus = async (
     }
 
     const now = new Date();
+
+    if (input.status === 'PICKED_UP' || input.status === 'DELIVERED') {
+      await ensureDeliveryHandoverCodesStored(tx, delivery.id);
+
+      const deliveryWithCodes = await tx.delivery.findUniqueOrThrow({
+        where: { id: delivery.id },
+        select: {
+          supplierHandoverCodeHash: true,
+          learnerDeliveryCodeHash: true,
+        },
+      });
+
+      const codeHash =
+        input.status === 'PICKED_UP'
+          ? deliveryWithCodes.supplierHandoverCodeHash
+          : deliveryWithCodes.learnerDeliveryCodeHash;
+
+      const codeValid = await verifyHandoverCode(
+        input.confirmationCode ?? '',
+        codeHash,
+      );
+
+      if (!codeValid) {
+        return { outcome: 'INVALID_CODE' as const };
+      }
+
+      if (input.status === 'PICKED_UP') {
+        const timing = evaluateHandoverWindow(
+          now,
+          delivery.reservation.supplierPickupWindowStart,
+          delivery.reservation.supplierPickupWindowEnd,
+        );
+
+        if (!timing.ok) {
+          if (timing.reason === 'NOT_STARTED') {
+            return { outcome: 'WINDOW_NOT_STARTED' as const };
+          }
+
+          return { outcome: 'WINDOW_EXPIRED' as const };
+        }
+      }
+
+      if (input.status === 'DELIVERED') {
+        const timing = evaluateHandoverWindow(
+          now,
+          delivery.reservation.confirmedDeliveryWindowStart,
+          delivery.reservation.confirmedDeliveryWindowEnd,
+        );
+
+        if (!timing.ok) {
+          if (timing.reason === 'NOT_STARTED') {
+            return { outcome: 'WINDOW_NOT_STARTED' as const };
+          }
+
+          return { outcome: 'WINDOW_EXPIRED' as const };
+        }
+      }
+    }
+
     const statusData: Prisma.DeliveryUpdateInput = {
       status: input.status,
       driverNote: input.note?.trim() || delivery.driverNote,
@@ -401,6 +471,28 @@ export const updateDriverDeliveryStatus = async (
       );
     case 'INVALID_TRANSITION':
       throw new AppError('Invalid delivery status transition.', 409, 'CONFLICT');
+    case 'INVALID_CODE':
+      throw new AppError(
+        'The confirmation code is incorrect.',
+        400,
+        'VALIDATION_ERROR',
+      );
+    case 'WINDOW_NOT_STARTED':
+      throw new AppError(
+        input.status === 'PICKED_UP'
+          ? supplierPickupWindowNotStartedMessage()
+          : deliveryWindowNotStartedMessage(),
+        400,
+        'VALIDATION_ERROR',
+      );
+    case 'WINDOW_EXPIRED':
+      throw new AppError(
+        input.status === 'PICKED_UP'
+          ? supplierPickupWindowExpiredMessage()
+          : deliveryWindowExpiredMessage(),
+        400,
+        'VALIDATION_ERROR',
+      );
     default:
       throw new AppError('Unable to update delivery.', 500, 'INTERNAL_ERROR');
   }

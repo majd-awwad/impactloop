@@ -1,4 +1,9 @@
 import { AppError } from '../../utils/app-error.js';
+import {
+  deriveHandoverCode,
+  ensureSelfPickupCodeStored,
+} from '../../utils/handover-codes.js';
+import { prisma } from '../../database/prisma.js';
 
 import {
   mapReservationMessage,
@@ -171,6 +176,11 @@ const mapLearnerReservation = (
     supplierNote: reservation.supplierNote,
     rejectionReason: reservation.rejectionReason,
     deliveryRequested: reservation.deliveryRequested,
+    selfPickupCode:
+      reservation.status === 'ACCEPTED' &&
+      reservation.fulfillmentMethod === 'PICKUP'
+        ? deriveHandoverCode('self-pickup', reservation.id)
+        : null,
     activeDelivery: latestDelivery
       ? {
           id: latestDelivery.id,
@@ -224,6 +234,21 @@ const mapCancelledReservation = (
 export const listMyReservations = async (requesterId: string) => {
   const reservations =
     await reservationsRepository.findLearnerReservations(requesterId);
+
+  const legacyPickupReservations = reservations.filter(
+    (reservation) =>
+      reservation.status === 'ACCEPTED' &&
+      reservation.fulfillmentMethod === 'PICKUP' &&
+      !reservation.selfPickupCodeHash,
+  );
+
+  if (legacyPickupReservations.length) {
+    await prisma.$transaction(async (tx) => {
+      for (const reservation of legacyPickupReservations) {
+        await ensureSelfPickupCodeStored(tx, reservation.id);
+      }
+    });
+  }
 
   const latestMessages = await findLatestReservationMessagesByReservationIds(
     reservations.map((reservation) => reservation.id),

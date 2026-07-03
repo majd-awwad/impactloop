@@ -4,6 +4,7 @@ import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'incoming_request_status_style.dart';
@@ -204,6 +205,9 @@ class IncomingRequestCard extends StatelessWidget {
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
                 child: _DeliveryFooter(
                   statusLabel: request.deliveryStatusLabel,
+                  supplierHandoverCode: request.shouldShowSupplierHandoverCode
+                      ? request.supplierHandoverCode
+                      : null,
                 ),
               ),
             if (isDeclined)
@@ -625,9 +629,13 @@ class _DeclineFooter extends StatelessWidget {
 }
 
 class _DeliveryFooter extends StatelessWidget {
-  const _DeliveryFooter({required this.statusLabel});
+  const _DeliveryFooter({
+    required this.statusLabel,
+    this.supplierHandoverCode,
+  });
 
   final String statusLabel;
+  final String? supplierHandoverCode;
 
   @override
   Widget build(BuildContext context) {
@@ -643,36 +651,55 @@ class _DeliveryFooter extends StatelessWidget {
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.sm,
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.local_shipping_outlined, size: 18, color: colors.accent),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    statusLabel == 'Delivered'
-                        ? 'Delivered'
-                        : 'Waiting for driver delivery',
-                    style: context.supplierLabel().copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.local_shipping_outlined,
+                  size: 18,
+                  color: colors.accent,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        statusLabel == 'Delivered'
+                            ? 'Delivered'
+                            : 'Waiting for driver delivery',
+                        style: context.supplierLabel().copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        supplierHandoverCode == null
+                            ? 'The driver will complete this reservation after delivery.'
+                            : 'Give the handover code to the driver after handing over the material.',
+                        style: context.supplierBody().copyWith(
+                          color: colors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'The driver will complete this reservation after delivery.',
-                    style: context.supplierBody().copyWith(
-                      color: colors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+            if (supplierHandoverCode != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              HandoverConfirmationCodePanel(
+                code: supplierHandoverCode!,
+                instructions:
+                    'Supplier handover code for the driver at pickup:',
+              ),
+            ],
           ],
         ),
       ),

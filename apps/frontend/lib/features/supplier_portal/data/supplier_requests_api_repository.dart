@@ -47,8 +47,14 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
   }
 
   @override
-  Future<SupplierIncomingRequest> completeRequest(String requestId) {
-    return _api.completeRequest(requestId);
+  Future<SupplierIncomingRequest> completeRequest(
+    String requestId, {
+    required String confirmationCode,
+  }) {
+    return _api.completeRequest(
+      requestId,
+      confirmationCode: confirmationCode,
+    );
   }
 
   @override

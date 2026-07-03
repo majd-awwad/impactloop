@@ -3,6 +3,7 @@ import { after, before, describe, test } from 'node:test';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
+import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import { hashPassword } from '../../utils/password.js';
 import { updateDriverDeliveryStatus } from '../driver/driver.service.js';
 import { requestDeliveryForReservation } from '../deliveries/deliveries.service.js';
@@ -372,7 +373,9 @@ describe('partial quantity reservations', () => {
     ctx.createdReservationIds.push(reservation.id);
 
     await acceptWithLearnerPreferredWindow(ctx.supplierId, reservation);
-    await completeSupplierReservation(ctx.supplierId, reservation.id);
+    await completeSupplierReservation(ctx.supplierId, reservation.id, {
+      confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+    });
 
     await assert.rejects(
       () => cancelReservation(ctx.learnerId, reservation.id),
@@ -438,6 +441,9 @@ describe('partial quantity reservations', () => {
     const completed = await completeSupplierReservation(
       ctx.supplierId,
       reservation.id,
+      {
+        confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+      },
     );
     assert.equal(completed.status, 'COMPLETED');
 
@@ -465,7 +471,9 @@ describe('partial quantity reservations', () => {
     ctx.createdReservationIds.push(reservation.id);
 
     await acceptWithLearnerPreferredWindow(ctx.supplierId, reservation);
-    await completeSupplierReservation(ctx.supplierId, reservation.id);
+    await completeSupplierReservation(ctx.supplierId, reservation.id, {
+      confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+    });
 
     const stored = await prisma.material.findUnique({
       where: { id: material.id },
@@ -507,6 +515,7 @@ describe('partial quantity reservations', () => {
 
     await updateDriverDeliveryStatus(ctx.driverId, delivery.id, {
       status: 'DELIVERED',
+      confirmationCode: deriveHandoverCode('learner-delivery', delivery.id),
     });
 
     const stored = await prisma.material.findUnique({

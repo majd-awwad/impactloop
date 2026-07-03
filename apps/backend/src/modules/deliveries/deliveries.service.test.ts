@@ -7,6 +7,7 @@ import { authMiddleware } from '../../middlewares/auth.middleware.js';
 import { requireRoles } from '../../middlewares/role.middleware.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
+import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import {
   acceptDelivery,
   createDeliveryLocationPing,
@@ -250,6 +251,7 @@ async function progressToDelivered(driverId: string, deliveryId: string) {
   });
   await updateDriverDeliveryStatus(driverId, deliveryId, {
     status: 'PICKED_UP',
+    confirmationCode: deriveHandoverCode('supplier-handover', deliveryId),
   });
   await updateDriverDeliveryStatus(driverId, deliveryId, {
     status: 'ON_THE_WAY',
@@ -259,6 +261,7 @@ async function progressToDelivered(driverId: string, deliveryId: string) {
   });
   return updateDriverDeliveryStatus(driverId, deliveryId, {
     status: 'DELIVERED',
+    confirmationCode: deriveHandoverCode('learner-delivery', deliveryId),
   });
 }
 
@@ -988,7 +991,10 @@ describe('internal delivery backend core', () => {
     await requestDeliveryForReservation(ctx.learnerId, reservation.id, deliveryInput());
 
     await assert.rejects(
-      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);
@@ -1002,7 +1008,9 @@ describe('internal delivery backend core', () => {
 
     const results = await Promise.allSettled([
       requestDeliveryForReservation(ctx.learnerId, reservation.id, deliveryInput()),
-      completeSupplierReservation(ctx.supplierId, reservation.id),
+      completeSupplierReservation(ctx.supplierId, reservation.id, {
+        confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+      }),
     ]);
 
     assert.equal(
@@ -1043,6 +1051,9 @@ describe('internal delivery backend core', () => {
     const completed = await completeSupplierReservation(
       ctx.supplierId,
       reservation.id,
+      {
+        confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+      },
     );
     assert.equal(completed.status, 'COMPLETED');
 

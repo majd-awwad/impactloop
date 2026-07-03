@@ -18,6 +18,7 @@ import '../../../deliveries/data/models/learner_delivery.dart';
 import '../../application/my_reservations_provider.dart';
 import '../../application/reservation_cancel_controller.dart';
 import '../../data/models/learner_reservation.dart';
+import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../learner_reservation_ui_helpers.dart';
 import '../widgets/learner_awaiting_confirmation_panel.dart';
 import '../widgets/learner_reservation_messages_panel.dart';
@@ -588,15 +589,33 @@ class _ReservationStatusRow extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _ReservationStatusChip(
-          label: reservationStatusLabel(
-            reservation.status,
-            fulfillmentMethod: reservation.fulfillmentMethod,
-          ),
+          label: learnerDeliveryPrimaryStatusLabel(
+                reservationStatus: reservation.status,
+                fulfillmentMethod: reservation.fulfillmentMethod,
+                deliveryStatus: delivery?.status,
+              ) ??
+              reservationStatusLabel(
+                reservation.status,
+                fulfillmentMethod: reservation.fulfillmentMethod,
+                deliveryStatus: delivery?.status,
+              ),
           background: statusStyle.chipBackground,
           foreground: statusStyle.chipForeground,
           border: statusStyle.chipBorder,
         ),
-        if (deliveryStyle != null)
+        if (learnerDeliverySecondaryStatusLabel(
+              reservationStatus: reservation.status,
+              fulfillmentMethod: reservation.fulfillmentMethod,
+              deliveryStatus: delivery?.status,
+            )
+            case final secondaryLabel?)
+          _ReservationStatusChip(
+            label: secondaryLabel,
+            background: deliveryStyle?.background ?? statusStyle.chipBackground,
+            foreground: deliveryStyle?.foreground ?? statusStyle.chipForeground,
+            border: deliveryStyle?.border ?? statusStyle.chipBorder,
+          )
+        else if (deliveryStyle != null)
           _ReservationStatusChip(
             label: _deliveryStatusLabel(delivery!.status),
             background: deliveryStyle.background,
@@ -700,6 +719,14 @@ class _AcceptedPickupInfoBlock extends StatelessWidget {
             icon: Icons.local_shipping_outlined,
             label: deliveryAvailability,
           ),
+          if (reservation.shouldShowSelfPickupCode) ...[
+            const SizedBox(height: AppSpacing.sm),
+            HandoverConfirmationCodePanel(
+              code: reservation.selfPickupCode!,
+              instructions:
+                  'Give this code to the supplier when you receive the material.',
+            ),
+          ],
         ],
       ),
     );

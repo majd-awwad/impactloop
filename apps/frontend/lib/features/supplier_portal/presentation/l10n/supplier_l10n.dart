@@ -798,7 +798,10 @@ class SupplierL10n {
   String get tabPending => t('Pending', 'معلق');
   String get tabAccepted => t('Accepted', 'مقبول');
   String get tabAwaitingConfirmation =>
-      t('Awaiting confirmation', 'في انتظار التأكيد');
+      t('Needs learner confirmation', 'بحاجة إلى تأكيد المتعلم');
+  String get tabAll => t('All', 'الكل');
+  String get tabNeedsLearner => t('Needs learner', 'بحاجة إلى المتعلم');
+  String get tabCancelled => t('Cancelled', 'ملغى');
   String get tabDeclined => t('Declined', 'مرفوض');
   String get tabCompleted => filterCompleted;
   String get noRequests => t('No requests yet.', 'لا توجد طلبات بعد.');
@@ -838,26 +841,43 @@ class SupplierL10n {
 
   String incomingRequestTabLabel(SupplierIncomingRequestTab tab) =>
       switch (tab) {
+        SupplierIncomingRequestTab.all => tabAll,
         SupplierIncomingRequestTab.pending => tabPending,
+        SupplierIncomingRequestTab.needsLearner => tabNeedsLearner,
         SupplierIncomingRequestTab.accepted => tabAccepted,
         SupplierIncomingRequestTab.declined => tabDeclined,
         SupplierIncomingRequestTab.completed => tabCompleted,
+        SupplierIncomingRequestTab.cancelled => tabCancelled,
       };
 
   String incomingRequestEmptyTitle(SupplierIncomingRequestTab tab) =>
       switch (tab) {
+        SupplierIncomingRequestTab.all => noRequests,
         SupplierIncomingRequestTab.pending => noPendingRequestsTitle,
+        SupplierIncomingRequestTab.needsLearner =>
+          t('No requests waiting for learner', 'لا توجد طلبات بانتظار المتعلم'),
         SupplierIncomingRequestTab.accepted => noAcceptedPickupsTitle,
         SupplierIncomingRequestTab.declined => noDeclinedRequestsTitle,
         SupplierIncomingRequestTab.completed => noCompletedPickupsTitle,
+        SupplierIncomingRequestTab.cancelled =>
+          t('No cancelled requests', 'لا توجد طلبات ملغاة'),
       };
 
   String incomingRequestEmptySubtitle(SupplierIncomingRequestTab tab) =>
       switch (tab) {
+        SupplierIncomingRequestTab.all => noPendingRequestsSubtitle,
         SupplierIncomingRequestTab.pending => noPendingRequestsSubtitle,
+        SupplierIncomingRequestTab.needsLearner => t(
+              'Reservations awaiting learner confirmation appear here.',
+              'تظهر الحجوزات التي تنتظر تأكيد المتعلم هنا.',
+            ),
         SupplierIncomingRequestTab.accepted => noAcceptedPickupsSubtitle,
         SupplierIncomingRequestTab.declined => noDeclinedRequestsSubtitle,
         SupplierIncomingRequestTab.completed => noCompletedPickupsSubtitle,
+        SupplierIncomingRequestTab.cancelled => t(
+              'Cancelled reservations will appear here.',
+              'ستظهر الحجوزات الملغاة هنا.',
+            ),
       };
 
   String incomingRequestStatusLabel(SupplierIncomingRequestStatus status) =>
@@ -868,6 +888,7 @@ class SupplierL10n {
           tabAwaitingConfirmation,
         SupplierIncomingRequestStatus.declined => tabDeclined,
         SupplierIncomingRequestStatus.completed => tabCompleted,
+        SupplierIncomingRequestStatus.cancelled => tabCancelled,
       };
 
   // —— Pickup schedule ——
@@ -1513,9 +1534,25 @@ class SupplierL10n {
   String get safeDropoffNotAllowed =>
       t('Safe drop-off not allowed', 'الإسقاط الآمن غير مسموح');
   String get deliveryNoteLabel => t('Delivery note', 'ملاحظة التوصيل');
+  String get deliveryPreferredWindowSelectedHint => t(
+        'Selected learner delivery window will be used when feasible.',
+        'سيتم استخدام نافذة التوصيل المفضلة للمتعلم عندما تكون ممكنة.',
+      );
+  String get proposeCustomDeliveryWindow => t(
+        'Propose custom delivery window',
+        'اقتراح نافذة توصيل مخصصة',
+      );
+  String get customDeliveryWindowLabel => t(
+        'Proposed learner delivery window',
+        'نافذة التوصيل المقترحة للمتعلم',
+      );
+  String get chooseCustomDeliveryWindow => t(
+        'Choose the proposed delivery date and time.',
+        'اختر تاريخ ووقت التوصيل المقترح.',
+      );
   String get awaitingProposedTimeConfirmation => t(
-        'Waiting for learner to confirm proposed time',
-        'في انتظار تأكيد المتعلم للوقت المقترح',
+        'Proposed pickup time — waiting for learner confirmation',
+        'وقت الاستلام المقترح — في انتظار تأكيد المتعلم',
       );
   String get awaitingSchedulingConflictConfirmation => t(
         'Scheduling conflict — waiting for learner confirmation',

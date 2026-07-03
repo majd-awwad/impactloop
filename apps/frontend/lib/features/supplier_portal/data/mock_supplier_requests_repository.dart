@@ -12,10 +12,31 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
     SupplierIncomingRequestTab status,
   ) async {
     await Future<void>.delayed(const Duration(milliseconds: 350));
-    return _requests
-        .where((request) => request.status == status.status)
-        .toList()
+    return _requests.where((request) => _matchesTab(request, status)).toList()
       ..sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+  }
+
+  bool _matchesTab(
+    SupplierIncomingRequest request,
+    SupplierIncomingRequestTab tab,
+  ) {
+    switch (tab) {
+      case SupplierIncomingRequestTab.all:
+        return true;
+      case SupplierIncomingRequestTab.pending:
+        return request.status == SupplierIncomingRequestStatus.pending;
+      case SupplierIncomingRequestTab.needsLearner:
+        return request.status ==
+            SupplierIncomingRequestStatus.awaitingConfirmation;
+      case SupplierIncomingRequestTab.accepted:
+        return request.status == SupplierIncomingRequestStatus.accepted;
+      case SupplierIncomingRequestTab.declined:
+        return request.status == SupplierIncomingRequestStatus.declined;
+      case SupplierIncomingRequestTab.completed:
+        return request.status == SupplierIncomingRequestStatus.completed;
+      case SupplierIncomingRequestTab.cancelled:
+        return request.status == SupplierIncomingRequestStatus.cancelled;
+    }
   }
 
   @override
@@ -58,7 +79,10 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
   }
 
   @override
-  Future<SupplierIncomingRequest> completeRequest(String requestId) async {
+  Future<SupplierIncomingRequest> completeRequest(
+    String requestId, {
+    required String confirmationCode,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
     final index = _requests.indexWhere((request) => request.id == requestId);
     if (index == -1) {

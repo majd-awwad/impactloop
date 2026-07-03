@@ -19,6 +19,7 @@ import {
 import {
   acceptSupplierReservationSchema,
   cancelSupplierReservationSchema,
+  completeSupplierReservationSchema,
   createReservationMessageSchema,
   declineSupplierReservationSchema,
   listSupplierReservationsQuerySchema,
@@ -77,6 +78,7 @@ supplierReservationsRouter.patch(
   authMiddleware,
   requireRoles('SUPPLIER'),
   validate(reservationIdParamsSchema, 'params'),
+  validate(completeSupplierReservationSchema),
   asyncHandler(completeSupplierReservationHandler),
 );
 

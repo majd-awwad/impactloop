@@ -133,6 +133,7 @@ class LearnerReservationStatusStyle {
 String reservationStatusLabel(
   String status, {
   String? fulfillmentMethod,
+  String? deliveryStatus,
 }) {
   switch (status) {
     case 'PENDING':
@@ -140,12 +141,17 @@ String reservationStatusLabel(
     case 'AWAITING_LEARNER_CONFIRMATION':
       return 'Needs your confirmation';
     case 'ACCEPTED':
-      return fulfillmentMethod == 'DELIVERY'
-          ? 'Accepted / Ready for delivery'
-          : 'Accepted / Ready for pickup';
+      if (fulfillmentMethod == 'DELIVERY') {
+        return 'Accepted';
+      }
+      return 'Accepted / Ready for pickup';
     case 'REJECTED':
       return 'Rejected';
     case 'COMPLETED':
+      if (fulfillmentMethod == 'DELIVERY' &&
+          deliveryStatus?.toUpperCase() == 'DELIVERED') {
+        return 'Completed';
+      }
       return 'Completed';
     case 'CANCELLED':
       return 'Cancelled';
@@ -154,6 +160,70 @@ String reservationStatusLabel(
     default:
       return status;
   }
+}
+
+String? learnerDeliverySecondaryStatusLabel({
+  required String reservationStatus,
+  required String fulfillmentMethod,
+  String? deliveryStatus,
+}) {
+  if (fulfillmentMethod.toUpperCase() != 'DELIVERY') {
+    return null;
+  }
+
+  final normalizedDeliveryStatus = deliveryStatus?.toUpperCase();
+
+  if (reservationStatus == 'COMPLETED' ||
+      normalizedDeliveryStatus == 'DELIVERED') {
+    return 'Delivered';
+  }
+
+  if (reservationStatus != 'ACCEPTED') {
+    return null;
+  }
+
+  switch (normalizedDeliveryStatus) {
+    case 'WAITING_FOR_DRIVER':
+      return 'Waiting for driver';
+    case 'DRIVER_ASSIGNED':
+    case 'ARRIVED_PICKUP':
+      return 'Driver assigned';
+    case 'PICKED_UP':
+    case 'ON_THE_WAY':
+    case 'ARRIVED_DROPOFF':
+      return 'On the way';
+    default:
+      return null;
+  }
+}
+
+String? learnerDeliveryPrimaryStatusLabel({
+  required String reservationStatus,
+  required String fulfillmentMethod,
+  String? deliveryStatus,
+}) {
+  if (fulfillmentMethod.toUpperCase() != 'DELIVERY') {
+    return null;
+  }
+
+  final normalizedDeliveryStatus = deliveryStatus?.toUpperCase();
+
+  if (reservationStatus == 'COMPLETED' ||
+      normalizedDeliveryStatus == 'DELIVERED') {
+    return 'Completed';
+  }
+
+  if (normalizedDeliveryStatus == 'PICKED_UP' ||
+      normalizedDeliveryStatus == 'ON_THE_WAY' ||
+      normalizedDeliveryStatus == 'ARRIVED_DROPOFF') {
+    return 'In delivery';
+  }
+
+  if (reservationStatus == 'ACCEPTED') {
+    return 'Accepted';
+  }
+
+  return null;
 }
 
 String formatFulfillmentMethodLabel(LearnerReservation reservation) {
@@ -309,6 +379,50 @@ String? formatAwaitingDeliveryEarliestSummary(LearnerReservation reservation) {
   final earliest = reservation.earliestDeliveryStart!.toLocal();
   return 'Earliest possible delivery: '
       '${DateFormat('MMM d, h:mm a').format(earliest)}';
+}
+
+String? formatAwaitingDeliveryProposedSummary(LearnerReservation reservation) {
+  if (reservation.confirmedDeliveryWindowStart == null ||
+      reservation.confirmedDeliveryWindowEnd == null) {
+    return null;
+  }
+
+  return formatPreferredWindowRange(
+    ReservationPreferredWindow(
+      start: reservation.confirmedDeliveryWindowStart!,
+      end: reservation.confirmedDeliveryWindowEnd!,
+    ),
+    prefix: 'Supplier proposed delivery',
+  );
+}
+
+String? formatConfirmedDeliveryWindowSummary(LearnerReservation reservation) {
+  if (!reservation.isAccepted ||
+      reservation.confirmedDeliveryWindowStart == null ||
+      reservation.confirmedDeliveryWindowEnd == null) {
+    return null;
+  }
+
+  return formatPreferredWindowRange(
+    ReservationPreferredWindow(
+      start: reservation.confirmedDeliveryWindowStart!,
+      end: reservation.confirmedDeliveryWindowEnd!,
+    ),
+    prefix: 'Confirmed delivery',
+  );
+}
+
+String? formatSupplierPickupWindowSummary(LearnerReservation reservation) {
+  if (reservation.supplierPickupWindowStart == null ||
+      reservation.supplierPickupWindowEnd == null) {
+    return null;
+  }
+
+  return formatDateTimeRange(
+    prefix: 'Supplier pickup window',
+    start: reservation.supplierPickupWindowStart,
+    end: reservation.supplierPickupWindowEnd,
+  );
 }
 
 String? formatAwaitingDeliveryPreferredSummary(LearnerReservation reservation) {

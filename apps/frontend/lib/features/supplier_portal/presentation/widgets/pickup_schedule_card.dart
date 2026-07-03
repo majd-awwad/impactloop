@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../../data/pickup_schedule_grouping.dart';
 import '../theme/supplier_theme_extension.dart';
@@ -210,7 +211,12 @@ class PickupScheduleCard extends StatelessWidget {
             ],
             if (showDeliveryStatus) ...[
               const SizedBox(height: AppSpacing.sm),
-              _DeliveryStatusPanel(statusLabel: item.deliveryStatusLabel),
+              _DeliveryStatusPanel(
+                statusLabel: item.deliveryStatusLabel,
+                supplierHandoverCode: item.shouldShowSupplierHandoverCode
+                    ? item.supplierHandoverCode
+                    : null,
+              ),
             ],
             if (item.isOverdue) ...[
               const SizedBox(height: AppSpacing.sm),
@@ -248,9 +254,13 @@ class PickupScheduleCard extends StatelessWidget {
 }
 
 class _DeliveryStatusPanel extends StatelessWidget {
-  const _DeliveryStatusPanel({required this.statusLabel});
+  const _DeliveryStatusPanel({
+    required this.statusLabel,
+    this.supplierHandoverCode,
+  });
 
   final String statusLabel;
+  final String? supplierHandoverCode;
 
   @override
   Widget build(BuildContext context) {
@@ -267,22 +277,39 @@ class _DeliveryStatusPanel extends StatelessWidget {
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.sm,
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.local_shipping_outlined, size: 18, color: colors.accent),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: Text(
-                statusLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.supplierLabel().copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
+            Row(
+              children: [
+                Icon(
+                  Icons.local_shipping_outlined,
+                  size: 18,
+                  color: colors.accent,
                 ),
-              ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    statusLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.supplierLabel().copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
             ),
+            if (supplierHandoverCode != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              HandoverConfirmationCodePanel(
+                code: supplierHandoverCode!,
+                instructions:
+                    'Give this code to the driver after handing over the material.',
+              ),
+            ],
           ],
         ),
       ),

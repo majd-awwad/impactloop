@@ -31,14 +31,18 @@ Future<void> _handleCompletePickup(
   WidgetRef ref,
   SupplierPickupScheduleItem item,
 ) async {
-  final confirmed = await CompletePickupDialog.show(context);
-  if (confirmed != true || !context.mounted) {
+  final code = await CompletePickupDialog.show(context);
+  if (code == null || code.trim().isEmpty || !context.mounted) {
     return;
   }
 
   ref.read(completingReservationIdProvider.notifier).setCompleting(item.id);
   try {
-    await completeIncomingRequest(ref, requestId: item.id);
+    await completeIncomingRequest(
+      ref,
+      requestId: item.id,
+      confirmationCode: code.trim(),
+    );
     if (!context.mounted) return;
     showSupplierInfoSnackBar(context, context.s.pickupCompleted);
   } catch (error) {

@@ -81,10 +81,14 @@ final completingReservationIdProvider =
 Future<SupplierIncomingRequest> completeIncomingRequest(
   WidgetRef ref, {
   required String requestId,
+  required String confirmationCode,
 }) async {
   final result = await ref
       .read(supplierRequestsRepositoryProvider)
-      .completeRequest(requestId);
+      .completeRequest(
+        requestId,
+        confirmationCode: confirmationCode,
+      );
   ref.invalidate(incomingRequestsProvider);
   ref.invalidate(supplierNotificationsProvider);
   ref.invalidate(supplierDashboardProvider);

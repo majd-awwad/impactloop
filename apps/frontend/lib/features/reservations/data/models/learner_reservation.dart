@@ -175,6 +175,7 @@ class LearnerReservation {
     this.pickupWindowStatus,
     this.canSendMessage = false,
     this.latestMessage,
+    this.selfPickupCode,
   });
 
   final String id;
@@ -211,6 +212,7 @@ class LearnerReservation {
   final String? pickupWindowStatus;
   final bool canSendMessage;
   final ReservationMessage? latestMessage;
+  final String? selfPickupCode;
 
   factory LearnerReservation.fromJson(Map<String, dynamic> json) {
     final materialJson = json['material'];
@@ -296,6 +298,7 @@ class LearnerReservation {
               Map<String, dynamic>.from(json['latestMessage'] as Map),
             )
           : null,
+      selfPickupCode: json['selfPickupCode'] as String?,
     );
   }
 
@@ -333,4 +336,10 @@ class LearnerReservation {
       hasRevealedPickupLocation &&
       isPickupFulfillment &&
       !hasDeliveryRecord;
+
+  bool get shouldShowSelfPickupCode =>
+      isAccepted &&
+      isPickupFulfillment &&
+      selfPickupCode != null &&
+      selfPickupCode!.trim().isNotEmpty;
 }

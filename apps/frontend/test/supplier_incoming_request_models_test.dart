@@ -96,6 +96,41 @@ void main() {
     },
   );
 
+  test('SupplierIncomingRequest.fromJson parses supplierHandoverCode', () {
+    final request = SupplierIncomingRequest.fromJson({
+      'id': 'res-delivery-code',
+      'status': 'ACCEPTED',
+      'fulfillmentMethod': 'DELIVERY',
+      'quantityRequested': 1,
+      'deliveryRequested': true,
+      'supplierHandoverCode': '654321',
+      'activeDelivery': {'id': 'del-1', 'status': 'WAITING_FOR_DRIVER'},
+      'createdAt': '2026-06-17T10:30:00.000Z',
+      'material': {'title': 'Wood scraps', 'unit': 'kg'},
+      'learner': {'displayName': 'Sara'},
+    });
+
+    expect(request.supplierHandoverCode, '654321');
+    expect(request.shouldShowSupplierHandoverCode, isTrue);
+  });
+
+  test('SupplierIncomingRequest hides supplier handover code when delivered', () {
+    final request = SupplierIncomingRequest.fromJson({
+      'id': 'res-delivered',
+      'status': 'ACCEPTED',
+      'fulfillmentMethod': 'DELIVERY',
+      'quantityRequested': 1,
+      'deliveryRequested': true,
+      'supplierHandoverCode': '654321',
+      'activeDelivery': {'id': 'del-1', 'status': 'DELIVERED'},
+      'createdAt': '2026-06-17T10:30:00.000Z',
+      'material': {'title': 'Wood scraps', 'unit': 'kg'},
+      'learner': {'displayName': 'Sara'},
+    });
+
+    expect(request.shouldShowSupplierHandoverCode, isFalse);
+  });
+
   test('SupplierIncomingRequestStatus maps awaiting confirmation', () {
     expect(
       SupplierIncomingRequestStatusLabels.fromApiValue(
@@ -161,7 +196,7 @@ void main() {
 
     expect(
       proposed.awaitingConfirmationMessage,
-      'Waiting for learner to confirm proposed time',
+      'Proposed pickup time — waiting for learner confirmation',
     );
 
     final conflict = SupplierIncomingRequest(

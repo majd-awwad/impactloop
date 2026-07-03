@@ -83,6 +83,7 @@ class SupplierPickupScheduleItem {
     this.supplierNote,
     this.learnerMessage,
     this.completedAt,
+    this.supplierHandoverCode,
   });
 
   final String id;
@@ -109,11 +110,19 @@ class SupplierPickupScheduleItem {
   final String? supplierNote;
   final String? learnerMessage;
   final DateTime? completedAt;
+  final String? supplierHandoverCode;
 
   bool get isCompleted => status == SupplierPickupScheduleStatus.completed;
   bool get hasDelivery => deliveryRequested || activeDelivery != null;
   String get deliveryStatusLabel =>
       activeDelivery?.statusLabel ?? 'Delivery requested';
+
+  bool get shouldShowSupplierHandoverCode =>
+      hasDelivery &&
+      !isCompleted &&
+      supplierHandoverCode != null &&
+      supplierHandoverCode!.trim().isNotEmpty &&
+      activeDelivery?.status.toUpperCase() != 'DELIVERED';
 
   DateTime? get scheduleDate {
     if (isCompleted) {
@@ -231,6 +240,7 @@ class SupplierPickupScheduleItem {
       supplierNote: json['supplierNote'] as String?,
       learnerMessage: json['message'] as String?,
       completedAt: completedAt,
+      supplierHandoverCode: json['supplierHandoverCode'] as String?,
     );
   }
 }

@@ -17,6 +17,7 @@ import {
 import type {
   AcceptSupplierReservationInput,
   CancelSupplierReservationInput,
+  CompleteSupplierReservationInput,
   CreateReservationMessageInput,
   DeclineSupplierReservationInput,
   ListSupplierReservationsQuery,
@@ -70,7 +71,11 @@ export const completeSupplierReservationHandler = async (
   res: Response,
 ): Promise<void> => {
   const { id } = readValidatedParams<ReservationIdParams>(req);
-  const reservation = await completeSupplierReservation(req.auth!.sub, id);
+  const reservation = await completeSupplierReservation(
+    req.auth!.sub,
+    id,
+    req.body as CompleteSupplierReservationInput,
+  );
 
   res.json(successResponse('Reservation completed.', reservation));
 };

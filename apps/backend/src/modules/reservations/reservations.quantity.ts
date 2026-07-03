@@ -22,7 +22,7 @@ const isPrismaCode = (error: unknown, code: string) =>
 export const runSerializableTransaction = async <T>(
   operation: (tx: Prisma.TransactionClient) => Promise<T>,
 ) => {
-  const maxAttempts = 3;
+  const maxAttempts = 5;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {

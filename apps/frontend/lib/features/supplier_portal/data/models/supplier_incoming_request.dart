@@ -1,7 +1,15 @@
 import '../../../reservations/data/models/reservation_message.dart';
 import '../../../reservations/data/models/reservation_preferred_window.dart';
 
-enum SupplierIncomingRequestTab { pending, accepted, declined, completed }
+enum SupplierIncomingRequestTab {
+  all,
+  pending,
+  needsLearner,
+  accepted,
+  declined,
+  completed,
+  cancelled,
+}
 
 enum SupplierIncomingRequestStatus {
   pending,
@@ -9,58 +17,83 @@ enum SupplierIncomingRequestStatus {
   awaitingConfirmation,
   declined,
   completed,
+  cancelled,
 }
 
 extension SupplierIncomingRequestTabLabels on SupplierIncomingRequestTab {
   String get label {
     switch (this) {
+      case SupplierIncomingRequestTab.all:
+        return 'All';
       case SupplierIncomingRequestTab.pending:
         return 'Pending';
+      case SupplierIncomingRequestTab.needsLearner:
+        return 'Needs learner';
       case SupplierIncomingRequestTab.accepted:
         return 'Accepted';
       case SupplierIncomingRequestTab.declined:
         return 'Declined';
       case SupplierIncomingRequestTab.completed:
         return 'Completed';
+      case SupplierIncomingRequestTab.cancelled:
+        return 'Cancelled';
+    }
+  }
+
+  String get apiQueryValue {
+    switch (this) {
+      case SupplierIncomingRequestTab.all:
+        return 'all';
+      case SupplierIncomingRequestTab.pending:
+        return 'pending';
+      case SupplierIncomingRequestTab.needsLearner:
+        return 'needs_learner';
+      case SupplierIncomingRequestTab.accepted:
+        return 'accepted';
+      case SupplierIncomingRequestTab.declined:
+        return 'declined';
+      case SupplierIncomingRequestTab.completed:
+        return 'completed';
+      case SupplierIncomingRequestTab.cancelled:
+        return 'cancelled';
     }
   }
 
   String get emptyMessage {
     switch (this) {
+      case SupplierIncomingRequestTab.all:
+        return 'No requests yet';
       case SupplierIncomingRequestTab.pending:
         return 'No pending requests';
+      case SupplierIncomingRequestTab.needsLearner:
+        return 'No requests waiting for learner';
       case SupplierIncomingRequestTab.accepted:
         return 'No accepted pickups yet.';
       case SupplierIncomingRequestTab.declined:
         return 'No declined requests.';
       case SupplierIncomingRequestTab.completed:
         return 'No completed pickups yet.';
+      case SupplierIncomingRequestTab.cancelled:
+        return 'No cancelled requests.';
     }
   }
 
   String get emptySubtitle {
     switch (this) {
+      case SupplierIncomingRequestTab.all:
+        return 'New learner requests will appear here.';
       case SupplierIncomingRequestTab.pending:
         return 'New learner requests will appear here.';
+      case SupplierIncomingRequestTab.needsLearner:
+        return 'Reservations awaiting learner confirmation appear here.';
       case SupplierIncomingRequestTab.accepted:
         return 'Accepted requests with pickup windows will show here.';
       case SupplierIncomingRequestTab.declined:
         return 'Requests you decline will be listed here.';
       case SupplierIncomingRequestTab.completed:
         return 'Finished pickups will appear here.';
-    }
-  }
-
-  SupplierIncomingRequestStatus get status {
-    switch (this) {
-      case SupplierIncomingRequestTab.pending:
-        return SupplierIncomingRequestStatus.pending;
-      case SupplierIncomingRequestTab.accepted:
-        return SupplierIncomingRequestStatus.accepted;
-      case SupplierIncomingRequestTab.declined:
-        return SupplierIncomingRequestStatus.declined;
-      case SupplierIncomingRequestTab.completed:
-        return SupplierIncomingRequestStatus.completed;
+      case SupplierIncomingRequestTab.cancelled:
+        return 'Cancelled reservations will appear here.';
     }
   }
 }
@@ -73,11 +106,13 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
       case SupplierIncomingRequestStatus.accepted:
         return 'Accepted';
       case SupplierIncomingRequestStatus.awaitingConfirmation:
-        return 'Awaiting confirmation';
+        return 'Needs learner confirmation';
       case SupplierIncomingRequestStatus.declined:
         return 'Declined';
       case SupplierIncomingRequestStatus.completed:
         return 'Completed';
+      case SupplierIncomingRequestStatus.cancelled:
+        return 'Cancelled';
     }
   }
 
@@ -91,9 +126,10 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
       case 'AWAITING_LEARNER_CONFIRMATION':
         return SupplierIncomingRequestStatus.awaitingConfirmation;
       case 'REJECTED':
-      case 'CANCELLED':
       case 'EXPIRED':
         return SupplierIncomingRequestStatus.declined;
+      case 'CANCELLED':
+        return SupplierIncomingRequestStatus.cancelled;
       case 'COMPLETED':
         return SupplierIncomingRequestStatus.completed;
       default:
@@ -113,6 +149,8 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
         return 'REJECTED';
       case SupplierIncomingRequestStatus.completed:
         return 'COMPLETED';
+      case SupplierIncomingRequestStatus.cancelled:
+        return 'CANCELLED';
     }
   }
 }
@@ -123,12 +161,16 @@ class SupplierPickupWindow {
     required this.end,
     this.note,
     this.selectedPreferredWindowIndex,
+    this.proposedDeliveryWindowStart,
+    this.proposedDeliveryWindowEnd,
   });
 
   final DateTime start;
   final DateTime end;
   final String? note;
   final int? selectedPreferredWindowIndex;
+  final DateTime? proposedDeliveryWindowStart;
+  final DateTime? proposedDeliveryWindowEnd;
 
   factory SupplierPickupWindow.fromJson(Map<String, dynamic> json) {
     return SupplierPickupWindow(
@@ -147,6 +189,12 @@ class SupplierPickupWindow {
       if (note != null && note!.isNotEmpty) 'supplierNote': note,
       if (selectedPreferredWindowIndex != null)
         'selectedPreferredWindowIndex': selectedPreferredWindowIndex,
+      if (proposedDeliveryWindowStart != null)
+        'proposedDeliveryWindowStart':
+            proposedDeliveryWindowStart!.toUtc().toIso8601String(),
+      if (proposedDeliveryWindowEnd != null)
+        'proposedDeliveryWindowEnd':
+            proposedDeliveryWindowEnd!.toUtc().toIso8601String(),
     };
   }
 }
@@ -172,11 +220,12 @@ class SupplierReservationDeliverySummary {
   String get statusLabel {
     switch (status.toUpperCase()) {
       case 'WAITING_FOR_DRIVER':
-        return 'Delivery requested';
+        return 'Waiting for driver';
       case 'DRIVER_ASSIGNED':
       case 'ARRIVED_PICKUP':
-      case 'PICKED_UP':
         return 'Driver assigned';
+      case 'PICKED_UP':
+        return 'Picked up by driver';
       case 'ON_THE_WAY':
       case 'ARRIVED_DROPOFF':
         return 'On the way';
@@ -230,6 +279,7 @@ class SupplierIncomingRequest {
     this.canSendMessage = false,
     this.noShowReport,
     this.latestMessage,
+    this.supplierHandoverCode,
   });
 
   final String id;
@@ -267,6 +317,7 @@ class SupplierIncomingRequest {
   final bool canSendMessage;
   final Map<String, dynamic>? noShowReport;
   final ReservationMessage? latestMessage;
+  final String? supplierHandoverCode;
 
   bool get hasDelivery => deliveryRequested || activeDelivery != null;
 
@@ -284,11 +335,23 @@ class SupplierIncomingRequest {
       return 'Scheduling conflict — waiting for learner confirmation';
     }
 
-    return 'Waiting for learner to confirm proposed time';
+    if (isDeliveryFulfillment) {
+      return 'Waiting for learner to confirm delivery window';
+    }
+
+    return 'Proposed pickup time — waiting for learner confirmation';
   }
 
   String get deliveryStatusLabel =>
-      activeDelivery?.statusLabel ?? 'Delivery requested';
+      activeDelivery?.statusLabel ?? 'Waiting for driver';
+
+  bool get shouldShowSupplierHandoverCode =>
+      isDeliveryFulfillment &&
+      status == SupplierIncomingRequestStatus.accepted &&
+      supplierHandoverCode != null &&
+      supplierHandoverCode!.trim().isNotEmpty &&
+      activeDelivery != null &&
+      activeDelivery!.status.toUpperCase() != 'DELIVERED';
 
   SupplierIncomingRequest copyWith({
     SupplierIncomingRequestStatus? status,
@@ -489,6 +552,7 @@ class SupplierIncomingRequest {
               Map<String, dynamic>.from(json['latestMessage'] as Map),
             )
           : null,
+      supplierHandoverCode: json['supplierHandoverCode'] as String?,
     );
   }
 }
