@@ -8,12 +8,14 @@ import {
   createLearnerReservationMessage,
   listLearnerReservationMessages,
   listMyReservations,
+  requestLearnerPickupReschedule,
   resolveLearnerConfirmation,
 } from './reservations.service.js';
 import type {
   CreateReservationInput,
   CreateReservationMessageInput,
   LearnerConfirmationInput,
+  RequestPickupRescheduleInput,
 } from './reservations.validation.js';
 
 export const createReservationHandler = async (
@@ -87,4 +89,17 @@ export const resolveLearnerConfirmationHandler = async (
   );
 
   res.json(successResponse('Reservation updated.', reservation));
+};
+
+export const requestLearnerPickupRescheduleHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const reservation = await requestLearnerPickupReschedule(
+    req.auth!.sub,
+    req.params.id as string,
+    req.body as RequestPickupRescheduleInput,
+  );
+
+  res.json(successResponse('Reschedule request submitted.', reservation));
 };

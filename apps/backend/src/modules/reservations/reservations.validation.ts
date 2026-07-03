@@ -124,3 +124,45 @@ export const learnerConfirmationSchema = z
   });
 
 export type LearnerConfirmationInput = z.infer<typeof learnerConfirmationSchema>;
+
+export const requestPickupRescheduleSchema = z
+  .object({
+    pickupWindowStart: z.iso.datetime(),
+    pickupWindowEnd: z.iso.datetime(),
+    reason: z.string().trim().min(1).max(500),
+    note: z.string().trim().max(1000).optional(),
+  })
+  .superRefine((value, ctx) => {
+    const start = new Date(value.pickupWindowStart);
+    const end = new Date(value.pickupWindowEnd);
+
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Pickup window dates must be valid.',
+        path: ['pickupWindowEnd'],
+      });
+      return;
+    }
+
+    if (end <= start) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Pickup end time must be after start time.',
+        path: ['pickupWindowEnd'],
+      });
+      return;
+    }
+
+    if (end.getTime() <= Date.now()) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Pickup window must be in the future.',
+        path: ['pickupWindowEnd'],
+      });
+    }
+  });
+
+export type RequestPickupRescheduleInput = z.infer<
+  typeof requestPickupRescheduleSchema
+>;

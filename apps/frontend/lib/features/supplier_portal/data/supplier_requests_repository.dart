@@ -25,8 +25,11 @@ abstract class SupplierRequestsRepository {
   Future<SupplierIncomingRequest> rescheduleRequest(
     String requestId,
     SupplierPickupWindow pickupWindow, {
+    required String reason,
     String? messageToLearner,
+    String? note,
   });
+  Future<SupplierIncomingRequest> acceptLearnerReschedule(String requestId);
 
   Future<SupplierIncomingRequest> cancelAcceptedRequest(
     String requestId, {
@@ -36,6 +39,19 @@ abstract class SupplierRequestsRepository {
   Future<void> submitNoShowReport(
     String requestId, {
     required String reasonCode,
+    String? note,
+  });
+
+  Future<SupplierIncomingRequest> markLearnerNoShow(
+    String requestId, {
+    required String reason,
+    String? note,
+  });
+
+  Future<SupplierIncomingRequest> markDeliveryPickupExpired(String requestId);
+
+  Future<SupplierIncomingRequest> markDriverNoShow(
+    String deliveryId, {
     String? note,
   });
 

@@ -18,8 +18,8 @@ class PickupScheduleCard extends StatelessWidget {
     this.onViewDetails,
     this.onMarkCompleted,
     this.onReschedule,
-    this.onCancel,
-    this.onReportNoShow,
+    this.onCloseReservation,
+    this.onReportToAdmin,
     this.isCompleting = false,
   });
 
@@ -28,8 +28,8 @@ class PickupScheduleCard extends StatelessWidget {
   final VoidCallback? onViewDetails;
   final VoidCallback? onMarkCompleted;
   final VoidCallback? onReschedule;
-  final VoidCallback? onCancel;
-  final VoidCallback? onReportNoShow;
+  final VoidCallback? onCloseReservation;
+  final VoidCallback? onReportToAdmin;
   final bool isCompleting;
 
   @override
@@ -45,11 +45,10 @@ class PickupScheduleCard extends StatelessWidget {
         ? l.scheduleDone
         : '—';
     final note = _displayNote(item);
-    final showMarkCompleted =
-        !item.isOverdue &&
+    final showFollowUp =
+        !item.isCompleted &&
         item.status == SupplierPickupScheduleStatus.accepted &&
-        item.canSupplierComplete &&
-        onMarkCompleted != null;
+        item.pickupHandoverPhase != null;
     final showDeliveryStatus =
         item.status == SupplierPickupScheduleStatus.accepted &&
         item.hasDelivery &&
@@ -171,44 +170,6 @@ class PickupScheduleCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (showMarkCompleted) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.tonal(
-                  onPressed: isCompleting ? null : onMarkCompleted,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colors.accentSoft.withValues(alpha: 0.22),
-                    foregroundColor: colors.textPrimary,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 12 : 14,
-                      vertical: compact ? 8 : 10,
-                    ),
-                    minimumSize: Size(compact ? 0 : 120, compact ? 36 : 40),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdAll,
-                    ),
-                  ),
-                  child: isCompleting
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: colors.textPrimary.withValues(alpha: 0.8),
-                          ),
-                        )
-                      : Text(
-                          l.markCompleted,
-                          style: context.supplierLabel().copyWith(
-                            fontSize: compact ? 12 : 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                ),
-              ),
-            ],
             if (showDeliveryStatus) ...[
               const SizedBox(height: AppSpacing.sm),
               _DeliveryStatusPanel(
@@ -218,20 +179,20 @@ class PickupScheduleCard extends StatelessWidget {
                     : null,
               ),
             ],
-            if (item.isOverdue) ...[
+            if (showFollowUp) ...[
               const SizedBox(height: AppSpacing.sm),
               ReservationFollowUpActions(
-                isOverdue: item.isOverdue,
+                pickupHandoverPhase: item.pickupHandoverPhase,
                 canMarkCompleted: item.canSupplierComplete,
-                canReschedule: item.canSupplierReschedule,
-                canCancel: item.canSupplierCancelOverdue,
-                canReportNoShow: item.canSupplierReportNoShow,
-                hasNoShowReport: item.noShowReport != null,
+                canRequestReschedule: item.canSupplierReschedule,
+                canCloseReservation: item.canSupplierCloseOverduePickup,
+                canReportToAdmin: item.canSupplierReportAndCloseOverduePickup,
+                hasAdminReport: item.noShowReport != null,
                 isBusy: isCompleting,
                 onMarkCompleted: onMarkCompleted,
-                onReschedule: onReschedule,
-                onCancel: onCancel,
-                onReportNoShow: onReportNoShow,
+                onRequestReschedule: onReschedule,
+                onCloseReservation: onCloseReservation,
+                onReportToAdmin: onReportToAdmin,
               ),
             ],
           ],

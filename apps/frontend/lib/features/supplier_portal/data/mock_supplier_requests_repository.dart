@@ -106,14 +106,30 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
   Future<SupplierIncomingRequest> rescheduleRequest(
     String requestId,
     SupplierPickupWindow pickupWindow, {
+    required String reason,
     String? messageToLearner,
+    String? note,
   }) async {
     final index = _requests.indexWhere((request) => request.id == requestId);
     if (index == -1) throw StateError('Request not found');
     final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.awaitingConfirmation,
       pickupWindow: pickupWindow,
       isOverdue: false,
       needsFollowUp: false,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<SupplierIncomingRequest> acceptLearnerReschedule(
+    String requestId,
+  ) async {
+    final index = _requests.indexWhere((request) => request.id == requestId);
+    if (index == -1) throw StateError('Request not found');
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.accepted,
     );
     _requests[index] = updated;
     return updated;
@@ -140,6 +156,56 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
     required String reasonCode,
     String? note,
   }) async {}
+
+  @override
+  Future<SupplierIncomingRequest> markLearnerNoShow(
+    String requestId, {
+    required String reason,
+    String? note,
+  }) async {
+    final index = _requests.indexWhere((item) => item.id == requestId);
+    if (index < 0) {
+      throw StateError('Request not found');
+    }
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.noShow,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<SupplierIncomingRequest> markDeliveryPickupExpired(
+    String requestId,
+  ) async {
+    final index = _requests.indexWhere((item) => item.id == requestId);
+    if (index < 0) {
+      throw StateError('Request not found');
+    }
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.needsResolution,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<SupplierIncomingRequest> markDriverNoShow(
+    String deliveryId, {
+    String? note,
+  }) async {
+    final index = _requests.indexWhere(
+      (item) => item.activeDelivery?.id == deliveryId,
+    );
+    if (index < 0) {
+      throw StateError('Request not found');
+    }
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.needsResolution,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
 
   @override
   Future<List<ReservationMessage>> fetchReservationMessages(

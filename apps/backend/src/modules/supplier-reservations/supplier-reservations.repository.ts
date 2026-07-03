@@ -25,7 +25,11 @@ import {
   windowMatchesLearnerPreference,
   type PreferredWindow,
 } from './supplier-reservation-scheduling.js';
-import { evaluateHandoverWindow } from '../../utils/handover-timing.js';
+import { evaluateHandoverWindow, isAfterAllowedEnd } from '../../utils/handover-timing.js';
+import {
+  assertRescheduleAllowedOutsideHandover,
+  clearPendingRescheduleFields,
+} from '../reservations/reservation-reschedule.js';
 
 const reservationInclude = {
   material: {
@@ -48,6 +52,7 @@ const reservationInclude = {
     select: {
       id: true,
       status: true,
+      assignedDriverProfileId: true,
     },
     orderBy: { requestedAt: 'desc' as const },
     take: 1,
@@ -722,6 +727,8 @@ export const rescheduleSupplierReservation = async (input: {
   pickupWindowEnd: Date;
   supplierNote?: string;
   followUpMessage?: string;
+  reason: string;
+  note?: string;
 }) => {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
@@ -735,16 +742,41 @@ export const rescheduleSupplierReservation = async (input: {
       return null;
     }
 
-    if (existing.status !== 'ACCEPTED') {
+    if (
+      existing.status !== 'ACCEPTED' &&
+      existing.status !== 'AWAITING_SUPPLIER_CONFIRMATION'
+    ) {
       return { conflict: true as const, reservation: existing };
     }
 
+    if (existing.fulfillmentMethod !== 'PICKUP') {
+      return { conflict: true as const, reservation: existing };
+    }
+
+    const phaseCheck = assertRescheduleAllowedOutsideHandover({
+      pickupWindowStart: existing.pickupWindowStart,
+      pickupWindowEnd: existing.pickupWindowEnd,
+    });
+
+    if (!phaseCheck.ok && existing.status === 'ACCEPTED') {
+      return { duringHandover: true as const, reservation: existing };
+    }
+
     const supplierNote = input.supplierNote?.trim() || existing.supplierNote;
+    const reason = input.reason.trim();
+    const note = input.note?.trim() || null;
+
     const reservation = await tx.reservation.update({
       where: { id: existing.id },
       data: {
-        pickupWindowStart: input.pickupWindowStart,
-        pickupWindowEnd: input.pickupWindowEnd,
+        status: 'AWAITING_LEARNER_CONFIRMATION',
+        supplierProposedPickupWindowStart: input.pickupWindowStart,
+        supplierProposedPickupWindowEnd: input.pickupWindowEnd,
+        learnerProposedPickupWindowStart: null,
+        learnerProposedPickupWindowEnd: null,
+        pendingRescheduleRequestedBy: 'SUPPLIER',
+        pendingRescheduleReason: reason,
+        pendingRescheduleNote: note,
         supplierNote,
       },
       include: reservationInclude,
@@ -754,10 +786,10 @@ export const rescheduleSupplierReservation = async (input: {
       data: {
         reservationId: reservation.id,
         statusGroup: 'RESERVATION',
-        oldStatus: 'ACCEPTED',
-        newStatus: 'ACCEPTED',
+        oldStatus: existing.status,
+        newStatus: 'AWAITING_LEARNER_CONFIRMATION',
         changedBy: input.ownerId,
-        note: 'Pickup window rescheduled by supplier',
+        note: `Supplier requested reschedule: ${reason}`,
       },
     });
 
@@ -770,6 +802,64 @@ export const rescheduleSupplierReservation = async (input: {
         },
       });
     }
+
+    return { conflict: false as const, reservation };
+  });
+};
+
+export const acceptLearnerRescheduleProposal = async (input: {
+  reservationId: string;
+  ownerId: string;
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.reservation.findFirst({
+      where: {
+        id: input.reservationId,
+        ownerId: input.ownerId,
+      },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    if (existing.status !== 'AWAITING_SUPPLIER_CONFIRMATION') {
+      return { conflict: true as const, reservation: existing };
+    }
+
+    if (
+      !existing.learnerProposedPickupWindowStart ||
+      !existing.learnerProposedPickupWindowEnd
+    ) {
+      return { missingProposal: true as const, reservation: existing };
+    }
+
+    const pickupCodeData = await buildSelfPickupCodeData(existing.id);
+
+    const reservation = await tx.reservation.update({
+      where: { id: existing.id },
+      data: {
+        status: 'ACCEPTED',
+        pickupWindowStart: existing.learnerProposedPickupWindowStart,
+        pickupWindowEnd: existing.learnerProposedPickupWindowEnd,
+        ...clearPendingRescheduleFields(),
+        ...pickupCodeData.data,
+      },
+      include: reservationInclude,
+    });
+
+    await tx.reservationStatusHistory.create({
+      data: {
+        reservationId: reservation.id,
+        statusGroup: 'RESERVATION',
+        oldStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
+        newStatus: 'ACCEPTED',
+        changedBy: input.ownerId,
+        note: 'Supplier accepted learner reschedule proposal',
+      },
+    });
+
+    await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
     return { conflict: false as const, reservation };
   });
@@ -792,17 +882,48 @@ export const cancelSupplierAcceptedReservation = async (input: {
       return null;
     }
 
-    if (existing.status !== 'ACCEPTED') {
+    if (existing.status !== 'ACCEPTED' && existing.status !== 'AWAITING_SUPPLIER_CONFIRMATION') {
       return { conflict: true as const, reservation: existing };
     }
 
-    const followUp = resolveReservationFollowUp({
-      status: existing.status,
-      pickupWindowStart: existing.pickupWindowStart,
-      pickupWindowEnd: existing.pickupWindowEnd,
-    });
+    if (existing.status === 'AWAITING_SUPPLIER_CONFIRMATION') {
+      const now = new Date();
+      const reason =
+        input.reason?.trim() ||
+        'Pickup reservation closed after learner reschedule request';
 
-    if (!followUp.isOverdue) {
+      const reservation = await tx.reservation.update({
+        where: { id: existing.id },
+        data: {
+          status: 'CANCELLED',
+          cancelledAt: now,
+          rejectionReason: reason,
+          ...clearPendingRescheduleFields(),
+        },
+        include: reservationInclude,
+      });
+
+      await tx.reservationStatusHistory.create({
+        data: {
+          reservationId: reservation.id,
+          statusGroup: 'RESERVATION',
+          oldStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
+          newStatus: 'CANCELLED',
+          changedBy: input.ownerId,
+          note: reason,
+        },
+      });
+
+      await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+
+      return { conflict: false as const, reservation };
+    }
+
+    if (
+      !existing.pickupWindowEnd ||
+      !isAfterAllowedEnd(new Date(), existing.pickupWindowEnd) ||
+      existing.fulfillmentMethod !== 'PICKUP'
+    ) {
       return { notOverdue: true as const, reservation: existing };
     }
 
@@ -815,7 +936,9 @@ export const cancelSupplierAcceptedReservation = async (input: {
     }
 
     const now = new Date();
-    const reason = input.reason?.trim() || 'Cancelled by supplier after overdue pickup window';
+    const reason =
+      input.reason?.trim() ||
+      'Pickup reservation cancelled after the window passed';
 
     const reservation = await tx.reservation.update({
       where: { id: existing.id },
@@ -874,17 +997,21 @@ export const createSupplierNoShowReport = async (input: {
       return null;
     }
 
-    if (existing.status !== 'ACCEPTED') {
+    if (
+      existing.status !== 'ACCEPTED' &&
+      existing.status !== 'AWAITING_SUPPLIER_CONFIRMATION'
+    ) {
       return { conflict: true as const };
     }
 
-    const followUp = resolveReservationFollowUp({
-      status: existing.status,
-      pickupWindowStart: existing.pickupWindowStart,
-      pickupWindowEnd: existing.pickupWindowEnd,
-    });
+    const canReportWithoutOverdueWindow =
+      existing.status === 'AWAITING_SUPPLIER_CONFIRMATION';
 
-    if (!followUp.isOverdue) {
+    if (
+      !canReportWithoutOverdueWindow &&
+      (!existing.pickupWindowEnd ||
+        !isAfterAllowedEnd(new Date(), existing.pickupWindowEnd))
+    ) {
       return { windowNotEnded: true as const };
     }
 
@@ -929,6 +1056,34 @@ export const createSupplierNoShowReport = async (input: {
         pickupWindowEnd: existing.pickupWindowEnd,
       },
     });
+
+    const isSelfPickupOverdue =
+      existing.fulfillmentMethod === 'PICKUP' &&
+      !existing.deliveryRequested &&
+      existing.deliveries.length === 0 &&
+      (existing.status === 'AWAITING_SUPPLIER_CONFIRMATION' ||
+        (existing.pickupWindowEnd != null &&
+          isAfterAllowedEnd(new Date(), existing.pickupWindowEnd)));
+
+    if (isSelfPickupOverdue) {
+      await tx.reservation.update({
+        where: { id: existing.id },
+        data: { status: 'AWAITING_RESOLUTION' },
+      });
+
+      await tx.reservationStatusHistory.create({
+        data: {
+          reservationId: existing.id,
+          statusGroup: 'RESERVATION',
+          oldStatus: 'ACCEPTED',
+          newStatus: 'AWAITING_RESOLUTION',
+          changedBy: input.ownerId,
+          note: 'Reported to admin after missed pickup window',
+        },
+      });
+
+      await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+    }
 
     return { report };
   });

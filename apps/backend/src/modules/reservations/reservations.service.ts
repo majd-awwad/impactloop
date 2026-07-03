@@ -16,6 +16,12 @@ import {
   reservationAllowsMessaging,
   resolveReservationFollowUp,
 } from './reservation-follow-up.js';
+import {
+  canRequestPickupReschedule,
+  mapPendingRescheduleSummary,
+  resolveSelfPickupHandoverPhase,
+} from './reservation-reschedule.js';
+import * as reservationsRescheduleRepository from './reservations.reschedule.repository.js';
 import * as reservationsRepository from './reservations.repository.js';
 import { resolveLearnerConfirmation as resolveLearnerConfirmationInRepository } from './reservations.learner-confirmation.repository.js';
 import type {
@@ -138,6 +144,24 @@ const mapLearnerReservation = (
     pickupWindowEnd: reservation.pickupWindowEnd,
   });
   const latestDelivery = reservation.deliveries[0] ?? null;
+  const deliveryCount = reservation.deliveries.length;
+  const pickupHandoverPhase = resolveSelfPickupHandoverPhase({
+    status: reservation.status,
+    pickupWindowStart: reservation.pickupWindowStart,
+    pickupWindowEnd: reservation.pickupWindowEnd,
+    fulfillmentMethod: reservation.fulfillmentMethod,
+    deliveryRequested: reservation.deliveryRequested,
+    deliveryCount,
+  });
+  const canLearnerReschedule = canRequestPickupReschedule({
+    status: reservation.status,
+    fulfillmentMethod: reservation.fulfillmentMethod,
+    deliveryRequested: reservation.deliveryRequested,
+    deliveryCount,
+    pickupWindowStart: reservation.pickupWindowStart,
+    pickupWindowEnd: reservation.pickupWindowEnd,
+    hasFinalReport: false,
+  });
 
   return {
     id: reservation.id,
@@ -162,6 +186,11 @@ const mapLearnerReservation = (
       reservation.supplierProposedPickupWindowStart?.toISOString() ?? null,
     supplierProposedPickupWindowEnd:
       reservation.supplierProposedPickupWindowEnd?.toISOString() ?? null,
+    learnerProposedPickupWindowStart:
+      reservation.learnerProposedPickupWindowStart?.toISOString() ?? null,
+    learnerProposedPickupWindowEnd:
+      reservation.learnerProposedPickupWindowEnd?.toISOString() ?? null,
+    pendingReschedule: mapPendingRescheduleSummary(reservation),
     supplierPickupWindowStart:
       reservation.supplierPickupWindowStart?.toISOString() ?? null,
     supplierPickupWindowEnd:
@@ -190,6 +219,8 @@ const mapLearnerReservation = (
     pickupWindowStatus: followUp.pickupWindowStatus,
     isOverdue: followUp.isOverdue,
     needsFollowUp: followUp.needsFollowUp,
+    pickupHandoverPhase,
+    canLearnerReschedule,
     canSendMessage: reservationAllowsMessaging(reservation.status),
     latestMessage: latestMessage ?? null,
     material: {
@@ -418,6 +449,57 @@ export const createLearnerReservationMessage = async (
   });
 
   return mapReservationMessage(message);
+};
+
+export const requestLearnerPickupReschedule = async (
+  requesterId: string,
+  reservationId: string,
+  input: import('./reservations.validation.js').RequestPickupRescheduleInput,
+) => {
+  const end = new Date(input.pickupWindowEnd);
+  if (end.getTime() <= Date.now()) {
+    throw new AppError(
+      'Pickup window end must be in the future.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const result = await reservationsRescheduleRepository.requestLearnerPickupReschedule({
+    requesterId,
+    reservationId,
+    pickupWindowStart: new Date(input.pickupWindowStart),
+    pickupWindowEnd: end,
+    reason: input.reason,
+    note: input.note,
+  });
+
+  if (!result) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if ('duringHandover' in result && result.duringHandover) {
+    throw new AppError(
+      'Reschedule requests are not allowed during the pickup handover window.',
+      409,
+      'CONFLICT',
+    );
+  }
+
+  if (result.conflict) {
+    throw new AppError(
+      'Only accepted pickup reservations can be rescheduled.',
+      409,
+      'CONFLICT',
+    );
+  }
+
+  const mapped = await mapLearnerReservationById(requesterId, reservationId);
+  if (!mapped) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  return mapped;
 };
 
 const mapLearnerReservationById = async (

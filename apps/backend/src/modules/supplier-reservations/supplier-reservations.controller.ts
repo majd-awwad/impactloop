@@ -5,6 +5,7 @@ import { readValidatedParams, readValidatedQuery } from '../../middlewares/valid
 
 import {
   acceptSupplierReservation,
+  acceptLearnerRescheduleProposal,
   cancelSupplierAcceptedReservation,
   completeSupplierReservation,
   createSupplierReservationMessage,
@@ -91,7 +92,17 @@ export const rescheduleSupplierReservationHandler = async (
     req.body as RescheduleSupplierReservationInput,
   );
 
-  res.json(successResponse('Pickup rescheduled.', reservation));
+  res.json(successResponse('Pickup reschedule requested.', reservation));
+};
+
+export const acceptLearnerRescheduleProposalHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<ReservationIdParams>(req);
+  const reservation = await acceptLearnerRescheduleProposal(req.auth!.sub, id);
+
+  res.json(successResponse('Learner reschedule accepted.', reservation));
 };
 
 export const cancelSupplierAcceptedReservationHandler = async (

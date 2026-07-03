@@ -24,6 +24,9 @@ export const TERMINAL_DELIVERY_STATUSES = [
   'CANCELLED',
   'FAILED_PICKUP',
   'FAILED_DELIVERY',
+  'DRIVER_NO_SHOW',
+  'LEARNER_NO_SHOW',
+  'AWAITING_RESOLUTION',
 ] as const satisfies readonly DeliveryStatus[];
 
 export const TRACKING_ELIGIBLE_DELIVERY_STATUSES = [

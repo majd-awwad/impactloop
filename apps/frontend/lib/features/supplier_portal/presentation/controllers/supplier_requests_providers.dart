@@ -109,13 +109,27 @@ Future<void> rescheduleIncomingRequest(
   WidgetRef ref, {
   required String requestId,
   required SupplierPickupWindow pickupWindow,
+  required String reason,
   String? messageToLearner,
+  String? note,
 }) async {
   await ref.read(supplierRequestsRepositoryProvider).rescheduleRequest(
         requestId,
         pickupWindow,
+        reason: reason,
         messageToLearner: messageToLearner,
+        note: note,
       );
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> acceptLearnerReschedule(
+  WidgetRef ref, {
+  required String requestId,
+}) async {
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .acceptLearnerReschedule(requestId);
   _invalidateReservationFollowUp(ref);
 }
 
@@ -140,6 +154,37 @@ Future<void> reportNoShowForRequest(
         requestId,
         reasonCode: reasonCode,
         note: note,
+      );
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> markLearnerNoShowForRequest(
+  WidgetRef ref, {
+  required String requestId,
+}) async {
+  await ref.read(supplierRequestsRepositoryProvider).markLearnerNoShow(
+        requestId,
+        reason: 'LEARNER_DID_NOT_ARRIVE',
+      );
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> markDeliveryPickupExpiredForRequest(
+  WidgetRef ref, {
+  required String requestId,
+}) async {
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .markDeliveryPickupExpired(requestId);
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> markDriverNoShowForDelivery(
+  WidgetRef ref, {
+  required String deliveryId,
+}) async {
+  await ref.read(supplierRequestsRepositoryProvider).markDriverNoShow(
+        deliveryId,
       );
   _invalidateReservationFollowUp(ref);
 }

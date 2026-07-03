@@ -72,8 +72,9 @@ class SupplierPickupScheduleItem {
     this.isOverdue = false,
     this.needsFollowUp = false,
     this.pickupWindowStatus,
-    this.canSupplierCancelOverdue = false,
-    this.canSupplierReportNoShow = false,
+    this.pickupHandoverPhase,
+    this.canSupplierCloseOverduePickup = false,
+    this.canSupplierReportAndCloseOverduePickup = false,
     this.canSupplierReschedule = false,
     this.canSendMessage = false,
     this.noShowReport,
@@ -100,8 +101,9 @@ class SupplierPickupScheduleItem {
   final bool isOverdue;
   final bool needsFollowUp;
   final String? pickupWindowStatus;
-  final bool canSupplierCancelOverdue;
-  final bool canSupplierReportNoShow;
+  final String? pickupHandoverPhase;
+  final bool canSupplierCloseOverduePickup;
+  final bool canSupplierReportAndCloseOverduePickup;
   final bool canSupplierReschedule;
   final bool canSendMessage;
   final Map<String, dynamic>? noShowReport;
@@ -224,8 +226,14 @@ class SupplierPickupScheduleItem {
       isOverdue: json['isOverdue'] == true,
       needsFollowUp: json['needsFollowUp'] == true,
       pickupWindowStatus: json['pickupWindowStatus'] as String?,
-      canSupplierCancelOverdue: json['canSupplierCancelOverdue'] == true,
-      canSupplierReportNoShow: json['canSupplierReportNoShow'] == true,
+      pickupHandoverPhase: json['pickupHandoverPhase'] as String?,
+      canSupplierCloseOverduePickup:
+          json['canSupplierCloseOverduePickup'] == true ||
+          json['canSupplierCancelOverdue'] == true,
+      canSupplierReportAndCloseOverduePickup:
+          json['canSupplierReportAndCloseOverduePickup'] == true ||
+          (json['canSupplierReportNoShow'] == true &&
+              json['noShowReport'] == null),
       canSupplierReschedule: json['canSupplierReschedule'] == true,
       canSendMessage: json['canSendMessage'] == true,
       noShowReport: json['noShowReport'] is Map

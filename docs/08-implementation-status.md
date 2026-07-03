@@ -56,7 +56,8 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `supplier` | **Implemented** | Dashboard, profile, materials |
 | `category-requests` | **Implemented** | Under `/api/supplier` |
 | `price-rule-requests` | **Implemented** | Create + supplier drafts |
-| `supplier-reservations` | **Partial** | Supplier fulfillment-aware accept (pickup match/propose, delivery scheduling with learner-window selection or custom proposal + delivery row on feasible accept); supplier list tabs `all`/`pending`/`needs_learner`/`accepted`/`declined`/`completed`/`cancelled`; `AWAITING_LEARNER_CONFIRMATION` hold; accept/decline/self-pickup complete with confirmation code + pickup-window timing (`HANDOVER_GRACE_MINUTES`); overdue follow-up; reservation messages; delivery reservations expose supplier handover code + delivery summary and hide supplier complete action |
+| `supplier-reservations` | **Partial** | Phase-based pickup follow-up (±30 min handover); supplier reschedule is always a proposal (`AWAITING_LEARNER_CONFIRMATION` + `reason`); learner reschedule request → `AWAITING_SUPPLIER_CONFIRMATION`; supplier `accept-learner-reschedule`; overdue close/report/reschedule; report form requires reason+note; admin report detail includes activity history; delivery handover codes unchanged |
+| `fulfillment-failures` | **Implemented (Phase 5)** | Post-grace failure/no-show transitions for supplier and driver; quantity hold rules (release on self-pickup no-show; keep hold after driver pickup failures) |
 | `supplier-notifications` | **Implemented** | Derived supplier inbox |
 | `supplier-verification` | **Implemented** | Supplier verification submit/status support for organization suppliers |
 

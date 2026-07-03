@@ -15,9 +15,13 @@ enum SupplierIncomingRequestStatus {
   pending,
   accepted,
   awaitingConfirmation,
+  awaitingSupplierConfirmation,
   declined,
   completed,
   cancelled,
+  noShow,
+  fulfillmentFailed,
+  needsResolution,
 }
 
 extension SupplierIncomingRequestTabLabels on SupplierIncomingRequestTab {
@@ -106,13 +110,21 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
       case SupplierIncomingRequestStatus.accepted:
         return 'Accepted';
       case SupplierIncomingRequestStatus.awaitingConfirmation:
-        return 'Needs learner confirmation';
+        return 'Waiting for learner confirmation';
+      case SupplierIncomingRequestStatus.awaitingSupplierConfirmation:
+        return 'Waiting for supplier response';
       case SupplierIncomingRequestStatus.declined:
         return 'Declined';
       case SupplierIncomingRequestStatus.completed:
         return 'Completed';
       case SupplierIncomingRequestStatus.cancelled:
         return 'Cancelled';
+      case SupplierIncomingRequestStatus.noShow:
+        return 'Learner no-show';
+      case SupplierIncomingRequestStatus.fulfillmentFailed:
+        return 'Fulfillment failed';
+      case SupplierIncomingRequestStatus.needsResolution:
+        return 'Needs resolution';
     }
   }
 
@@ -125,6 +137,8 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
         return SupplierIncomingRequestStatus.accepted;
       case 'AWAITING_LEARNER_CONFIRMATION':
         return SupplierIncomingRequestStatus.awaitingConfirmation;
+      case 'AWAITING_SUPPLIER_CONFIRMATION':
+        return SupplierIncomingRequestStatus.awaitingSupplierConfirmation;
       case 'REJECTED':
       case 'EXPIRED':
         return SupplierIncomingRequestStatus.declined;
@@ -132,6 +146,12 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
         return SupplierIncomingRequestStatus.cancelled;
       case 'COMPLETED':
         return SupplierIncomingRequestStatus.completed;
+      case 'NO_SHOW':
+        return SupplierIncomingRequestStatus.noShow;
+      case 'FULFILLMENT_FAILED':
+        return SupplierIncomingRequestStatus.fulfillmentFailed;
+      case 'AWAITING_RESOLUTION':
+        return SupplierIncomingRequestStatus.needsResolution;
       default:
         return SupplierIncomingRequestStatus.pending;
     }
@@ -145,12 +165,20 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
         return 'ACCEPTED';
       case SupplierIncomingRequestStatus.awaitingConfirmation:
         return 'AWAITING_LEARNER_CONFIRMATION';
+      case SupplierIncomingRequestStatus.awaitingSupplierConfirmation:
+        return 'AWAITING_SUPPLIER_CONFIRMATION';
       case SupplierIncomingRequestStatus.declined:
         return 'REJECTED';
       case SupplierIncomingRequestStatus.completed:
         return 'COMPLETED';
       case SupplierIncomingRequestStatus.cancelled:
         return 'CANCELLED';
+      case SupplierIncomingRequestStatus.noShow:
+        return 'NO_SHOW';
+      case SupplierIncomingRequestStatus.fulfillmentFailed:
+        return 'FULFILLMENT_FAILED';
+      case SupplierIncomingRequestStatus.needsResolution:
+        return 'AWAITING_RESOLUTION';
     }
   }
 }
@@ -236,6 +264,12 @@ class SupplierReservationDeliverySummary {
       case 'FAILED_PICKUP':
       case 'FAILED_DELIVERY':
         return 'Delivery failed';
+      case 'DRIVER_NO_SHOW':
+        return 'Driver no-show';
+      case 'LEARNER_NO_SHOW':
+        return 'Learner no-show';
+      case 'AWAITING_RESOLUTION':
+        return 'Needs resolution';
       default:
         return 'Delivery requested';
     }
@@ -273,9 +307,15 @@ class SupplierIncomingRequest {
     this.isOverdue = false,
     this.needsFollowUp = false,
     this.pickupWindowStatus,
-    this.canSupplierCancelOverdue = false,
-    this.canSupplierReportNoShow = false,
+    this.pickupHandoverPhase,
+    this.canSupplierCloseOverduePickup = false,
+    this.canSupplierReportAndCloseOverduePickup = false,
     this.canSupplierReschedule = false,
+    this.canSupplierAcceptLearnerReschedule = false,
+    this.canSupplierProposeDifferentTime = false,
+    this.canSupplierCloseAwaitingLearnerRequest = false,
+    this.canSupplierReportAwaitingLearnerRequest = false,
+    this.pendingRescheduleReason,
     this.canSendMessage = false,
     this.noShowReport,
     this.latestMessage,
@@ -311,9 +351,15 @@ class SupplierIncomingRequest {
   final bool isOverdue;
   final bool needsFollowUp;
   final String? pickupWindowStatus;
-  final bool canSupplierCancelOverdue;
-  final bool canSupplierReportNoShow;
+  final String? pickupHandoverPhase;
+  final bool canSupplierCloseOverduePickup;
+  final bool canSupplierReportAndCloseOverduePickup;
   final bool canSupplierReschedule;
+  final bool canSupplierAcceptLearnerReschedule;
+  final bool canSupplierProposeDifferentTime;
+  final bool canSupplierCloseAwaitingLearnerRequest;
+  final bool canSupplierReportAwaitingLearnerRequest;
+  final String? pendingRescheduleReason;
   final bool canSendMessage;
   final Map<String, dynamic>? noShowReport;
   final ReservationMessage? latestMessage;
@@ -361,8 +407,9 @@ class SupplierIncomingRequest {
     bool? isOverdue,
     bool? needsFollowUp,
     String? pickupWindowStatus,
-    bool? canSupplierCancelOverdue,
-    bool? canSupplierReportNoShow,
+    String? pickupHandoverPhase,
+    bool? canSupplierCloseOverduePickup,
+    bool? canSupplierReportAndCloseOverduePickup,
     bool? canSupplierReschedule,
     bool? canSendMessage,
     Map<String, dynamic>? noShowReport,
@@ -387,10 +434,12 @@ class SupplierIncomingRequest {
       isOverdue: isOverdue ?? this.isOverdue,
       needsFollowUp: needsFollowUp ?? this.needsFollowUp,
       pickupWindowStatus: pickupWindowStatus ?? this.pickupWindowStatus,
-      canSupplierCancelOverdue:
-          canSupplierCancelOverdue ?? this.canSupplierCancelOverdue,
-      canSupplierReportNoShow:
-          canSupplierReportNoShow ?? this.canSupplierReportNoShow,
+      pickupHandoverPhase: pickupHandoverPhase ?? this.pickupHandoverPhase,
+      canSupplierCloseOverduePickup:
+          canSupplierCloseOverduePickup ?? this.canSupplierCloseOverduePickup,
+      canSupplierReportAndCloseOverduePickup:
+          canSupplierReportAndCloseOverduePickup ??
+          this.canSupplierReportAndCloseOverduePickup,
       canSupplierReschedule:
           canSupplierReschedule ?? this.canSupplierReschedule,
       canSendMessage: canSendMessage ?? this.canSendMessage,
@@ -540,9 +589,30 @@ class SupplierIncomingRequest {
       isOverdue: json['isOverdue'] == true,
       needsFollowUp: json['needsFollowUp'] == true,
       pickupWindowStatus: json['pickupWindowStatus'] as String?,
-      canSupplierCancelOverdue: json['canSupplierCancelOverdue'] == true,
-      canSupplierReportNoShow: json['canSupplierReportNoShow'] == true,
+      pickupHandoverPhase: json['pickupHandoverPhase'] as String?,
+      canSupplierCloseOverduePickup:
+          json['canSupplierCloseOverduePickup'] == true ||
+          json['canSupplierCancelOverdue'] == true,
+      canSupplierReportAndCloseOverduePickup:
+          json['canSupplierReportAndCloseOverduePickup'] == true ||
+          (json['canSupplierReportNoShow'] == true &&
+              json['noShowReport'] == null),
       canSupplierReschedule: json['canSupplierReschedule'] == true,
+      canSupplierAcceptLearnerReschedule:
+          json['canSupplierAcceptLearnerReschedule'] == true,
+      canSupplierProposeDifferentTime:
+          json['canSupplierProposeDifferentTime'] == true,
+      canSupplierCloseAwaitingLearnerRequest:
+          json['canSupplierCloseAwaitingLearnerRequest'] == true,
+      canSupplierReportAwaitingLearnerRequest:
+          json['canSupplierReportAwaitingLearnerRequest'] == true,
+      pendingRescheduleReason: () {
+        final pending = json['pendingReschedule'];
+        if (pending is Map) {
+          return pending['reason'] as String?;
+        }
+        return null;
+      }(),
       canSendMessage: json['canSendMessage'] == true,
       noShowReport: json['noShowReport'] is Map
           ? Map<String, dynamic>.from(json['noShowReport'] as Map)

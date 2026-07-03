@@ -160,7 +160,7 @@ class _SupplierIncomingRequestsPageState
                   ? () => _handleComplete(context, ref, request)
                   : null,
               onReschedule: request.canSupplierReschedule
-                  ? () => handleReschedulePickup(
+                  ? () => handleRequestReschedulePickup(
                         context,
                         ref,
                         reservationId: request.id,
@@ -168,18 +168,39 @@ class _SupplierIncomingRequestsPageState
                         learnerName: request.learnerName,
                       )
                   : null,
-              onCancel: request.canSupplierCancelOverdue
-                  ? () => handleCancelReservation(
+              onCloseReservation:
+                  request.canSupplierCloseOverduePickup ||
+                      request.canSupplierCloseAwaitingLearnerRequest
+                  ? () => handleCloseOverduePickup(
                         context,
                         ref,
                         reservationId: request.id,
                       )
                   : null,
-              onReportNoShow: request.canSupplierReportNoShow
-                  ? () => handleReportNoShow(
+              onReportToAdmin:
+                  request.canSupplierReportAndCloseOverduePickup ||
+                      request.canSupplierReportAwaitingLearnerRequest
+                  ? () => handleReportToAdminAndClose(
                         context,
                         ref,
                         reservationId: request.id,
+                      )
+                  : null,
+              onAcceptLearnerReschedule:
+                  request.canSupplierAcceptLearnerReschedule
+                  ? () => handleAcceptLearnerReschedule(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
+              onProposeDifferentTime: request.canSupplierProposeDifferentTime
+                  ? () => handleRequestReschedulePickup(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                        materialTitle: request.materialTitle,
+                        learnerName: request.learnerName,
                       )
                   : null,
             ),

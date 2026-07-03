@@ -6,6 +6,7 @@ export const listSupplierReservationsQuerySchema = z.object({
       'all',
       'pending',
       'needs_learner',
+      'needs_supplier',
       'accepted',
       'declined',
       'completed',
@@ -103,9 +104,45 @@ export type AcceptSupplierReservationInput = z.infer<
   typeof acceptSupplierReservationSchema
 >;
 
-export const rescheduleSupplierReservationSchema = pickupWindowSchema.extend({
-  messageToLearner: z.string().trim().max(1000).optional(),
-});
+export const rescheduleSupplierReservationSchema = z
+  .object({
+    pickupWindowStart: z.iso.datetime(),
+    pickupWindowEnd: z.iso.datetime(),
+    supplierNote: z.string().trim().max(1000).optional(),
+    messageToLearner: z.string().trim().max(1000).optional(),
+    reason: z.string().trim().min(1).max(500),
+    note: z.string().trim().max(1000).optional(),
+  })
+  .superRefine((value, ctx) => {
+    const start = new Date(value.pickupWindowStart);
+    const end = new Date(value.pickupWindowEnd);
+
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Pickup window dates must be valid.',
+        path: ['pickupWindowEnd'],
+      });
+      return;
+    }
+
+    if (end <= start) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Pickup end time must be after start time.',
+        path: ['pickupWindowEnd'],
+      });
+      return;
+    }
+
+    if (end.getTime() <= Date.now()) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Supplier window end must be in the future.',
+        path: ['pickupWindowEnd'],
+      });
+    }
+  });
 
 export type RescheduleSupplierReservationInput = z.infer<
   typeof rescheduleSupplierReservationSchema
@@ -124,9 +161,12 @@ export const submitNoShowReportSchema = z.object({
     'LEARNER_DID_NOT_ARRIVE',
     'DRIVER_DID_NOT_ARRIVE',
     'NO_RESPONSE_AFTER_PICKUP_WINDOW',
+    'REPEATED_DELAY',
+    'WRONG_INFORMATION',
+    'SAFETY_OR_TRUST_CONCERN',
     'OTHER',
   ]),
-  note: z.string().trim().max(1000).optional(),
+  note: z.string().trim().min(1).max(1000),
 });
 
 export type SubmitNoShowReportInput = z.infer<typeof submitNoShowReportSchema>;

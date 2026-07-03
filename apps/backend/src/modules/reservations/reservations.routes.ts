@@ -11,12 +11,14 @@ import {
   createLearnerReservationMessageHandler,
   listLearnerReservationMessagesHandler,
   listMyReservationsHandler,
+  requestLearnerPickupRescheduleHandler,
   resolveLearnerConfirmationHandler,
 } from './reservations.controller.js';
 import {
   createReservationSchema,
   createReservationMessageSchema,
   learnerConfirmationSchema,
+  requestPickupRescheduleSchema,
   reservationIdParamsSchema,
 } from './reservations.validation.js';
 import { requestDeliveryForReservationHandler } from '../deliveries/deliveries.controller.js';
@@ -73,6 +75,15 @@ reservationsRouter.post(
   validate(reservationIdParamsSchema, 'params'),
   validate(createReservationMessageSchema),
   asyncHandler(createLearnerReservationMessageHandler),
+);
+
+reservationsRouter.post(
+  '/:id/request-reschedule',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(requestPickupRescheduleSchema),
+  asyncHandler(requestLearnerPickupRescheduleHandler),
 );
 
 reservationsRouter.post(

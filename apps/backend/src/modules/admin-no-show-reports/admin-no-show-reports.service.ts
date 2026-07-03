@@ -1,6 +1,8 @@
 import { AppError } from '../../utils/app-error.js';
 
 import { findReservationMessages, mapReservationMessage } from '../reservations/reservation-messages.repository.js';
+import { mapPendingRescheduleSummary } from '../reservations/reservation-reschedule.js';
+import { prisma } from '../../database/prisma.js';
 import * as repository from './admin-no-show-reports.repository.js';
 import type { AdminNoShowReportsListQuery } from './admin-no-show-reports.validation.js';
 
@@ -21,6 +23,10 @@ const mapReport = (report: repository.AdminNoShowReportRecord) => ({
   reviewedBy: report.reviewedBy,
   reservation: {
     id: report.reservation.id,
+    status: report.reservation.status,
+    pickupWindowStart: report.reservation.pickupWindowStart?.toISOString() ?? null,
+    pickupWindowEnd: report.reservation.pickupWindowEnd?.toISOString() ?? null,
+    pendingReschedule: mapPendingRescheduleSummary(report.reservation),
     material: report.reservation.material,
     requester: report.reservation.requester,
     owner: report.reservation.owner,
@@ -52,10 +58,33 @@ export const getAdminNoShowReportById = async (id: string) => {
   }
 
   const messages = await findReservationMessages(report.reservationId);
+  const activityHistory = await prisma.reservationStatusHistory.findMany({
+    where: { reservationId: report.reservationId },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      changedByUser: {
+        select: { id: true, displayName: true },
+      },
+    },
+  });
 
   return {
     ...mapReport(report),
     messages: messages.map(mapReservationMessage),
+    activityHistory: activityHistory.map((entry) => ({
+      id: entry.id,
+      statusGroup: entry.statusGroup,
+      oldStatus: entry.oldStatus,
+      newStatus: entry.newStatus,
+      note: entry.note,
+      createdAt: entry.createdAt.toISOString(),
+      changedBy: entry.changedByUser
+        ? {
+            id: entry.changedByUser.id,
+            displayName: entry.changedByUser.displayName,
+          }
+        : null,
+    })),
     targetVerifiedNoShowCount:
       report.status === 'VERIFIED'
         ? await repository.countVerifiedNoShowReportsForTarget(report.targetUserId)

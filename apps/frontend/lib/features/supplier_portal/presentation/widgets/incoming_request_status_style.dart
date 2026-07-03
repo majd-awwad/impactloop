@@ -25,9 +25,13 @@ class IncomingRequestStatusStyle {
       SupplierIncomingRequestStatus.pending => _pending,
       SupplierIncomingRequestStatus.accepted => _accepted,
       SupplierIncomingRequestStatus.awaitingConfirmation => _accepted,
+      SupplierIncomingRequestStatus.awaitingSupplierConfirmation => _accepted,
       SupplierIncomingRequestStatus.declined => _declined,
       SupplierIncomingRequestStatus.completed => _completed,
       SupplierIncomingRequestStatus.cancelled => _declined,
+      SupplierIncomingRequestStatus.noShow => _declined,
+      SupplierIncomingRequestStatus.fulfillmentFailed => _declined,
+      SupplierIncomingRequestStatus.needsResolution => _pending,
     };
   }
 

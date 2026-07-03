@@ -46,7 +46,8 @@ bool reservationMatchesStatusFilter(
     case LearnerReservationStatusFilter.active:
       return reservation.isPending ||
           reservation.isAccepted ||
-          reservation.isAwaitingConfirmation;
+          reservation.isAwaitingConfirmation ||
+          reservation.status == 'AWAITING_RESOLUTION';
     case LearnerReservationStatusFilter.needsAction:
       return reservation.isAwaitingConfirmation;
     case LearnerReservationStatusFilter.pending:
@@ -113,11 +114,20 @@ class LearnerReservationStatusStyle {
         );
       case 'CANCELLED':
       case 'EXPIRED':
+      case 'NO_SHOW':
+      case 'FULFILLMENT_FAILED':
         return LearnerReservationStatusStyle(
           accentColor: colors.borderStrong.withValues(alpha: 0.55),
           chipBackground: colors.cardSurfaceAlt,
           chipForeground: colors.textSecondary,
           chipBorder: colors.borderSubtle,
+        );
+      case 'AWAITING_RESOLUTION':
+        return LearnerReservationStatusStyle(
+          accentColor: colors.warning.withValues(alpha: 0.85),
+          chipBackground: colors.warningSoft,
+          chipForeground: colors.warningText,
+          chipBorder: colors.warningBorder,
         );
       default:
         return LearnerReservationStatusStyle(
@@ -139,7 +149,9 @@ String reservationStatusLabel(
     case 'PENDING':
       return 'Pending supplier response';
     case 'AWAITING_LEARNER_CONFIRMATION':
-      return 'Needs your confirmation';
+      return 'Waiting for learner confirmation';
+    case 'AWAITING_SUPPLIER_CONFIRMATION':
+      return 'Waiting for supplier response';
     case 'ACCEPTED':
       if (fulfillmentMethod == 'DELIVERY') {
         return 'Accepted';
@@ -154,9 +166,18 @@ String reservationStatusLabel(
       }
       return 'Completed';
     case 'CANCELLED':
+      if (fulfillmentMethod == 'PICKUP') {
+        return 'Pickup reservation cancelled after the window passed';
+      }
       return 'Cancelled';
     case 'EXPIRED':
       return 'Expired';
+    case 'NO_SHOW':
+      return 'Pickup missed';
+    case 'FULFILLMENT_FAILED':
+      return 'Fulfillment failed';
+    case 'AWAITING_RESOLUTION':
+      return 'Closed and reported';
     default:
       return status;
   }

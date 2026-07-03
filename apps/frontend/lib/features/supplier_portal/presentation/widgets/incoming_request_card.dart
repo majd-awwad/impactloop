@@ -60,8 +60,10 @@ class IncomingRequestCard extends StatelessWidget {
     this.onDecline,
     this.onMarkCompleted,
     this.onReschedule,
-    this.onCancel,
-    this.onReportNoShow,
+    this.onCloseReservation,
+    this.onReportToAdmin,
+    this.onAcceptLearnerReschedule,
+    this.onProposeDifferentTime,
     this.isCompleting = false,
   });
 
@@ -70,8 +72,10 @@ class IncomingRequestCard extends StatelessWidget {
   final VoidCallback? onDecline;
   final VoidCallback? onMarkCompleted;
   final VoidCallback? onReschedule;
-  final VoidCallback? onCancel;
-  final VoidCallback? onReportNoShow;
+  final VoidCallback? onCloseReservation;
+  final VoidCallback? onReportToAdmin;
+  final VoidCallback? onAcceptLearnerReschedule;
+  final VoidCallback? onProposeDifferentTime;
   final bool isCompleting;
 
   @override
@@ -83,6 +87,8 @@ class IncomingRequestCard extends StatelessWidget {
     final isAccepted = request.status == SupplierIncomingRequestStatus.accepted;
     final isAwaiting =
         request.status == SupplierIncomingRequestStatus.awaitingConfirmation;
+    final isAwaitingSupplier = request.status ==
+        SupplierIncomingRequestStatus.awaitingSupplierConfirmation;
     final isCompleted =
         request.status == SupplierIncomingRequestStatus.completed;
     final compact =
@@ -232,59 +238,47 @@ class IncomingRequestCard extends StatelessWidget {
                 stacked: compact,
               ),
             ],
-            if (isAccepted &&
-                !request.isOverdue &&
-                request.canSupplierComplete &&
-                onMarkCompleted != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.tonal(
-                  onPressed: isCompleting ? null : onMarkCompleted,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colors.accentSoft.withValues(alpha: 0.22),
-                    foregroundColor: colors.textPrimary,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 12 : 14,
-                      vertical: compact ? 8 : 10,
-                    ),
-                    minimumSize: Size(compact ? 0 : 120, compact ? 36 : 40),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdAll,
-                    ),
+            if ((isAccepted || isAwaitingSupplier) &&
+                request.isPickupFulfillment &&
+                (request.pickupHandoverPhase != null || isAwaitingSupplier)) ...[
+              if (isAwaitingSupplier &&
+                  request.pendingRescheduleReason?.trim().isNotEmpty ==
+                      true) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Learner requested reschedule: ${request.pendingRescheduleReason!.trim()}',
+                  style: context.supplierBody().copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
-                  child: isCompleting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(
-                          l.markCompleted,
-                          style: context.supplierLabel().copyWith(
-                            fontSize: compact ? 12 : 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                 ),
-              ),
-            ],
-            if (isAccepted && request.isOverdue) ...[
+              ],
               const SizedBox(height: AppSpacing.md),
               ReservationFollowUpActions(
-                isOverdue: request.isOverdue,
+                pickupHandoverPhase: request.pickupHandoverPhase,
                 canMarkCompleted: request.canSupplierComplete,
-                canReschedule: request.canSupplierReschedule,
-                canCancel: request.canSupplierCancelOverdue,
-                canReportNoShow: request.canSupplierReportNoShow,
-                hasNoShowReport: request.noShowReport != null,
+                canRequestReschedule: request.canSupplierReschedule,
+                canCloseReservation: request.canSupplierCloseOverduePickup ||
+                    request.canSupplierCloseAwaitingLearnerRequest,
+                canReportToAdmin:
+                    request.canSupplierReportAndCloseOverduePickup ||
+                    request.canSupplierReportAwaitingLearnerRequest,
+                hasAdminReport: request.noShowReport != null,
+                canAcceptLearnerReschedule:
+                    request.canSupplierAcceptLearnerReschedule,
+                canProposeDifferentTime:
+                    request.canSupplierProposeDifferentTime,
+                canCloseAwaitingLearnerRequest:
+                    request.canSupplierCloseAwaitingLearnerRequest,
+                canReportAwaitingLearnerRequest:
+                    request.canSupplierReportAwaitingLearnerRequest,
                 isBusy: isCompleting,
-                compact: compact,
                 onMarkCompleted: onMarkCompleted,
-                onReschedule: onReschedule,
-                onCancel: onCancel,
-                onReportNoShow: onReportNoShow,
+                onRequestReschedule: onReschedule,
+                onCloseReservation: onCloseReservation,
+                onReportToAdmin: onReportToAdmin,
+                onAcceptLearnerReschedule: onAcceptLearnerReschedule,
+                onProposeDifferentTime: onProposeDifferentTime,
               ),
             ],
           ],

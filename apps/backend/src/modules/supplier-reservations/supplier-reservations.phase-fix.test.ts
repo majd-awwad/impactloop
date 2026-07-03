@@ -12,10 +12,14 @@ import { getMaterialQuantityState } from '../reservations/reservations.quantity.
 import type { CreateReservationInput } from '../reservations/reservations.validation.js';
 import {
   acceptSupplierReservation,
+  cancelSupplierAcceptedReservation,
   completeSupplierReservation,
   declineSupplierReservation,
   listSupplierReservations,
+  rescheduleSupplierReservation,
+  submitSupplierNoShowReport,
 } from './supplier-reservations.service.js';
+import { createLearnerReservationMessage } from '../reservations/reservations.service.js';
 
 const TEST_MARKER = '[test-supplier-phase-fix]';
 
@@ -75,6 +79,12 @@ async function createMaterial(
 
 async function cleanup(ctx: TestContext) {
   if (ctx.createdReservationIds.length) {
+    await prisma.noShowReport.deleteMany({
+      where: { reservationId: { in: ctx.createdReservationIds } },
+    });
+    await prisma.reservationMessage.deleteMany({
+      where: { reservationId: { in: ctx.createdReservationIds } },
+    });
     await prisma.deliveryStatusHistory.deleteMany({
       where: { delivery: { reservationId: { in: ctx.createdReservationIds } } },
     });
@@ -123,6 +133,30 @@ async function acceptPickupReservation(
   await acceptSupplierReservation(ctx.supplierId, reservation.id, {
     pickupWindowStart: preferred.start,
     pickupWindowEnd: preferred.end,
+  });
+
+  return { material, reservation };
+}
+
+async function acceptPickupReservationWithPastWindow(
+  ctx: TestContext,
+  pickupWindowStart: Date,
+  pickupWindowEnd: Date,
+) {
+  const futureStart = new Date(Date.now() + 24 * 3_600_000);
+  const futureEnd = new Date(futureStart.getTime() + 3_600_000);
+  const { material, reservation } = await acceptPickupReservation(
+    ctx,
+    futureStart,
+    futureEnd,
+  );
+
+  await prisma.reservation.update({
+    where: { id: reservation.id },
+    data: {
+      pickupWindowStart,
+      pickupWindowEnd,
+    },
   });
 
   return { material, reservation };
@@ -257,6 +291,41 @@ describe('supplier reservations phase fix', () => {
     await cleanup(ctx);
   });
 
+  test('pickup complete 31 minutes before window start with correct code is rejected', async () => {
+    const start = new Date(Date.now() + 31 * 60_000);
+    const end = new Date(start.getTime() + 3_600_000);
+    const { reservation } = await acceptPickupReservation(ctx, start, end);
+
+    await assert.rejects(
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.equal(error.message, 'Pickup window has not started yet.');
+        return true;
+      },
+    );
+  });
+
+  test('pickup complete 30 minutes before window start with correct code succeeds', async () => {
+    const start = new Date(Date.now() + 30 * 60_000);
+    const end = new Date(start.getTime() + 3_600_000);
+    const { reservation } = await acceptPickupReservation(ctx, start, end);
+
+    const completed = await completeSupplierReservation(
+      ctx.supplierId,
+      reservation.id,
+      {
+        confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+      },
+    );
+
+    assert.equal(completed.status, 'COMPLETED');
+  });
+
   test('pickup complete before window with correct code is rejected', async () => {
     const start = new Date(Date.now() + 2 * 3_600_000);
     const end = new Date(start.getTime() + 3_600_000);
@@ -292,6 +361,26 @@ describe('supplier reservations phase fix', () => {
     assert.equal(completed.status, 'COMPLETED');
   });
 
+  test('pickup complete 30 minutes after window end with correct code succeeds', async () => {
+    const start = new Date(Date.now() - 2 * 3_600_000);
+    const end = new Date(Date.now() - 29 * 60_000);
+    const { reservation } = await acceptPickupReservationWithPastWindow(
+      ctx,
+      start,
+      end,
+    );
+
+    const completed = await completeSupplierReservation(
+      ctx.supplierId,
+      reservation.id,
+      {
+        confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+      },
+    );
+
+    assert.equal(completed.status, 'COMPLETED');
+  });
+
   test('pickup complete after grace with correct code is rejected', async () => {
     const start = new Date(Date.now() + 2 * 3_600_000);
     const end = new Date(start.getTime() + 3_600_000);
@@ -301,7 +390,7 @@ describe('supplier reservations phase fix', () => {
       where: { id: reservation.id },
       data: {
         pickupWindowStart: new Date(Date.now() - 3 * 3_600_000),
-        pickupWindowEnd: new Date(Date.now() - 2 * 3_600_000),
+        pickupWindowEnd: new Date(Date.now() - 31 * 60_000),
       },
     });
 
@@ -312,7 +401,7 @@ describe('supplier reservations phase fix', () => {
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
-        assert.equal(error.message, 'Pickup window has expired.');
+        assert.equal(error.message, 'Pickup window has passed.');
         return true;
       },
     );
@@ -599,5 +688,125 @@ describe('supplier reservations phase fix', () => {
     });
 
     assert.equal(updated.status, 'PICKED_UP');
+  });
+
+  test('overdue pickup close reservation releases hold without decrementing stock', async () => {
+    const start = new Date(Date.now() - 3 * 3_600_000);
+    const end = new Date(Date.now() - 31 * 60_000);
+    const { material, reservation } = await acceptPickupReservationWithPastWindow(
+      ctx,
+      start,
+      end,
+    );
+
+    const beforeClose = await getMaterialQuantityState(prisma, material.id);
+    assert.equal(Number(beforeClose.heldQuantity), 1);
+
+    const closed = await cancelSupplierAcceptedReservation(
+      ctx.supplierId,
+      reservation.id,
+      {},
+    );
+
+    assert.equal(closed.status, 'CANCELLED');
+    assert.equal(closed.canSupplierCloseOverduePickup, false);
+    assert.equal(closed.canSupplierReportAndCloseOverduePickup, false);
+
+    const afterClose = await getMaterialQuantityState(prisma, material.id);
+    assert.equal(Number(afterClose.heldQuantity), 0);
+    assert.equal(Number(afterClose.availableQuantity), 5);
+
+    const updatedMaterial = await prisma.material.findUnique({
+      where: { id: material.id },
+    });
+    assert.equal(Number(updatedMaterial?.quantity), 5);
+  });
+
+  test('overdue pickup report to admin closes flow and releases hold', async () => {
+    const start = new Date(Date.now() - 3 * 3_600_000);
+    const end = new Date(Date.now() - 31 * 60_000);
+    const { material, reservation } = await acceptPickupReservationWithPastWindow(
+      ctx,
+      start,
+      end,
+    );
+
+    const reported = await submitSupplierNoShowReport(
+      ctx.supplierId,
+      reservation.id,
+      { reasonCode: 'LEARNER_DID_NOT_ARRIVE', note: 'Learner never arrived' },
+    );
+
+    assert.equal(reported.status, 'AWAITING_RESOLUTION');
+    assert.equal(reported.canSupplierCloseOverduePickup, false);
+    assert.equal(reported.canSupplierReportAndCloseOverduePickup, false);
+    assert.ok(reported.noShowReport);
+
+    const afterReport = await getMaterialQuantityState(prisma, material.id);
+    assert.equal(Number(afterReport.heldQuantity), 0);
+
+    const updatedMaterial = await prisma.material.findUnique({
+      where: { id: material.id },
+    });
+    assert.equal(Number(updatedMaterial?.quantity), 5);
+  });
+
+  test('overdue pickup reschedule moves to awaiting learner confirmation and keeps hold', async () => {
+    const start = new Date(Date.now() - 3 * 3_600_000);
+    const end = new Date(Date.now() - 31 * 60_000);
+    const { material, reservation } = await acceptPickupReservationWithPastWindow(
+      ctx,
+      start,
+      end,
+    );
+
+    const proposedStart = new Date(Date.now() + 24 * 3_600_000);
+    const proposedEnd = new Date(proposedStart.getTime() + 2 * 3_600_000);
+
+    const rescheduled = await rescheduleSupplierReservation(
+      ctx.supplierId,
+      reservation.id,
+      {
+        pickupWindowStart: proposedStart.toISOString(),
+        pickupWindowEnd: proposedEnd.toISOString(),
+        reason: 'Learner did not arrive for previous window',
+        messageToLearner: 'Can you make this new time?',
+      },
+    );
+
+    assert.equal(rescheduled.status, 'AWAITING_LEARNER_CONFIRMATION');
+    assert.equal(
+      rescheduled.supplierProposedPickupWindowStart,
+      proposedStart.toISOString(),
+    );
+    assert.equal(rescheduled.pendingReschedule?.requestedBy, 'SUPPLIER');
+
+    const holdState = await getMaterialQuantityState(prisma, material.id);
+    assert.equal(Number(holdState.heldQuantity), 1);
+
+    const updatedMaterial = await prisma.material.findUnique({
+      where: { id: material.id },
+    });
+    assert.equal(Number(updatedMaterial?.quantity), 5);
+  });
+
+  test('learner apology message is visible to supplier on reservation card', async () => {
+    const start = new Date(Date.now() - 15 * 60_000);
+    const end = new Date(Date.now() + 45 * 60_000);
+    const { reservation } = await acceptPickupReservation(ctx, start, end);
+
+    const apology = 'Sorry, I am late. Can we reschedule?';
+    await createLearnerReservationMessage(ctx.learnerId, reservation.id, {
+      body: apology,
+    });
+
+    const listed = await listSupplierReservations(ctx.supplierId, {
+      status: 'accepted',
+    });
+    const mapped = listed.find((item) => item.id === reservation.id);
+
+    assert.ok(mapped);
+    assert.equal(mapped?.latestMessage?.body, apology);
+    assert.equal(mapped?.canSendMessage, true);
   });
 });

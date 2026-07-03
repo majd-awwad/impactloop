@@ -20,9 +20,14 @@ import {
 import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import {
   evaluateHandoverWindow,
-  pickupWindowExpiredMessage,
   pickupWindowNotStartedMessage,
+  pickupWindowPassedMessage,
 } from '../../utils/handover-timing.js';
+import {
+  canRequestPickupReschedule,
+  mapPendingRescheduleSummary,
+  resolveSelfPickupHandoverPhase,
+} from '../reservations/reservation-reschedule.js';
 import type {
   AcceptSupplierReservationInput,
   CancelSupplierReservationInput,
@@ -44,6 +49,8 @@ const tabToReservationStatuses = (
       return ['PENDING'];
     case 'needs_learner':
       return ['AWAITING_LEARNER_CONFIRMATION'];
+    case 'needs_supplier':
+      return ['AWAITING_SUPPLIER_CONFIRMATION'];
     case 'accepted':
       return ['ACCEPTED'];
     case 'declined':
@@ -125,6 +132,37 @@ export const mapSupplierReservation = (
     pickupWindowEnd: reservation.pickupWindowEnd,
     completedAt: reservation.completedAt,
   });
+  const isSelfPickup =
+    reservation.fulfillmentMethod === 'PICKUP' && !hasDelivery;
+  const pickupHandoverPhase = resolveSelfPickupHandoverPhase({
+    status: reservation.status,
+    pickupWindowStart: reservation.pickupWindowStart,
+    pickupWindowEnd: reservation.pickupWindowEnd,
+    fulfillmentMethod: reservation.fulfillmentMethod,
+    deliveryRequested: reservation.deliveryRequested,
+    deliveryCount: reservation._count.deliveries,
+  });
+  const hasLearnerNoShowReport = reservation.noShowReports.some(
+    (report) => report.targetRole === 'LEARNER',
+  );
+  const awaitingLearnerReschedule =
+    reservation.status === 'AWAITING_SUPPLIER_CONFIRMATION';
+  const canReschedule = canRequestPickupReschedule({
+    status: reservation.status,
+    fulfillmentMethod: reservation.fulfillmentMethod,
+    deliveryRequested: reservation.deliveryRequested,
+    deliveryCount: reservation._count.deliveries,
+    pickupWindowStart: reservation.pickupWindowStart,
+    pickupWindowEnd: reservation.pickupWindowEnd,
+    hasFinalReport: hasLearnerNoShowReport,
+  });
+  const canCompleteBase =
+    supplierReservationsRepository.supplierCanCompleteReservation({
+      status: reservation.status,
+      fulfillmentMethod: reservation.fulfillmentMethod,
+      deliveryRequested: reservation.deliveryRequested,
+      hasDelivery,
+    });
 
   return {
     id: reservation.id,
@@ -164,6 +202,11 @@ export const mapSupplierReservation = (
       reservation.supplierProposedPickupWindowStart?.toISOString() ?? null,
     supplierProposedPickupWindowEnd:
       reservation.supplierProposedPickupWindowEnd?.toISOString() ?? null,
+    learnerProposedPickupWindowStart:
+      reservation.learnerProposedPickupWindowStart?.toISOString() ?? null,
+    learnerProposedPickupWindowEnd:
+      reservation.learnerProposedPickupWindowEnd?.toISOString() ?? null,
+    pendingReschedule: mapPendingRescheduleSummary(reservation),
     supplierPickupWindowStart:
       reservation.supplierPickupWindowStart?.toISOString() ?? null,
     supplierPickupWindowEnd:
@@ -189,12 +232,7 @@ export const mapSupplierReservation = (
         ? deriveHandoverCode('supplier-handover', latestDelivery.id)
         : null,
     canSupplierComplete:
-      supplierReservationsRepository.supplierCanCompleteReservation({
-        status: reservation.status,
-        fulfillmentMethod: reservation.fulfillmentMethod,
-        deliveryRequested: reservation.deliveryRequested,
-        hasDelivery,
-      }),
+      canCompleteBase && pickupHandoverPhase === 'DURING_ALLOWED',
     pickupWindowStart: reservation.pickupWindowStart?.toISOString() ?? null,
     pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
     supplierNote: reservation.supplierNote,
@@ -204,14 +242,22 @@ export const mapSupplierReservation = (
     pickupWindowStatus: followUp.pickupWindowStatus,
     isOverdue: followUp.isOverdue,
     needsFollowUp: followUp.needsFollowUp,
-    canSupplierCancelOverdue:
-      followUp.isOverdue &&
-      reservation.status === 'ACCEPTED' &&
-      !reservation.deliveryRequested &&
-      !hasDelivery,
-    canSupplierReportNoShow:
-      followUp.isOverdue && reservation.status === 'ACCEPTED',
-    canSupplierReschedule: reservation.status === 'ACCEPTED',
+    pickupHandoverPhase,
+    canSupplierCloseOverduePickup:
+      pickupHandoverPhase === 'AFTER_ALLOWED' &&
+      isSelfPickup &&
+      !hasLearnerNoShowReport,
+    canSupplierReportAndCloseOverduePickup:
+      pickupHandoverPhase === 'AFTER_ALLOWED' &&
+      isSelfPickup &&
+      !hasLearnerNoShowReport,
+    canSupplierReschedule: canReschedule,
+    canSupplierAcceptLearnerReschedule: awaitingLearnerReschedule && isSelfPickup,
+    canSupplierProposeDifferentTime: awaitingLearnerReschedule && isSelfPickup,
+    canSupplierCloseAwaitingLearnerRequest:
+      awaitingLearnerReschedule && isSelfPickup && !hasLearnerNoShowReport,
+    canSupplierReportAwaitingLearnerRequest:
+      awaitingLearnerReschedule && isSelfPickup && !hasLearnerNoShowReport,
     canSendMessage: reservationAllowsMessaging(reservation.status),
     noShowReport: mapNoShowReportSummary(reservation.noShowReports),
     latestMessage: latestMessage ?? null,
@@ -436,7 +482,7 @@ export const completeSupplierReservation = async (
   }
 
   if ('windowExpired' in result && result.windowExpired) {
-    throw new AppError(pickupWindowExpiredMessage(), 400, 'VALIDATION_ERROR');
+    throw new AppError(pickupWindowPassedMessage(), 400, 'VALIDATION_ERROR');
   }
 
   if (result.conflict) {
@@ -471,10 +517,20 @@ export const rescheduleSupplierReservation = async (
     pickupWindowEnd: end,
     supplierNote: input.supplierNote,
     followUpMessage: input.messageToLearner,
+    reason: input.reason,
+    note: input.note,
   });
 
   if (!result) {
     throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if ('duringHandover' in result && result.duringHandover) {
+    throw new AppError(
+      'Reschedule requests are not allowed during the pickup handover window.',
+      409,
+      'CONFLICT',
+    );
   }
 
   if (result.conflict) {
@@ -483,6 +539,35 @@ export const rescheduleSupplierReservation = async (
       409,
       'CONFLICT',
     );
+  }
+
+  return mapSupplierReservation(result.reservation);
+};
+
+export const acceptLearnerRescheduleProposal = async (
+  ownerId: string,
+  reservationId: string,
+) => {
+  const result =
+    await supplierReservationsRepository.acceptLearnerRescheduleProposal({
+      reservationId,
+      ownerId,
+    });
+
+  if (!result) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if ('conflict' in result && result.conflict) {
+    throw new AppError(
+      'Only reservations awaiting supplier confirmation can be accepted.',
+      409,
+      'CONFLICT',
+    );
+  }
+
+  if ('missingProposal' in result && result.missingProposal) {
+    throw new AppError('Learner reschedule proposal is missing.', 409, 'CONFLICT');
   }
 
   return mapSupplierReservation(result.reservation);
@@ -579,16 +664,17 @@ export const submitSupplierNoShowReport = async (
     );
   }
 
-  return {
-    id: result.report.id,
-    reservationId: result.report.reservationId,
-    targetUserId: result.report.targetUserId,
-    targetRole: result.report.targetRole,
-    reasonCode: result.report.reasonCode,
-    note: result.report.note,
-    status: result.report.status,
-    createdAt: result.report.createdAt.toISOString(),
-  };
+  const reservation =
+    await supplierReservationsRepository.findSupplierReservationForOwner(
+      ownerId,
+      reservationId,
+    );
+
+  if (!reservation) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  return mapSupplierReservation(reservation);
 };
 
 const assertSupplierReservationAccess = async (

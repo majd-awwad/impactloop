@@ -139,15 +139,17 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                                             learnerName: item.learnerName,
                                           )
                                       : null,
-                                  onCancel: item.canSupplierCancelOverdue
-                                      ? () => handleCancelReservation(
+                                  onCloseReservation:
+                                      item.canSupplierCloseOverduePickup
+                                      ? () => handleCloseOverduePickup(
                                             context,
                                             ref,
                                             reservationId: item.id,
                                           )
                                       : null,
-                                  onReportNoShow: item.canSupplierReportNoShow
-                                      ? () => handleReportNoShow(
+                                  onReportToAdmin:
+                                      item.canSupplierReportAndCloseOverduePickup
+                                      ? () => handleReportToAdminAndClose(
                                             context,
                                             ref,
                                             reservationId: item.id,
@@ -170,15 +172,17 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                                       learnerName: item.learnerName,
                                     )
                                 : null,
-                            onCancel: item.canSupplierCancelOverdue
-                                ? () => handleCancelReservation(
+                            onCloseReservation:
+                                item.canSupplierCloseOverduePickup
+                                ? () => handleCloseOverduePickup(
                                       context,
                                       ref,
                                       reservationId: item.id,
                                     )
                                 : null,
-                            onReportNoShow: item.canSupplierReportNoShow
-                                ? () => handleReportNoShow(
+                            onReportToAdmin:
+                                item.canSupplierReportAndCloseOverduePickup
+                                ? () => handleReportToAdminAndClose(
                                       context,
                                       ref,
                                       reservationId: item.id,

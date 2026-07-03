@@ -17,8 +17,8 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
     required this.groupKind,
     this.onMarkCompleted,
     this.onReschedule,
-    this.onCancel,
-    this.onReportNoShow,
+    this.onCloseReservation,
+    this.onReportToAdmin,
     this.isCompleting = false,
   });
 
@@ -26,8 +26,8 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
   final PickupScheduleGroupKind groupKind;
   final VoidCallback? onMarkCompleted;
   final VoidCallback? onReschedule;
-  final VoidCallback? onCancel;
-  final VoidCallback? onReportNoShow;
+  final VoidCallback? onCloseReservation;
+  final VoidCallback? onReportToAdmin;
   final bool isCompleting;
 
   static Future<void> show(
@@ -36,8 +36,8 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
     required PickupScheduleGroupKind groupKind,
     VoidCallback? onMarkCompleted,
     VoidCallback? onReschedule,
-    VoidCallback? onCancel,
-    VoidCallback? onReportNoShow,
+    VoidCallback? onCloseReservation,
+    VoidCallback? onReportToAdmin,
     bool isCompleting = false,
   }) {
     return showDialog<void>(
@@ -48,8 +48,8 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
         groupKind: groupKind,
         onMarkCompleted: onMarkCompleted,
         onReschedule: onReschedule,
-        onCancel: onCancel,
-        onReportNoShow: onReportNoShow,
+        onCloseReservation: onCloseReservation,
+        onReportToAdmin: onReportToAdmin,
         isCompleting: isCompleting,
       ),
     );
@@ -79,11 +79,10 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
     final outerPadding = compact ? 18.0 : 24.0;
     final dialogWidth = compact ? screenSize.width - 32 : 560.0;
     final instructions = _pickupInstructions();
-    final showMarkCompleted =
-        !item.isOverdue &&
+    final showFollowUp =
+        !item.isCompleted &&
         item.status == SupplierPickupScheduleStatus.accepted &&
-        item.canSupplierComplete &&
-        onMarkCompleted != null;
+        item.pickupHandoverPhase != null;
     final currentUserId = ref.watch(authControllerProvider).user?.id ?? '';
 
     return Dialog(
@@ -213,15 +212,16 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
                           value: item.learnerMessage!.trim(),
                         ),
                       ],
-                      if (item.isOverdue) ...[
+                      if (showFollowUp) ...[
                         const _SectionDivider(),
                         ReservationFollowUpActions(
-                          isOverdue: item.isOverdue,
+                          pickupHandoverPhase: item.pickupHandoverPhase,
                           canMarkCompleted: item.canSupplierComplete,
-                          canReschedule: item.canSupplierReschedule,
-                          canCancel: item.canSupplierCancelOverdue,
-                          canReportNoShow: item.canSupplierReportNoShow,
-                          hasNoShowReport: item.noShowReport != null,
+                          canRequestReschedule: item.canSupplierReschedule,
+                          canCloseReservation: item.canSupplierCloseOverduePickup,
+                          canReportToAdmin:
+                              item.canSupplierReportAndCloseOverduePickup,
+                          hasAdminReport: item.noShowReport != null,
                           isBusy: isCompleting,
                           onMarkCompleted: onMarkCompleted == null
                               ? null
@@ -229,23 +229,23 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
                                   Navigator.of(context).pop();
                                   onMarkCompleted?.call();
                                 },
-                          onReschedule: onReschedule == null
+                          onRequestReschedule: onReschedule == null
                               ? null
                               : () {
                                   Navigator.of(context).pop();
                                   onReschedule?.call();
                                 },
-                          onCancel: onCancel == null
+                          onCloseReservation: onCloseReservation == null
                               ? null
                               : () {
                                   Navigator.of(context).pop();
-                                  onCancel?.call();
+                                  onCloseReservation?.call();
                                 },
-                          onReportNoShow: onReportNoShow == null
+                          onReportToAdmin: onReportToAdmin == null
                               ? null
                               : () {
                                   Navigator.of(context).pop();
-                                  onReportNoShow?.call();
+                                  onReportToAdmin?.call();
                                 },
                         ),
                       ],
@@ -270,36 +270,6 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
                 color: colors.border.withValues(alpha: 0.35),
               ),
               const SizedBox(height: AppSpacing.md),
-              if (showMarkCompleted)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: FilledButton(
-                    onPressed: isCompleting
-                        ? null
-                        : () {
-                            Navigator.of(context).pop();
-                            onMarkCompleted?.call();
-                          },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colors.accentMuted.withValues(alpha: 0.82),
-                      foregroundColor: colors.textOnAccent,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppRadius.mdAll,
-                      ),
-                    ),
-                    child: isCompleting
-                        ? SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: colors.textOnAccent,
-                            ),
-                          )
-                        : Text(l.markCompleted),
-                  ),
-                ),
               Align(
                 alignment:
                     compact ? Alignment.center : Alignment.centerRight,

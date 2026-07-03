@@ -33,6 +33,7 @@ import { supplierPriceRuleRequestsRouter } from '../price-rule-requests/price-ru
 import { supplierNotificationsRouter } from '../supplier-notifications/supplier-notifications.routes.js';
 import { supplierReservationsRouter } from '../supplier-reservations/supplier-reservations.routes.js';
 import { supplierVerificationRouter } from '../supplier-verification/supplier-verification.routes.js';
+import { supplierDeliveryFailuresRouter } from '../fulfillment-failures/fulfillment-failures.routes.js';
 
 export const supplierRouter = Router();
 
@@ -135,4 +136,5 @@ supplierRouter.use('/category-requests', categoryRequestsRouter);
 supplierRouter.use('/price-rule-requests', supplierPriceRuleRequestsRouter);
 supplierRouter.use('/notifications', supplierNotificationsRouter);
 supplierRouter.use('/reservations', supplierReservationsRouter);
+supplierRouter.use('/deliveries', supplierDeliveryFailuresRouter);
 supplierRouter.use('/verification', supplierVerificationRouter);

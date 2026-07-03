@@ -37,6 +37,7 @@ void main() {
       status: SupplierPickupScheduleStatus.accepted,
       pickupType: 'Self pickup',
       canSupplierComplete: true,
+      pickupHandoverPhase: 'DURING_ALLOWED',
       pickupWindow: SupplierPickupWindow(
         start: DateTime(2026, 6, 17, 10),
         end: DateTime(2026, 6, 17, 12),

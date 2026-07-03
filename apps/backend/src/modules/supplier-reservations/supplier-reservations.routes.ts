@@ -6,6 +6,11 @@ import { validate } from '../../middlewares/validate.middleware.js';
 import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
+  markSupplierDeliveryPickupExpiredHandler,
+  markSupplierLearnerNoShowHandler,
+} from '../fulfillment-failures/fulfillment-failures.controller.js';
+import { markLearnerNoShowSchema } from '../fulfillment-failures/fulfillment-failures.validation.js';
+import {
   acceptSupplierReservationHandler,
   cancelSupplierAcceptedReservationHandler,
   completeSupplierReservationHandler,
@@ -14,6 +19,7 @@ import {
   listSupplierReservationMessagesHandler,
   listSupplierReservationsHandler,
   rescheduleSupplierReservationHandler,
+  acceptLearnerRescheduleProposalHandler,
   submitSupplierNoShowReportHandler,
 } from './supplier-reservations.controller.js';
 import {
@@ -91,6 +97,14 @@ supplierReservationsRouter.patch(
   asyncHandler(rescheduleSupplierReservationHandler),
 );
 
+supplierReservationsRouter.post(
+  '/:id/accept-learner-reschedule',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(acceptLearnerRescheduleProposalHandler),
+);
+
 supplierReservationsRouter.patch(
   '/:id/cancel',
   authMiddleware,
@@ -107,4 +121,21 @@ supplierReservationsRouter.post(
   validate(reservationIdParamsSchema, 'params'),
   validate(submitNoShowReportSchema),
   asyncHandler(submitSupplierNoShowReportHandler),
+);
+
+supplierReservationsRouter.post(
+  '/:id/mark-no-show',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(markLearnerNoShowSchema),
+  asyncHandler(markSupplierLearnerNoShowHandler),
+);
+
+supplierReservationsRouter.post(
+  '/:id/mark-delivery-pickup-expired',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(markSupplierDeliveryPickupExpiredHandler),
 );

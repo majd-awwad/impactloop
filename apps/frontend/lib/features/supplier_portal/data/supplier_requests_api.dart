@@ -111,16 +111,36 @@ class SupplierRequestsApi {
   Future<SupplierIncomingRequest> rescheduleRequest(
     String requestId,
     SupplierPickupWindow pickupWindow, {
+    required String reason,
     String? messageToLearner,
+    String? note,
   }) async {
     try {
       final response = await _client.patch<Map<String, dynamic>>(
         '/api/supplier/reservations/$requestId/reschedule',
         data: {
           ...pickupWindow.toJson(),
+          'reason': reason.trim(),
           if (messageToLearner != null && messageToLearner.trim().isNotEmpty)
             'messageToLearner': messageToLearner.trim(),
+          if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
         },
+      );
+
+      return _parseReservationResponse(response);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  Future<SupplierIncomingRequest> acceptLearnerReschedule(
+    String requestId,
+  ) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/api/supplier/reservations/$requestId/accept-learner-reschedule',
       );
 
       return _parseReservationResponse(response);
@@ -161,7 +181,7 @@ class SupplierRequestsApi {
         '/api/supplier/reservations/$requestId/no-show-report',
         data: {
           'reasonCode': reasonCode,
-          if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+          'note': note?.trim() ?? '',
         },
       );
 
@@ -172,6 +192,64 @@ class SupplierRequestsApi {
           statusCode: response.statusCode,
         );
       }
+    } on ApiException {
+      rethrow;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  Future<SupplierIncomingRequest> markLearnerNoShow(
+    String requestId, {
+    required String reason,
+    String? note,
+  }) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/api/supplier/reservations/$requestId/mark-no-show',
+        data: {
+          'reason': reason,
+          if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        },
+      );
+
+      return _parseReservationResponse(response);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  Future<SupplierIncomingRequest> markDeliveryPickupExpired(
+    String requestId,
+  ) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/api/supplier/reservations/$requestId/mark-delivery-pickup-expired',
+      );
+
+      return _parseReservationResponse(response);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  Future<SupplierIncomingRequest> markDriverNoShow(
+    String deliveryId, {
+    String? note,
+  }) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/api/supplier/deliveries/$deliveryId/driver-no-show',
+        data: {
+          if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        },
+      );
+
+      return _parseReservationResponse(response);
     } on ApiException {
       rethrow;
     } on DioException catch (error) {

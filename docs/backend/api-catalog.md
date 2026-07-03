@@ -166,6 +166,8 @@ All routes require Bearer JWT + `DRIVER` role and an active `DriverProfile`.
 | POST | `/api/driver/deliveries/:id/accept` | `driver/driver.routes.ts` |
 | PATCH | `/api/driver/deliveries/:id/status` | `driver/driver.routes.ts` |
 | POST | `/api/driver/deliveries/:id/location-pings` | `driver/driver.routes.ts` |
+| POST | `/api/driver/deliveries/:id/pickup-failed` | `driver/driver.routes.ts` |
+| POST | `/api/driver/deliveries/:id/delivery-failed` | `driver/driver.routes.ts` |
 
 Available jobs return safe area-level pickup/dropoff data only. Accept is transactional and assigns only `WAITING_FOR_DRIVER` unassigned deliveries; active drivers can accept from `OFFLINE` or `AVAILABLE`, and accepting moves the profile to `ON_DELIVERY`. Status updates are assigned-driver-only and must follow `DRIVER_ASSIGNED → ARRIVED_PICKUP → PICKED_UP → ON_THE_WAY → ARRIVED_DROPOFF → DELIVERED`. `ARRIVED_*` transitions do not require a code. `PICKED_UP` requires body `{ status, confirmationCode?, note? }` with the supplier handover code. `DELIVERED` requires the learner delivery code in `confirmationCode`. Wrong or missing codes return `400 VALIDATION_ERROR`. Driver DTOs never include plain codes. `DELIVERED` completes the reservation, subtracts `quantityRequested` from `material.quantity`, and marks the material `REUSED` only when remaining quantity reaches `0`. Location pings store decimal latitude/longitude for assigned active deliveries and return numeric coordinates to the driver caller. Learner delivery reads expose only the latest ping, with coordinates limited to tracking-eligible statuses, and include `learnerDeliveryCode` for active deliveries (owner learner only). No realtime stream exists yet.
 
@@ -380,8 +382,11 @@ Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must s
 | PATCH | `/api/supplier/reservations/:id/decline` | `supplier-reservations/supplier-reservations.routes.ts` |
 | PATCH | `/api/supplier/reservations/:id/complete` | `supplier-reservations/supplier-reservations.routes.ts` |
 | PATCH | `/api/supplier/reservations/:id/reschedule` | `supplier-reservations/supplier-reservations.routes.ts` |
+| POST | `/api/supplier/reservations/:id/accept-learner-reschedule` | `supplier-reservations/supplier-reservations.routes.ts` |
 | PATCH | `/api/supplier/reservations/:id/cancel` | `supplier-reservations/supplier-reservations.routes.ts` |
 | POST | `/api/supplier/reservations/:id/no-show-report` | `supplier-reservations/supplier-reservations.routes.ts` |
+| POST | `/api/supplier/reservations/:id/mark-no-show` | `supplier-reservations/supplier-reservations.routes.ts` |
+| POST | `/api/supplier/reservations/:id/mark-delivery-pickup-expired` | `supplier-reservations/supplier-reservations.routes.ts` |
 | GET | `/api/supplier/reservations/:id/messages` | `supplier-reservations/supplier-reservations.routes.ts` |
 | POST | `/api/supplier/reservations/:id/messages` | `supplier-reservations/supplier-reservations.routes.ts` |
 
@@ -391,13 +396,21 @@ Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must s
 
 `PATCH /api/supplier/reservations/:id/complete` requires `{ confirmationCode }` (6-digit). Correct code alone is insufficient: completion is allowed only when `now` is inside `pickupWindowStart`–`pickupWindowEnd` plus a 30-minute grace period (`HANDOVER_GRACE_MINUTES`). Early completion returns `400` with `Pickup window has not started yet.`; late completion returns `Pickup window has expired.`
 
-Driver `PATCH /api/driver/deliveries/:id/status` requires `confirmationCode` for `PICKED_UP` and `DELIVERED`. After code verification, `PICKED_UP` is allowed only inside `supplierPickupWindowStart`–`supplierPickupWindowEnd` (+ grace); `DELIVERED` only inside `confirmedDeliveryWindowStart`–`confirmedDeliveryWindowEnd` (+ grace). Wrong code returns `400` regardless of time.
+Driver `PATCH /api/driver/deliveries/:id/status` requires `confirmationCode` for `PICKED_UP` and `DELIVERED`. After code verification, `PICKED_UP` is allowed only inside `supplierPickupWindowStart`–`supplierPickupWindowEnd` (+ grace); `DELIVERED` only inside `confirmedDeliveryWindowStart`–`confirmedDeliveryWindowEnd` (+ grace). Wrong code returns `400` regardless of time. Phase 5 failure actions (after window + grace): `POST .../pickup-failed` body `{ reason, note? }` (`FAILED_PICKUP`, reservation `AWAITING_RESOLUTION`, hold kept); `POST .../delivery-failed` body `{ reason, note? }` (`LEARNER_NO_SHOW` when `LEARNER_UNAVAILABLE`, else `FAILED_DELIVERY`; hold kept when driver already picked up). Active driver delivery responses include `canDriverReportPickupFailed` / `canDriverReportDeliveryFailed`.
 
 `PATCH /api/supplier/reservations/:id/accept` body remains `{ pickupWindowStart, pickupWindowEnd, supplierNote?, selectedPreferredWindowIndex? }`. For `PICKUP`, optional `selectedPreferredWindowIndex` selects an exact learner preferred window from stored JSON and always accepts as `ACCEPTED` using those canonical timestamps (avoids timezone/format mismatches from UI reconstruction). Without an index, `pickupWindowStart/End` are treated as a custom proposal. Legacy pickup reservations with null preferred windows accept directly to `ACCEPTED`. For `DELIVERY`, the same body fields represent the **driver pickup window from supplier**; backend validates delivery address/windows/material delivery allowance, applies a 60-minute buffer to compute a confirmed delivery window when feasible (`ACCEPTED` + optional `Delivery` row `WAITING_FOR_DRIVER`), or sets `AWAITING_LEARNER_CONFIRMATION` with `schedulingConflictReason` when no learner delivery window fits.
 
 Accept keeps the held quantity and recomputes material status. Decline rejects a pending reservation and releases the hold. `PATCH /api/supplier/reservations/:id/complete` body requires `{ confirmationCode }` (6 digits). Supplier enters the learner's self-pickup code to complete; wrong/missing code returns `400 VALIDATION_ERROR`. Complete subtracts `quantityRequested` from `material.quantity` for self-pickup; material becomes `REUSED` only when remaining quantity reaches `0`. Complete is blocked when `deliveryRequested` is true or any delivery row exists for the reservation. Legacy accepted pickup rows without stored hashes lazily generate a hash on authorized read; completion still requires the derived code once stored.
 
-Overdue accepted reservations stay `ACCEPTED`; supplier may `PATCH .../reschedule` (updates pickup window, optional note/message), `PATCH .../cancel` (releases material), or `POST .../no-show-report` (admin review; one report per reservation+target; only after pickup window ends). No-show reports do not auto-suspend. Admin verify counts as a strike; at 3 verified reports the verify response includes `shouldWarnAdmin` + recommendation only.
+Overdue accepted self-pickup reservations use a phase-based supplier UI (`pickupHandoverPhase`: `BEFORE_ALLOWED`, `DURING_ALLOWED`, `AFTER_ALLOWED`) with handover flexibility ±30 minutes (`HANDOVER_EARLY_MINUTES` / `HANDOVER_GRACE_MINUTES`). **Before** allowed start: supplier may `PATCH .../reschedule` only (proposal → `AWAITING_LEARNER_CONFIRMATION`, requires `reason` + proposed window; hold kept). **During** allowed handover: supplier may `PATCH .../complete` only. **After** allowed end: supplier may `PATCH .../cancel` (close, releases hold), `POST .../no-show-report` (requires `reasonCode` + `note`; self-pickup releases hold → `AWAITING_RESOLUTION`), or `PATCH .../reschedule` (proposal). Learner may `POST /api/reservations/:id/request-reschedule` before/after handover (not during) → `AWAITING_SUPPLIER_CONFIRMATION`; supplier may `POST .../accept-learner-reschedule` or propose a different time via reschedule. Schedule changes never silently update confirmed windows on `ACCEPTED` without the other party accepting. `GET /api/admin/no-show-reports/:id` includes messages and `activityHistory` (reservation status history).
+
+### Supplier deliveries — `/api/supplier/deliveries`
+
+| Method | Path | Module |
+|--------|------|--------|
+| POST | `/api/supplier/deliveries/:id/driver-no-show` | `fulfillment-failures/fulfillment-failures.routes.ts` |
+
+No-show reports do not auto-suspend. Admin verify counts as a strike; at 3 verified reports the verify response includes `shouldWarnAdmin` + recommendation only.
 
 ## Endpoints documented elsewhere but **not mounted**
 

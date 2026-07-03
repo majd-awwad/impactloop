@@ -61,13 +61,22 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
   Future<SupplierIncomingRequest> rescheduleRequest(
     String requestId,
     SupplierPickupWindow pickupWindow, {
+    required String reason,
     String? messageToLearner,
+    String? note,
   }) {
     return _api.rescheduleRequest(
       requestId,
       pickupWindow,
+      reason: reason,
       messageToLearner: messageToLearner,
+      note: note,
     );
+  }
+
+  @override
+  Future<SupplierIncomingRequest> acceptLearnerReschedule(String requestId) {
+    return _api.acceptLearnerReschedule(requestId);
   }
 
   @override
@@ -89,6 +98,28 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
       reasonCode: reasonCode,
       note: note,
     );
+  }
+
+  @override
+  Future<SupplierIncomingRequest> markLearnerNoShow(
+    String requestId, {
+    required String reason,
+    String? note,
+  }) {
+    return _api.markLearnerNoShow(requestId, reason: reason, note: note);
+  }
+
+  @override
+  Future<SupplierIncomingRequest> markDeliveryPickupExpired(String requestId) {
+    return _api.markDeliveryPickupExpired(requestId);
+  }
+
+  @override
+  Future<SupplierIncomingRequest> markDriverNoShow(
+    String deliveryId, {
+    String? note,
+  }) {
+    return _api.markDriverNoShow(deliveryId, note: note);
   }
 
   @override

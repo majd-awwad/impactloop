@@ -116,17 +116,29 @@ enum VerificationDocumentStatus {
 enum ReservationStatus {
   PENDING
   AWAITING_LEARNER_CONFIRMATION
+  AWAITING_SUPPLIER_CONFIRMATION
   ACCEPTED
   REJECTED
   CANCELLED
   COMPLETED
   EXPIRED
+  NO_SHOW
+  FULFILLMENT_FAILED
+  AWAITING_RESOLUTION
+}
+
+enum RescheduleRequestedBy {
+  SUPPLIER
+  LEARNER
 }
 
 enum NoShowReportReason {
   LEARNER_DID_NOT_ARRIVE
   DRIVER_DID_NOT_ARRIVE
   NO_RESPONSE_AFTER_PICKUP_WINDOW
+  REPEATED_DELAY
+  WRONG_INFORMATION
+  SAFETY_OR_TRUST_CONCERN
   OTHER
 }
 
@@ -167,6 +179,9 @@ enum DeliveryStatus {
   CANCELLED
   FAILED_PICKUP
   FAILED_DELIVERY
+  DRIVER_NO_SHOW
+  LEARNER_NO_SHOW
+  AWAITING_RESOLUTION
 }
 
 enum DriverProfileStatus {
@@ -846,6 +861,11 @@ model Reservation {
   pickupWindowEnd   DateTime?                  @map("pickup_window_end")
   supplierProposedPickupWindowStart DateTime?    @map("supplier_proposed_pickup_window_start")
   supplierProposedPickupWindowEnd   DateTime?    @map("supplier_proposed_pickup_window_end")
+  learnerProposedPickupWindowStart  DateTime?    @map("learner_proposed_pickup_window_start")
+  learnerProposedPickupWindowEnd    DateTime?    @map("learner_proposed_pickup_window_end")
+  pendingRescheduleRequestedBy      RescheduleRequestedBy? @map("pending_reschedule_requested_by")
+  pendingRescheduleReason           String?                  @map("pending_reschedule_reason")
+  pendingRescheduleNote             String?                  @map("pending_reschedule_note")
   supplierPickupWindowStart DateTime?            @map("supplier_pickup_window_start")
   supplierPickupWindowEnd   DateTime?            @map("supplier_pickup_window_end")
   confirmedDeliveryWindowStart DateTime?         @map("confirmed_delivery_window_start")

@@ -4,15 +4,19 @@ import { AppError } from '../../utils/app-error.js';
 import { applyReservationCompletionToMaterial } from '../reservations/reservations.quantity.js';
 import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
 import {
+  canDriverMarkDeliveryFailed,
+  canDriverMarkPickupFailed,
+} from '../fulfillment-failures/fulfillment-failures.eligibility.js';
+import {
   ensureDeliveryHandoverCodesStored,
   verifyHandoverCode,
 } from '../../utils/handover-codes.js';
 import {
-  deliveryWindowExpiredMessage,
   deliveryWindowNotStartedMessage,
+  deliveryWindowPassedMessage,
   evaluateHandoverWindow,
-  supplierPickupWindowExpiredMessage,
   supplierPickupWindowNotStartedMessage,
+  supplierPickupWindowPassedMessage,
 } from '../../utils/handover-timing.js';
 
 import type {
@@ -25,6 +29,9 @@ const terminalStatuses = [
   'CANCELLED',
   'FAILED_PICKUP',
   'FAILED_DELIVERY',
+  'DRIVER_NO_SHOW',
+  'LEARNER_NO_SHOW',
+  'AWAITING_RESOLUTION',
 ] as const satisfies readonly DeliveryStatus[];
 
 const allowedTransitions: Partial<Record<DeliveryStatus, DeliveryStatus>> = {
@@ -35,13 +42,18 @@ const allowedTransitions: Partial<Record<DeliveryStatus, DeliveryStatus>> = {
   ARRIVED_DROPOFF: 'DELIVERED',
 };
 
-const driverDeliveryInclude = {
+export const driverDeliveryInclude = {
   reservation: {
     select: {
       id: true,
       status: true,
+      fulfillmentMethod: true,
       pickupWindowStart: true,
       pickupWindowEnd: true,
+      supplierPickupWindowStart: true,
+      supplierPickupWindowEnd: true,
+      confirmedDeliveryWindowStart: true,
+      confirmedDeliveryWindowEnd: true,
       quantityRequested: true,
       material: {
         select: {
@@ -140,6 +152,25 @@ const mapAvailableDelivery = (delivery: DriverDeliveryRecord) => ({
 
 const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
   ...mapAvailableDelivery(delivery),
+  supplierPickupWindowStart:
+    delivery.reservation.supplierPickupWindowStart?.toISOString() ?? null,
+  supplierPickupWindowEnd:
+    delivery.reservation.supplierPickupWindowEnd?.toISOString() ?? null,
+  confirmedDeliveryWindowStart:
+    delivery.reservation.confirmedDeliveryWindowStart?.toISOString() ?? null,
+  confirmedDeliveryWindowEnd:
+    delivery.reservation.confirmedDeliveryWindowEnd?.toISOString() ?? null,
+  canDriverReportPickupFailed: canDriverMarkPickupFailed({
+    reservationStatus: delivery.reservation.status,
+    deliveryStatus: delivery.status,
+    supplierPickupWindowEnd: delivery.reservation.supplierPickupWindowEnd,
+  }),
+  canDriverReportDeliveryFailed: canDriverMarkDeliveryFailed({
+    reservationStatus: delivery.reservation.status,
+    deliveryStatus: delivery.status,
+    confirmedDeliveryWindowEnd:
+      delivery.reservation.confirmedDeliveryWindowEnd,
+  }),
   assignedAt: delivery.assignedAt?.toISOString() ?? null,
   arrivedPickupAt: delivery.arrivedPickupAt?.toISOString() ?? null,
   pickedUpAt: delivery.pickedUpAt?.toISOString() ?? null,
@@ -161,6 +192,9 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
   pickupLocation: mapExactLocation(delivery.pickupLocation),
   dropoffLocation: mapExactLocation(delivery.dropoffLocation),
 });
+
+export const mapDriverDeliveryForResponse = (delivery: DriverDeliveryRecord) =>
+  mapAssignedDelivery(delivery);
 
 const findActiveDriverProfile = async (
   userId: string,
@@ -488,8 +522,8 @@ export const updateDriverDeliveryStatus = async (
     case 'WINDOW_EXPIRED':
       throw new AppError(
         input.status === 'PICKED_UP'
-          ? supplierPickupWindowExpiredMessage()
-          : deliveryWindowExpiredMessage(),
+          ? supplierPickupWindowPassedMessage()
+          : deliveryWindowPassedMessage(),
         400,
         'VALIDATION_ERROR',
       );

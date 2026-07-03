@@ -886,9 +886,14 @@ class SupplierL10n {
         SupplierIncomingRequestStatus.accepted => tabAccepted,
         SupplierIncomingRequestStatus.awaitingConfirmation =>
           tabAwaitingConfirmation,
+        SupplierIncomingRequestStatus.awaitingSupplierConfirmation =>
+          t('Waiting for supplier', 'بانتظار المورد'),
         SupplierIncomingRequestStatus.declined => tabDeclined,
         SupplierIncomingRequestStatus.completed => tabCompleted,
         SupplierIncomingRequestStatus.cancelled => tabCancelled,
+        SupplierIncomingRequestStatus.noShow => 'Learner no-show',
+        SupplierIncomingRequestStatus.fulfillmentFailed => 'Fulfillment failed',
+        SupplierIncomingRequestStatus.needsResolution => 'Needs resolution',
       };
 
   // —— Pickup schedule ——

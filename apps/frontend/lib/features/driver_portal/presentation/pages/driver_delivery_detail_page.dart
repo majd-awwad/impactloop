@@ -261,6 +261,25 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
+          if (widget.delivery.canDriverReportPickupFailed)
+            OutlinedButton.icon(
+              onPressed: isSubmitting
+                  ? null
+                  : () => _reportPickupFailed(context),
+              icon: const Icon(Icons.report_problem_outlined),
+              label: const Text('Report pickup failed'),
+            ),
+          if (widget.delivery.canDriverReportDeliveryFailed) ...[
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: isSubmitting
+                  ? null
+                  : () => _reportDeliveryFailed(context),
+              icon: const Icon(Icons.no_accounts_outlined),
+              label: const Text('Report delivery failed'),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
           _LocationSharingSection(delivery: widget.delivery),
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
@@ -338,6 +357,102 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       }
 
       showErrorSnackBar(context, error);
+    }
+  }
+
+  Future<void> _reportPickupFailed(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report pickup failed'),
+        content: const Text(
+          'Confirm that the supplier pickup window expired and the handover could not happen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Report failed'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    try {
+      await ref
+          .read(driverDeliveryActionControllerProvider.notifier)
+          .reportPickupFailed(
+            deliveryId: widget.delivery.id,
+            reason: 'SUPPLIER_UNAVAILABLE',
+            note: _noteController.text.trim().isEmpty
+                ? null
+                : _noteController.text.trim(),
+          );
+      if (!mounted) {
+        return;
+      }
+      showInfoSnackBar(context, 'Pickup failure reported.');
+      context.go('/driver/jobs');
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      showErrorSnackBar(context, error.displayMessage);
+    }
+  }
+
+  Future<void> _reportDeliveryFailed(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report delivery failed'),
+        content: const Text(
+          'Confirm that the delivery window expired and the learner could not receive the material.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Report failed'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    try {
+      await ref
+          .read(driverDeliveryActionControllerProvider.notifier)
+          .reportDeliveryFailed(
+            deliveryId: widget.delivery.id,
+            reason: 'LEARNER_UNAVAILABLE',
+            note: _noteController.text.trim().isEmpty
+                ? null
+                : _noteController.text.trim(),
+          );
+      if (!mounted) {
+        return;
+      }
+      showInfoSnackBar(context, 'Delivery failure reported.');
+      context.go('/driver/jobs');
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      showErrorSnackBar(context, error.displayMessage);
     }
   }
 }

@@ -1,4 +1,5 @@
 import type { ReservationStatus } from '../../generated/prisma/client.js';
+import { isAfterAllowedEnd } from '../../utils/handover-timing.js';
 
 export type PickupWindowStatus =
   | 'UPCOMING'
@@ -39,7 +40,11 @@ export const resolveReservationFollowUp = (input: {
     input.status === 'REJECTED' ||
     input.status === 'CANCELLED' ||
     input.status === 'EXPIRED' ||
-    input.status === 'AWAITING_LEARNER_CONFIRMATION'
+    input.status === 'AWAITING_LEARNER_CONFIRMATION' ||
+    input.status === 'AWAITING_SUPPLIER_CONFIRMATION' ||
+    input.status === 'NO_SHOW' ||
+    input.status === 'FULFILLMENT_FAILED' ||
+    input.status === 'AWAITING_RESOLUTION'
   ) {
     return {
       pickupWindowStatus: 'NONE',
@@ -57,7 +62,7 @@ export const resolveReservationFollowUp = (input: {
   }
 
   const end = input.pickupWindowEnd;
-  if (end.getTime() < now.getTime()) {
+  if (isAfterAllowedEnd(now, end)) {
     return {
       pickupWindowStatus: 'OVERDUE',
       isOverdue: true,
@@ -88,7 +93,8 @@ export const reservationAllowsMessaging = (status: ReservationStatus) => {
   return (
     status === 'PENDING' ||
     status === 'ACCEPTED' ||
-    status === 'AWAITING_LEARNER_CONFIRMATION'
+    status === 'AWAITING_LEARNER_CONFIRMATION' ||
+    status === 'AWAITING_SUPPLIER_CONFIRMATION'
   );
 };
 

@@ -8,8 +8,18 @@ import { prisma } from '../../database/prisma.js';
 export const ACTIVE_HOLD_STATUSES = [
   'PENDING',
   'AWAITING_LEARNER_CONFIRMATION',
+  'AWAITING_SUPPLIER_CONFIRMATION',
   'ACCEPTED',
 ] as const satisfies readonly ReservationStatus[];
+
+/** Delivery states where material may still be with the driver after admin review is needed. */
+export const MATERIAL_IN_CUSTODY_DELIVERY_STATUSES = [
+  'PICKED_UP',
+  'ON_THE_WAY',
+  'ARRIVED_DROPOFF',
+  'LEARNER_NO_SHOW',
+  'FAILED_DELIVERY',
+] as const;
 
 /** Reservation statuses that reduce public availableQuantity. COMPLETED consumes stock instead. */
 
@@ -80,7 +90,32 @@ export const sumHeldQuantityForMaterial = async (
     },
   });
 
-  return toDecimal(aggregate._sum.quantityRequested);
+  let held = toDecimal(aggregate._sum.quantityRequested);
+
+  const usesDefaultHoldStatuses =
+    statuses.length === ACTIVE_HOLD_STATUSES.length &&
+    ACTIVE_HOLD_STATUSES.every((status) => statuses.includes(status));
+
+  if (usesDefaultHoldStatuses) {
+    const awaitingResolutionAggregate = await tx.reservation.aggregate({
+      where: {
+        materialId,
+        status: 'AWAITING_RESOLUTION',
+        deliveries: {
+          some: {
+            status: { in: [...MATERIAL_IN_CUSTODY_DELIVERY_STATUSES] },
+          },
+        },
+      },
+      _sum: {
+        quantityRequested: true,
+      },
+    });
+
+    held = held.plus(toDecimal(awaitingResolutionAggregate._sum.quantityRequested));
+  }
+
+  return held;
 };
 
 export const sumHeldQuantityByStatus = async (
