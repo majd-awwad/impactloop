@@ -115,9 +115,17 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
   }
 
   @override
+  Future<SupplierIncomingRequest> reportNoDriverAvailable(
+    String requestId, {
+    required String note,
+  }) {
+    return _api.reportNoDriverAvailable(requestId, note: note);
+  }
+
+  @override
   Future<SupplierIncomingRequest> markDriverNoShow(
     String deliveryId, {
-    String? note,
+    required String note,
   }) {
     return _api.markDriverNoShow(deliveryId, note: note);
   }

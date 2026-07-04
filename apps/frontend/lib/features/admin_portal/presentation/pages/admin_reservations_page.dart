@@ -126,11 +126,7 @@ final _adminReservationDetailProvider =
   (ref, id) => ref.read(adminReservationsApiProvider).fetchReservationDetail(id),
 );
 
-String _statusLabel(String status) {
-  final label = humanizeEnum(status);
-  if (label.isEmpty) return status;
-  return '${label[0].toUpperCase()}${label.substring(1)}';
-}
+String _statusLabel(String status) => monitoringStatusLabel(status);
 
 Color _reservationStatusAccent(AdminPalette palette, String status) {
   final normalized = status.toUpperCase();

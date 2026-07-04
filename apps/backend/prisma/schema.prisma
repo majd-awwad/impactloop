@@ -139,6 +139,12 @@ enum NoShowReportReason {
   REPEATED_DELAY
   WRONG_INFORMATION
   SAFETY_OR_TRUST_CONCERN
+  SUPPLIER_UNAVAILABLE
+  SUPPLIER_MATERIAL_NOT_READY
+  NO_DRIVER_AVAILABLE
+  PICKUP_FAILED
+  DELIVERY_FAILED
+  DRIVER_ISSUE
   OTHER
 }
 
@@ -146,11 +152,14 @@ enum NoShowReportStatus {
   PENDING_REVIEW
   VERIFIED
   REJECTED
+  RESOLVED_NO_STRIKE
 }
 
 enum NoShowReportTargetRole {
   LEARNER
+  SUPPLIER
   DRIVER
+  SYSTEM
 }
 
 enum ReservationStatusGroup {
@@ -959,6 +968,7 @@ model Delivery {
   assignments             DeliveryAssignment[]
   statusHistory           DeliveryStatusHistory[]
   locationPings           DeliveryLocationPing[]
+  incidentReports         NoShowReport[]
 
   @@index([reservationId])
   @@index([status])
@@ -1060,8 +1070,9 @@ model ReservationMessage {
 model NoShowReport {
   id                String                 @id @default(cuid())
   reservationId     String                 @map("reservation_id")
+  deliveryId        String?                @map("delivery_id")
   reporterUserId    String                 @map("reporter_user_id")
-  targetUserId      String                 @map("target_user_id")
+  targetUserId      String?                @map("target_user_id")
   targetRole        NoShowReportTargetRole @map("target_role")
   reasonCode        NoShowReportReason     @map("reason_code")
   note              String?
@@ -1073,14 +1084,16 @@ model NoShowReport {
   reviewNote        String?                @map("review_note")
   createdAt         DateTime               @default(now()) @map("created_at")
   reservation       Reservation            @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  delivery          Delivery?              @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
   reporter          User                   @relation("NoShowReportReporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
-  target            User                   @relation("NoShowReportTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  target            User?                  @relation("NoShowReportTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
   reviewedBy        User?                  @relation("NoShowReportReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@unique([reservationId, targetUserId])
   @@index([status, createdAt(sort: Desc)])
   @@index([targetUserId, status])
   @@index([reporterUserId])
+  @@index([deliveryId])
   @@map("no_show_reports")
 }
 

@@ -237,16 +237,32 @@ class SupplierRequestsApi {
     }
   }
 
+  Future<SupplierIncomingRequest> reportNoDriverAvailable(
+    String requestId, {
+    required String note,
+  }) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/api/supplier/reservations/$requestId/report-no-driver',
+        data: {'note': note.trim()},
+      );
+
+      return _parseReservationResponse(response);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
   Future<SupplierIncomingRequest> markDriverNoShow(
     String deliveryId, {
-    String? note,
+    required String note,
   }) async {
     try {
       final response = await _client.post<Map<String, dynamic>>(
         '/api/supplier/deliveries/$deliveryId/driver-no-show',
-        data: {
-          if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
-        },
+        data: {'note': note.trim()},
       );
 
       return _parseReservationResponse(response);

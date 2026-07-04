@@ -126,15 +126,18 @@ class LearnerReservationActiveDelivery {
   const LearnerReservationActiveDelivery({
     required this.id,
     required this.status,
+    this.learnerDeliveryCode,
   });
 
   final String id;
   final String status;
+  final String? learnerDeliveryCode;
 
   factory LearnerReservationActiveDelivery.fromJson(Map<String, dynamic> json) {
     return LearnerReservationActiveDelivery(
       id: json['id'] as String? ?? '',
       status: json['status'] as String? ?? '',
+      learnerDeliveryCode: json['learnerDeliveryCode'] as String?,
     );
   }
 }
@@ -176,6 +179,11 @@ class LearnerReservation {
     this.canSendMessage = false,
     this.latestMessage,
     this.selfPickupCode,
+    this.pickupHandoverPhase,
+    this.canLearnerReschedule = false,
+    this.pendingRescheduleReason,
+    this.canLearnerReportSupplier = false,
+    this.canReportNoDriverAvailable = false,
   });
 
   final String id;
@@ -213,6 +221,11 @@ class LearnerReservation {
   final bool canSendMessage;
   final ReservationMessage? latestMessage;
   final String? selfPickupCode;
+  final String? pickupHandoverPhase;
+  final bool canLearnerReschedule;
+  final String? pendingRescheduleReason;
+  final bool canLearnerReportSupplier;
+  final bool canReportNoDriverAvailable;
 
   factory LearnerReservation.fromJson(Map<String, dynamic> json) {
     final materialJson = json['material'];
@@ -299,6 +312,17 @@ class LearnerReservation {
             )
           : null,
       selfPickupCode: json['selfPickupCode'] as String?,
+      pickupHandoverPhase: json['pickupHandoverPhase'] as String?,
+      canLearnerReschedule: json['canLearnerReschedule'] == true,
+      pendingRescheduleReason: () {
+        final pending = json['pendingReschedule'];
+        if (pending is Map) {
+          return pending['reason'] as String?;
+        }
+        return null;
+      }(),
+      canLearnerReportSupplier: json['canLearnerReportSupplier'] == true,
+      canReportNoDriverAvailable: json['canReportNoDriverAvailable'] == true,
     );
   }
 
@@ -306,6 +330,17 @@ class LearnerReservation {
   bool get isAccepted => status == 'ACCEPTED';
   bool get isAwaitingConfirmation =>
       status == 'AWAITING_LEARNER_CONFIRMATION';
+  bool get isAwaitingSupplierConfirmation =>
+      status == 'AWAITING_SUPPLIER_CONFIRMATION';
+  bool get isAwaitingResolution => status == 'AWAITING_RESOLUTION';
+  bool get isReadOnlyFinalState =>
+      isCompleted ||
+      isCancelled ||
+      isRejected ||
+      isExpired ||
+      isAwaitingResolution ||
+      status == 'NO_SHOW' ||
+      status == 'FULFILLMENT_FAILED';
   bool get isRejected => status == 'REJECTED';
   bool get isCompleted => status == 'COMPLETED';
   bool get isCancelled => status == 'CANCELLED';
@@ -342,4 +377,10 @@ class LearnerReservation {
       isPickupFulfillment &&
       selfPickupCode != null &&
       selfPickupCode!.trim().isNotEmpty;
+
+  bool get shouldShowLearnerDeliveryCode =>
+      isAccepted &&
+      isDeliveryFulfillment &&
+      activeDelivery?.learnerDeliveryCode != null &&
+      activeDelivery!.learnerDeliveryCode!.trim().isNotEmpty;
 }

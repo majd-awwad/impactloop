@@ -89,6 +89,21 @@ class DriverDeliveriesApi {
       ),
     );
   }
+
+  Future<DriverDelivery> reportDriverIssue(
+    String deliveryId, {
+    required String note,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/driver/deliveries/$deliveryId/driver-issue',
+        data: {'note': note},
+      ),
+      (json) => DriverDelivery.fromJson(
+        Map<String, dynamic>.from(json['delivery'] as Map? ?? json),
+      ),
+    );
+  }
 }
 
 List<DriverDelivery> _parseDeliveryList(Map<String, dynamic> json) {

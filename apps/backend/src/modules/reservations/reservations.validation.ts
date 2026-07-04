@@ -166,3 +166,21 @@ export const requestPickupRescheduleSchema = z
 export type RequestPickupRescheduleInput = z.infer<
   typeof requestPickupRescheduleSchema
 >;
+
+export const reportSupplierIssueSchema = z.object({
+  reason: z.enum([
+    'SUPPLIER_UNAVAILABLE',
+    'SUPPLIER_MATERIAL_NOT_READY',
+    'WRONG_PICKUP_INFO',
+    'OTHER',
+  ]),
+  note: z.string().trim().max(1000).optional(),
+});
+
+export type ReportSupplierIssueInput = z.infer<typeof reportSupplierIssueSchema>;
+
+export const reportNoDriverSchema = z.object({
+  note: z.string().trim().min(1, 'Note is required.').max(1000),
+});
+
+export type ReportNoDriverInput = z.infer<typeof reportNoDriverSchema>;

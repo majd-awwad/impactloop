@@ -23,6 +23,12 @@ import {
 } from './reservation-reschedule.js';
 import * as reservationsRescheduleRepository from './reservations.reschedule.repository.js';
 import * as reservationsRepository from './reservations.repository.js';
+import {
+  canLearnerReportSupplierIssue,
+  canReportNoDriverAvailable,
+  createLearnerSupplierIssueReport,
+  createNoDriverAvailableReport,
+} from './reservations.incidents.repository.js';
 import { resolveLearnerConfirmation as resolveLearnerConfirmationInRepository } from './reservations.learner-confirmation.repository.js';
 import type {
   CreateReservationInput,
@@ -134,6 +140,12 @@ const mapReservation = (
   createdAt: reservation.createdAt.toISOString(),
 });
 
+const LEARNER_DELIVERY_CODE_VISIBLE_STATUSES = new Set([
+  'PICKED_UP',
+  'ON_THE_WAY',
+  'ARRIVED_DROPOFF',
+]);
+
 const mapLearnerReservation = (
   reservation: reservationsRepository.LearnerReservationListRecord,
   latestMessage?: ReturnType<typeof mapReservationMessage> | null,
@@ -160,7 +172,29 @@ const mapLearnerReservation = (
     deliveryCount,
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
-    hasFinalReport: false,
+    hasFinalReport:
+      reservation.status === 'AWAITING_RESOLUTION' ||
+      reservation.noShowReports.some(
+        (report) => report.status === 'PENDING_REVIEW',
+      ),
+  });
+  const hasOpenIncident = reservation.noShowReports.some(
+    (report) => report.status === 'PENDING_REVIEW',
+  );
+  const canLearnerReportSupplier = canLearnerReportSupplierIssue({
+    status: reservation.status,
+    fulfillmentMethod: reservation.fulfillmentMethod,
+    deliveryRequested: reservation.deliveryRequested,
+    pickupWindowEnd: reservation.pickupWindowEnd,
+    hasPendingReport: hasOpenIncident,
+  });
+  const canReportNoDriverAvailableFlag = canReportNoDriverAvailable({
+    status: reservation.status,
+    fulfillmentMethod: reservation.fulfillmentMethod,
+    supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+    deliveryStatus: latestDelivery?.status ?? null,
+    assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+    hasPendingReport: hasOpenIncident,
   });
 
   return {
@@ -214,6 +248,11 @@ const mapLearnerReservation = (
       ? {
           id: latestDelivery.id,
           status: latestDelivery.status,
+          learnerDeliveryCode:
+            reservation.status === 'ACCEPTED' &&
+            LEARNER_DELIVERY_CODE_VISIBLE_STATUSES.has(latestDelivery.status)
+              ? deriveHandoverCode('learner-delivery', latestDelivery.id)
+              : null,
         }
       : null,
     pickupWindowStatus: followUp.pickupWindowStatus,
@@ -221,7 +260,10 @@ const mapLearnerReservation = (
     needsFollowUp: followUp.needsFollowUp,
     pickupHandoverPhase,
     canLearnerReschedule,
-    canSendMessage: reservationAllowsMessaging(reservation.status),
+    canLearnerReportSupplier,
+    canReportNoDriverAvailable: canReportNoDriverAvailableFlag,
+    canSendMessage:
+      reservationAllowsMessaging(reservation.status) && !hasOpenIncident,
     latestMessage: latestMessage ?? null,
     material: {
       id: reservation.material.id,
@@ -612,5 +654,99 @@ export const resolveLearnerConfirmation = async (
         500,
         'INTERNAL_ERROR',
       );
+  }
+};
+
+export const reportLearnerSupplierIssue = async (
+  requesterId: string,
+  reservationId: string,
+  input: import('./reservations.validation.js').ReportSupplierIssueInput,
+) => {
+  const result = await createLearnerSupplierIssueReport({
+    learnerId: requesterId,
+    reservationId,
+    reason: input.reason,
+    note: input.note,
+  });
+
+  switch (result.outcome) {
+    case 'NOT_FOUND':
+      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    case 'INVALID_STATUS':
+    case 'NOT_SELF_PICKUP':
+      throw new AppError(
+        'Supplier issue reports are allowed only for accepted self-pickup reservations.',
+        409,
+        'CONFLICT',
+      );
+    case 'MISSING_WINDOW':
+    case 'WINDOW_NOT_EXPIRED':
+      throw new AppError(
+        'Supplier issue reports are allowed only after the pickup window and grace period.',
+        409,
+        'CONFLICT',
+      );
+    case 'DUPLICATE':
+      throw new AppError(
+        'A supplier issue report already exists for this reservation.',
+        409,
+        'CONFLICT',
+      );
+    case 'CREATED': {
+      const mapped = await mapLearnerReservationById(requesterId, reservationId);
+      if (!mapped) {
+        throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+      }
+      return mapped;
+    }
+    default:
+      throw new AppError('Unable to submit supplier issue report.', 500, 'INTERNAL_ERROR');
+  }
+};
+
+export const reportNoDriverAvailable = async (
+  reporterUserId: string,
+  reservationId: string,
+  input: import('./reservations.validation.js').ReportNoDriverInput,
+) => {
+  const result = await createNoDriverAvailableReport({
+    reporterUserId,
+    reservationId,
+    note: input.note,
+  });
+
+  switch (result.outcome) {
+    case 'NOT_FOUND':
+      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    case 'FORBIDDEN':
+      throw new AppError('You cannot report this reservation.', 403, 'FORBIDDEN');
+    case 'INVALID_STATUS':
+    case 'INVALID_DELIVERY_STATE':
+      throw new AppError(
+        'No-driver reports are allowed only when delivery is waiting for a driver.',
+        409,
+        'CONFLICT',
+      );
+    case 'WINDOW_NOT_EXPIRED':
+      throw new AppError(
+        'No-driver reports are allowed only after the supplier pickup window and grace period.',
+        409,
+        'CONFLICT',
+      );
+    case 'DUPLICATE':
+      throw new AppError(
+        'A no-driver report already exists for this reservation.',
+        409,
+        'CONFLICT',
+      );
+    case 'CREATED': {
+      const mapped = await mapLearnerReservationById(reporterUserId, reservationId);
+      if (!mapped) {
+        throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+      }
+      return mapped;
+    }
+    default:
+      throw new AppError('Unable to submit no-driver report.', 500, 'INTERNAL_ERROR');
   }
 };

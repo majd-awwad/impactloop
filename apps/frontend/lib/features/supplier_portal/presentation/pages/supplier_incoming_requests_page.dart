@@ -11,6 +11,7 @@ import '../widgets/accept_incoming_request_dialog.dart';
 import '../widgets/complete_pickup_dialog.dart';
 import '../widgets/decline_incoming_request_dialog.dart';
 import '../widgets/reservation_follow_up_flow.dart';
+import '../widgets/supplier_delivery_incident_flow.dart';
 import '../widgets/incoming_request_card.dart';
 import '../widgets/incoming_request_filter_chips.dart';
 import '../widgets/supplier_feedback.dart';
@@ -201,6 +202,22 @@ class _SupplierIncomingRequestsPageState
                         reservationId: request.id,
                         materialTitle: request.materialTitle,
                         learnerName: request.learnerName,
+                      )
+                  : null,
+              onReportNoDriver: request.canReportNoDriverAvailable
+                  ? () => handleReportNoDriverAvailable(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
+              onReportDriverNoShow:
+                  request.canSupplierReportDriverNoShow &&
+                          request.activeDelivery?.id != null
+                  ? () => handleReportDriverNoShow(
+                        context,
+                        ref,
+                        deliveryId: request.activeDelivery!.id,
                       )
                   : null,
             ),

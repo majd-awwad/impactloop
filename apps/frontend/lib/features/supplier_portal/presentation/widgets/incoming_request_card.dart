@@ -64,6 +64,8 @@ class IncomingRequestCard extends StatelessWidget {
     this.onReportToAdmin,
     this.onAcceptLearnerReschedule,
     this.onProposeDifferentTime,
+    this.onReportNoDriver,
+    this.onReportDriverNoShow,
     this.isCompleting = false,
   });
 
@@ -76,6 +78,8 @@ class IncomingRequestCard extends StatelessWidget {
   final VoidCallback? onReportToAdmin;
   final VoidCallback? onAcceptLearnerReschedule;
   final VoidCallback? onProposeDifferentTime;
+  final VoidCallback? onReportNoDriver;
+  final VoidCallback? onReportDriverNoShow;
   final bool isCompleting;
 
   @override
@@ -239,6 +243,7 @@ class IncomingRequestCard extends StatelessWidget {
               ),
             ],
             if ((isAccepted || isAwaitingSupplier) &&
+                !request.isReadOnlyFinalState &&
                 request.isPickupFulfillment &&
                 (request.pickupHandoverPhase != null || isAwaitingSupplier)) ...[
               if (isAwaitingSupplier &&
@@ -279,6 +284,19 @@ class IncomingRequestCard extends StatelessWidget {
                 onReportToAdmin: onReportToAdmin,
                 onAcceptLearnerReschedule: onAcceptLearnerReschedule,
                 onProposeDifferentTime: onProposeDifferentTime,
+              ),
+            ],
+            if (isAccepted &&
+                !request.isReadOnlyFinalState &&
+                request.isDeliveryFulfillment &&
+                (request.canReportNoDriverAvailable ||
+                    request.canSupplierReportDriverNoShow)) ...[
+              const SizedBox(height: AppSpacing.md),
+              _DeliveryIncidentActions(
+                canReportNoDriver: request.canReportNoDriverAvailable,
+                canReportDriverNoShow: request.canSupplierReportDriverNoShow,
+                onReportNoDriver: onReportNoDriver,
+                onReportDriverNoShow: onReportDriverNoShow,
               ),
             ],
           ],
@@ -869,6 +887,40 @@ class _StatusBadge extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
+    );
+  }
+}
+
+class _DeliveryIncidentActions extends StatelessWidget {
+  const _DeliveryIncidentActions({
+    required this.canReportNoDriver,
+    required this.canReportDriverNoShow,
+    this.onReportNoDriver,
+    this.onReportDriverNoShow,
+  });
+
+  final bool canReportNoDriver;
+  final bool canReportDriverNoShow;
+  final VoidCallback? onReportNoDriver;
+  final VoidCallback? onReportDriverNoShow;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: [
+        if (canReportNoDriver && onReportNoDriver != null)
+          OutlinedButton(
+            onPressed: onReportNoDriver,
+            child: const Text('Report no driver available'),
+          ),
+        if (canReportDriverNoShow && onReportDriverNoShow != null)
+          OutlinedButton(
+            onPressed: onReportDriverNoShow,
+            child: const Text('Report driver no-show'),
+          ),
+      ],
     );
   }
 }

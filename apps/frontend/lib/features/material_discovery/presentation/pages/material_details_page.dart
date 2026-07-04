@@ -26,6 +26,7 @@ import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
 import '../../../reservations/data/models/learner_reservation.dart';
 import '../../../reservations/data/models/reservation_preferred_window.dart';
+import '../../../reservations/presentation/learner_reservation_ui_helpers.dart';
 import '../../../reservations/presentation/reservation_create_error_message.dart';
 import '../../application/material_discovery_providers.dart';
 import '../../domain/discovery_material.dart';
@@ -529,8 +530,8 @@ class _ReservationUiState {
 
     final helperText = !isAvailable
         ? const LocalizedText(
-            en: 'This material is not available for new reservations.',
-            ar: 'هذه المادة غير متاحة لحجوزات جديدة.',
+            en: 'This material is no longer available.',
+            ar: 'هذه المادة لم تعد متاحة.',
           )
         : isOwnMaterial
         ? const LocalizedText(
@@ -1788,24 +1789,7 @@ String _reservationActionLabel(String status) {
   }
 }
 
-String _reservationStatusLabel(String status) {
-  switch (status) {
-    case 'PENDING':
-      return 'Reservation request sent';
-    case 'ACCEPTED':
-      return 'Reservation accepted';
-    case 'REJECTED':
-      return 'Reservation rejected';
-    case 'COMPLETED':
-      return 'Reservation completed';
-    case 'CANCELLED':
-      return 'Reservation cancelled';
-    case 'EXPIRED':
-      return 'Reservation expired';
-    default:
-      return status;
-  }
-}
+String _reservationStatusLabel(String status) => reservationStatusLabel(status);
 
 MaterialStatusBadgeTone _reservationStatusTone(String status) {
   switch (status) {
