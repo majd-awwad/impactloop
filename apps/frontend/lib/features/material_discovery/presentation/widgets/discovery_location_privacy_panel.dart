@@ -51,9 +51,9 @@ class DiscoveryLocationPrivacyPanel extends StatelessWidget {
                 Text(
                   const LocalizedText(
                     en:
-                        'For privacy, public results show city and area only until a reservation is accepted.',
+                        'For privacy, public results show city, area, and approximate map pins only.',
                     ar:
-                        'لحماية الخصوصية، تُعرض النتائج العامة بالمدينة والمنطقة فقط حتى يتم قبول الحجز.',
+                        'لحماية الخصوصية، تعرض النتائج العامة المدينة والمنطقة ونقاطاً تقريبية فقط.',
                   ).resolve(context),
                   style: AppTextStyles.subtitle(
                     context,

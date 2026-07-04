@@ -26,10 +26,7 @@ void main() {
     expect(material.viewsCount, 4);
     expect(material.isPopular, isFalse);
     expect(material.statusTone, MaterialStatusBadgeTone.available);
-    expect(
-      material.quantityLabel.en,
-      'Available: 3 of 10 sheet',
-    );
+    expect(material.quantityLabel.en, 'Available: 3 of 10 sheet');
   });
 
   test('shows zero available stock when all quantity is held', () {
@@ -187,15 +184,20 @@ void main() {
       },
       'city': 'Nablus',
       'area': 'Industrial',
+      'approximateLatitude': 32.22,
+      'approximateLongitude': 35.25,
+      'approximateDistanceKm': 4.6,
     });
 
     expect(both.categoryId, 'cat-electronics');
     expect(both.city, 'Nablus');
     expect(both.area, 'Industrial');
-    expect(
-      both.availabilityLabel.en,
-      'Pickup and delivery available',
-    );
+    expect(both.approximateLatitude, 32.22);
+    expect(both.approximateLongitude, 35.25);
+    expect(both.approximateDistanceKm, 4.6);
+    expect(both.hasApproximatePin, isTrue);
+    expect(both.approximateDistanceLabel?.en, '~4.6 km away');
+    expect(both.availabilityLabel.en, 'Pickup and delivery available');
 
     final pickupOnly = MaterialDiscoveryApiMapper.fromJson({
       'id': 'mat-9',

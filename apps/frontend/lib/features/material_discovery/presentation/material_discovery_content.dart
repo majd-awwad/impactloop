@@ -34,6 +34,7 @@ const materialQuickFilters = <LocalizedText>[
 const materialSortOptions = <LocalizedText>[
   LocalizedText(en: 'Newest', ar: 'الأحدث'),
   LocalizedText(en: 'Popular', ar: 'الأكثر شعبية'),
+  LocalizedText(en: 'Nearest', ar: 'الأقرب'),
 ];
 
 const materialConditionFilters = <({String? value, LocalizedText label})>[

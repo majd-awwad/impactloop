@@ -327,6 +327,44 @@ describe('public material discovery', () => {
     assert.ok(result.items.some((item) => item.id === material.id));
   });
 
+  test('nearest sort orders by viewer distance without exposing exact coordinates', async () => {
+    const unique = `${TEST_MARKER}-nearest-${Date.now()}`;
+    const farMaterial = await createMaterial(ctx, {
+      title: `${unique} far stock`,
+      locationId: ctx.locationId,
+    });
+    const nearMaterial = await createMaterial(ctx, {
+      title: `${unique} near stock`,
+      locationId: ctx.areaLocationId,
+    });
+
+    const result = await getMaterials({
+      page: 1,
+      limit: 20,
+      q: unique,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      sort: 'nearest',
+      latitude: 31.904,
+      longitude: 35.204,
+    });
+
+    const ids = result.items.map((item) => item.id);
+    assert.equal(ids[0], nearMaterial.id);
+    assert.ok(ids.indexOf(nearMaterial.id) < ids.indexOf(farMaterial.id));
+
+    const listedNear = result.items.find((item) => item.id === nearMaterial.id);
+    assert.ok(listedNear);
+    const listedNearRecord = listedNear as Record<string, unknown>;
+    assert.equal('latitude' in listedNear!, false);
+    assert.equal('longitude' in listedNear!, false);
+    assert.equal('addressLine' in listedNear!, false);
+    assert.equal('location' in listedNear!, false);
+    assert.equal(listedNearRecord.approximateLatitude, 31.9);
+    assert.equal(listedNearRecord.approximateLongitude, 35.2);
+    assert.equal(typeof listedNearRecord.approximateDistanceKm, 'number');
+  });
+
   test('pagination metadata works', async () => {
     const unique = `${TEST_MARKER}-page-${Date.now()}`;
     await createMaterial(ctx, { title: `${unique} one` });
@@ -586,6 +624,47 @@ describe('public material discovery', () => {
     assert.equal(result.success, false);
   });
 
+  test('nearest sort validation requires one valid viewer location source', () => {
+    assert.equal(
+      materialsQuerySchema.safeParse({
+        sort: 'nearest',
+        latitude: 31.9,
+      }).success,
+      false,
+    );
+    assert.equal(
+      materialsQuerySchema.safeParse({
+        sort: 'nearest',
+        latitude: 91,
+        longitude: 35.2,
+      }).success,
+      false,
+    );
+    assert.equal(
+      materialsQuerySchema.safeParse({
+        sort: 'nearest',
+      }).success,
+      false,
+    );
+    assert.equal(
+      materialsQuerySchema.safeParse({
+        sort: 'nearest',
+        latitude: 31.9,
+        longitude: 35.2,
+        savedLocationId: 'saved-location-id',
+      }).success,
+      false,
+    );
+    assert.equal(
+      materialsQuerySchema.safeParse({
+        sort: 'nearest',
+        latitude: 31.9,
+        longitude: 35.2,
+      }).success,
+      true,
+    );
+  });
+
   test('public list and detail expose only approximate location fields', async () => {
     const unique = `${TEST_MARKER}-privacy-${Date.now()}`;
     const material = await createMaterial(ctx, {
@@ -619,6 +698,9 @@ describe('public material discovery', () => {
     assert.equal('addressLine' in listed!, false);
     assert.equal('pickupNotes' in listed!, false);
     assert.equal('location' in listed!, false);
+    const listedRecord = listed as Record<string, unknown>;
+    assert.equal(listedRecord.approximateLatitude, 32.22);
+    assert.equal(listedRecord.approximateLongitude, 35.25);
     assert.equal('supplierProfile' in listed!, false);
     assert.equal('owner' in listed!, false);
     assert.equal(typeof listed?.viewsCount, 'number');
@@ -631,6 +713,8 @@ describe('public material discovery', () => {
     assert.equal('addressLine' in detail, false);
     assert.equal('pickupNotes' in detail, false);
     assert.equal('location' in detail, false);
+    assert.equal('approximateLatitude' in detail, false);
+    assert.equal('approximateLongitude' in detail, false);
     assert.equal('supplierProfile' in detail, false);
     assert.equal('owner' in detail, false);
     assert.equal(typeof detail.viewsCount, 'number');

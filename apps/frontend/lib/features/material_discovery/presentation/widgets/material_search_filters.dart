@@ -5,6 +5,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../locations/data/saved_location.dart';
 import '../../../materials/data/models/category.dart';
 import 'discovery_category_picker.dart';
 
@@ -14,10 +15,18 @@ class MaterialSearchFilters extends StatefulWidget {
     required this.searchController,
     required this.cityController,
     required this.areaController,
+    required this.latitudeController,
+    required this.longitudeController,
     required this.searchValue,
+    required this.savedLocations,
+    required this.savedLocationsLoading,
+    required this.selectedSavedLocationId,
     required this.onSearchChanged,
     required this.onCityChanged,
     required this.onAreaChanged,
+    required this.onLatitudeChanged,
+    required this.onLongitudeChanged,
+    required this.onSavedLocationSelected,
     required this.categories,
     required this.selectedCategoryIndex,
     required this.onCategorySelected,
@@ -38,10 +47,18 @@ class MaterialSearchFilters extends StatefulWidget {
   final TextEditingController searchController;
   final TextEditingController cityController;
   final TextEditingController areaController;
+  final TextEditingController latitudeController;
+  final TextEditingController longitudeController;
   final String searchValue;
+  final List<SavedLocation> savedLocations;
+  final bool savedLocationsLoading;
+  final String? selectedSavedLocationId;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onCityChanged;
   final ValueChanged<String> onAreaChanged;
+  final ValueChanged<String> onLatitudeChanged;
+  final ValueChanged<String> onLongitudeChanged;
+  final ValueChanged<String?> onSavedLocationSelected;
   final List<MaterialCategory> categories;
   final int selectedCategoryIndex;
   final ValueChanged<int> onCategorySelected;
@@ -94,10 +111,18 @@ class _MaterialSearchFiltersState extends State<MaterialSearchFilters> {
                     searchController: widget.searchController,
                     cityController: widget.cityController,
                     areaController: widget.areaController,
+                    latitudeController: widget.latitudeController,
+                    longitudeController: widget.longitudeController,
                     searchValue: widget.searchValue,
+                    savedLocations: widget.savedLocations,
+                    savedLocationsLoading: widget.savedLocationsLoading,
+                    selectedSavedLocationId: widget.selectedSavedLocationId,
                     onSearchChanged: widget.onSearchChanged,
                     onCityChanged: widget.onCityChanged,
                     onAreaChanged: widget.onAreaChanged,
+                    onLatitudeChanged: widget.onLatitudeChanged,
+                    onLongitudeChanged: widget.onLongitudeChanged,
+                    onSavedLocationSelected: widget.onSavedLocationSelected,
                     categories: widget.categories,
                     selectedCategoryIndex: widget.selectedCategoryIndex,
                     onCategorySelected: widget.onCategorySelected,
@@ -172,10 +197,7 @@ class _MaterialSearchFiltersState extends State<MaterialSearchFilters> {
                   style: TextButton.styleFrom(foregroundColor: palette.mint),
                   icon: const Icon(Icons.restart_alt_rounded, size: 18),
                   label: Text(
-                    LocalizedText(
-                      en: 'Clear',
-                      ar: 'مسح',
-                    ).resolve(context),
+                    LocalizedText(en: 'Clear', ar: 'مسح').resolve(context),
                   ),
                 ),
               ],
@@ -201,8 +223,15 @@ class _MaterialSearchFiltersState extends State<MaterialSearchFilters> {
               onConditionSelected: widget.onConditionSelected,
               cityController: widget.cityController,
               areaController: widget.areaController,
+              latitudeController: widget.latitudeController,
+              longitudeController: widget.longitudeController,
               onCityChanged: widget.onCityChanged,
               onAreaChanged: widget.onAreaChanged,
+              onLatitudeChanged: widget.onLatitudeChanged,
+              onLongitudeChanged: widget.onLongitudeChanged,
+              savedLocations: widget.savedLocations,
+              selectedSavedLocationId: widget.selectedSavedLocationId,
+              onSavedLocationSelected: widget.onSavedLocationSelected,
             ),
           ],
         ],
@@ -220,10 +249,18 @@ class _MaterialSearchFiltersState extends State<MaterialSearchFilters> {
         searchController: widget.searchController,
         cityController: widget.cityController,
         areaController: widget.areaController,
+        latitudeController: widget.latitudeController,
+        longitudeController: widget.longitudeController,
         searchValue: widget.searchValue,
+        savedLocations: widget.savedLocations,
+        savedLocationsLoading: widget.savedLocationsLoading,
+        selectedSavedLocationId: widget.selectedSavedLocationId,
         onSearchChanged: widget.onSearchChanged,
         onCityChanged: widget.onCityChanged,
         onAreaChanged: widget.onAreaChanged,
+        onLatitudeChanged: widget.onLatitudeChanged,
+        onLongitudeChanged: widget.onLongitudeChanged,
+        onSavedLocationSelected: widget.onSavedLocationSelected,
         categories: widget.categories,
         selectedCategoryIndex: widget.selectedCategoryIndex,
         onCategorySelected: widget.onCategorySelected,
@@ -254,10 +291,18 @@ class _MaterialDiscoveryFilterPanel extends StatelessWidget {
     required this.searchController,
     required this.cityController,
     required this.areaController,
+    required this.latitudeController,
+    required this.longitudeController,
     required this.searchValue,
+    required this.savedLocations,
+    required this.savedLocationsLoading,
+    required this.selectedSavedLocationId,
     required this.onSearchChanged,
     required this.onCityChanged,
     required this.onAreaChanged,
+    required this.onLatitudeChanged,
+    required this.onLongitudeChanged,
+    required this.onSavedLocationSelected,
     required this.categories,
     required this.selectedCategoryIndex,
     required this.onCategorySelected,
@@ -281,10 +326,18 @@ class _MaterialDiscoveryFilterPanel extends StatelessWidget {
   final TextEditingController searchController;
   final TextEditingController cityController;
   final TextEditingController areaController;
+  final TextEditingController latitudeController;
+  final TextEditingController longitudeController;
   final String searchValue;
+  final List<SavedLocation> savedLocations;
+  final bool savedLocationsLoading;
+  final String? selectedSavedLocationId;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onCityChanged;
   final ValueChanged<String> onAreaChanged;
+  final ValueChanged<String> onLatitudeChanged;
+  final ValueChanged<String> onLongitudeChanged;
+  final ValueChanged<String?> onSavedLocationSelected;
   final List<MaterialCategory> categories;
   final int selectedCategoryIndex;
   final ValueChanged<int> onCategorySelected;
@@ -307,8 +360,19 @@ class _MaterialDiscoveryFilterPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final hasLocationInput = cityController.text.trim().isNotEmpty ||
-        areaController.text.trim().isNotEmpty;
+    final hasLocationInput =
+        cityController.text.trim().isNotEmpty ||
+        areaController.text.trim().isNotEmpty ||
+        latitudeController.text.trim().isNotEmpty ||
+        longitudeController.text.trim().isNotEmpty ||
+        selectedSavedLocationId != null;
+    final savedLocationValue =
+        savedLocations.any(
+          (location) =>
+              location.id == selectedSavedLocationId && location.hasCoordinates,
+        )
+        ? selectedSavedLocationId
+        : null;
     const sectionGap = AppSpacing.md;
     const chipSectionGap = AppSpacing.sm;
 
@@ -337,15 +401,16 @@ class _MaterialDiscoveryFilterPanel extends StatelessWidget {
                 Icon(
                   Icons.location_on_outlined,
                   size: 18,
-                  color: hasLocationInput ? palette.mint : palette.textSecondary,
+                  color: hasLocationInput
+                      ? palette.mint
+                      : palette.textSecondary,
                 ),
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
                     hasLocationInput
                         ? LocalizedText(
-                            en:
-                                'Location: ${cityController.text.trim().isEmpty ? 'Any city' : cityController.text.trim()}${areaController.text.trim().isEmpty ? '' : ', ${areaController.text.trim()}'}',
+                            en: 'Location: ${cityController.text.trim().isEmpty ? 'Any city' : cityController.text.trim()}${areaController.text.trim().isEmpty ? '' : ', ${areaController.text.trim()}'}',
                             ar: 'الموقع: مفلتر',
                           ).resolve(context)
                         : const LocalizedText(
@@ -372,6 +437,52 @@ class _MaterialDiscoveryFilterPanel extends StatelessWidget {
         ),
         if (showLocationFields) ...[
           SizedBox(height: sectionGap),
+          if (savedLocationsLoading)
+            LinearProgressIndicator(
+              minHeight: 2,
+              color: palette.mint,
+              backgroundColor: palette.borderSubtle,
+            )
+          else if (savedLocations.isNotEmpty) ...[
+            DropdownButtonFormField<String?>(
+              initialValue: savedLocationValue,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: const LocalizedText(
+                  en: 'Saved location for nearest sort',
+                  ar: 'موقع محفوظ للترتيب حسب الأقرب',
+                ).resolve(context),
+                isDense: true,
+                filled: true,
+                fillColor: palette.cardSurfaceAlt,
+                border: OutlineInputBorder(borderRadius: AppRadius.lgAll),
+              ),
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(
+                    const LocalizedText(
+                      en: 'No saved location',
+                      ar: 'بدون موقع محفوظ',
+                    ).resolve(context),
+                  ),
+                ),
+                ...savedLocations
+                    .where((location) => location.hasCoordinates)
+                    .map(
+                      (location) => DropdownMenuItem<String?>(
+                        value: location.id,
+                        child: Text(
+                          location.displayLabel,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+              ],
+              onChanged: onSavedLocationSelected,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
           Row(
             children: [
               Expanded(
@@ -389,9 +500,7 @@ class _MaterialDiscoveryFilterPanel extends StatelessWidget {
                     isDense: true,
                     filled: true,
                     fillColor: palette.cardSurfaceAlt,
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.lgAll,
-                    ),
+                    border: OutlineInputBorder(borderRadius: AppRadius.lgAll),
                   ),
                 ),
               ),
@@ -411,9 +520,59 @@ class _MaterialDiscoveryFilterPanel extends StatelessWidget {
                     isDense: true,
                     filled: true,
                     fillColor: palette.cardSurfaceAlt,
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.lgAll,
-                    ),
+                    border: OutlineInputBorder(borderRadius: AppRadius.lgAll),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: latitudeController,
+                  onChanged: onLatitudeChanged,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    signed: true,
+                    decimal: true,
+                  ),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: const LocalizedText(
+                      en: 'Viewer lat',
+                      ar: 'خط العرض',
+                    ).resolve(context),
+                    isDense: true,
+                    filled: true,
+                    fillColor: palette.cardSurfaceAlt,
+                    border: OutlineInputBorder(borderRadius: AppRadius.lgAll),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: TextField(
+                  controller: longitudeController,
+                  onChanged: onLongitudeChanged,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    signed: true,
+                    decimal: true,
+                  ),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: const LocalizedText(
+                      en: 'Viewer lng',
+                      ar: 'خط الطول',
+                    ).resolve(context),
+                    isDense: true,
+                    filled: true,
+                    fillColor: palette.cardSurfaceAlt,
+                    border: OutlineInputBorder(borderRadius: AppRadius.lgAll),
                   ),
                 ),
               ),
@@ -536,9 +695,7 @@ class _DiscoverySearchField extends StatelessWidget {
     return TextField(
       controller: controller,
       onChanged: onSearchChanged,
-      style: AppTextStyles.body(
-        context,
-      ).copyWith(color: palette.textPrimary),
+      style: AppTextStyles.body(context).copyWith(color: palette.textPrimary),
       textAlign: TextAlign.start,
       decoration: InputDecoration(
         hintText: LocalizedText(
@@ -548,10 +705,7 @@ class _DiscoverySearchField extends StatelessWidget {
         hintStyle: AppTextStyles.body(
           context,
         ).copyWith(color: palette.textSecondary),
-        prefixIcon: Icon(
-          Icons.search_rounded,
-          color: palette.textSecondary,
-        ),
+        prefixIcon: Icon(Icons.search_rounded, color: palette.textSecondary),
         suffixIcon: searchValue.isEmpty
             ? Icon(Icons.grid_view_rounded, color: palette.mint)
             : IconButton(
@@ -559,10 +713,7 @@ class _DiscoverySearchField extends StatelessWidget {
                   controller.clear();
                   onSearchChanged('');
                 },
-                icon: Icon(
-                  Icons.close_rounded,
-                  color: palette.textSecondary,
-                ),
+                icon: Icon(Icons.close_rounded, color: palette.textSecondary),
               ),
         filled: true,
         fillColor: palette.cardSurfaceAlt,
@@ -611,8 +762,15 @@ class _ActiveFilterChips extends StatelessWidget {
     required this.onConditionSelected,
     required this.cityController,
     required this.areaController,
+    required this.latitudeController,
+    required this.longitudeController,
     required this.onCityChanged,
     required this.onAreaChanged,
+    required this.onLatitudeChanged,
+    required this.onLongitudeChanged,
+    required this.savedLocations,
+    required this.selectedSavedLocationId,
+    required this.onSavedLocationSelected,
   });
 
   final String searchValue;
@@ -632,8 +790,15 @@ class _ActiveFilterChips extends StatelessWidget {
   final ValueChanged<int> onConditionSelected;
   final TextEditingController cityController;
   final TextEditingController areaController;
+  final TextEditingController latitudeController;
+  final TextEditingController longitudeController;
   final ValueChanged<String> onCityChanged;
   final ValueChanged<String> onAreaChanged;
+  final ValueChanged<String> onLatitudeChanged;
+  final ValueChanged<String> onLongitudeChanged;
+  final List<SavedLocation> savedLocations;
+  final String? selectedSavedLocationId;
+  final ValueChanged<String?> onSavedLocationSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -686,7 +851,9 @@ class _ActiveFilterChips extends StatelessWidget {
     if (selectedConditionIndex > 0) {
       chips.add(
         _ActiveFilterChip(
-          label: conditionFilters[selectedConditionIndex].label.resolve(context),
+          label: conditionFilters[selectedConditionIndex].label.resolve(
+            context,
+          ),
           onDeleted: () => onConditionSelected(0),
         ),
       );
@@ -724,6 +891,41 @@ class _ActiveFilterChips extends StatelessWidget {
       );
     }
 
+    SavedLocation? selectedSavedLocation;
+    for (final location in savedLocations) {
+      if (location.id == selectedSavedLocationId) {
+        selectedSavedLocation = location;
+        break;
+      }
+    }
+    if (selectedSavedLocation != null) {
+      chips.add(
+        _ActiveFilterChip(
+          label: selectedSavedLocation.label,
+          onDeleted: () => onSavedLocationSelected(null),
+        ),
+      );
+    }
+
+    final latitude = latitudeController.text.trim();
+    final longitude = longitudeController.text.trim();
+    if (latitude.isNotEmpty || longitude.isNotEmpty) {
+      chips.add(
+        _ActiveFilterChip(
+          label: LocalizedText(
+            en: 'Nearest point',
+            ar: 'نقطة الأقرب',
+          ).resolve(context),
+          onDeleted: () {
+            latitudeController.clear();
+            longitudeController.clear();
+            onLatitudeChanged('');
+            onLongitudeChanged('');
+          },
+        ),
+      );
+    }
+
     if (chips.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -737,10 +939,7 @@ class _ActiveFilterChips extends StatelessWidget {
 }
 
 class _ActiveFilterChip extends StatelessWidget {
-  const _ActiveFilterChip({
-    required this.label,
-    required this.onDeleted,
-  });
+  const _ActiveFilterChip({required this.label, required this.onDeleted});
 
   final String label;
   final VoidCallback onDeleted;
@@ -752,12 +951,15 @@ class _ActiveFilterChip extends StatelessWidget {
     return InputChip(
       label: Text(
         label,
-        style: AppTextStyles.label(context).copyWith(
-          color: palette.textPrimary,
-          fontSize: 12,
-        ),
+        style: AppTextStyles.label(
+          context,
+        ).copyWith(color: palette.textPrimary, fontSize: 12),
       ),
-      deleteIcon: Icon(Icons.close_rounded, size: 16, color: palette.textSecondary),
+      deleteIcon: Icon(
+        Icons.close_rounded,
+        size: 16,
+        color: palette.textSecondary,
+      ),
       onDeleted: onDeleted,
       backgroundColor: palette.mint.withValues(alpha: 0.12),
       side: BorderSide(color: palette.mint.withValues(alpha: 0.35)),
@@ -778,9 +980,7 @@ class _FilterSectionTitle extends StatelessWidget {
 
     return Text(
       label.resolve(context),
-      style: AppTextStyles.label(
-        context,
-      ).copyWith(color: palette.textPrimary),
+      style: AppTextStyles.label(context).copyWith(color: palette.textPrimary),
       textAlign: TextAlign.start,
     );
   }

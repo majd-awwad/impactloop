@@ -1,4 +1,4 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 import type { MaterialsQuery } from './materials.validation.js';
@@ -136,6 +136,8 @@ const materialInclude = {
     select: {
       city: true,
       area: true,
+      latitude: true,
+      longitude: true,
     },
   },
   images: {
@@ -195,9 +197,161 @@ const buildMaterialsOrderBy = (
   return [{ createdAt: 'desc' }];
 };
 
-export const findMaterials = async (query: MaterialsQuery) => {
+export type ViewerCoordinates = {
+  latitude: number;
+  longitude: number;
+};
+
+const buildNearestWhereClauses = (query: MaterialsQuery): Prisma.Sql[] => {
+  const clauses: Prisma.Sql[] = [
+    Prisma.sql`m."status" = ${query.status}::"MaterialStatus"`,
+    Prisma.sql`c."is_active" = true`,
+    Prisma.sql`c."category_type" IN ('MATERIAL'::"CategoryType", 'BOTH'::"CategoryType")`,
+  ];
+
+  if (query.categoryId) {
+    clauses.push(Prisma.sql`m."category_id" = ${query.categoryId}`);
+  }
+
+  if (query.condition) {
+    clauses.push(
+      Prisma.sql`m."condition" = ${query.condition}::"MaterialCondition"`,
+    );
+  }
+
+  if (query.deliveryAvailable !== undefined) {
+    clauses.push(
+      Prisma.sql`m."delivery_allowed" = ${query.deliveryAvailable}`,
+    );
+  }
+
+  if (query.pickupAllowed !== undefined) {
+    clauses.push(Prisma.sql`m."pickup_allowed" = ${query.pickupAllowed}`);
+  }
+
+  if (query.priceType === 'FREE') {
+    clauses.push(Prisma.sql`m."is_free" = true`);
+  }
+
+  if (query.priceType === 'PAID') {
+    clauses.push(Prisma.sql`m."is_free" = false`);
+  }
+
+  if (query.city) {
+    clauses.push(Prisma.sql`l."city" ILIKE ${`%${query.city}%`}`);
+  }
+
+  if (query.area) {
+    clauses.push(Prisma.sql`l."area" ILIKE ${`%${query.area}%`}`);
+  }
+
+  if (query.q) {
+    const pattern = `%${query.q}%`;
+    clauses.push(Prisma.sql`(
+      m."title" ILIKE ${pattern}
+      OR m."description" ILIKE ${pattern}
+      OR m."material_type" ILIKE ${pattern}
+      OR c."name_en" ILIKE ${pattern}
+      OR c."name_ar" ILIKE ${pattern}
+      OR EXISTS (
+        SELECT 1
+        FROM "material_tags" mt
+        WHERE mt."material_id" = m."id"
+          AND mt."tag" ILIKE ${pattern}
+      )
+    )`);
+  }
+
+  return clauses;
+};
+
+const buildDistanceSql = (coordinates: ViewerCoordinates) => {
+  const viewerPoint = Prisma.sql`ST_SetSRID(ST_MakePoint(${coordinates.longitude}, ${coordinates.latitude}), 4326)::geography`;
+
+  return Prisma.sql`CASE
+    WHEN l."location" IS NOT NULL THEN ST_Distance(l."location", ${viewerPoint})
+    WHEN l."latitude" IS NOT NULL AND l."longitude" IS NOT NULL THEN
+      ST_Distance(
+        ST_SetSRID(ST_MakePoint(l."longitude"::double precision, l."latitude"::double precision), 4326)::geography,
+        ${viewerPoint}
+      )
+    ELSE NULL
+  END`;
+};
+
+const findNearestMaterialIds = async (
+  query: MaterialsQuery,
+  coordinates: ViewerCoordinates,
+) => {
+  const skip = (query.page - 1) * query.limit;
+  const whereSql = Prisma.join(buildNearestWhereClauses(query), ' AND ');
+  const distanceSql = buildDistanceSql(coordinates);
+
+  const [rows, totalRows] = await Promise.all([
+    prisma.$queryRaw<{ id: string; distanceKm: number | null }[]>`
+      SELECT m."id" AS "id", (${distanceSql}) / 1000.0 AS "distanceKm"
+      FROM "materials" m
+      INNER JOIN "categories" c ON c."id" = m."category_id"
+      INNER JOIN "locations" l ON l."id" = m."location_id"
+      WHERE ${whereSql}
+      ORDER BY (${distanceSql}) ASC NULLS LAST, m."created_at" DESC
+      OFFSET ${skip}
+      LIMIT ${query.limit}
+    `,
+    prisma.$queryRaw<{ total: bigint }[]>`
+      SELECT COUNT(*)::bigint AS "total"
+      FROM "materials" m
+      INNER JOIN "categories" c ON c."id" = m."category_id"
+      INNER JOIN "locations" l ON l."id" = m."location_id"
+      WHERE ${whereSql}
+    `,
+  ]);
+
+  return {
+    rows,
+    total: Number(totalRows[0]?.total ?? 0n),
+  };
+};
+
+export const findMaterials = async (
+  query: MaterialsQuery,
+  coordinates?: ViewerCoordinates,
+) => {
   const where = buildMaterialsWhere(query);
   const skip = (query.page - 1) * query.limit;
+
+  if (query.sort === 'nearest' && coordinates) {
+    const nearest = await findNearestMaterialIds(query, coordinates);
+    const ids = nearest.rows.map((row) => row.id);
+
+    if (ids.length === 0) {
+      return {
+        items: [],
+        total: nearest.total,
+        distanceByMaterialId: new Map<string, number | null>(),
+      };
+    }
+
+    const orderById = new Map(ids.map((id, index) => [id, index]));
+    const distanceByMaterialId = new Map(
+      nearest.rows.map((row) => [row.id, row.distanceKm]),
+    );
+    const items = await prisma.material.findMany({
+      where: { id: { in: ids } },
+      include: materialInclude,
+    });
+
+    items.sort(
+      (left, right) =>
+        (orderById.get(left.id) ?? 0) - (orderById.get(right.id) ?? 0),
+    );
+
+    return {
+      items,
+      total: nearest.total,
+      distanceByMaterialId,
+    };
+  }
 
   const [items, total] = await Promise.all([
     prisma.material.findMany({
@@ -210,7 +364,7 @@ export const findMaterials = async (query: MaterialsQuery) => {
     prisma.material.count({ where }),
   ]);
 
-  return { items, total };
+  return { items, total, distanceByMaterialId: new Map<string, number | null>() };
 };
 
 export const recordMaterialView = async (

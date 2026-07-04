@@ -195,13 +195,13 @@ Mount order: `apps/backend/src/app.ts`
 
 ## `locations`
 
-**Purpose:** Authenticated reverse geocoding for supplier location input.
+**Purpose:** Authenticated reverse geocoding for supplier location input and private user saved-location CRUD.
 
-**Key files:** `locations.routes.ts`, `locations.controller.ts`, `locations.service.ts`, `locations.validation.ts`, `locations.test.ts`
+**Key files:** `locations.routes.ts`, `locations.controller.ts`, `locations.service.ts`, `locations.repository.ts`, `locations.validation.ts`, `locations.test.ts`
 
 **Cross-cutting:** `apps/backend/src/services/reverse-geocoding.service.ts`
 
-**Prisma:** `Location` (PostGIS `geography(Point,4326)` on column `location`)
+**Prisma:** `Location` (PostGIS `geography(Point,4326)` on column `location`), `UserSavedLocation`
 
 ---
 
@@ -217,7 +217,7 @@ Mount order: `apps/backend/src/app.ts`
 
 ## `materials`
 
-**Purpose:** Public material discovery (list/detail), listing policy, authenticated price check before listing, and learner material engagement (views/likes).
+**Purpose:** Public material discovery (list/detail, nearest sort, approximate map pins), listing policy, authenticated price check before listing, and learner material engagement (views/likes).
 
 **Key files:** `materials.routes.ts`, `materials.controller.ts`, `materials.service.ts`, `materials.repository.ts`, `materials.validation.ts`, `materials.price.test.ts`
 

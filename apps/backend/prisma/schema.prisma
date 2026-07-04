@@ -331,6 +331,7 @@ model User {
   supplierFollows              SupplierFollower[] @relation("SupplierFollowerUser")
   materialLikes                MaterialLike[]     @relation("MaterialLikeUser")
   materialViews                MaterialView[]     @relation("MaterialViewUser")
+  savedLocations               UserSavedLocation[]
   suspendedBy                  User?            @relation("UserSuspendedBy", fields: [suspendedById], references: [id], onDelete: SetNull)
   accountsSuspended            User[]           @relation("UserSuspendedBy")
   reactivatedBy                User?            @relation("UserReactivatedBy", fields: [reactivatedById], references: [id], onDelete: SetNull)
@@ -544,9 +545,27 @@ model Location {
   reservationDropoffs     Reservation[]                         @relation("ReservationDropoffLocation")
   deliveryPickups         Delivery[]                            @relation("DeliveryPickupLocation")
   deliveryDropoffs        Delivery[]                            @relation("DeliveryDropoffLocation")
+  savedByUsers            UserSavedLocation[]
 
   @@index([country, city])
   @@map("locations")
+}
+
+model UserSavedLocation {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  locationId  String   @map("location_id")
+  label       String
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@index([locationId])
+  @@map("user_saved_locations")
 }
 
 model Category {

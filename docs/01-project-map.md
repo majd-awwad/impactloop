@@ -56,7 +56,7 @@ Derived **only** from `apps/backend/src/modules/`:
 | `health` | `/health` | Health check |
 | `invitations` | `/api/invitations` | Admin role invitations + accept |
 | `learning-projects` | `/api/learning-projects` | Public read list/detail + learner submit |
-| `locations` | `/api/locations` | Authenticated reverse geocode |
+| `locations` | `/api/locations` | Authenticated forward/reverse geocode and private saved locations |
 | `material-types` | `/api/material-types` | Search types + price rules |
 | `materials` | `/api/materials` | Public discovery read + listing policy + price check |
 | `price-rule-requests` | `/api/price-rule-requests`, `/api/supplier/price-rule-requests` | Create + supplier list/draft |

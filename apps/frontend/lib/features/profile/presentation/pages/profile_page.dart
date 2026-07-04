@@ -164,9 +164,9 @@ class _ProfileContent extends ConsumerWidget {
     if (user.createdAt.millisecondsSinceEpoch == 0) {
       return null;
     }
-    final date = MaterialLocalizations.of(context).formatMediumDate(
-      user.createdAt,
-    );
+    final date = MaterialLocalizations.of(
+      context,
+    ).formatMediumDate(user.createdAt);
     return 'Member since $date';
   }
 
@@ -228,6 +228,13 @@ class _ProfileContent extends ConsumerWidget {
             onTap: () => context.push('/profile/learner/edit'),
           ),
         ],
+        _ProfileDivider(),
+        _ProfileActionTile(
+          icon: Icons.location_on_outlined,
+          title: 'Saved locations',
+          subtitle: 'Manage private addresses for nearest-first discovery.',
+          onTap: () => context.push('/profile/locations'),
+        ),
         _ProfileDivider(),
         _ProfileActionTile(
           icon: Icons.lock_outline_rounded,
@@ -507,7 +514,9 @@ class _LearnerProfileCard extends StatelessWidget {
     }
     if (skillLevel.isNotEmpty) {
       if (rows.isNotEmpty) rows.add(_ProfileDivider());
-      rows.add(_ProfileInfoRow(label: 'Skill level', value: humanize(skillLevel)));
+      rows.add(
+        _ProfileInfoRow(label: 'Skill level', value: humanize(skillLevel)),
+      );
     }
     if (interests.isNotEmpty) {
       if (rows.isNotEmpty) rows.add(_ProfileDivider());
@@ -671,9 +680,7 @@ class _ProfileActionTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: AppRadius.mdAll,
       child: Padding(
-        padding: const EdgeInsetsDirectional.symmetric(
-          vertical: AppSpacing.sm,
-        ),
+        padding: const EdgeInsetsDirectional.symmetric(vertical: AppSpacing.sm),
         child: Row(
           children: [
             Container(
@@ -713,7 +720,11 @@ class _ProfileActionTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            Icon(Icons.arrow_forward_rounded, color: colors.textMuted, size: 18),
+            Icon(
+              Icons.arrow_forward_rounded,
+              color: colors.textMuted,
+              size: 18,
+            ),
           ],
         ),
       ),
@@ -783,7 +794,11 @@ class _StatusLine extends StatelessWidget {
 
     return Row(
       children: [
-        Icon(icon, color: emphasized ? colors.primary : colors.textMuted, size: 18),
+        Icon(
+          icon,
+          color: emphasized ? colors.primary : colors.textMuted,
+          size: 18,
+        ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Column(
@@ -964,19 +979,15 @@ class _ProfileBodyText extends StatelessWidget {
 
     return Text(
       text,
-      style: AppTextStyles.body(context).copyWith(
-        color: colors.textSecondary,
-        height: 1.45,
-      ),
+      style: AppTextStyles.body(
+        context,
+      ).copyWith(color: colors.textSecondary, height: 1.45),
     );
   }
 }
 
 class _LearnerCompletionHint extends StatelessWidget {
-  const _LearnerCompletionHint({
-    required this.title,
-    required this.body,
-  });
+  const _LearnerCompletionHint({required this.title, required this.body});
 
   final String title;
   final String body;
@@ -994,7 +1005,11 @@ class _LearnerCompletionHint extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lightbulb_outline_rounded, color: colors.primary, size: 18),
+          Icon(
+            Icons.lightbulb_outline_rounded,
+            color: colors.primary,
+            size: 18,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(

@@ -72,6 +72,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/profile/edit` | `ProfileEditPage` | authenticated | Edit display name, phone, and profile photo |
 | `/profile/learner/edit` | `LearnerProfileEditPage` | authenticated | Edit learner type, skill level, interests, and bio (`LEARNER` role required) |
 | `/profile/security` | `ProfileSecurityPage` | authenticated | Change password via `/api/auth/change-password` |
+| `/profile/locations` | `SavedLocationsPage` | authenticated | Manage private saved locations via `/api/locations/saved`; exact address and coordinates are visible only to the owner |
 | `/learner/reservations` | `LearnerReservationsPage` | learner | Learner reservation status list |
 | `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline, latest driver ping summary, and page-scoped polling map marker when tracking coordinates are allowed |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |

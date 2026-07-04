@@ -161,6 +161,21 @@ Relations: assigned deliveries, assignments, location pings.
 
 ---
 
+## `user_saved_locations` — model `UserSavedLocation`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| userId | String | FK → users; cascade delete |
+| locationId | String | FK → locations; cascade delete |
+| label | String | User-facing private label |
+| isDefault | Boolean | default false |
+| createdAt, updatedAt | DateTime | |
+
+Indexes: `userId`, `(userId, isDefault)`, `locationId`.
+
+---
+
 ## `categories` — model `Category`
 
 | Field | Type | Notes |

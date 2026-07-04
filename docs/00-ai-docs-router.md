@@ -101,7 +101,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Area | Feature doc | Flow doc(s) | Ship status (summary) |
 |------|-------------|-------------|------------------------|
 | Materials listing (shared data layer) | [features/materials-listing.md](features/materials-listing.md) | — (see [supplier-material-listing-flow](flows/supplier-material-listing-flow.md)) | **Partial** — supplier create support; no update/delete |
-| Locations | [features/locations.md](features/locations.md) | — | **Partial** — reverse geocode + profile/material usage; public redaction **Needs verification** |
+| Locations | [features/locations.md](features/locations.md) | — | **Partial** — forward/reverse geocode + profile/material usage; public redaction **Needs verification** |
 | Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Implemented** — admin UI + accept UI exist; email delivery depends on provider |
 | Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static UI; no API |
 | Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — suggested materials + learning spotlight **API-backed** |

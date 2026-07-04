@@ -118,7 +118,7 @@ Optional query `discoveryOnly=true` applies discovery name filtering and dedupe 
 
 **`POST /api/materials/:id/reports` body:** `{ reason: MaterialReportReason, note?: string }` — `note` required when `reason=OTHER`. Duplicate pending report by same user/material returns 409. Public discovery excludes `UNAVAILABLE` materials (default list status `AVAILABLE`).
 
-**`GET /api/materials` query:** `q`, `categoryId`, `condition`, `status` (default `AVAILABLE`), `priceType` (`FREE` \| `PAID` \| `ANY`, default `ANY`), `deliveryAvailable`, `pickupAllowed`, `city`, `area`, `sort` (`newest` \| `popular`, default `newest`), `page`, `limit`. Response: `{ items, pagination: { page, limit, total, totalPages } }`. Public item fields include `quantity`, `availableQuantity`, `unit`, `city`, `area`, `pickupAllowed`, `deliveryAvailable`, `viewsCount`, `likesCount`, and `isLiked` (`false` without authenticated viewer); no `addressLine` / `latitude` / `longitude`.
+**`GET /api/materials` query:** `q`, `categoryId`, `condition`, `status` (default `AVAILABLE`), `priceType` (`FREE` \| `PAID` \| `ANY`, default `ANY`), `deliveryAvailable`, `pickupAllowed`, `city`, `area`, `sort` (`newest` \| `popular` \| `nearest`, default `newest`), `latitude`, `longitude`, `savedLocationId`, `page`, `limit`. `sort=nearest` requires either `latitude` + `longitude` or an authenticated `savedLocationId`; the two location sources are mutually exclusive. Response: `{ items, pagination: { page, limit, total, totalPages } }`. Public item fields include `quantity`, `availableQuantity`, `unit`, `city`, `area`, optional `approximateLatitude`, optional `approximateLongitude`, optional `approximateDistanceKm`, `pickupAllowed`, `deliveryAvailable`, `viewsCount`, `likesCount`, and `isLiked` (`false` without authenticated viewer); no `addressLine` / exact `latitude` / exact `longitude`.
 
 **`GET /api/materials/:id`:** creates a `material_views` row and increments `viewsCount` on successful detail reads (`404` does not increment). Authenticated requests attach `viewerUserId` and are counted once per user/material; repeat opens by the same authenticated user return the existing count. Guest requests store a null viewer and are counted per request because there is no anonymous identity. Same public field redaction as list items.
 
@@ -198,6 +198,15 @@ Public list/detail return only `PUBLISHED` projects. Learner submit creates `PEN
 | Method | Path | Auth | Source file |
 |--------|------|------|-------------|
 | POST | `/api/locations/reverse-geocode` | Bearer JWT | `locations/locations.routes.ts` |
+| POST | `/api/locations/geocode` | Bearer JWT | `locations/locations.routes.ts` |
+| GET | `/api/locations/saved` | Bearer JWT | `locations/locations.routes.ts` |
+| POST | `/api/locations/saved` | Bearer JWT | `locations/locations.routes.ts` |
+| PATCH | `/api/locations/saved/:id` | Bearer JWT | `locations/locations.routes.ts` |
+| DELETE | `/api/locations/saved/:id` | Bearer JWT | `locations/locations.routes.ts` |
+
+`POST /api/locations/geocode` body: `{ country?, city, area?, addressLine? }`. It resolves typed private location text through the configured geocoding provider and returns `{ latitude, longitude, country, city, area, addressLine, displayName, provider }`. It is authenticated because typed saved-location address text and resulting exact coordinates are private account data.
+
+Saved locations are private to the authenticated user. Response rows include `label`, `city`, `area`, private `addressLine`, exact `latitude`/`longitude`, and `isDefault`. Public Materials Discovery may use `savedLocationId` only for server-side distance sorting; it does not expose saved-location private fields.
 
 ## Invitations — `/api/invitations`
 

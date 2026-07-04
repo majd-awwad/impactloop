@@ -23,6 +23,7 @@ import '../../features/learning_hub/presentation/pages/learning_add_draft_page.d
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
+import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
@@ -63,7 +64,14 @@ import '../../features/invitations/presentation/pages/invite_accept_page.dart';
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
 const _adminAccessDeniedRoute = '/admin/access-denied';
 
-enum _RouteAccessLevel { public, authenticated, learner, supplier, driver, admin }
+enum _RouteAccessLevel {
+  public,
+  authenticated,
+  learner,
+  supplier,
+  driver,
+  admin,
+}
 
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   final path = state.matchedLocation;
@@ -247,10 +255,7 @@ String? _resolveAuthPageRedirect(AuthState authState, GoRouterState state) {
   return _resolveProtectedRoute(authState, accessLevel, target) ?? target;
 }
 
-String? _resolveSupplierVerificationRedirect(
-  AuthState authState,
-  String path,
-) {
+String? _resolveSupplierVerificationRedirect(AuthState authState, String path) {
   if (_isAuthPage(path) ||
       path == '/complete-supplier-profile' ||
       path == '/complete-learner-profile' ||
@@ -272,7 +277,8 @@ String? _resolveSupplierVerificationRedirect(
     verificationStatus: profile?.verificationStatus,
   );
 
-  final onVerificationPage = isSupplierVerificationStatusRoute(path) ||
+  final onVerificationPage =
+      isSupplierVerificationStatusRoute(path) ||
       path == supplierVerificationPendingRoute;
 
   if (gate != null && _isSupplierPortalPath(path) && !onVerificationPage) {
@@ -414,6 +420,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile/security',
         builder: (context, state) => const ProfileSecurityPage(),
+      ),
+      GoRoute(
+        path: '/profile/locations',
+        builder: (context, state) => const SavedLocationsPage(),
       ),
       GoRoute(
         path: '/learner/deliveries/:id',
@@ -618,8 +628,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/supplier-verification',
-            builder: (context, state) =>
-                const AdminSupplierVerificationPage(),
+            builder: (context, state) => const AdminSupplierVerificationPage(),
           ),
           GoRoute(
             path: '/admin/materials',

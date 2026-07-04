@@ -10,6 +10,9 @@ class MaterialDiscoveryQuery {
     this.city,
     this.area,
     this.sort = 'newest',
+    this.latitude,
+    this.longitude,
+    this.savedLocationId,
     this.page = 1,
     this.limit = 20,
   });
@@ -24,6 +27,9 @@ class MaterialDiscoveryQuery {
   final String? city;
   final String? area;
   final String sort;
+  final double? latitude;
+  final double? longitude;
+  final String? savedLocationId;
   final int page;
   final int limit;
 
@@ -38,6 +44,9 @@ class MaterialDiscoveryQuery {
     String? city,
     String? area,
     String? sort,
+    double? latitude,
+    double? longitude,
+    String? savedLocationId,
     int? page,
     int? limit,
     bool clearQ = false,
@@ -47,6 +56,8 @@ class MaterialDiscoveryQuery {
     bool clearPickupAllowed = false,
     bool clearCity = false,
     bool clearArea = false,
+    bool clearCoordinates = false,
+    bool clearSavedLocationId = false,
   }) {
     return MaterialDiscoveryQuery(
       q: clearQ ? null : (q ?? this.q),
@@ -63,6 +74,11 @@ class MaterialDiscoveryQuery {
       city: clearCity ? null : (city ?? this.city),
       area: clearArea ? null : (area ?? this.area),
       sort: sort ?? this.sort,
+      latitude: clearCoordinates ? null : (latitude ?? this.latitude),
+      longitude: clearCoordinates ? null : (longitude ?? this.longitude),
+      savedLocationId: clearSavedLocationId
+          ? null
+          : (savedLocationId ?? this.savedLocationId),
       page: page ?? this.page,
       limit: limit ?? this.limit,
     );
@@ -77,6 +93,8 @@ class MaterialDiscoveryQuery {
       pickupAllowed != null ||
       (city != null && city!.trim().isNotEmpty) ||
       (area != null && area!.trim().isNotEmpty) ||
+      (latitude != null && longitude != null) ||
+      savedLocationId != null ||
       sort != 'newest';
 
   @override
@@ -92,6 +110,9 @@ class MaterialDiscoveryQuery {
         other.city == city &&
         other.area == area &&
         other.sort == sort &&
+        other.latitude == latitude &&
+        other.longitude == longitude &&
+        other.savedLocationId == savedLocationId &&
         other.page == page &&
         other.limit == limit;
   }
@@ -108,6 +129,9 @@ class MaterialDiscoveryQuery {
     city,
     area,
     sort,
+    latitude,
+    longitude,
+    savedLocationId,
     page,
     limit,
   );

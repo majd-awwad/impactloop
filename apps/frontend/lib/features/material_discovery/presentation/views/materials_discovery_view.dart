@@ -7,10 +7,12 @@ import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../materials/data/models/category.dart';
+import '../../../locations/data/saved_location.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_result.dart';
 import '../material_discovery_content.dart';
 import '../widgets/discovery_location_privacy_panel.dart';
+import '../widgets/discovery_material_map.dart';
 import '../widgets/material_search_filters.dart';
 import '../widgets/materials_hero_section.dart';
 
@@ -23,7 +25,12 @@ class MaterialsDiscoveryView extends StatelessWidget {
     required this.searchController,
     required this.cityController,
     required this.areaController,
+    required this.latitudeController,
+    required this.longitudeController,
     required this.searchValue,
+    required this.savedLocations,
+    required this.savedLocationsLoading,
+    required this.selectedSavedLocationId,
     required this.selectedCategoryIndex,
     required this.selectedQuickFilterIndex,
     required this.selectedSortIndex,
@@ -36,6 +43,9 @@ class MaterialsDiscoveryView extends StatelessWidget {
     required this.onSearchChanged,
     required this.onCityChanged,
     required this.onAreaChanged,
+    required this.onLatitudeChanged,
+    required this.onLongitudeChanged,
+    required this.onSavedLocationSelected,
     required this.onCategorySelected,
     required this.onQuickFilterSelected,
     required this.onSortSelected,
@@ -54,7 +64,12 @@ class MaterialsDiscoveryView extends StatelessWidget {
   final TextEditingController searchController;
   final TextEditingController cityController;
   final TextEditingController areaController;
+  final TextEditingController latitudeController;
+  final TextEditingController longitudeController;
   final String searchValue;
+  final List<SavedLocation> savedLocations;
+  final bool savedLocationsLoading;
+  final String? selectedSavedLocationId;
   final int selectedCategoryIndex;
   final int selectedQuickFilterIndex;
   final int selectedSortIndex;
@@ -67,6 +82,9 @@ class MaterialsDiscoveryView extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onCityChanged;
   final ValueChanged<String> onAreaChanged;
+  final ValueChanged<String> onLatitudeChanged;
+  final ValueChanged<String> onLongitudeChanged;
+  final ValueChanged<String?> onSavedLocationSelected;
   final ValueChanged<int> onCategorySelected;
   final ValueChanged<int> onQuickFilterSelected;
   final ValueChanged<int> onSortSelected;
@@ -100,20 +118,13 @@ class MaterialsDiscoveryView extends StatelessWidget {
                   ar: 'اكتشاف المواد',
                 ),
                 subtitle: const LocalizedText(
-                  en:
-                      'Browse reusable materials from verified suppliers. Search, filter, and reserve what you need.',
-                  ar:
-                      'تصفح المواد القابلة لإعادة الاستخدام من موردين موثوقين. ابحث، وفلتر، واحجز ما تحتاجه.',
+                  en: 'Browse reusable materials from verified suppliers. Search, filter, and reserve what you need.',
+                  ar: 'تصفح المواد القابلة لإعادة الاستخدام من موردين موثوقين. ابحث، وفلتر، واحجز ما تحتاجه.',
                 ),
                 stats: {
-                  const LocalizedText(
-                    en: 'loaded',
-                    ar: 'محمّلة',
-                  ): '$showingCount',
-                  const LocalizedText(
-                    en: 'matches',
-                    ar: 'مطابقة',
-                  ): '$total',
+                  const LocalizedText(en: 'loaded', ar: 'محمّلة'):
+                      '$showingCount',
+                  const LocalizedText(en: 'matches', ar: 'مطابقة'): '$total',
                 },
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -142,10 +153,18 @@ class MaterialsDiscoveryView extends StatelessWidget {
               searchController: searchController,
               cityController: cityController,
               areaController: areaController,
+              latitudeController: latitudeController,
+              longitudeController: longitudeController,
               searchValue: searchValue,
+              savedLocations: savedLocations,
+              savedLocationsLoading: savedLocationsLoading,
+              selectedSavedLocationId: selectedSavedLocationId,
               onSearchChanged: onSearchChanged,
               onCityChanged: onCityChanged,
               onAreaChanged: onAreaChanged,
+              onLatitudeChanged: onLatitudeChanged,
+              onLongitudeChanged: onLongitudeChanged,
+              onSavedLocationSelected: onSavedLocationSelected,
               categories: categories,
               selectedCategoryIndex: selectedCategoryIndex,
               onCategorySelected: onCategorySelected,
@@ -182,12 +201,19 @@ class MaterialsDiscoveryView extends StatelessWidget {
                     ? materialDiscoveryEmptySubtitle
                     : materialDiscoveryNoMaterialsSubtitle,
               )
-            else
+            else ...[
+              DiscoveryMaterialMap(
+                materials: materials,
+                onMaterialTap: onMaterialTap,
+              ),
+              if (materials.any((material) => material.hasApproximatePin))
+                SizedBox(height: isMobile ? AppSpacing.sm : AppSpacing.md),
               _MaterialsResultsGrid(
                 materials: materials,
                 cardVariant: cardVariant,
                 onMaterialTap: onMaterialTap,
               ),
+            ],
             if (hasMore) ...[
               const SizedBox(height: AppSpacing.lg),
               Center(
@@ -262,9 +288,7 @@ class _MaterialsResultsGrid extends StatelessWidget {
                 quantityLabel: material.quantityLabel.resolve(context),
                 priceLabel: material.priceLabel.resolve(context),
                 locationLabel: material.locationLabel.resolve(context),
-                availabilityLabel: material.availabilityLabel.resolve(
-                  context,
-                ),
+                availabilityLabel: material.availabilityLabel.resolve(context),
                 deliveryAvailable: material.deliveryAvailable,
                 isFree: material.isFree,
                 gradientColors: materialGradient(material),
@@ -319,9 +343,7 @@ class _MaterialsResultsGrid extends StatelessWidget {
                 quantityLabel: material.quantityLabel.resolve(context),
                 priceLabel: material.priceLabel.resolve(context),
                 locationLabel: material.locationLabel.resolve(context),
-                availabilityLabel: material.availabilityLabel.resolve(
-                  context,
-                ),
+                availabilityLabel: material.availabilityLabel.resolve(context),
                 deliveryAvailable: material.deliveryAvailable,
                 isFree: material.isFree,
                 gradientColors: materialGradient(material),
@@ -389,10 +411,9 @@ class _CompactDiscoveryHeader extends StatelessWidget {
                       ar: 'عرض $showingCount من $total نتيجة عامة',
                     ))
               .resolve(context),
-          style: AppTextStyles.subtitle(context).copyWith(
-            color: palette.textSecondary,
-            fontSize: 14,
-          ),
+          style: AppTextStyles.subtitle(
+            context,
+          ).copyWith(color: palette.textSecondary, fontSize: 14),
           textAlign: TextAlign.start,
         ),
       ],
@@ -493,11 +514,7 @@ class _EmptyStatePanel extends StatelessWidget {
               color: palette.mint.withValues(alpha: 0.14),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              color: palette.mint,
-              size: 32,
-            ),
+            child: Icon(icon, color: palette.mint, size: 32),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
@@ -559,10 +576,7 @@ class _RefetchingIndicator extends StatelessWidget {
 }
 
 class _RefetchErrorBanner extends StatelessWidget {
-  const _RefetchErrorBanner({
-    required this.message,
-    required this.onRetry,
-  });
+  const _RefetchErrorBanner({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback? onRetry;

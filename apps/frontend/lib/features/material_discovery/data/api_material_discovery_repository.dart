@@ -18,9 +18,7 @@ class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
   static const _basePath = '/api/materials';
 
   @override
-  Future<MaterialDiscoveryResult> fetchMaterials(
-    MaterialDiscoveryQuery query,
-  ) {
+  Future<MaterialDiscoveryResult> fetchMaterials(MaterialDiscoveryQuery query) {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
         _basePath,
@@ -34,12 +32,20 @@ class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
   static Map<String, dynamic> buildQueryParameters(
     MaterialDiscoveryQuery query,
   ) {
+    final savedLocationId = query.savedLocationId?.trim();
+    final hasSavedLocation =
+        savedLocationId != null && savedLocationId.isNotEmpty;
+    final hasCoordinates = query.latitude != null && query.longitude != null;
+    final sort = query.sort == 'nearest' && !hasSavedLocation && !hasCoordinates
+        ? 'newest'
+        : query.sort;
+
     final params = <String, dynamic>{
       'page': query.page,
       'limit': query.limit,
       'status': query.status,
       'priceType': query.priceType,
-      'sort': query.sort,
+      'sort': sort,
     };
 
     final trimmedQ = query.q?.trim();
@@ -73,6 +79,15 @@ class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
     final area = query.area?.trim();
     if (area != null && area.isNotEmpty) {
       params['area'] = area;
+    }
+
+    if (query.latitude != null && query.longitude != null) {
+      params['latitude'] = query.latitude;
+      params['longitude'] = query.longitude;
+    }
+
+    if (savedLocationId != null && savedLocationId.isNotEmpty) {
+      params['savedLocationId'] = savedLocationId;
     }
 
     return params;

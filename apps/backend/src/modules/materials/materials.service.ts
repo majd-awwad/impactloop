@@ -25,6 +25,7 @@ import {
   getHeldQuantitiesByMaterialIds,
   toDecimal,
 } from '../reservations/reservations.quantity.js';
+import { resolveSavedLocationCoordinates } from '../locations/locations.service.js';
 import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
 
 import * as materialsRepository from './materials.repository.js';
@@ -447,6 +448,23 @@ const mapPublicMaterialImages = (images: PublicMaterialImageRecord[]) => {
   }));
 };
 
+const approximateCoordinate = (
+  value: Parameters<typeof decimalToNumber>[0] | null,
+) => {
+  if (value == null) return null;
+
+  const numeric = decimalToNumber(value);
+  if (numeric == null) return null;
+
+  return Math.round(numeric * 100) / 100;
+};
+
+const approximateDistanceKm = (distanceKm: number | null | undefined) => {
+  if (distanceKm == null || !Number.isFinite(distanceKm)) return null;
+
+  return Math.round(distanceKm * 10) / 10;
+};
+
 const mapMaterial = (
   material: {
     id: string;
@@ -466,6 +484,8 @@ const mapMaterial = (
     location: {
       city: string;
       area: string | null;
+      latitude?: Parameters<typeof decimalToNumber>[0] | null;
+      longitude?: Parameters<typeof decimalToNumber>[0] | null;
     };
     deliveryAllowed: boolean;
     pickupAllowed: boolean;
@@ -483,12 +503,16 @@ const mapMaterial = (
     likesCount?: number;
     isLiked?: boolean;
   } = {},
+  options: {
+    includeApproximateLocation?: boolean;
+    distanceKm?: number | null;
+  } = {},
 ) => {
   const quantity = toDecimal(material.quantity);
   const availableQuantity = computeAvailableQuantity(quantity, heldQuantity);
   const primaryImageUrl = resolvePrimaryImageUrl(material);
 
-  return {
+  const mapped = {
     id: material.id,
     title: material.title,
     description: material.description,
@@ -516,6 +540,24 @@ const mapMaterial = (
     likesCount: engagement.likesCount ?? 0,
     isLiked: engagement.isLiked ?? false,
     createdAt: material.createdAt.toISOString(),
+  };
+
+  if (!options.includeApproximateLocation) {
+    return mapped;
+  }
+
+  const approximateLatitude = approximateCoordinate(
+    material.location.latitude ?? null,
+  );
+  const approximateLongitude = approximateCoordinate(
+    material.location.longitude ?? null,
+  );
+
+  return {
+    ...mapped,
+    approximateLatitude,
+    approximateLongitude,
+    approximateDistanceKm: approximateDistanceKm(options.distanceKm),
   };
 };
 
@@ -615,7 +657,40 @@ export const getMaterials = async (
   query: MaterialsQuery,
   viewer?: AccessTokenPayload,
 ) => {
-  const result = await materialsRepository.findMaterials(query);
+  let viewerCoordinates: materialsRepository.ViewerCoordinates | undefined;
+
+  if (query.savedLocationId) {
+    if (!viewer) {
+      throw new AppError(
+        'Authentication required to use a saved location',
+        401,
+        'UNAUTHENTICATED',
+      );
+    }
+
+    viewerCoordinates = await resolveSavedLocationCoordinates(
+      viewer.sub,
+      query.savedLocationId,
+    );
+  } else if (query.latitude != null && query.longitude != null) {
+    viewerCoordinates = {
+      latitude: query.latitude,
+      longitude: query.longitude,
+    };
+  }
+
+  if (query.sort === 'nearest' && !viewerCoordinates) {
+    throw new AppError(
+      'Nearest sorting requires latitude/longitude or a saved location',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const result = await materialsRepository.findMaterials(
+    query,
+    viewerCoordinates,
+  );
   const materialIds = result.items.map((item) => item.id);
   const [heldByMaterialId, likesByMaterialId, likedMaterialIds] =
     await Promise.all([
@@ -626,10 +701,18 @@ export const getMaterials = async (
 
   return {
     items: result.items.map((item) =>
-      mapMaterial(item, heldByMaterialId.get(item.id) ?? toDecimal(0), {
-        likesCount: likesByMaterialId.get(item.id) ?? 0,
-        isLiked: likedMaterialIds.has(item.id),
-      }),
+      mapMaterial(
+        item,
+        heldByMaterialId.get(item.id) ?? toDecimal(0),
+        {
+          likesCount: likesByMaterialId.get(item.id) ?? 0,
+          isLiked: likedMaterialIds.has(item.id),
+        },
+        {
+          includeApproximateLocation: true,
+          distanceKm: result.distanceByMaterialId.get(item.id),
+        },
+      ),
     ),
     pagination: {
       page: query.page,
