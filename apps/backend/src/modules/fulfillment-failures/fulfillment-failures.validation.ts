@@ -20,7 +20,7 @@ export const markDriverPickupFailedSchema = z.object({
     'LOCATION_ISSUE',
     'OTHER',
   ]),
-  note: z.string().trim().max(1000).optional(),
+  note: z.string().trim().min(1, 'Note is required.').max(1000),
 });
 
 export const markDriverDeliveryFailedSchema = z.object({
@@ -30,11 +30,15 @@ export const markDriverDeliveryFailedSchema = z.object({
     'ACCESS_ISSUE',
     'OTHER',
   ]),
-  note: z.string().trim().max(1000).optional(),
+  note: z.string().trim().min(1, 'Note is required.').max(1000),
 });
 
 export const markDriverNoShowSchema = z.object({
-  note: z.string().trim().max(1000).optional(),
+  note: z.string().trim().min(1, 'Note is required.').max(1000),
+});
+
+export const markDriverIssueAfterPickupSchema = z.object({
+  note: z.string().trim().min(1, 'Note is required.').max(1000),
 });
 
 export type ReservationIdParams = z.infer<typeof reservationIdParamsSchema>;
@@ -47,3 +51,6 @@ export type MarkDriverDeliveryFailedInput = z.infer<
   typeof markDriverDeliveryFailedSchema
 >;
 export type MarkDriverNoShowInput = z.infer<typeof markDriverNoShowSchema>;
+export type MarkDriverIssueAfterPickupInput = z.infer<
+  typeof markDriverIssueAfterPickupSchema
+>;

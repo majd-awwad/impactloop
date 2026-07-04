@@ -203,3 +203,11 @@ export const completeSupplierReservationSchema = z.object({
 export type CompleteSupplierReservationInput = z.infer<
   typeof completeSupplierReservationSchema
 >;
+
+export const reportSupplierNoDriverSchema = z.object({
+  note: z.string().trim().min(1, 'Note is required.').max(1000),
+});
+
+export type ReportSupplierNoDriverInput = z.infer<
+  typeof reportSupplierNoDriverSchema
+>;

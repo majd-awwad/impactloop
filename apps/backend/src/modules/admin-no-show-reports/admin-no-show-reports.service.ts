@@ -2,6 +2,7 @@ import { AppError } from '../../utils/app-error.js';
 
 import { findReservationMessages, mapReservationMessage } from '../reservations/reservation-messages.repository.js';
 import { mapPendingRescheduleSummary } from '../reservations/reservation-reschedule.js';
+import { getMaterialQuantityState } from '../reservations/reservations.quantity.js';
 import { prisma } from '../../database/prisma.js';
 import * as repository from './admin-no-show-reports.repository.js';
 import type { AdminNoShowReportsListQuery } from './admin-no-show-reports.validation.js';
@@ -9,6 +10,7 @@ import type { AdminNoShowReportsListQuery } from './admin-no-show-reports.valida
 const mapReport = (report: repository.AdminNoShowReportRecord) => ({
   id: report.id,
   reservationId: report.reservationId,
+  deliveryId: report.deliveryId,
   status: report.status,
   reasonCode: report.reasonCode,
   note: report.note,
@@ -58,15 +60,29 @@ export const getAdminNoShowReportById = async (id: string) => {
   }
 
   const messages = await findReservationMessages(report.reservationId);
-  const activityHistory = await prisma.reservationStatusHistory.findMany({
-    where: { reservationId: report.reservationId },
-    orderBy: { createdAt: 'asc' },
-    include: {
-      changedByUser: {
-        select: { id: true, displayName: true },
+  const [activityHistory, deliveryHistory, quantityState] = await Promise.all([
+    prisma.reservationStatusHistory.findMany({
+      where: { reservationId: report.reservationId },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        changedByUser: {
+          select: { id: true, displayName: true },
+        },
       },
-    },
-  });
+    }),
+    report.deliveryId
+      ? prisma.deliveryStatusHistory.findMany({
+          where: { deliveryId: report.deliveryId },
+          orderBy: { createdAt: 'asc' },
+          include: {
+            changedByUser: {
+              select: { id: true, displayName: true },
+            },
+          },
+        })
+      : Promise.resolve([]),
+    getMaterialQuantityState(prisma, report.reservation.material.id),
+  ]);
 
   return {
     ...mapReport(report),
@@ -85,10 +101,29 @@ export const getAdminNoShowReportById = async (id: string) => {
           }
         : null,
     })),
-    targetVerifiedNoShowCount:
-      report.status === 'VERIFIED'
-        ? await repository.countVerifiedNoShowReportsForTarget(report.targetUserId)
-        : undefined,
+    deliveryTimeline: deliveryHistory.map((entry) => ({
+      id: entry.id,
+      oldStatus: entry.oldStatus,
+      newStatus: entry.newStatus,
+      note: entry.note,
+      createdAt: entry.createdAt.toISOString(),
+      changedBy: entry.changedByUser
+        ? {
+            id: entry.changedByUser.id,
+            displayName: entry.changedByUser.displayName,
+          }
+        : null,
+    })),
+    quantityStatus: quantityState
+      ? {
+          materialQuantity: Number(quantityState.materialQuantity),
+          heldQuantity: Number(quantityState.heldQuantity),
+          availableQuantity: Number(quantityState.availableQuantity),
+        }
+      : null,
+    targetVerifiedStrikeCount: report.targetUserId
+      ? await repository.countVerifiedNoShowReportsForTarget(report.targetUserId)
+      : 0,
   };
 };
 
@@ -119,10 +154,39 @@ export const verifyAdminNoShowReport = async (
     report: mapReport(result.report),
     targetVerifiedNoShowCount: result.verifiedCount,
     shouldWarnAdmin: result.shouldWarnAdmin,
-    adminRecommendation: result.shouldWarnAdmin
-      ? 'Target user has 3 or more verified no-show reports. Consider suspension or restriction using People management.'
-      : null,
+    targetSuspended: result.targetSuspended,
+    adminRecommendation: result.targetSuspended
+      ? 'Target account was automatically suspended after 3 verified incident reports.'
+      : result.shouldWarnAdmin
+        ? 'Target user has 3 or more verified incident reports.'
+        : null,
   };
+};
+
+export const resolveAdminNoShowReport = async (
+  adminUserId: string,
+  reportId: string,
+  reviewNote?: string,
+) => {
+  const result = await repository.resolveNoShowReportWithoutStrike({
+    reportId,
+    adminUserId,
+    reviewNote,
+  });
+
+  if (!result) {
+    throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
+  }
+
+  if ('conflict' in result && result.conflict) {
+    throw new AppError(
+      'Only pending reports can be resolved without strike.',
+      409,
+      'CONFLICT',
+    );
+  }
+
+  return mapReport(result.report);
 };
 
 export const rejectAdminNoShowReport = async (

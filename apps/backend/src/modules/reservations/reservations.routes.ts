@@ -11,6 +11,8 @@ import {
   createLearnerReservationMessageHandler,
   listLearnerReservationMessagesHandler,
   listMyReservationsHandler,
+  reportLearnerSupplierIssueHandler,
+  reportNoDriverAvailableHandler,
   requestLearnerPickupRescheduleHandler,
   resolveLearnerConfirmationHandler,
 } from './reservations.controller.js';
@@ -18,6 +20,8 @@ import {
   createReservationSchema,
   createReservationMessageSchema,
   learnerConfirmationSchema,
+  reportNoDriverSchema,
+  reportSupplierIssueSchema,
   requestPickupRescheduleSchema,
   reservationIdParamsSchema,
 } from './reservations.validation.js';
@@ -84,6 +88,24 @@ reservationsRouter.post(
   validate(reservationIdParamsSchema, 'params'),
   validate(requestPickupRescheduleSchema),
   asyncHandler(requestLearnerPickupRescheduleHandler),
+);
+
+reservationsRouter.post(
+  '/:id/report-supplier-issue',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(reportSupplierIssueSchema),
+  asyncHandler(reportLearnerSupplierIssueHandler),
+);
+
+reservationsRouter.post(
+  '/:id/report-no-driver',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(reportNoDriverSchema),
+  asyncHandler(reportNoDriverAvailableHandler),
 );
 
 reservationsRouter.post(

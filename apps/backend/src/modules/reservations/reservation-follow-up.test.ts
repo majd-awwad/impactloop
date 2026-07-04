@@ -24,6 +24,9 @@ import {
 
 const TEST_MARKER = '[test-reservation-follow-up]';
 
+const pickupWindowEndAfterGrace = () =>
+  new Date(Date.now() - (31 * 60 + 5) * 1000);
+
 type TestContext = {
   supplierId: string;
   otherSupplierId: string;
@@ -248,7 +251,7 @@ describe('reservation follow-up actions', () => {
   });
 
   test('supplier list exposes overdue flags after pickup window passes', async () => {
-    const pastEnd = new Date(Date.now() - 60_000);
+    const pastEnd = pickupWindowEndAfterGrace();
     const { reservation } = await createAcceptedReservation(ctx, {
       pickupWindowEnd: pastEnd,
     });
@@ -261,12 +264,12 @@ describe('reservation follow-up actions', () => {
     assert.ok(item);
     assert.equal(item.isOverdue, true);
     assert.equal(item.needsFollowUp, true);
-    assert.equal(item.canSupplierCancelOverdue, true);
-    assert.equal(item.canSupplierReportNoShow, true);
+    assert.equal(item.canSupplierCloseOverduePickup, true);
+    assert.equal(item.canSupplierReportAndCloseOverduePickup, true);
   });
 
   test('supplier can reschedule own accepted reservation and clears overdue when future', async () => {
-    const pastEnd = new Date(Date.now() - 60_000);
+    const pastEnd = pickupWindowEndAfterGrace();
     const { reservation } = await createAcceptedReservation(ctx, {
       pickupWindowEnd: pastEnd,
     });
@@ -282,16 +285,17 @@ describe('reservation follow-up actions', () => {
         pickupWindowEnd: futureEnd.toISOString(),
         supplierNote: 'Rescheduled pickup',
         messageToLearner: 'Pickup rescheduled to tomorrow.',
+        reason: 'Schedule conflict',
       },
     );
 
+    assert.equal(updated.status, 'AWAITING_LEARNER_CONFIRMATION');
     assert.equal(updated.isOverdue, false);
     assert.equal(updated.needsFollowUp, false);
-    assert.equal(updated.supplierNote, 'Rescheduled pickup');
   });
 
   test('supplier cannot reschedule another supplier reservation', async () => {
-    const pastEnd = new Date(Date.now() - 60_000);
+    const pastEnd = pickupWindowEndAfterGrace();
     const { reservation } = await createAcceptedReservation(ctx, {
       pickupWindowEnd: pastEnd,
       ownerId: ctx.otherSupplierId,
@@ -302,6 +306,7 @@ describe('reservation follow-up actions', () => {
         rescheduleSupplierReservation(ctx.supplierId, reservation.id, {
           pickupWindowStart: new Date(Date.now() + 3_600_000).toISOString(),
           pickupWindowEnd: new Date(Date.now() + 7_200_000).toISOString(),
+          reason: 'Schedule conflict',
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
@@ -312,7 +317,7 @@ describe('reservation follow-up actions', () => {
   });
 
   test('supplier can cancel own overdue accepted reservation and release material', async () => {
-    const pastEnd = new Date(Date.now() - 60_000);
+    const pastEnd = pickupWindowEndAfterGrace();
     const { reservation, material } = await createAcceptedReservation(ctx, {
       pickupWindowEnd: pastEnd,
     });
@@ -332,7 +337,7 @@ describe('reservation follow-up actions', () => {
   });
 
   test('cancel does not create no-show strike', async () => {
-    const pastEnd = new Date(Date.now() - 60_000);
+    const pastEnd = pickupWindowEndAfterGrace();
     const { reservation } = await createAcceptedReservation(ctx, {
       pickupWindowEnd: pastEnd,
     });
@@ -346,7 +351,7 @@ describe('reservation follow-up actions', () => {
   });
 
   test('supplier can submit no-show report after pickup window expires', async () => {
-    const pastEnd = new Date(Date.now() - 60_000);
+    const pastEnd = pickupWindowEndAfterGrace();
     const { reservation } = await createAcceptedReservation(ctx, {
       pickupWindowEnd: pastEnd,
     });
@@ -360,9 +365,10 @@ describe('reservation follow-up actions', () => {
       },
     );
 
-    ctx.createdReportIds.push(report.id);
-    assert.equal(report.status, 'PENDING_REVIEW');
-    assert.equal(report.targetRole, 'LEARNER');
+    ctx.createdReportIds.push(report.noShowReport!.id);
+    assert.equal(report.status, 'AWAITING_RESOLUTION');
+    assert.equal(report.noShowReport?.status, 'PENDING_REVIEW');
+    assert.equal(report.noShowReport?.targetRole, 'LEARNER');
   });
 
   test('supplier cannot report before pickup window expires', async () => {
@@ -385,7 +391,7 @@ describe('reservation follow-up actions', () => {
   });
 
   test('same reservation target cannot be reported twice', async () => {
-    const pastEnd = new Date(Date.now() - 60_000);
+    const pastEnd = pickupWindowEndAfterGrace();
     const { reservation } = await createAcceptedReservation(ctx, {
       pickupWindowEnd: pastEnd,
     });
@@ -393,14 +399,15 @@ describe('reservation follow-up actions', () => {
     const first = await submitSupplierNoShowReport(
       ctx.supplierId,
       reservation.id,
-      { reasonCode: 'LEARNER_DID_NOT_ARRIVE' },
+      { reasonCode: 'LEARNER_DID_NOT_ARRIVE', note: 'Did not arrive' },
     );
-    ctx.createdReportIds.push(first.id);
+    ctx.createdReportIds.push(first.noShowReport!.id);
 
     await assert.rejects(
       () =>
         submitSupplierNoShowReport(ctx.supplierId, reservation.id, {
           reasonCode: 'OTHER',
+          note: 'Duplicate attempt',
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
@@ -410,46 +417,56 @@ describe('reservation follow-up actions', () => {
     );
   });
 
-  test('admin can verify no-show report and three verified reports warn admin', async () => {
+  test('admin can verify no-show report and three verified reports suspend target', async () => {
     for (let i = 0; i < 3; i += 1) {
-      const pastEnd = new Date(Date.now() - 60_000 - i * 1000);
+      const pastEnd = new Date(pickupWindowEndAfterGrace().getTime() - i * 1000);
       const { reservation } = await createAcceptedReservation(ctx, {
         pickupWindowEnd: pastEnd,
       });
       const report = await submitSupplierNoShowReport(
         ctx.supplierId,
         reservation.id,
-        { reasonCode: 'LEARNER_DID_NOT_ARRIVE' },
+        { reasonCode: 'LEARNER_DID_NOT_ARRIVE', note: 'Did not arrive' },
       );
-      ctx.createdReportIds.push(report.id);
+      ctx.createdReportIds.push(report.noShowReport!.id);
 
       const verified = await verifyAdminNoShowReport(
         ctx.adminId,
-        report.id,
+        report.noShowReport!.id,
         'Verified',
       );
       if (i === 2) {
         assert.equal(verified.shouldWarnAdmin, true);
-        assert.match(verified.adminRecommendation ?? '', /3 or more verified/);
+        assert.equal(verified.targetSuspended, true);
+        assert.match(
+          verified.adminRecommendation ?? '',
+          /automatically suspended/i,
+        );
       }
     }
+
+    const target = await prisma.user.findUnique({
+      where: { id: ctx.learnerId },
+      select: { accountStatus: true },
+    });
+    assert.equal(target?.accountStatus, 'SUSPENDED');
   });
 
   test('admin can reject no-show report', async () => {
-    const pastEnd = new Date(Date.now() - 60_000);
+    const pastEnd = pickupWindowEndAfterGrace();
     const { reservation } = await createAcceptedReservation(ctx, {
       pickupWindowEnd: pastEnd,
     });
     const report = await submitSupplierNoShowReport(
       ctx.supplierId,
       reservation.id,
-      { reasonCode: 'OTHER' },
+      { reasonCode: 'OTHER', note: 'Insufficient evidence from supplier' },
     );
-    ctx.createdReportIds.push(report.id);
+    ctx.createdReportIds.push(report.noShowReport!.id);
 
     const rejected = await rejectAdminNoShowReport(
       ctx.adminId,
-      report.id,
+      report.noShowReport!.id,
       'Insufficient evidence',
     );
 
@@ -507,7 +524,7 @@ describe('reservation follow-up actions', () => {
   });
 
   test('learner list includes follow-up fields and latest message', async () => {
-    const pastEnd = new Date(Date.now() - 60_000);
+    const pastEnd = pickupWindowEndAfterGrace();
     const { reservation } = await createAcceptedReservation(ctx, {
       pickupWindowEnd: pastEnd,
     });

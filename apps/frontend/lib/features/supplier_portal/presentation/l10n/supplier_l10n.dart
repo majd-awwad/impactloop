@@ -893,7 +893,7 @@ class SupplierL10n {
         SupplierIncomingRequestStatus.cancelled => tabCancelled,
         SupplierIncomingRequestStatus.noShow => 'Learner no-show',
         SupplierIncomingRequestStatus.fulfillmentFailed => 'Fulfillment failed',
-        SupplierIncomingRequestStatus.needsResolution => 'Needs resolution',
+        SupplierIncomingRequestStatus.needsResolution => 'Needs admin review',
       };
 
   // —— Pickup schedule ——
@@ -1517,6 +1517,14 @@ class SupplierL10n {
   String get deliveryNoFeasibleWindowPreview => t(
         'No feasible learner delivery window. This will wait for learner confirmation.',
         'لا توجد نافذة توصيل مناسبة للمتعلم. سينتظر هذا تأكيد المتعلم.',
+      );
+  String get deliveryScheduleCanAcceptDirectly => t(
+        'This schedule can be accepted directly.',
+        'يمكن قبول هذا الجدول مباشرة.',
+      );
+  String get deliveryScheduleNeedsLearnerConfirmation => t(
+        'This delivery window is not feasible after supplier pickup and travel buffer. Learner confirmation will be required.',
+        'نافذة التوصيل هذه غير مناسبة بعد استلام المورد وفترة السفر. سيلزم تأكيد المتعلم.',
       );
   String get pickupPreferredWindowSelectedHint => t(
         'Selected learner preferred window',

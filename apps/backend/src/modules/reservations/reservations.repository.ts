@@ -91,6 +91,14 @@ const learnerReservationListInclude = {
     orderBy: { requestedAt: 'desc' },
     take: 1,
   },
+  noShowReports: {
+    select: {
+      id: true,
+      status: true,
+      targetRole: true,
+      reasonCode: true,
+    },
+  },
 } satisfies Prisma.ReservationInclude;
 
 const learnerCancelInclude = {

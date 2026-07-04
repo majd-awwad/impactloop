@@ -60,7 +60,7 @@ String deliveryStatusLabel(String status) {
     case 'LEARNER_NO_SHOW':
       return 'Learner no-show';
     case 'AWAITING_RESOLUTION':
-      return 'Needs resolution';
+      return 'Needs admin review';
     default:
       return status;
   }

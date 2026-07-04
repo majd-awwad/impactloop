@@ -28,6 +28,13 @@ import {
   mapPendingRescheduleSummary,
   resolveSelfPickupHandoverPhase,
 } from '../reservations/reservation-reschedule.js';
+import {
+  canSupplierMarkDriverNoShow,
+} from '../fulfillment-failures/fulfillment-failures.eligibility.js';
+import {
+  canReportNoDriverAvailable,
+  createNoDriverAvailableReport,
+} from '../reservations/reservations.incidents.repository.js';
 import type {
   AcceptSupplierReservationInput,
   CancelSupplierReservationInput,
@@ -145,6 +152,11 @@ export const mapSupplierReservation = (
   const hasLearnerNoShowReport = reservation.noShowReports.some(
     (report) => report.targetRole === 'LEARNER',
   );
+  const hasOpenIncident =
+    reservation.status === 'AWAITING_RESOLUTION' ||
+    reservation.noShowReports.some(
+      (report) => report.status === 'PENDING_REVIEW',
+    );
   const awaitingLearnerReschedule =
     reservation.status === 'AWAITING_SUPPLIER_CONFIRMATION';
   const canReschedule = canRequestPickupReschedule({
@@ -154,7 +166,7 @@ export const mapSupplierReservation = (
     deliveryCount: reservation._count.deliveries,
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
-    hasFinalReport: hasLearnerNoShowReport,
+    hasFinalReport: hasOpenIncident,
   });
   const canCompleteBase =
     supplierReservationsRepository.supplierCanCompleteReservation({
@@ -246,19 +258,36 @@ export const mapSupplierReservation = (
     canSupplierCloseOverduePickup:
       pickupHandoverPhase === 'AFTER_ALLOWED' &&
       isSelfPickup &&
-      !hasLearnerNoShowReport,
+      !hasOpenIncident,
     canSupplierReportAndCloseOverduePickup:
       pickupHandoverPhase === 'AFTER_ALLOWED' &&
       isSelfPickup &&
-      !hasLearnerNoShowReport,
+      !hasOpenIncident,
     canSupplierReschedule: canReschedule,
     canSupplierAcceptLearnerReschedule: awaitingLearnerReschedule && isSelfPickup,
     canSupplierProposeDifferentTime: awaitingLearnerReschedule && isSelfPickup,
     canSupplierCloseAwaitingLearnerRequest:
-      awaitingLearnerReschedule && isSelfPickup && !hasLearnerNoShowReport,
+      awaitingLearnerReschedule && isSelfPickup && !hasOpenIncident,
     canSupplierReportAwaitingLearnerRequest:
-      awaitingLearnerReschedule && isSelfPickup && !hasLearnerNoShowReport,
-    canSendMessage: reservationAllowsMessaging(reservation.status),
+      awaitingLearnerReschedule && isSelfPickup && !hasOpenIncident,
+    canReportNoDriverAvailable: canReportNoDriverAvailable({
+      status: reservation.status,
+      fulfillmentMethod: reservation.fulfillmentMethod,
+      supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+      deliveryStatus: latestDelivery?.status ?? null,
+      assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+      hasPendingReport: hasOpenIncident,
+    }),
+    canSupplierReportDriverNoShow:
+      !hasOpenIncident &&
+      canSupplierMarkDriverNoShow({
+        status: reservation.status,
+        supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+        deliveryStatus: latestDelivery?.status ?? null,
+        assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+      }),
+    canSendMessage:
+      reservationAllowsMessaging(reservation.status) && !hasOpenIncident,
     noShowReport: mapNoShowReportSummary(reservation.noShowReports),
     latestMessage: latestMessage ?? null,
   };
@@ -362,11 +391,12 @@ export const acceptSupplierReservation = async (
   }
 
   if (pickupWindowEnd.getTime() <= Date.now()) {
-    throw new AppError(
-      'Supplier window end must be in the future.',
-      400,
-      'VALIDATION_ERROR',
-    );
+    const message =
+      existing.fulfillmentMethod === 'PICKUP' &&
+      input.selectedPreferredWindowIndex != null
+        ? 'Requested window has passed. Propose a new time.'
+        : 'Supplier window end must be in the future.';
+    throw new AppError(message, 400, 'VALIDATION_ERROR');
   }
 
   if (existing.fulfillmentMethod === 'DELIVERY') {
@@ -662,6 +692,60 @@ export const submitSupplierNoShowReport = async (
       409,
       'CONFLICT',
     );
+  }
+
+  const reservation =
+    await supplierReservationsRepository.findSupplierReservationForOwner(
+      ownerId,
+      reservationId,
+    );
+
+  if (!reservation) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  return mapSupplierReservation(reservation);
+};
+
+export const reportSupplierNoDriverAvailable = async (
+  ownerId: string,
+  reservationId: string,
+  input: { note?: string },
+) => {
+  const result = await createNoDriverAvailableReport({
+    reporterUserId: ownerId,
+    reservationId,
+    note: input.note,
+  });
+
+  switch (result.outcome) {
+    case 'NOT_FOUND':
+      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    case 'FORBIDDEN':
+      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    case 'INVALID_STATUS':
+    case 'INVALID_DELIVERY_STATE':
+      throw new AppError(
+        'No-driver reports apply only to accepted deliveries waiting for a driver.',
+        409,
+        'CONFLICT',
+      );
+    case 'WINDOW_NOT_EXPIRED':
+      throw new AppError(
+        'No-driver reports are allowed only after the supplier pickup window and grace period.',
+        409,
+        'CONFLICT',
+      );
+    case 'DUPLICATE':
+      throw new AppError(
+        'A no-driver report already exists for this reservation.',
+        409,
+        'CONFLICT',
+      );
+    case 'CREATED':
+      break;
+    default:
+      throw new AppError('Unable to submit no-driver report.', 500, 'INTERNAL_ERROR');
   }
 
   const reservation =

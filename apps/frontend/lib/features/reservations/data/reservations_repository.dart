@@ -60,4 +60,42 @@ class ReservationsRepository {
   ) {
     return _api.sendReservationMessage(reservationId, body);
   }
+
+  Future<LearnerReservation> requestPickupReschedule({
+    required String reservationId,
+    required DateTime pickupWindowStart,
+    required DateTime pickupWindowEnd,
+    required String reason,
+    String? note,
+  }) {
+    return _api.requestPickupReschedule(
+      reservationId: reservationId,
+      pickupWindowStart: pickupWindowStart,
+      pickupWindowEnd: pickupWindowEnd,
+      reason: reason,
+      note: note,
+    );
+  }
+
+  Future<LearnerReservation> reportSupplierIssue({
+    required String reservationId,
+    required String reason,
+    String? note,
+  }) {
+    return _api.reportSupplierIssue(
+      reservationId: reservationId,
+      reason: reason,
+      note: note,
+    );
+  }
+
+  Future<LearnerReservation> reportNoDriverAvailable({
+    required String reservationId,
+    required String note,
+  }) {
+    return _api.reportNoDriverAvailable(
+      reservationId: reservationId,
+      note: note,
+    );
+  }
 }

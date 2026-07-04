@@ -124,6 +124,7 @@ class DriverDelivery {
     this.confirmedDeliveryWindowEnd,
     this.canDriverReportPickupFailed = false,
     this.canDriverReportDeliveryFailed = false,
+    this.canDriverReportDriverIssue = false,
   });
 
   final String id;
@@ -151,6 +152,7 @@ class DriverDelivery {
   final DateTime? confirmedDeliveryWindowEnd;
   final bool canDriverReportPickupFailed;
   final bool canDriverReportDeliveryFailed;
+  final bool canDriverReportDriverIssue;
 
   factory DriverDelivery.fromJson(Map<String, dynamic> json) {
     return DriverDelivery(
@@ -196,6 +198,8 @@ class DriverDelivery {
           json['canDriverReportPickupFailed'] == true,
       canDriverReportDeliveryFailed:
           json['canDriverReportDeliveryFailed'] == true,
+      canDriverReportDriverIssue:
+          json['canDriverReportDriverIssue'] == true,
     );
   }
 

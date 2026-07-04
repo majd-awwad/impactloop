@@ -191,7 +191,11 @@ const toUserSummary = (
 
 const assertAccountCanLogin = (accountStatus: AccountStatus): void => {
   if (accountStatus === 'SUSPENDED' || accountStatus === 'DISABLED') {
-    throw new AppError('Account is not allowed to sign in', 403, 'FORBIDDEN');
+    throw new AppError(
+      'Your account has been suspended after repeated verified reports. Contact admin.',
+      403,
+      'ACCOUNT_SUSPENDED',
+    );
   }
 };
 

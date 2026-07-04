@@ -114,6 +114,27 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
     }
   }
 
+  Future<DriverDelivery> reportDriverIssue({
+    required String deliveryId,
+    required String note,
+  }) async {
+    state = const AsyncLoading();
+
+    try {
+      final delivery = await ref
+          .read(driverDeliveriesRepositoryProvider)
+          .reportDriverIssue(deliveryId, note: note);
+      ref.invalidate(activeDriverDeliveriesProvider);
+      ref.invalidate(activeDriverDeliveryProvider(deliveryId));
+      ref.invalidate(availableDriverDeliveriesProvider);
+      state = const AsyncData(null);
+      return delivery;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
   Future<void> sendLocationPing({
     required String deliveryId,
     required DriverLocationPingRequest request,
