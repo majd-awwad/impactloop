@@ -373,6 +373,21 @@ class SupplierIncomingRequest {
 
   bool get hasDelivery => deliveryRequested || activeDelivery != null;
 
+  bool get canMarkOrReportNoDriverAvailable =>
+      canSupplierMarkDeliveryPickupExpired || canReportNoDriverAvailable;
+
+  bool get showDeliveryPickupExpiredHint {
+    if (!hasDelivery || noShowReport != null) {
+      return false;
+    }
+
+    if (activeDelivery?.status.toUpperCase() != 'WAITING_FOR_DRIVER') {
+      return false;
+    }
+
+    return !canMarkOrReportNoDriverAvailable && !canSupplierReportDriverNoShow;
+  }
+
   bool get isDeliveryFulfillment => fulfillmentMethod.toUpperCase() == 'DELIVERY';
 
   bool get isReadOnlyFinalState =>

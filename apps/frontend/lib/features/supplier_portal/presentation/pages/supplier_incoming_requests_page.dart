@@ -205,7 +205,7 @@ class _SupplierIncomingRequestsPageState
                       )
                   : null,
               onMarkDeliveryPickupExpired:
-                  request.canSupplierMarkDeliveryPickupExpired
+                  request.canMarkOrReportNoDriverAvailable
                   ? () => handleMarkDeliveryPickupExpired(
                         context,
                         ref,
