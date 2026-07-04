@@ -289,8 +289,10 @@ export const mapSupplierReservation = (
       status: reservation.status,
       fulfillmentMethod: reservation.fulfillmentMethod,
       supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+      pickupWindowEnd: reservation.pickupWindowEnd,
       deliveryStatus: latestDelivery?.status ?? null,
       assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+      hasDelivery,
       hasPendingReport: hasOpenIncident,
     }),
     canSupplierMarkDeliveryPickupExpired:
@@ -299,14 +301,17 @@ export const mapSupplierReservation = (
         status: reservation.status,
         fulfillmentMethod: reservation.fulfillmentMethod,
         supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+        pickupWindowEnd: reservation.pickupWindowEnd,
         deliveryStatus: latestDelivery?.status ?? null,
         assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+        hasDelivery,
       }),
     canSupplierReportDriverNoShow:
       !hasOpenIncident &&
       canSupplierMarkDriverNoShow({
         status: reservation.status,
         supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+        pickupWindowEnd: reservation.pickupWindowEnd,
         deliveryStatus: latestDelivery?.status ?? null,
         assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
       }),

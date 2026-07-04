@@ -203,8 +203,10 @@ const mapLearnerReservation = (
     status: reservation.status,
     fulfillmentMethod: reservation.fulfillmentMethod,
     supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+    pickupWindowEnd: reservation.pickupWindowEnd,
     deliveryStatus: latestDelivery?.status ?? null,
     assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+    hasDelivery: deliveryCount > 0,
     hasPendingReport: hasOpenIncident,
   });
   const canLearnerRequestDelivery =

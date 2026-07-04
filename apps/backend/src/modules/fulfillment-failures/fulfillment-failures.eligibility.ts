@@ -23,26 +23,52 @@ export const canSupplierMarkLearnerPickupNoShow = (input: {
   input.fulfillmentMethod === 'PICKUP' &&
   isAfterWindowWithGrace(input.now ?? new Date(), input.pickupWindowEnd);
 
+export const resolveSupplierPickupWindowEnd = (input: {
+  supplierPickupWindowEnd: Date | null;
+  pickupWindowEnd?: Date | null;
+}) => input.supplierPickupWindowEnd ?? input.pickupWindowEnd ?? null;
+
 export const canSupplierMarkDeliveryPickupExpired = (input: {
   status: ReservationStatus;
   fulfillmentMethod: string;
   supplierPickupWindowEnd: Date | null;
+  pickupWindowEnd?: Date | null;
   deliveryStatus: DeliveryStatus | null;
   assignedDriverProfileId: string | null;
+  hasDelivery?: boolean;
   now?: Date;
-}) =>
-  input.status === 'ACCEPTED' &&
-  input.fulfillmentMethod === 'DELIVERY' &&
-  input.deliveryStatus === 'WAITING_FOR_DRIVER' &&
-  !input.assignedDriverProfileId &&
-  isAfterWindowWithGrace(
-    input.now ?? new Date(),
-    input.supplierPickupWindowEnd,
-  );
+}) => {
+  if (input.status !== 'ACCEPTED') {
+    return false;
+  }
+
+  const hasDeliveryContext =
+    input.fulfillmentMethod === 'DELIVERY' || input.hasDelivery === true;
+
+  if (!hasDeliveryContext) {
+    return false;
+  }
+
+  if (input.deliveryStatus !== 'WAITING_FOR_DRIVER') {
+    return false;
+  }
+
+  if (input.assignedDriverProfileId) {
+    return false;
+  }
+
+  const windowEnd = resolveSupplierPickupWindowEnd({
+    supplierPickupWindowEnd: input.supplierPickupWindowEnd,
+    pickupWindowEnd: input.pickupWindowEnd,
+  });
+
+  return isAfterWindowWithGrace(input.now ?? new Date(), windowEnd);
+};
 
 export const canSupplierMarkDriverNoShow = (input: {
   status: ReservationStatus;
   supplierPickupWindowEnd: Date | null;
+  pickupWindowEnd?: Date | null;
   deliveryStatus: DeliveryStatus | null;
   assignedDriverProfileId: string | null;
   now?: Date;
@@ -60,10 +86,12 @@ export const canSupplierMarkDriverNoShow = (input: {
     return false;
   }
 
-  return isAfterWindowWithGrace(
-    input.now ?? new Date(),
-    input.supplierPickupWindowEnd,
-  );
+  const windowEnd = resolveSupplierPickupWindowEnd({
+    supplierPickupWindowEnd: input.supplierPickupWindowEnd,
+    pickupWindowEnd: input.pickupWindowEnd,
+  });
+
+  return isAfterWindowWithGrace(input.now ?? new Date(), windowEnd);
 };
 
 export const canDriverMarkPickupFailed = (input: {
