@@ -242,7 +242,6 @@ void main() {
       'isFree': true,
       'deliveryAvailable': true,
       'pickupAllowed': false,
-      'pickupNotes': 'Ring the bell at the workshop gate.',
       'suggestedUses': 'Good for robotics club builds.',
       'sourceType': 'WORKSHOP_SURPLUS',
       'supplierType': 'WORKSHOP',
@@ -253,7 +252,6 @@ void main() {
       'category': {'nameEn': 'Electronics', 'nameAr': 'إلكترونيات'},
     });
 
-    expect(material.pickupNotes, 'Ring the bell at the workshop gate.');
     expect(material.suggestedUses, 'Good for robotics club builds.');
     expect(material.sourceTypeLabel?.en, 'Workshop surplus');
     expect(material.supplierTypeLabel?.en, 'Workshop');

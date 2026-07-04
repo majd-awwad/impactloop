@@ -17,7 +17,7 @@ Locations are **created/updated inline** through supplier profile PATCH and refe
 | Locations CRUD API | **Not implemented** | No `GET/POST/PATCH /api/locations` |
 | Supplier profile location | **Implemented** | `defaultPickupLocation` on `PATCH /api/supplier/profile` |
 | Material create location | **Implemented** | Copies profile default or optional per-material override (individual/student only); never reuses profile row |
-| Public discovery location fields | **Implemented** | API returns `city` + `area` only — no lat/lng/address |
+| Public discovery location fields | **Implemented** | `GET /api/materials` and `GET /api/materials/:id` return `city` + `area` only — no lat/lng/address or `pickupNotes` |
 | Post-acceptance pickup reveal (learner) | **Implemented** | `GET /api/reservations/my` returns `pickupLocationFull` for `ACCEPTED`/`COMPLETED` only |
 | Public redaction / visibility enforcement | **Implemented** | Public `mapMaterial` omits coordinates/address; reservation reveal is status-gated |
 
@@ -53,7 +53,7 @@ Profile edits do **not** retroactively change existing material pickup rows beca
 | Geocoding | `services/reverse-geocoding.service.ts` (Nominatim, cache, rate limit) |
 | Profile upsert | `modules/supplier/supplier.repository.ts` (`upsertLocation`, profile PATCH) |
 | Material create pickup | `modules/supplier/supplier.service.ts` (`resolveMaterialPickupLocationId`), `supplier.repository.ts` (`copyLocationRow`, `createMaterialPickupLocation`) |
-| Public material mapper | `modules/materials/materials.service.ts` (`mapMaterial` — city/area only) |
+| Public material mapper | `modules/materials/materials.service.ts` (`mapMaterial` + detail fields — city/area only; free-form pickup notes are redacted) |
 | Supplier-owned material mapper | `modules/supplier/supplier.service.ts` (`mapLocation` — full fields for owner) |
 
 ## API endpoints
@@ -79,7 +79,7 @@ Public material discovery:
 
 | Method | Path | Location in response |
 |--------|------|----------------------|
-| GET | `/api/materials`, `GET /api/materials/:id` | `city`, `area` only |
+| GET | `/api/materials`, `GET /api/materials/:id` | `city`, `area` only; no `addressLine`, latitude/longitude, location object, supplier private location object, or `pickupNotes` |
 
 ## Database tables
 

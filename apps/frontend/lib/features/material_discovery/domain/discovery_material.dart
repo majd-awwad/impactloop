@@ -44,7 +44,6 @@ class DiscoveryMaterial {
     this.likesCount = 0,
     this.isLiked = false,
     this.postedAt,
-    this.pickupNotes,
     this.suggestedUses,
     this.sourceType,
     this.isOwnMaterial,
@@ -87,7 +86,6 @@ class DiscoveryMaterial {
   final int likesCount;
   final bool isLiked;
   final DateTime? postedAt;
-  final String? pickupNotes;
   final String? suggestedUses;
   final String? sourceType;
   final bool? isOwnMaterial;
@@ -137,7 +135,6 @@ class DiscoveryMaterial {
       likesCount: likesCount ?? this.likesCount,
       isLiked: isLiked ?? this.isLiked,
       postedAt: postedAt,
-      pickupNotes: pickupNotes,
       suggestedUses: suggestedUses,
       sourceType: sourceType,
       isOwnMaterial: isOwnMaterial,

@@ -42,7 +42,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 | When does price-rule AI write to `ai_price_lookup_logs`? | **Needs verification** | [materials-listing](features/materials-listing.md), `ai-price-lookup.repository.ts` |
 | Organization supplier: required `organization_profiles` fields on create? | Open | [supplier-material-listing-flow](flows/supplier-material-listing-flow.md) |
 | `POST /api/price-rule-requests` — should route require `SUPPLIER` role? | **Needs verification** | [api-catalog](backend/api-catalog.md), [materials-listing](features/materials-listing.md) |
-| Which location fields are on public material DTOs — consistent redaction on list and detail? | **Resolved for discovery list/detail** — public material DTOs return `city`/`area` only; broader location visibility enforcement remains tracked under Locations | [material-discovery-flow](flows/material-discovery-flow.md), [locations](features/locations.md) |
+| Which location fields are on public material DTOs — consistent redaction on list and detail? | **Resolved for discovery list/detail** — `GET /api/materials` and `GET /api/materials/:id` return `city`/`area` only and omit `addressLine`, latitude/longitude, location object, supplier private location object, and `pickupNotes`; broader location visibility enforcement remains tracked under Locations | [material-discovery-flow](flows/material-discovery-flow.md), [locations](features/locations.md) |
 | Is discovery pagination exposed in Flutter UI? | **Resolved** — Load more increments `MaterialDiscoveryQuery.page` and appends results | [material-discovery-flow](flows/material-discovery-flow.md), [material-discovery](features/material-discovery.md) |
 | Does material detail increment `materials.views_count`? | **Resolved** — yes on successful `GET /api/materials/:id`; authenticated viewers count once per user/material, guests count per request; also writes `material_views`; exposed as `viewsCount` in public DTO | [material-discovery-flow](flows/material-discovery-flow.md) |
 | Server-side filter parity with client-side discovery chips? | **Resolved for current discovery UI** — UI query maps to repository/API params including category, condition, status, price, delivery/pickup, city/area, sort, page, and limit | [material-discovery](features/material-discovery.md) |
@@ -55,7 +55,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 | Question | Status | Source |
 |----------|--------|--------|
-| Are all public API paths consistent on omitting lat/lng/address? | **Needs verification** | [locations](features/locations.md), `materials.service.ts` |
+| Are all public API paths consistent on omitting lat/lng/address? | **Needs verification** — public Materials Discovery list/detail verified; non-material public API paths still need separate review | [locations](features/locations.md), `materials.service.ts` |
 | Is `visibility` / `ORDER_ONLY` enforced beyond storage? | **Needs verification** | [locations](features/locations.md), `supplier.validation.ts` |
 | When should precise location reveal to learner after accepted reservation? | Open — precise pickup reveal **not implemented** | [locations](features/locations.md), [reservations](features/reservations.md) |
 

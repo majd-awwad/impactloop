@@ -37,7 +37,6 @@ class MaterialDiscoveryApiMapper {
     final area = _nullableString(json['area']);
     final deliveryAvailable = json['deliveryAvailable'] == true;
     final pickupAllowed = json['pickupAllowed'] != false;
-    final pickupNotes = _nullableString(json['pickupNotes']);
     final suggestedUses = _nullableString(json['suggestedUses']);
     final sourceType = _nullableString(json['sourceType']);
     final supplierType = _nullableString(json['supplierType']);
@@ -124,7 +123,6 @@ class MaterialDiscoveryApiMapper {
       likesCount: likesCount,
       isLiked: isLiked,
       postedAt: _dateTimeFromDynamic(json['createdAt']),
-      pickupNotes: pickupNotes,
       suggestedUses: suggestedUses,
       sourceType: sourceType,
       isOwnMaterial: isOwnMaterial,

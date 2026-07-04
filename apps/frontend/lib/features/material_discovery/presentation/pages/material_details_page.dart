@@ -1133,20 +1133,6 @@ class _MaterialDetailExtraSections extends StatelessWidget {
   Widget build(BuildContext context) {
     final sections = <Widget>[];
 
-    final pickupNotes = material.pickupNotes?.trim();
-    if (pickupNotes != null && pickupNotes.isNotEmpty) {
-      sections.add(
-        _DetailTextSection(
-          title: const LocalizedText(
-            en: 'Pickup notes',
-            ar: 'ملاحظات الاستلام',
-          ),
-          body: pickupNotes,
-          icon: Icons.notes_outlined,
-        ),
-      );
-    }
-
     final suggestedUses = material.suggestedUses?.trim();
     if (suggestedUses != null && suggestedUses.isNotEmpty) {
       sections.add(

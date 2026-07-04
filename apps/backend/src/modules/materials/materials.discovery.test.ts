@@ -586,11 +586,18 @@ describe('public material discovery', () => {
     assert.equal(result.success, false);
   });
 
-  test('public list and detail omit precise pickup fields', async () => {
+  test('public list and detail expose only approximate location fields', async () => {
     const unique = `${TEST_MARKER}-privacy-${Date.now()}`;
     const material = await createMaterial(ctx, {
       title: `${unique} privacy stock`,
       locationId: ctx.locationId,
+    });
+
+    await prisma.material.update({
+      where: { id: material.id },
+      data: {
+        pickupNotes: 'Use the side entrance at the exact warehouse door.',
+      },
     });
 
     const listed = (
@@ -610,12 +617,22 @@ describe('public material discovery', () => {
     assert.equal('latitude' in listed!, false);
     assert.equal('longitude' in listed!, false);
     assert.equal('addressLine' in listed!, false);
+    assert.equal('pickupNotes' in listed!, false);
+    assert.equal('location' in listed!, false);
+    assert.equal('supplierProfile' in listed!, false);
+    assert.equal('owner' in listed!, false);
     assert.equal(typeof listed?.viewsCount, 'number');
 
     const detail = await getMaterialById(material.id);
+    assert.equal(detail.city, `${TEST_MARKER}-Nablus`);
+    assert.equal(detail.area, `${TEST_MARKER}-Industrial`);
     assert.equal('latitude' in detail, false);
     assert.equal('longitude' in detail, false);
     assert.equal('addressLine' in detail, false);
+    assert.equal('pickupNotes' in detail, false);
+    assert.equal('location' in detail, false);
+    assert.equal('supplierProfile' in detail, false);
+    assert.equal('owner' in detail, false);
     assert.equal(typeof detail.viewsCount, 'number');
   });
 
@@ -702,7 +719,7 @@ describe('public material discovery', () => {
     assert.equal(detail.primaryImageUrl, coverUrl);
   });
 
-  test('public detail includes extended safe fields and omits precise location', async () => {
+  test('public detail includes extended safe fields and omits precise pickup data', async () => {
     const unique = `${TEST_MARKER}-detail-fields-${Date.now()}`;
     const material = await createMaterial(ctx, {
       title: `${unique} extended detail stock`,
@@ -721,7 +738,6 @@ describe('public material discovery', () => {
     const detail = await getMaterialById(material.id);
 
     assert.ok(detail);
-    assert.equal(detail.pickupNotes, 'Call one hour before pickup.');
     assert.equal(detail.suggestedUses, 'Useful for Arduino motor projects.');
     assert.equal(detail.sourceType, 'WORKSHOP_SURPLUS');
     assert.equal(detail.pickupAllowed, false);
@@ -731,6 +747,7 @@ describe('public material discovery', () => {
     assert.equal('latitude' in detail, false);
     assert.equal('longitude' in detail, false);
     assert.equal('addressLine' in detail, false);
+    assert.equal('pickupNotes' in detail, false);
     assert.equal('ownerId' in detail, false);
     assert.equal('isOwnMaterial' in detail, false);
   });

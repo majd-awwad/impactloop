@@ -544,7 +544,6 @@ const resolvePublicSupplierVerified = (
 };
 
 const mapMaterialDetailFields = (material: MaterialDetailRecord) => ({
-  pickupNotes: material.pickupNotes?.trim() || null,
   suggestedUses: material.suggestedUses?.trim() || null,
   sourceType: material.sourceType,
   supplierType: material.supplierProfile?.supplierType ?? null,
