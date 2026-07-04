@@ -9,6 +9,10 @@ import {
 } from '../../utils/handover-codes.js';
 
 import type { RequestDeliveryInput } from './deliveries.validation.js';
+import {
+  maybeSaveDropoffAddressAfterDeliveryRequest,
+  resolveSavedDropoffAddressForDelivery,
+} from '../saved-dropoff-addresses/saved-dropoff-addresses.service.js';
 
 export const ACTIVE_DELIVERY_STATUSES = [
   'WAITING_FOR_DRIVER',
@@ -237,6 +241,13 @@ export const requestDeliveryForReservation = async (
   reservationId: string,
   input: RequestDeliveryInput,
 ) => {
+  const resolvedDropoffLocation = input.savedDropoffAddressId
+    ? await resolveSavedDropoffAddressForDelivery(
+        learnerId,
+        input.savedDropoffAddressId,
+      )
+    : input.dropoffLocation!;
+
   let result: Awaited<ReturnType<typeof runSerializableTransaction<{
     outcome:
       | 'CREATED'
@@ -306,14 +317,14 @@ export const requestDeliveryForReservation = async (
 
       const dropoffLocation = await tx.location.create({
         data: {
-          country: input.dropoffLocation.country,
-          city: input.dropoffLocation.city,
-          area: input.dropoffLocation.area ?? null,
-          addressLine: input.dropoffLocation.addressLine ?? null,
-          latitude: input.dropoffLocation.latitude ?? null,
-          longitude: input.dropoffLocation.longitude ?? null,
+          country: resolvedDropoffLocation.country,
+          city: resolvedDropoffLocation.city,
+          area: resolvedDropoffLocation.area ?? null,
+          addressLine: resolvedDropoffLocation.addressLine ?? null,
+          latitude: resolvedDropoffLocation.latitude ?? null,
+          longitude: resolvedDropoffLocation.longitude ?? null,
           visibility: 'PRIVATE',
-          isApproximate: input.dropoffLocation.isApproximate,
+          isApproximate: resolvedDropoffLocation.isApproximate,
           locationType: 'DELIVERY_DROPOFF',
         },
       });
@@ -363,8 +374,24 @@ export const requestDeliveryForReservation = async (
   }
 
   switch (result.outcome) {
-    case 'CREATED':
+    case 'CREATED': {
+      if (input.dropoffLocation && input.saveDropoffAddressLabel?.trim()) {
+        await maybeSaveDropoffAddressAfterDeliveryRequest(learnerId, {
+          label: input.saveDropoffAddressLabel.trim(),
+          location: {
+            country: input.dropoffLocation.country,
+            city: input.dropoffLocation.city,
+            area: input.dropoffLocation.area ?? null,
+            addressLine: input.dropoffLocation.addressLine ?? null,
+            latitude: input.dropoffLocation.latitude ?? null,
+            longitude: input.dropoffLocation.longitude ?? null,
+            isApproximate: input.dropoffLocation.isApproximate,
+          },
+        });
+      }
+
       return mapLearnerDelivery(result.delivery!);
+    }
     case 'NOT_FOUND':
       throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
     case 'INVALID_STATUS':

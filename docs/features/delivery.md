@@ -13,7 +13,7 @@ Role-scope boundary: driver is an operational support role for basic internal de
 | Learner delivery read/tracking API | **Implemented** | `GET /api/deliveries/my`, `GET /api/deliveries/:id` |
 | Driver jobs/assignment/status API | **Implemented** | `/api/driver/deliveries/*` |
 | Driver location pings | **Partial** | Assigned active drivers can share foreground location manually or automatically every 45 seconds while the active delivery detail page is open; no background tracking |
-| Flutter learner delivery UI | **Partial** | My Reservations request dialog, `/learner/deliveries/:id` status page, safe latest driver ping summary, and polling map marker; no realtime stream |
+| Flutter learner delivery UI | **Partial** | My Reservations request dialog (saved or new dropoff + optional save), `/learner/deliveries/:id` status page, safe latest driver ping summary, and polling map marker; no realtime stream |
 | Flutter driver portal | **Partial** | `/driver/jobs` job board, `/driver/deliveries/:id` status updates, foreground auto-location sharing on the active delivery detail page, and manual location ping; no live map or background pings |
 | External partners/payment/AI | **Out of scope** | Not implemented |
 
@@ -47,8 +47,8 @@ Flutter learner delivery request:
 
 - My Reservations is the primary request surface.
 - Accepted pickup-only reservations show pickup window/supplier-note copy.
-- Accepted delivery-enabled reservations show **Request delivery** when no active delivery exists.
-- Submitted delivery requests invalidate learner reservations and learner deliveries.
+- Accepted pickup reservations on delivery-enabled materials show **Request delivery** when `canLearnerRequestDelivery` is true (no active delivery).
+- Submitted delivery requests invalidate learner reservations, learner deliveries, and saved dropoff addresses.
 - Existing deliveries show a status badge and link to `/learner/deliveries/:id`.
 
 Flutter driver portal:

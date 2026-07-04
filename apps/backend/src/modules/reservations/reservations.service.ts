@@ -1,4 +1,5 @@
 import { AppError } from '../../utils/app-error.js';
+import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
 import { notifyReservationCancelledByLearner } from '../notifications/reservation-notifications.js';
 import {
   deriveHandoverCode,
@@ -206,6 +207,14 @@ const mapLearnerReservation = (
     assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
     hasPendingReport: hasOpenIncident,
   });
+  const canLearnerRequestDelivery =
+    reservation.status === 'ACCEPTED' &&
+    reservation.fulfillmentMethod === 'PICKUP' &&
+    reservation.material.deliveryAllowed &&
+    (!latestDelivery ||
+      !(ACTIVE_DELIVERY_STATUSES as readonly string[]).includes(
+        latestDelivery.status,
+      ));
 
   return {
     id: reservation.id,
@@ -272,6 +281,7 @@ const mapLearnerReservation = (
     canLearnerReschedule,
     canLearnerReportSupplier,
     canReportNoDriverAvailable: canReportNoDriverAvailableFlag,
+    canLearnerRequestDelivery,
     canSendMessage:
       reservationAllowsMessaging(reservation.status) && !hasOpenIncident,
     latestMessage: latestMessage ?? null,

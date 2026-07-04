@@ -171,7 +171,18 @@ Admin incident review (`/api/admin/no-show-reports` and `/api/admin/reservation-
 
 Public material list/detail responses include `quantity` (remaining stock), `availableQuantity` (remaining minus active holds), and `unit`.
 
-`POST /api/reservations/:id/delivery` creates an internal delivery attempt for an accepted learner-owned reservation. Body: `{ dropoffLocation, learnerNote? }`, where `dropoffLocation` includes country/city plus optional area/address/latitude/longitude. The route creates copied pickup/dropoff locations, a `Delivery` row with `WAITING_FOR_DRIVER`, and delivery status history. It rejects non-accepted reservations, delivery-disabled materials, and reservations with an active delivery.
+`POST /api/reservations/:id/delivery` creates an internal delivery attempt for an accepted learner-owned **pickup** reservation (`fulfillmentMethod = PICKUP`). Body: either `{ savedDropoffAddressId, learnerNote? }` or `{ dropoffLocation, learnerNote?, saveDropoffAddressLabel? }`. Inline `dropoffLocation` includes country/city plus optional area/address/latitude/longitude; optional `saveDropoffAddressLabel` persists the address for reuse (max 10 per learner). The route creates copied pickup/dropoff locations, a `Delivery` row with `WAITING_FOR_DRIVER`, and delivery status history. It rejects non-accepted reservations, delivery-fulfillment reservations, delivery-disabled materials, and reservations with an active delivery.
+
+## Learner saved dropoff addresses — `/api/learner/saved-dropoff-addresses`
+
+| Method | Path | Auth | Roles | Source file |
+|--------|------|------|-------|-------------|
+| GET | `/api/learner/saved-dropoff-addresses` | Bearer JWT | `LEARNER` | `saved-dropoff-addresses/saved-dropoff-addresses.routes.ts` |
+| POST | `/api/learner/saved-dropoff-addresses` | Bearer JWT | `LEARNER` | `saved-dropoff-addresses/saved-dropoff-addresses.routes.ts` |
+| PATCH | `/api/learner/saved-dropoff-addresses/:id` | Bearer JWT | `LEARNER` | `saved-dropoff-addresses/saved-dropoff-addresses.routes.ts` |
+| DELETE | `/api/learner/saved-dropoff-addresses/:id` | Bearer JWT | `LEARNER` | `saved-dropoff-addresses/saved-dropoff-addresses.routes.ts` |
+
+List/create/update/delete learner-owned saved dropoff locations (`user_saved_locations` + dedicated `locations` rows with `locationType = LEARNER_SAVED_DROPOFF`). Create body: `{ label, location, isDefault? }`. Update accepts any subset of `label`, `location`, `isDefault`. Max 10 saved addresses per learner.
 
 ## Deliveries — `/api/deliveries`
 

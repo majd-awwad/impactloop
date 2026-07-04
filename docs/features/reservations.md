@@ -40,7 +40,7 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 | Delivery learner UI | **Partial** | Request/status/tracking summary + polling map marker on delivery detail; not on self-pickup reservation cards |
 | Admin incident queue | **Implemented** | `/admin/no-show-reports` verify/reject/resolve |
 
-**Overall:** **Partial**. Core booking, scheduling, handover codes, cancel/reschedule, incident reporting, and delivery request paths are implemented end-to-end. Remaining reservation-loop gaps: QR polish, saved dropoff addresses.
+**Overall:** **Partial**. Core booking, scheduling, handover codes, cancel/reschedule, incident reporting, delivery request paths, and saved dropoff addresses are implemented end-to-end. **Deferred:** QR polish.
 
 ## Existing Related Files
 
@@ -104,8 +104,9 @@ Verified against code (2026-07-04):
 - **Self-pickup map on learner reservation UI** — implemented on accepted self-pickup cards when `pickupLocationFull` includes coordinates (OpenStreetMap marker + address text).
 - Generic persisted notification table flow — **Implemented** via `/api/notifications` + reservation lifecycle writes (supplier derived inbox unchanged).
 - Live delivery tracking stream, ETA, delivery cancellation/retry, payment, and reviews.
-- Saved learner dropoff addresses, standalone location CRUD, current-location delivery request, and nearest-first sorting.
-- QR polish.
+- ~~**Saved learner dropoff addresses**~~ — implemented via `/api/learner/saved-dropoff-addresses` CRUD + My Reservations request-delivery dialog (saved pick or inline with optional save).
+- Standalone location CRUD, current-location delivery request, and nearest-first sorting.
+- QR polish (**deferred**).
 - Project build checklist integration and already-owned material markers.
 
 ## Already implemented (do not re-build)

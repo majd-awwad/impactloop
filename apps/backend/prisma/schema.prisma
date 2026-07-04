@@ -345,6 +345,7 @@ model User {
   reactivatedBy                User?            @relation("UserReactivatedBy", fields: [reactivatedById], references: [id], onDelete: SetNull)
   accountsReactivated          User[]           @relation("UserReactivatedBy")
   adminActivityLogs            AdminActivityLog[]
+  savedDropoffLocations        UserSavedLocation[]
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -553,9 +554,25 @@ model Location {
   reservationDropoffs     Reservation[]                         @relation("ReservationDropoffLocation")
   deliveryPickups         Delivery[]                            @relation("DeliveryPickupLocation")
   deliveryDropoffs        Delivery[]                            @relation("DeliveryDropoffLocation")
+  userSavedLocations      UserSavedLocation[]
 
   @@index([country, city])
   @@map("locations")
+}
+
+model UserSavedLocation {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  label      String
+  locationId String   @map("location_id")
+  isDefault  Boolean  @default(false) @map("is_default")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@map("user_saved_locations")
 }
 
 model Category {

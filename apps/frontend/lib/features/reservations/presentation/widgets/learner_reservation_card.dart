@@ -14,6 +14,7 @@ import '../../../auth/application/auth_controller.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../deliveries/data/models/learner_delivery.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
+import '../../../deliveries/presentation/widgets/request_delivery_dialog.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../application/learner_reservation_cache.dart';
 import '../../application/reservation_cancel_controller.dart';
@@ -785,6 +786,18 @@ class _ReservationCardActions extends ConsumerWidget {
       onNavigate: (deliveryId) => context.go('/learner/deliveries/$deliveryId'),
     );
 
+    final requestDelivery = reservation.canLearnerRequestDelivery
+        ? _ReservationActionButton(
+            label: 'Request delivery',
+            onPressed: () => showRequestDeliveryDialog(
+              context: context,
+              ref: ref,
+              reservation: reservation,
+            ),
+            desktopRail: desktopColumn,
+          )
+        : null;
+
     final cancelRequest = reservation.isPending
         ? _ReservationActionButton(
             label: 'Cancel request',
@@ -807,6 +820,10 @@ class _ReservationCardActions extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xs),
             viewDelivery,
           ],
+          if (requestDelivery != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            requestDelivery,
+          ],
           if (cancelRequest != null) ...[
             const SizedBox(height: AppSpacing.xs),
             cancelRequest,
@@ -828,6 +845,7 @@ class _ReservationCardActions extends ConsumerWidget {
       children: [
         viewMaterial,
         ?viewDelivery,
+        ?requestDelivery,
         ?cancelRequest,
       ],
     );

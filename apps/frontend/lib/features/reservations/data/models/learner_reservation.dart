@@ -186,6 +186,7 @@ class LearnerReservation {
     this.pendingRescheduleReason,
     this.canLearnerReportSupplier = false,
     this.canReportNoDriverAvailable = false,
+    this.canLearnerRequestDelivery = false,
   });
 
   final String id;
@@ -228,6 +229,7 @@ class LearnerReservation {
   final String? pendingRescheduleReason;
   final bool canLearnerReportSupplier;
   final bool canReportNoDriverAvailable;
+  final bool canLearnerRequestDelivery;
 
   factory LearnerReservation.fromJson(Map<String, dynamic> json) {
     final materialJson = json['material'];
@@ -325,6 +327,7 @@ class LearnerReservation {
       }(),
       canLearnerReportSupplier: json['canLearnerReportSupplier'] == true,
       canReportNoDriverAvailable: json['canReportNoDriverAvailable'] == true,
+      canLearnerRequestDelivery: json['canLearnerRequestDelivery'] == true,
     );
   }
 

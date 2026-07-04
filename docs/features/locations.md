@@ -86,6 +86,7 @@ Public material discovery:
 | Table / field | Role |
 |---------------|------|
 | `locations` | `country`, `city`, `area`, `address_line`, `latitude`, `longitude`, PostGIS `location`, `visibility`, `is_approximate`, `location_type` |
+| `user_saved_locations` | Learner saved dropoff addresses (`label`, `is_default`, FK to `locations`) |
 | `supplier_profiles.default_pickup_location_id` | Default pickup for listings |
 | `organization_profiles` | Optional `business_location` relation |
 | `materials.location_id` | Pickup location per listing (copied or override row; not the profile row) |
@@ -99,11 +100,12 @@ Public material discovery:
 
 ## Known gaps / future work
 
-- No `user_saved_locations` or learner location CRUD API.
 - No distance sorting or nearest-first material discovery.
 - No current-location delivery request from device GPS.
 - Reverse geocode requires external Nominatim — env/network dependent (`reverse-geocoding.service.ts`).
 - Legacy delivery pickup/dropoff fields on `reservations` remain compatibility fields; developed delivery pickup/dropoff locations are copied onto `deliveries` and exposed only through learner-owned or assigned-driver delivery APIs.
+
+**Implemented:** learner saved dropoff addresses CRUD at `/api/learner/saved-dropoff-addresses` and reuse in `POST /api/reservations/:id/delivery`.
 
 ## Related docs
 
