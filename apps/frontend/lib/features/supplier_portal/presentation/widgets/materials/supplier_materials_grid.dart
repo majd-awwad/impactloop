@@ -83,6 +83,13 @@ Widget buildSupplierMaterialCard({
   final imageUrl = material.coverImageUrl == null
       ? null
       : ApiConfig.resolveMediaUrl(material.coverImageUrl!);
+  final compactBadges = <String>[];
+  if (material.demandScore > 0) {
+    if (material.reservationsCount > 0) {
+      compactBadges.add(context.s.materialRequestsBadge(material.reservationsCount));
+    }
+    compactBadges.add(context.s.highDemandBadge);
+  }
 
   return SupplierMaterialCard(
     title: material.title,
@@ -94,9 +101,10 @@ Widget buildSupplierMaterialCard({
     statusLabel: SupplierMaterialLabelHelper.resolveText(status.label, isArabic),
     statusTone: status.tone,
     quantityLabel: SupplierMaterialLabelHelper.resolveText(
-      SupplierMaterialLabelHelper.quantityLabel(
-        material.quantity,
-        material.unit,
+      SupplierMaterialLabelHelper.stockLabel(
+        quantity: material.quantity,
+        availableQuantity: material.availableQuantity ?? material.quantity,
+        unit: material.unit,
       ),
       isArabic,
     ),
@@ -127,6 +135,7 @@ Widget buildSupplierMaterialCard({
     imageUrl: imageUrl,
     viewsCount: material.viewsCount,
     likesCount: material.likesCount,
+    compactBadgeLabels: compactBadges,
     createdAtLabel: createdAtLabel,
     onTap: onTap,
     actions: actions,

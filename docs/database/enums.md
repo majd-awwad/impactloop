@@ -130,9 +130,17 @@ Used by: `OrganizationProfile.verificationDocumentStatus`
 
 ## `ReservationStatus`
 
-`PENDING`, `ACCEPTED`, `REJECTED`, `CANCELLED`, `COMPLETED`, `EXPIRED`
+`PENDING`, `AWAITING_LEARNER_CONFIRMATION`, `ACCEPTED`, `REJECTED`, `CANCELLED`, `COMPLETED`, `EXPIRED`
 
 Used by: `Reservation.status`
+
+---
+
+## `ReservationFulfillmentMethod`
+
+`PICKUP`, `DELIVERY`
+
+Used by: `Reservation.fulfillmentMethod`
 
 ---
 

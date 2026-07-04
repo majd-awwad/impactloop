@@ -25,6 +25,7 @@ import '../../../reservations/application/my_reservations_provider.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
 import '../../../reservations/data/models/learner_reservation.dart';
+import '../../../reservations/data/models/reservation_preferred_window.dart';
 import '../../../reservations/presentation/reservation_create_error_message.dart';
 import '../../application/material_discovery_providers.dart';
 import '../../domain/discovery_material.dart';
@@ -35,6 +36,7 @@ import '../widgets/material_details_gallery.dart';
 import '../discovery_material_display.dart';
 import '../reservation_dialog_copy.dart';
 import '../widgets/discovery_location_privacy_panel.dart';
+import '../widgets/preferred_window_input.dart';
 
 const _materialDetailsStickyCtaHeight = 76.0;
 const _materialDetailsDesktopMaxWidth = 1160.0;
@@ -2393,6 +2395,12 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _quantityController;
   final _messageController = TextEditingController();
+  final _deliveryAddressController = TextEditingController();
+  final _deliveryNoteController = TextEditingController();
+  var _fulfillmentMethod = 'PICKUP';
+  final _pickupWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
+  final _deliveryWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
+  bool? _safeDropoffAllowed;
   var _isSubmitting = false;
   String? _errorMessage;
 
@@ -2412,7 +2420,37 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
   void dispose() {
     _quantityController.dispose();
     _messageController.dispose();
+    _deliveryAddressController.dispose();
+    _deliveryNoteController.dispose();
     super.dispose();
+  }
+
+  bool get _isPickup => _fulfillmentMethod == 'PICKUP';
+
+  bool get _canChooseDelivery => widget.material.deliveryAvailable;
+
+  List<ReservationPreferredWindow>? _validatedPreferredWindows(
+    List<PreferredWindowDraft> drafts,
+  ) {
+    final now = DateTime.now();
+    final windows = <ReservationPreferredWindow>[];
+
+    for (final draft in drafts) {
+      final error = draft.validationError(now: now);
+      if (error != null) {
+        setState(() => _errorMessage = error);
+        return null;
+      }
+
+      windows.add(
+        ReservationPreferredWindow(
+          start: draft.start!,
+          end: draft.end!,
+        ),
+      );
+    }
+
+    return windows;
   }
 
   bool get _usesCountSteps => _isCountLikeUnit(widget.material.unit);
@@ -2508,45 +2546,117 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     final quantity = double.parse(_quantityController.text.trim());
     final message = _messageController.text.trim();
 
-    setState(() {
-      _isSubmitting = true;
-      _errorMessage = null;
-    });
-
-    try {
-      await widget.onSubmit(
-        CreateReservationRequest(
-          materialId: widget.material.id,
-          quantityRequested: quantity,
-          message: message.isEmpty ? null : message,
-        ),
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      Navigator.of(context).pop();
-    } on ApiException catch (error) {
-      if (!mounted) {
+    if (_isPickup) {
+      final windows = _validatedPreferredWindows(_pickupWindows);
+      if (windows == null) {
         return;
       }
 
       setState(() {
-        _isSubmitting = false;
-        _errorMessage = reservationCreateErrorMessage(error);
+        _isSubmitting = true;
+        _errorMessage = null;
       });
-    } catch (_) {
-      if (!mounted) {
+
+      try {
+        await widget.onSubmit(
+          CreateReservationRequest(
+            materialId: widget.material.id,
+            quantityRequested: quantity,
+            fulfillmentMethod: 'PICKUP',
+            message: message.isEmpty ? null : message,
+            learnerPreferredPickupWindows: windows,
+          ),
+        );
+      } on ApiException catch (error) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage = reservationCreateErrorMessage(error);
+        });
+        return;
+      } catch (_) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage =
+              'Could not request this reservation. Please try again.';
+        });
+        return;
+      }
+    } else {
+      final windows = _validatedPreferredWindows(_deliveryWindows);
+      if (windows == null) {
         return;
       }
 
+      final deliveryAddress = _deliveryAddressController.text.trim();
+      if (deliveryAddress.isEmpty) {
+        setState(() => _errorMessage = 'Enter a delivery address.');
+        return;
+      }
+
+      if (_safeDropoffAllowed == null) {
+        setState(
+          () => _errorMessage = 'Choose whether safe drop-off is allowed.',
+        );
+        return;
+      }
+
+      final deliveryNote = _deliveryNoteController.text.trim();
+
       setState(() {
-        _isSubmitting = false;
-        _errorMessage =
-            'Could not request this reservation. Please try again.';
+        _isSubmitting = true;
+        _errorMessage = null;
       });
+
+      try {
+        await widget.onSubmit(
+          CreateReservationRequest(
+            materialId: widget.material.id,
+            quantityRequested: quantity,
+            fulfillmentMethod: 'DELIVERY',
+            message: message.isEmpty ? null : message,
+            learnerPreferredDeliveryWindows: windows,
+            deliveryAddressText: deliveryAddress,
+            safeDropoffAllowed: _safeDropoffAllowed,
+            deliveryNote: deliveryNote.isEmpty ? null : deliveryNote,
+          ),
+        );
+      } on ApiException catch (error) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage = reservationCreateErrorMessage(error);
+        });
+        return;
+      } catch (_) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage =
+              'Could not request this reservation. Please try again.';
+        });
+        return;
+      }
     }
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pop();
   }
 
   @override
@@ -2685,6 +2795,188 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                         ),
                         const SizedBox(height: _reservationDialogSectionGap),
                         Text(
+                          'Fulfillment',
+                          style: AppTextStyles.label(context).copyWith(
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        SegmentedButton<String>(
+                          segments: [
+                            const ButtonSegment(
+                              value: 'PICKUP',
+                              label: Text('Pickup'),
+                              icon: Icon(Icons.storefront_outlined, size: 18),
+                            ),
+                            ButtonSegment(
+                              value: 'DELIVERY',
+                              enabled: _canChooseDelivery,
+                              label: const Text('Delivery'),
+                              icon: const Icon(
+                                Icons.local_shipping_outlined,
+                                size: 18,
+                              ),
+                            ),
+                          ],
+                          selected: {_fulfillmentMethod},
+                          onSelectionChanged: _isSubmitting
+                              ? null
+                              : (selection) {
+                                  setState(() {
+                                    _fulfillmentMethod = selection.first;
+                                    _errorMessage = null;
+                                  });
+                                },
+                        ),
+                        if (!_canChooseDelivery) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'This material is pickup only.',
+                            style: AppTextStyles.label(context).copyWith(
+                              color: palette.textMuted,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: _reservationDialogSectionGap),
+                        if (_isPickup)
+                          PreferredWindowInput(
+                            windows: _pickupWindows,
+                            enabled: !_isSubmitting,
+                            label: 'Preferred pickup windows',
+                            onChanged: (windows) {
+                              setState(() => _pickupWindows
+                                ..clear()
+                                ..addAll(windows));
+                            },
+                          )
+                        else ...[
+                          PreferredWindowInput(
+                            windows: _deliveryWindows,
+                            enabled: !_isSubmitting,
+                            label: 'Preferred delivery windows',
+                            onChanged: (windows) {
+                              setState(() => _deliveryWindows
+                                ..clear()
+                                ..addAll(windows));
+                            },
+                          ),
+                          const SizedBox(height: _reservationDialogSectionGap),
+                          Text(
+                            'Delivery address',
+                            style: AppTextStyles.label(context).copyWith(
+                              color: palette.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          TextFormField(
+                            controller: _deliveryAddressController,
+                            enabled: !_isSubmitting,
+                            minLines: 2,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              hintText: 'Street, building, city…',
+                              filled: true,
+                              fillColor: palette.inputSurface,
+                              contentPadding: const EdgeInsetsDirectional.all(
+                                AppSpacing.sm,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide:
+                                    BorderSide(color: palette.borderSubtle),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide:
+                                    BorderSide(color: palette.borderSubtle),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide: BorderSide(color: palette.mint),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: _reservationDialogSectionGap),
+                          Text(
+                            'Safe drop-off allowed?',
+                            style: AppTextStyles.label(context).copyWith(
+                              color: palette.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: RadioListTile<bool>(
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                  title: const Text('Yes'),
+                                  value: true,
+                                  groupValue: _safeDropoffAllowed,
+                                  onChanged: _isSubmitting
+                                      ? null
+                                      : (value) => setState(
+                                            () => _safeDropoffAllowed = value,
+                                          ),
+                                ),
+                              ),
+                              Expanded(
+                                child: RadioListTile<bool>(
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                  title: const Text('No'),
+                                  value: false,
+                                  groupValue: _safeDropoffAllowed,
+                                  onChanged: _isSubmitting
+                                      ? null
+                                      : (value) => setState(
+                                            () => _safeDropoffAllowed = value,
+                                          ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: _reservationDialogSectionGap),
+                          Text(
+                            'Delivery note',
+                            style: AppTextStyles.label(context).copyWith(
+                              color: palette.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          TextFormField(
+                            controller: _deliveryNoteController,
+                            enabled: !_isSubmitting,
+                            minLines: 2,
+                            maxLines: 3,
+                            maxLength: _reservationMessageMaxLength,
+                            decoration: InputDecoration(
+                              hintText: 'Gate code, landmarks, or instructions…',
+                              helperText: 'Optional',
+                              filled: true,
+                              fillColor: palette.inputSurface,
+                              contentPadding: const EdgeInsetsDirectional.all(
+                                AppSpacing.sm,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide:
+                                    BorderSide(color: palette.borderSubtle),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide:
+                                    BorderSide(color: palette.borderSubtle),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide: BorderSide(color: palette.mint),
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: _reservationDialogSectionGap),
+                        Text(
                           'Message to supplier',
                           style: AppTextStyles.label(context).copyWith(
                             color: palette.textSecondary,
@@ -2698,7 +2990,9 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                           maxLines: 5,
                           maxLength: _reservationMessageMaxLength,
                           decoration: InputDecoration(
-                            hintText: 'Add pickup notes or questions…',
+                            hintText: _isPickup
+                                ? 'Add pickup notes or questions…'
+                                : 'Add reservation notes or questions…',
                             helperText: 'Optional',
                             filled: true,
                             fillColor: palette.inputSurface,

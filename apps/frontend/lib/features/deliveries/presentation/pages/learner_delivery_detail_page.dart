@@ -11,6 +11,7 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/learner_deliveries_provider.dart';
+import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/learner_delivery.dart';
 import '../delivery_status_presentation.dart';
 
@@ -226,6 +227,14 @@ class _DeliverySummaryPanel extends StatelessWidget {
           ],
           if (delivery.driverNote?.trim().isNotEmpty == true)
             _InfoRow(label: 'Driver note', value: delivery.driverNote!),
+          if (delivery.shouldShowLearnerDeliveryCode) ...[
+            const SizedBox(height: AppSpacing.md),
+            HandoverConfirmationCodePanel(
+              code: delivery.learnerDeliveryCode!,
+              instructions:
+                  'Give this code to the driver when you receive the material.',
+            ),
+          ],
           if (delivery.failureReason?.trim().isNotEmpty == true)
             _InfoRow(label: 'Failure reason', value: delivery.failureReason!),
           const SizedBox(height: AppSpacing.md),

@@ -24,13 +24,27 @@ class IncomingRequestStatusStyle {
     return switch (status) {
       SupplierIncomingRequestStatus.pending => _pending,
       SupplierIncomingRequestStatus.accepted => _accepted,
+      SupplierIncomingRequestStatus.awaitingConfirmation => _accepted,
+      SupplierIncomingRequestStatus.awaitingSupplierConfirmation => _accepted,
       SupplierIncomingRequestStatus.declined => _declined,
       SupplierIncomingRequestStatus.completed => _completed,
+      SupplierIncomingRequestStatus.cancelled => _declined,
+      SupplierIncomingRequestStatus.noShow => _declined,
+      SupplierIncomingRequestStatus.fulfillmentFailed => _declined,
+      SupplierIncomingRequestStatus.needsResolution => _pending,
     };
   }
 
   static IncomingRequestStatusStyle forTab(SupplierIncomingRequestTab tab) {
-    return forStatus(tab.status);
+    return switch (tab) {
+      SupplierIncomingRequestTab.all => _pending,
+      SupplierIncomingRequestTab.pending => _pending,
+      SupplierIncomingRequestTab.needsLearner => _accepted,
+      SupplierIncomingRequestTab.accepted => _accepted,
+      SupplierIncomingRequestTab.declined => _declined,
+      SupplierIncomingRequestTab.completed => _completed,
+      SupplierIncomingRequestTab.cancelled => _declined,
+    };
   }
 
   static const _pending = IncomingRequestStatusStyle(

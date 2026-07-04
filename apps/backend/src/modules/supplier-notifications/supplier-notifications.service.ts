@@ -471,7 +471,7 @@ export const listSupplierActionNotifications = async (userId: string) => {
     ...categoryRequests.map(mapCategoryRequestNotification),
     ...priceRuleRequests.map(mapPriceRuleRequestNotification),
     ...pendingReservations
-      .map(mapSupplierReservation)
+      .map((reservation) => mapSupplierReservation(reservation))
       .map(mapReservationNotification),
   ];
 

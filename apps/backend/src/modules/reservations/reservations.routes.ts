@@ -8,10 +8,17 @@ import { asyncHandler } from '../../utils/async-handler.js';
 import {
   cancelReservationHandler,
   createReservationHandler,
+  createLearnerReservationMessageHandler,
+  listLearnerReservationMessagesHandler,
   listMyReservationsHandler,
+  requestLearnerPickupRescheduleHandler,
+  resolveLearnerConfirmationHandler,
 } from './reservations.controller.js';
 import {
   createReservationSchema,
+  createReservationMessageSchema,
+  learnerConfirmationSchema,
+  requestPickupRescheduleSchema,
   reservationIdParamsSchema,
 } from './reservations.validation.js';
 import { requestDeliveryForReservationHandler } from '../deliveries/deliveries.controller.js';
@@ -42,6 +49,41 @@ reservationsRouter.patch(
   requireRoles('LEARNER'),
   validate(reservationIdParamsSchema, 'params'),
   asyncHandler(cancelReservationHandler),
+);
+
+reservationsRouter.patch(
+  '/:id/learner-confirmation',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(learnerConfirmationSchema),
+  asyncHandler(resolveLearnerConfirmationHandler),
+);
+
+reservationsRouter.get(
+  '/:id/messages',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(listLearnerReservationMessagesHandler),
+);
+
+reservationsRouter.post(
+  '/:id/messages',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(createReservationMessageSchema),
+  asyncHandler(createLearnerReservationMessageHandler),
+);
+
+reservationsRouter.post(
+  '/:id/request-reschedule',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(requestPickupRescheduleSchema),
+  asyncHandler(requestLearnerPickupRescheduleHandler),
 );
 
 reservationsRouter.post(

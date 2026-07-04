@@ -12,6 +12,7 @@ import {
   declineSupplierReservation,
   listSupplierReservations,
 } from './supplier-reservations.service.js';
+import { deriveHandoverCode } from '../../utils/handover-codes.js';
 
 const TEST_MARKER = '[test-complete-pickup]';
 
@@ -205,6 +206,9 @@ describe('completeSupplierReservation', () => {
     const result = await completeSupplierReservation(
       ctx.supplierId,
       reservation.id,
+      {
+        confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+      },
     );
 
     assert.equal(result.status, 'COMPLETED');
@@ -295,7 +299,10 @@ describe('completeSupplierReservation', () => {
     assert.equal(listed.canSupplierComplete, false);
 
     await assert.rejects(
-      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);
@@ -324,7 +331,10 @@ describe('completeSupplierReservation', () => {
       assert.equal(listed.canSupplierComplete, false);
 
       await assert.rejects(
-        () => completeSupplierReservation(ctx.supplierId, reservation.id),
+        () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
         (error: unknown) => {
           assert.ok(error instanceof AppError);
           assert.equal(error.statusCode, 409);
@@ -360,7 +370,10 @@ describe('completeSupplierReservation', () => {
     assert.equal(listed.canSupplierComplete, false);
 
     await assert.rejects(
-      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);
@@ -473,7 +486,10 @@ describe('completeSupplierReservation', () => {
     );
 
     await assert.rejects(
-      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 404);
@@ -486,7 +502,10 @@ describe('completeSupplierReservation', () => {
     const { reservation } = await createReservation(ctx, 'PENDING');
 
     await assert.rejects(
-      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);
@@ -499,7 +518,10 @@ describe('completeSupplierReservation', () => {
     const { reservation } = await createReservation(ctx, 'REJECTED');
 
     await assert.rejects(
-      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);

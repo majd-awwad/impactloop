@@ -9,6 +9,7 @@ import '../controllers/supplier_pickup_schedule_providers.dart';
 import '../controllers/supplier_requests_providers.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/complete_pickup_dialog.dart';
+import '../widgets/reservation_follow_up_flow.dart';
 import '../widgets/pickup_schedule_card.dart';
 import '../widgets/pickup_schedule_date_section.dart';
 import '../widgets/pickup_schedule_details_dialog.dart';
@@ -30,14 +31,18 @@ Future<void> _handleCompletePickup(
   WidgetRef ref,
   SupplierPickupScheduleItem item,
 ) async {
-  final confirmed = await CompletePickupDialog.show(context);
-  if (confirmed != true || !context.mounted) {
+  final code = await CompletePickupDialog.show(context);
+  if (code == null || code.trim().isEmpty || !context.mounted) {
     return;
   }
 
   ref.read(completingReservationIdProvider.notifier).setCompleting(item.id);
   try {
-    await completeIncomingRequest(ref, requestId: item.id);
+    await completeIncomingRequest(
+      ref,
+      requestId: item.id,
+      confirmationCode: code.trim(),
+    );
     if (!context.mounted) return;
     showSupplierInfoSnackBar(context, context.s.pickupCompleted);
   } catch (error) {
@@ -113,6 +118,43 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                                   context,
                                   item: item,
                                   groupKind: groups[i].kind,
+                                  isCompleting: completingId == item.id,
+                                  onMarkCompleted:
+                                      item.status ==
+                                              SupplierPickupScheduleStatus
+                                                  .accepted &&
+                                          item.canSupplierComplete
+                                      ? () => _handleCompletePickup(
+                                            context,
+                                            ref,
+                                            item,
+                                          )
+                                      : null,
+                                  onReschedule: item.canSupplierReschedule
+                                      ? () => handleReschedulePickup(
+                                            context,
+                                            ref,
+                                            reservationId: item.id,
+                                            materialTitle: item.materialTitle,
+                                            learnerName: item.learnerName,
+                                          )
+                                      : null,
+                                  onCloseReservation:
+                                      item.canSupplierCloseOverduePickup
+                                      ? () => handleCloseOverduePickup(
+                                            context,
+                                            ref,
+                                            reservationId: item.id,
+                                          )
+                                      : null,
+                                  onReportToAdmin:
+                                      item.canSupplierReportAndCloseOverduePickup
+                                      ? () => handleReportToAdminAndClose(
+                                            context,
+                                            ref,
+                                            reservationId: item.id,
+                                          )
+                                      : null,
                                 ),
                             onMarkCompleted:
                                 item.status ==
@@ -120,6 +162,31 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                                     item.canSupplierComplete
                                 ? () =>
                                       _handleCompletePickup(context, ref, item)
+                                : null,
+                            onReschedule: item.canSupplierReschedule
+                                ? () => handleReschedulePickup(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                      materialTitle: item.materialTitle,
+                                      learnerName: item.learnerName,
+                                    )
+                                : null,
+                            onCloseReservation:
+                                item.canSupplierCloseOverduePickup
+                                ? () => handleCloseOverduePickup(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                    )
+                                : null,
+                            onReportToAdmin:
+                                item.canSupplierReportAndCloseOverduePickup
+                                ? () => handleReportToAdminAndClose(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                    )
                                 : null,
                           ),
                         ),

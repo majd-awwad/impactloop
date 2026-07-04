@@ -122,6 +122,17 @@ import {
   adminLearningProjectsListQuerySchema,
   moderationReasonSchema,
 } from '../admin-learning-projects/admin-learning-projects.validation.js';
+import {
+  getAdminNoShowReportHandler,
+  listAdminNoShowReportsHandler,
+  rejectAdminNoShowReportHandler,
+  verifyAdminNoShowReportHandler,
+} from '../admin-no-show-reports/admin-no-show-reports.controller.js';
+import {
+  adminNoShowReportIdParamSchema,
+  adminNoShowReportsListQuerySchema,
+  reviewNoShowReportSchema,
+} from '../admin-no-show-reports/admin-no-show-reports.validation.js';
 
 export const adminRouter = Router();
 
@@ -519,5 +530,39 @@ adminRouter.patch(
   validate(adminLearningProjectIdParamSchema, 'params'),
   validate(moderationReasonSchema),
   asyncHandler(archiveAdminLearningProjectHandler),
+);
+
+adminRouter.get(
+  '/no-show-reports',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportsListQuerySchema, 'query'),
+  asyncHandler(listAdminNoShowReportsHandler),
+);
+
+adminRouter.get(
+  '/no-show-reports/:id',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  asyncHandler(getAdminNoShowReportHandler),
+);
+
+adminRouter.patch(
+  '/no-show-reports/:id/verify',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  validate(reviewNoShowReportSchema),
+  asyncHandler(verifyAdminNoShowReportHandler),
+);
+
+adminRouter.patch(
+  '/no-show-reports/:id/reject',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  validate(reviewNoShowReportSchema),
+  asyncHandler(rejectAdminNoShowReportHandler),
 );
 

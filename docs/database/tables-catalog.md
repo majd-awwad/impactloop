@@ -342,8 +342,19 @@ Used by authenticated material reporting and admin material report review. This 
 | quantityRequested | Decimal | Held/requested amount for this reservation |
 | message | String? | |
 | status | ReservationStatus | default `PENDING` |
-| pickupWindowStart, pickupWindowEnd | DateTime? | |
-| pickupType | PickupType | default `SELF_PICKUP` |
+| fulfillmentMethod | ReservationFulfillmentMethod | default `PICKUP` |
+| learnerPreferredPickupWindows | Json? | Reserve-time pickup windows |
+| learnerPreferredDeliveryWindows | Json? | Reserve-time delivery windows |
+| deliveryAddressText | String? | Delivery drop-off text |
+| safeDropoffAllowed | Boolean | default false |
+| deliveryNote | String? | Learner delivery note |
+| pickupWindowStart, pickupWindowEnd | DateTime? | Confirmed self-pickup window |
+| supplierProposedPickupWindowStart, supplierProposedPickupWindowEnd | DateTime? | Supplier-proposed pickup awaiting learner confirmation |
+| supplierPickupWindowStart, supplierPickupWindowEnd | DateTime? | Driver pickup from supplier (delivery accept) |
+| confirmedDeliveryWindowStart, confirmedDeliveryWindowEnd | DateTime? | Feasible delivery window after supplier pickup + buffer |
+| earliestDeliveryStart | DateTime? | Computed earliest learner delivery start |
+| schedulingConflictReason | String? | Set when delivery scheduling is infeasible |
+| pickupType | PickupType | default `SELF_PICKUP` (legacy) |
 | supplierNote, rejectionReason | String? | |
 | acceptedAt, rejectedAt, cancelledAt, completedAt | DateTime? | |
 | deliveryRequested | Boolean | default false |
