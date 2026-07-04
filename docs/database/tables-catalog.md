@@ -560,7 +560,7 @@ Used by price-rule AI services — not a user-facing AI agent credits system.
 
 ## `idempotency_records` — model `IdempotencyRecord`
 
-Generic operation idempotency store. Supplier material create uses scope `SUPPLIER_CREATE_MATERIAL`.
+Generic operation idempotency store. Supplier material create uses scope `SUPPLIER_CREATE_MATERIAL`; Learning Hub learner submit uses scope `LEARNING_PROJECT_SUBMIT`.
 
 | Field | Type | Notes |
 |-------|------|-------|

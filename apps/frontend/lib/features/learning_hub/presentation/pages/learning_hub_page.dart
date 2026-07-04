@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
@@ -34,6 +36,7 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
   static const int _chunkSize = 4;
 
   late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
   Timer? _searchDebounce;
 
   int _visibleProjectCount = _chunkSize;
@@ -63,11 +66,13 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    _searchFocusNode = FocusNode();
   }
 
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _searchFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -164,6 +169,7 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
                     categoriesAsync: categoriesAsync,
                     selectedCategoryIndex: _selectedCategoryIndex,
                     searchController: _searchController,
+                    searchFocusNode: _searchFocusNode,
                     searchDraft: _searchDraft,
                     selectedDifficulty: _selectedDifficulty,
                     selectedTag: _selectedTag,
@@ -174,6 +180,8 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
                     onDifficultySelected: _setDifficulty,
                     onTagSelected: _setTag,
                     onClearFilters: _clearFilters,
+                    onSubmitProject: () => context.go('/learning/add-draft'),
+                    onFocusSearch: () => _searchFocusNode.requestFocus(),
                     onCategorySelected: (index, categoryId) {
                       setState(() {
                         _selectedCategoryIndex = index;
@@ -207,6 +215,7 @@ class _HubContent extends StatelessWidget {
     required this.categoriesAsync,
     required this.selectedCategoryIndex,
     required this.searchController,
+    required this.searchFocusNode,
     required this.searchDraft,
     required this.selectedDifficulty,
     required this.selectedTag,
@@ -217,6 +226,8 @@ class _HubContent extends StatelessWidget {
     required this.onDifficultySelected,
     required this.onTagSelected,
     required this.onClearFilters,
+    required this.onSubmitProject,
+    required this.onFocusSearch,
     required this.onCategorySelected,
     required this.onLoadMore,
   });
@@ -225,6 +236,7 @@ class _HubContent extends StatelessWidget {
   final AsyncValue<List<MaterialCategory>> categoriesAsync;
   final int selectedCategoryIndex;
   final TextEditingController searchController;
+  final FocusNode searchFocusNode;
   final String searchDraft;
   final String? selectedDifficulty;
   final String? selectedTag;
@@ -235,6 +247,8 @@ class _HubContent extends StatelessWidget {
   final ValueChanged<String?> onDifficultySelected;
   final ValueChanged<String?> onTagSelected;
   final VoidCallback onClearFilters;
+  final VoidCallback onSubmitProject;
+  final VoidCallback onFocusSearch;
   final void Function(int index, String? categoryId) onCategorySelected;
   final VoidCallback onLoadMore;
 
@@ -277,7 +291,11 @@ class _HubContent extends StatelessWidget {
                   ar: 'اكتشف المشاريع وتعلم ما يمكنك بناؤه من مواد معاد تدويرها.',
                 ),
                 stats: heroStats,
+                onSearchPressed: onFocusSearch,
+                onSubmitPressed: onSubmitProject,
               ),
+              const SizedBox(height: AppSpacing.lg),
+              _SubmitProjectCallout(onSubmitProject: onSubmitProject),
               const SizedBox(height: AppSpacing.lg),
               if (categoryLabels.isNotEmpty)
                 LearningCategoryChips(
@@ -294,6 +312,7 @@ class _HubContent extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xl),
               _LearningHubFilters(
                 searchController: searchController,
+                searchFocusNode: searchFocusNode,
                 searchDraft: searchDraft,
                 selectedDifficulty: selectedDifficulty,
                 selectedTag: selectedTag,
@@ -520,9 +539,88 @@ class _HubContent extends StatelessWidget {
   }
 }
 
+class _SubmitProjectCallout extends StatelessWidget {
+  const _SubmitProjectCallout({required this.onSubmitProject});
+
+  final VoidCallback onSubmitProject;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.xlAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 720;
+          final copy = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                const LocalizedText(
+                  en: 'Have a project idea?',
+                  ar: 'هل لديك فكرة مشروع؟',
+                ).resolve(context),
+                style: AppTextStyles.title(
+                  context,
+                ).copyWith(color: palette.textPrimary),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                const LocalizedText(
+                  en: 'Create a draft and submit it for admin review.',
+                  ar: 'أنشئ مسودة وأرسلها لمراجعة الإدارة.',
+                ).resolve(context),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textSecondary),
+              ),
+            ],
+          );
+          final action = FilledButton.icon(
+            onPressed: onSubmitProject,
+            icon: const Icon(Icons.edit_note_rounded),
+            label: Text(
+              const LocalizedText(
+                en: 'Add project draft',
+                ar: 'إضافة مسودة مشروع',
+              ).resolve(context),
+            ),
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                copy,
+                const SizedBox(height: AppSpacing.md),
+                action,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: copy),
+              const SizedBox(width: AppSpacing.lg),
+              SizedBox(width: 240, child: action),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _LearningHubFilters extends StatelessWidget {
   const _LearningHubFilters({
     required this.searchController,
+    required this.searchFocusNode,
     required this.searchDraft,
     required this.selectedDifficulty,
     required this.selectedTag,
@@ -551,6 +649,7 @@ class _LearningHubFilters extends StatelessWidget {
   ];
 
   final TextEditingController searchController;
+  final FocusNode searchFocusNode;
   final String searchDraft;
   final String? selectedDifficulty;
   final String? selectedTag;
@@ -581,6 +680,7 @@ class _LearningHubFilters extends StatelessWidget {
               final isCompact = constraints.maxWidth < 720;
               final searchField = TextField(
                 controller: searchController,
+                focusNode: searchFocusNode,
                 textInputAction: TextInputAction.search,
                 onChanged: onSearchChanged,
                 onSubmitted: onSearchSubmitted,

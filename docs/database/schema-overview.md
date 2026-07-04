@@ -122,7 +122,7 @@ AiPriceLookupLog (standalone audit of price AI lookups)
 IdempotencyRecord → User
 ```
 
-`idempotency_records` stores per-user operation keys, request hashes, status (`IN_PROGRESS`, `SUCCEEDED`, `FAILED`), optional resource metadata, and successful response JSON. The unique `(userId, scope, key)` constraint is used by supplier material create to prevent duplicate inserts for repeated `Idempotency-Key` submissions without comparing material title/name/category.
+`idempotency_records` stores per-user operation keys, request hashes, status (`IN_PROGRESS`, `SUCCEEDED`, `FAILED`), optional resource metadata, and successful response JSON. The unique `(userId, scope, key)` constraint is used by supplier material create and Learning Hub project submit to prevent duplicate inserts for repeated `Idempotency-Key` submissions.
 
 ## Tables in schema vs older docs
 

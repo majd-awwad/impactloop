@@ -42,7 +42,7 @@ Theme details are documented in [07-theme-system.md](../07-theme-system.md). Sta
 | `AppPasswordField` | `app_password_field.dart` | Password variant of `AppTextField` with per-field visibility toggle (or optional shared `obscureOverride` / `onToggleVisibility`), tooltip, and semantic labels. |
 | `AppFieldGap` | `app_text_field.dart` | Standard vertical field gap using `AppSpacing.md`. |
 | `AppTextArea` | `app_text_area.dart` | Themed multiline text field with label, hint, validation, forced error text, and callbacks. |
-| `AppDropdownField<T>` | `app_dropdown_field.dart` | Themed `DropdownButtonFormField` using generic values and forced error text. |
+| `AppDropdownField<T>` | `app_dropdown_field.dart` | Themed `DropdownButtonFormField` using generic values, forced error text, and nullable `onChanged` for disabled/loading states. |
 | `AppPrimaryButton` | `app_primary_button.dart` | Full-width `FilledButton`; disables itself and shows a spinner when `isLoading` is true. |
 | `AppLinkButton` | `app_link_button.dart` | Aligned text button using `AppTextStyles.link`. |
 | `AppInlineError` | `app_inline_error.dart` | Inline body-small error text using `Theme.of(context).colorScheme.error`. |

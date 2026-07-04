@@ -13,7 +13,7 @@ Browse educational project ideas (components, steps, links) for inspiration. **L
 | Backend `learning-projects` | **Implemented** | Public read list + detail (`PUBLISHED` only in repository) |
 | Flutter list/detail pages | **Partial** | `/learning` and `/learning/:id` use `ApiLearningHubRepository` + Riverpod providers; browse exposes category, search, difficulty, and tag filters |
 | Home learning spotlight | **Implemented** | Reuses `learningProjectsProvider` with `limit: 2` on `/home` |
-| Add draft page | **Implemented for learner submit** | `LearningAddDraftPage` posts to `POST /api/learning-projects/submit`; submitted projects enter `PENDING_REVIEW` |
+| Add draft page | **Implemented for learner submit** | `LearningAddDraftPage` is reachable from Learning Hub, can save a local device draft, and posts to `POST /api/learning-projects/submit` with `Idempotency-Key`; submitted projects enter `PENDING_REVIEW` |
 | Admin project moderation | **Implemented** | `/admin/learning-projects` lists, filters, reviews, approves/rejects/request-changes, hides/restores, and archives projects |
 | AI panel on detail | **Frontend-only** | `disabled_ai_panel.dart` — placeholder |
 | Ratings on cards/detail | **Partial** | Hidden when backend `ratingSummary` is null (current API returns null) |
@@ -31,7 +31,7 @@ Product intent from role planning: the learning hub should eventually support pr
 3. Category chips filter by `categoryId` using `GET /api/categories?type=PROJECT`; search, difficulty, and tag filters use the existing learning projects query params.
 4. First list item is shown as featured; remaining items render in the grid.
 5. Tap project → `/learning/:id` → `learningProjectProvider(id)` loads detail from `GET /api/learning-projects/:id`; existing project links can be opened when they contain valid `http`/`https` URLs.
-6. Optional: `/learning/add-draft` — authenticated learner submits a draft to `POST /api/learning-projects/submit`; backend stores it as `PENDING_REVIEW`.
+6. Optional: `/learning/add-draft` — authenticated learner submits a draft to `POST /api/learning-projects/submit` with an `Idempotency-Key`; backend stores it as `PENDING_REVIEW` and replays duplicate same-key submissions without creating another project.
 7. Home `/home` learning spotlight loads up to 2 published projects via `learningProjectsProvider`.
 
 ## Frontend files
@@ -61,7 +61,7 @@ Repository filter: `status: 'PUBLISHED'` (`learning-projects.repository.ts`).
 | GET | `/api/learning-projects` | Public | **Yes** — Learning Hub list |
 | GET | `/api/learning-projects/:id` | Public | **Yes** — Learning Hub detail |
 | GET | `/api/categories?type=PROJECT` | Public | **Yes** — category chips |
-| POST | `/api/learning-projects/submit` | JWT + LEARNER | **Yes** — add-draft submit |
+| POST | `/api/learning-projects/submit` | JWT + LEARNER + `Idempotency-Key` | **Yes** — add-draft submit |
 | GET/PATCH | `/api/admin/learning-projects*` | JWT + ADMIN | **Yes** — admin moderation portal |
 
 Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. Flutter `/learning` exposes `q`, `categoryId`, `difficulty`, and tag chips derived from tags returned in the project list response.

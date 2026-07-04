@@ -1,10 +1,22 @@
 import { AppError } from '../../utils/app-error.js';
+import {
+  LEARNING_PROJECT_SUBMIT_SCOPE,
+  runIdempotentOperation,
+} from '../../services/idempotency.service.js';
 
 import * as learningProjectsRepository from './learning-projects.repository.js';
 import type {
   LearningProjectsQuery,
   SubmitLearningProjectInput,
 } from './learning-projects.validation.js';
+
+type SubmitLearningProjectResponse = {
+  id: string;
+  title: string;
+  status: string;
+  submittedAt: string | null;
+  message: string;
+};
 
 const decimalToSerializable = (value: { toNumber(): number } | number): number => {
   if (typeof value === 'number') {
@@ -128,6 +140,7 @@ export const getLearningProjectById = async (id: string) => {
 export const submitLearningProjectForReview = async (
   userId: string,
   input: SubmitLearningProjectInput,
+  idempotencyKey: string,
 ) => {
   const category = await learningProjectsRepository.findProjectCategoryForSubmit(
     input.categoryId,
@@ -141,25 +154,37 @@ export const submitLearningProjectForReview = async (
     );
   }
 
-  const project = await learningProjectsRepository.createLearningProjectForReview({
-    createdBy: userId,
-    categoryId: input.categoryId,
-    title: input.title,
-    shortDescription: input.shortDescription,
-    description: input.description,
-    difficulty: input.difficulty,
-    estimatedDurationMinutes: input.estimatedDurationMinutes,
-    coverImageUrl: input.coverImageUrl,
-    requiredComponents: input.requiredComponents,
-    steps: input.steps,
-    links: input.links,
-  });
+  return runIdempotentOperation<SubmitLearningProjectResponse>({
+    userId,
+    scope: LEARNING_PROJECT_SUBMIT_SCOPE,
+    key: idempotencyKey,
+    payload: input,
+    resourceType: 'LEARNING_PROJECT',
+    getResourceId: (response) => response.id,
+    handler: async (tx) => {
+      const project =
+        await learningProjectsRepository.createLearningProjectForReview({
+          createdBy: userId,
+          categoryId: input.categoryId,
+          title: input.title,
+          shortDescription: input.shortDescription,
+          description: input.description,
+          difficulty: input.difficulty,
+          estimatedDurationMinutes: input.estimatedDurationMinutes,
+          coverImageUrl: input.coverImageUrl,
+          requiredComponents: input.requiredComponents,
+          steps: input.steps,
+          links: input.links,
+          client: tx,
+        });
 
-  return {
-    id: project.id,
-    title: project.title,
-    status: project.status,
-    submittedAt: project.submittedAt?.toISOString() ?? null,
-    message: 'Your project was submitted for admin review.',
-  };
+      return {
+        id: project.id,
+        title: project.title,
+        status: project.status,
+        submittedAt: project.submittedAt?.toISOString() ?? null,
+        message: 'Your project was submitted for admin review.',
+      };
+    },
+  });
 };

@@ -142,7 +142,7 @@ Same as list: `GET /api/learning-projects? page=1&limit=2`.
 
 ### Trigger
 
-User navigates to `/learning/add-draft`.
+User opens `/learning/add-draft` directly or from the Learning Hub "Add project draft" CTA.
 
 ### User path
 
@@ -150,15 +150,15 @@ Fill title, summary, components, steps, links → tap submit → project is sent
 
 ### Frontend path
 
-`LearningAddDraftPage` validates title/summary/category, maps difficulty to `BEGINNER` / `INTERMEDIATE` / `ADVANCED`, parses component/step/link text, then calls `learningHubRepositoryProvider.submitProjectForReview`.
+`LearningAddDraftPage` uses the shared form controls, validates title/summary/category plus optional component/step/link limits, maps difficulty to `BEGINNER` / `INTERMEDIATE` / `ADVANCED`, maps duration to minutes, parses component/step/link text, then calls `learningHubRepositoryProvider.submitProjectForReview` with one `Idempotency-Key` per form session. On success, the local draft is cleared and the learner returns to Learning Hub. Learners can also save an incomplete form as a local device draft; that local save does not create a backend project row.
 
 ### Backend path
 
-`POST /api/learning-projects/submit` with JWT + `LEARNER` role. Backend validates the body and creates a `PENDING_REVIEW` project.
+`POST /api/learning-projects/submit` with JWT + `LEARNER` role + `Idempotency-Key`. Backend validates the body and creates a `PENDING_REVIEW` project. Same learner + same key + same body replays the stored response without inserting another project; same key with a different body returns `409 IDEMPOTENCY_KEY_REUSED`.
 
 ### Database changes
 
-Creates a `learning_projects` row with `status = PENDING_REVIEW`, `submittedAt`, `submittedByUserId`, plus optional components, steps, and links.
+Creates a `learning_projects` row with `status = PENDING_REVIEW`, `submittedAt`, `submittedByUserId`, plus optional components, steps, and links. The successful response is stored in `idempotency_records` under scope `LEARNING_PROJECT_SUBMIT`.
 
 ### Files involved
 

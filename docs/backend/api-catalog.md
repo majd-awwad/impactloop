@@ -180,9 +180,9 @@ Available jobs return safe area-level pickup/dropoff data only. Accept is transa
 |--------|------|------|-------------|
 | GET | `/api/learning-projects` | Public | `learning-projects/learning-projects.routes.ts` |
 | GET | `/api/learning-projects/:id` | Public (`PUBLISHED` only) | `learning-projects/learning-projects.routes.ts` |
-| POST | `/api/learning-projects/submit` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| POST | `/api/learning-projects/submit` | Bearer JWT + `Idempotency-Key` | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
 
-Public list/detail return only `PUBLISHED` projects. Learner submit creates `PENDING_REVIEW` with `submittedAt`.
+Public list/detail return only `PUBLISHED` projects. Learner submit creates `PENDING_REVIEW` with `submittedAt`. `POST /api/learning-projects/submit` requires an `Idempotency-Key` header and uses scope `LEARNING_PROJECT_SUBMIT`; same learner + same key + identical body returns the stored response without creating another project.
 
 ## Locations — `/api/locations`
 

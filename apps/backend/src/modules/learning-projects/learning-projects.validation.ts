@@ -44,7 +44,7 @@ export const submitLearningProjectSchema = z.object({
   title: z.string().trim().min(3).max(200),
   shortDescription: z.string().trim().min(10).max(500),
   description: z.string().trim().min(10).max(10000),
-  categoryId: z.string().trim().uuid(),
+  categoryId: z.string().trim().min(1),
   difficulty: z.enum(PROJECT_DIFFICULTIES),
   estimatedDurationMinutes: z.number().int().positive().max(10000).optional(),
   coverImageUrl: z.string().trim().url().optional().nullable(),

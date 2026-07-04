@@ -119,6 +119,7 @@ Examples:
 - `healthStatusProvider` fetches backend health.
 - `homeSuggestedMaterialsProvider` loads material discovery results and takes the first four.
 - `learningProjectsProvider`, `learningProjectProvider`, and `projectCategoriesProvider` load Learning Hub list/detail/category data from `/api/learning-projects` and `/api/categories?type=PROJECT`.
+- `learningProjectDraftStorageProvider` persists the `/learning/add-draft` form as a local device draft; submit still uses `POST /api/learning-projects/submit`.
 - `materialCategoriesProvider`, `discoveryMaterialCategoriesProvider`, `materialListingPolicyProvider`, and `categoryRequestsProvider` load shared materials data. Supplier add-material uses the full category list; discovery browse uses `discoveryMaterialCategoriesProvider` (`discoveryOnly=true`); admin approvals uses `materialCategoriesProvider`.
 - `reservationCreateControllerProvider` submits learner reservation requests from material detail and exposes loading/error state for the Reserve button.
 - Material discovery list/detail and Home suggested materials use `materialDiscoveryRepositoryProvider` for `fetchMaterials`, `getMaterialById`, `likeMaterial`, and `unlikeMaterial`; the detail like toggle keeps optimistic widget-local state without replacing the page future and invalidates `homeSuggestedMaterialsProvider` after successful mutation.
