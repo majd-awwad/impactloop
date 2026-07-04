@@ -316,6 +316,7 @@ class SupplierIncomingRequest {
     this.canSupplierCloseAwaitingLearnerRequest = false,
     this.canSupplierReportAwaitingLearnerRequest = false,
     this.canReportNoDriverAvailable = false,
+    this.canSupplierMarkDeliveryPickupExpired = false,
     this.canSupplierReportDriverNoShow = false,
     this.pendingRescheduleReason,
     this.canSendMessage = false,
@@ -362,6 +363,7 @@ class SupplierIncomingRequest {
   final bool canSupplierCloseAwaitingLearnerRequest;
   final bool canSupplierReportAwaitingLearnerRequest;
   final bool canReportNoDriverAvailable;
+  final bool canSupplierMarkDeliveryPickupExpired;
   final bool canSupplierReportDriverNoShow;
   final String? pendingRescheduleReason;
   final bool canSendMessage;
@@ -622,6 +624,8 @@ class SupplierIncomingRequest {
       canSupplierReportAwaitingLearnerRequest:
           json['canSupplierReportAwaitingLearnerRequest'] == true,
       canReportNoDriverAvailable: json['canReportNoDriverAvailable'] == true,
+      canSupplierMarkDeliveryPickupExpired:
+          json['canSupplierMarkDeliveryPickupExpired'] == true,
       canSupplierReportDriverNoShow:
           json['canSupplierReportDriverNoShow'] == true,
       pendingRescheduleReason: () {

@@ -36,7 +36,7 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 | Material discovery/detail `availableQuantity` | **Implemented** | Public browse/detail DTO field |
 | Learner reserve UI | **Implemented** | Material detail quantity + explicit pickup/delivery fulfillment dialog |
 | Learner “My Reservations” UI | **Partial** | Rich list cards + `/learner/reservations/:id` detail route with 10-second polling; list cards link to detail |
-| Supplier list/accept/decline/complete | **Partial** | Fulfillment-aware accept (pickup + delivery scheduling), `needs_learner` tab, handover-code complete, overdue close/report/reschedule, learner-reschedule accept, delivery handover code, incident reports; **`mark-delivery-pickup-expired` API exists but Flutter UI not wired** |
+| Supplier list/accept/decline/complete | **Partial** | Fulfillment-aware accept (pickup + delivery scheduling), `needs_learner` tab, handover-code complete, overdue close/report/reschedule, learner-reschedule accept, delivery handover code, incident reports including **`mark-delivery-pickup-expired` UI** |
 | Delivery learner UI | **Partial** | Request/status/tracking summary + polling map marker on delivery detail; not on self-pickup reservation cards |
 | Admin incident queue | **Implemented** | `/admin/no-show-reports` verify/reject/resolve |
 
@@ -100,7 +100,7 @@ Verified against code (2026-07-04):
 
 - **Dedicated learner reservation detail page** — `GET /api/reservations/:id` + `/learner/reservations/:id` with shared reservation card UI.
 - **Automatic `PENDING` expiry** — implemented via lazy expiry on read paths; see Intended Purpose above.
-- **Supplier `mark-delivery-pickup-expired` UI** — backend route + Flutter API/provider exist; no supplier card action or `can*` flag on list DTO yet.
+- ~~**Supplier `mark-delivery-pickup-expired` UI**~~ — implemented on incoming request cards (`canSupplierMarkDeliveryPickupExpired` + confirm dialog).
 - **Self-pickup map on learner reservation UI** — `pickupLocationFull` includes coordinates after accept, but learner reservations show address text only (delivery detail page has a polling map marker).
 - Generic persisted notification table flow (supplier-derived inbox only today).
 - Live delivery tracking stream, ETA, delivery cancellation/retry, payment, and reviews.

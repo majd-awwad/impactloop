@@ -39,6 +39,7 @@ import {
   resolveSelfPickupHandoverPhase,
 } from '../reservations/reservation-reschedule.js';
 import {
+  canSupplierMarkDeliveryPickupExpired,
   canSupplierMarkDriverNoShow,
 } from '../fulfillment-failures/fulfillment-failures.eligibility.js';
 import {
@@ -288,6 +289,15 @@ export const mapSupplierReservation = (
       assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
       hasPendingReport: hasOpenIncident,
     }),
+    canSupplierMarkDeliveryPickupExpired:
+      !hasOpenIncident &&
+      canSupplierMarkDeliveryPickupExpired({
+        status: reservation.status,
+        fulfillmentMethod: reservation.fulfillmentMethod,
+        supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+        deliveryStatus: latestDelivery?.status ?? null,
+        assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+      }),
     canSupplierReportDriverNoShow:
       !hasOpenIncident &&
       canSupplierMarkDriverNoShow({

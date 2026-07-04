@@ -165,7 +165,7 @@ Complete invalidates incoming requests, supplier notifications, supplier dashboa
 ## Not implemented
 
 - Automatic `PENDING` reservation expiry — **Implemented (lazy)** on learner/supplier reservation reads and material availability reads; supplier `cancelled` tab includes `EXPIRED`.
-- Supplier **`mark-delivery-pickup-expired` UI** (backend route + Flutter API/provider exist; no card action wired).
+- Supplier **`mark-delivery-pickup-expired` UI** — **Implemented** on incoming request cards.
 - Dedicated learner reservation detail route (`/learner/reservations/:id`).
 - Self-pickup map on learner reservation UI.
 - Realtime delivery tracking stream / background GPS.

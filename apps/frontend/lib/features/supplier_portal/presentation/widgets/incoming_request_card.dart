@@ -64,7 +64,7 @@ class IncomingRequestCard extends StatelessWidget {
     this.onReportToAdmin,
     this.onAcceptLearnerReschedule,
     this.onProposeDifferentTime,
-    this.onReportNoDriver,
+    this.onMarkDeliveryPickupExpired,
     this.onReportDriverNoShow,
     this.isCompleting = false,
   });
@@ -78,7 +78,7 @@ class IncomingRequestCard extends StatelessWidget {
   final VoidCallback? onReportToAdmin;
   final VoidCallback? onAcceptLearnerReschedule;
   final VoidCallback? onProposeDifferentTime;
-  final VoidCallback? onReportNoDriver;
+  final VoidCallback? onMarkDeliveryPickupExpired;
   final VoidCallback? onReportDriverNoShow;
   final bool isCompleting;
 
@@ -289,13 +289,14 @@ class IncomingRequestCard extends StatelessWidget {
             if (isAccepted &&
                 !request.isReadOnlyFinalState &&
                 request.isDeliveryFulfillment &&
-                (request.canReportNoDriverAvailable ||
+                (request.canSupplierMarkDeliveryPickupExpired ||
                     request.canSupplierReportDriverNoShow)) ...[
               const SizedBox(height: AppSpacing.md),
               _DeliveryIncidentActions(
-                canReportNoDriver: request.canReportNoDriverAvailable,
+                canMarkDeliveryPickupExpired:
+                    request.canSupplierMarkDeliveryPickupExpired,
                 canReportDriverNoShow: request.canSupplierReportDriverNoShow,
-                onReportNoDriver: onReportNoDriver,
+                onMarkDeliveryPickupExpired: onMarkDeliveryPickupExpired,
                 onReportDriverNoShow: onReportDriverNoShow,
               ),
             ],
@@ -893,15 +894,15 @@ class _StatusBadge extends StatelessWidget {
 
 class _DeliveryIncidentActions extends StatelessWidget {
   const _DeliveryIncidentActions({
-    required this.canReportNoDriver,
+    required this.canMarkDeliveryPickupExpired,
     required this.canReportDriverNoShow,
-    this.onReportNoDriver,
+    this.onMarkDeliveryPickupExpired,
     this.onReportDriverNoShow,
   });
 
-  final bool canReportNoDriver;
+  final bool canMarkDeliveryPickupExpired;
   final bool canReportDriverNoShow;
-  final VoidCallback? onReportNoDriver;
+  final VoidCallback? onMarkDeliveryPickupExpired;
   final VoidCallback? onReportDriverNoShow;
 
   @override
@@ -910,10 +911,10 @@ class _DeliveryIncidentActions extends StatelessWidget {
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
       children: [
-        if (canReportNoDriver && onReportNoDriver != null)
+        if (canMarkDeliveryPickupExpired && onMarkDeliveryPickupExpired != null)
           OutlinedButton(
-            onPressed: onReportNoDriver,
-            child: const Text('Report no driver available'),
+            onPressed: onMarkDeliveryPickupExpired,
+            child: const Text('Mark pickup window expired'),
           ),
         if (canReportDriverNoShow && onReportDriverNoShow != null)
           OutlinedButton(

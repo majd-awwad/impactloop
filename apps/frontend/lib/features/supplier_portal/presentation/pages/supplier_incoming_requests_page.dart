@@ -204,8 +204,9 @@ class _SupplierIncomingRequestsPageState
                         learnerName: request.learnerName,
                       )
                   : null,
-              onReportNoDriver: request.canReportNoDriverAvailable
-                  ? () => handleReportNoDriverAvailable(
+              onMarkDeliveryPickupExpired:
+                  request.canSupplierMarkDeliveryPickupExpired
+                  ? () => handleMarkDeliveryPickupExpired(
                         context,
                         ref,
                         reservationId: request.id,

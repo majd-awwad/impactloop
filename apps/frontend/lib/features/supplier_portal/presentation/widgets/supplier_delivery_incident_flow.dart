@@ -45,6 +45,49 @@ Future<String?> _promptIncidentNote(
   return result;
 }
 
+Future<void> handleMarkDeliveryPickupExpired(
+  BuildContext context,
+  WidgetRef ref, {
+  required String reservationId,
+}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Mark pickup window expired'),
+      content: const Text(
+        'No driver accepted this delivery before the supplier pickup window ended. '
+        'This will close the delivery attempt and send the case to admin review.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(context.s.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Mark expired'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    await markDeliveryPickupExpiredForRequest(
+      ref,
+      requestId: reservationId,
+    );
+    if (!context.mounted) return;
+    showSupplierInfoSnackBar(
+      context,
+      'Pickup window marked expired. Admin review is in progress.',
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    showSupplierErrorSnackBar(context, error.toString());
+  }
+}
+
 Future<void> handleReportNoDriverAvailable(
   BuildContext context,
   WidgetRef ref, {
