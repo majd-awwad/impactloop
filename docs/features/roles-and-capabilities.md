@@ -69,6 +69,8 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Learner reservation list, pending cancel, status display, and accepted self-pickup address reveal.
 - Internal delivery request/status page for accepted delivery-enabled reservations.
 - Published learning project browse/detail.
+- Existing learner accounts can become **Student/Individual** suppliers from `/become-supplier` without a second account (`POST /api/auth/become-supplier`).
+- Dual-role users switch active portal with `POST /api/auth/switch-role` and see switch actions in the account menu, profile page, and supplier profile popover.
 
 **Partial:**
 
@@ -106,6 +108,8 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Supplier accept/decline/self-pickup complete.
 - Delivery reservations are handed to driver flow rather than supplier manual completion.
 - Supplier material image upload.
+- Same-account learner upgrade for personal supplier types (Student/Individual) via `/become-supplier`.
+- Portal switch between learner and supplier modes for eligible dual-role accounts (`activeRole` on `users`).
 
 **Partial:**
 

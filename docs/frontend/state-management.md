@@ -79,6 +79,11 @@ Auth state is centralized in `authControllerProvider`.
 - bootstrap status
 - normalized API error
 
+Role-change methods on `AuthController`:
+
+- `becomeSupplier` — learner-only upgrade via `POST /api/auth/become-supplier`; reloads `me()` and invalidates supplier portal providers.
+- `switchActiveRole` — dual-role portal switch via `POST /api/auth/switch-role`; same session refresh behavior.
+
 `authNetworkBootstrapProvider` initializes the shared Dio client and schedules `bootstrapSession()`.
 
 Auth dependencies are provider-built:

@@ -320,6 +320,22 @@ String? _resolveActivePortalRedirect(AuthState authState, String path) {
   return null;
 }
 
+String? _resolveBecomeSupplierRedirect(AuthState authState, String path) {
+  if (path != becomeSupplierRoute && path != '/supplier/onboarding') {
+    return null;
+  }
+
+  if (!authState.isAuthenticated || authState.user == null) {
+    return null;
+  }
+
+  if (userHasSupplierRole(authState.user)) {
+    return supplierProfileRoute;
+  }
+
+  return null;
+}
+
 String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
   final authState = ref.read(authControllerProvider);
   final path = state.matchedLocation;
@@ -353,6 +369,11 @@ String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
   final portalRedirect = _resolveActivePortalRedirect(authState, path);
   if (portalRedirect != null) {
     return portalRedirect;
+  }
+
+  final becomeSupplierRedirect = _resolveBecomeSupplierRedirect(authState, path);
+  if (becomeSupplierRedirect != null) {
+    return becomeSupplierRedirect;
   }
 
   if (authState.status == AuthStatus.unknown) {

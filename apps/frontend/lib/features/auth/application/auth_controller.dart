@@ -276,8 +276,7 @@ class AuthController extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      await _repository.becomeSupplier(request);
-      final freshUser = await _repository.me();
+      final freshUser = await _repository.becomeSupplier(request);
       state = AuthState(
         user: freshUser,
         accessToken: _repository.accessToken,
@@ -300,8 +299,7 @@ class AuthController extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      await _repository.switchActiveRole(activeRole);
-      final freshUser = await _repository.me();
+      final freshUser = await _repository.switchActiveRole(activeRole);
       state = AuthState(
         user: freshUser,
         accessToken: _repository.accessToken,

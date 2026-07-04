@@ -13,6 +13,8 @@ import '../../../../core/config/api_config.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
+import '../../../auth/application/portal_navigation.dart';
+import '../../../auth/presentation/widgets/portal_switch_menu.dart';
 import '../../../auth/data/models/user.dart';
 
 const _profileDesktopBreakpoint = 600.0;
@@ -160,6 +162,55 @@ class _ProfileContent extends ConsumerWidget {
     return words.isEmpty ? value : words.join(' ');
   }
 
+  List<Widget> _buildPortalSwitchSection(BuildContext context, WidgetRef ref) {
+    final items = <Widget>[];
+
+    if (shouldShowSwitchToSupplier(user)) {
+      items.add(
+        _ProfileActionTile(
+          icon: Icons.storefront_outlined,
+          title: 'Switch to Supplier',
+          subtitle: 'Open the supplier portal on this account.',
+          onTap: () => handlePortalRoleSwitch(
+            context: context,
+            ref: ref,
+            targetRole: 'SUPPLIER',
+          ),
+        ),
+      );
+    }
+
+    if (shouldShowSwitchToLearner(user)) {
+      items.add(
+        _ProfileActionTile(
+          icon: Icons.school_outlined,
+          title: 'Switch to Learner',
+          subtitle: 'Return to learning, materials, and reservations.',
+          onTap: () => handlePortalRoleSwitch(
+            context: context,
+            ref: ref,
+            targetRole: 'LEARNER',
+          ),
+        ),
+      );
+    } else if (isOrganizationSupplierWithoutLearnerSwitch(user) &&
+        user.isSupplierMode) {
+      items.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          child: Text(
+            'Organization supplier accounts stay in supplier mode.',
+            style: AppTextStyles.body(context).copyWith(
+              color: AppThemeColors.of(context).textSecondary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return items;
+  }
+
   String? _memberSinceLabel(BuildContext context) {
     if (user.createdAt.millisecondsSinceEpoch == 0) {
       return null;
@@ -237,6 +288,7 @@ class _ProfileContent extends ConsumerWidget {
         ),
       ],
     );
+    final portalSwitchActions = _buildPortalSwitchSection(context, ref);
     final accountActions = _ProfileSection(
       title: 'Account actions',
       children: [
@@ -257,6 +309,10 @@ class _ProfileContent extends ConsumerWidget {
               : 'Start sharing reusable materials.',
           onTap: () => context.go(supplierEntryRouteForUser(user)),
         ),
+        if (portalSwitchActions.isNotEmpty) ...[
+          _ProfileDivider(),
+          ...portalSwitchActions,
+        ],
       ],
     );
     final accountStatus = _ProfileSection(

@@ -243,6 +243,90 @@ Missing token shows a clean inline error. The reset flow does not auto-login.
 
 ---
 
+## Flow I — Become supplier (existing learner)
+
+### Trigger
+
+Learner-only account taps **Become a supplier** from `/home`, `/profile`, or the account menu.
+
+### User path
+
+1. `/become-supplier` wizard collects supplier type (Student/Individual only), public name, pickup area, and optional description/hours/notes.
+2. Submit → account keeps `LEARNER` role, gains `SUPPLIER` role and supplier profile → lands on supplier portal (`postAuthRouteForUser`).
+
+Organization supplier types are rejected; those users must register as supplier or use `/register?intent=supplier`.
+
+### Frontend path
+
+`BecomeSupplierWizard` → `authController.becomeSupplier` → `authRepository.becomeSupplier` → `POST /api/auth/become-supplier` → refresh session via `me()` → `context.go(postAuthRouteForUser(user))`.
+
+Entry routing uses `supplierEntryRouteForUser`: learner-only → `/become-supplier`; existing supplier → `/supplier/profile`.
+
+### Backend path
+
+`POST /api/auth/become-supplier` (authenticated) → `auth.service.becomeSupplier` → `authRepository.becomeSupplierForUser` adds `SUPPLIER` role, creates or reuses supplier profile, sets `activeRole` to `SUPPLIER`, returns fresh auth session (JWT roles in sync).
+
+### Database changes
+
+Insert or update: `user_roles` (SUPPLIER), `supplier_profiles`, optional `locations` from `pickupArea`; update `users.active_role`.
+
+### Success state
+
+Dual-role session; supplier API routes authorize immediately; learner data and reservations remain on the same account.
+
+### Error states
+
+- Organization supplier type → `400 VALIDATION_ERROR`.
+- Admin/driver/moderator account → `403 FORBIDDEN`.
+- Field validation errors map to wizard inline errors.
+
+### Files involved
+
+`become_supplier_wizard.dart`, `become_supplier_request.dart`, `auth_controller.dart`, `auth_api.dart`, `auth.service.ts`, `auth.repository.ts`, `role-capabilities.ts`
+
+---
+
+## Flow J — Switch active portal (dual-role)
+
+### Trigger
+
+Dual-role user chooses **Switch to Supplier** or **Switch to Learner** from the account menu, profile page, or supplier profile popover.
+
+### User path
+
+Switch action → navigate to the opposite portal home (`/supplier/overview` or `/learning` per `oppositePortalSwitchRoute`).
+
+### Frontend path
+
+`PortalSwitchMenuItems` → `handlePortalRoleSwitch` → `authController.switchActiveRole` → `POST /api/auth/switch-role` → `me()` → `context.go(oppositePortalSwitchRoute(...))`.
+
+Router guards redirect mismatched portal URLs when `activeRole` does not match the destination (learner mode cannot browse supplier portal except onboarding/verification routes).
+
+### Backend path
+
+`POST /api/auth/switch-role` body `{ activeRole: "LEARNER" | "SUPPLIER" }` → capability checks in `role-capabilities.ts` → may grant `LEARNER` on first switch for student/individual suppliers → `setUserActiveRole` → fresh auth session.
+
+Organization suppliers without an existing `LEARNER` role cannot switch to learner mode.
+
+### Database changes
+
+Update `users.active_role`; may insert `user_roles` (LEARNER) on first eligible switch.
+
+### Success state
+
+Updated `activeRole`, refreshed tokens, portal routes match active mode.
+
+### Error states
+
+- Switch not allowed for account type → `403 FORBIDDEN` snackbar.
+- Invalid `activeRole` → `400`.
+
+### Files involved
+
+`portal_switch_menu.dart`, `portal_navigation.dart`, `auth_controller.dart`, `app_router.dart`, `auth.service.ts`, `role-capabilities.ts`
+
+---
+
 ## Open questions
 
 - Is `account_status = PENDING_VERIFICATION` enforced on login?
