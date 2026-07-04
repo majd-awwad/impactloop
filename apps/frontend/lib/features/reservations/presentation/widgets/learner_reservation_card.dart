@@ -22,6 +22,7 @@ import '../../data/models/learner_reservation.dart';
 import '../../data/reservations_repository.dart';
 import '../learner_reservation_ui_helpers.dart';
 import '../widgets/learner_awaiting_confirmation_panel.dart';
+import '../widgets/learner_pickup_location_map.dart';
 import '../widgets/learner_reservation_messages_panel.dart';
 
 const _cancelDialogMaxWidth = 440.0;
@@ -439,6 +440,11 @@ class _AcceptedPickupInfoBlock extends StatelessWidget {
       reservation,
       hasDeliveryRecord: hasDeliveryRecord,
     );
+    final showPickupMap = shouldShowSelfPickupMap(
+      reservation,
+      hasDeliveryRecord: hasDeliveryRecord,
+    );
+    final pickupLocation = reservation.pickupLocationFull;
 
     return Container(
       width: double.infinity,
@@ -460,6 +466,13 @@ class _AcceptedPickupInfoBlock extends StatelessWidget {
             _AcceptedPickupInfoRow(
               icon: Icons.location_on_outlined,
               label: 'Pickup address: $pickupAddress',
+            ),
+          ],
+          if (showPickupMap && pickupLocation != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            LearnerPickupLocationMap(
+              location: pickupLocation,
+              compact: MediaQuery.sizeOf(context).width < 720,
             ),
           ],
           if (pickupWindow != null || pickupAddress != null)

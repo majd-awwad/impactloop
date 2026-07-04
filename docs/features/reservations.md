@@ -40,7 +40,7 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 | Delivery learner UI | **Partial** | Request/status/tracking summary + polling map marker on delivery detail; not on self-pickup reservation cards |
 | Admin incident queue | **Implemented** | `/admin/no-show-reports` verify/reject/resolve |
 
-**Overall:** **Partial**. Core booking, scheduling, handover codes, cancel/reschedule, incident reporting, and delivery request paths are implemented end-to-end. Remaining reservation-loop gaps: dedicated learner detail page/route, automatic `PENDING` expiry, supplier delivery-pickup-expired UI, self-pickup map, generic notifications, QR polish, saved dropoff addresses.
+**Overall:** **Partial**. Core booking, scheduling, handover codes, cancel/reschedule, incident reporting, and delivery request paths are implemented end-to-end. Remaining reservation-loop gaps: generic notifications, QR polish, saved dropoff addresses.
 
 ## Existing Related Files
 
@@ -101,7 +101,7 @@ Verified against code (2026-07-04):
 - **Dedicated learner reservation detail page** — `GET /api/reservations/:id` + `/learner/reservations/:id` with shared reservation card UI.
 - **Automatic `PENDING` expiry** — implemented via lazy expiry on read paths; see Intended Purpose above.
 - ~~**Supplier `mark-delivery-pickup-expired` UI**~~ — implemented on incoming request cards (`canSupplierMarkDeliveryPickupExpired` + confirm dialog).
-- **Self-pickup map on learner reservation UI** — `pickupLocationFull` includes coordinates after accept, but learner reservations show address text only (delivery detail page has a polling map marker).
+- **Self-pickup map on learner reservation UI** — implemented on accepted self-pickup cards when `pickupLocationFull` includes coordinates (OpenStreetMap marker + address text).
 - Generic persisted notification table flow (supplier-derived inbox only today).
 - Live delivery tracking stream, ETA, delivery cancellation/retry, payment, and reviews.
 - Saved learner dropoff addresses, standalone location CRUD, current-location delivery request, and nearest-first sorting.
@@ -122,7 +122,7 @@ Verified against code (2026-07-04):
 - Public material discovery (`GET /api/materials`, `GET /api/materials/:id`) exposes only approximate `city` and `area`.
 - `GET /api/reservations/my` keeps the same approximate material fields for all statuses.
 - `deliveryRequested` is included on learner reservation list items so the UI can hide self-pickup instructions when delivery is in progress, even if the deliveries list has not loaded yet.
-- `pickupLocationFull` (country, city, area, address line, coordinates, `isApproximate`) is returned only for learner-owned reservations in `ACCEPTED` or `COMPLETED` status; it is `null` for `PENDING`, `AWAITING_LEARNER_CONFIRMATION`, `REJECTED`, `CANCELLED`, and `EXPIRED`. The My Reservations UI shows the pickup address panel only for self-pickup reservations without `deliveryRequested` and without a loaded delivery row.
+- `pickupLocationFull` (country, city, area, address line, coordinates, `isApproximate`) is returned only for learner-owned reservations in `ACCEPTED` or `COMPLETED` status; it is `null` for `PENDING`, `AWAITING_LEARNER_CONFIRMATION`, `REJECTED`, `CANCELLED`, and `EXPIRED`. The My Reservations UI shows the pickup address + map panel for accepted self-pickup reservations without `deliveryRequested` and without a loaded delivery row when coordinates are present.
 - Delivery route exact pickup/dropoff locations remain on learner-owned or assigned-driver delivery APIs only.
 
 ## Legacy data and dev DB cleanup

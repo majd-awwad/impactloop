@@ -167,7 +167,7 @@ Complete invalidates incoming requests, supplier notifications, supplier dashboa
 - Automatic `PENDING` reservation expiry — **Implemented (lazy)** on learner/supplier reservation reads and material availability reads; supplier `cancelled` tab includes `EXPIRED`.
 - Supplier **`mark-delivery-pickup-expired` UI** — **Implemented** on incoming request cards.
 - Dedicated learner reservation detail route (`/learner/reservations/:id`).
-- Self-pickup map on learner reservation UI.
+- Self-pickup map on learner reservation UI — **Implemented**.
 - Realtime delivery tracking stream / background GPS.
 - Generic persisted notifications on reservation state changes.
 - QR polish.

@@ -90,7 +90,7 @@ Learner sees a success snack bar, refreshed material detail, and a pending card 
 ## Still Not Implemented
 
 - Scheduled background expiry cron (lazy expiry on read paths is implemented).
-- Self-pickup map on reservation cards (address text only today).
+- Self-pickup map on reservation cards — **Implemented** when `pickupLocationFull` has coordinates (accepted self-pickup, no active delivery row).
 - Realtime live tracking map/stream, ETA, delivery cancellation/retry UI, payment, and reviews.
 - Generic persisted notifications (supplier-derived inbox only).
 - Saved dropoff addresses, standalone location CRUD, current-location delivery request, and nearest-first sorting.

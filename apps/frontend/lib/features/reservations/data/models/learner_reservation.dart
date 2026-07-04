@@ -45,6 +45,8 @@ class LearnerReservationPickupLocation {
 
     return parts.where((part) => part.isNotEmpty).join(', ');
   }
+
+  bool get hasCoordinates => latitude != null && longitude != null;
 }
 
 class LearnerReservationMaterial {
