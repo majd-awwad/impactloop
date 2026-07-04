@@ -6,10 +6,10 @@ Current MVP status for material reservations.
 
 ## Intended Purpose
 
-- Learner creates reservation → `PENDING` with `quantityRequested` and reserve-time `fulfillmentMethod` (`PICKUP` or `DELIVERY`).
-- Pickup reservations store learner preferred pickup windows; delivery reservations store preferred delivery windows, delivery address text, safe drop-off preference, and optional delivery note. No `Delivery` row is created at reservation time.
+- Learner creates reservation → `PENDING` with `quantityRequested` and reserve-time `fulfillmentMethod` (`PICKUP` or `DELIVERY`). When both methods are available, the learner must explicitly choose one in the reservation dialog; the UI auto-selects only when the material supports exactly one receive method.
+- Pickup reservations store learner preferred pickup windows; each pickup window must have at least 60 minutes remaining when created. Delivery reservations store preferred delivery windows, delivery address text, safe drop-off preference, and optional delivery note. No `Delivery` row is created at reservation time.
 - Supplier accepts or rejects pending reservations. Accept does **not** complete the reservation; it confirms or proposes scheduling and keeps the quantity hold.
-- Pickup accept: supplier supplies pickup window. Matching a learner preferred window → `ACCEPTED` with confirmed `pickupWindowStart/End`. Non-matching proposal → `AWAITING_LEARNER_CONFIRMATION` with `supplierProposedPickupWindowStart/End`.
+- Pickup accept: supplier supplies pickup window. Selecting a learner preferred window → `ACCEPTED` with confirmed `pickupWindowStart/End` when at least 60 minutes remain, even if the window already started. Custom supplier proposals must start at least 30 minutes in the future; matching a learner preferred window → `ACCEPTED`, non-matching proposal → `AWAITING_LEARNER_CONFIRMATION` with `supplierProposedPickupWindowStart/End`.
 - Delivery accept: supplier supplies driver pickup window from supplier only. Backend trims/confirms a delivery window using a 60-minute buffer after supplier pickup end. Feasible → `ACCEPTED`, stores supplier pickup + confirmed delivery windows, sets `deliveryRequested`, creates `Delivery` `WAITING_FOR_DRIVER`. Infeasible → `AWAITING_LEARNER_CONFIRMATION` with `schedulingConflictReason` (no delivery row).
 - Multiple learners may hold different quantities from the same listing while stock remains.
 - Same learner may hold only one open (`PENDING` or `ACCEPTED`) reservation per material.
@@ -32,8 +32,8 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 | Learner `PATCH /api/reservations/:id/learner-confirmation` | **Implemented** | Accept proposed pickup, submit delivery window, or cancel while awaiting confirmation |
 | Learner `GET /api/reservations/my` | **Implemented** | Includes `quantityRequested`, `material.unit`, approximate `material.city`/`area`, and `pickupLocationFull` after accept/complete |
 | Material discovery/detail `availableQuantity` | **Implemented** | Public browse/detail DTO field |
-| Learner reserve UI | **Implemented** | Material detail quantity + pickup/delivery fulfillment dialog |
-| Learner “My Reservations” UI | **Partial** | Quantity + PENDING cancel + awaiting-confirmation panel (accept proposed pickup / submit delivery window / cancel) + self-pickup pickup address after accept/complete; no detail page |
+| Learner reserve UI | **Implemented** | Material detail quantity + explicit pickup/delivery fulfillment dialog |
+| Learner “My Reservations” UI | **Partial** | Quantity + PENDING cancel + awaiting-confirmation panel (accept proposed pickup / submit delivery window / cancel) + self-pickup pickup address after accept/complete + 10-second foreground polling; no detail page |
 | Supplier list/accept/decline/complete | **Partial** | Fulfillment-aware accept (pickup match/propose, delivery scheduling); awaiting-confirmation status; partial-quantity completion subtracts stock; delivery complete guarded |
 | Delivery learner UI | **Partial** | Request/status/tracking summary exists |
 **Overall:** **Partial**. Partial-quantity holds, learner PENDING cancel, quantity-aware reserve UI, and post-acceptance self-pickup address reveal are implemented. Expiry, notifications, QR, reservation detail page, pickup map, and saved dropoff addresses remain pending.
@@ -141,7 +141,7 @@ Recompute `materials.status` / `reused_at` manually for affected rows if needed.
 
 ## Risks
 
-- Public discovery pages own local futures, so the detail page refreshes itself and home suggestions/my reservations are invalidated after reservation/cancel; existing open discovery pages refresh only by re-entering/reloading.
+- Public discovery pages own local futures, so the detail page refreshes itself and home suggestions/my reservations are invalidated after reservation/cancel; existing open discovery pages refresh only by re-entering/reloading. The learner reservations page polls its reservation and delivery summaries every 10 seconds while open to pick up supplier-side accept/decline/complete changes without a full WebSocket channel.
 - No database unique constraint enforces stock limits; protection is serializable transactions plus held-quantity math.
 - `REUSED` is set only when remaining `material.quantity` reaches `0`; `reusedByReservationId` points to the completing reservation.
 - Admin impact metrics still count whole `REUSED` materials; partial depletion may need reservation-level impact later.

@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+import {
+  LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+  MIN_PICKUP_NOTICE_MINUTES,
+} from './reservation-timing-policy.js';
+
 const preferredWindowSchema = z
   .object({
     start: z.iso.datetime(),
@@ -57,6 +62,21 @@ export const createReservationSchema = z
           path: ['learnerPreferredPickupWindows'],
         });
       }
+
+      const minPickupEnd = Date.now() + MIN_PICKUP_NOTICE_MINUTES * 60_000;
+      value.learnerPreferredPickupWindows?.forEach((window, index) => {
+        const end = new Date(window.end);
+        if (
+          Number.isFinite(end.getTime()) &&
+          end.getTime() < minPickupEnd
+        ) {
+          ctx.addIssue({
+            code: 'custom',
+            message: LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+            path: ['learnerPreferredPickupWindows', index, 'end'],
+          });
+        }
+      });
       return;
     }
 
@@ -158,6 +178,18 @@ export const requestPickupRescheduleSchema = z
       ctx.addIssue({
         code: 'custom',
         message: 'Pickup window must be in the future.',
+        path: ['pickupWindowEnd'],
+      });
+      return;
+    }
+
+    if (
+      end.getTime() <
+      Date.now() + MIN_PICKUP_NOTICE_MINUTES * 60_000
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
         path: ['pickupWindowEnd'],
       });
     }

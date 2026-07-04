@@ -254,9 +254,14 @@ class _SupplierIncomingRequestsPageState
       ref
           .read(incomingRequestTabProvider.notifier)
           .selectTab(SupplierIncomingRequestTab.accepted);
-    } catch (_) {
+    } catch (error) {
       if (!context.mounted) return;
-      showSupplierErrorSnackBar(context, context.s.requestAcceptFailed);
+      showSupplierErrorSnackBar(
+        context,
+        error is ApiException
+            ? error.displayMessage
+            : context.s.requestAcceptFailed,
+      );
     }
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +21,7 @@ import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../application/my_reservations_provider.dart';
 import '../../application/reservation_cancel_controller.dart';
 import '../../data/reservations_repository.dart';
+import '../../application/reservation_timing_policy.dart';
 import '../../data/models/learner_reservation.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../learner_reservation_ui_helpers.dart';
@@ -32,6 +35,7 @@ const _desktopCardPadding = 18.0;
 const _reservationMediaSizeDesktop = 96.0;
 const _reservationMediaSizeMobile = 72.0;
 const _desktopCardMinHeight = 132.0;
+const _reservationRefreshInterval = Duration(seconds: 10);
 
 class LearnerReservationsPage extends ConsumerWidget {
   const LearnerReservationsPage({super.key});
@@ -91,6 +95,32 @@ class _ReservationsContent extends ConsumerStatefulWidget {
 class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
   LearnerReservationStatusFilter _selectedFilter =
       LearnerReservationStatusFilter.all;
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_refreshReservations);
+    _refreshTimer = Timer.periodic(
+      _reservationRefreshInterval,
+      (_) => _refreshReservations(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _refreshReservations() {
+    if (!mounted) {
+      return;
+    }
+
+    ref.invalidate(myReservationsProvider);
+    ref.invalidate(learnerDeliveriesProvider);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +135,17 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _PageHeader(),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Expanded(child: _PageHeader()),
+            TextButton.icon(
+              onPressed: _refreshReservations,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Refresh'),
+            ),
+          ],
+        ),
         const SizedBox(height: AppSpacing.md),
         reservationsAsync.maybeWhen(
           data: (reservations) {
@@ -1677,10 +1717,35 @@ class _LearnerRequestRescheduleButtonState
                   onPressed: () {
                     if (reasonController.text.trim().isEmpty ||
                         start == null ||
-                        end == null ||
-                        !end!.isAfter(start!)) {
+                        end == null) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Enter a reason and choose a pickup window.',
+                          ),
+                        ),
+                      );
                       return;
                     }
+
+                    if (!end!.isAfter(start!)) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(
+                          content: Text('End time must be after start time.'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (end!.isBefore(DateTime.now().add(minPickupNotice))) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(
+                          content: Text(learnerPickupWindowTooCloseMessage),
+                        ),
+                      );
+                      return;
+                    }
+
                     reason = reasonController.text.trim();
                     final rawNote = noteController.text.trim();
                     note = rawNote.isEmpty ? null : rawNote;
@@ -1720,7 +1785,7 @@ class _LearnerRequestRescheduleButtonState
       showInfoSnackBar(context, 'Reschedule request sent to supplier.');
     } on ApiException catch (error) {
       if (!mounted) return;
-      showInfoSnackBar(context, error.displayMessage);
+      showErrorSnackBar(context, error);
     } catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, error);
@@ -1789,7 +1854,7 @@ class _LearnerReportSupplierButtonState
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedReason,
+                  initialValue: selectedReason,
                   decoration: const InputDecoration(labelText: 'Reason'),
                   items: _learnerSupplierReportReasons.entries
                       .map(

@@ -1,4 +1,4 @@
-export const DELIVERY_BUFFER_MINUTES = 60;
+import { DELIVERY_BUFFER_MINUTES } from '../reservations/reservation-timing-policy.js';
 
 export type PreferredWindow = {
   start: Date;

@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 
+import { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
+import { AppError } from '../../utils/app-error.js';
 import { createReservation } from '../reservations/reservations.service.js';
 import { getMaterialQuantityState } from '../reservations/reservations.quantity.js';
 import type { CreateReservationInput } from '../reservations/reservations.validation.js';
@@ -10,12 +12,26 @@ import {
   acceptSupplierReservation,
   declineSupplierReservation,
 } from './supplier-reservations.service.js';
+import { acceptSupplierReservationSchema } from './supplier-reservations.validation.js';
 
 const TEST_MARKER = '[test-supplier-accept-fulfillment]';
 
 function futurePreferredWindow(hoursFromNow = 24, durationHours = 2) {
   const start = new Date(Date.now() + hoursFromNow * 3_600_000);
   const end = new Date(start.getTime() + durationHours * 3_600_000);
+
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+  };
+}
+
+function startedPreferredWindow(
+  minutesStartedAgo: number,
+  minutesRemaining: number,
+) {
+  const start = new Date(Date.now() - minutesStartedAgo * 60_000);
+  const end = new Date(Date.now() + minutesRemaining * 60_000);
 
   return {
     start: start.toISOString(),
@@ -194,6 +210,34 @@ describe('supplier accept fulfillment', () => {
     await cleanup(ctx);
   });
 
+  test('accept validation allows selected preferred window that already started', () => {
+    const preferred = startedPreferredWindow(10, 120);
+    const result = acceptSupplierReservationSchema.safeParse({
+      pickupWindowStart: preferred.start,
+      pickupWindowEnd: preferred.end,
+      selectedPreferredWindowIndex: 0,
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  test('accept validation rejects custom pickup window that starts under notice threshold', () => {
+    const startsSoon = new Date(Date.now() + 15 * 60_000);
+    const endsLater = new Date(Date.now() + 90 * 60_000);
+    const result = acceptSupplierReservationSchema.safeParse({
+      pickupWindowStart: startsSoon.toISOString(),
+      pickupWindowEnd: endsLater.toISOString(),
+    });
+
+    assert.equal(result.success, false);
+    if (!result.success) {
+      assert.equal(
+        result.error.issues[0]?.message,
+        'Proposed pickup time must start in the future.',
+      );
+    }
+  });
+
   test('supplier accepts PICKUP using selected learner preferred window index -> ACCEPTED', async () => {
     const material = await createMaterial(ctx);
     const preferred = futurePreferredWindow();
@@ -217,6 +261,68 @@ describe('supplier accept fulfillment', () => {
     assert.equal(accepted.status, 'ACCEPTED');
     assert.equal(accepted.pickupWindowStart, preferred.start);
     assert.equal(accepted.pickupWindowEnd, preferred.end);
+  });
+
+  test('supplier accepts selected learner PICKUP window that already started when enough time remains', async () => {
+    const material = await createMaterial(ctx);
+    const preferred = startedPreferredWindow(10, 120);
+    const reservation = await prisma.reservation.create({
+      data: {
+        materialId: material.id,
+        requesterId: ctx.learnerId,
+        ownerId: ctx.supplierId,
+        quantityRequested: 1,
+        status: 'PENDING',
+        fulfillmentMethod: 'PICKUP',
+        learnerPreferredPickupWindows: [preferred],
+      },
+    });
+    ctx.createdReservationIds.push(reservation.id);
+
+    const accepted = await acceptSupplierReservation(ctx.supplierId, reservation.id, {
+      pickupWindowStart: preferred.start,
+      pickupWindowEnd: preferred.end,
+      selectedPreferredWindowIndex: 0,
+    });
+
+    assert.equal(accepted.status, 'ACCEPTED');
+    assert.equal(accepted.pickupWindowStart, preferred.start);
+    assert.equal(accepted.pickupWindowEnd, preferred.end);
+  });
+
+  test('supplier cannot accept selected learner PICKUP window that is too close to ending', async () => {
+    const material = await createMaterial(ctx);
+    const preferred = startedPreferredWindow(60, 30);
+    const reservation = await prisma.reservation.create({
+      data: {
+        materialId: material.id,
+        requesterId: ctx.learnerId,
+        ownerId: ctx.supplierId,
+        quantityRequested: 1,
+        status: 'PENDING',
+        fulfillmentMethod: 'PICKUP',
+        learnerPreferredPickupWindows: [preferred],
+      },
+    });
+    ctx.createdReservationIds.push(reservation.id);
+
+    await assert.rejects(
+      () =>
+        acceptSupplierReservation(ctx.supplierId, reservation.id, {
+          pickupWindowStart: preferred.start,
+          pickupWindowEnd: preferred.end,
+          selectedPreferredWindowIndex: 0,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.equal(
+          error.message,
+          'This pickup window is too close to ending. Propose a new time.',
+        );
+        return true;
+      },
+    );
   });
 
   test('supplier accepts PICKUP using learner preferred window -> ACCEPTED', async () => {
@@ -263,6 +369,38 @@ describe('supplier accept fulfillment', () => {
     assert.equal(accepted.pickupWindowStart, null);
   });
 
+  test('supplier cannot propose custom PICKUP window that starts too soon', async () => {
+    const material = await createMaterial(ctx);
+    const preferred = futurePreferredWindow(48);
+    const reservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, {
+        learnerPreferredPickupWindows: [preferred],
+      }),
+    );
+    ctx.createdReservationIds.push(reservation.id);
+
+    const startsSoon = new Date(Date.now() + 15 * 60_000);
+    const endsLater = new Date(Date.now() + 90 * 60_000);
+
+    await assert.rejects(
+      () =>
+        acceptSupplierReservation(ctx.supplierId, reservation.id, {
+          pickupWindowStart: startsSoon.toISOString(),
+          pickupWindowEnd: endsLater.toISOString(),
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.equal(
+          error.message,
+          'Proposed pickup time must start in the future.',
+        );
+        return true;
+      },
+    );
+  });
+
   test('old PICKUP reservation with null preferred windows still accepts normally', async () => {
     const material = await createMaterial(ctx);
     const reservation = await prisma.reservation.create({
@@ -273,7 +411,7 @@ describe('supplier accept fulfillment', () => {
         quantityRequested: 1,
         status: 'PENDING',
         fulfillmentMethod: 'PICKUP',
-        learnerPreferredPickupWindows: null,
+        learnerPreferredPickupWindows: Prisma.JsonNull,
       },
     });
     ctx.createdReservationIds.push(reservation.id);
@@ -308,6 +446,7 @@ describe('supplier accept fulfillment', () => {
     });
 
     const state = await getMaterialQuantityState(prisma, material.id);
+    assert.ok(state);
     assert.equal(Number(state.heldQuantity), 1);
     assert.equal(Number(state.availableQuantity), 1);
   });
@@ -428,6 +567,7 @@ describe('supplier accept fulfillment', () => {
     ctx.createdReservationIds.push(reservation.id);
 
     const beforeDecline = await getMaterialQuantityState(prisma, material.id);
+    assert.ok(beforeDecline);
     assert.equal(Number(beforeDecline.heldQuantity), 1);
 
     await declineSupplierReservation(ctx.supplierId, reservation.id, {
@@ -435,6 +575,7 @@ describe('supplier accept fulfillment', () => {
     });
 
     const afterDecline = await getMaterialQuantityState(prisma, material.id);
+    assert.ok(afterDecline);
     assert.equal(Number(afterDecline.heldQuantity), 0);
     assert.equal(Number(afterDecline.availableQuantity), 2);
   });

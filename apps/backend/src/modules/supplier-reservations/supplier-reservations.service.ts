@@ -17,6 +17,12 @@ import {
   mapPreferredWindowsForResponse,
   resolvePreferredWindowByIndex,
 } from './supplier-reservation-scheduling.js';
+import {
+  MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES,
+  MIN_PICKUP_NOTICE_MINUTES,
+  PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+  PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
+} from '../reservations/reservation-timing-policy.js';
 import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import {
   evaluateHandoverWindow,
@@ -390,13 +396,50 @@ export const acceptSupplierReservation = async (
     };
   }
 
-  if (pickupWindowEnd.getTime() <= Date.now()) {
-    const message =
-      existing.fulfillmentMethod === 'PICKUP' &&
-      input.selectedPreferredWindowIndex != null
-        ? 'Requested window has passed. Propose a new time.'
-        : 'Supplier window end must be in the future.';
-    throw new AppError(message, 400, 'VALIDATION_ERROR');
+  const now = Date.now();
+  const isSelectedLearnerPickupWindow =
+    existing.fulfillmentMethod === 'PICKUP' &&
+    input.selectedPreferredWindowIndex != null;
+
+  if (isSelectedLearnerPickupWindow) {
+    const latestAcceptableEnd =
+      now + MIN_PICKUP_NOTICE_MINUTES * 60_000;
+    if (pickupWindowEnd.getTime() < latestAcceptableEnd) {
+      throw new AppError(
+        PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+  } else {
+    const earliestCustomStart =
+      now + MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES * 60_000;
+    if (pickupWindowStart.getTime() < earliestCustomStart) {
+      throw new AppError(
+        PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+
+    if (pickupWindowEnd.getTime() <= now) {
+      throw new AppError(
+        'Supplier window end must be in the future.',
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+  }
+
+  if (
+    proposedDeliveryWindow &&
+    proposedDeliveryWindow.start.getTime() <= now
+  ) {
+    throw new AppError(
+      'Proposed delivery window start must be in the future.',
+      400,
+      'VALIDATION_ERROR',
+    );
   }
 
   if (existing.fulfillmentMethod === 'DELIVERY') {
@@ -531,8 +574,22 @@ export const rescheduleSupplierReservation = async (
   reservationId: string,
   input: RescheduleSupplierReservationInput,
 ) => {
+  const start = new Date(input.pickupWindowStart);
   const end = new Date(input.pickupWindowEnd);
-  if (end.getTime() <= Date.now()) {
+  const now = Date.now();
+
+  if (
+    start.getTime() <
+    now + MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES * 60_000
+  ) {
+    throw new AppError(
+      PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if (end.getTime() <= now) {
     throw new AppError(
       'Pickup window end must be in the future.',
       400,
@@ -543,7 +600,7 @@ export const rescheduleSupplierReservation = async (
   const result = await supplierReservationsRepository.rescheduleSupplierReservation({
     reservationId,
     ownerId,
-    pickupWindowStart: new Date(input.pickupWindowStart),
+    pickupWindowStart: start,
     pickupWindowEnd: end,
     supplierNote: input.supplierNote,
     followUpMessage: input.messageToLearner,
@@ -598,6 +655,14 @@ export const acceptLearnerRescheduleProposal = async (
 
   if ('missingProposal' in result && result.missingProposal) {
     throw new AppError('Learner reschedule proposal is missing.', 409, 'CONFLICT');
+  }
+
+  if ('windowTooClose' in result && result.windowTooClose) {
+    throw new AppError(
+      PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+      400,
+      'VALIDATION_ERROR',
+    );
   }
 
   return mapSupplierReservation(result.reservation);

@@ -17,6 +17,10 @@ import {
   resolveReservationFollowUp,
 } from './reservation-follow-up.js';
 import {
+  LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+  MIN_PICKUP_NOTICE_MINUTES,
+} from './reservation-timing-policy.js';
+import {
   canRequestPickupReschedule,
   mapPendingRescheduleSummary,
   resolveSelfPickupHandoverPhase,
@@ -499,9 +503,18 @@ export const requestLearnerPickupReschedule = async (
   input: import('./reservations.validation.js').RequestPickupRescheduleInput,
 ) => {
   const end = new Date(input.pickupWindowEnd);
+  const now = Date.now();
   if (end.getTime() <= Date.now()) {
     throw new AppError(
       'Pickup window end must be in the future.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if (end.getTime() < now + MIN_PICKUP_NOTICE_MINUTES * 60_000) {
+    throw new AppError(
+      LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
       400,
       'VALIDATION_ERROR',
     );

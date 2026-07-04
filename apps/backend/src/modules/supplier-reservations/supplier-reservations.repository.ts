@@ -25,6 +25,9 @@ import {
   windowMatchesLearnerPreference,
   type PreferredWindow,
 } from './supplier-reservation-scheduling.js';
+import {
+  MIN_PICKUP_NOTICE_MINUTES,
+} from '../reservations/reservation-timing-policy.js';
 import { evaluateHandoverWindow, isAfterAllowedEnd } from '../../utils/handover-timing.js';
 import {
   assertRescheduleAllowedOutsideHandover,
@@ -832,6 +835,13 @@ export const acceptLearnerRescheduleProposal = async (input: {
       !existing.learnerProposedPickupWindowEnd
     ) {
       return { missingProposal: true as const, reservation: existing };
+    }
+
+    if (
+      existing.learnerProposedPickupWindowEnd.getTime() <
+      Date.now() + MIN_PICKUP_NOTICE_MINUTES * 60_000
+    ) {
+      return { windowTooClose: true as const, reservation: existing };
     }
 
     const pickupCodeData = await buildSelfPickupCodeData(existing.id);

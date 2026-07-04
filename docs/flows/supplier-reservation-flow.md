@@ -58,8 +58,9 @@ Confirm window → reservation becomes `ACCEPTED` or `AWAITING_LEARNER_CONFIRMAT
 
 **PICKUP**
 
-- Preferred window match → `ACCEPTED`, set `pickupWindowStart/End`
-- Non-matching proposal → `AWAITING_LEARNER_CONFIRMATION`, set `supplierProposedPickupWindowStart/End`
+- Selected learner preferred window → `ACCEPTED`, set `pickupWindowStart/End` when the window still has at least 60 minutes remaining, even if its start time already passed
+- Selected learner preferred window with less than 60 minutes remaining → `400` with “This pickup window is too close to ending. Propose a new time.”
+- Custom supplier proposal → must start at least 30 minutes in the future; matching a learner preferred window → `ACCEPTED`, non-matching proposal → `AWAITING_LEARNER_CONFIRMATION`, set `supplierProposedPickupWindowStart/End`
 - Legacy null preferred windows → `ACCEPTED` (old behavior)
 
 **DELIVERY**
@@ -82,7 +83,7 @@ Returns mapped reservation DTO including fulfillment/scheduling fields; provider
 
 - 404 not found
 - 409 `CONFLICT` — not pending
-- 400 validation — future window required; delivery requires address/windows/material.deliveryAllowed
+- 400 validation — selected learner pickup window has too little remaining time, custom supplier pickup starts too soon, invalid end-before-start windows, or delivery requires address/windows/material.deliveryAllowed
 
 ---
 

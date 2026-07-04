@@ -121,7 +121,7 @@ Examples:
 - `learningProjectsProvider`, `learningProjectProvider`, and `projectCategoriesProvider` load Learning Hub list/detail/category data from `/api/learning-projects` and `/api/categories?type=PROJECT`.
 - `materialCategoriesProvider`, `discoveryMaterialCategoriesProvider`, `materialListingPolicyProvider`, and `categoryRequestsProvider` load shared materials data. Supplier add-material uses the full category list; discovery browse uses `discoveryMaterialCategoriesProvider` (`discoveryOnly=true`); admin approvals uses `materialCategoriesProvider`.
 - `reservationCreateControllerProvider` submits learner reservation requests from material detail and exposes loading/error state for the Reserve button.
-- `myReservationsProvider` loads `GET /api/reservations/my` for the learner reservation page and material-detail reservation state.
+- `myReservationsProvider` loads `GET /api/reservations/my` for the learner reservation page and material-detail reservation state. The learner reservations page invalidates `myReservationsProvider` and `learnerDeliveriesProvider` every 10 seconds while mounted so supplier-side reservation changes become visible without manual refresh.
 - `learnerDeliveriesProvider` and `learnerDeliveryProvider` load learner delivery status from `/api/deliveries`; `deliveryRequestControllerProvider` submits accepted-reservation delivery requests.
 - `supplierMyMaterialsProvider` checks auth, watches query state, then fetches supplier materials.
 - Supplier dashboard/profile/request/schedule/notification providers load supplier portal data.

@@ -24,6 +24,7 @@ import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../reservations/application/my_reservations_provider.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
+import '../../../reservations/application/reservation_timing_policy.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
 import '../../../reservations/data/models/learner_reservation.dart';
 import '../../../reservations/data/models/reservation_preferred_window.dart';
@@ -2047,7 +2048,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
   final _messageController = TextEditingController();
   final _deliveryAddressController = TextEditingController();
   final _deliveryNoteController = TextEditingController();
-  var _fulfillmentMethod = 'PICKUP';
+  String? _fulfillmentMethod;
   final _pickupWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
   final _deliveryWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
   bool? _safeDropoffAllowed;
@@ -2064,6 +2065,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     _quantityController = TextEditingController(
       text: _formatQuantity(defaultQuantity),
     );
+    _fulfillmentMethod = _initialFulfillmentMethod();
   }
 
   @override
@@ -2075,18 +2077,43 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     super.dispose();
   }
 
+  String? _initialFulfillmentMethod() {
+    final canPickup = widget.material.pickupAllowed;
+    final canDelivery = widget.material.deliveryAvailable;
+
+    if (canPickup && !canDelivery) {
+      return 'PICKUP';
+    }
+
+    if (!canPickup && canDelivery) {
+      return 'DELIVERY';
+    }
+
+    return null;
+  }
+
   bool get _isPickup => _fulfillmentMethod == 'PICKUP';
+
+  bool get _isDelivery => _fulfillmentMethod == 'DELIVERY';
+
+  bool get _canChoosePickup => widget.material.pickupAllowed;
 
   bool get _canChooseDelivery => widget.material.deliveryAvailable;
 
   List<ReservationPreferredWindow>? _validatedPreferredWindows(
-    List<PreferredWindowDraft> drafts,
-  ) {
+    List<PreferredWindowDraft> drafts, {
+    Duration? minimumRemainingTime,
+    String? minimumRemainingTimeMessage,
+  }) {
     final now = DateTime.now();
     final windows = <ReservationPreferredWindow>[];
 
     for (final draft in drafts) {
-      final error = draft.validationError(now: now);
+      final error = draft.validationError(
+        now: now,
+        minimumRemainingTime: minimumRemainingTime,
+        minimumRemainingTimeMessage: minimumRemainingTimeMessage,
+      );
       if (error != null) {
         setState(() => _errorMessage = error);
         return null;
@@ -2196,8 +2223,19 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     final quantity = double.parse(_quantityController.text.trim());
     final message = _messageController.text.trim();
 
+    if (_fulfillmentMethod == null) {
+      setState(
+        () => _errorMessage = 'Choose pickup or delivery before reserving.',
+      );
+      return;
+    }
+
     if (_isPickup) {
-      final windows = _validatedPreferredWindows(_pickupWindows);
+      final windows = _validatedPreferredWindows(
+        _pickupWindows,
+        minimumRemainingTime: minPickupNotice,
+        minimumRemainingTimeMessage: learnerPickupWindowTooCloseMessage,
+      );
       if (windows == null) {
         return;
       }
@@ -2239,7 +2277,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
         });
         return;
       }
-    } else {
+    } else if (_isDelivery) {
       final windows = _validatedPreferredWindows(_deliveryWindows);
       if (windows == null) {
         return;
@@ -2300,6 +2338,12 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
         });
         return;
       }
+    } else {
+      setState(
+        () => _errorMessage =
+            'This material does not have an available receive method.',
+      );
+      return;
     }
 
     if (!mounted) {
@@ -2453,10 +2497,14 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                         const SizedBox(height: AppSpacing.sm),
                         SegmentedButton<String>(
                           segments: [
-                            const ButtonSegment(
+                            ButtonSegment(
                               value: 'PICKUP',
-                              label: Text('Pickup'),
-                              icon: Icon(Icons.storefront_outlined, size: 18),
+                              enabled: _canChoosePickup,
+                              label: const Text('Pickup'),
+                              icon: const Icon(
+                                Icons.storefront_outlined,
+                                size: 18,
+                              ),
                             ),
                             ButtonSegment(
                               value: 'DELIVERY',
@@ -2468,20 +2516,29 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                               ),
                             ),
                           ],
-                          selected: {_fulfillmentMethod},
+                          emptySelectionAllowed: true,
+                          selected: _fulfillmentMethod == null
+                              ? const <String>{}
+                              : {_fulfillmentMethod!},
                           onSelectionChanged: _isSubmitting
                               ? null
                               : (selection) {
                                   setState(() {
-                                    _fulfillmentMethod = selection.first;
+                                    _fulfillmentMethod = selection.isEmpty
+                                        ? null
+                                        : selection.first;
                                     _errorMessage = null;
                                   });
                                 },
                         ),
-                        if (!_canChooseDelivery) ...[
+                        if (!_canChoosePickup || !_canChooseDelivery) ...[
                           const SizedBox(height: AppSpacing.xs),
                           Text(
-                            'This material is pickup only.',
+                            !_canChooseDelivery
+                                ? 'This material is pickup only.'
+                                : !_canChoosePickup
+                                    ? 'This material is delivery only.'
+                                    : '',
                             style: AppTextStyles.label(context).copyWith(
                               color: palette.textMuted,
                             ),
@@ -2499,7 +2556,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                                 ..addAll(windows));
                             },
                           )
-                        else ...[
+                        else if (_isDelivery) ...[
                           PreferredWindowInput(
                             windows: _deliveryWindows,
                             enabled: !_isSubmitting,
@@ -2554,37 +2611,24 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                             ),
                           ),
                           const SizedBox(height: AppSpacing.xs),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: RadioListTile<bool>(
-                                  contentPadding: EdgeInsets.zero,
-                                  dense: true,
-                                  title: const Text('Yes'),
-                                  value: true,
-                                  groupValue: _safeDropoffAllowed,
-                                  onChanged: _isSubmitting
-                                      ? null
-                                      : (value) => setState(
-                                            () => _safeDropoffAllowed = value,
-                                          ),
-                                ),
-                              ),
-                              Expanded(
-                                child: RadioListTile<bool>(
-                                  contentPadding: EdgeInsets.zero,
-                                  dense: true,
-                                  title: const Text('No'),
-                                  value: false,
-                                  groupValue: _safeDropoffAllowed,
-                                  onChanged: _isSubmitting
-                                      ? null
-                                      : (value) => setState(
-                                            () => _safeDropoffAllowed = value,
-                                          ),
-                                ),
-                              ),
+                          SegmentedButton<bool>(
+                            emptySelectionAllowed: true,
+                            segments: const [
+                              ButtonSegment(value: true, label: Text('Yes')),
+                              ButtonSegment(value: false, label: Text('No')),
                             ],
+                            selected: _safeDropoffAllowed == null
+                                ? const <bool>{}
+                                : {_safeDropoffAllowed!},
+                            onSelectionChanged: _isSubmitting
+                                ? null
+                                : (selection) {
+                                    setState(() {
+                                      _safeDropoffAllowed = selection.isEmpty
+                                          ? null
+                                          : selection.first;
+                                    });
+                                  },
                           ),
                           const SizedBox(height: _reservationDialogSectionGap),
                           Text(
@@ -2624,7 +2668,13 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                               ),
                             ),
                           ),
-                        ],
+                        ] else
+                          Text(
+                            'Choose how you want to receive this material to continue.',
+                            style: AppTextStyles.body(context).copyWith(
+                              color: palette.textMuted,
+                            ),
+                          ),
                         const SizedBox(height: _reservationDialogSectionGap),
                         Text(
                           'Message to supplier',
