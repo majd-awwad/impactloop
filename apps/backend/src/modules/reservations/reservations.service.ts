@@ -34,6 +34,10 @@ import {
   createNoDriverAvailableReport,
 } from './reservations.incidents.repository.js';
 import { resolveLearnerConfirmation as resolveLearnerConfirmationInRepository } from './reservations.learner-confirmation.repository.js';
+import {
+  expireStalePendingReservationsByIds,
+  expireStalePendingReservationsForMaterialIds,
+} from './reservations.pending-expiry.repository.js';
 import type {
   CreateReservationInput,
   CreateReservationMessageInput,
@@ -309,8 +313,18 @@ const mapCancelledReservation = (
 });
 
 export const listMyReservations = async (requesterId: string) => {
-  const reservations =
+  let reservations =
     await reservationsRepository.findLearnerReservations(requesterId);
+
+  const pendingIds = reservations
+    .filter((reservation) => reservation.status === 'PENDING')
+    .map((reservation) => reservation.id);
+
+  if (pendingIds.length > 0) {
+    await expireStalePendingReservationsByIds(pendingIds, requesterId);
+    reservations =
+      await reservationsRepository.findLearnerReservations(requesterId);
+  }
 
   const legacyPickupReservations = reservations.filter(
     (reservation) =>
@@ -354,6 +368,18 @@ export const getMyReservationById = async (
     throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
   }
 
+  if (reservation.status === 'PENDING') {
+    await expireStalePendingReservationsByIds([reservationId], requesterId);
+    reservation = await reservationsRepository.findLearnerReservationById(
+      requesterId,
+      reservationId,
+    );
+
+    if (!reservation) {
+      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    }
+  }
+
   if (
     reservation.status === 'ACCEPTED' &&
     reservation.fulfillmentMethod === 'PICKUP' &&
@@ -384,6 +410,10 @@ export const getMyReservationById = async (
       : null,
   );
 };
+
+export const expireStalePendingReservationsForMaterials = async (
+  materialIds: string[],
+) => expireStalePendingReservationsForMaterialIds(materialIds);
 
 export const createReservation = async (
   requesterId: string,

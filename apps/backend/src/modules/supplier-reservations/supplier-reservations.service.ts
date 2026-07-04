@@ -2,6 +2,10 @@ import type { ReservationStatus } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
+  expireStalePendingReservationsByIds,
+  expireStalePendingReservationsForOwner,
+} from '../reservations/reservations.pending-expiry.repository.js';
+import {
   mapReservationMessage,
   findLatestReservationMessagesByReservationIds,
   findReservationMessages,
@@ -71,7 +75,7 @@ const tabToReservationStatuses = (
     case 'completed':
       return ['COMPLETED'];
     case 'cancelled':
-      return ['CANCELLED'];
+      return ['CANCELLED', 'EXPIRED'];
     default:
       return null;
   }
@@ -303,6 +307,8 @@ export const listSupplierReservations = async (
   ownerId: string,
   query: ListSupplierReservationsQuery,
 ) => {
+  await expireStalePendingReservationsForOwner(ownerId);
+
   const statuses = query.status
     ? tabToReservationStatuses(query.status)
     : null;
@@ -332,7 +338,7 @@ export const acceptSupplierReservation = async (
   reservationId: string,
   input: AcceptSupplierReservationInput,
 ) => {
-  const existing =
+  let existing =
     await supplierReservationsRepository.findSupplierReservationForOwner(
       ownerId,
       reservationId,
@@ -340,6 +346,34 @@ export const acceptSupplierReservation = async (
 
   if (!existing) {
     throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  await expireStalePendingReservationsByIds([reservationId], ownerId);
+
+  existing =
+    await supplierReservationsRepository.findSupplierReservationForOwner(
+      ownerId,
+      reservationId,
+    );
+
+  if (!existing) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if (existing.status === 'EXPIRED') {
+    throw new AppError(
+      'This reservation expired before it could be accepted.',
+      409,
+      'CONFLICT',
+    );
+  }
+
+  if (existing.status !== 'PENDING') {
+    throw new AppError(
+      'Only pending reservations can be accepted.',
+      409,
+      'CONFLICT',
+    );
   }
 
   let pickupWindowStart = new Date(input.pickupWindowStart);

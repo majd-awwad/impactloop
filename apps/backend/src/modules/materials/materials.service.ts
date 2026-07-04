@@ -19,6 +19,9 @@ import { isOtherCategory } from '../categories/categories.repository.js';
 import * as categoriesRepository from '../categories/categories.repository.js';
 import * as materialTypesRepository from '../material-types/material-types.repository.js';
 import {
+  expireStalePendingReservationsForMaterials,
+} from '../reservations/reservations.service.js';
+import {
   ACTIVE_HOLD_STATUSES,
   computeAvailableQuantity,
   decimalToNumber as quantityDecimalToNumber,
@@ -608,9 +611,11 @@ const buildMaterialReserveEnrichment = async (
 
 export const getMaterials = async (query: MaterialsQuery) => {
   const result = await materialsRepository.findMaterials(query);
-  const heldByMaterialId = await getHeldQuantitiesByMaterialIds(
-    result.items.map((item) => item.id),
-  );
+  const materialIds = result.items.map((item) => item.id);
+
+  await expireStalePendingReservationsForMaterials(materialIds);
+
+  const heldByMaterialId = await getHeldQuantitiesByMaterialIds(materialIds);
 
   return {
     items: result.items.map((item) =>
@@ -638,6 +643,8 @@ export const getMaterialById = async (
   const incremented = await materialsRepository.incrementMaterialViewsCount(
     material.id,
   );
+
+  await expireStalePendingReservationsForMaterials([material.id]);
 
   const heldByMaterialId = await getHeldQuantitiesByMaterialIds([material.id]);
   const heldQuantity = heldByMaterialId.get(material.id) ?? toDecimal(0);

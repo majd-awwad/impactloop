@@ -18,6 +18,7 @@ Current MVP status for material reservations.
 - Material stays publicly `AVAILABLE` while `availableQuantity > 0`.
 - Material becomes `REUSED` only when remaining quantity reaches `0` after completion/delivery.
 - Learner may cancel while reservation is `PENDING` or `AWAITING_LEARNER_CONFIRMATION` (via cancel route or learner-confirmation `CANCEL` action).
+- `PENDING` reservations expire automatically when the last preferred pickup/delivery window ends without supplier response. Legacy rows without stored windows expire after 72 hours (`PENDING_RESERVATION_FALLBACK_HOURS`). Expiry releases the quantity hold and sets status `EXPIRED` (lazy on learner/supplier reads and material availability reads; no background cron in MVP).
 - Learner resolves `AWAITING_LEARNER_CONFIRMATION` via `PATCH /api/reservations/:id/learner-confirmation`: accept proposed pickup, submit a new delivery window, or cancel.
 
 Reservation is the booking layer. Future build-checklist states such as `Available`, `Missing`, `Alternative`, `Already owned`, and `Reserved` should integrate with reservations, but the checklist itself belongs to future Learning Hub / AI matching work.
@@ -98,7 +99,7 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 Verified against code (2026-07-04):
 
 - **Dedicated learner reservation detail page** — `GET /api/reservations/:id` + `/learner/reservations/:id` with shared reservation card UI.
-- **Automatic `PENDING` expiry** — `ReservationStatus.EXPIRED` exists in schema but no scheduled job or service transitions stale `PENDING` reservations; overdue *accepted* pickup follow-up is implemented separately.
+- **Automatic `PENDING` expiry** — implemented via lazy expiry on read paths; see Intended Purpose above.
 - **Supplier `mark-delivery-pickup-expired` UI** — backend route + Flutter API/provider exist; no supplier card action or `can*` flag on list DTO yet.
 - **Self-pickup map on learner reservation UI** — `pickupLocationFull` includes coordinates after accept, but learner reservations show address text only (delivery detail page has a polling map marker).
 - Generic persisted notification table flow (supplier-derived inbox only today).

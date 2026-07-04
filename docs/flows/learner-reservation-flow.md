@@ -2,7 +2,7 @@
 
 Documents the implemented MVP learner reservation request path.
 
-**Out of scope for Flutter (still):** background GPS streaming, WebSockets/realtime tracking, public tracking links, supplier live tracking, automatic `PENDING` expiry jobs, reviews, multi-reservation queues, saved dropoff addresses, standalone location CRUD, and nearest-first sorting.
+**Out of scope for Flutter (still):** background GPS streaming, WebSockets/realtime tracking, public tracking links, supplier live tracking, scheduled background expiry cron, reviews, multi-reservation queues, saved dropoff addresses, standalone location CRUD, and nearest-first sorting.
 
 **Implemented since earlier doc drafts:** learner cancel (`PENDING` / awaiting confirmation), partial-quantity holds, handover codes, reschedule/report/messages, delivery request + delivery detail tracking summary.
 
@@ -89,7 +89,7 @@ Learner sees a success snack bar, refreshed material detail, and a pending card 
 
 ## Still Not Implemented
 
-- Automatic expiry job for stale `PENDING` reservations (`EXPIRED` status exists; no auto-transition).
+- Scheduled background expiry cron (lazy expiry on read paths is implemented).
 - Self-pickup map on reservation cards (address text only today).
 - Realtime live tracking map/stream, ETA, delivery cancellation/retry UI, payment, and reviews.
 - Generic persisted notifications (supplier-derived inbox only).

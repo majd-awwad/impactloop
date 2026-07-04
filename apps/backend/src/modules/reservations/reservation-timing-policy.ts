@@ -10,3 +10,6 @@ export const LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE =
 
 export const PROPOSED_PICKUP_START_TOO_SOON_MESSAGE =
   'Proposed pickup time must start in the future.';
+
+/** When a PENDING reservation has no stored preferred windows (legacy rows). */
+export const PENDING_RESERVATION_FALLBACK_HOURS = 72;

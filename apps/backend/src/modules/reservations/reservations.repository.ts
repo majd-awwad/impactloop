@@ -10,6 +10,7 @@ import {
   runSerializableTransaction,
   toDecimal,
 } from './reservations.quantity.js';
+import { expireStalePendingReservationsForLearnerMaterial } from './reservations.pending-expiry.repository.js';
 
 const reservationInclude = {
   material: {
@@ -211,6 +212,11 @@ export const createLearnerReservation = async (input: {
         availableQuantity: decimalToNumber(quantityState.availableQuantity),
       };
     }
+
+    await expireStalePendingReservationsForLearnerMaterial(tx, {
+      requesterId: input.requesterId,
+      materialId: material.id,
+    });
 
     const openLearnerReservationCount = await tx.reservation.count({
       where: {
