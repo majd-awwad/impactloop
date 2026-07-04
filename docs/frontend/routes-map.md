@@ -173,6 +173,14 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 | `/supplier/materials/new` | `categoryRequestId`, `priceRuleRequestId` | Resume listing from approved request |
 | `/supplier/reservations` | `tab`, `focus` | Deep link into reservation inbox |
 
+## Navigation stack behavior
+
+Primary app navigation replaces the current route with `context.go(...)`: entry nav links, mobile bottom tabs, supplier/admin sidebars, portal switchers, auth redirects, and direct filter-reset URL updates.
+
+Page-level drill-ins preserve the previous page with `context.push(...)`: material/project/reservation/delivery detail opens, profile subpages, supplier material add/edit/detail flows, notification deep links, dashboard shortcut cards, and admin overview shortcut cards.
+
+Back/save/delete completion paths use `context.popOrGo(<fallback>)` from `app/router/navigation_extensions.dart` when a page must return to the caller if history exists, while still supporting direct web URL entry with a stable fallback route.
+
 ## Post-auth default destination
 
 `postAuthRouteForUser` (`auth_navigation.dart`) — first matching role wins:

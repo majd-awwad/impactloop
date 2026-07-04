@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
@@ -25,7 +25,8 @@ class LearnerProfileEditPage extends ConsumerStatefulWidget {
       _LearnerProfileEditPageState();
 }
 
-class _LearnerProfileEditPageState extends ConsumerState<LearnerProfileEditPage> {
+class _LearnerProfileEditPageState
+    extends ConsumerState<LearnerProfileEditPage> {
   final _formKey = GlobalKey<FormState>();
   final _interestsController = TextEditingController();
   final _bioController = TextEditingController();
@@ -85,7 +86,9 @@ class _LearnerProfileEditPageState extends ConsumerState<LearnerProfileEditPage>
 
     try {
       final bio = _bioController.text.trim();
-      final user = await ref.read(profileRepositoryProvider).updateLearnerProfile(
+      final user = await ref
+          .read(profileRepositoryProvider)
+          .updateLearnerProfile(
             learnerType: _learnerType!,
             skillLevel: _skillLevel!,
             interests: parseInterestsInput(_interestsController.text),
@@ -99,7 +102,7 @@ class _LearnerProfileEditPageState extends ConsumerState<LearnerProfileEditPage>
       }
 
       showInfoSnackBar(context, 'Learner profile updated.');
-      context.go('/profile');
+      context.popOrGo('/profile');
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -111,7 +114,8 @@ class _LearnerProfileEditPageState extends ConsumerState<LearnerProfileEditPage>
         _skillLevelError = firstFieldError(error, const ['skillLevel']);
         _interestsError = firstFieldError(error, const ['interests']);
         _bioError = firstFieldError(error, const ['bio']);
-        _formError = _learnerTypeError == null &&
+        _formError =
+            _learnerTypeError == null &&
                 _skillLevelError == null &&
                 _interestsError == null &&
                 _bioError == null

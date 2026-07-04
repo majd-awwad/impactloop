@@ -34,11 +34,11 @@ class SuggestedMaterialsSection extends ConsumerWidget {
               compactInlineAction: useMobileList,
               action: useMobileList
                   ? TextButton(
-                      onPressed: () => context.go('/materials'),
+                      onPressed: () => context.push('/materials'),
                       child: const Text('Browse all'),
                     )
                   : HomeSectionActionButton(
-                      onPressed: () => context.go('/materials'),
+                      onPressed: () => context.push('/materials'),
                       icon: const Icon(Icons.arrow_forward_rounded),
                       label: 'Browse all',
                     ),
@@ -57,7 +57,7 @@ class SuggestedMaterialsSection extends ConsumerWidget {
                     description:
                         'When suppliers list reusable materials, a small set will appear here.',
                     actionLabel: 'Open materials',
-                    onAction: () => context.go('/materials'),
+                    onAction: () => context.push('/materials'),
                   );
                 }
 
@@ -106,7 +106,8 @@ class SuggestedMaterialsSection extends ConsumerWidget {
                             imageUrl: imageUrl,
                             ratingLabel: material.ratingLabel?.resolve(context),
                             fallbackIcon: material.heroIconData,
-                            onTap: () => context.go('/materials/${material.id}'),
+                            onTap: () =>
+                                context.push('/materials/${material.id}'),
                           );
                         },
                       );
@@ -140,10 +141,7 @@ class SuggestedMaterialsSection extends ConsumerWidget {
                       ),
                       itemBuilder: (context, index) {
                         final material = materials[index];
-                        final imageUrl = _homeMaterialImageUrl(
-                          material,
-                          index,
-                        );
+                        final imageUrl = _homeMaterialImageUrl(material, index);
 
                         return ImpactMaterialGridCard(
                           title: material.title.resolve(context),
@@ -159,7 +157,9 @@ class SuggestedMaterialsSection extends ConsumerWidget {
                             context,
                           ),
                           priceLabel: material.priceLabel.resolve(context),
-                          locationLabel: material.locationLabel.resolve(context),
+                          locationLabel: material.locationLabel.resolve(
+                            context,
+                          ),
                           availabilityLabel: material.availabilityLabel.resolve(
                             context,
                           ),
@@ -170,7 +170,8 @@ class SuggestedMaterialsSection extends ConsumerWidget {
                           ratingLabel: material.ratingLabel?.resolve(context),
                           fallbackIcon: material.heroIconData,
                           variant: AppMaterialCardVariant.compact,
-                          onTap: () => context.go('/materials/${material.id}'),
+                          onTap: () =>
+                              context.push('/materials/${material.id}'),
                         );
                       },
                     );

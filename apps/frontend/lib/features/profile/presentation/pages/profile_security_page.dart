@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
@@ -49,7 +49,9 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
     });
 
     try {
-      await ref.read(authRepositoryProvider).changePassword(
+      await ref
+          .read(authRepositoryProvider)
+          .changePassword(
             currentPassword: _currentPasswordController.text,
             newPassword: _newPasswordController.text,
             confirmNewPassword: _confirmPasswordController.text,
@@ -64,7 +66,7 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
       _confirmPasswordController.clear();
 
       showInfoSnackBar(context, 'Password updated successfully.');
-      context.go('/profile');
+      context.popOrGo('/profile');
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -133,9 +135,7 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Change your password using your current password.',
-              ),
+              const Text('Change your password using your current password.'),
               const SizedBox(height: AppSpacing.lg),
               AppPasswordField(
                 controller: _currentPasswordController,

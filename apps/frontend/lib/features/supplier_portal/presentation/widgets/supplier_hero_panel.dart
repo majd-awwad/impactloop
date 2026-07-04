@@ -32,13 +32,12 @@ class SupplierHeroPanel extends StatelessWidget {
         children: [
           Text(
             context.s.supplierHub,
-            style: context.supplierDisplay().copyWith(fontSize: compact ? 26 : 32),
+            style: context.supplierDisplay().copyWith(
+              fontSize: compact ? 26 : 32,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            context.s.heroTagline,
-            style: context.supplierSubtitle(),
-          ),
+          Text(context.s.heroTagline, style: context.supplierSubtitle()),
           const SizedBox(height: AppSpacing.md),
           Wrap(
             spacing: AppSpacing.sm,
@@ -123,7 +122,7 @@ class SupplierHeroPanel extends StatelessWidget {
 
     return [
       FilledButton.icon(
-        onPressed: () => context.go('/supplier/materials/new'),
+        onPressed: () => context.push('/supplier/materials/new'),
         style: FilledButton.styleFrom(
           backgroundColor: colors.accent,
           foregroundColor: colors.textOnAccent,
@@ -134,12 +133,10 @@ class SupplierHeroPanel extends StatelessWidget {
         label: Text(context.s.addMaterial),
       ),
       OutlinedButton.icon(
-        onPressed: () => context.go('/supplier/profile'),
+        onPressed: () => context.push('/supplier/profile'),
         style: OutlinedButton.styleFrom(
           foregroundColor: colors.textPrimary,
-          side: BorderSide(
-            color: colors.borderFocused.withValues(alpha: 0.5),
-          ),
+          side: BorderSide(color: colors.borderFocused.withValues(alpha: 0.5)),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
           padding: buttonPadding,
         ),
@@ -147,7 +144,7 @@ class SupplierHeroPanel extends StatelessWidget {
         label: Text(context.s.editProfile),
       ),
       TextButton.icon(
-        onPressed: () => context.go('/supplier/materials'),
+        onPressed: () => context.push('/supplier/materials'),
         style: TextButton.styleFrom(
           foregroundColor: colors.accent,
           padding: buttonPadding,

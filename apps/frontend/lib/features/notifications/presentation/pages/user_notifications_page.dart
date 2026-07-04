@@ -118,22 +118,17 @@ class UserNotificationsPage extends ConsumerWidget {
       final reservationId = notification.relatedEntityId!;
 
       if (user?.hasRole('SUPPLIER') == true) {
-        context.go(
-          '/supplier/reservations?tab=pending&focus=$reservationId',
-        );
+        context.push('/supplier/reservations?tab=pending&focus=$reservationId');
         return;
       }
 
-      context.go('/learner/reservations/$reservationId');
+      context.push('/learner/reservations/$reservationId');
     }
   }
 }
 
 class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({
-    required this.notification,
-    required this.onOpen,
-  });
+  const _NotificationTile({required this.notification, required this.onOpen});
 
   final AppNotification notification;
   final VoidCallback onOpen;
@@ -143,9 +138,7 @@ class _NotificationTile extends StatelessWidget {
     final palette = MaterialsUiPalette.of(context);
 
     return Material(
-      color: notification.isRead
-          ? palette.panelSurface
-          : palette.inputSurface,
+      color: notification.isRead ? palette.panelSurface : palette.inputSurface,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onOpen,

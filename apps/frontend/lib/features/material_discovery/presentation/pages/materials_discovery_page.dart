@@ -31,7 +31,8 @@ class MaterialsDiscoveryPage extends ConsumerStatefulWidget {
       _MaterialsDiscoveryPageState();
 }
 
-class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage> {
+class _MaterialsDiscoveryPageState
+    extends ConsumerState<MaterialsDiscoveryPage> {
   static const _debounceDuration = Duration(milliseconds: 300);
 
   late final MaterialDiscoveryRepository _defaultRepository;
@@ -97,7 +98,8 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
     required List<MaterialCategory> categories,
     int? page,
   }) {
-    final categoryId = _selectedCategoryIndex == 0 ||
+    final categoryId =
+        _selectedCategoryIndex == 0 ||
             categories.isEmpty ||
             _selectedCategoryIndex - 1 >= categories.length
         ? null
@@ -256,10 +258,7 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
     }
 
     setState(() {
-      _query = _buildQuery(
-        categories: categories,
-        page: pagination.page + 1,
-      );
+      _query = _buildQuery(categories: categories, page: pagination.page + 1);
     });
     _fetchMaterials(reset: false);
   }
@@ -295,10 +294,7 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
   void _retryFetch(List<MaterialCategory> categories) {
     final shouldReset = _query.page <= 1;
     setState(() {
-      _query = _buildQuery(
-        categories: categories,
-        page: _query.page,
-      );
+      _query = _buildQuery(categories: categories, page: _query.page);
     });
     _fetchMaterials(reset: shouldReset);
   }
@@ -405,7 +401,7 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
                         onClearFilters: () => _clearFilters(categories),
                         onLoadMore: () => _loadMore(categories),
                         onMaterialTap: (material) =>
-                            context.go('/materials/${material.id}'),
+                            context.push('/materials/${material.id}'),
                       ),
                     ),
                   ),

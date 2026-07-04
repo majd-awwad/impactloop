@@ -13,7 +13,6 @@ import '../../../../core/config/api_config.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
-import '../../../auth/application/portal_navigation.dart';
 import '../../../auth/presentation/widgets/portal_switch_menu.dart';
 import '../../../auth/data/models/user.dart';
 
@@ -296,7 +295,7 @@ class _ProfileContent extends ConsumerWidget {
           icon: Icons.receipt_long_outlined,
           title: 'My reservations',
           subtitle: 'Track pickups and material requests.',
-          onTap: () => context.go(learnerReservationsRoute),
+          onTap: () => context.push(learnerReservationsRoute),
         ),
         _ProfileDivider(),
         _ProfileActionTile(
@@ -307,7 +306,7 @@ class _ProfileContent extends ConsumerWidget {
           subtitle: _hasSupplierAccess
               ? 'Manage your supplier details.'
               : 'Start sharing reusable materials.',
-          onTap: () => context.go(supplierEntryRouteForUser(user)),
+          onTap: () => context.push(supplierEntryRouteForUser(user)),
         ),
         if (portalSwitchActions.isNotEmpty) ...[
           _ProfileDivider(),

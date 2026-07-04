@@ -100,7 +100,7 @@ class _WelcomeHero extends StatelessWidget {
         compact: compact,
         maxWidth: 352,
         child: FilledButton.icon(
-          onPressed: () => context.go('/materials'),
+          onPressed: () => context.push('/materials'),
           style: FilledButton.styleFrom(
             backgroundColor: palette.mint,
             foregroundColor: palette.ctaForeground,
@@ -119,7 +119,7 @@ class _WelcomeHero extends StatelessWidget {
         compact: compact,
         maxWidth: 300,
         child: OutlinedButton.icon(
-          onPressed: () => context.go('/learning'),
+          onPressed: () => context.push('/learning'),
           style: OutlinedButton.styleFrom(
             foregroundColor: palette.textPrimary,
             backgroundColor: palette.cardSurface.withValues(alpha: 0.7),
@@ -317,7 +317,7 @@ class _QuickActionsSection extends ConsumerWidget {
                       ? 'Review activity'
                       : 'Review platform activity, pending actions, and impact metrics.',
                   compact: useCompactActions,
-                  onPressed: () => context.go(adminPortalRoute),
+                  onPressed: () => context.push(adminPortalRoute),
                 ),
               HomeActionCard(
                 icon: Icons.inventory_2_outlined,
@@ -328,7 +328,7 @@ class _QuickActionsSection extends ConsumerWidget {
                     ? 'Browse items'
                     : 'Search currently listed materials from suppliers.',
                 compact: useCompactActions,
-                onPressed: () => context.go('/materials'),
+                onPressed: () => context.push('/materials'),
               ),
               HomeActionCard(
                 icon: Icons.school_outlined,
@@ -339,7 +339,7 @@ class _QuickActionsSection extends ConsumerWidget {
                     ? 'Explore projects'
                     : 'Open the Learning Hub project catalog.',
                 compact: useCompactActions,
-                onPressed: () => context.go('/learning'),
+                onPressed: () => context.push('/learning'),
               ),
               HomeActionCard(
                 icon: Icons.assignment_turned_in_outlined,
@@ -348,7 +348,7 @@ class _QuickActionsSection extends ConsumerWidget {
                     ? 'Track pickups'
                     : 'Track supplier responses and pickup windows for requested materials.',
                 compact: useCompactActions,
-                onPressed: () => context.go(learnerReservationsRoute),
+                onPressed: () => context.push(learnerReservationsRoute),
               ),
               HomeActionCard(
                 icon: Icons.storefront_outlined,
@@ -356,15 +356,15 @@ class _QuickActionsSection extends ConsumerWidget {
                 description: useCompactActions
                     ? 'Share materials'
                     : hasSupplierRole
-                        ? 'Update your supplier profile and pickup details.'
-                        : 'Start the supplier setup path for your account.',
+                    ? 'Update your supplier profile and pickup details.'
+                    : 'Start the supplier setup path for your account.',
                 badge: useCompactActions
                     ? null
                     : hasSupplierRole
-                        ? 'Profile'
-                        : null,
+                    ? 'Profile'
+                    : null,
                 compact: useCompactActions,
-                onPressed: () => context.go(supplierEntryRouteForUser(user)),
+                onPressed: () => context.push(supplierEntryRouteForUser(user)),
               ),
             ];
 
@@ -403,7 +403,7 @@ class _FutureActivitySection extends StatelessWidget {
               description:
                   'View pickup, delivery, and reservation updates from My Reservations.',
               badge: 'Open My Reservations',
-              onPressed: () => context.go(learnerReservationsRoute),
+              onPressed: () => context.push(learnerReservationsRoute),
             ),
             ComingSoonCard(
               icon: Icons.bookmark_border_rounded,

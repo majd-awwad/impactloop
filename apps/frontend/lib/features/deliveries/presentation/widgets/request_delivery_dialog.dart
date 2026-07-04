@@ -47,7 +47,8 @@ class _RequestDeliveryDialog extends ConsumerStatefulWidget {
       _RequestDeliveryDialogState();
 }
 
-class _RequestDeliveryDialogState extends ConsumerState<_RequestDeliveryDialog> {
+class _RequestDeliveryDialogState
+    extends ConsumerState<_RequestDeliveryDialog> {
   final _countryController = TextEditingController(text: 'Palestine');
   final _cityController = TextEditingController();
   final _areaController = TextEditingController();
@@ -153,10 +154,9 @@ class _RequestDeliveryDialogState extends ConsumerState<_RequestDeliveryDialog> 
       }
 
       showInfoSnackBar(context, 'Delivery requested.');
+      final router = GoRouter.of(context);
       widget.onSubmitted();
-      if (context.mounted) {
-        context.go('/learner/deliveries/${delivery.id}');
-      }
+      router.push('/learner/deliveries/${delivery.id}');
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -166,10 +166,7 @@ class _RequestDeliveryDialogState extends ConsumerState<_RequestDeliveryDialog> 
       if (!mounted) {
         return;
       }
-      showErrorSnackBar(
-        context,
-        'Could not request delivery. Try again.',
-      );
+      showErrorSnackBar(context, 'Could not request delivery. Try again.');
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
@@ -199,7 +196,7 @@ class _RequestDeliveryDialogState extends ConsumerState<_RequestDeliveryDialog> 
                   padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
                   child: LinearProgressIndicator(),
                 ),
-                error: (_, __) => Column(
+                error: (_, _) => Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text('Could not load saved addresses.'),
@@ -219,10 +216,13 @@ class _RequestDeliveryDialogState extends ConsumerState<_RequestDeliveryDialog> 
                         }
                       });
                     }
-                    return const Text('No saved addresses yet. Enter one below.');
+                    return const Text(
+                      'No saved addresses yet. Enter one below.',
+                    );
                   }
 
-                  final selectedId = _selectedSavedAddressId ?? addresses.first.id;
+                  final selectedId =
+                      _selectedSavedAddressId ?? addresses.first.id;
                   if (_selectedSavedAddressId == null) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted && _selectedSavedAddressId == null) {

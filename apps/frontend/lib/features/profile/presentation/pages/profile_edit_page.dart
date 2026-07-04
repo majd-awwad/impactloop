@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
@@ -142,7 +142,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       }
 
       final phoneUpdate = _phoneUpdatePayload();
-      final user = await ref.read(profileRepositoryProvider).updateProfile(
+      final user = await ref
+          .read(profileRepositoryProvider)
+          .updateProfile(
             displayName: _displayNameController.text.trim(),
             phone: phoneUpdate.phone,
             updatePhone: phoneUpdate.updatePhone,
@@ -158,7 +160,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       }
 
       showInfoSnackBar(context, 'Profile updated.');
-      context.go('/profile');
+      context.popOrGo('/profile');
     } on ApiException catch (error) {
       if (!mounted) {
         return;

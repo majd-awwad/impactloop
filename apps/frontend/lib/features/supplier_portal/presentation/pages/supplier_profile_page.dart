@@ -630,17 +630,17 @@ class _SupplierProfileContentState
           const SizedBox(height: AppSpacing.xl),
           switch (_profileTabIndex) {
             0 => ProfileOverviewTab(
-                profile: profile,
-                onViewAllMaterials: () => context.go('/supplier/materials'),
-                onAddMaterial: () => context.go('/supplier/materials/new'),
-              ),
+              profile: profile,
+              onViewAllMaterials: () => context.push('/supplier/materials'),
+              onAddMaterial: () => context.push('/supplier/materials/new'),
+            ),
             1 => ProfileFollowersTab(
-                followersCount: profile.stats.followersCount,
-                followers: profile.latestFollowers,
-                onViewAll: profile.stats.followersCount > 0
-                    ? () => _showFollowersDialog(context, profile)
-                    : null,
-              ),
+              followersCount: profile.stats.followersCount,
+              followers: profile.latestFollowers,
+              onViewAll: profile.stats.followersCount > 0
+                  ? () => _showFollowersDialog(context, profile)
+                  : null,
+            ),
             2 => ProfileDetailsSection(profile: profile),
             _ => const SizedBox.shrink(),
           },
@@ -860,16 +860,9 @@ class _SupplierProfileError extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.error_outline,
-                color: colors.error,
-                size: 40,
-              ),
+              Icon(Icons.error_outline, color: colors.error, size: 40),
               const SizedBox(height: AppSpacing.md),
-              Text(
-                l.profileUnavailable,
-                style: context.supplierTitle(),
-              ),
+              Text(l.profileUnavailable, style: context.supplierTitle()),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 message,

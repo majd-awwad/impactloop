@@ -32,6 +32,7 @@ const _desktopCardPadding = 18.0;
 const _reservationMediaSizeDesktop = 96.0;
 const _reservationMediaSizeMobile = 72.0;
 const _desktopCardMinHeight = 132.0;
+
 class LearnerReservationCard extends ConsumerWidget {
   const LearnerReservationCard({
     super.key,
@@ -70,10 +71,7 @@ class LearnerReservationCard extends ConsumerWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 4,
-              color: statusStyle.accentColor,
-            ),
+            Container(width: 4, color: statusStyle.accentColor),
             Expanded(
               child: Padding(
                 padding: EdgeInsetsDirectional.all(
@@ -121,13 +119,11 @@ class _ReservationCardDesktopLayout extends StatelessWidget {
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: _desktopCardMinHeight),
       child: Row(
-        crossAxisAlignment:
-            showPickupInfo ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        crossAxisAlignment: showPickupInfo
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
         children: [
-          _ReservationMediaTile(
-            reservation: reservation,
-            isMobile: false,
-          ),
+          _ReservationMediaTile(reservation: reservation, isMobile: false),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: _ReservationCardSummary(
@@ -177,10 +173,7 @@ class _ReservationCardMobileLayout extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _ReservationMediaTile(
-              reservation: reservation,
-              isMobile: true,
-            ),
+            _ReservationMediaTile(reservation: reservation, isMobile: true),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _ReservationCardSummaryLines(
@@ -192,10 +185,7 @@ class _ReservationCardMobileLayout extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        _ReservationCardActions(
-          reservation: reservation,
-          delivery: delivery,
-        ),
+        _ReservationCardActions(reservation: reservation, delivery: delivery),
       ],
     );
   }
@@ -231,8 +221,9 @@ class _ReservationMediaTileState extends State<_ReservationMediaTile> {
     return url != null && url.isNotEmpty && !_imageFailed;
   }
 
-  double get _size =>
-      widget.isMobile ? _reservationMediaSizeMobile : _reservationMediaSizeDesktop;
+  double get _size => widget.isMobile
+      ? _reservationMediaSizeMobile
+      : _reservationMediaSizeDesktop;
 
   Widget _placeholderTile(AppThemeColors colors) {
     return DecoratedBox(
@@ -339,7 +330,8 @@ class _ReservationStatusRow extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _ReservationStatusChip(
-          label: learnerDeliveryPrimaryStatusLabel(
+          label:
+              learnerDeliveryPrimaryStatusLabel(
                 reservationStatus: reservation.status,
                 fulfillmentMethod: reservation.fulfillmentMethod,
                 deliveryStatus: delivery?.status,
@@ -396,7 +388,10 @@ class _DeliveryStatusChipStyle {
   final Color border;
 }
 
-_DeliveryStatusChipStyle _deliveryStatusStyle(BuildContext context, String status) {
+_DeliveryStatusChipStyle _deliveryStatusStyle(
+  BuildContext context,
+  String status,
+) {
   final colors = AppThemeColors.of(context);
 
   switch (status) {
@@ -505,10 +500,7 @@ class _AcceptedPickupInfoBlock extends StatelessWidget {
 }
 
 class _AcceptedPickupInfoRow extends StatelessWidget {
-  const _AcceptedPickupInfoRow({
-    required this.icon,
-    required this.label,
-  });
+  const _AcceptedPickupInfoRow({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -554,10 +546,9 @@ class _OverdueWarningBanner extends StatelessWidget {
       ),
       child: Text(
         'Pickup window passed. Please contact the supplier or wait for follow-up.',
-        style: AppTextStyles.label(context).copyWith(
-          color: colors.warningText,
-          fontWeight: FontWeight.w600,
-        ),
+        style: AppTextStyles.label(
+          context,
+        ).copyWith(color: colors.warningText, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -659,24 +650,28 @@ class _ReservationCardSummaryLines extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        if (formatPreferredWindowsSummary(reservation) case final preferredWindows?) ...[
+        if (formatPreferredWindowsSummary(reservation)
+            case final preferredWindows?) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
             preferredWindows,
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w400),
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.textSecondary,
+              fontWeight: FontWeight.w400,
+            ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
         ],
-        if (formatDeliveryAddressSummary(reservation) case final deliveryAddress?) ...[
+        if (formatDeliveryAddressSummary(reservation)
+            case final deliveryAddress?) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
             deliveryAddress,
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w400),
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.textSecondary,
+              fontWeight: FontWeight.w400,
+            ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -696,9 +691,10 @@ class _ReservationCardSummaryLines extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             statusMessage,
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w400),
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.textSecondary,
+              fontWeight: FontWeight.w400,
+            ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -775,7 +771,7 @@ class _ReservationCardActions extends ConsumerWidget {
 
     final viewMaterial = _ReservationActionButton(
       label: 'View material',
-      onPressed: () => context.go('/materials/${reservation.material.id}'),
+      onPressed: () => context.push('/materials/${reservation.material.id}'),
       desktopRail: desktopColumn,
     );
 
@@ -783,7 +779,8 @@ class _ReservationCardActions extends ConsumerWidget {
       reservation: reservation,
       delivery: delivery,
       desktopColumn: desktopColumn,
-      onNavigate: (deliveryId) => context.go('/learner/deliveries/$deliveryId'),
+      onNavigate: (deliveryId) =>
+          context.push('/learner/deliveries/$deliveryId'),
     );
 
     final requestDelivery = reservation.canLearnerRequestDelivery
@@ -842,12 +839,7 @@ class _ReservationCardActions extends ConsumerWidget {
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
-      children: [
-        viewMaterial,
-        ?viewDelivery,
-        ?requestDelivery,
-        ?cancelRequest,
-      ],
+      children: [viewMaterial, ?viewDelivery, ?requestDelivery, ?cancelRequest],
     );
   }
 
@@ -1058,8 +1050,9 @@ class _CancelReservationDialogState extends State<_CancelReservationDialog> {
     final colors = AppThemeColors.of(context);
     final screenSize = MediaQuery.sizeOf(context);
     final isNarrow = screenSize.width < 480;
-    final dialogWidth =
-        isNarrow ? screenSize.width * 0.92 : _cancelDialogMaxWidth;
+    final dialogWidth = isNarrow
+        ? screenSize.width * 0.92
+        : _cancelDialogMaxWidth;
 
     final keepButton = OutlinedButton(
       onPressed: _isSubmitting ? null : widget.onKeep,
@@ -1254,7 +1247,8 @@ class _LearnerRequestRescheduleButtonState
                 context: context,
                 firstDate: DateTime.now(),
                 lastDate: DateTime.now().add(const Duration(days: 60)),
-                initialDate: start ?? DateTime.now().add(const Duration(days: 1)),
+                initialDate:
+                    start ?? DateTime.now().add(const Duration(days: 1)),
               );
               if (date == null || !context.mounted) return;
               final time = await showTimePicker(
@@ -1278,7 +1272,8 @@ class _LearnerRequestRescheduleButtonState
                 context: context,
                 firstDate: start ?? DateTime.now(),
                 lastDate: DateTime.now().add(const Duration(days: 60)),
-                initialDate: end ?? start ?? DateTime.now().add(const Duration(days: 1)),
+                initialDate:
+                    end ?? start ?? DateTime.now().add(const Duration(days: 1)),
               );
               if (date == null || !context.mounted) return;
               final time = await showTimePicker(
@@ -1404,14 +1399,19 @@ class _LearnerRequestRescheduleButtonState
 
     setState(() => _submitting = true);
     try {
-      await ref.read(reservationsRepositoryProvider).requestPickupReschedule(
+      await ref
+          .read(reservationsRepositoryProvider)
+          .requestPickupReschedule(
             reservationId: widget.reservation.id,
             pickupWindowStart: start!,
             pickupWindowEnd: end!,
             reason: reason!,
             note: note,
           );
-      invalidateLearnerReservationCaches(ref, reservationId: widget.reservation.id);
+      invalidateLearnerReservationCaches(
+        ref,
+        reservationId: widget.reservation.id,
+      );
       if (!mounted) return;
       showInfoSnackBar(context, 'Reschedule request sent to supplier.');
     } on ApiException catch (error) {
@@ -1534,12 +1534,17 @@ class _LearnerReportSupplierButtonState
 
     setState(() => _submitting = true);
     try {
-      await ref.read(reservationsRepositoryProvider).reportSupplierIssue(
+      await ref
+          .read(reservationsRepositoryProvider)
+          .reportSupplierIssue(
             reservationId: widget.reservation.id,
             reason: selectedReason,
             note: note.isEmpty ? null : note,
           );
-      invalidateLearnerReservationCaches(ref, reservationId: widget.reservation.id);
+      invalidateLearnerReservationCaches(
+        ref,
+        reservationId: widget.reservation.id,
+      );
       if (!mounted) return;
       showInfoSnackBar(context, 'Supplier issue reported to admin.');
     } on ApiException catch (error) {
@@ -1603,9 +1608,7 @@ class _LearnerReportNoDriverButtonState
               maxLength: 1000,
               minLines: 2,
               maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Note (required)',
-              ),
+              decoration: const InputDecoration(labelText: 'Note (required)'),
             ),
           ],
         ),
@@ -1631,11 +1634,16 @@ class _LearnerReportNoDriverButtonState
 
     setState(() => _submitting = true);
     try {
-      await ref.read(reservationsRepositoryProvider).reportNoDriverAvailable(
+      await ref
+          .read(reservationsRepositoryProvider)
+          .reportNoDriverAvailable(
             reservationId: widget.reservation.id,
             note: note,
           );
-      invalidateLearnerReservationCaches(ref, reservationId: widget.reservation.id);
+      invalidateLearnerReservationCaches(
+        ref,
+        reservationId: widget.reservation.id,
+      );
       if (!mounted) return;
       showInfoSnackBar(context, 'No-driver case reported to admin.');
     } on ApiException catch (error) {

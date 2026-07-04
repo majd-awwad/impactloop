@@ -62,82 +62,82 @@ class AdminKpiCard extends StatelessWidget {
                 ColoredBox(color: accent, child: const SizedBox(width: 4)),
                 Expanded(
                   child: Padding(
-                    padding:
-                        const EdgeInsetsDirectional.fromSTEB(14, 12, 12, 12),
+                    padding: const EdgeInsetsDirectional.fromSTEB(
+                      14,
+                      12,
+                      12,
+                      12,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: accent.withValues(
-                                alpha: palette.isDark ? 0.18 : 0.12,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: accent.withValues(alpha: 0.22),
-                              ),
-                            ),
-                            child: Icon(icon, color: accent, size: 19),
-                          ),
-                          const Spacer(),
-                          if (onTap != null)
-                            Icon(
-                              Icons.arrow_forward,
-                              size: 16,
-                              color: palette.textSecondary,
-                            ),
-                          if (badge != null) ...[
-                            if (onTap != null) const SizedBox(width: 6),
+                        Row(
+                          children: [
                             Container(
-                              padding:
-                                  const EdgeInsetsDirectional.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
-                              ),
+                              width: 36,
+                              height: 36,
+                              alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: accent.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(999),
+                                color: accent.withValues(
+                                  alpha: palette.isDark ? 0.18 : 0.12,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: accent.withValues(alpha: 0.22),
+                                ),
                               ),
-                              child: Text(
-                                badge!,
-                                style: _badgeStyle(accent),
-                              ),
+                              child: Icon(icon, color: accent, size: 19),
                             ),
+                            const Spacer(),
+                            if (onTap != null)
+                              Icon(
+                                Icons.arrow_forward,
+                                size: 16,
+                                color: palette.textSecondary,
+                              ),
+                            if (badge != null) ...[
+                              if (onTap != null) const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 7,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: accent.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(badge!, style: _badgeStyle(accent)),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        displayValue,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AdminTypography.kpiValue(palette),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AdminTypography.kpiLabel(palette),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        displayHelper,
-                        maxLines: helperMaxLines,
-                        overflow: TextOverflow.ellipsis,
-                        style: AdminTypography.kpiHelper(palette),
-                      ),
-                    ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          displayValue,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AdminTypography.kpiValue(palette),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AdminTypography.kpiLabel(palette),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          displayHelper,
+                          maxLines: helperMaxLines,
+                          overflow: TextOverflow.ellipsis,
+                          style: AdminTypography.kpiHelper(palette),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
             ),
           ),
         ),
@@ -162,11 +162,8 @@ class AdminKpiCard extends StatelessWidget {
     );
   }
 
-  static TextStyle _badgeStyle(Color accent) => TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        color: accent,
-      );
+  static TextStyle _badgeStyle(Color accent) =>
+      TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: accent);
 }
 
 /// Builds the 8 platform metric cards from live dashboard data.
@@ -188,7 +185,11 @@ class AdminKpiGrid extends StatelessWidget {
     final l = AdminL10n.of(context);
     final palette = context.adminPalette;
     final width = MediaQuery.sizeOf(context).width;
-    final columns = width >= 1100 ? 4 : width >= 560 ? 2 : 1;
+    final columns = width >= 1100
+        ? 4
+        : width >= 560
+        ? 2
+        : 1;
     const spacing = 10.0;
 
     final cards = <AdminKpiCard>[
@@ -198,7 +199,7 @@ class AdminKpiGrid extends StatelessWidget {
         helper: l.hintUsers,
         icon: Icons.people_outline,
         accent: palette.blue,
-        onTap: () => context.go('/admin/users'),
+        onTap: () => context.push('/admin/users'),
       ),
       AdminKpiCard(
         label: l.statSuppliers,
@@ -206,7 +207,7 @@ class AdminKpiGrid extends StatelessWidget {
         helper: l.hintSuppliers,
         icon: Icons.storefront_outlined,
         accent: palette.amber,
-        onTap: () => context.go('/admin/users?role=SUPPLIER'),
+        onTap: () => context.push('/admin/users?role=SUPPLIER'),
       ),
       AdminKpiCard(
         label: l.statMaterials,
@@ -214,7 +215,7 @@ class AdminKpiGrid extends StatelessWidget {
         helper: l.hintMaterials,
         icon: Icons.inventory_2_outlined,
         accent: palette.primaryTeal,
-        onTap: () => context.go('/admin/materials'),
+        onTap: () => context.push('/admin/materials'),
       ),
       AdminKpiCard(
         label: l.statAvailableMaterials,
@@ -222,7 +223,7 @@ class AdminKpiGrid extends StatelessWidget {
         helper: l.hintAvailableMaterials,
         icon: Icons.check_circle_outline,
         accent: palette.green,
-        onTap: () => context.go('/admin/materials?status=AVAILABLE'),
+        onTap: () => context.push('/admin/materials?status=AVAILABLE'),
       ),
       AdminKpiCard(
         label: l.statPendingApprovals,
@@ -233,7 +234,7 @@ class AdminKpiGrid extends StatelessWidget {
         badge: dashboard.summary.pendingApprovals > 0
             ? l.t('Pending', 'معلّق')
             : null,
-        onTap: () => context.go('/admin/approvals?status=PENDING'),
+        onTap: () => context.push('/admin/approvals?status=PENDING'),
       ),
       AdminKpiCard(
         label: l.statActiveInvitations,
@@ -241,7 +242,7 @@ class AdminKpiGrid extends StatelessWidget {
         helper: l.hintActiveInvitations,
         icon: Icons.mail_outline,
         accent: palette.blue,
-        onTap: () => context.go('/admin/invitations?status=PENDING'),
+        onTap: () => context.push('/admin/invitations?status=PENDING'),
       ),
       AdminKpiCard(
         label: l.statCompletedReuse,
@@ -249,7 +250,7 @@ class AdminKpiGrid extends StatelessWidget {
         helper: l.hintCompletedReuse,
         icon: Icons.autorenew,
         accent: palette.green,
-        onTap: () => context.go('/admin/materials?status=REUSED'),
+        onTap: () => context.push('/admin/materials?status=REUSED'),
       ),
       AdminKpiCard(
         label: l.estimatedCo2Avoided,
@@ -259,7 +260,7 @@ class AdminKpiGrid extends StatelessWidget {
         accent: palette.brightTeal,
         badge: l.estimatedBadge,
         helperMaxLines: 1,
-        onTap: () => context.go('/admin/impact'),
+        onTap: () => context.push('/admin/impact'),
       ),
     ];
 
@@ -270,7 +271,9 @@ class AdminKpiGrid extends StatelessWidget {
       final rowCards = cards.skip(i).take(columns).toList();
       rows.add(
         Padding(
-          padding: EdgeInsets.only(bottom: i + columns < cards.length ? spacing : 0),
+          padding: EdgeInsets.only(
+            bottom: i + columns < cards.length ? spacing : 0,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -300,65 +303,66 @@ class AdminTypography {
   const AdminTypography._();
 
   static TextStyle pageTitle(AdminPalette palette) => TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w800,
-        color: palette.textPrimary,
-        height: 1.2,
-      );
+    fontSize: 20,
+    fontWeight: FontWeight.w800,
+    color: palette.textPrimary,
+    height: 1.2,
+  );
 
   static TextStyle pageSubtitle(AdminPalette palette) => TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: palette.textSecondary,
-        height: 1.35,
-      );
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: palette.textSecondary,
+    height: 1.35,
+  );
 
   static TextStyle sectionTitle(AdminPalette palette) => TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w800,
-        color: palette.textPrimary,
-      );
+    fontSize: 15,
+    fontWeight: FontWeight.w800,
+    color: palette.textPrimary,
+  );
 
   static TextStyle kpiValue(AdminPalette palette) => TextStyle(
-        fontSize: 22,
-        fontWeight: FontWeight.w800,
-        height: 1.1,
-        color: palette.textPrimary,
-        letterSpacing: -0.3,
-      );
+    fontSize: 22,
+    fontWeight: FontWeight.w800,
+    height: 1.1,
+    color: palette.textPrimary,
+    letterSpacing: -0.3,
+  );
 
   static TextStyle kpiLabel(AdminPalette palette) => TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        height: 1.2,
-        color: palette.textPrimary,
-      );
+    fontSize: 13,
+    fontWeight: FontWeight.w700,
+    height: 1.2,
+    color: palette.textPrimary,
+  );
 
   static TextStyle kpiHelper(AdminPalette palette) => TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w500,
-        height: 1.3,
-        color: palette.textSecondary,
-      );
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    height: 1.3,
+    color: palette.textSecondary,
+  );
 
   static TextStyle sidebarBrand(AdminPalette palette) => TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w800,
-        color: palette.sidebarTextPrimary,
-      );
+    fontSize: 18,
+    fontWeight: FontWeight.w800,
+    color: palette.sidebarTextPrimary,
+  );
 
   static TextStyle sidebarSection(AdminPalette palette) => TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: palette.sidebarTextSecondary,
-        letterSpacing: 0.2,
-      );
+    fontSize: 12,
+    fontWeight: FontWeight.w700,
+    color: palette.sidebarTextSecondary,
+    letterSpacing: 0.2,
+  );
 
   static TextStyle sidebarNav(AdminPalette palette, {required bool active}) =>
       TextStyle(
         fontSize: 14,
         fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-        color:
-            active ? palette.sidebarTextPrimary : palette.sidebarTextSecondary,
+        color: active
+            ? palette.sidebarTextPrimary
+            : palette.sidebarTextSecondary,
       );
 }
