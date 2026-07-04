@@ -161,6 +161,7 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 **Implemented / current:**
 
 - `MODERATOR` is a stored role and an invitation target.
+- Moderator tokens can access Learning Hub project review endpoints under `/api/admin/learning-projects*` to list, preview, approve, request changes, reject, hide, restore, or archive submitted projects.
 
 **Not implemented as a portal:**
 
@@ -173,12 +174,13 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Admin currently handles material reports, material hide/restore, category request approval, price request approval, supplier verification review, and people management.
 - Supplier-facing category and price request submission exists.
 - Material report submission exists from material detail.
+- Learning project review is shared through the admin route namespace; only the standalone moderator workspace is missing.
 
 **Planned / future:**
 
 - Moderator queue for reported materials, suspicious listings, wrong categories, inappropriate images/descriptions, project reports, material type/category requests, and price issues.
 - Hide/reject content with a moderation reason.
-- Review project submissions if/when moderation is delegated from admin.
+- Review additional moderation queues if/when delegated from admin.
 - Clear separation between moderator permissions and admin-only permissions.
 
 **Strongest product feature:** Moderation queue for reports, price issues, category/material type requests, and content quality.
@@ -196,7 +198,7 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Supplier verification review.
 - Category and price request approval/rejection.
 - Material moderation, material reports, hide/unavailable/restore flows.
-- Learning project moderation: list/detail, approve, request changes, reject, hide, restore, and archive.
+- Learning project moderation: list/detail, approve, request changes, reject, hide, restore, and archive. Backend review endpoints are shared with MODERATOR.
 - People management list, summary, suspend, and reactivate with safety guards.
 
 **Partial:**
@@ -205,7 +207,7 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Audit logs route exists with paginated backend data, filters, summary stats, and details.
 - Delivery oversight and reservation admin management are not complete.
 - AI log viewing is not implemented.
-- Project moderation is implemented for ADMIN; moderator-owned project review is not implemented.
+- Project moderation UI is implemented for ADMIN; MODERATOR can use the backend review endpoints, but no moderator portal is implemented.
 
 **Planned / future:**
 

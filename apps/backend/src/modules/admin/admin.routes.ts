@@ -467,7 +467,7 @@ adminRouter.get(
 adminRouter.get(
   '/learning-projects',
   authMiddleware,
-  requireRoles('ADMIN'),
+  requireRoles('ADMIN', 'MODERATOR'),
   validate(adminLearningProjectsListQuerySchema, 'query'),
   asyncHandler(listAdminLearningProjectsHandler),
 );
@@ -475,7 +475,7 @@ adminRouter.get(
 adminRouter.get(
   '/learning-projects/:id',
   authMiddleware,
-  requireRoles('ADMIN'),
+  requireRoles('ADMIN', 'MODERATOR'),
   validate(adminLearningProjectIdParamSchema, 'params'),
   asyncHandler(getAdminLearningProjectHandler),
 );
@@ -483,7 +483,7 @@ adminRouter.get(
 adminRouter.patch(
   '/learning-projects/:id/approve',
   authMiddleware,
-  requireRoles('ADMIN'),
+  requireRoles('ADMIN', 'MODERATOR'),
   validate(adminLearningProjectIdParamSchema, 'params'),
   asyncHandler(approveAdminLearningProjectHandler),
 );
@@ -491,7 +491,7 @@ adminRouter.patch(
 adminRouter.patch(
   '/learning-projects/:id/request-changes',
   authMiddleware,
-  requireRoles('ADMIN'),
+  requireRoles('ADMIN', 'MODERATOR'),
   validate(adminLearningProjectIdParamSchema, 'params'),
   validate(moderationReasonSchema),
   asyncHandler(requestChangesAdminLearningProjectHandler),
@@ -500,7 +500,7 @@ adminRouter.patch(
 adminRouter.patch(
   '/learning-projects/:id/reject',
   authMiddleware,
-  requireRoles('ADMIN'),
+  requireRoles('ADMIN', 'MODERATOR'),
   validate(adminLearningProjectIdParamSchema, 'params'),
   validate(moderationReasonSchema),
   asyncHandler(rejectAdminLearningProjectHandler),
@@ -509,7 +509,7 @@ adminRouter.patch(
 adminRouter.patch(
   '/learning-projects/:id/hide',
   authMiddleware,
-  requireRoles('ADMIN'),
+  requireRoles('ADMIN', 'MODERATOR'),
   validate(adminLearningProjectIdParamSchema, 'params'),
   validate(moderationReasonSchema),
   asyncHandler(hideAdminLearningProjectHandler),
@@ -518,7 +518,7 @@ adminRouter.patch(
 adminRouter.patch(
   '/learning-projects/:id/restore',
   authMiddleware,
-  requireRoles('ADMIN'),
+  requireRoles('ADMIN', 'MODERATOR'),
   validate(adminLearningProjectIdParamSchema, 'params'),
   asyncHandler(restoreAdminLearningProjectHandler),
 );
@@ -526,7 +526,7 @@ adminRouter.patch(
 adminRouter.patch(
   '/learning-projects/:id/archive',
   authMiddleware,
-  requireRoles('ADMIN'),
+  requireRoles('ADMIN', 'MODERATOR'),
   validate(adminLearningProjectIdParamSchema, 'params'),
   validate(moderationReasonSchema),
   asyncHandler(archiveAdminLearningProjectHandler),

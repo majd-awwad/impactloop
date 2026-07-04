@@ -14,7 +14,7 @@ Browse educational project ideas (components, steps, links) for inspiration. **L
 | Flutter list/detail pages | **Partial** | `/learning` and `/learning/:id` use `ApiLearningHubRepository` + Riverpod providers; browse exposes category, search, difficulty, and tag filters |
 | Home learning spotlight | **Implemented** | Reuses `learningProjectsProvider` with `limit: 2` on `/home` |
 | Add draft page | **Implemented for learner submit** | `LearningAddDraftPage` is reachable from Learning Hub, can save a local device draft, and posts to `POST /api/learning-projects/submit` with `Idempotency-Key`; submitted projects enter `PENDING_REVIEW` |
-| Admin project moderation | **Implemented** | `/admin/learning-projects` lists, filters, reviews, approves/rejects/request-changes, hides/restores, and archives projects |
+| Project moderation | **Implemented** | `/admin/learning-projects` lists, filters, reviews, approves/rejects/request-changes, hides/restores, and archives projects for admins; backend review endpoints also allow `MODERATOR` tokens |
 | AI panel on detail | **Frontend-only** | `disabled_ai_panel.dart` — placeholder |
 | Ratings on cards/detail | **Partial** | Hidden when backend `ratingSummary` is null (current API returns null) |
 | Project links | **Implemented** | Detail links open safe `http`/`https` URLs through `url_launcher`; invalid/missing URLs are disabled |
@@ -62,7 +62,7 @@ Repository filter: `status: 'PUBLISHED'` (`learning-projects.repository.ts`).
 | GET | `/api/learning-projects/:id` | Public | **Yes** — Learning Hub detail |
 | GET | `/api/categories?type=PROJECT` | Public | **Yes** — category chips |
 | POST | `/api/learning-projects/submit` | JWT + LEARNER + `Idempotency-Key` | **Yes** — add-draft submit |
-| GET/PATCH | `/api/admin/learning-projects*` | JWT + ADMIN | **Yes** — admin moderation portal |
+| GET/PATCH | `/api/admin/learning-projects*` | JWT + ADMIN or MODERATOR | **Yes** — admin moderation portal; no moderator portal yet |
 
 Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. Flutter `/learning` exposes `q`, `categoryId`, `difficulty`, and tag chips derived from tags returned in the project list response.
 
@@ -87,7 +87,7 @@ Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. 
 
 - Project IDs are backend UUIDs; old mock slug bookmarks will not resolve.
 - `ratingSummary` is currently null in backend responses — rating UI stays hidden.
-- Project moderation is admin-backed; a separate moderator portal/workspace is still **not implemented**.
+- Project moderation API accepts ADMIN and MODERATOR roles, but the shipped Flutter review workspace is the admin portal; a separate moderator portal/workspace is still **not implemented**.
 - Hub “Load more” is client-side within the first fetched page; server `page > 1` navigation is not exposed in the UI yet.
 - AI material matching — **not implemented**.
 - Save project, like project, follow project/category, start build, build checklist, and available/missing/alternative material coverage — **not implemented**.

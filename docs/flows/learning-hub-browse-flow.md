@@ -156,9 +156,11 @@ Fill title, summary, components, steps, links → tap submit → project is sent
 
 `POST /api/learning-projects/submit` with JWT + `LEARNER` role + `Idempotency-Key`. Backend validates the body and creates a `PENDING_REVIEW` project. Same learner + same key + same body replays the stored response without inserting another project; same key with a different body returns `409 IDEMPOTENCY_KEY_REUSED`.
 
+Admin or moderator reviewers use `/api/admin/learning-projects*` to list pending submissions, preview details, approve, reject, request changes, hide, restore, or archive projects. The current Flutter review workspace is `/admin/learning-projects`; a standalone moderator portal is not implemented.
+
 ### Database changes
 
-Creates a `learning_projects` row with `status = PENDING_REVIEW`, `submittedAt`, `submittedByUserId`, plus optional components, steps, and links. The successful response is stored in `idempotency_records` under scope `LEARNING_PROJECT_SUBMIT`.
+Creates a `learning_projects` row with `status = PENDING_REVIEW`, `submittedAt`, `createdBy`, plus optional components, steps, and links. The successful response is stored in `idempotency_records` under scope `LEARNING_PROJECT_SUBMIT`.
 
 ### Files involved
 

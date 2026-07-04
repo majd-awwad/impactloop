@@ -22,9 +22,9 @@ Moderator is invitation-only. It is not available through public registration.
 | Category request approval | **Implemented for ADMIN** | `/api/admin/approvals/category-requests*` |
 | Price request approval | **Implemented for ADMIN** | `/api/admin/approvals/price-requests*` |
 | Material reports review | **Implemented for ADMIN** | `/api/admin/material-reports*` |
-| Learning project moderation API | **Not implemented** | Public read `PUBLISHED` only; no submit/review endpoints |
+| Learning project moderation API | **Implemented** | `MODERATOR` tokens can use `/api/admin/learning-projects*` review endpoints |
 
-**Overall:** Moderator exists as a role and invitation target, but there is no moderator portal or moderator-specific API. Some planned moderation work is currently handled by admin routes.
+**Overall:** Moderator exists as a role and invitation target. Learning project moderation is available through shared admin-route backend endpoints, but there is no moderator portal or moderator-specific module. Other planned moderation work is currently handled by admin routes.
 
 ## Current related implementation
 
@@ -36,7 +36,7 @@ Moderator is invitation-only. It is not available through public registration.
 | Category request approval | Admin approvals UI/API |
 | Price request approval | Admin approvals UI/API |
 | Supplier verification review | Admin supplier verification UI/API |
-| Project publishing/review | Not implemented |
+| Project publishing/review | Shared admin-route backend API for ADMIN/MODERATOR; admin portal UI only |
 
 ## Planned moderator scope
 
@@ -46,6 +46,7 @@ From the role capability plan, moderator should eventually be able to:
 - Review suspicious listings.
 - Review wrong categories.
 - Review inappropriate images/descriptions.
+- Review learning project submissions through the shared backend API.
 - Review project reports when project reports exist.
 - Review price issues.
 - Review material type/category requests if delegated from admin.
@@ -68,10 +69,10 @@ Admin remains the current implemented owner for approvals and material report re
 ## What is missing
 
 - `/moderator` route and Flutter feature.
-- Moderator-authenticated backend routes.
+- Moderator-specific backend routes.
 - Moderator queue API and UI.
 - Clear permission matrix for moderator vs admin actions.
-- Project submission/review workflow.
+- Moderator portal access to the project submission/review workflow.
 - Notifications to suppliers/learners after moderator actions.
 
 ## Questions before implementation

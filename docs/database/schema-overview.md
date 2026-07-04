@@ -154,7 +154,9 @@ Tables listed in [03-database.md](../03-database.md) but **absent** from current
 | `20260619180000_add_price_rule_request_listing_draft_json` | Price rule listing drafts |
 | `20260619190000_add_request_published_material_tracking` | Published material tracking |
 | `20260625120000_add_internal_delivery_domain` | Driver profiles, deliveries, assignment/history/location pings |
+| `20260625120000_add_material_reports_and_moderation` | Material reports and material moderation fields |
 | `20260625123000_add_delivery_active_invariant_indexes` | Partial unique indexes for active delivery invariants |
+| `20260625140000_add_learning_project_moderation_fields` | Learning project submission/review moderation fields |
 | `20260627120000_add_idempotency_records` | Generic idempotency records for safe create retries |
 | `20260704120000_add_user_saved_locations` | Private saved locations and PostGIS location index |
 

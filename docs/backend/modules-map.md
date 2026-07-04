@@ -133,7 +133,7 @@ Mount order: `apps/backend/src/app.ts`
 
 **Key files:** `admin.routes.ts`, `admin.controller.ts`, `admin.service.ts`, `admin.repository.ts`, `admin.dashboard.test.ts`
 
-**Auth:** `authMiddleware` + `requireRoles('ADMIN')` on all `/api/admin/*` routes.
+**Auth:** `authMiddleware` + `requireRoles('ADMIN')` on most `/api/admin/*` routes. Learning project moderation routes use `requireRoles('ADMIN', 'MODERATOR')`.
 
 **Prisma:** Aggregates and operations across existing tables (`users`, `user_roles`, `materials`, `material_reports`, `reservations`, `categories`, `role_invitations`, `category_requests`, `price_rule_requests`, supplier verification tables). No admin-only tables.
 
@@ -189,7 +189,7 @@ Mount order: `apps/backend/src/app.ts`
 
 **Prisma:** `LearningProject` and related project tables
 
-**Frontend:** Learning hub list/detail, home spotlight, and add-draft submission are API-backed; admin moderation lives under `/api/admin/learning-projects*` — see [08-implementation-status.md](../08-implementation-status.md)
+**Frontend:** Learning hub list/detail, home spotlight, and add-draft submission are API-backed; project moderation lives under `/api/admin/learning-projects*` for ADMIN or MODERATOR tokens, with the shipped UI under the admin portal — see [08-implementation-status.md](../08-implementation-status.md)
 
 ---
 

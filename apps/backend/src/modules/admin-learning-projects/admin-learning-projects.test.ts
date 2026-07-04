@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
+import type { AddressInfo } from 'node:net';
 
+import { app } from '../../app.js';
 import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 import { AppError } from '../../utils/app-error.js';
+import { signAccessToken } from '../../utils/jwt.js';
 
 import {
   approveAdminLearningProject,
@@ -36,6 +39,48 @@ const ids: TestIds = {
   notifications: [],
   activityLogs: [],
 };
+
+async function requestAdminLearningProjectAction(input: {
+  method: 'GET' | 'PATCH';
+  path: string;
+  roles?: string[];
+  body?: unknown;
+}) {
+  const server = app.listen(0);
+
+  try {
+    const address = server.address() as AddressInfo;
+    const token =
+      input.roles === undefined
+        ? null
+        : signAccessToken({
+            sub: 'route-guard-test-user',
+            roles: input.roles,
+          });
+    const response = await fetch(`http://127.0.0.1:${address.port}${input.path}`, {
+      method: input.method,
+      headers: {
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(input.body ? { 'content-type': 'application/json' } : {}),
+      },
+      body: input.body ? JSON.stringify(input.body) : undefined,
+    });
+
+    return {
+      status: response.status,
+      body: (await response.json()) as {
+        error?: { code?: string };
+      },
+    };
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
+  }
+}
 
 async function createAdminUser() {
   const passwordHash = await hashPassword('TestPassword123!');
@@ -478,5 +523,38 @@ describe('admin learning projects moderation', () => {
     assert.equal(filtered.items.length, 1);
     assert.ok(filtered.items[0]?.title.includes('search-alpha'));
     assert.equal(filtered.pagination.total, 1);
+  });
+
+  test('normal users cannot run learning project review actions', async () => {
+    const result = await requestAdminLearningProjectAction({
+      method: 'PATCH',
+      path: '/api/admin/learning-projects/11111111-1111-4111-8111-111111111111/reject',
+      roles: ['LEARNER'],
+      body: { reason: 'Not enough detail.' },
+    });
+
+    assert.equal(result.status, 403);
+    assert.equal(result.body.error?.code, 'FORBIDDEN');
+  });
+
+  test('moderators can reach learning project review endpoints', async () => {
+    const result = await requestAdminLearningProjectAction({
+      method: 'PATCH',
+      path: '/api/admin/learning-projects/11111111-1111-4111-8111-111111111111/approve',
+      roles: ['MODERATOR'],
+    });
+
+    assert.equal(result.status, 404);
+    assert.equal(result.body.error?.code, 'NOT_FOUND');
+  });
+
+  test('unauthenticated review actions are rejected', async () => {
+    const result = await requestAdminLearningProjectAction({
+      method: 'PATCH',
+      path: '/api/admin/learning-projects/11111111-1111-4111-8111-111111111111/approve',
+    });
+
+    assert.equal(result.status, 401);
+    assert.equal(result.body.error?.code, 'UNAUTHENTICATED');
   });
 });

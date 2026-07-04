@@ -83,7 +83,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 | Map API `difficulty` enum to localized labels? | **Resolved** — `LearningHubApiMapper.mapDifficultyLabel` | [learning-hub](features/learning-hub.md) |
 | Remove mock data from list/detail/home spotlight? | **Resolved** — API-backed; mock file retained for disabled AI copy and unused sample catalog only | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
 | Show fake ratings on API-backed pages? | **Resolved** — hidden when `ratingSummary` is null; backend currently always null | [learning-hub](features/learning-hub.md) |
-| Project submission/admin review workflow (draft → pending → published)? | **Resolved** — learner submit creates `PENDING_REVIEW`; `/admin/learning-projects` moderation can approve/request changes/reject/hide/restore/archive. Moderator-owned review remains not implemented. | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md), `learning-projects.routes.ts`, `admin.routes.ts`, `admin-learning-projects.*` |
+| Project submission/admin review workflow (draft -> pending -> published)? | **Resolved** — learner submit creates `PENDING_REVIEW`; `/api/admin/learning-projects*` moderation allows ADMIN and MODERATOR tokens to approve/request changes/reject/hide/restore/archive. The shipped Flutter review UI is still the admin portal; a separate moderator portal remains not implemented. | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md), `learning-projects.routes.ts`, `admin.routes.ts`, `admin-learning-projects.*` |
 | Learning project ratings/reviews model and API? | **Not implemented** — `reviews` table is reservation-scoped; no PROJECT target type | [learning-hub](features/learning-hub.md) |
 | AI material matching for project components? | **Not implemented** | [ai-agent](features/ai-agent.md) |
 | Open external project links in browser (`url_launcher`)? | **Resolved** — detail links open safe `http`/`https` URLs; invalid/missing URLs render disabled | [learning-hub](features/learning-hub.md) |
@@ -115,7 +115,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 | Question | Status | Source |
 |----------|--------|--------|
-| Should category/price/material report review remain admin-only, or should moderator share those queues? | Open | [admin](features/admin.md), [moderator](features/moderator.md) |
+| Should category/price/material report review remain admin-only, or should moderator share those queues? | Open — learning project review is now shared by ADMIN/MODERATOR; other queues remain admin-only | [admin](features/admin.md), [moderator](features/moderator.md) |
 | What moderator portal should be built first? | Open | [moderator](features/moderator.md), [roles-and-capabilities](features/roles-and-capabilities.md) |
 | Should future sensitive admin actions require a `SUPER_ADMIN` role or another policy? | Open | [admin](features/admin.md) |
 

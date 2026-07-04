@@ -26,7 +26,7 @@ Admin is an operational support role. It is not available through public registr
 | Audit logs route | **Implemented** | `/admin/audit-logs` reads paginated `admin_activity_logs` with filters/details |
 | Delivery/reservation admin ops | **Partial** | Read-only monitoring pages exist; reassignment/cancellation operations are not implemented |
 | AI usage/log viewer | **Not implemented** | Material-matching AI is not implemented |
-| Project moderation | **Implemented for ADMIN** | `/admin/learning-projects` review queue with approve/request changes/reject/hide/restore/archive actions |
+| Project moderation | **Implemented** | `/admin/learning-projects` review queue for admins; backend `/api/admin/learning-projects*` review endpoints also allow `MODERATOR` |
 
 **Overall:** **Partial**. Admin portal and APIs cover several MVP operations, including learning project moderation, impact, audit logs, and read-only reservation/delivery monitors. AI logs and operational delivery/reservation actions remain future work.
 
@@ -42,7 +42,7 @@ Admin is an operational support role. It is not available through public registr
    - Category and price approvals.
    - Invitations.
    - Impact analytics, audit logs, read-only operations monitors, and learning project moderation.
-4. Admin actions use `/api/admin/*` endpoints guarded by `authMiddleware` + `requireRoles('ADMIN')`.
+4. Admin actions use `/api/admin/*` endpoints guarded by `authMiddleware` + `requireRoles('ADMIN')`; learning project moderation endpoints are shared with `MODERATOR`.
 
 ## Frontend files
 
@@ -68,7 +68,7 @@ Admin is an operational support role. It is not available through public registr
 
 ## API surface
 
-Mounted at `/api/admin` and guarded by `ADMIN`.
+Mounted at `/api/admin` and guarded by `ADMIN`, except learning project moderation which allows `ADMIN` or `MODERATOR`.
 
 | Area | Endpoints |
 |------|-----------|
@@ -88,7 +88,7 @@ Full route details: [api-catalog](../backend/api-catalog.md#admin--apiadmin).
 - Admin can invite `DRIVER`, `MODERATOR`, and `ADMIN`.
 - Admin can review category and price requests; moderator cannot yet.
 - Admin can review material reports; a general reports module is not present.
-- Admin can review and publish/hide/archive learning projects; moderator cannot yet.
+- Admin can review and publish/hide/archive learning projects in the admin portal; moderator tokens can call the same backend review endpoints, but there is no moderator portal yet.
 - Admin people management cannot delete users or manually edit roles.
 - Admin suspension/reactivation is guarded against self-suspension, admin suspension, and last-active-admin risk.
 
@@ -103,7 +103,7 @@ From the role capability plan:
 - Deeper impact analytics beyond the current dashboard-backed route.
 - Audit log export/retention policy beyond the current paginated admin UI.
 - AI usage/log review if learner material matching AI is implemented.
-- Moderator-owned project review or shared moderator/admin review queues.
+- A dedicated moderator portal/workspace for the shared project review queue.
 
 ## Risks / open questions
 

@@ -252,7 +252,7 @@ Used by: `LearningProject.difficulty`
 
 ## `LearningProjectStatus`
 
-`DRAFT`, `PENDING_REVIEW`, `PUBLISHED`, `REJECTED`, `ARCHIVED`
+`DRAFT`, `PENDING_REVIEW`, `PUBLISHED`, `CHANGES_REQUESTED`, `REJECTED`, `HIDDEN`, `ARCHIVED`
 
 Used by: `LearningProject.status`
 

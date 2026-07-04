@@ -201,8 +201,14 @@ Indexes: `userId`, `(userId, isDefault)`, `locationId`.
 | estimatedDurationMinutes | Int? | |
 | coverImageUrl | String? | |
 | status | LearningProjectStatus | default `DRAFT` |
+| submittedAt | DateTime? | Set when a learner submits a project for review |
 | reviewedBy | String? | FK → users |
+| reviewedAt | DateTime? | Last review action timestamp |
 | reviewNote | String? | |
+| rejectionReason | String? | Set by reject action |
+| changesRequestedReason | String? | Set by request-changes action |
+| hiddenAt, hiddenBy, hiddenReason | DateTime? / String? | Hidden/unpublished moderation audit fields |
+| archivedAt, archivedBy, archivedReason | DateTime? / String? | Archive moderation audit fields |
 | stepsGeneratedByAi | Boolean | default false |
 | aiStepsGeneratedAt | DateTime? | |
 
