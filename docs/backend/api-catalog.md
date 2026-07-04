@@ -54,6 +54,21 @@ Validation schemas: `auth/auth.validation.ts`
 - Success: marks token used, updates `users.password_hash`, revokes active `REFRESH_TOKEN` rows for the user, sends a password-changed notification email, and returns `data: null`.
 - Invalid, expired, or used tokens return a safe validation error. Reset does not create an auth session.
 
+## Notifications — `/api/notifications`
+
+| Method | Path | Auth | Module |
+|--------|------|------|--------|
+| GET | `/api/notifications` | Bearer JWT | `notifications/notifications.routes.ts` |
+| GET | `/api/notifications/unread-count` | Bearer JWT | `notifications/notifications.routes.ts` |
+| PATCH | `/api/notifications/read-all` | Bearer JWT | `notifications/notifications.routes.ts` |
+| PATCH | `/api/notifications/:id/read` | Bearer JWT | `notifications/notifications.routes.ts` |
+
+`GET /api/notifications` query: `page`, `limit`, optional `isRead=true|false`. Returns `{ items[], unreadCount, pagination }` where each item includes `id`, `notificationType`, `title`, `body`, `relatedEntityType`, `relatedEntityId`, `isRead`, `createdAt`.
+
+Reservation lifecycle writes persisted rows for supplier/learner recipients (`RESERVATION_REQUESTED`, `RESERVATION_ACCEPTED`, `RESERVATION_SCHEDULING_PROPOSAL`, `RESERVATION_DECLINED`, `RESERVATION_CANCELLED`, `RESERVATION_EXPIRED`). Admin moderation flows continue to write their own `notificationType` values.
+
+Supplier **derived action inbox** remains at `GET /api/supplier/notifications` (category/price/reservation review cards). Generic `/api/notifications` covers persisted table rows for any authenticated user.
+
 ## Profile — `/api/profile`
 
 | Method | Path | Auth | Source file |

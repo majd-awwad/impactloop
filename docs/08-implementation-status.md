@@ -49,7 +49,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `locations` | **Partial** | Reverse geocode only — no CRUD locations API |
 | `learning-projects` | **Implemented** | Public read list + detail (`PUBLISHED` only); learner `POST /submit` → `PENDING_REVIEW`; admin moderation module |
 | `invitations` | **Implemented** | Admin email invitations (mock/SMTP), validate/accept API, unified `driver_profiles` |
-| `reservations` | **Partial** | Learner create/cancel/read-by-id + learner confirmation + request-reschedule + report-supplier-issue + report-no-driver + my reservations read with scheduling fields, `canLearnerReschedule`, `canLearnerReportSupplier`, `canReportNoDriverAvailable`, `pickupHandoverPhase`, `activeDelivery`, post-acceptance `pickupLocationFull`, derived overdue follow-up fields, reservation-scoped messages; partial-quantity holds; lazy automatic `PENDING` → `EXPIRED` on read paths; learner delivery request route mounted |
+| `reservations` | **Partial** | Learner create/cancel/read-by-id + learner confirmation + request-reschedule + report-supplier-issue + report-no-driver + my reservations read with scheduling fields, `canLearnerReschedule`, `canLearnerReportSupplier`, `canReportNoDriverAvailable`, `pickupHandoverPhase`, `activeDelivery`, post-acceptance `pickupLocationFull`, derived overdue follow-up fields, reservation-scoped messages; partial-quantity holds; lazy automatic `PENDING` → `EXPIRED` on read paths; persisted reservation notifications; learner delivery request route mounted |
 | `deliveries` | **Partial** | Learner delivery request/read backed by `deliveries`; Flutter learner request/status UI, latest ping summary, and polling map marker exist; driver jobs/status UI exists; no realtime stream |
 | `driver` | **Partial** | Driver available/active jobs, accept, status updates, foreground auto-location sharing on active delivery detail page, and manual location pings; no background GPS |
 | `admin` | **Partial** | Dashboard + invitations + supplier verification + approvals + materials moderation + people management + impact analytics + audit logs + reservations/deliveries monitoring (read-only) + reservation incident report queue (verify/reject/resolve); other admin pages placeholder |
@@ -60,6 +60,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `fulfillment-failures` | **Implemented (Phase 5–7)** | Post-grace failure/no-show transitions for supplier and driver; creates incident reports for driver pickup/delivery failures; quantity hold rules (release on self-pickup report before handover; keep hold after driver pickup failures) |
 | `admin-no-show-reports` | **Implemented (Phase 6–7)** | Admin reservation incident queue; verify/reject/resolve without strike; enriched detail (messages, history, strikes); 3 verified strikes auto-suspend + token revocation |
 | `supplier-notifications` | **Implemented** | Derived supplier inbox |
+| `notifications` | **Implemented** | Generic persisted inbox API + reservation lifecycle writes |
 | `supplier-verification` | **Implemented** | Supplier verification submit/status support for organization suppliers |
 
 ### Backend **not implemented** as modules
@@ -119,7 +120,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | AI price suggestions (listing) | **Partial** | `ai-price-suggestion.service.ts`, `AiPriceLookupLog` — internal to price rules; **not** material-matching agent |
 | Learning hub API → Flutter | **Partial** | Read path wired: `/learning`, `/learning/:id`, Home spotlight; add-draft/AI/ratings/review pending |
 | Reviews | **Not implemented** | `reviews` table; no API/UI |
-| General notifications API | **Not implemented** | `notifications` table; supplier-derived notifications only |
+| General notifications API | **Implemented** | `GET/PATCH /api/notifications` + reservation lifecycle writes to `notifications` table; supplier derived inbox unchanged |
 | Admin / moderator dashboards | **Partial** | Admin overview dashboard **Partial** ([admin.md](features/admin.md)); moderator **Not implemented** |
 | Impact analytics | **Partial** | Computed from `materials`/`reservations` in admin dashboard; counts whole `REUSED` materials (not per-reservation quantity yet) |
 
@@ -139,7 +140,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Legacy delivery fields on reservation | Yes | Deprecated compatibility only | No |
 | Learning projects | Yes | Yes (PUBLISHED only) | **Partial** — browse/detail/spotlight API-backed; add-draft mock-only |
 | Reviews | Yes | No | No |
-| Notifications (generic) | Yes | No | No |
+| Notifications (generic) | Yes | Yes | Partial (`/notifications` page) |
 | Price/category requests | Yes | Yes | Yes (supplier add flow) |
 
 ---

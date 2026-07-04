@@ -1,4 +1,5 @@
 import { AppError } from '../../utils/app-error.js';
+import { notifyReservationCancelledByLearner } from '../notifications/reservation-notifications.js';
 import {
   deriveHandoverCode,
   ensureSelfPickupCodeStored,
@@ -38,6 +39,7 @@ import {
   expireStalePendingReservationsByIds,
   expireStalePendingReservationsForMaterialIds,
 } from './reservations.pending-expiry.repository.js';
+import { notifyReservationCreated } from '../notifications/reservation-notifications.js';
 import type {
   CreateReservationInput,
   CreateReservationMessageInput,
@@ -434,6 +436,7 @@ export const createReservation = async (
 
   switch (result.outcome) {
     case 'CREATED':
+      void notifyReservationCreated(result.reservation.id);
       return mapReservation(result.reservation);
     case 'NOT_FOUND':
       throw new AppError('Material not found.', 404, 'NOT_FOUND');
@@ -490,6 +493,7 @@ export const cancelReservation = async (
 
   switch (result.outcome) {
     case 'CANCELLED':
+      void notifyReservationCancelledByLearner(result.reservation.id);
       return mapCancelledReservation(result.reservation);
     case 'NOT_FOUND':
       throw new AppError('Reservation not found.', 404, 'NOT_FOUND');

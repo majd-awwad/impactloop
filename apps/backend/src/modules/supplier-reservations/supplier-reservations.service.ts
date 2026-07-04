@@ -46,6 +46,10 @@ import {
   canReportNoDriverAvailable,
   createNoDriverAvailableReport,
 } from '../reservations/reservations.incidents.repository.js';
+import {
+  notifyReservationAccepted,
+  notifyReservationDeclined,
+} from '../notifications/reservation-notifications.js';
 import type {
   AcceptSupplierReservationInput,
   CancelSupplierReservationInput,
@@ -538,6 +542,8 @@ export const acceptSupplierReservation = async (
     );
   }
 
+  void notifyReservationAccepted(result.reservation.id);
+
   return mapSupplierReservation(result.reservation);
 };
 
@@ -565,6 +571,8 @@ export const declineSupplierReservation = async (
       'CONFLICT',
     );
   }
+
+  void notifyReservationDeclined(result.reservation.id);
 
   return mapSupplierReservation(result.reservation);
 };

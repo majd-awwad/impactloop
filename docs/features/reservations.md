@@ -40,7 +40,7 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 | Delivery learner UI | **Partial** | Request/status/tracking summary + polling map marker on delivery detail; not on self-pickup reservation cards |
 | Admin incident queue | **Implemented** | `/admin/no-show-reports` verify/reject/resolve |
 
-**Overall:** **Partial**. Core booking, scheduling, handover codes, cancel/reschedule, incident reporting, and delivery request paths are implemented end-to-end. Remaining reservation-loop gaps: generic notifications, QR polish, saved dropoff addresses.
+**Overall:** **Partial**. Core booking, scheduling, handover codes, cancel/reschedule, incident reporting, and delivery request paths are implemented end-to-end. Remaining reservation-loop gaps: QR polish, saved dropoff addresses.
 
 ## Existing Related Files
 
@@ -102,7 +102,7 @@ Verified against code (2026-07-04):
 - **Automatic `PENDING` expiry** — implemented via lazy expiry on read paths; see Intended Purpose above.
 - ~~**Supplier `mark-delivery-pickup-expired` UI**~~ — implemented on incoming request cards (`canSupplierMarkDeliveryPickupExpired` + confirm dialog).
 - **Self-pickup map on learner reservation UI** — implemented on accepted self-pickup cards when `pickupLocationFull` includes coordinates (OpenStreetMap marker + address text).
-- Generic persisted notification table flow (supplier-derived inbox only today).
+- Generic persisted notification table flow — **Implemented** via `/api/notifications` + reservation lifecycle writes (supplier derived inbox unchanged).
 - Live delivery tracking stream, ETA, delivery cancellation/retry, payment, and reviews.
 - Saved learner dropoff addresses, standalone location CRUD, current-location delivery request, and nearest-first sorting.
 - QR polish.

@@ -29,6 +29,7 @@ import '../../features/profile/presentation/pages/learner_profile_edit_page.dart
 import '../../features/profile/presentation/pages/profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_security_page.dart';
+import '../../features/notifications/presentation/pages/user_notifications_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservation_detail_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
@@ -145,6 +146,7 @@ _RouteAccessLevel _routeAccessForPath(String path) {
   if (path == '/home' ||
       path == '/profile' ||
       path.startsWith('/profile/') ||
+      path == '/notifications' ||
       path == _supplierAccessDeniedRoute) {
     return _RouteAccessLevel.authenticated;
   }
@@ -415,6 +417,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile/security',
         builder: (context, state) => const ProfileSecurityPage(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const UserNotificationsPage(),
       ),
       GoRoute(
         path: '/learner/deliveries/:id',

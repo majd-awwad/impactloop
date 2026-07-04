@@ -6,6 +6,7 @@ import {
   pendingReservationExpiredNote,
   type PendingReservationExpiryRecord,
 } from './reservation-pending-expiry.js';
+import { notifyReservationsExpired } from '../notifications/reservation-notifications.js';
 import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
@@ -90,9 +91,13 @@ export const expireStalePendingReservationsByIds = async (
     return [];
   }
 
-  return runSerializableTransaction(async (tx) =>
+  const expiredIds = await runSerializableTransaction(async (tx) =>
     expireStalePendingReservationsInTransaction(tx, pending, changedBy),
   );
+
+  void notifyReservationsExpired(expiredIds);
+
+  return expiredIds;
 };
 
 export const expireStalePendingReservationsForMaterialIds = async (
@@ -115,9 +120,13 @@ export const expireStalePendingReservationsForMaterialIds = async (
     return [];
   }
 
-  return runSerializableTransaction(async (tx) =>
+  const expiredIds = await runSerializableTransaction(async (tx) =>
     expireStalePendingReservationsInTransaction(tx, pending, changedBy),
   );
+
+  void notifyReservationsExpired(expiredIds);
+
+  return expiredIds;
 };
 
 export const expireStalePendingReservationsForOwner = async (
@@ -136,9 +145,13 @@ export const expireStalePendingReservationsForOwner = async (
     return [];
   }
 
-  return runSerializableTransaction(async (tx) =>
+  const expiredIds = await runSerializableTransaction(async (tx) =>
     expireStalePendingReservationsInTransaction(tx, pending, changedBy),
   );
+
+  void notifyReservationsExpired(expiredIds);
+
+  return expiredIds;
 };
 
 export const expireStalePendingReservationsForLearnerMaterial = async (

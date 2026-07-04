@@ -169,7 +169,7 @@ Complete invalidates incoming requests, supplier notifications, supplier dashboa
 - Dedicated learner reservation detail route (`/learner/reservations/:id`).
 - Self-pickup map on learner reservation UI — **Implemented**.
 - Realtime delivery tracking stream / background GPS.
-- Generic persisted notifications on reservation state changes.
+- Generic persisted notifications on reservation state changes — **Implemented** (`/api/notifications` + `/notifications` Flutter page).
 - QR polish.
 
 ---
