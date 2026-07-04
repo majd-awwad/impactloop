@@ -7,6 +7,7 @@ import {
   getAdminNoShowReportById,
   listAdminNoShowReports,
   rejectAdminNoShowReport,
+  resolveAdminNoShowReport,
   verifyAdminNoShowReport,
 } from './admin-no-show-reports.service.js';
 import type {
@@ -62,4 +63,18 @@ export const rejectAdminNoShowReportHandler = async (
   );
 
   res.json(successResponse('No-show report rejected.', report));
+};
+
+export const resolveAdminNoShowReportHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<AdminNoShowReportIdParams>(req);
+  const report = await resolveAdminNoShowReport(
+    req.auth!.sub,
+    id,
+    (req.body as ReviewNoShowReportInput).reviewNote,
+  );
+
+  res.json(successResponse('Report resolved without strike.', report));
 };

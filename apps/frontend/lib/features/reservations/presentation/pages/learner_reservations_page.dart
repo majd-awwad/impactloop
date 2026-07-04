@@ -15,8 +15,10 @@ import '../../../auth/application/auth_controller.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../deliveries/data/models/learner_delivery.dart';
+import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../application/my_reservations_provider.dart';
 import '../../application/reservation_cancel_controller.dart';
+import '../../data/reservations_repository.dart';
 import '../../data/models/learner_reservation.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../learner_reservation_ui_helpers.dart';
@@ -598,6 +600,7 @@ class _ReservationStatusRow extends StatelessWidget {
                 reservation.status,
                 fulfillmentMethod: reservation.fulfillmentMethod,
                 deliveryStatus: delivery?.status,
+                pickupWindowEnd: reservation.pickupWindowEnd,
               ),
           background: statusStyle.chipBackground,
           foreground: statusStyle.chipForeground,
@@ -617,7 +620,7 @@ class _ReservationStatusRow extends StatelessWidget {
           )
         else if (deliveryStyle != null)
           _ReservationStatusChip(
-            label: _deliveryStatusLabel(delivery!.status),
+            label: deliveryStatusLabel(delivery!.status),
             background: deliveryStyle.background,
             foreground: deliveryStyle.foreground,
             border: deliveryStyle.border,
@@ -725,6 +728,14 @@ class _AcceptedPickupInfoBlock extends StatelessWidget {
               code: reservation.selfPickupCode!,
               instructions:
                   'Give this code to the supplier when you receive the material.',
+            ),
+          ],
+          if (reservation.shouldShowLearnerDeliveryCode) ...[
+            const SizedBox(height: AppSpacing.sm),
+            HandoverConfirmationCodePanel(
+              code: reservation.activeDelivery!.learnerDeliveryCode!,
+              instructions:
+                  'Give this code to the driver when you receive the material.',
             ),
           ],
         ],
@@ -953,6 +964,29 @@ class _ReservationCardSummaryLines extends StatelessWidget {
             reservationId: reservation.id,
             canSendMessage: reservation.canSendMessage,
             currentUserId: currentUserId,
+          ),
+        ],
+        if (reservation.canLearnerReschedule) ...[
+          const SizedBox(height: 12),
+          _LearnerRequestRescheduleButton(reservation: reservation),
+        ],
+        if (reservation.canLearnerReportSupplier) ...[
+          const SizedBox(height: 12),
+          _LearnerReportSupplierButton(reservation: reservation),
+        ],
+        if (reservation.canReportNoDriverAvailable) ...[
+          const SizedBox(height: 12),
+          _LearnerReportNoDriverButton(reservation: reservation),
+        ],
+        if (reservation.isAwaitingSupplierConfirmation &&
+            reservation.pendingRescheduleReason?.trim().isNotEmpty == true) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Your reschedule request: ${reservation.pendingRescheduleReason!.trim()}',
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ],
@@ -1517,29 +1551,422 @@ Map<String, LearnerDelivery> _latestDeliveryByReservationId(
   return result;
 }
 
-String _deliveryStatusLabel(String status) {
-  switch (status) {
-    case 'WAITING_FOR_DRIVER':
-      return 'Waiting for driver';
-    case 'DRIVER_ASSIGNED':
-      return 'Driver assigned';
-    case 'ARRIVED_PICKUP':
-      return 'Driver at pickup';
-    case 'PICKED_UP':
-      return 'Picked up';
-    case 'ON_THE_WAY':
-      return 'On the way';
-    case 'ARRIVED_DROPOFF':
-      return 'Arrived at dropoff';
-    case 'DELIVERED':
-      return 'Delivered';
-    case 'CANCELLED':
-      return 'Delivery cancelled';
-    case 'FAILED_PICKUP':
-      return 'Pickup failed';
-    case 'FAILED_DELIVERY':
-      return 'Delivery failed';
-    default:
-      return status;
+class _LearnerRequestRescheduleButton extends ConsumerStatefulWidget {
+  const _LearnerRequestRescheduleButton({required this.reservation});
+
+  final LearnerReservation reservation;
+
+  @override
+  ConsumerState<_LearnerRequestRescheduleButton> createState() =>
+      _LearnerRequestRescheduleButtonState();
+}
+
+class _LearnerRequestRescheduleButtonState
+    extends ConsumerState<_LearnerRequestRescheduleButton> {
+  bool _submitting = false;
+
+  Future<void> _submit() async {
+    final reasonController = TextEditingController();
+    final noteController = TextEditingController();
+    DateTime? start;
+    DateTime? end;
+    String? reason;
+    String? note;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> pickStart() async {
+              final date = await showDatePicker(
+                context: context,
+                firstDate: DateTime.now(),
+                lastDate: DateTime.now().add(const Duration(days: 60)),
+                initialDate: start ?? DateTime.now().add(const Duration(days: 1)),
+              );
+              if (date == null || !context.mounted) return;
+              final time = await showTimePicker(
+                context: context,
+                initialTime: const TimeOfDay(hour: 10, minute: 0),
+              );
+              if (time == null) return;
+              setDialogState(() {
+                start = DateTime(
+                  date.year,
+                  date.month,
+                  date.day,
+                  time.hour,
+                  time.minute,
+                );
+              });
+            }
+
+            Future<void> pickEnd() async {
+              final date = await showDatePicker(
+                context: context,
+                firstDate: start ?? DateTime.now(),
+                lastDate: DateTime.now().add(const Duration(days: 60)),
+                initialDate: end ?? start ?? DateTime.now().add(const Duration(days: 1)),
+              );
+              if (date == null || !context.mounted) return;
+              final time = await showTimePicker(
+                context: context,
+                initialTime: const TimeOfDay(hour: 11, minute: 0),
+              );
+              if (time == null) return;
+              setDialogState(() {
+                end = DateTime(
+                  date.year,
+                  date.month,
+                  date.day,
+                  time.hour,
+                  time.minute,
+                );
+              });
+            }
+
+            return AlertDialog(
+              title: const Text('Request reschedule'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: reasonController,
+                      maxLength: 500,
+                      decoration: const InputDecoration(
+                        labelText: 'Reason (required)',
+                      ),
+                    ),
+                    TextField(
+                      controller: noteController,
+                      maxLength: 1000,
+                      decoration: const InputDecoration(
+                        labelText: 'Note (optional)',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    OutlinedButton(
+                      onPressed: pickStart,
+                      child: Text(
+                        start == null
+                            ? 'Pick proposed start'
+                            : 'Start: ${start!.toLocal()}',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    OutlinedButton(
+                      onPressed: pickEnd,
+                      child: Text(
+                        end == null
+                            ? 'Pick proposed end'
+                            : 'End: ${end!.toLocal()}',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    if (reasonController.text.trim().isEmpty ||
+                        start == null ||
+                        end == null ||
+                        !end!.isAfter(start!)) {
+                      return;
+                    }
+                    reason = reasonController.text.trim();
+                    final rawNote = noteController.text.trim();
+                    note = rawNote.isEmpty ? null : rawNote;
+                    Navigator.of(dialogContext).pop(true);
+                  },
+                  child: const Text('Send request'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    reasonController.dispose();
+    noteController.dispose();
+
+    if (confirmed != true ||
+        start == null ||
+        end == null ||
+        reason == null ||
+        !mounted) {
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      await ref.read(reservationsRepositoryProvider).requestPickupReschedule(
+            reservationId: widget.reservation.id,
+            pickupWindowStart: start!,
+            pickupWindowEnd: end!,
+            reason: reason!,
+            note: note,
+          );
+      ref.invalidate(myReservationsProvider);
+      if (!mounted) return;
+      showInfoSnackBar(context, 'Reschedule request sent to supplier.');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      showInfoSnackBar(context, error.displayMessage);
+    } catch (error) {
+      if (!mounted) return;
+      showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: OutlinedButton(
+        onPressed: _submitting ? null : _submit,
+        child: _submitting
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text('Request reschedule'),
+      ),
+    );
+  }
+}
+
+const _learnerSupplierReportReasons = <String, String>{
+  'SUPPLIER_UNAVAILABLE': 'Supplier unavailable',
+  'SUPPLIER_MATERIAL_NOT_READY': 'Material not ready',
+  'WRONG_PICKUP_INFO': 'Wrong pickup information',
+  'OTHER': 'Other',
+};
+
+class _LearnerReportSupplierButton extends ConsumerStatefulWidget {
+  const _LearnerReportSupplierButton({required this.reservation});
+
+  final LearnerReservation reservation;
+
+  @override
+  ConsumerState<_LearnerReportSupplierButton> createState() =>
+      _LearnerReportSupplierButtonState();
+}
+
+class _LearnerReportSupplierButtonState
+    extends ConsumerState<_LearnerReportSupplierButton> {
+  bool _submitting = false;
+
+  Future<void> _submit() async {
+    var selectedReason = 'SUPPLIER_UNAVAILABLE';
+    final noteController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Report supplier issue'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Report a supplier issue for admin review. The reservation will be closed pending review.',
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedReason,
+                  decoration: const InputDecoration(labelText: 'Reason'),
+                  items: _learnerSupplierReportReasons.entries
+                      .map(
+                        (entry) => DropdownMenuItem(
+                          value: entry.key,
+                          child: Text(entry.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => selectedReason = value);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noteController,
+                  maxLength: 1000,
+                  minLines: 3,
+                  maxLines: 5,
+                  decoration: const InputDecoration(
+                    labelText: 'Note (optional)',
+                    hintText: 'Describe what happened',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Submit report'),
+            ),
+          ],
+        ),
+      ),
+    );
+    final note = noteController.text.trim();
+    noteController.dispose();
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    try {
+      await ref.read(reservationsRepositoryProvider).reportSupplierIssue(
+            reservationId: widget.reservation.id,
+            reason: selectedReason,
+            note: note.isEmpty ? null : note,
+          );
+      ref.invalidate(myReservationsProvider);
+      if (!mounted) return;
+      showInfoSnackBar(context, 'Supplier issue reported to admin.');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      showInfoSnackBar(context, error.displayMessage);
+    } catch (error) {
+      if (!mounted) return;
+      showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: OutlinedButton(
+        onPressed: _submitting ? null : _submit,
+        child: _submitting
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text('Report supplier issue'),
+      ),
+    );
+  }
+}
+
+class _LearnerReportNoDriverButton extends ConsumerStatefulWidget {
+  const _LearnerReportNoDriverButton({required this.reservation});
+
+  final LearnerReservation reservation;
+
+  @override
+  ConsumerState<_LearnerReportNoDriverButton> createState() =>
+      _LearnerReportNoDriverButtonState();
+}
+
+class _LearnerReportNoDriverButtonState
+    extends ConsumerState<_LearnerReportNoDriverButton> {
+  bool _submitting = false;
+
+  Future<void> _submit() async {
+    final noteController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report no driver available'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'No driver accepted this delivery. Submit a report for admin review.',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteController,
+              maxLength: 1000,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Note (required)',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (noteController.text.trim().isEmpty) return;
+              Navigator.of(context).pop(true);
+            },
+            child: const Text('Submit report'),
+          ),
+        ],
+      ),
+    );
+    final note = noteController.text.trim();
+    noteController.dispose();
+
+    if (confirmed != true || note.isEmpty || !mounted) return;
+
+    setState(() => _submitting = true);
+    try {
+      await ref.read(reservationsRepositoryProvider).reportNoDriverAvailable(
+            reservationId: widget.reservation.id,
+            note: note,
+          );
+      ref.invalidate(myReservationsProvider);
+      if (!mounted) return;
+      showInfoSnackBar(context, 'No-driver case reported to admin.');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      showInfoSnackBar(context, error.displayMessage);
+    } catch (error) {
+      if (!mounted) return;
+      showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: OutlinedButton(
+        onPressed: _submitting ? null : _submit,
+        child: _submitting
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text('Report no driver available'),
+      ),
+    );
   }
 }

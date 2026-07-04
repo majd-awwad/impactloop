@@ -279,6 +279,16 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
               label: const Text('Report delivery failed'),
             ),
           ],
+          if (widget.delivery.canDriverReportDriverIssue) ...[
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: isSubmitting
+                  ? null
+                  : () => _reportDriverIssue(context),
+              icon: const Icon(Icons.car_crash_outlined),
+              label: const Text('Report driver issue'),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           _LocationSharingSection(delivery: widget.delivery),
           const SizedBox(height: AppSpacing.md),
@@ -361,60 +371,80 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
   }
 
   Future<void> _reportPickupFailed(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Report pickup failed'),
-        content: const Text(
-          'Confirm that the supplier pickup window expired and the handover could not happen.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Report failed'),
-          ),
-        ],
-      ),
+    final result = await _showDriverIncidentDialog(
+      context,
+      title: 'Report pickup failed',
+      reasonOptions: const {
+        'SUPPLIER_UNAVAILABLE': 'Supplier unavailable',
+        'MATERIAL_NOT_READY': 'Material not ready',
+        'LOCATION_ISSUE': 'Location issue',
+        'OTHER': 'Other',
+      },
     );
-
-    if (confirmed != true || !mounted) {
-      return;
-    }
+    if (result == null || !mounted) return;
 
     try {
       await ref
           .read(driverDeliveryActionControllerProvider.notifier)
           .reportPickupFailed(
             deliveryId: widget.delivery.id,
-            reason: 'SUPPLIER_UNAVAILABLE',
-            note: _noteController.text.trim().isEmpty
-                ? null
-                : _noteController.text.trim(),
+            reason: result.reason,
+            note: result.note,
           );
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       showInfoSnackBar(context, 'Pickup failure reported.');
       context.go('/driver/jobs');
     } on ApiException catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       showErrorSnackBar(context, error.displayMessage);
     }
   }
 
   Future<void> _reportDeliveryFailed(BuildContext context) async {
+    final result = await _showDriverIncidentDialog(
+      context,
+      title: 'Report delivery failed',
+      reasonOptions: const {
+        'LEARNER_UNAVAILABLE': 'Learner unavailable',
+        'ADDRESS_ISSUE': 'Address issue',
+        'ACCESS_ISSUE': 'Access issue',
+        'OTHER': 'Other',
+      },
+    );
+    if (result == null || !mounted) return;
+
+    try {
+      await ref
+          .read(driverDeliveryActionControllerProvider.notifier)
+          .reportDeliveryFailed(
+            deliveryId: widget.delivery.id,
+            reason: result.reason,
+            note: result.note,
+          );
+      if (!mounted) return;
+      showInfoSnackBar(context, 'Delivery failure reported.');
+      context.go('/driver/jobs');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      showErrorSnackBar(context, error.displayMessage);
+    }
+  }
+
+  Future<void> _reportDriverIssue(BuildContext context) async {
+    final noteController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Report delivery failed'),
-        content: const Text(
-          'Confirm that the delivery window expired and the learner could not receive the material.',
+        title: const Text('Report driver issue'),
+        content: TextField(
+          controller: noteController,
+          maxLength: 1000,
+          minLines: 3,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            labelText: 'Note (required)',
+            hintText: 'Describe why you cannot continue delivery',
+          ),
         ),
         actions: [
           TextButton(
@@ -422,39 +452,109 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Report failed'),
+            onPressed: () {
+              if (noteController.text.trim().isEmpty) return;
+              Navigator.of(context).pop(true);
+            },
+            child: const Text('Submit report'),
           ),
         ],
       ),
     );
-
-    if (confirmed != true || !mounted) {
-      return;
-    }
+    final note = noteController.text.trim();
+    noteController.dispose();
+    if (confirmed != true || note.isEmpty || !mounted) return;
 
     try {
       await ref
           .read(driverDeliveryActionControllerProvider.notifier)
-          .reportDeliveryFailed(
+          .reportDriverIssue(
             deliveryId: widget.delivery.id,
-            reason: 'LEARNER_UNAVAILABLE',
-            note: _noteController.text.trim().isEmpty
-                ? null
-                : _noteController.text.trim(),
+            note: note,
           );
-      if (!mounted) {
-        return;
-      }
-      showInfoSnackBar(context, 'Delivery failure reported.');
+      if (!mounted) return;
+      showInfoSnackBar(context, 'Driver issue reported.');
       context.go('/driver/jobs');
     } on ApiException catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       showErrorSnackBar(context, error.displayMessage);
     }
   }
+
+  Future<_DriverIncidentFormResult?> _showDriverIncidentDialog(
+    BuildContext context, {
+    required String title,
+    required Map<String, String> reasonOptions,
+  }) async {
+    var selectedReason = reasonOptions.keys.first;
+    final noteController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(title),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: selectedReason,
+                  decoration: const InputDecoration(labelText: 'Reason'),
+                  items: reasonOptions.entries
+                      .map(
+                        (entry) => DropdownMenuItem(
+                          value: entry.key,
+                          child: Text(entry.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => selectedReason = value);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noteController,
+                  maxLength: 1000,
+                  minLines: 3,
+                  maxLines: 5,
+                  decoration: const InputDecoration(
+                    labelText: 'Note (required)',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (noteController.text.trim().isEmpty) return;
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('Submit report'),
+            ),
+          ],
+        ),
+      ),
+    );
+    final note = noteController.text.trim();
+    noteController.dispose();
+    if (confirmed != true || note.isEmpty) return null;
+    return _DriverIncidentFormResult(reason: selectedReason, note: note);
+  }
+}
+
+class _DriverIncidentFormResult {
+  const _DriverIncidentFormResult({required this.reason, required this.note});
+
+  final String reason;
+  final String note;
 }
 
 class _LocationSharingSection extends ConsumerStatefulWidget {

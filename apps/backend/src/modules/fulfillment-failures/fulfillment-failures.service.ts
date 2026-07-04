@@ -12,6 +12,7 @@ import { prisma } from '../../database/prisma.js';
 import * as fulfillmentFailuresRepository from './fulfillment-failures.repository.js';
 import type {
   MarkDriverDeliveryFailedInput,
+  MarkDriverIssueAfterPickupInput,
   MarkDriverNoShowInput,
   MarkDriverPickupFailedInput,
   MarkLearnerNoShowInput,
@@ -241,6 +242,37 @@ export const markDriverDeliveryFailed = async (
       throw new AppError('Delivery window is not set.', 409, 'CONFLICT');
     case 'WINDOW_NOT_EXPIRED':
       throwWindowNotExpired(deliveryWindowNotExpiredMessage());
+    default:
+      return loadDriverDelivery(result.delivery.id);
+  }
+};
+
+export const markDriverIssueAfterPickup = async (
+  driverUserId: string,
+  deliveryId: string,
+  input: MarkDriverIssueAfterPickupInput,
+) => {
+  const result = await fulfillmentFailuresRepository.markDriverIssueAfterPickup({
+    driverUserId,
+    deliveryId,
+    note: input.note,
+  });
+
+  switch (result.outcome) {
+    case 'NOT_FOUND':
+      throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+    case 'INVALID_RESERVATION_STATUS':
+      throw new AppError(
+        'Completed reservations cannot be updated.',
+        409,
+        'CONFLICT',
+      );
+    case 'INVALID_DELIVERY_STATUS':
+      throw new AppError(
+        'Driver issue reports apply only after pickup.',
+        409,
+        'CONFLICT',
+      );
     default:
       return loadDriverDelivery(result.delivery.id);
   }

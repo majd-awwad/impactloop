@@ -3,6 +3,7 @@ import type {
   LearnerProfile,
   Location,
   OrganizationProfile,
+  Prisma,
   SupplierProfile,
   User,
   UserRole,
@@ -244,6 +245,22 @@ export const revokeRefreshTokensByHash = async (
   await prisma.authToken.updateMany({
     where: {
       tokenHash,
+      tokenType: 'REFRESH_TOKEN',
+      usedAt: null,
+    },
+    data: {
+      usedAt: new Date(),
+    },
+  });
+};
+
+export const revokeAllRefreshTokensForUser = async (
+  userId: string,
+  client: typeof prisma | Prisma.TransactionClient = prisma,
+): Promise<void> => {
+  await client.authToken.updateMany({
+    where: {
+      userId,
       tokenType: 'REFRESH_TOKEN',
       usedAt: null,
     },

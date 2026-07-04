@@ -14,6 +14,7 @@ import {
 } from './driver.controller.js';
 import {
   markDriverDeliveryFailedHandler,
+  markDriverIssueAfterPickupHandler,
   markDriverPickupFailedHandler,
 } from '../fulfillment-failures/fulfillment-failures.controller.js';
 import {
@@ -23,6 +24,7 @@ import {
 } from './driver.validation.js';
 import {
   markDriverDeliveryFailedSchema,
+  markDriverIssueAfterPickupSchema,
   markDriverPickupFailedSchema,
 } from '../fulfillment-failures/fulfillment-failures.validation.js';
 
@@ -72,4 +74,11 @@ driverRouter.post(
   validate(deliveryIdParamsSchema, 'params'),
   validate(markDriverDeliveryFailedSchema),
   asyncHandler(markDriverDeliveryFailedHandler),
+);
+
+driverRouter.post(
+  '/deliveries/:id/driver-issue',
+  validate(deliveryIdParamsSchema, 'params'),
+  validate(markDriverIssueAfterPickupSchema),
+  asyncHandler(markDriverIssueAfterPickupHandler),
 );

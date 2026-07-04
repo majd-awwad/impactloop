@@ -1047,6 +1047,7 @@ export const createSupplierNoShowReport = async (input: {
     const report = await tx.noShowReport.create({
       data: {
         reservationId: existing.id,
+        deliveryId: latestDelivery?.id ?? null,
         reporterUserId: input.ownerId,
         targetUserId,
         targetRole,

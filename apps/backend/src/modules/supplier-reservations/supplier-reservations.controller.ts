@@ -13,6 +13,7 @@ import {
   listSupplierReservationMessages,
   listSupplierReservations,
   rescheduleSupplierReservation,
+  reportSupplierNoDriverAvailable,
   submitSupplierNoShowReport,
 } from './supplier-reservations.service.js';
 import type {
@@ -22,6 +23,7 @@ import type {
   CreateReservationMessageInput,
   DeclineSupplierReservationInput,
   ListSupplierReservationsQuery,
+  ReportSupplierNoDriverInput,
   RescheduleSupplierReservationInput,
   ReservationIdParams,
   SubmitNoShowReportInput,
@@ -131,6 +133,20 @@ export const submitSupplierNoShowReportHandler = async (
   );
 
   res.json(successResponse('No-show report submitted.', report));
+};
+
+export const reportSupplierNoDriverHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<ReservationIdParams>(req);
+  const reservation = await reportSupplierNoDriverAvailable(
+    req.auth!.sub,
+    id,
+    req.body as ReportSupplierNoDriverInput,
+  );
+
+  res.json(successResponse('No-driver report submitted.', reservation));
 };
 
 export const listSupplierReservationMessagesHandler = async (

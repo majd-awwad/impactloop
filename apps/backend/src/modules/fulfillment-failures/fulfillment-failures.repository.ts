@@ -244,6 +244,30 @@ export const markDeliveryPickupWindowExpired = async (input: {
       },
     });
 
+    const duplicate = await tx.noShowReport.findFirst({
+      where: {
+        reservationId: existing.id,
+        targetRole: 'SYSTEM',
+        reasonCode: 'NO_DRIVER_AVAILABLE',
+      },
+    });
+
+    if (!duplicate) {
+      await tx.noShowReport.create({
+        data: {
+          reservationId: existing.id,
+          deliveryId: delivery.id,
+          reporterUserId: input.ownerId,
+          targetUserId: null,
+          targetRole: 'SYSTEM',
+          reasonCode: 'NO_DRIVER_AVAILABLE',
+          note: 'Supplier pickup window expired with no driver assigned',
+          pickupWindowStart: existing.supplierPickupWindowStart,
+          pickupWindowEnd: existing.supplierPickupWindowEnd,
+        },
+      });
+    }
+
     return {
       outcome: 'UPDATED' as const,
       reservation,
@@ -322,6 +346,7 @@ export const markDriverNoShow = async (input: {
         await tx.noShowReport.create({
           data: {
             reservationId: delivery.reservationId,
+            deliveryId: delivery.id,
             reporterUserId: input.ownerId,
             targetUserId: driverUserId,
             targetRole: 'DRIVER',
@@ -450,6 +475,31 @@ export const markDriverPickupFailed = async (input: {
       .filter(Boolean)
       .join(': ');
 
+    const supplierUserId = delivery.reservation.ownerId;
+    const duplicate = await tx.noShowReport.findFirst({
+      where: {
+        reservationId: delivery.reservationId,
+        targetUserId: supplierUserId,
+        targetRole: 'SUPPLIER',
+      },
+    });
+
+    if (!duplicate) {
+      await tx.noShowReport.create({
+        data: {
+          reservationId: delivery.reservationId,
+          deliveryId: delivery.id,
+          reporterUserId: input.driverUserId,
+          targetUserId: supplierUserId,
+          targetRole: 'SUPPLIER',
+          reasonCode: 'PICKUP_FAILED',
+          note: failureNote,
+          pickupWindowStart: delivery.reservation.supplierPickupWindowStart,
+          pickupWindowEnd: delivery.reservation.supplierPickupWindowEnd,
+        },
+      });
+    }
+
     await releaseDriverFromDelivery(tx, {
       deliveryId: delivery.id,
       driverProfileId: profile.id,
@@ -571,6 +621,32 @@ export const markDriverDeliveryFailed = async (input: {
         ? 'LEARNER_NO_SHOW'
         : 'FAILED_DELIVERY';
 
+    if (input.reason === 'LEARNER_UNAVAILABLE') {
+      const duplicate = await tx.noShowReport.findFirst({
+        where: {
+          reservationId: delivery.reservationId,
+          targetUserId: delivery.reservation.requesterId,
+          targetRole: 'LEARNER',
+        },
+      });
+
+      if (!duplicate) {
+        await tx.noShowReport.create({
+          data: {
+            reservationId: delivery.reservationId,
+            deliveryId: delivery.id,
+            reporterUserId: input.driverUserId,
+            targetUserId: delivery.reservation.requesterId,
+            targetRole: 'LEARNER',
+            reasonCode: 'DELIVERY_FAILED',
+            note: failureNote,
+            pickupWindowStart: delivery.reservation.confirmedDeliveryWindowStart,
+            pickupWindowEnd: delivery.reservation.confirmedDeliveryWindowEnd,
+          },
+        });
+      }
+    }
+
     const updatedDelivery = await tx.delivery.update({
       where: { id: delivery.id },
       data: {
@@ -611,6 +687,119 @@ export const markDriverDeliveryFailed = async (input: {
       deliveryId: delivery.id,
       driverProfileId: profile.id,
       releaseReason: 'Delivery failed',
+    });
+
+    return {
+      outcome: 'UPDATED' as const,
+      reservation,
+      delivery: updatedDelivery,
+    };
+  });
+
+export const markDriverIssueAfterPickup = async (input: {
+  driverUserId: string;
+  deliveryId: string;
+  note: string;
+}) =>
+  runSerializableTransaction(async (tx) => {
+    const profile = await tx.driverProfile.findFirst({
+      where: { userId: input.driverUserId, status: 'ACTIVE' },
+    });
+
+    if (!profile) {
+      return { outcome: 'NOT_FOUND' as const };
+    }
+
+    const delivery = await tx.delivery.findFirst({
+      where: {
+        id: input.deliveryId,
+        assignedDriverProfileId: profile.id,
+      },
+      include: { reservation: true },
+    });
+
+    if (!delivery) {
+      return { outcome: 'NOT_FOUND' as const };
+    }
+
+    if (delivery.reservation.status === 'COMPLETED') {
+      return { outcome: 'INVALID_RESERVATION_STATUS' as const };
+    }
+
+    if (
+      !(postPickupDeliveryStatuses as readonly DeliveryStatus[]).includes(
+        delivery.status,
+      )
+    ) {
+      return { outcome: 'INVALID_DELIVERY_STATUS' as const };
+    }
+
+    const duplicate = await tx.noShowReport.findFirst({
+      where: {
+        reservationId: delivery.reservationId,
+        targetUserId: input.driverUserId,
+        targetRole: 'DRIVER',
+        reasonCode: 'DRIVER_ISSUE',
+      },
+    });
+
+    if (!duplicate) {
+      await tx.noShowReport.create({
+        data: {
+          reservationId: delivery.reservationId,
+          deliveryId: delivery.id,
+          reporterUserId: input.driverUserId,
+          targetUserId: input.driverUserId,
+          targetRole: 'DRIVER',
+          reasonCode: 'DRIVER_ISSUE',
+          note: input.note.trim(),
+          pickupWindowStart: delivery.reservation.confirmedDeliveryWindowStart,
+          pickupWindowEnd: delivery.reservation.confirmedDeliveryWindowEnd,
+        },
+      });
+    }
+
+    const now = new Date();
+    const updatedDelivery = await tx.delivery.update({
+      where: { id: delivery.id },
+      data: {
+        status: 'AWAITING_RESOLUTION',
+        failedAt: now,
+        failureReason: input.note.trim(),
+        driverNote: input.note.trim(),
+      },
+    });
+
+    await tx.deliveryStatusHistory.create({
+      data: {
+        deliveryId: delivery.id,
+        oldStatus: delivery.status,
+        newStatus: 'AWAITING_RESOLUTION',
+        changedByUserId: input.driverUserId,
+        note: 'Driver reported issue after pickup',
+      },
+    });
+
+    const reservation = await tx.reservation.update({
+      where: { id: delivery.reservationId },
+      data: { status: 'AWAITING_RESOLUTION' },
+    });
+
+    await tx.reservationStatusHistory.create({
+      data: {
+        reservationId: reservation.id,
+        statusGroup: 'RESERVATION',
+        oldStatus: delivery.reservation.status as ReservationStatus,
+        newStatus: 'AWAITING_RESOLUTION',
+        changedBy: input.driverUserId,
+        note: 'Driver issue after pickup',
+      },
+    });
+
+    await releaseDriverFromDelivery(tx, {
+      deliveryId: delivery.id,
+      driverProfileId: profile.id,
+      releaseReason: 'Driver issue after pickup',
     });
 
     return {

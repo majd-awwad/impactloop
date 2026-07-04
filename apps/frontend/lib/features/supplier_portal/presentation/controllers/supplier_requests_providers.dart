@@ -179,12 +179,26 @@ Future<void> markDeliveryPickupExpiredForRequest(
   _invalidateReservationFollowUp(ref);
 }
 
+Future<void> reportNoDriverAvailableForRequest(
+  WidgetRef ref, {
+  required String requestId,
+  required String note,
+}) async {
+  await ref.read(supplierRequestsRepositoryProvider).reportNoDriverAvailable(
+        requestId,
+        note: note,
+      );
+  _invalidateReservationFollowUp(ref);
+}
+
 Future<void> markDriverNoShowForDelivery(
   WidgetRef ref, {
   required String deliveryId,
+  required String note,
 }) async {
   await ref.read(supplierRequestsRepositoryProvider).markDriverNoShow(
         deliveryId,
+        note: note,
       );
   _invalidateReservationFollowUp(ref);
 }

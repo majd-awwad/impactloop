@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { paginationQuerySchema } from '../../utils/zod-helpers.js';
 
 export const adminNoShowReportsListQuerySchema = paginationQuerySchema.extend({
-  status: z.enum(['PENDING_REVIEW', 'VERIFIED', 'REJECTED']).optional(),
+  status: z
+    .enum(['PENDING_REVIEW', 'VERIFIED', 'REJECTED', 'RESOLVED_NO_STRIKE'])
+    .optional(),
 });
 
 export type AdminNoShowReportsListQuery = z.infer<

@@ -9,12 +9,16 @@ import {
   listLearnerReservationMessages,
   listMyReservations,
   requestLearnerPickupReschedule,
+  reportLearnerSupplierIssue,
+  reportNoDriverAvailable,
   resolveLearnerConfirmation,
 } from './reservations.service.js';
 import type {
   CreateReservationInput,
   CreateReservationMessageInput,
   LearnerConfirmationInput,
+  ReportNoDriverInput,
+  ReportSupplierIssueInput,
   RequestPickupRescheduleInput,
 } from './reservations.validation.js';
 
@@ -102,4 +106,30 @@ export const requestLearnerPickupRescheduleHandler = async (
   );
 
   res.json(successResponse('Reschedule request submitted.', reservation));
+};
+
+export const reportLearnerSupplierIssueHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const reservation = await reportLearnerSupplierIssue(
+    req.auth!.sub,
+    req.params.id as string,
+    req.body as ReportSupplierIssueInput,
+  );
+
+  res.json(successResponse('Supplier issue reported to admin.', reservation));
+};
+
+export const reportNoDriverAvailableHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const reservation = await reportNoDriverAvailable(
+    req.auth!.sub,
+    req.params.id as string,
+    req.body as ReportNoDriverInput,
+  );
+
+  res.json(successResponse('No-driver case reported to admin.', reservation));
 };

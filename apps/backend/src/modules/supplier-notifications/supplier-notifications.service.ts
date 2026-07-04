@@ -464,7 +464,7 @@ export const listSupplierActionNotifications = async (userId: string) => {
     await Promise.all([
       categoryRequestsRepository.listCategoryRequestsWithDrafts(userId),
       priceRuleRequestsRepository.listPriceRuleRequestsForSupplier(userId),
-      supplierReservationsRepository.findSupplierReservations(userId, 'PENDING'),
+      supplierReservationsRepository.findSupplierReservations(userId, ['PENDING']),
     ]);
 
   const notifications: SupplierActionNotification[] = [

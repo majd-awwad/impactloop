@@ -190,9 +190,25 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
   }
 
   @override
+  Future<SupplierIncomingRequest> reportNoDriverAvailable(
+    String requestId, {
+    required String note,
+  }) async {
+    final index = _requests.indexWhere((item) => item.id == requestId);
+    if (index < 0) {
+      throw StateError('Request not found');
+    }
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.needsResolution,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
   Future<SupplierIncomingRequest> markDriverNoShow(
     String deliveryId, {
-    String? note,
+    required String note,
   }) async {
     final index = _requests.indexWhere(
       (item) => item.activeDelivery?.id == deliveryId,

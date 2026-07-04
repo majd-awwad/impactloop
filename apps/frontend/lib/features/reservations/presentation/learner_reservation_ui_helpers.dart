@@ -97,6 +97,13 @@ class LearnerReservationStatusStyle {
           chipForeground: colors.primary,
           chipBorder: colors.primary.withValues(alpha: 0.35),
         );
+      case 'AWAITING_SUPPLIER_CONFIRMATION':
+        return LearnerReservationStatusStyle(
+          accentColor: colors.primary.withValues(alpha: 0.85),
+          chipBackground: colors.primarySoft,
+          chipForeground: colors.primary,
+          chipBorder: colors.primary.withValues(alpha: 0.35),
+        );
       case 'ACCEPTED':
       case 'COMPLETED':
         return LearnerReservationStatusStyle(
@@ -144,12 +151,13 @@ String reservationStatusLabel(
   String status, {
   String? fulfillmentMethod,
   String? deliveryStatus,
+  DateTime? pickupWindowEnd,
 }) {
   switch (status) {
     case 'PENDING':
       return 'Pending supplier response';
     case 'AWAITING_LEARNER_CONFIRMATION':
-      return 'Waiting for learner confirmation';
+      return 'Needs your confirmation';
     case 'AWAITING_SUPPLIER_CONFIRMATION':
       return 'Waiting for supplier response';
     case 'ACCEPTED':
@@ -166,8 +174,8 @@ String reservationStatusLabel(
       }
       return 'Completed';
     case 'CANCELLED':
-      if (fulfillmentMethod == 'PICKUP') {
-        return 'Pickup reservation cancelled after the window passed';
+      if (fulfillmentMethod == 'PICKUP' && pickupWindowEnd != null) {
+        return 'Closed after missed pickup';
       }
       return 'Cancelled';
     case 'EXPIRED':
@@ -177,7 +185,7 @@ String reservationStatusLabel(
     case 'FULFILLMENT_FAILED':
       return 'Fulfillment failed';
     case 'AWAITING_RESOLUTION':
-      return 'Closed and reported';
+      return 'Pending admin review';
     default:
       return status;
   }
@@ -197,6 +205,20 @@ String? learnerDeliverySecondaryStatusLabel({
   if (reservationStatus == 'COMPLETED' ||
       normalizedDeliveryStatus == 'DELIVERED') {
     return 'Delivered';
+  }
+
+  if (reservationStatus == 'AWAITING_RESOLUTION') {
+    switch (normalizedDeliveryStatus) {
+      case 'FAILED_DELIVERY':
+      case 'LEARNER_NO_SHOW':
+        return 'Delivery issue reported';
+      case 'FAILED_PICKUP':
+        return 'Pickup failed';
+      case 'DRIVER_NO_SHOW':
+        return 'Driver no-show';
+      default:
+        return 'Pending admin review';
+    }
   }
 
   if (reservationStatus != 'ACCEPTED') {
@@ -232,6 +254,14 @@ String? learnerDeliveryPrimaryStatusLabel({
   if (reservationStatus == 'COMPLETED' ||
       normalizedDeliveryStatus == 'DELIVERED') {
     return 'Completed';
+  }
+
+  if (reservationStatus == 'AWAITING_LEARNER_CONFIRMATION') {
+    return 'Needs your confirmation';
+  }
+
+  if (reservationStatus == 'AWAITING_RESOLUTION') {
+    return 'Pending admin review';
   }
 
   if (normalizedDeliveryStatus == 'PICKED_UP' ||
@@ -500,6 +530,14 @@ String? reservationStatusMessage(LearnerReservation reservation) {
 
   if (reservation.isAwaitingConfirmation) {
     return 'The supplier proposed a schedule that needs your confirmation.';
+  }
+
+  if (reservation.isAwaitingSupplierConfirmation) {
+    return 'You requested a new pickup time. Waiting for the supplier to respond.';
+  }
+
+  if (reservation.isAwaitingResolution) {
+    return 'This reservation was reported and is awaiting admin review.';
   }
 
   if (reservation.isAccepted) {

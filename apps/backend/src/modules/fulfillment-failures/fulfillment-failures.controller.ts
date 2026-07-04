@@ -5,6 +5,7 @@ import { readValidatedParams } from '../../middlewares/validate.middleware.js';
 
 import {
   markDriverDeliveryFailed,
+  markDriverIssueAfterPickup,
   markDriverPickupFailed,
   markSupplierDeliveryPickupExpired,
   markSupplierDriverNoShow,
@@ -13,6 +14,7 @@ import {
 import type {
   DeliveryIdParams,
   MarkDriverDeliveryFailedInput,
+  MarkDriverIssueAfterPickupInput,
   MarkDriverNoShowInput,
   MarkDriverPickupFailedInput,
   MarkLearnerNoShowInput,
@@ -88,4 +90,18 @@ export const markDriverDeliveryFailedHandler = async (
   );
 
   res.json(successResponse('Delivery failure recorded.', { delivery }));
+};
+
+export const markDriverIssueAfterPickupHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<DeliveryIdParams>(req);
+  const delivery = await markDriverIssueAfterPickup(
+    req.auth!.sub,
+    id,
+    req.body as MarkDriverIssueAfterPickupInput,
+  );
+
+  res.json(successResponse('Driver issue reported.', { delivery }));
 };

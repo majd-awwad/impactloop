@@ -56,6 +56,8 @@ class ApiException implements Exception {
         return message.isNotEmpty
             ? message
             : 'You do not have permission to complete this action.';
+      case 'ACCOUNT_SUSPENDED':
+        return 'Your account has been suspended after repeated verified reports. Contact admin.';
       default:
         if (statusCode != null && statusCode! >= 500) {
           return 'The server hit a problem. Please try again in a moment.';

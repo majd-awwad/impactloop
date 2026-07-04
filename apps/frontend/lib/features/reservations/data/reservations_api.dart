@@ -114,4 +114,55 @@ class ReservationsApi {
       (json) => ReservationMessage.fromJson(json),
     );
   }
+
+  Future<LearnerReservation> requestPickupReschedule({
+    required String reservationId,
+    required DateTime pickupWindowStart,
+    required DateTime pickupWindowEnd,
+    required String reason,
+    String? note,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/request-reschedule',
+        data: {
+          'pickupWindowStart': pickupWindowStart.toUtc().toIso8601String(),
+          'pickupWindowEnd': pickupWindowEnd.toUtc().toIso8601String(),
+          'reason': reason,
+          if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        },
+      ),
+      LearnerReservation.fromJson,
+    );
+  }
+
+  Future<LearnerReservation> reportSupplierIssue({
+    required String reservationId,
+    required String reason,
+    String? note,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/report-supplier-issue',
+        data: {
+          'reason': reason,
+          if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        },
+      ),
+      LearnerReservation.fromJson,
+    );
+  }
+
+  Future<LearnerReservation> reportNoDriverAvailable({
+    required String reservationId,
+    required String note,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/reservations/$reservationId/report-no-driver',
+        data: {'note': note.trim()},
+      ),
+      LearnerReservation.fromJson,
+    );
+  }
 }

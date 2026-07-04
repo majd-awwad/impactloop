@@ -410,6 +410,19 @@ class _AcceptIncomingRequestDialogState
                                   : colors.textSecondary,
                             ),
                           ),
+                          const SizedBox(height: 4),
+                          Text(
+                            deliveryPreview.isFeasible
+                                ? context.s.deliveryScheduleCanAcceptDirectly
+                                : context.s.deliveryScheduleNeedsLearnerConfirmation,
+                            style: context.supplierBody().copyWith(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: deliveryPreview.isFeasible
+                                  ? colors.accentMuted
+                                  : colors.warningText,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -542,7 +555,9 @@ class _AcceptIncomingRequestDialogState
     if (picked != null) {
       setState(() {
         _pickupDate = picked;
-        _selectedPreferredIndex = null;
+        if (!_isDelivery) {
+          _selectedPreferredIndex = null;
+        }
       });
     }
   }
@@ -559,7 +574,9 @@ class _AcceptIncomingRequestDialogState
         } else {
           _endTime = picked;
         }
-        _selectedPreferredIndex = null;
+        if (!_isDelivery) {
+          _selectedPreferredIndex = null;
+        }
       });
     }
   }

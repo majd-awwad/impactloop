@@ -6,6 +6,7 @@ import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
 import {
   canDriverMarkDeliveryFailed,
   canDriverMarkPickupFailed,
+  canDriverReportDriverIssue,
 } from '../fulfillment-failures/fulfillment-failures.eligibility.js';
 import {
   ensureDeliveryHandoverCodesStored,
@@ -170,6 +171,10 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
     deliveryStatus: delivery.status,
     confirmedDeliveryWindowEnd:
       delivery.reservation.confirmedDeliveryWindowEnd,
+  }),
+  canDriverReportDriverIssue: canDriverReportDriverIssue({
+    reservationStatus: delivery.reservation.status,
+    deliveryStatus: delivery.status,
   }),
   assignedAt: delivery.assignedAt?.toISOString() ?? null,
   arrivedPickupAt: delivery.arrivedPickupAt?.toISOString() ?? null,

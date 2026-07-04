@@ -124,7 +124,7 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
       case SupplierIncomingRequestStatus.fulfillmentFailed:
         return 'Fulfillment failed';
       case SupplierIncomingRequestStatus.needsResolution:
-        return 'Needs resolution';
+        return 'Pending admin review';
     }
   }
 
@@ -269,7 +269,7 @@ class SupplierReservationDeliverySummary {
       case 'LEARNER_NO_SHOW':
         return 'Learner no-show';
       case 'AWAITING_RESOLUTION':
-        return 'Needs resolution';
+        return 'Needs admin review';
       default:
         return 'Delivery requested';
     }
@@ -315,6 +315,8 @@ class SupplierIncomingRequest {
     this.canSupplierProposeDifferentTime = false,
     this.canSupplierCloseAwaitingLearnerRequest = false,
     this.canSupplierReportAwaitingLearnerRequest = false,
+    this.canReportNoDriverAvailable = false,
+    this.canSupplierReportDriverNoShow = false,
     this.pendingRescheduleReason,
     this.canSendMessage = false,
     this.noShowReport,
@@ -359,6 +361,8 @@ class SupplierIncomingRequest {
   final bool canSupplierProposeDifferentTime;
   final bool canSupplierCloseAwaitingLearnerRequest;
   final bool canSupplierReportAwaitingLearnerRequest;
+  final bool canReportNoDriverAvailable;
+  final bool canSupplierReportDriverNoShow;
   final String? pendingRescheduleReason;
   final bool canSendMessage;
   final Map<String, dynamic>? noShowReport;
@@ -368,6 +372,12 @@ class SupplierIncomingRequest {
   bool get hasDelivery => deliveryRequested || activeDelivery != null;
 
   bool get isDeliveryFulfillment => fulfillmentMethod.toUpperCase() == 'DELIVERY';
+
+  bool get isReadOnlyFinalState =>
+      status == SupplierIncomingRequestStatus.completed ||
+      status == SupplierIncomingRequestStatus.cancelled ||
+      status == SupplierIncomingRequestStatus.needsResolution ||
+      noShowReport != null;
 
   bool get isPickupFulfillment => !isDeliveryFulfillment;
 
@@ -388,8 +398,13 @@ class SupplierIncomingRequest {
     return 'Proposed pickup time — waiting for learner confirmation';
   }
 
-  String get deliveryStatusLabel =>
-      activeDelivery?.statusLabel ?? 'Waiting for driver';
+  String get deliveryStatusLabel {
+    if (status == SupplierIncomingRequestStatus.awaitingConfirmation) {
+      return 'Waiting for learner confirmation';
+    }
+
+    return activeDelivery?.statusLabel ?? 'Waiting for driver';
+  }
 
   bool get shouldShowSupplierHandoverCode =>
       isDeliveryFulfillment &&
@@ -606,6 +621,9 @@ class SupplierIncomingRequest {
           json['canSupplierCloseAwaitingLearnerRequest'] == true,
       canSupplierReportAwaitingLearnerRequest:
           json['canSupplierReportAwaitingLearnerRequest'] == true,
+      canReportNoDriverAvailable: json['canReportNoDriverAvailable'] == true,
+      canSupplierReportDriverNoShow:
+          json['canSupplierReportDriverNoShow'] == true,
       pendingRescheduleReason: () {
         final pending = json['pendingReschedule'];
         if (pending is Map) {

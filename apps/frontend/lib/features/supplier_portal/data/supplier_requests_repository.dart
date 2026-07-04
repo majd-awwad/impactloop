@@ -50,9 +50,14 @@ abstract class SupplierRequestsRepository {
 
   Future<SupplierIncomingRequest> markDeliveryPickupExpired(String requestId);
 
+  Future<SupplierIncomingRequest> reportNoDriverAvailable(
+    String requestId, {
+    required String note,
+  });
+
   Future<SupplierIncomingRequest> markDriverNoShow(
     String deliveryId, {
-    String? note,
+    required String note,
   });
 
   Future<List<ReservationMessage>> fetchReservationMessages(String requestId);

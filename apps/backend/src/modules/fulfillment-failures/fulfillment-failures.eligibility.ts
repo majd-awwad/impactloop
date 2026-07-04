@@ -113,3 +113,12 @@ export const canDriverMarkDeliveryFailed = (input: {
     input.confirmedDeliveryWindowEnd,
   );
 };
+
+export const canDriverReportDriverIssue = (input: {
+  reservationStatus: ReservationStatus;
+  deliveryStatus: DeliveryStatus;
+}) =>
+  input.reservationStatus === 'ACCEPTED' &&
+  (postPickupDeliveryStatuses as readonly DeliveryStatus[]).includes(
+    input.deliveryStatus,
+  );

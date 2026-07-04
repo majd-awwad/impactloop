@@ -61,4 +61,11 @@ class DriverDeliveriesRepository {
   ) {
     return _api.reportDeliveryFailed(deliveryId, request);
   }
+
+  Future<DriverDelivery> reportDriverIssue(
+    String deliveryId, {
+    required String note,
+  }) {
+    return _api.reportDriverIssue(deliveryId, note: note);
+  }
 }

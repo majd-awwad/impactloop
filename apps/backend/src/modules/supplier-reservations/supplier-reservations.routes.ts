@@ -20,6 +20,7 @@ import {
   listSupplierReservationsHandler,
   rescheduleSupplierReservationHandler,
   acceptLearnerRescheduleProposalHandler,
+  reportSupplierNoDriverHandler,
   submitSupplierNoShowReportHandler,
 } from './supplier-reservations.controller.js';
 import {
@@ -29,6 +30,7 @@ import {
   createReservationMessageSchema,
   declineSupplierReservationSchema,
   listSupplierReservationsQuerySchema,
+  reportSupplierNoDriverSchema,
   rescheduleSupplierReservationSchema,
   reservationIdParamsSchema,
   submitNoShowReportSchema,
@@ -130,6 +132,15 @@ supplierReservationsRouter.post(
   validate(reservationIdParamsSchema, 'params'),
   validate(markLearnerNoShowSchema),
   asyncHandler(markSupplierLearnerNoShowHandler),
+);
+
+supplierReservationsRouter.post(
+  '/:id/report-no-driver',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(reportSupplierNoDriverSchema),
+  asyncHandler(reportSupplierNoDriverHandler),
 );
 
 supplierReservationsRouter.post(
