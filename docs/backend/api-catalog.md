@@ -125,6 +125,7 @@ Optional query `discoveryOnly=true` applies discovery name filtering and dedupe 
 | Method | Path | Auth | Roles | Source file |
 |--------|------|------|-------|-------------|
 | GET | `/api/reservations/my` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
+| GET | `/api/reservations/:id` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
 | POST | `/api/reservations` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
 | PATCH | `/api/reservations/:id/cancel` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |
 | PATCH | `/api/reservations/:id/learner-confirmation` | Bearer JWT | `LEARNER` | `reservations/reservations.routes.ts` |

@@ -38,7 +38,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 |-------|-------|----------------|
 | **public** | Most routes (landing, materials, learning, auth pages, register deprecated fallbacks) | No login required |
 | **authenticated** | `/home`, `/profile`, `/profile/*`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
-| **learner** | `/learner/reservations`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
+| **learner** | `/learner/reservations`, `/learner/reservations/:id`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
 | **driver** | `/driver`, `/driver/*` | Requires login + `DRIVER` role; non-drivers redirect to `/home` |
 | **admin** | `/admin`, `/admin/*` (except access-denied) | Requires login + `ADMIN` role |
@@ -73,6 +73,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/profile/learner/edit` | `LearnerProfileEditPage` | authenticated | Edit learner type, skill level, interests, and bio (`LEARNER` role required) |
 | `/profile/security` | `ProfileSecurityPage` | authenticated | Change password via `/api/auth/change-password` |
 | `/learner/reservations` | `LearnerReservationsPage` | learner | Learner reservation status list |
+| `/learner/reservations/:id` | `LearnerReservationDetailPage` | learner | Single reservation detail with refresh + shared reservation card |
 | `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline, latest driver ping summary, and page-scoped polling map marker when tracking coordinates are allowed |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
 | `/learning` | `LearningHubPage` | public | **Partial** — API-backed list; add-draft/AI paths remain mock/disabled |

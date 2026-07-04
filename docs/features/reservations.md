@@ -26,17 +26,20 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Database `reservations` + `reservation_status_history` | **Implemented** | Existing schema; `quantityRequested` already present |
+| Database `reservations` + `reservation_status_history` | **Implemented** | Schema incl. `quantityRequested`, reschedule/incident fields, `AWAITING_SUPPLIER_CONFIRMATION`, `AWAITING_RESOLUTION` |
 | Learner `POST /api/reservations` | **Implemented** | Partial-quantity holds, fulfillment choice, preferred windows, per-learner open-reservation guard |
-| Learner `PATCH /api/reservations/:id/cancel` | **Implemented** | PENDING or AWAITING cancel releases hold |
+| Learner `PATCH /api/reservations/:id/cancel` | **Implemented** | `PENDING` or `AWAITING_LEARNER_CONFIRMATION` cancel releases hold |
 | Learner `PATCH /api/reservations/:id/learner-confirmation` | **Implemented** | Accept proposed pickup, submit delivery window, or cancel while awaiting confirmation |
-| Learner `GET /api/reservations/my` | **Implemented** | Includes `quantityRequested`, `material.unit`, approximate `material.city`/`area`, and `pickupLocationFull` after accept/complete |
+| Learner follow-up APIs | **Implemented** | `request-reschedule`, `report-supplier-issue`, `report-no-driver`, reservation-scoped `messages` |
+| Learner `GET /api/reservations/my` | **Implemented** | Scheduling fields, `selfPickupCode`, `pickupHandoverPhase`, follow-up flags, `pickupLocationFull` after accept/complete, `activeDelivery` |
 | Material discovery/detail `availableQuantity` | **Implemented** | Public browse/detail DTO field |
 | Learner reserve UI | **Implemented** | Material detail quantity + explicit pickup/delivery fulfillment dialog |
-| Learner “My Reservations” UI | **Partial** | Quantity + PENDING cancel + awaiting-confirmation panel (accept proposed pickup / submit delivery window / cancel) + self-pickup pickup address after accept/complete + 10-second foreground polling; no detail page |
-| Supplier list/accept/decline/complete | **Partial** | Fulfillment-aware accept (pickup match/propose, delivery scheduling); awaiting-confirmation status; partial-quantity completion subtracts stock; delivery complete guarded |
-| Delivery learner UI | **Partial** | Request/status/tracking summary exists |
-**Overall:** **Partial**. Partial-quantity holds, learner PENDING cancel, quantity-aware reserve UI, and post-acceptance self-pickup address reveal are implemented. Expiry, notifications, QR, reservation detail page, pickup map, and saved dropoff addresses remain pending.
+| Learner “My Reservations” UI | **Partial** | Rich list cards + `/learner/reservations/:id` detail route with 10-second polling; list cards link to detail |
+| Supplier list/accept/decline/complete | **Partial** | Fulfillment-aware accept (pickup + delivery scheduling), `needs_learner` tab, handover-code complete, overdue close/report/reschedule, learner-reschedule accept, delivery handover code, incident reports; **`mark-delivery-pickup-expired` API exists but Flutter UI not wired** |
+| Delivery learner UI | **Partial** | Request/status/tracking summary + polling map marker on delivery detail; not on self-pickup reservation cards |
+| Admin incident queue | **Implemented** | `/admin/no-show-reports` verify/reject/resolve |
+
+**Overall:** **Partial**. Core booking, scheduling, handover codes, cancel/reschedule, incident reporting, and delivery request paths are implemented end-to-end. Remaining reservation-loop gaps: dedicated learner detail page/route, automatic `PENDING` expiry, supplier delivery-pickup-expired UI, self-pickup map, generic notifications, QR polish, saved dropoff addresses.
 
 ## Existing Related Files
 
@@ -61,7 +64,10 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 | Path | Role |
 |------|------|
 | `reservations/data/*`, `reservations/application/*` | Learner reservation API/repository/controllers |
-| `reservations/presentation/pages/learner_reservations_page.dart` | Learner reservation status page |
+| `reservations/presentation/pages/learner_reservations_page.dart` | Learner reservation list + inline actions (not a separate detail route) |
+| `reservations/presentation/widgets/learner_awaiting_confirmation_panel.dart` | Awaiting-confirmation accept/submit/cancel |
+| `reservations/presentation/widgets/learner_reservation_messages_panel.dart` | Reservation-scoped messages |
+| `shared/widgets/handover_confirmation_code_panel.dart` | Self-pickup / delivery handover code display |
 | `material_discovery/.../material_details_page.dart` | Reserve button entry point; post-success and existing-reservation links to My Reservations |
 | `supplier_portal/.../supplier_incoming_requests_page.dart` | Supplier inbox |
 | `supplier_portal/data/supplier_requests_api.dart` | Supplier API client |
@@ -89,13 +95,26 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 
 ## What Is Missing
 
-- Dedicated learner reservation detail page.
-- Expiry workflow for stale `PENDING` reservations.
-- Generic persisted notification table flow.
-- Live delivery map/tracking stream, ETA, delivery cancellation/retry, payment, and reviews.
+Verified against code (2026-07-04):
+
+- **Dedicated learner reservation detail page** — `GET /api/reservations/:id` + `/learner/reservations/:id` with shared reservation card UI.
+- **Automatic `PENDING` expiry** — `ReservationStatus.EXPIRED` exists in schema but no scheduled job or service transitions stale `PENDING` reservations; overdue *accepted* pickup follow-up is implemented separately.
+- **Supplier `mark-delivery-pickup-expired` UI** — backend route + Flutter API/provider exist; no supplier card action or `can*` flag on list DTO yet.
+- **Self-pickup map on learner reservation UI** — `pickupLocationFull` includes coordinates after accept, but learner reservations show address text only (delivery detail page has a polling map marker).
+- Generic persisted notification table flow (supplier-derived inbox only today).
+- Live delivery tracking stream, ETA, delivery cancellation/retry, payment, and reviews.
 - Saved learner dropoff addresses, standalone location CRUD, current-location delivery request, and nearest-first sorting.
 - QR polish.
 - Project build checklist integration and already-owned material markers.
+
+## Already implemented (do not re-build)
+
+- Learner cancel while `PENDING` or `AWAITING_LEARNER_CONFIRMATION`.
+- Partial-quantity holds and reserve-time pickup/delivery fulfillment choice.
+- Handover confirmation codes (learner self-pickup code, supplier→driver handover code, code-required supplier complete).
+- Phase-based overdue pickup follow-up (±30 min handover window) for supplier and learner reschedule/report actions.
+- Reservation-scoped messages, incident reports, and admin `/admin/no-show-reports` queue.
+- Learner delivery request + `/learner/deliveries/:id` status/tracking summary.
 
 ## Location privacy (MVP)
 

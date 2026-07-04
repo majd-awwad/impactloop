@@ -69,7 +69,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 | Should future inventory support partial allocation instead of whole-material hold? | Open — MVP exclusive reservation only | [learner-reservation-flow](flows/learner-reservation-flow.md) |
 | Notification generation on reservation state changes? | Open | [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
 | Pickup window validation schema — exact rules? | **Needs verification** | [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
-| Cancel/expiry flows for reservations? | **Not implemented** | [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
+| Cancel/expiry flows for reservations? | **Partial** — learner cancel + overdue accepted pickup close/report implemented; automatic `PENDING` → `EXPIRED` job **not implemented** | [supplier-reservation-flow](flows/supplier-reservation-flow.md), [reservations](features/reservations.md) |
 
 ---
 

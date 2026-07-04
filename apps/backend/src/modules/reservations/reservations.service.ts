@@ -341,6 +341,50 @@ export const listMyReservations = async (requesterId: string) => {
   );
 };
 
+export const getMyReservationById = async (
+  requesterId: string,
+  reservationId: string,
+) => {
+  let reservation = await reservationsRepository.findLearnerReservationById(
+    requesterId,
+    reservationId,
+  );
+
+  if (!reservation) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if (
+    reservation.status === 'ACCEPTED' &&
+    reservation.fulfillmentMethod === 'PICKUP' &&
+    !reservation.selfPickupCodeHash
+  ) {
+    await prisma.$transaction(async (tx) => {
+      await ensureSelfPickupCodeStored(tx, reservation!.id);
+    });
+
+    reservation = await reservationsRepository.findLearnerReservationById(
+      requesterId,
+      reservationId,
+    );
+
+    if (!reservation) {
+      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    }
+  }
+
+  const latestMessages = await findLatestReservationMessagesByReservationIds([
+    reservationId,
+  ]);
+
+  return mapLearnerReservation(
+    reservation,
+    latestMessages.has(reservation.id)
+      ? mapReservationMessage(latestMessages.get(reservation.id)!)
+      : null,
+  );
+};
+
 export const createReservation = async (
   requesterId: string,
   input: CreateReservationInput,

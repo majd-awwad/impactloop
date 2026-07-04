@@ -29,6 +29,7 @@ import '../../features/profile/presentation/pages/learner_profile_edit_page.dart
 import '../../features/profile/presentation/pages/profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_security_page.dart';
+import '../../features/reservations/presentation/pages/learner_reservation_detail_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
 import '../../features/supplier_portal/application/supplier_verification_access.dart';
@@ -136,6 +137,7 @@ _RouteAccessLevel _routeAccessForPath(String path) {
   }
 
   if (path == '/learner/reservations' ||
+      path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/')) {
     return _RouteAccessLevel.learner;
   }
@@ -288,6 +290,7 @@ String? _resolveSupplierVerificationRedirect(
 bool _isLearnerPortalHomePath(String path) {
   return path == '/home' ||
       path == '/learner/reservations' ||
+      path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/');
 }
 
@@ -417,6 +420,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/learner/deliveries/:id',
         builder: (context, state) =>
             LearnerDeliveryDetailPage(deliveryId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/learner/reservations/:id',
+        builder: (context, state) => LearnerReservationDetailPage(
+          reservationId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: authCheckingRoute,

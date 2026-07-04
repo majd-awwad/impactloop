@@ -2,7 +2,9 @@
 
 Documents the implemented MVP learner reservation request path.
 
-**Out of scope for Flutter:** background GPS streaming, WebSockets/realtime tracking, public tracking links, supplier live tracking, learner reservation cancel, expiry jobs, reviews, multi-reservation queues, partial stock allocation, saved dropoff addresses, standalone location CRUD, and nearest-first sorting.
+**Out of scope for Flutter (still):** background GPS streaming, WebSockets/realtime tracking, public tracking links, supplier live tracking, automatic `PENDING` expiry jobs, reviews, multi-reservation queues, saved dropoff addresses, standalone location CRUD, and nearest-first sorting.
+
+**Implemented since earlier doc drafts:** learner cancel (`PENDING` / awaiting confirmation), partial-quantity holds, handover codes, reschedule/report/messages, delivery request + delivery detail tracking summary.
 
 ## Trigger
 
@@ -15,9 +17,11 @@ Authenticated **LEARNER** reserves an available material from public material de
 | Step | Status |
 |------|--------|
 | Learner reserve UI | **Implemented MVP** — detail CTA only |
-| `POST /api/reservations` | **Implemented MVP** |
-| Learner status list UI | **Implemented MVP** — `/learner/reservations` |
-| Supplier accept/decline/complete | **Partial** — accept/reject/self-pickup complete implemented |
+| `POST /api/reservations` | **Implemented MVP** — partial quantity, fulfillment method, preferred windows |
+| Learner cancel + awaiting-confirmation actions | **Implemented** — `PATCH .../cancel`, `PATCH .../learner-confirmation` |
+| Learner follow-up (reschedule, reports, messages) | **Implemented** — on `/learner/reservations` list cards |
+| Learner status list + detail UI | **Partial** — `/learner/reservations` list + `/learner/reservations/:id` detail |
+| Supplier accept/decline/complete + overdue follow-up | **Partial** — accept/reject/handover complete + incident flows implemented |
 | Delivery after accept | **Partial** — learner request/status/tracking UI and driver jobs/status/manual ping UI exist; no background GPS, WebSockets, ETA, or public tracking |
 | Test data | **Partial** — seed data still exists for supplier portal demos |
 
@@ -85,13 +89,10 @@ Learner sees a success snack bar, refreshed material detail, and a pending card 
 
 ## Still Not Implemented
 
-- Learner reservation cancel.
-- Dedicated learner reservation detail page.
-- Driver workflow in Flutter.
-- Live tracking map, ETA, cancellation, retry delivery UI, payment, and reviews.
-- Expiry jobs.
-- Reviews.
-- Multi-reservation queues and partial stock allocation.
+- Automatic expiry job for stale `PENDING` reservations (`EXPIRED` status exists; no auto-transition).
+- Self-pickup map on reservation cards (address text only today).
+- Realtime live tracking map/stream, ETA, delivery cancellation/retry UI, payment, and reviews.
+- Generic persisted notifications (supplier-derived inbox only).
 - Saved dropoff addresses, standalone location CRUD, current-location delivery request, and nearest-first sorting.
 
 ---

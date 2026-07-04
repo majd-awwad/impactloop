@@ -1354,7 +1354,7 @@ class _PostReservationStatusCta extends StatelessWidget {
           TextButton.icon(
             onPressed: () => context.go('/learner/reservations'),
             icon: const Icon(Icons.assignment_turned_in_outlined),
-            label: const Text('View reservation status'),
+            label: const Text('View all reservations'),
           ),
         ],
       ),
@@ -1422,7 +1422,8 @@ class _LearnerReservationStateCard extends StatelessWidget {
             )
           else
             TextButton.icon(
-              onPressed: () => context.go('/learner/reservations'),
+              onPressed: () =>
+                  context.go('/learner/reservations/${reservation.id}'),
               icon: const Icon(Icons.assignment_turned_in_outlined),
               label: Text(
                 reservation.isAccepted && deliveryAvailable

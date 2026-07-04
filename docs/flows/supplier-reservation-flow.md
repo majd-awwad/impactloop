@@ -164,12 +164,13 @@ Complete invalidates incoming requests, supplier notifications, supplier dashboa
 
 ## Not implemented
 
-- Handover codes and completion verification (Phase 4)
-- Handover codes, issue reports, driver failed pickup/delivery flows
-- Learner reservation cancel beyond PENDING
-- Flutter delivery request / driver assignment UI
-- Cancel/expiry flows in UI
-- Multi-reservation queues / partial inventory allocation
+- Automatic `PENDING` reservation expiry (schema has `EXPIRED`; no scheduled transition).
+- Supplier **`mark-delivery-pickup-expired` UI** (backend route + Flutter API/provider exist; no card action wired).
+- Dedicated learner reservation detail route (`/learner/reservations/:id`).
+- Self-pickup map on learner reservation UI.
+- Realtime delivery tracking stream / background GPS.
+- Generic persisted notifications on reservation state changes.
+- QR polish.
 
 ---
 

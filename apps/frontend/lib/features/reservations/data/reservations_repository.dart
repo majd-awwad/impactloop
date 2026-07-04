@@ -30,6 +30,10 @@ class ReservationsRepository {
     return _api.fetchMyReservations();
   }
 
+  Future<LearnerReservation> fetchReservation(String reservationId) {
+    return _api.fetchReservation(reservationId);
+  }
+
   Future<void> cancelReservation(String reservationId) {
     return _api.cancelReservation(reservationId);
   }

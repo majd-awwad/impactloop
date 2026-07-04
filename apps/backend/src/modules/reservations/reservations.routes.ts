@@ -9,6 +9,7 @@ import {
   cancelReservationHandler,
   createReservationHandler,
   createLearnerReservationMessageHandler,
+  getMyReservationByIdHandler,
   listLearnerReservationMessagesHandler,
   listMyReservationsHandler,
   reportLearnerSupplierIssueHandler,
@@ -37,6 +38,14 @@ reservationsRouter.get(
   authMiddleware,
   requireRoles('LEARNER'),
   asyncHandler(listMyReservationsHandler),
+);
+
+reservationsRouter.get(
+  '/:id',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(getMyReservationByIdHandler),
 );
 
 reservationsRouter.post(
