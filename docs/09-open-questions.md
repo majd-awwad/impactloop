@@ -81,13 +81,16 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 |----------|--------|--------|
 | Target Flutter repository pattern (`LearningHubRepository` + Riverpod providers)? | **Resolved** — `ApiLearningHubRepository`, `learning_hub_providers.dart`, override in `main.dart` | [learning-hub](features/learning-hub.md), [state-management](frontend/state-management.md) |
 | Map API `difficulty` enum to localized labels? | **Resolved** — `LearningHubApiMapper.mapDifficultyLabel` | [learning-hub](features/learning-hub.md) |
-| Remove mock data from list/detail/home spotlight? | **Resolved** — API-backed; mock file retained for disabled AI copy and unused sample catalog only | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
+| Remove mock data from list/detail/home spotlight? | **Resolved** — API-backed; mock file retained for unused sample catalog only | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
 | Show fake ratings on API-backed pages? | **Resolved** — hidden when `ratingSummary` is null; backend currently always null | [learning-hub](features/learning-hub.md) |
 | Project submission/admin review workflow (draft → pending → published)? | **Resolved** — learner submit creates `PENDING_REVIEW`; `/admin/learning-projects` moderation can approve/request changes/reject/hide/restore/archive. Moderator-owned review remains not implemented. | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md), `learning-projects.routes.ts`, `admin.routes.ts`, `admin-learning-projects.*` |
 | Learning project ratings/reviews model and API? | **Not implemented** — `reviews` table is reservation-scoped; no PROJECT target type | [learning-hub](features/learning-hub.md) |
 | AI material matching for project components? | **Not implemented** | [ai-agent](features/ai-agent.md) |
 | Open external project links in browser (`url_launcher`)? | **Resolved** — detail links open safe `http`/`https` URLs; invalid/missing URLs render disabled | [learning-hub](features/learning-hub.md) |
-| Expose Hub search (`q`), difficulty, tag filters, or server pagination in UI? | **Partially resolved** — search, difficulty, and tag filters are wired; server `page > 1` navigation is still not exposed | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
+| Expose Hub search (`q`), difficulty, tag filters, or server pagination in UI? | **Resolved** — search, difficulty, tag filters, and server `page > 1` navigation are wired | [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
+| Project likes API/UI? | **Resolved** — `project_likes` stores learner likes; list/detail include `likesCount` and viewer-specific `isLiked`; detail has optimistic like/unlike | [learning-hub](features/learning-hub.md), [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
+| Project saves API/UI? | **Resolved** — `project_saves` stores private learner saves; list/detail include viewer-specific `isSaved`; detail has optimistic save/unsave | [learning-hub](features/learning-hub.md), [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
+| Project follows API/UI? | **Resolved** — `project_follows` stores learner follows; list/detail include `followersCount` and viewer-specific `isFollowing`; detail has optimistic follow/unfollow | [learning-hub](features/learning-hub.md), [learning-hub-browse-flow](flows/learning-hub-browse-flow.md) |
 
 ---
 

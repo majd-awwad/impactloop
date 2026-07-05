@@ -1,5 +1,5 @@
 -- DropIndex
-DROP INDEX "locations_location_gist_idx";
+DROP INDEX IF EXISTS "locations_location_gist_idx";
 
 -- AlterTable
-ALTER TABLE "user_saved_locations" ALTER COLUMN "updated_at" DROP DEFAULT;
+ALTER TABLE IF EXISTS "user_saved_locations" ALTER COLUMN "updated_at" DROP DEFAULT;

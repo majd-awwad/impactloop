@@ -230,6 +230,199 @@ export const findLearningProjectById = async (id: string) => {
   });
 };
 
+export const findPublicLearningProjectById = async (id: string) => {
+  return prisma.learningProject.findFirst({
+    where: {
+      id,
+      ...publicProjectWhere,
+    },
+    select: {
+      id: true,
+    },
+  });
+};
+
+export const countLikesByProjectIds = async (projectIds: string[]) => {
+  if (projectIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const groups = await prisma.projectLike.groupBy({
+    by: ['projectId'],
+    where: { projectId: { in: projectIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(groups.map((group) => [group.projectId, group._count._all]));
+};
+
+export const findLikedProjectIds = async (
+  userId: string | undefined,
+  projectIds: string[],
+) => {
+  if (!userId || projectIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const likes = await prisma.projectLike.findMany({
+    where: {
+      userId,
+      projectId: { in: projectIds },
+    },
+    select: {
+      projectId: true,
+    },
+  });
+
+  return new Set(likes.map((like) => like.projectId));
+};
+
+export const findSavedProjectIds = async (
+  userId: string | undefined,
+  projectIds: string[],
+) => {
+  if (!userId || projectIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const saves = await prisma.projectSave.findMany({
+    where: {
+      userId,
+      projectId: { in: projectIds },
+    },
+    select: {
+      projectId: true,
+    },
+  });
+
+  return new Set(saves.map((save) => save.projectId));
+};
+
+export const countFollowsByProjectIds = async (projectIds: string[]) => {
+  if (projectIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const groups = await prisma.projectFollow.groupBy({
+    by: ['projectId'],
+    where: { projectId: { in: projectIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(groups.map((group) => [group.projectId, group._count._all]));
+};
+
+export const findFollowedProjectIds = async (
+  userId: string | undefined,
+  projectIds: string[],
+) => {
+  if (!userId || projectIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const follows = await prisma.projectFollow.findMany({
+    where: {
+      userId,
+      projectId: { in: projectIds },
+    },
+    select: {
+      projectId: true,
+    },
+  });
+
+  return new Set(follows.map((follow) => follow.projectId));
+};
+
+export const setProjectLiked = async (projectId: string, userId: string) => {
+  await prisma.projectLike.upsert({
+    where: {
+      projectId_userId: {
+        projectId,
+        userId,
+      },
+    },
+    create: {
+      projectId,
+      userId,
+    },
+    update: {},
+  });
+};
+
+export const unsetProjectLiked = async (projectId: string, userId: string) => {
+  await prisma.projectLike.deleteMany({
+    where: {
+      projectId,
+      userId,
+    },
+  });
+};
+
+export const countLikesForProject = async (projectId: string) => {
+  return prisma.projectLike.count({
+    where: { projectId },
+  });
+};
+
+export const setProjectSaved = async (projectId: string, userId: string) => {
+  await prisma.projectSave.upsert({
+    where: {
+      projectId_userId: {
+        projectId,
+        userId,
+      },
+    },
+    create: {
+      projectId,
+      userId,
+    },
+    update: {},
+  });
+};
+
+export const unsetProjectSaved = async (projectId: string, userId: string) => {
+  await prisma.projectSave.deleteMany({
+    where: {
+      projectId,
+      userId,
+    },
+  });
+};
+
+export const setProjectFollowed = async (projectId: string, userId: string) => {
+  await prisma.projectFollow.upsert({
+    where: {
+      projectId_userId: {
+        projectId,
+        userId,
+      },
+    },
+    create: {
+      projectId,
+      userId,
+    },
+    update: {},
+  });
+};
+
+export const unsetProjectFollowed = async (
+  projectId: string,
+  userId: string,
+) => {
+  await prisma.projectFollow.deleteMany({
+    where: {
+      projectId,
+      userId,
+    },
+  });
+};
+
+export const countFollowsForProject = async (projectId: string) => {
+  return prisma.projectFollow.count({
+    where: { projectId },
+  });
+};
+
 export const createLearningProjectForReview = async (input: {
   createdBy: string;
   categoryId: string;

@@ -18,17 +18,17 @@ Role-scope framing: see [roles-and-capabilities](roles-and-capabilities.md) for 
 | Welcome hero + greeting | **Implemented** | **API-backed** — `authControllerProvider` user `displayName` |
 | Quick actions | **Implemented** | Materials, My Reservations, Learning Hub, and **Become a supplier** use live routes/APIs |
 | Suggested materials | **Implemented** | **API-backed** — `GET /api/materials` via `ApiMaterialDiscoveryRepository`, first 4 items, with read-only view/like engagement counts |
-| Learning spotlight | **Implemented** | **API-backed** — `GET /api/learning-projects` via `learningProjectsProvider` (limit 2) |
-| Activity updates | **Partial** | Delivery/reservation entry links to `/learner/reservations`; saved projects remain Coming Soon |
+| Learning spotlight | **Implemented** | **API-backed** — `GET /api/learning-projects` via `learningProjectsProvider` (limit 2), including project like/follower counts and viewer saved/followed state |
+| Activity updates | **Partial** | Delivery/reservation entry links to `/learner/reservations`; saved-project listing remains Coming Soon |
 | Coming later (impact + AI) | **Frontend-only** | Empty / Coming Soon placeholders — no learner-facing APIs |
 
-**Not documented as implemented:** learner reservation cancel, saved projects, AI agent, learner impact analytics.
+**Not documented as implemented:** learner reservation cancel, saved-project listing, AI agent, learner impact analytics.
 
 ## Main user flow
 
 1. Learner logs in → redirect `/home` (role-dependent routing in `app_router.dart`).
 2. Page loads suggested materials from discovery API and shows read-only material like counts on cards.
-3. Learning spotlight loads up to 2 published projects from `learningProjectsProvider` (`GET /api/learning-projects`, `page=1`, `limit=2`).
+3. Learning spotlight loads up to 2 published projects from `learningProjectsProvider` (`GET /api/learning-projects`, `page=1`, `limit=2`) and shows read-only project like/follower counts plus saved/followed badges when present.
 4. User taps **Browse Materials** → `/materials` (live API discovery).
 5. User taps **Explore Learning Hub** → `/learning` (API-backed catalog).
 6. User taps **My Reservations** (Quick actions) → `/learner/reservations` (live reservation + delivery request/status).
@@ -38,7 +38,7 @@ Role-scope framing: see [roles-and-capabilities](roles-and-capabilities.md) for 
    - Learner-only → `/become-supplier` wizard → `POST /api/auth/become-supplier` (Student/Individual types only)
    - Unauthenticated defensive path → `/register?intent=supplier`
 9. Dual-role users switch portals from the account menu or profile via `POST /api/auth/switch-role`.
-10. Disabled / Coming Soon cards show info snackbars for saved projects, impact, and AI helper.
+10. Disabled / Coming Soon cards show info snackbars for saved-project listing, impact, and AI helper.
 
 ## Frontend files
 
@@ -80,7 +80,7 @@ No dedicated `/api/home` or learner dashboard endpoint.
 
 Read-only via materials API: `materials`, `material_images`, `categories`, `locations` (city/area in DTO), supplier profile display fields.
 
-No home-specific tables. Suggested material engagement reads from `materials.views_count` and `material_likes` via the materials API.
+No home-specific tables. Suggested material engagement reads from `materials.views_count` and `material_likes` via the materials API; learning spotlight engagement reads `project_likes`, `project_follows`, and viewer-specific `project_saves`/`project_follows` through the Learning Hub API.
 
 ## Reusable components
 
@@ -91,7 +91,7 @@ No home-specific tables. Suggested material engagement reads from `materials.vie
 ## Known gaps / Needs verification
 
 - Suggested materials uses unfiltered discovery list (first 4) — no personalization API.
-- No saved projects, followed suppliers/categories, materials-for-saved-projects, free-near-you, or continue-build sections yet.
+- No saved-project listing, followed suppliers/categories, materials-for-saved-projects, free-near-you, or continue-build sections yet.
 - Home shows material engagement counts, but like/unlike is handled from material detail.
 - Supplier users may land on `/supplier` after login via `postAuthRouteForUser` but can still open `/home` manually.
 

@@ -48,6 +48,11 @@ class LearningProject {
     required this.heroIconData,
     required this.cardGradient,
     required this.isFeatured,
+    this.likesCount = 0,
+    this.isLiked = false,
+    this.isSaved = false,
+    this.followersCount = 0,
+    this.isFollowing = false,
     this.tags = const <String>[],
     this.longDescription,
     this.hasRatings = false,
@@ -71,6 +76,47 @@ class LearningProject {
   final IconData heroIconData;
   final List<int> cardGradient;
   final bool isFeatured;
+  final int likesCount;
+  final bool isLiked;
+  final bool isSaved;
+  final int followersCount;
+  final bool isFollowing;
   final List<String> tags;
   final bool hasRatings;
+
+  LearningProject copyWith({
+    int? likesCount,
+    bool? isLiked,
+    bool? isSaved,
+    int? followersCount,
+    bool? isFollowing,
+  }) {
+    return LearningProject(
+      id: id,
+      category: category,
+      title: title,
+      summary: summary,
+      longDescription: longDescription,
+      difficulty: difficulty,
+      duration: duration,
+      ratingLabel: ratingLabel,
+      ratingValue: ratingValue,
+      ratingCount: ratingCount,
+      hasRatings: hasRatings,
+      componentCountLabel: componentCountLabel,
+      components: components,
+      steps: steps,
+      links: links,
+      imageUrl: imageUrl,
+      heroIconData: heroIconData,
+      cardGradient: cardGradient,
+      isFeatured: isFeatured,
+      likesCount: likesCount ?? this.likesCount,
+      isLiked: isLiked ?? this.isLiked,
+      isSaved: isSaved ?? this.isSaved,
+      followersCount: followersCount ?? this.followersCount,
+      isFollowing: isFollowing ?? this.isFollowing,
+      tags: tags,
+    );
+  }
 }

@@ -14,7 +14,6 @@ import '../../domain/learning_projects_result.dart';
 import '../../domain/models/learning_project.dart';
 import '../../../materials/data/models/category.dart';
 import '../theme/learning_ui_palette.dart';
-import '../widgets/disabled_ai_panel.dart';
 import '../widgets/featured_project_card.dart';
 import '../widgets/learning_category_chips.dart';
 import '../widgets/learning_hub_hero.dart';
@@ -33,13 +32,13 @@ class LearningHubPage extends ConsumerStatefulWidget {
 }
 
 class _LearningHubPageState extends ConsumerState<LearningHubPage> {
-  static const int _chunkSize = 4;
+  static const int _pageSize = 12;
 
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
   Timer? _searchDebounce;
 
-  int _visibleProjectCount = _chunkSize;
+  int _currentPage = 1;
   int _selectedCategoryIndex = 0;
   String? _selectedCategoryId;
   String _searchDraft = '';
@@ -48,8 +47,8 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
   String? _selectedTag;
 
   LearningProjectsQuery get _query => LearningProjectsQuery(
-    page: 1,
-    limit: 20,
+    page: _currentPage,
+    limit: _pageSize,
     q: _searchTerm,
     categoryId: _selectedCategoryId,
     difficulty: _selectedDifficulty,
@@ -98,21 +97,21 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
 
     setState(() {
       _searchTerm = nextSearchTerm;
-      _visibleProjectCount = _chunkSize;
+      _currentPage = 1;
     });
   }
 
   void _setDifficulty(String? difficulty) {
     setState(() {
       _selectedDifficulty = difficulty;
-      _visibleProjectCount = _chunkSize;
+      _currentPage = 1;
     });
   }
 
   void _setTag(String? tag) {
     setState(() {
       _selectedTag = tag;
-      _visibleProjectCount = _chunkSize;
+      _currentPage = 1;
     });
   }
 
@@ -126,7 +125,17 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
       _searchTerm = null;
       _selectedDifficulty = null;
       _selectedTag = null;
-      _visibleProjectCount = _chunkSize;
+      _currentPage = 1;
+    });
+  }
+
+  void _setPage(int page) {
+    if (page == _currentPage || page < 1) {
+      return;
+    }
+
+    setState(() {
+      _currentPage = page;
     });
   }
 
@@ -174,7 +183,6 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
                     selectedDifficulty: _selectedDifficulty,
                     selectedTag: _selectedTag,
                     hasActiveFilters: _hasActiveFilters,
-                    visibleProjectCount: _visibleProjectCount,
                     onSearchChanged: _onSearchChanged,
                     onSearchSubmitted: _applySearch,
                     onDifficultySelected: _setDifficulty,
@@ -186,18 +194,10 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
                       setState(() {
                         _selectedCategoryIndex = index;
                         _selectedCategoryId = categoryId;
-                        _visibleProjectCount = _chunkSize;
+                        _currentPage = 1;
                       });
                     },
-                    onLoadMore: () {
-                      setState(() {
-                        _visibleProjectCount =
-                            (_visibleProjectCount + _chunkSize).clamp(
-                              0,
-                              result.items.length - 1,
-                            );
-                      });
-                    },
+                    onPageChanged: _setPage,
                   );
                 },
               ),
@@ -220,7 +220,6 @@ class _HubContent extends StatelessWidget {
     required this.selectedDifficulty,
     required this.selectedTag,
     required this.hasActiveFilters,
-    required this.visibleProjectCount,
     required this.onSearchChanged,
     required this.onSearchSubmitted,
     required this.onDifficultySelected,
@@ -229,7 +228,7 @@ class _HubContent extends StatelessWidget {
     required this.onSubmitProject,
     required this.onFocusSearch,
     required this.onCategorySelected,
-    required this.onLoadMore,
+    required this.onPageChanged,
   });
 
   final LearningProjectsResult result;
@@ -241,7 +240,6 @@ class _HubContent extends StatelessWidget {
   final String? selectedDifficulty;
   final String? selectedTag;
   final bool hasActiveFilters;
-  final int visibleProjectCount;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onSearchSubmitted;
   final ValueChanged<String?> onDifficultySelected;
@@ -250,19 +248,24 @@ class _HubContent extends StatelessWidget {
   final VoidCallback onSubmitProject;
   final VoidCallback onFocusSearch;
   final void Function(int index, String? categoryId) onCategorySelected;
-  final VoidCallback onLoadMore;
+  final ValueChanged<int> onPageChanged;
 
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
-    final featuredProject = result.items.isEmpty ? null : result.items.first;
-    final otherProjects = result.items.length > 1
+    final isFirstPage = result.page <= 1;
+    final featuredProject = isFirstPage && result.items.isNotEmpty
+        ? result.items.first
+        : null;
+    final gridProjects = featuredProject != null && result.items.length > 1
         ? result.items.sublist(1)
-        : const <LearningProject>[];
-    final visibleProjects = otherProjects
-        .take(visibleProjectCount)
-        .toList(growable: false);
-    final hasMoreProjects = visibleProjectCount < otherProjects.length;
+        : result.items;
+    final pageStart = result.total == 0
+        ? 0
+        : ((result.page - 1) * result.limit) + 1;
+    final pageEnd = result.total == 0
+        ? 0
+        : (pageStart + result.items.length - 1).clamp(pageStart, result.total);
     final categoryLabels = _categoryLabels(categoriesAsync);
     final tagOptions = _tagOptions(result.items, selectedTag);
     final heroStats = <LocalizedText, int>{
@@ -369,20 +372,26 @@ class _HubContent extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
                 FeaturedProjectCard(project: featuredProject),
               ],
-              if (otherProjects.isNotEmpty) ...[
+              if (gridProjects.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  const LocalizedText(
-                    en: 'More projects',
-                    ar: 'مشاريع أخرى',
-                  ).resolve(context),
+                  (isFirstPage
+                          ? const LocalizedText(
+                              en: 'More projects',
+                              ar: 'مشاريع أخرى',
+                            )
+                          : const LocalizedText(
+                              en: 'Projects',
+                              ar: 'المشاريع',
+                            ))
+                      .resolve(context),
                   style: AppTextStyles.display(
                     context,
                   ).copyWith(color: palette.textPrimary),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  '${otherProjects.length} ${const LocalizedText(en: 'results', ar: 'نتيجة').resolve(context)}',
+                  _pageSummary(context, pageStart, pageEnd, result.total),
                   style: AppTextStyles.subtitle(
                     context,
                   ).copyWith(color: palette.textSecondary),
@@ -404,7 +413,7 @@ class _HubContent extends StatelessWidget {
                     return Wrap(
                       spacing: AppSpacing.md,
                       runSpacing: AppSpacing.md,
-                      children: visibleProjects.map((project) {
+                      children: gridProjects.map((project) {
                         return SizedBox(
                           width: itemWidth,
                           child: LearningProjectCard(project: project),
@@ -413,20 +422,12 @@ class _HubContent extends StatelessWidget {
                     );
                   },
                 ),
-                if (hasMoreProjects) ...[
+                if (result.totalPages > 1) ...[
                   const SizedBox(height: AppSpacing.lg),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: OutlinedButton.icon(
-                      onPressed: onLoadMore,
-                      icon: const Icon(Icons.expand_more_rounded),
-                      label: Text(
-                        const LocalizedText(
-                          en: 'Load more projects',
-                          ar: 'عرض المزيد من المشاريع',
-                        ).resolve(context),
-                      ),
-                    ),
+                  _LearningPaginationControls(
+                    page: result.page,
+                    totalPages: result.totalPages,
+                    onPageChanged: onPageChanged,
                   ),
                 ],
               ],
@@ -469,7 +470,7 @@ class _HubContent extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              const DisabledAiPanel(compact: true),
+              _LearningHubRoadmapPanel(onSubmitProject: onSubmitProject),
             ],
           ),
         ),
@@ -536,6 +537,213 @@ class _HubContent extends StatelessWidget {
 
     return tags.toList(growable: false)
       ..sort((left, right) => left.toLowerCase().compareTo(right.toLowerCase()));
+  }
+
+  String _pageSummary(
+    BuildContext context,
+    int pageStart,
+    int pageEnd,
+    int total,
+  ) {
+    final results = const LocalizedText(en: 'results', ar: 'نتيجة').resolve(
+      context,
+    );
+
+    if (total == 0) {
+      return '0 $results';
+    }
+
+    final showing = const LocalizedText(en: 'Showing', ar: 'عرض').resolve(
+      context,
+    );
+    final of = const LocalizedText(en: 'of', ar: 'من').resolve(context);
+
+    return '$showing $pageStart-$pageEnd $of $total $results';
+  }
+}
+
+class _LearningPaginationControls extends StatelessWidget {
+  const _LearningPaginationControls({
+    required this.page,
+    required this.totalPages,
+    required this.onPageChanged,
+  });
+
+  final int page;
+  final int totalPages;
+  final ValueChanged<int> onPageChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final canGoBack = page > 1;
+    final canGoForward = page < totalPages;
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 560;
+          final pageLabel = Text(
+            LocalizedText(
+              en: 'Page $page of $totalPages',
+              ar: 'صفحة $page من $totalPages',
+            ).resolve(context),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textPrimary),
+            textAlign: TextAlign.center,
+          );
+          final previous = OutlinedButton.icon(
+            onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
+            icon: const Icon(Icons.chevron_left_rounded),
+            label: Text(
+              const LocalizedText(en: 'Previous', ar: 'السابق').resolve(
+                context,
+              ),
+            ),
+          );
+          final next = FilledButton.icon(
+            onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
+            icon: const Icon(Icons.chevron_right_rounded),
+            label: Text(
+              const LocalizedText(en: 'Next', ar: 'التالي').resolve(context),
+            ),
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                pageLabel,
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(child: previous),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: next),
+                  ],
+                ),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              previous,
+              Expanded(child: pageLabel),
+              next,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _LearningHubRoadmapPanel extends StatelessWidget {
+  const _LearningHubRoadmapPanel({required this.onSubmitProject});
+
+  final VoidCallback onSubmitProject;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.xlAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 760;
+          final content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.route_outlined, color: palette.lime),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                const LocalizedText(
+                  en: 'Build tools are coming next',
+                  ar: 'أدوات البناء قادمة لاحقاً',
+                ).resolve(context),
+                style: AppTextStyles.title(
+                  context,
+                ).copyWith(color: palette.textPrimary),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                const LocalizedText(
+                  en: 'The next Learning Hub steps are saved projects, project likes, reviews, and build checklists that connect projects to materials without automated matching.',
+                  ar: 'الخطوات القادمة في مركز التعلم هي حفظ المشاريع، الإعجابات، المراجعات، وقوائم البناء التي تربط المشاريع بالمواد بدون مطابقة آلية.',
+                ).resolve(context),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textSecondary, height: 1.45),
+              ),
+            ],
+          );
+          final actions = Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              FilledButton.icon(
+                onPressed: onSubmitProject,
+                icon: const Icon(Icons.edit_note_rounded),
+                label: Text(
+                  const LocalizedText(
+                    en: 'Submit a project',
+                    ar: 'إرسال مشروع',
+                  ).resolve(context),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => context.go('/materials'),
+                icon: const Icon(Icons.inventory_2_outlined),
+                label: Text(
+                  const LocalizedText(
+                    en: 'Browse materials',
+                    ar: 'تصفح المواد',
+                  ).resolve(context),
+                ),
+              ),
+            ],
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                content,
+                const SizedBox(height: AppSpacing.lg),
+                actions,
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: content),
+              const SizedBox(width: AppSpacing.lg),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: actions,
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
 

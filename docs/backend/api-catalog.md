@@ -226,11 +226,17 @@ Available jobs return safe area-level pickup/dropoff data only. Accept is transa
 
 | Method | Path | Auth | Source file |
 |--------|------|------|-------------|
-| GET | `/api/learning-projects` | Public | `learning-projects/learning-projects.routes.ts` |
-| GET | `/api/learning-projects/:id` | Public (`PUBLISHED` only) | `learning-projects/learning-projects.routes.ts` |
+| GET | `/api/learning-projects` | Public, optional Bearer JWT | `learning-projects/learning-projects.routes.ts` |
+| GET | `/api/learning-projects/:id` | Public, optional Bearer JWT (`PUBLISHED` only) | `learning-projects/learning-projects.routes.ts` |
+| POST | `/api/learning-projects/:id/like` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| DELETE | `/api/learning-projects/:id/like` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| POST | `/api/learning-projects/:id/save` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| DELETE | `/api/learning-projects/:id/save` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| POST | `/api/learning-projects/:id/follow` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| DELETE | `/api/learning-projects/:id/follow` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
 | POST | `/api/learning-projects/submit` | Bearer JWT + `Idempotency-Key` | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
 
-Public list/detail return only `PUBLISHED` projects. Learner submit creates `PENDING_REVIEW` with `submittedAt`. `POST /api/learning-projects/submit` requires an `Idempotency-Key` header and uses scope `LEARNING_PROJECT_SUBMIT`; same learner + same key + identical body returns the stored response without creating another project.
+Public list/detail return only `PUBLISHED` projects and include `likesCount`, `followersCount`, plus viewer-specific `isLiked`, `isSaved`, and `isFollowing` (`false` without authenticated viewer). Learner like/unlike is idempotent and returns `{ projectId, likesCount, isLiked }`. Learner save/unsave is idempotent and returns `{ projectId, isSaved }`; save counts are not exposed publicly. Learner follow/unfollow is idempotent and returns `{ projectId, followersCount, isFollowing }`. Learner submit creates `PENDING_REVIEW` with `submittedAt`. `POST /api/learning-projects/submit` requires an `Idempotency-Key` header and uses scope `LEARNING_PROJECT_SUBMIT`; same learner + same key + identical body returns the stored response without creating another project.
 
 ## Locations — `/api/locations`
 

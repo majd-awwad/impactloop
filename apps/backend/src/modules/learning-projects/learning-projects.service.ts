@@ -1,4 +1,5 @@
 import { AppError } from '../../utils/app-error.js';
+import type { AccessTokenPayload } from '../../utils/jwt.js';
 import {
   LEARNING_PROJECT_SUBMIT_SCOPE,
   runIdempotentOperation,
@@ -49,6 +50,13 @@ const mapLearningProjectListItem = (
   project: Awaited<
     ReturnType<typeof learningProjectsRepository.findLearningProjects>
   >['items'][number],
+  engagement: {
+    likesCount?: number;
+    isLiked?: boolean;
+    isSaved?: boolean;
+    followersCount?: number;
+    isFollowing?: boolean;
+  } = {},
 ) => ({
   id: project.id,
   title: project.title,
@@ -60,6 +68,11 @@ const mapLearningProjectListItem = (
   authorName: resolveAuthorName(project),
   tags: project.tags.map((tag) => tag.tag),
   ratingSummary: null,
+  likesCount: engagement.likesCount ?? 0,
+  isLiked: engagement.isLiked ?? false,
+  isSaved: engagement.isSaved ?? false,
+  followersCount: engagement.followersCount ?? 0,
+  isFollowing: engagement.isFollowing ?? false,
   createdAt: project.createdAt.toISOString(),
 });
 
@@ -67,6 +80,13 @@ const mapLearningProjectDetail = (
   project: NonNullable<
     Awaited<ReturnType<typeof learningProjectsRepository.findLearningProjectById>>
   >,
+  engagement: {
+    likesCount?: number;
+    isLiked?: boolean;
+    isSaved?: boolean;
+    followersCount?: number;
+    isFollowing?: boolean;
+  } = {},
 ) => ({
   id: project.id,
   title: project.title,
@@ -110,14 +130,44 @@ const mapLearningProjectDetail = (
   })),
   tags: project.tags.map((tag) => tag.tag),
   ratingSummary: null,
+  likesCount: engagement.likesCount ?? 0,
+  isLiked: engagement.isLiked ?? false,
+  isSaved: engagement.isSaved ?? false,
+  followersCount: engagement.followersCount ?? 0,
+  isFollowing: engagement.isFollowing ?? false,
   createdAt: project.createdAt.toISOString(),
 });
 
-export const getLearningProjects = async (query: LearningProjectsQuery) => {
+export const getLearningProjects = async (
+  query: LearningProjectsQuery,
+  viewer?: AccessTokenPayload,
+) => {
   const result = await learningProjectsRepository.findLearningProjects(query);
+  const projectIds = result.items.map((item) => item.id);
+  const [
+    likesByProjectId,
+    likedProjectIds,
+    savedProjectIds,
+    followsByProjectId,
+    followedProjectIds,
+  ] = await Promise.all([
+    learningProjectsRepository.countLikesByProjectIds(projectIds),
+    learningProjectsRepository.findLikedProjectIds(viewer?.sub, projectIds),
+    learningProjectsRepository.findSavedProjectIds(viewer?.sub, projectIds),
+    learningProjectsRepository.countFollowsByProjectIds(projectIds),
+    learningProjectsRepository.findFollowedProjectIds(viewer?.sub, projectIds),
+  ]);
 
   return {
-    items: result.items.map(mapLearningProjectListItem),
+    items: result.items.map((item) =>
+      mapLearningProjectListItem(item, {
+        likesCount: likesByProjectId.get(item.id) ?? 0,
+        isLiked: likedProjectIds.has(item.id),
+        isSaved: savedProjectIds.has(item.id),
+        followersCount: followsByProjectId.get(item.id) ?? 0,
+        isFollowing: followedProjectIds.has(item.id),
+      }),
+    ),
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -127,14 +177,154 @@ export const getLearningProjects = async (query: LearningProjectsQuery) => {
   };
 };
 
-export const getLearningProjectById = async (id: string) => {
+export const getLearningProjectById = async (
+  id: string,
+  viewer?: AccessTokenPayload,
+) => {
   const project = await learningProjectsRepository.findLearningProjectById(id);
 
   if (!project) {
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
-  return mapLearningProjectDetail(project);
+  const [
+    likesByProjectId,
+    likedProjectIds,
+    savedProjectIds,
+    followsByProjectId,
+    followedProjectIds,
+  ] = await Promise.all([
+    learningProjectsRepository.countLikesByProjectIds([project.id]),
+    learningProjectsRepository.findLikedProjectIds(viewer?.sub, [project.id]),
+    learningProjectsRepository.findSavedProjectIds(viewer?.sub, [project.id]),
+    learningProjectsRepository.countFollowsByProjectIds([project.id]),
+    learningProjectsRepository.findFollowedProjectIds(viewer?.sub, [
+      project.id,
+    ]),
+  ]);
+
+  return mapLearningProjectDetail(project, {
+    likesCount: likesByProjectId.get(project.id) ?? 0,
+    isLiked: likedProjectIds.has(project.id),
+    isSaved: savedProjectIds.has(project.id),
+    followersCount: followsByProjectId.get(project.id) ?? 0,
+    isFollowing: followedProjectIds.has(project.id),
+  });
+};
+
+export const likeLearningProjectById = async (id: string, userId: string) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    id,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  await learningProjectsRepository.setProjectLiked(id, userId);
+  const likesCount = await learningProjectsRepository.countLikesForProject(id);
+
+  return {
+    projectId: id,
+    likesCount,
+    isLiked: true,
+  };
+};
+
+export const unlikeLearningProjectById = async (id: string, userId: string) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    id,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  await learningProjectsRepository.unsetProjectLiked(id, userId);
+  const likesCount = await learningProjectsRepository.countLikesForProject(id);
+
+  return {
+    projectId: id,
+    likesCount,
+    isLiked: false,
+  };
+};
+
+export const saveLearningProjectById = async (id: string, userId: string) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    id,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  await learningProjectsRepository.setProjectSaved(id, userId);
+
+  return {
+    projectId: id,
+    isSaved: true,
+  };
+};
+
+export const unsaveLearningProjectById = async (id: string, userId: string) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    id,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  await learningProjectsRepository.unsetProjectSaved(id, userId);
+
+  return {
+    projectId: id,
+    isSaved: false,
+  };
+};
+
+export const followLearningProjectById = async (id: string, userId: string) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    id,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  await learningProjectsRepository.setProjectFollowed(id, userId);
+  const followersCount =
+    await learningProjectsRepository.countFollowsForProject(id);
+
+  return {
+    projectId: id,
+    followersCount,
+    isFollowing: true,
+  };
+};
+
+export const unfollowLearningProjectById = async (
+  id: string,
+  userId: string,
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    id,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  await learningProjectsRepository.unsetProjectFollowed(id, userId);
+  const followersCount =
+    await learningProjectsRepository.countFollowsForProject(id);
+
+  return {
+    projectId: id,
+    followersCount,
+    isFollowing: false,
+  };
 };
 
 export const submitLearningProjectForReview = async (

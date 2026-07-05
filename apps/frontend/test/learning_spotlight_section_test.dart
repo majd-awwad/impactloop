@@ -10,6 +10,9 @@ import 'package:frontend/features/learning_hub/application/learning_hub_provider
 import 'package:frontend/features/learning_hub/domain/learning_project_repository.dart';
 import 'package:frontend/features/learning_hub/domain/learning_projects_result.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project.dart';
+import 'package:frontend/features/learning_hub/domain/project_engagement.dart';
+import 'package:frontend/features/learning_hub/domain/project_follow_status.dart';
+import 'package:frontend/features/learning_hub/domain/project_save_status.dart';
 import 'package:frontend/features/materials/data/models/category.dart';
 
 void main() {
@@ -201,6 +204,44 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
 
   @override
   Future<LearningProject?> fetchProjectById(String id) async => null;
+
+  @override
+  Future<ProjectEngagement> likeProject(String id) async {
+    return ProjectEngagement(projectId: id, likesCount: 1, isLiked: true);
+  }
+
+  @override
+  Future<ProjectEngagement> unlikeProject(String id) async {
+    return ProjectEngagement(projectId: id, likesCount: 0, isLiked: false);
+  }
+
+  @override
+  Future<ProjectSaveStatus> saveProject(String id) async {
+    return ProjectSaveStatus(projectId: id, isSaved: true);
+  }
+
+  @override
+  Future<ProjectSaveStatus> unsaveProject(String id) async {
+    return ProjectSaveStatus(projectId: id, isSaved: false);
+  }
+
+  @override
+  Future<ProjectFollowStatus> followProject(String id) async {
+    return ProjectFollowStatus(
+      projectId: id,
+      followersCount: 1,
+      isFollowing: true,
+    );
+  }
+
+  @override
+  Future<ProjectFollowStatus> unfollowProject(String id) async {
+    return ProjectFollowStatus(
+      projectId: id,
+      followersCount: 0,
+      isFollowing: false,
+    );
+  }
 
   @override
   Future<List<MaterialCategory>> fetchProjectCategories() async => const [];

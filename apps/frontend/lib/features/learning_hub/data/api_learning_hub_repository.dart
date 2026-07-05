@@ -7,6 +7,9 @@ import '../../materials/data/models/category.dart';
 import '../domain/learning_project_repository.dart';
 import '../domain/learning_projects_result.dart';
 import '../domain/models/learning_project.dart';
+import '../domain/project_engagement.dart';
+import '../domain/project_follow_status.dart';
+import '../domain/project_save_status.dart';
 import 'learning_hub_api_mapper.dart';
 
 class ApiLearningHubRepository implements LearningProjectRepository {
@@ -95,6 +98,54 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   @override
   Future<List<MaterialCategory>> fetchProjectCategories() {
     return _categoriesApi.fetchProjectCategories();
+  }
+
+  @override
+  Future<ProjectEngagement> likeProject(String id) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>('$_basePath/$id/like'),
+      ProjectEngagement.fromJson,
+    );
+  }
+
+  @override
+  Future<ProjectEngagement> unlikeProject(String id) {
+    return unwrapApiResponse(
+      _client.delete<Map<String, dynamic>>('$_basePath/$id/like'),
+      ProjectEngagement.fromJson,
+    );
+  }
+
+  @override
+  Future<ProjectSaveStatus> saveProject(String id) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>('$_basePath/$id/save'),
+      ProjectSaveStatus.fromJson,
+    );
+  }
+
+  @override
+  Future<ProjectSaveStatus> unsaveProject(String id) {
+    return unwrapApiResponse(
+      _client.delete<Map<String, dynamic>>('$_basePath/$id/save'),
+      ProjectSaveStatus.fromJson,
+    );
+  }
+
+  @override
+  Future<ProjectFollowStatus> followProject(String id) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>('$_basePath/$id/follow'),
+      ProjectFollowStatus.fromJson,
+    );
+  }
+
+  @override
+  Future<ProjectFollowStatus> unfollowProject(String id) {
+    return unwrapApiResponse(
+      _client.delete<Map<String, dynamic>>('$_basePath/$id/follow'),
+      ProjectFollowStatus.fromJson,
+    );
   }
 
   @override

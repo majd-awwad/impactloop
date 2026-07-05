@@ -78,7 +78,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/learner/reservations/:id` | `LearnerReservationDetailPage` | learner | Single reservation detail with refresh + shared reservation card |
 | `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline, latest driver ping summary, and page-scoped polling map marker when tracking coordinates are allowed |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
-| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, and category filters; add-draft submits for review; AI remains disabled |
+| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, category filters, and server-side page navigation; add-draft submits for review; AI material matching is not implemented |
 | `/learning/add-draft` | `LearningAddDraftPage` | learner | Learner project submission form; posts to `/api/learning-projects/submit` |
 | `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail |
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default |

@@ -140,6 +140,32 @@ class _FeaturedContent extends StatelessWidget {
           children: [
             _MetaChip(label: project.difficulty.resolve(context)),
             _MetaChip(label: project.duration.resolve(context)),
+            if (project.likesCount > 0 || project.isLiked)
+              _MetaChip(
+                label: project.likesCount == 1
+                    ? '1 like'
+                    : '${project.likesCount} likes',
+                icon: project.isLiked
+                    ? Icons.favorite_rounded
+                    : Icons.favorite_border_rounded,
+                accent: project.isLiked,
+              ),
+            if (project.isSaved)
+              _MetaChip(
+                label: 'Saved',
+                icon: Icons.bookmark_rounded,
+                accent: true,
+              ),
+            if (project.followersCount > 0 || project.isFollowing)
+              _MetaChip(
+                label: project.followersCount == 1
+                    ? '1 follower'
+                    : '${project.followersCount} followers',
+                icon: project.isFollowing
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_none_rounded,
+                accent: project.isFollowing,
+              ),
             if (project.componentCountLabel.en.trim().isNotEmpty)
               _MetaChip(label: project.componentCountLabel.resolve(context)),
             if (project.hasRatings)
@@ -216,10 +242,11 @@ class _FeaturedMedia extends StatelessWidget {
 }
 
 class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.label, this.accent = false});
+  const _MetaChip({required this.label, this.accent = false, this.icon});
 
   final String label;
   final bool accent;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -238,15 +265,32 @@ class _MetaChip extends StatelessWidget {
         borderRadius: AppRadius.pillAll,
         border: Border.all(color: palette.borderSubtle),
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.body(context).copyWith(
-          color: accent
-              ? isDark
-                    ? palette.limeSoft
-                    : AppColorTokens.emeraldDeep
-              : palette.textSecondary,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: 16,
+              color: accent
+                  ? isDark
+                        ? palette.limeSoft
+                        : AppColorTokens.emeraldDeep
+                  : palette.textSecondary,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+          ],
+          Text(
+            label,
+            style: AppTextStyles.body(context).copyWith(
+              color: accent
+                  ? isDark
+                        ? palette.limeSoft
+                        : AppColorTokens.emeraldDeep
+                  : palette.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }

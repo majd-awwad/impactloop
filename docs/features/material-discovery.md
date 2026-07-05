@@ -6,7 +6,7 @@
 
 Public browse and detail view of surplus materials available for reuse. Guests and authenticated users can search, filter, paginate, and open material details without logging in.
 
-**Not in current shipped scope:** similar materials, material-to-project suggestions, account-wide saved materials/favorites, project likes, and follows.
+**Not in current shipped scope:** similar materials, material-to-project suggestions, account-wide saved materials/favorites, project linking, and follows.
 
 ## Current status
 
@@ -110,6 +110,6 @@ Detail states:
 
 - Bilingual material titles/descriptions (backend has single `title`/`description` today).
 - Saved-location create/update/delete UI in Flutter; backend CRUD exists and discovery can read/select saved locations.
-- Similar materials, saved materials, follows, project likes, and supplier/category follow signals.
+- Similar materials, saved materials, follows, material-to-project linking, and supplier/category follow signals.
 - "Projects you can build with this material" suggestions.
 - Database `isPublic` category flag to replace discovery name-pattern filtering.

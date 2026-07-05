@@ -8,9 +8,15 @@ import { successResponse } from '../../utils/api-response.js';
 import { validateIdempotencyKey } from '../../services/idempotency.service.js';
 
 import {
+  followLearningProjectById,
   getLearningProjectById,
   getLearningProjects,
+  likeLearningProjectById,
+  saveLearningProjectById,
   submitLearningProjectForReview,
+  unlikeLearningProjectById,
+  unfollowLearningProjectById,
+  unsaveLearningProjectById,
 } from './learning-projects.service.js';
 import type {
   LearningProjectsQuery,
@@ -23,6 +29,7 @@ export const listLearningProjects = async (
 ): Promise<void> => {
   const projects = await getLearningProjects(
     readValidatedQuery<LearningProjectsQuery>(req),
+    req.auth,
   );
 
   res.json(successResponse('Learning projects fetched successfully', projects));
@@ -33,9 +40,69 @@ export const getLearningProject = async (
   res: Response,
 ): Promise<void> => {
   const { id } = readValidatedParams<{ id: string }>(req);
-  const project = await getLearningProjectById(id);
+  const project = await getLearningProjectById(id, req.auth);
 
   res.json(successResponse('Learning project fetched successfully', project));
+};
+
+export const likeLearningProject = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const result = await likeLearningProjectById(id, req.auth!.sub);
+
+  res.json(successResponse('Learning project liked successfully', result));
+};
+
+export const unlikeLearningProject = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const result = await unlikeLearningProjectById(id, req.auth!.sub);
+
+  res.json(successResponse('Learning project unliked successfully', result));
+};
+
+export const saveLearningProject = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const result = await saveLearningProjectById(id, req.auth!.sub);
+
+  res.json(successResponse('Learning project saved successfully', result));
+};
+
+export const unsaveLearningProject = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const result = await unsaveLearningProjectById(id, req.auth!.sub);
+
+  res.json(successResponse('Learning project unsaved successfully', result));
+};
+
+export const followLearningProject = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const result = await followLearningProjectById(id, req.auth!.sub);
+
+  res.json(successResponse('Learning project followed successfully', result));
+};
+
+export const unfollowLearningProject = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const result = await unfollowLearningProjectById(id, req.auth!.sub);
+
+  res.json(successResponse('Learning project unfollowed successfully', result));
 };
 
 export const submitLearningProject = async (

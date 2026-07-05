@@ -46,6 +46,11 @@ class LearningHubApiMapper {
     final durationMinutes = _intFromDynamic(json['estimatedDurationMinutes']);
     final coverImageUrl = _nullableString(json['coverImageUrl']);
     final rating = _parseRatingSummary(json['ratingSummary']);
+    final likesCount = _intFromDynamic(json['likesCount']) ?? 0;
+    final isLiked = json['isLiked'] == true;
+    final isSaved = json['isSaved'] == true;
+    final followersCount = _intFromDynamic(json['followersCount']) ?? 0;
+    final isFollowing = json['isFollowing'] == true;
     final tags = _mapTags(json['tags']);
 
     final components = includeDetailFields
@@ -95,6 +100,11 @@ class LearningHubApiMapper {
       heroIconData: heroIconForCategory(categoryNameEn, id: id),
       cardGradient: gradientForCategory(categoryNameEn, id: id),
       isFeatured: false,
+      likesCount: likesCount,
+      isLiked: isLiked,
+      isSaved: isSaved,
+      followersCount: followersCount,
+      isFollowing: isFollowing,
       tags: tags,
     );
   }

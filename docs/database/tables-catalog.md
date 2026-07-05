@@ -22,7 +22,7 @@ Per-table reference from `apps/backend/prisma/schema.prisma`. Column names shown
 | activeRole | UserRole? | Current portal selection (`LEARNER`, `SUPPLIER`, etc.); does not remove stored roles |
 | createdAt, updatedAt | DateTime | |
 
-Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, material reports, learning projects, requests.
+Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, material reports, learning projects, project likes/saves/follows, requests.
 
 ---
 
@@ -206,7 +206,7 @@ Indexes: `userId`, `(userId, isDefault)`, `locationId`.
 | stepsGeneratedByAi | Boolean | default false |
 | aiStepsGeneratedAt | DateTime? | |
 
-Child tables: project_images, project_required_components, project_steps, project_links, project_tags.
+Child tables: project_images, project_required_components, project_steps, project_links, project_tags, project_likes, project_saves, project_follows.
 
 ---
 
@@ -273,6 +273,45 @@ Child tables: project_images, project_required_components, project_steps, projec
 | id | String (uuid) | PK |
 | projectId | String | FK → learning_projects |
 | tag | String | unique per project |
+
+---
+
+## `project_likes` — model `ProjectLike`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| projectId | String | FK → learning_projects; cascade delete |
+| userId | String | FK → users; cascade delete |
+| createdAt | DateTime | default now |
+
+**Unique:** `(projectId, userId)`. Used by learner project like/unlike and public Learning Hub `likesCount` / viewer-specific `isLiked` fields.
+
+---
+
+## `project_saves` — model `ProjectSave`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| projectId | String | FK → learning_projects; cascade delete |
+| userId | String | FK → users; cascade delete |
+| createdAt | DateTime | default now |
+
+**Unique:** `(projectId, userId)`. Used by private learner project save/unsave and viewer-specific `isSaved`; save counts are not exposed publicly.
+
+---
+
+## `project_follows` — model `ProjectFollow`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| projectId | String | FK → learning_projects; cascade delete |
+| userId | String | FK → users; cascade delete |
+| createdAt | DateTime | default now |
+
+**Unique:** `(projectId, userId)`. Used by learner project follow/unfollow and public Learning Hub `followersCount` / viewer-specific `isFollowing` fields.
 
 ---
 

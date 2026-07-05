@@ -43,11 +43,11 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Public learning hub browse/detail pages for published projects.
 - Material detail views create `MaterialView` engagement rows; authenticated users count once per material.
 - Public material cards/details show material like counts.
+- Public learning project cards/details show project like counts.
 - Public material location is redacted to city/area only.
 
 **Planned / future:**
 
-- Public project engagement signals beyond views, such as project likes.
 - Guest prompts for login when trying to save, like, reserve, follow, or start a build.
 - Public supplier profile pages beyond the supplier summary already shown on material details.
 
@@ -71,6 +71,9 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Learner reservation list, pending cancel, status display, and accepted self-pickup address reveal.
 - Internal delivery request/status page for accepted delivery-enabled reservations.
 - Published learning project browse/detail.
+- Learner project likes from Learning Hub detail, with counts visible on Learning Hub cards, detail, and Home spotlight.
+- Learner project saves from Learning Hub detail, with viewer-specific saved badges visible on Learning Hub cards, detail, and Home spotlight.
+- Learner project follows from Learning Hub detail, with follower counts and viewer-specific followed state visible on Learning Hub cards, detail, and Home spotlight.
 - Existing learner accounts can become **Student/Individual** suppliers from `/become-supplier` without a second account (`POST /api/auth/become-supplier`).
 - Dual-role users switch active portal with `POST /api/auth/switch-role` and see switch actions in the account menu, profile page, and supplier profile popover.
 - Learner project draft submission for admin review.
@@ -79,12 +82,12 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 
 - Preferences and interests exist on profile/registration, but recommendation logic is currently simple and not a dedicated personalization engine.
 - Delivery tracking is polling/latest-ping based, not realtime.
-- Learning hub remains partial: learners can browse/detail and submit drafts for admin review, but project engagement, build checklist, ratings, and AI matching are not implemented.
+- Learning hub remains partial: learners can browse/detail, like/save/follow projects, and submit drafts for admin review, but saved/followed-project listing, build checklist, ratings, material linking, and AI matching are not implemented.
 
 **Planned / future:**
 
 - Personalized home sections based on interests, city/area, price preference, followed suppliers/categories, saved projects, and reservation/build history.
-- Save material, save project, like project, follow supplier, follow category.
+- Save material, follow supplier, follow category.
 - Project to materials matching.
 - Material to projects discovery.
 - Build checklist with `Available`, `Missing`, `Alternative`, `Already owned`, and `Reserved` states.

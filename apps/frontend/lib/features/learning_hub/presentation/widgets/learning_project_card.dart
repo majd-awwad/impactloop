@@ -79,6 +79,40 @@ class LearningProjectCard extends StatelessWidget {
                                 _ProjectMetaChip(
                                   label: project.duration.resolve(context),
                                 ),
+                                if (project.likesCount > 0 ||
+                                    project.isLiked) ...[
+                                  const SizedBox(width: AppSpacing.sm),
+                                  _ProjectMetaChip(
+                                    label: project.likesCount == 1
+                                        ? '1 like'
+                                        : '${project.likesCount} likes',
+                                    icon: project.isLiked
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    accent: project.isLiked,
+                                  ),
+                                ],
+                                if (project.isSaved) ...[
+                                  const SizedBox(width: AppSpacing.sm),
+                                  _ProjectMetaChip(
+                                    label: 'Saved',
+                                    icon: Icons.bookmark_rounded,
+                                    accent: true,
+                                  ),
+                                ],
+                                if (project.followersCount > 0 ||
+                                    project.isFollowing) ...[
+                                  const SizedBox(width: AppSpacing.sm),
+                                  _ProjectMetaChip(
+                                    label: project.followersCount == 1
+                                        ? '1 follower'
+                                        : '${project.followersCount} followers',
+                                    icon: project.isFollowing
+                                        ? Icons.notifications_active_rounded
+                                        : Icons.notifications_none_rounded,
+                                    accent: project.isFollowing,
+                                  ),
+                                ],
                                 if (project.componentCountLabel.en
                                     .trim()
                                     .isNotEmpty) ...[
@@ -280,9 +314,11 @@ class _ProjectTitleRow extends StatelessWidget {
 }
 
 class _ProjectMetaChip extends StatelessWidget {
-  const _ProjectMetaChip({required this.label});
+  const _ProjectMetaChip({required this.label, this.icon, this.accent = false});
 
   final String label;
+  final IconData? icon;
+  final bool accent;
 
   @override
   Widget build(BuildContext context) {
@@ -294,15 +330,30 @@ class _ProjectMetaChip extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: palette.mutedChip,
+        color: accent
+            ? palette.lime.withValues(alpha: 0.16)
+            : palette.mutedChip,
         borderRadius: AppRadius.pillAll,
         border: Border.all(color: palette.borderSubtle),
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.body(
-          context,
-        ).copyWith(color: palette.textSecondary),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: 16,
+              color: accent ? palette.limeSoft : palette.textSecondary,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+          ],
+          Text(
+            label,
+            style: AppTextStyles.body(context).copyWith(
+              color: accent ? palette.limeSoft : palette.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }
