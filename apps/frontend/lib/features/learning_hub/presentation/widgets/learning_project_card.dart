@@ -22,7 +22,7 @@ class LearningProjectCard extends StatelessWidget {
       height: 392,
       child: InkWell(
         borderRadius: AppRadius.xlAll,
-        onTap: () => context.go('/learning/${project.id}'),
+        onTap: () => context.push('/learning/${project.id}'),
         child: Container(
           decoration: BoxDecoration(
             color: palette.cardSurface,

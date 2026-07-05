@@ -183,25 +183,25 @@ Mount order: `apps/backend/src/app.ts`
 
 ## `learning-projects`
 
-**Purpose:** Public read API for learning hub projects (list + detail).
+**Purpose:** Public read API for learning hub projects (list + detail) plus learner project submit-for-review.
 
 **Key files:** `learning-projects.routes.ts`, `learning-projects.controller.ts`, `learning-projects.service.ts`, `learning-projects.repository.ts`, `learning-projects.validation.ts`
 
 **Prisma:** `LearningProject` and related project tables
 
-**Frontend:** Learning hub list/detail and home spotlight are API-backed; add-draft remains mock-only — see [08-implementation-status.md](../08-implementation-status.md)
+**Frontend:** Learning hub list/detail, home spotlight, and add-draft submission are API-backed; admin moderation lives under `/api/admin/learning-projects*` — see [08-implementation-status.md](../08-implementation-status.md)
 
 ---
 
 ## `locations`
 
-**Purpose:** Authenticated reverse geocoding for supplier location input.
+**Purpose:** Authenticated reverse geocoding for supplier location input and private user saved-location CRUD.
 
-**Key files:** `locations.routes.ts`, `locations.controller.ts`, `locations.service.ts`, `locations.validation.ts`, `locations.test.ts`
+**Key files:** `locations.routes.ts`, `locations.controller.ts`, `locations.service.ts`, `locations.repository.ts`, `locations.validation.ts`, `locations.test.ts`
 
 **Cross-cutting:** `apps/backend/src/services/reverse-geocoding.service.ts`
 
-**Prisma:** `Location` (PostGIS `geography(Point,4326)` on column `location`)
+**Prisma:** `Location` (PostGIS `geography(Point,4326)` on column `location`), `UserSavedLocation`
 
 ---
 
@@ -217,13 +217,13 @@ Mount order: `apps/backend/src/app.ts`
 
 ## `materials`
 
-**Purpose:** Public material discovery (list/detail), listing policy, authenticated price check before listing.
+**Purpose:** Public material discovery (list/detail, nearest sort, approximate map pins), listing policy, authenticated price check before listing, and learner material engagement (views/likes).
 
 **Key files:** `materials.routes.ts`, `materials.controller.ts`, `materials.service.ts`, `materials.repository.ts`, `materials.validation.ts`, `materials.price.test.ts`
 
 **Constants:** `apps/backend/src/constants/material-listing-policy.ts`
 
-**Prisma:** `Material`, `MaterialImage`, `MaterialTag`
+**Prisma:** `Material`, `MaterialImage`, `MaterialTag`, `MaterialView`, `MaterialLike`
 
 ---
 

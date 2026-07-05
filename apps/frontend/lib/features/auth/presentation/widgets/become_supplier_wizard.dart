@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
+import '../../../supplier_portal/application/supplier_verification_gate.dart';
+import '../../../supplier_portal/data/supplier_verification_api.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
 import '../../data/models/become_supplier_request.dart';
@@ -54,8 +57,26 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
   String? _publicNameError;
   String? _cityError;
   String? _formError;
+  String? _verificationDocumentError;
+  PlatformFile? _verificationDocument;
 
-  BecomeSupplierStep get _currentStep => becomeSupplierSteps[_stepIndex];
+  bool get _needsVerification => isOrganizationSupplierInput(_supplierType);
+
+  List<BecomeSupplierStep> get _activeSteps {
+    final steps = <BecomeSupplierStep>[
+      BecomeSupplierStep.supplierType,
+      BecomeSupplierStep.profile,
+      BecomeSupplierStep.location,
+      BecomeSupplierStep.pickupDetails,
+    ];
+    if (_needsVerification) {
+      steps.add(BecomeSupplierStep.verification);
+    }
+    steps.add(BecomeSupplierStep.review);
+    return steps;
+  }
+
+  BecomeSupplierStep get _currentStep => _activeSteps[_stepIndex];
 
   @override
   void didChangeDependencies() {
@@ -88,7 +109,71 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
       _publicNameError = null;
       _cityError = null;
       _formError = null;
+      _verificationDocumentError = null;
     });
+  }
+
+  String? _validateVerificationDocument(PlatformFile? file) {
+    if (file == null || file.bytes == null) {
+      return 'Verification document is required';
+    }
+
+    if (file.size > maxVerificationDocumentBytes) {
+      return 'File must be 5MB or smaller';
+    }
+
+    final extension = file.name.split('.').last.toLowerCase();
+    if (!allowedVerificationExtensions.contains(extension)) {
+      return 'Allowed file types: PDF, PNG, JPG, JPEG';
+    }
+
+    return null;
+  }
+
+  Future<void> _pickVerificationDocument() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: allowedVerificationExtensions.toList(),
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    final file = result.files.first;
+    final validationError = _validateVerificationDocument(file);
+
+    setState(() {
+      _verificationDocument = validationError == null ? file : null;
+      _verificationDocumentError = validationError;
+      if (validationError == null) {
+        _formError = null;
+      }
+    });
+  }
+
+  Future<void> _submitVerification() async {
+    final api = ref.read(supplierVerificationApiProvider);
+    final uploaded = await api.uploadDocument(
+      bytes: _verificationDocument!.bytes!,
+      fileName: _verificationDocument!.name,
+      mimeType: mimeTypeForVerificationFile(_verificationDocument!.name),
+    );
+    final location = verificationLocationPayload(_pickupArea);
+    final apiSupplierType = normalizeSupplierTypeInput(_supplierType)!;
+
+    await api.submitVerification({
+      'organizationName': _publicNameController.text.trim(),
+      'supplierType': apiSupplierType,
+      'description': _descriptionController.text.trim().isEmpty
+          ? null
+          : _descriptionController.text.trim(),
+      'defaultPickupLocation': location,
+      'businessLocation': location,
+      'verificationDocumentUrl': uploaded.url,
+      'verificationDocumentName': uploaded.name,
+    });
+    await ref.read(authControllerProvider.notifier).refreshCurrentUser();
   }
 
   void _applyServerError(ApiException error) {
@@ -140,6 +225,16 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
         }
         return true;
       case BecomeSupplierStep.pickupDetails:
+        return true;
+      case BecomeSupplierStep.verification:
+        final documentError = _validateVerificationDocument(
+          _verificationDocument,
+        );
+        if (documentError != null) {
+          setState(() => _verificationDocumentError = documentError);
+          return false;
+        }
+        return true;
       case BecomeSupplierStep.review:
         return true;
     }
@@ -194,6 +289,15 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
             ),
           );
 
+      if (_needsVerification) {
+        await _submitVerification();
+        if (!mounted) {
+          return;
+        }
+        context.go(supplierVerificationPendingRoute);
+        return;
+      }
+
       if (!mounted) {
         return;
       }
@@ -240,7 +344,7 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Keep your learner access and add a personal supplier profile on the same account.',
+            'Keep your learner access and add a supplier profile on the same account.',
             style: TextStyle(
               fontSize: 14,
               height: 1.5,
@@ -249,7 +353,7 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
           ),
           const SizedBox(height: AppSpacing.lg),
           _BecomeSupplierStepProgress(
-            steps: becomeSupplierSteps,
+            steps: _activeSteps,
             currentIndex: _stepIndex,
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -279,7 +383,9 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
           const SizedBox(height: AppSpacing.lg),
           AuthPrimaryButton(
             label: _currentStep == BecomeSupplierStep.review
-                ? 'Open Supplier Portal'
+                ? (_needsVerification
+                    ? 'Submit for verification'
+                    : 'Open Supplier Portal')
                 : 'Continue',
             isLoading: _isSubmitting,
             onPressed: _goNext,
@@ -301,6 +407,8 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
         return _buildLocationStep(context);
       case BecomeSupplierStep.pickupDetails:
         return _buildPickupDetailsStep(context);
+      case BecomeSupplierStep.verification:
+        return _buildVerificationStep(context);
       case BecomeSupplierStep.review:
         return _buildReviewStep(context);
     }
@@ -310,16 +418,25 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const AuthSectionTitle(title: 'Personal supplier type'),
+        const AuthSectionTitle(title: 'Supplier type'),
         const SizedBox(height: AppSpacing.sm),
-        for (final type in registrationPersonalSupplierTypes) ...[
+        for (final type in registrationSupplierTypes) ...[
           AuthSelectCard(
             label: type,
             description: supplierTypeDescription(type),
             isSelected: _supplierType == type,
             onTap: () {
               _clearErrors();
-              setState(() => _supplierType = type);
+              setState(() {
+                _supplierType = type;
+                if (!isOrganizationSupplierInput(type)) {
+                  _verificationDocument = null;
+                  _verificationDocumentError = null;
+                }
+                if (_stepIndex >= _activeSteps.length) {
+                  _stepIndex = _activeSteps.length - 1;
+                }
+              });
             },
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -328,7 +445,9 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
           AppInlineError(message: _supplierTypeError!),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'Student and individual suppliers can switch back to learner mode anytime. Organization supplier accounts are set up separately.',
+          'Student and individual suppliers can list materials right away. '
+          'Workshop, factory, and institution suppliers need admin verification '
+          'before publishing, just like during registration.',
           style: TextStyle(
             fontSize: 13,
             height: 1.45,
@@ -426,6 +545,71 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
           minLines: 2,
           maxLines: 4,
           onChanged: (_) => _clearErrors(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVerificationStep(BuildContext context) {
+    final colors = AuthUiPalette.of(context);
+    final hasFile =
+        _verificationDocument?.name != null &&
+        _verificationDocument!.name.trim().isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Upload a document that proves your organization identity, such as a '
+          'workshop license, factory document, or university/institution proof.',
+          style: TextStyle(
+            fontSize: 13,
+            color: colors.textSecondary,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        InputDecorator(
+          decoration: InputDecoration(
+            labelText: 'Verification document',
+            hintText: 'PDF, PNG, JPG, or JPEG (max 5MB)',
+            floatingLabelBehavior: FloatingLabelBehavior.always,
+            errorText: _verificationDocumentError,
+            filled: true,
+            fillColor: colors.surfaceElevated,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: colors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: colors.primary, width: 1.4),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  hasFile ? _verificationDocument!.name : 'No file selected',
+                  style: TextStyle(
+                    color: hasFile ? colors.textPrimary : colors.textMuted,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              TextButton(
+                onPressed: _pickVerificationDocument,
+                child: Text(hasFile ? 'Change file' : 'Select file'),
+              ),
+            ],
+          ),
         ),
       ],
     );

@@ -5,6 +5,7 @@ import {
   readValidatedQuery,
 } from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
+import { validateIdempotencyKey } from '../../services/idempotency.service.js';
 
 import {
   getLearningProjectById,
@@ -43,6 +44,13 @@ export const submitLearningProject = async (
 ): Promise<void> => {
   const body = req.body as SubmitLearningProjectInput;
   const userId = req.auth!.sub;
-  const result = await submitLearningProjectForReview(userId, body);
-  res.status(201).json(successResponse(result.message, result));
+  const idempotencyKey = validateIdempotencyKey(req.get('Idempotency-Key'));
+  const result = await submitLearningProjectForReview(
+    userId,
+    body,
+    idempotencyKey,
+  );
+  res
+    .status(result.replayed ? 200 : 201)
+    .json(successResponse(result.response.message, result.response));
 };

@@ -157,14 +157,23 @@ const cleanupTestContext = async (ctx: TestContext) => {
 
   await prisma.reservation.deleteMany({ where: { id: ctx.reservationId } });
   await prisma.material.deleteMany({ where: { id: ctx.materialId } });
+
+  const savedLinks = await prisma.userSavedLocation.findMany({
+    where: { userId: ctx.learnerId },
+    select: { locationId: true },
+  });
   await prisma.userSavedLocation.deleteMany({ where: { userId: ctx.learnerId } });
+
+  const savedLocationIds = savedLinks.map((link) => link.locationId);
+  const locationIdsToDelete = [
+    ctx.locationId,
+    ...deliveryLocationIds.filter((id): id is string => Boolean(id)),
+    ...savedLocationIds,
+  ];
+
   await prisma.location.deleteMany({
     where: {
-      OR: [
-        { id: ctx.locationId },
-        { id: { in: deliveryLocationIds } },
-        { locationType: 'LEARNER_SAVED_DROPOFF' },
-      ],
+      id: { in: [...new Set(locationIdsToDelete)] },
     },
   });
   await prisma.category.deleteMany({ where: { id: ctx.categoryId } });

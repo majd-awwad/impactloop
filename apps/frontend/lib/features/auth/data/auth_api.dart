@@ -56,7 +56,12 @@ class AuthApi {
 
   Future<User> me() {
     return unwrapApiResponse(
-      _client.get<Map<String, dynamic>>('$_authBasePath/me'),
+      _client.get<Map<String, dynamic>>(
+        '$_authBasePath/me',
+        options: Options(
+          headers: const {'Cache-Control': 'no-cache'},
+        ),
+      ),
       (json) => User.fromJson(json['user'] as Map<String, dynamic>),
     );
   }

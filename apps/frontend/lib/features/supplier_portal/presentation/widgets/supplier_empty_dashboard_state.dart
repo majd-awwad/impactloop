@@ -21,16 +21,9 @@ class SupplierEmptyDashboardState extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.eco_outlined,
-            color: colors.accent,
-            size: 28,
-          ),
+          Icon(Icons.eco_outlined, color: colors.accent, size: 28),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            context.s.noMaterialsListedYet,
-            style: context.supplierTitle(),
-          ),
+          Text(context.s.noMaterialsListedYet, style: context.supplierTitle()),
           const SizedBox(height: AppSpacing.sm),
           Text(
             context.s.noMaterialsListedSubtitle,
@@ -41,7 +34,7 @@ class SupplierEmptyDashboardState extends StatelessWidget {
             width: 280,
             child: AppPrimaryButton(
               label: context.s.addFirstMaterial,
-              onPressed: () => context.go('/supplier/materials/new'),
+              onPressed: () => context.push('/supplier/materials/new'),
             ),
           ),
         ],
@@ -65,11 +58,7 @@ class SupplierMissingProfileCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.account_circle_outlined,
-            color: colors.accent,
-            size: 28,
-          ),
+          Icon(Icons.account_circle_outlined, color: colors.accent, size: 28),
           const SizedBox(height: AppSpacing.md),
           Text(
             context.s.completeSupplierProfileTitle,
@@ -85,7 +74,7 @@ class SupplierMissingProfileCard extends StatelessWidget {
             width: 240,
             child: AppPrimaryButton(
               label: context.s.completeProfile,
-              onPressed: () => context.go('/supplier/profile'),
+              onPressed: () => context.push('/supplier/profile'),
             ),
           ),
         ],
@@ -111,10 +100,7 @@ class SupplierDashboardErrorCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.s.dashboardLoadError,
-            style: context.supplierTitle(),
-          ),
+          Text(context.s.dashboardLoadError, style: context.supplierTitle()),
           const SizedBox(height: AppSpacing.sm),
           Text(
             context.s.dashboardLoadErrorMessage,

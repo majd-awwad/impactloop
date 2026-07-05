@@ -46,6 +46,9 @@ class SupplierProfileButton extends ConsumerWidget {
               supplierType: supplierType,
               verificationStatus: verificationStatus,
               showSettingsControls: showSettingsControls,
+              onBeforePortalSwitch: () {
+                Navigator.of(sheetContext).pop();
+              },
               onNavigate: (route) {
                 Navigator.of(sheetContext).pop();
                 context.go(route);
@@ -76,6 +79,9 @@ class SupplierProfileButton extends ConsumerWidget {
               supplierType: supplierType,
               verificationStatus: verificationStatus,
               showSettingsControls: showSettingsControls,
+              onBeforePortalSwitch: () {
+                Navigator.of(dialogContext).pop();
+              },
               onNavigate: (route) {
                 Navigator.of(dialogContext).pop();
                 context.go(route);
@@ -125,6 +131,7 @@ class SupplierProfilePopoverContent extends ConsumerWidget {
     this.supplierType,
     required this.verificationStatus,
     this.showSettingsControls = false,
+    this.onBeforePortalSwitch,
     required this.onNavigate,
     required this.onLogout,
   });
@@ -134,6 +141,7 @@ class SupplierProfilePopoverContent extends ConsumerWidget {
   final String? supplierType;
   final String verificationStatus;
   final bool showSettingsControls;
+  final VoidCallback? onBeforePortalSwitch;
   final ValueChanged<String> onNavigate;
   final VoidCallback onLogout;
 
@@ -152,7 +160,11 @@ class SupplierProfilePopoverContent extends ConsumerWidget {
         children: [
           Row(
             children: [
-              SupplierPortalAvatar(displayName: displayName, size: 48, fontSize: 20),
+              SupplierPortalAvatar(
+                displayName: displayName,
+                size: 48,
+                fontSize: 20,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
@@ -221,6 +233,7 @@ class SupplierProfilePopoverContent extends ConsumerWidget {
                 color: colors.textPrimary,
               ),
               noteStyle: context.supplierBody(),
+              onBeforeSwitch: onBeforePortalSwitch,
             ),
           ],
           Divider(color: colors.border, height: 24),
@@ -257,10 +270,7 @@ class _PopoverAction extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(icon, color: color, size: 20),
-      title: Text(
-        label,
-        style: context.supplierLabel().copyWith(color: color),
-      ),
+      title: Text(label, style: context.supplierLabel().copyWith(color: color)),
       onTap: onTap,
       dense: true,
       visualDensity: VisualDensity.compact,

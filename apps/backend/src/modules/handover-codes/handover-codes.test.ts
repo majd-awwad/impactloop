@@ -23,6 +23,10 @@ import {
 import { acceptSupplierReservation } from '../supplier-reservations/supplier-reservations.service.js';
 import { listMyReservations } from '../reservations/reservations.service.js';
 import { getMyDelivery } from '../deliveries/deliveries.service.js';
+import {
+  activeConfirmedDeliveryWindowUpdate,
+  activePickupWindowReservationUpdate,
+} from '../../test-utils/handover-test-windows.js';
 
 const TEST_MARKER = '[test-handover-codes]';
 
@@ -330,6 +334,11 @@ describe('handover confirmation codes', () => {
       pickupWindowEnd: preferred.end,
     });
 
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: activePickupWindowReservationUpdate(),
+    });
+
     const completed = await completeSupplierReservation(
       ctx.supplierId,
       reservation.id,
@@ -464,6 +473,14 @@ describe('handover confirmation codes', () => {
       pickupWindowEnd: supplierPickupEnd.toISOString(),
     });
 
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        ...activePickupWindowReservationUpdate(),
+        ...activeConfirmedDeliveryWindowUpdate(),
+      },
+    });
+
     const delivery = await prisma.delivery.findFirstOrThrow({
       where: { reservationId: reservation.id },
     });
@@ -514,6 +531,14 @@ describe('handover confirmation codes', () => {
     await acceptSupplierReservation(ctx.supplierId, reservation.id, {
       pickupWindowStart: supplierPickupStart.toISOString(),
       pickupWindowEnd: supplierPickupEnd.toISOString(),
+    });
+
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        ...activePickupWindowReservationUpdate(),
+        ...activeConfirmedDeliveryWindowUpdate(),
+      },
     });
 
     const delivery = await prisma.delivery.findFirstOrThrow({

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../materials/data/models/category.dart';
+import '../data/learning_project_draft_storage.dart';
 import '../domain/learning_project_repository.dart';
 import '../domain/learning_projects_result.dart';
 import '../domain/models/learning_project.dart';
@@ -11,6 +12,11 @@ final learningHubRepositoryProvider = Provider<LearningProjectRepository>(
     'Override it in ProviderScope (see main.dart).',
   ),
 );
+
+final learningProjectDraftStorageProvider =
+    Provider<LearningProjectDraftStorage>((ref) {
+      return createLearningProjectDraftStorage();
+    });
 
 final projectCategoriesProvider =
     FutureProvider.autoDispose<List<MaterialCategory>>((ref) {

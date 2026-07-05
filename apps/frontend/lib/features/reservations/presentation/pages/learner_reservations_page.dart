@@ -172,7 +172,7 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
                 subtitle:
                     'Reserve an available material and supplier updates will appear here.',
                 actionLabel: 'Browse materials',
-                onAction: () => context.go('/materials'),
+                onAction: () => context.push('/materials'),
               );
             }
 
@@ -192,7 +192,7 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
                 subtitle:
                     'Try another filter or browse materials to start a new request.',
                 actionLabel: 'Browse materials',
-                onAction: () => context.go('/materials'),
+                onAction: () => context.push('/materials'),
               );
             }
 
@@ -204,14 +204,13 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () => context.go(
+                          onTap: () => context.push(
                             '/learner/reservations/${reservation.id}',
                           ),
                           borderRadius: AppRadius.lgAll,
                           child: LearnerReservationCard(
                             reservation: reservation,
-                            delivery:
-                                deliveriesByReservationId[reservation.id],
+                            delivery: deliveriesByReservationId[reservation.id],
                           ),
                         ),
                       ),
@@ -239,10 +238,11 @@ class _PageHeader extends StatelessWidget {
       children: [
         Text(
           'My Reservations',
-          style: (compact
-                  ? AppTextStyles.title(context)
-                  : AppTextStyles.display(context))
-              .copyWith(color: palette.textPrimary),
+          style:
+              (compact
+                      ? AppTextStyles.title(context)
+                      : AppTextStyles.display(context))
+                  .copyWith(color: palette.textPrimary),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
@@ -257,10 +257,7 @@ class _PageHeader extends StatelessWidget {
 }
 
 class _StatusFilterChips extends StatelessWidget {
-  const _StatusFilterChips({
-    required this.selected,
-    required this.onSelected,
-  });
+  const _StatusFilterChips({required this.selected, required this.onSelected});
 
   final LearnerReservationStatusFilter selected;
   final ValueChanged<LearnerReservationStatusFilter> onSelected;
@@ -273,47 +270,50 @@ class _StatusFilterChips extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: LearnerReservationStatusFilter.values.map((filter) {
-          final isSelected = filter == selected;
+        children: LearnerReservationStatusFilter.values
+            .map((filter) {
+              final isSelected = filter == selected;
 
-          return Padding(
-            padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => onSelected(filter),
-                borderRadius: AppRadius.pillAll,
-                child: Ink(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? colors.primarySoft
-                        : palette.panelSurface,
+              return Padding(
+                padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => onSelected(filter),
                     borderRadius: AppRadius.pillAll,
-                    border: Border.all(
-                      color: isSelected
-                          ? colors.primary.withValues(alpha: 0.35)
-                          : palette.borderSubtle,
-                    ),
-                  ),
-                  child: Text(
-                    filter.label,
-                    style: AppTextStyles.label(context).copyWith(
-                      color: isSelected
-                          ? colors.primary
-                          : palette.textSecondary,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                    child: Ink(
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.sm,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? colors.primarySoft
+                            : palette.panelSurface,
+                        borderRadius: AppRadius.pillAll,
+                        border: Border.all(
+                          color: isSelected
+                              ? colors.primary.withValues(alpha: 0.35)
+                              : palette.borderSubtle,
+                        ),
+                      ),
+                      child: Text(
+                        filter.label,
+                        style: AppTextStyles.label(context).copyWith(
+                          color: isSelected
+                              ? colors.primary
+                              : palette.textSecondary,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
-        }).toList(growable: false),
+              );
+            })
+            .toList(growable: false),
       ),
     );
   }
@@ -424,4 +424,3 @@ Map<String, LearnerDelivery> _latestDeliveryByReservationId(
 
   return result;
 }
-

@@ -144,15 +144,14 @@ class _SupplierMyMaterialsPageState
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
     final bottomInset = compact
         ? AppSpacing.supplierMobileNavHeight +
-            MediaQuery.paddingOf(context).bottom +
-            AppSpacing.lg
+              MediaQuery.paddingOf(context).bottom +
+              AppSpacing.lg
         : AppSpacing.lg;
 
     return LayoutBuilder(
       builder: (context, viewportConstraints) {
         final viewportWidth = viewportConstraints.maxWidth;
-        final isCompact =
-            viewportWidth < AppSpacing.supplierLayoutBreakpoint;
+        final isCompact = viewportWidth < AppSpacing.supplierLayoutBreakpoint;
         final contentWidth = isCompact
             ? viewportWidth
             : viewportWidth.clamp(0.0, _contentMaxWidth).toDouble();
@@ -176,13 +175,15 @@ class _SupplierMyMaterialsPageState
                     title: l.myMaterialsTitle,
                     subtitle: l.myMaterialsSubtitle,
                     actionLabel: l.navAddMaterial,
-                    onAction: () => context.go('/supplier/materials/new'),
+                    onAction: () => context.push('/supplier/materials/new'),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   materialsAsync.when(
                     loading: () {
                       if (kDebugMode) {
-                        debugPrint('[SupplierMyMaterialsPage] provider: loading');
+                        debugPrint(
+                          '[SupplierMyMaterialsPage] provider: loading',
+                        );
                       }
                       return _LoadingBody(compact: isCompact);
                     },
@@ -224,8 +225,10 @@ class _SupplierMyMaterialsPageState
                               hintStyle: context.supplierBody().copyWith(
                                 color: colors.textMuted,
                               ),
-                              prefixIcon:
-                                  Icon(Icons.search, color: colors.accent),
+                              prefixIcon: Icon(
+                                Icons.search,
+                                color: colors.accent,
+                              ),
                               filled: true,
                               fillColor: colors.surfaceSolid,
                               contentPadding: const EdgeInsets.symmetric(
@@ -275,7 +278,8 @@ class _SupplierMyMaterialsPageState
                           const SizedBox(height: AppSpacing.sm),
                           if (result.pagination.totalItems == 0)
                             _EmptyState(
-                              onAdd: () => context.go('/supplier/materials/new'),
+                              onAdd: () =>
+                                  context.push('/supplier/materials/new'),
                             )
                           else if (result.items.isEmpty)
                             _FilteredEmptyState(onClear: _clearFilters)
@@ -289,7 +293,7 @@ class _SupplierMyMaterialsPageState
                                   material: material,
                                   isArabic: l.isArabic,
                                   createdAtLabel: _formatCreatedAt(material),
-                                  onTap: () => context.go(
+                                  onTap: () => context.push(
                                     '/supplier/materials/${material.id}',
                                   ),
                                   actions: buildSupplierMaterialCardActions(
@@ -300,27 +304,27 @@ class _SupplierMyMaterialsPageState
                                     canDelete: material.canDelete,
                                     deleteBlockedMessage:
                                         supplierMaterialDeleteBlockedMessage(
-                                      l,
-                                      material.deleteBlockedReason,
-                                    ),
+                                          l,
+                                          material.deleteBlockedReason,
+                                        ),
                                     canEdit: material.canEdit,
                                     editBlockedMessage:
                                         supplierMaterialEditBlockedMessage(
-                                      l,
-                                      material.editBlockedReason,
-                                    ),
-                                    onManage: () => context.go(
+                                          l,
+                                          material.editBlockedReason,
+                                        ),
+                                    onManage: () => context.push(
                                       '/supplier/materials/${material.id}',
                                     ),
-                                    onEdit: () => context.go(
+                                    onEdit: () => context.push(
                                       '/supplier/materials/${material.id}/edit',
                                     ),
                                     onDelete: () =>
                                         handleSupplierMaterialDelete(
-                                      context: context,
-                                      ref: ref,
-                                      material: material,
-                                    ),
+                                          context: context,
+                                          ref: ref,
+                                          material: material,
+                                        ),
                                   ),
                                 );
                               },
@@ -332,13 +336,13 @@ class _SupplierMyMaterialsPageState
                               compact: isCompact,
                               onPrevious: query.page > 1
                                   ? () => _applyQuery(
-                                        query.copyWith(page: query.page - 1),
-                                      )
+                                      query.copyWith(page: query.page - 1),
+                                    )
                                   : null,
                               onNext: query.page < result.pagination.totalPages
                                   ? () => _applyQuery(
-                                        query.copyWith(page: query.page + 1),
-                                      )
+                                      query.copyWith(page: query.page + 1),
+                                    )
                                   : null,
                             ),
                           ],
@@ -497,20 +501,14 @@ class _PaginationBar extends StatelessWidget {
 
     return Row(
       children: [
-        OutlinedButton(
-          onPressed: onPrevious,
-          child: Text(l.previousPage),
-        ),
+        OutlinedButton(onPressed: onPrevious, child: Text(l.previousPage)),
         const Spacer(),
         Text(
           l.paginationLabel(page, totalPages),
           style: context.supplierBody(),
         ),
         const Spacer(),
-        OutlinedButton(
-          onPressed: onNext,
-          child: Text(l.nextPage),
-        ),
+        OutlinedButton(onPressed: onNext, child: Text(l.nextPage)),
       ],
     );
   }
@@ -564,8 +562,10 @@ class _FilteredEmptyState extends StatelessWidget {
       decoration: context.supplierDecorations.dashboardCard,
       child: Column(
         children: [
-          Text(l.myMaterialsFilteredEmptyTitle,
-              style: context.supplierSectionTitle()),
+          Text(
+            l.myMaterialsFilteredEmptyTitle,
+            style: context.supplierSectionTitle(),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             l.myMaterialsFilteredEmptySubtitle,
@@ -603,8 +603,11 @@ class _ErrorState extends StatelessWidget {
       decoration: context.supplierDecorations.dashboardCard,
       child: Column(
         children: [
-          Icon(Icons.cloud_off_outlined,
-              size: 44, color: context.supplierColors.error),
+          Icon(
+            Icons.cloud_off_outlined,
+            size: 44,
+            color: context.supplierColors.error,
+          ),
           const SizedBox(height: AppSpacing.md),
           Text(message, textAlign: TextAlign.center),
           if (detail != null && detail!.isNotEmpty) ...[

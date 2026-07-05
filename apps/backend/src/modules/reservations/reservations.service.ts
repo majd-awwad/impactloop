@@ -348,11 +348,14 @@ export const listMyReservations = async (requesterId: string) => {
   );
 
   if (legacyPickupReservations.length) {
-    await prisma.$transaction(async (tx) => {
-      for (const reservation of legacyPickupReservations) {
-        await ensureSelfPickupCodeStored(tx, reservation.id);
-      }
-    });
+    await prisma.$transaction(
+      async (tx) => {
+        for (const reservation of legacyPickupReservations) {
+          await ensureSelfPickupCodeStored(tx, reservation.id);
+        }
+      },
+      { timeout: 15_000 },
+    );
   }
 
   const latestMessages = await findLatestReservationMessagesByReservationIds(

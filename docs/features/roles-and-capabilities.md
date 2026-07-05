@@ -41,12 +41,13 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Public landing page.
 - Public material browse, search, filters, pagination, and detail pages.
 - Public learning hub browse/detail pages for published projects.
-- Material detail views increment `viewsCount`.
+- Material detail views create `MaterialView` engagement rows; authenticated users count once per material.
+- Public material cards/details show material like counts.
 - Public material location is redacted to city/area only.
 
 **Planned / future:**
 
-- Public project/material engagement signals beyond views, such as public likes.
+- Public project engagement signals beyond views, such as project likes.
 - Guest prompts for login when trying to save, like, reserve, follow, or start a build.
 - Public supplier profile pages beyond the supplier summary already shown on material details.
 
@@ -65,21 +66,25 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Authenticated learner home route.
 - Home suggested materials and learning spotlight are API-backed, but not personalized yet.
 - Material browse/search/filter/detail.
+- Learner material likes from material detail, with counts visible on detail, discovery cards, home suggestions, and related material cards.
 - Material reservation with quantity, note, and pickup/delivery preference at reservation/delivery flow boundaries.
 - Learner reservation list, pending cancel, status display, and accepted self-pickup address reveal.
 - Internal delivery request/status page for accepted delivery-enabled reservations.
 - Published learning project browse/detail.
+- Existing learner accounts can become **Student/Individual** suppliers from `/become-supplier` without a second account (`POST /api/auth/become-supplier`).
+- Dual-role users switch active portal with `POST /api/auth/switch-role` and see switch actions in the account menu, profile page, and supplier profile popover.
+- Learner project draft submission for admin review.
 
 **Partial:**
 
 - Preferences and interests exist on profile/registration, but recommendation logic is currently simple and not a dedicated personalization engine.
 - Delivery tracking is polling/latest-ping based, not realtime.
-- Learning hub is read-only; add-draft is mock-only.
+- Learning hub remains partial: learners can browse/detail and submit drafts for admin review, but project engagement, build checklist, ratings, and AI matching are not implemented.
 
 **Planned / future:**
 
 - Personalized home sections based on interests, city/area, price preference, followed suppliers/categories, saved projects, and reservation/build history.
-- Save material, save project, like material, like project, follow supplier, follow category.
+- Save material, save project, like project, follow supplier, follow category.
 - Project to materials matching.
 - Material to projects discovery.
 - Build checklist with `Available`, `Missing`, `Alternative`, `Already owned`, and `Reserved` states.
@@ -106,18 +111,20 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Supplier accept/decline/self-pickup complete.
 - Delivery reservations are handed to driver flow rather than supplier manual completion.
 - Supplier material image upload.
+- Same-account learner upgrade for personal supplier types (Student/Individual) via `/become-supplier`.
+- Portal switch between learner and supplier modes for eligible dual-role accounts (`activeRole` on `users`).
 
 **Partial:**
 
-- Dashboard has operational counts and activity, but deeper demand insights are limited.
+- Dashboard/profile surfaces include material views and likes as demand signals, but deeper demand insights are limited.
 - AI support is focused on price references; AI category/use/description suggestions are not a complete shipped assistant.
 - Related projects for a supplier material are not implemented as a product surface.
 
 **Planned / future:**
 
 - Supplier followers and followed-supplier recommendations.
-- Saves/likes per material as demand signals.
-- Supplier insights for views, likes, saves, reservations, category demand, and materials learners request.
+- Saves per material as demand signals.
+- Supplier insights for saves, reservations, category demand, and materials learners request.
 - "This material can be used in these projects" guidance for supplier listings.
 - Richer AI support for description, category, likely uses, and pricing explanations.
 
@@ -175,7 +182,7 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 
 - Moderator queue for reported materials, suspicious listings, wrong categories, inappropriate images/descriptions, project reports, material type/category requests, and price issues.
 - Hide/reject content with a moderation reason.
-- Review project submissions when project publishing is implemented.
+- Review project submissions if/when moderation is delegated from admin.
 - Clear separation between moderator permissions and admin-only permissions.
 
 **Strongest product feature:** Moderation queue for reports, price issues, category/material type requests, and content quality.
@@ -193,15 +200,16 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 - Supplier verification review.
 - Category and price request approval/rejection.
 - Material moderation, material reports, hide/unavailable/restore flows.
+- Learning project moderation: list/detail, approve, request changes, reject, hide, restore, and archive.
 - People management list, summary, suspend, and reactivate with safety guards.
 
 **Partial:**
 
-- Impact analytics route exists as a placeholder; overview has partial impact metrics.
-- Audit logs route exists as a placeholder.
+- Impact analytics route exists and uses dashboard-backed impact data; deeper analytics remain partial.
+- Audit logs route exists with paginated backend data, filters, summary stats, and details.
 - Delivery oversight and reservation admin management are not complete.
 - AI log viewing is not implemented.
-- Project moderation/admin publishing workflow is not implemented.
+- Project moderation is implemented for ADMIN; moderator-owned project review is not implemented.
 
 **Planned / future:**
 
@@ -219,13 +227,13 @@ The team wants engagement signals to improve recommendations and measure interes
 
 **Implemented now:**
 
-- `viewsCount` on material detail.
+- `viewsCount` on material detail plus row-backed `MaterialView` analytics, with authenticated users counted once per material.
+- Material likes.
 - Material reports.
 - Reservation and delivery activity.
 
 **Planned / future:**
 
-- Likes.
 - Saves.
 - Follows.
 - Project start/build progress.

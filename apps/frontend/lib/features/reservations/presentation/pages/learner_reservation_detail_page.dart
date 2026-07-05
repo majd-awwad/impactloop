@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
@@ -25,7 +25,8 @@ class LearnerReservationDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = MaterialsUiPalette.of(context);
-    final isLearner = ref.watch(authControllerProvider).user?.hasRole('LEARNER') == true;
+    final isLearner =
+        ref.watch(authControllerProvider).user?.hasRole('LEARNER') == true;
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -48,7 +49,9 @@ class LearnerReservationDetailPage extends ConsumerWidget {
                 ),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: _detailMaxWidth),
+                    constraints: const BoxConstraints(
+                      maxWidth: _detailMaxWidth,
+                    ),
                     child: !isLearner
                         ? const _DetailStatePanel(
                             icon: Icons.lock_outline,
@@ -109,8 +112,9 @@ class _ReservationDetailContentState
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final reservationAsync =
-        ref.watch(learnerReservationProvider(widget.reservationId));
+    final reservationAsync = ref.watch(
+      learnerReservationProvider(widget.reservationId),
+    );
     final deliveriesAsync = ref.watch(learnerDeliveriesProvider);
 
     return Column(
@@ -124,7 +128,7 @@ class _ReservationDetailContentState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextButton.icon(
-                    onPressed: () => context.go('/learner/reservations'),
+                    onPressed: () => context.popOrGo('/learner/reservations'),
                     icon: const Icon(Icons.arrow_back_rounded, size: 18),
                     label: const Text('All reservations'),
                   ),
@@ -161,10 +165,8 @@ class _ReservationDetailContentState
           ),
           data: (reservation) {
             final delivery = deliveriesAsync.maybeWhen(
-              data: (deliveries) => _latestDeliveryForReservation(
-                deliveries,
-                reservation.id,
-              ),
+              data: (deliveries) =>
+                  _latestDeliveryForReservation(deliveries, reservation.id),
               orElse: () => null,
             );
 
@@ -190,8 +192,7 @@ LearnerDelivery? _latestDeliveryForReservation(
       continue;
     }
 
-    if (latest == null ||
-        delivery.requestedAt.isAfter(latest.requestedAt)) {
+    if (latest == null || delivery.requestedAt.isAfter(latest.requestedAt)) {
       latest = delivery;
     }
   }

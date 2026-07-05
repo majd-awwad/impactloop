@@ -99,29 +99,37 @@ class ApiLearningHubRepository implements LearningProjectRepository {
 
   @override
   Future<void> submitProjectForReview({
+    required String idempotencyKey,
     required String title,
     required String shortDescription,
     required String description,
     required String categoryId,
     required String difficulty,
+    int? estimatedDurationMinutes,
     List<Map<String, dynamic>>? requiredComponents,
     List<Map<String, dynamic>>? steps,
     List<Map<String, dynamic>>? links,
   }) async {
+    final data = <String, dynamic>{
+      'title': title,
+      'shortDescription': shortDescription,
+      'description': description,
+      'categoryId': categoryId,
+      'difficulty': difficulty,
+      if (requiredComponents != null && requiredComponents.isNotEmpty)
+        'requiredComponents': requiredComponents,
+      if (steps != null && steps.isNotEmpty) 'steps': steps,
+      if (links != null && links.isNotEmpty) 'links': links,
+    };
+    if (estimatedDurationMinutes != null) {
+      data['estimatedDurationMinutes'] = estimatedDurationMinutes;
+    }
+
     await unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '$_basePath/submit',
-        data: {
-          'title': title,
-          'shortDescription': shortDescription,
-          'description': description,
-          'categoryId': categoryId,
-          'difficulty': difficulty,
-          if (requiredComponents != null && requiredComponents.isNotEmpty)
-            'requiredComponents': requiredComponents,
-          if (steps != null && steps.isNotEmpty) 'steps': steps,
-          if (links != null && links.isNotEmpty) 'links': links,
-        },
+        data: data,
+        options: Options(headers: {'Idempotency-Key': idempotencyKey}),
       ),
       (json) => json,
     );

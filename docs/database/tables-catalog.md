@@ -161,6 +161,21 @@ Relations: assigned deliveries, assignments, location pings.
 
 ---
 
+## `user_saved_locations` — model `UserSavedLocation`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| userId | String | FK → users; cascade delete |
+| locationId | String | FK → locations; cascade delete |
+| label | String | User-facing private label |
+| isDefault | Boolean | default false |
+| createdAt, updatedAt | DateTime | |
+
+Indexes: `userId`, `(userId, isDefault)`, `locationId`.
+
+---
+
 ## `categories` — model `Category`
 
 | Field | Type | Notes |
@@ -571,7 +586,7 @@ Used by price-rule AI services — not a user-facing AI agent credits system.
 
 ## `idempotency_records` — model `IdempotencyRecord`
 
-Generic operation idempotency store. Supplier material create uses scope `SUPPLIER_CREATE_MATERIAL`.
+Generic operation idempotency store. Supplier material create uses scope `SUPPLIER_CREATE_MATERIAL`; Learning Hub learner submit uses scope `LEARNING_PROJECT_SUBMIT`.
 
 | Field | Type | Notes |
 |-------|------|-------|

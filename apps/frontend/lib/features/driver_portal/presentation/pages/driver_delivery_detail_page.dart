@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -59,7 +59,7 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
                   subtitle:
                       'Open the jobs board to view your current assigned delivery.',
                   actionLabel: 'Back to jobs',
-                  onAction: () => context.go('/driver/jobs'),
+                  onAction: () => context.popOrGo('/driver/jobs'),
                 );
               }
 
@@ -263,18 +263,14 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           const SizedBox(height: AppSpacing.md),
           if (widget.delivery.canDriverReportPickupFailed)
             OutlinedButton.icon(
-              onPressed: isSubmitting
-                  ? null
-                  : () => _reportPickupFailed(context),
+              onPressed: isSubmitting ? null : _reportPickupFailed,
               icon: const Icon(Icons.report_problem_outlined),
               label: const Text('Report pickup failed'),
             ),
           if (widget.delivery.canDriverReportDeliveryFailed) ...[
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
-              onPressed: isSubmitting
-                  ? null
-                  : () => _reportDeliveryFailed(context),
+              onPressed: isSubmitting ? null : _reportDeliveryFailed,
               icon: const Icon(Icons.no_accounts_outlined),
               label: const Text('Report delivery failed'),
             ),
@@ -282,9 +278,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           if (widget.delivery.canDriverReportDriverIssue) ...[
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
-              onPressed: isSubmitting
-                  ? null
-                  : () => _reportDriverIssue(context),
+              onPressed: isSubmitting ? null : _reportDriverIssue,
               icon: const Icon(Icons.car_crash_outlined),
               label: const Text('Report driver issue'),
             ),
@@ -293,7 +287,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           _LocationSharingSection(delivery: widget.delivery),
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
-            onPressed: () => context.go('/driver/jobs'),
+            onPressed: () => context.popOrGo('/driver/jobs'),
             icon: const Icon(Icons.local_shipping_outlined),
             label: const Text('Back to jobs'),
           ),
@@ -344,7 +338,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
 
       if (nextStatus == 'DELIVERED') {
         showInfoSnackBar(context, 'Delivery marked delivered.');
-        context.go('/driver/jobs');
+        context.popOrGo('/driver/jobs');
         return;
       }
 
@@ -370,7 +364,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
     }
   }
 
-  Future<void> _reportPickupFailed(BuildContext context) async {
+  Future<void> _reportPickupFailed() async {
     final result = await _showDriverIncidentDialog(
       context,
       title: 'Report pickup failed',
@@ -393,14 +387,14 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           );
       if (!mounted) return;
       showInfoSnackBar(context, 'Pickup failure reported.');
-      context.go('/driver/jobs');
+      context.popOrGo('/driver/jobs');
     } on ApiException catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, error.displayMessage);
     }
   }
 
-  Future<void> _reportDeliveryFailed(BuildContext context) async {
+  Future<void> _reportDeliveryFailed() async {
     final result = await _showDriverIncidentDialog(
       context,
       title: 'Report delivery failed',
@@ -423,14 +417,14 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           );
       if (!mounted) return;
       showInfoSnackBar(context, 'Delivery failure reported.');
-      context.go('/driver/jobs');
+      context.popOrGo('/driver/jobs');
     } on ApiException catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, error.displayMessage);
     }
   }
 
-  Future<void> _reportDriverIssue(BuildContext context) async {
+  Future<void> _reportDriverIssue() async {
     final noteController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
@@ -468,13 +462,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
     try {
       await ref
           .read(driverDeliveryActionControllerProvider.notifier)
-          .reportDriverIssue(
-            deliveryId: widget.delivery.id,
-            note: note,
-          );
+          .reportDriverIssue(deliveryId: widget.delivery.id, note: note);
       if (!mounted) return;
       showInfoSnackBar(context, 'Driver issue reported.');
-      context.go('/driver/jobs');
+      context.popOrGo('/driver/jobs');
     } on ApiException catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, error.displayMessage);

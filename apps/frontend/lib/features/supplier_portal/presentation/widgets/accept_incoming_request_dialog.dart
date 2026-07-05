@@ -421,7 +421,7 @@ class _AcceptIncomingRequestDialogState
                               fontWeight: FontWeight.w600,
                               color: deliveryPreview.isFeasible
                                   ? colors.accentMuted
-                                  : colors.error,
+                                  : colors.amberAccent,
                             ),
                           ),
                         ],

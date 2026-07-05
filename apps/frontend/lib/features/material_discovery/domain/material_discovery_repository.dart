@@ -1,4 +1,5 @@
 import 'discovery_material.dart';
+import 'material_engagement.dart';
 import 'material_discovery_query.dart';
 import 'material_discovery_result.dart';
 
@@ -8,4 +9,8 @@ abstract class MaterialDiscoveryRepository {
   );
 
   Future<DiscoveryMaterial?> getMaterialById(String id);
+
+  Future<MaterialEngagement> likeMaterial(String id);
+
+  Future<MaterialEngagement> unlikeMaterial(String id);
 }

@@ -13,6 +13,7 @@ import {
   listSupplierReservations,
 } from './supplier-reservations.service.js';
 import { deriveHandoverCode } from '../../utils/handover-codes.js';
+import { safeSupplierAcceptPickupWindow } from '../../test-utils/handover-test-windows.js';
 
 const TEST_MARKER = '[test-complete-pickup]';
 
@@ -384,14 +385,14 @@ describe('completeSupplierReservation', () => {
 
   test('supplier accept sets material reserved', async () => {
     const { reservation, material } = await createReservation(ctx, 'PENDING');
-    const now = new Date();
+    const { start, end } = safeSupplierAcceptPickupWindow();
 
     const result = await acceptSupplierReservation(
       ctx.supplierId,
       reservation.id,
       {
-        pickupWindowStart: now.toISOString(),
-        pickupWindowEnd: new Date(now.getTime() + 3_600_000).toISOString(),
+        pickupWindowStart: start.toISOString(),
+        pickupWindowEnd: end.toISOString(),
       },
     );
 
@@ -411,15 +412,16 @@ describe('completeSupplierReservation', () => {
   });
 
   test('supplier accept requires pending reservation', async () => {
+    const { start, end } = safeSupplierAcceptPickupWindow();
+
     for (const status of ['ACCEPTED', 'REJECTED', 'COMPLETED'] as const) {
       const { reservation } = await createReservation(ctx, status);
-      const now = new Date();
 
       await assert.rejects(
         () =>
           acceptSupplierReservation(ctx.supplierId, reservation.id, {
-            pickupWindowStart: now.toISOString(),
-            pickupWindowEnd: new Date(now.getTime() + 3_600_000).toISOString(),
+            pickupWindowStart: start.toISOString(),
+            pickupWindowEnd: end.toISOString(),
           }),
         (error: unknown) => {
           assert.ok(error instanceof AppError);

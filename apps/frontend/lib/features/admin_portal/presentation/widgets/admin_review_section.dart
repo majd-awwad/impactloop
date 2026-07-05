@@ -82,7 +82,7 @@ class AdminReviewSection extends StatelessWidget {
                     Align(
                       alignment: AlignmentDirectional.centerEnd,
                       child: TextButton(
-                        onPressed: () => context.go('/admin/audit-logs'),
+                        onPressed: () => context.push('/admin/audit-logs'),
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 6),
                           minimumSize: Size.zero,
@@ -91,9 +91,8 @@ class AdminReviewSection extends StatelessWidget {
                         ),
                         child: Text(
                           l.viewAllAuditLogs,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
@@ -109,9 +108,9 @@ class AdminReviewSection extends StatelessWidget {
         Text(
           l.reviewQueuesTitle,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: palette.textPrimary,
-              ),
+            fontWeight: FontWeight.w800,
+            color: palette.textPrimary,
+          ),
         ),
         const SizedBox(height: 8),
         if (threeCol)
@@ -172,9 +171,9 @@ class _ReviewCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: palette.textPrimary,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    color: palette.textPrimary,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -199,7 +198,9 @@ class _SupplierVerificationPreviewRow extends StatelessWidget {
     final palette = context.adminPalette;
     final submitted = _formatDate(item.submittedAt);
     final org = item.organizationName.trim();
-    final subtitle = org.isNotEmpty ? org : item.supplierType.replaceAll('_', ' ');
+    final subtitle = org.isNotEmpty
+        ? org
+        : item.supplierType.replaceAll('_', ' ');
 
     return Padding(
       padding: const EdgeInsetsDirectional.only(bottom: 8),
@@ -213,19 +214,19 @@ class _SupplierVerificationPreviewRow extends StatelessWidget {
                 Text(
                   item.ownerName,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: palette.textPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: palette.textSecondary,
-                        fontSize: 11,
-                      ),
+                    color: palette.textSecondary,
+                    fontSize: 11,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -233,15 +234,15 @@ class _SupplierVerificationPreviewRow extends StatelessWidget {
                   Text(
                     submitted,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: palette.textSecondary,
-                          fontSize: 10,
-                        ),
+                      color: palette.textSecondary,
+                      fontSize: 10,
+                    ),
                   ),
               ],
             ),
           ),
           TextButton(
-            onPressed: () => context.go('/admin/supplier-verification'),
+            onPressed: () => context.push('/admin/supplier-verification'),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               minimumSize: Size.zero,
@@ -296,11 +297,11 @@ class _ActivityRow extends StatelessWidget {
                 Text(
                   activity.actionLabel,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: palette.textPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                        height: 1.25,
-                      ),
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    height: 1.25,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -308,10 +309,10 @@ class _ActivityRow extends StatelessWidget {
                 Text(
                   metaLine,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: palette.textMuted,
-                        fontSize: 11,
-                        height: 1.25,
-                      ),
+                    color: palette.textMuted,
+                    fontSize: 11,
+                    height: 1.25,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -320,10 +321,10 @@ class _ActivityRow extends StatelessWidget {
                   Text(
                     when,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: palette.textMuted,
-                          fontSize: 10,
-                          height: 1.2,
-                        ),
+                      color: palette.textMuted,
+                      fontSize: 10,
+                      height: 1.2,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -359,10 +360,10 @@ class _InvitationRow extends StatelessWidget {
             child: Text(
               invitation.targetEmail ?? '—',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: palette.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
+                color: palette.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -370,9 +371,9 @@ class _InvitationRow extends StatelessWidget {
           Text(
             invitation.targetRole,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: palette.textSecondary,
-                  fontSize: 11,
-                ),
+              color: palette.textSecondary,
+              fontSize: 11,
+            ),
           ),
         ],
       ),

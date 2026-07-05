@@ -1,22 +1,77 @@
+import '../models/registration_intent.dart';
+
 const registrationInterestOptions = [
-  'Arduino',
-  'Robotics',
+  'Art and design',
+  'Assistive tools',
+  'Audio and media',
+  'Automotive basics',
+  'Community projects',
+  'Construction basics',
+  'Crafts and handmade work',
+  'Education and teaching',
+  'Electrical repair',
   'Electronics',
-  '3D printing',
+  'Environmental action',
+  'Fashion and textiles',
+  'Furniture',
+  'Gardening and agriculture',
+  'Health and accessibility',
+  'Home improvement',
+  'Household repair',
+  'Interior design',
+  'Mechanical parts',
+  'Metalworking',
+  'Packaging reuse',
+  'Product design',
+  'Programming and apps',
+  'Recycling and upcycling',
+  'Robotics',
+  'Science experiments',
+  'Solar and energy',
+  'Sports and outdoor gear',
   'Woodworking',
-  'Programming',
-  'Mechanical design',
-  'IoT',
 ];
 
-const registrationGoalOptions = [
+const learnerRegistrationGoalOptions = [
   'Build projects',
   'Find components',
   'Learn new skills',
-  'Reduce waste',
-  'Share surplus materials',
-  'Support learners',
+  'Repair something',
+  'Reuse materials',
+  'Save money',
+  'Explore project ideas',
+  'Help my community',
 ];
+
+const supplierRegistrationGoalOptions = [
+  'Share surplus materials',
+  'Reduce waste',
+  'Clear storage space',
+  'Support learners',
+  'Find people who can reuse items',
+  'Manage pickup requests',
+  'Track material impact',
+  'List materials faster',
+];
+
+const dualRoleRegistrationGoalOptions = [
+  'Build projects',
+  'Find components',
+  'Learn new skills',
+  'Share surplus materials',
+  'Reuse materials',
+  'Reduce waste',
+  'Support learners',
+  'Help my community',
+];
+
+List<String> registrationGoalOptionsForIntent(RegistrationIntent? intent) {
+  return switch (intent) {
+    RegistrationIntent.supplier => supplierRegistrationGoalOptions,
+    RegistrationIntent.both => dualRoleRegistrationGoalOptions,
+    RegistrationIntent.learner || null => learnerRegistrationGoalOptions,
+  };
+}
 
 const registrationLearnerTypes = [
   'University student',

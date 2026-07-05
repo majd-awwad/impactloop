@@ -110,7 +110,7 @@ async function assertBecomeSupplierRejected(
       assert.equal(error.statusCode, 400);
       assert.match(
         error.message,
-        /student or individual supplier profiles/i,
+        /Unsupported supplier type for this flow/i,
       );
       return true;
     },
@@ -189,20 +189,42 @@ describe('auth role switching', () => {
     assert.equal(user.supplierProfile?.supplierType, 'INDIVIDUAL_SUPPLIER');
   });
 
-  test('learner cannot become organization supplier types from become-supplier flow', async () => {
+  test('learner can become organization supplier types with pending verification', async () => {
+    const organizationTypes = [
+      'WORKSHOP',
+      'FACTORY',
+      'EDUCATIONAL_INSTITUTION',
+    ] as const;
+
+    for (const supplierType of organizationTypes) {
+      const learner = await createUser({
+        suffix: `org-${supplierType.toLowerCase()}`,
+        roles: ['LEARNER'],
+        withLearnerProfile: true,
+      });
+
+      const { user } = await becomeSupplier(learner.id, {
+        userId: learner.id,
+        supplierType,
+        publicName: `Org ${supplierType}`,
+        pickupArea: 'Nablus, Rafidia',
+      });
+
+      assert.equal(user.roles.includes('LEARNER'), true);
+      assert.equal(user.roles.includes('SUPPLIER'), true);
+      assert.equal(user.supplierProfile?.supplierType, supplierType);
+      assert.equal(user.supplierProfile?.verificationStatus, 'PENDING');
+    }
+  });
+
+  test('unsupported supplier types are rejected from become-supplier flow', async () => {
     const learner = await createUser({
       suffix: 'blocked-types',
       roles: ['LEARNER'],
       withLearnerProfile: true,
     });
 
-    for (const supplierType of [
-      'WORKSHOP',
-      'STORE',
-      'FACTORY',
-      'UNIVERSITY_LAB',
-      'EDUCATIONAL_INSTITUTION',
-    ]) {
+    for (const supplierType of ['STORE', 'UNIVERSITY_LAB']) {
       await assertBecomeSupplierRejected(learner.id, supplierType);
     }
   });
@@ -261,9 +283,7 @@ describe('auth role switching', () => {
   test('organization supplier types cannot switch to learner', async () => {
     for (const supplierType of [
       'WORKSHOP',
-      'STORE',
       'FACTORY',
-      'UNIVERSITY_LAB',
       'EDUCATIONAL_INSTITUTION',
     ]) {
       const supplier = await createUser({

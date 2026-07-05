@@ -39,10 +39,14 @@ void main() {
     expect(find.text('University Student'), findsOneWidget);
     expect(find.text('Beginner'), findsOneWidget);
     expect(find.text('Robotics'), findsOneWidget);
-    expect(find.text('Building useful projects with reused parts.'), findsOneWidget);
+    expect(
+      find.text('Building useful projects with reused parts.'),
+      findsOneWidget,
+    );
     expect(find.text('Complete your learner profile'), findsNothing);
     expect(find.text('Profile management'), findsOneWidget);
     expect(find.text('Edit profile'), findsOneWidget);
+    expect(find.text('Saved locations'), findsOneWidget);
     expect(find.text('Security'), findsOneWidget);
     expect(find.text('Coming soon'), findsNothing);
     expect(find.text('Account status'), findsOneWidget);
@@ -88,95 +92,95 @@ void main() {
 
     expect(find.text('Add a short bio'), findsOneWidget);
     expect(
-      find.text(
-        'Add a short bio to help personalize project suggestions.',
-      ),
+      find.text('Add a short bio to help personalize project suggestions.'),
       findsOneWidget,
     );
     expect(find.text('University Student'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('profile page shows interests completion hint when interests are missing', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(400, 900);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+  testWidgets(
+    'profile page shows interests completion hint when interests are missing',
+    (tester) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith(
-            () => _TestAuthController(
-              _testUser(
-                learnerProfile: const LearnerProfile(
-                  learnerType: 'University student',
-                  skillLevel: 'Beginner',
-                  interests: [],
-                  bio: 'Building useful projects with reused parts.',
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _TestAuthController(
+                _testUser(
+                  learnerProfile: const LearnerProfile(
+                    learnerType: 'University student',
+                    skillLevel: 'Beginner',
+                    interests: [],
+                    bio: 'Building useful projects with reused parts.',
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-        child: const MaterialApp(home: ProfilePage()),
-      ),
-    );
+          ],
+          child: const MaterialApp(home: ProfilePage()),
+        ),
+      );
 
-    await tester.pump();
+      await tester.pump();
 
-    expect(find.text('Add your interests'), findsOneWidget);
-    expect(
-      find.text('Add interests to improve project suggestions.'),
-      findsOneWidget,
-    );
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('Add your interests'), findsOneWidget);
+      expect(
+        find.text('Add interests to improve project suggestions.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('profile page shows combined completion hint when bio and interests are missing', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(400, 900);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+  testWidgets(
+    'profile page shows combined completion hint when bio and interests are missing',
+    (tester) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith(
-            () => _TestAuthController(
-              _testUser(
-                learnerProfile: const LearnerProfile(
-                  learnerType: 'University student',
-                  skillLevel: 'Beginner',
-                  interests: [],
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _TestAuthController(
+                _testUser(
+                  learnerProfile: const LearnerProfile(
+                    learnerType: 'University student',
+                    skillLevel: 'Beginner',
+                    interests: [],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-        child: const MaterialApp(home: ProfilePage()),
-      ),
-    );
+          ],
+          child: const MaterialApp(home: ProfilePage()),
+        ),
+      );
 
-    await tester.pump();
+      await tester.pump();
 
-    expect(find.text('Complete your learner profile'), findsOneWidget);
-    expect(
-      find.text(
-        'Add interests and a short bio to get better project suggestions.',
-      ),
-      findsOneWidget,
-    );
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('Complete your learner profile'), findsOneWidget);
+      expect(
+        find.text(
+          'Add interests and a short bio to get better project suggestions.',
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('profile page uses two-column desktop layout on wide screens', (
     tester,
@@ -205,8 +209,7 @@ void main() {
       of: find.byType(ConstrainedBox),
       matching: find.byWidgetPredicate(
         (widget) =>
-            widget is Row &&
-            widget.children.whereType<Expanded>().length == 2,
+            widget is Row && widget.children.whereType<Expanded>().length == 2,
       ),
     );
     expect(rowFinder, findsOneWidget);
