@@ -12,7 +12,7 @@ User chooses **Sign up** or **Sign in**, or app loads a protected route while se
 
 ### User path
 
-1. `/register` → select **Find materials**, fill account fields, interests, goals, optional city/area, learner type, and skill level.
+1. `/register` → select **Find materials**, fill account fields, broad learner interests, learner-specific goals, optional city/area, learner type, and skill level.
 2. Review inside `/register`.
 3. Submit → account created → land on `/home`.
 
@@ -46,14 +46,14 @@ Authenticated session; access token in memory; refresh via cookie/body; user red
 
 ## Flow B — Register (supplier only)
 
-Same as Flow A but intent **Share materials** collects goals/location, supplier type, supplier display name, and optional description. Supplier display name defaults to the account full name if the user does not change it. The register payload includes `supplierProfile.pickupArea` derived from onboarding city/area. If the supplier type requires organization verification, the wizard creates the authenticated session, uploads the document to `/api/uploads/supplier-verification-document`, submits `/api/supplier/verification/submit`, then routes to `/supplier/verification-pending`. Student and individual suppliers skip the verification step. If verification upload/submission fails after account creation, the wizard stays recoverable inside `/register` and lets the user retry verification without recreating the account.
+Same as Flow A but intent **Share materials** collects supplier-specific goals, general pickup city/area, supplier type, supplier display name, and optional description. Supplier display name defaults to the account full name if the user does not change it. Learner-only interests are not shown for supplier-only registration. The register payload includes `supplierProfile.pickupArea` derived from onboarding city/area. If the supplier type requires organization verification, the wizard creates the authenticated session, uploads the document to `/api/uploads/supplier-verification-document`, submits `/api/supplier/verification/submit`, then routes to `/supplier/verification-pending`. Student and individual suppliers skip the verification step. If verification upload/submission fails after account creation, the wizard stays recoverable inside `/register` and lets the user retry verification without recreating the account.
 
 ---
 
 ## Flow C — Register (both roles)
 
 1. Intent **Do both** stays inside `/register`.
-2. The wizard collects interests once, goals/location, learner basics, supplier basics, verification document only when required, and review. Student learner types can preselect **Student supplier**; self-learners and makers can preselect **Individual supplier**.
+2. The wizard collects broad learner interests once, dual-role goals, supplier pickup location, learner basics, supplier basics, verification document only when required, and review. Student learner types can preselect **Student supplier**; self-learners and makers can preselect **Individual supplier**.
 3. Submit sends one register payload with roles `[LEARNER, SUPPLIER]`, `learnerProfile.interests`, and supplier `pickupArea` from city/area.
 4. Redirect: organization suppliers go to `/supplier/verification-pending` after verification submission; otherwise `postAuthRouteForUser` routes the authenticated user.
 

@@ -17,7 +17,7 @@ Role-scope framing: see [roles-and-capabilities](roles-and-capabilities.md) for 
 | Route `/home` | **Implemented** | `HomePage` → `LearnerHomePage` |
 | Welcome hero + greeting | **Implemented** | **API-backed** — `authControllerProvider` user `displayName` |
 | Quick actions | **Implemented** | Materials, My Reservations, Learning Hub, and **Become a supplier** use live routes/APIs |
-| Suggested materials | **Implemented** | **API-backed** — `GET /api/materials` via `ApiMaterialDiscoveryRepository`, first 4 items |
+| Suggested materials | **Implemented** | **API-backed** — `GET /api/materials` via `ApiMaterialDiscoveryRepository`, first 4 items, with read-only view/like engagement counts |
 | Learning spotlight | **Implemented** | **API-backed** — `GET /api/learning-projects` via `learningProjectsProvider` (limit 2) |
 | Activity updates | **Partial** | Delivery/reservation entry links to `/learner/reservations`; saved projects remain Coming Soon |
 | Coming later (impact + AI) | **Frontend-only** | Empty / Coming Soon placeholders — no learner-facing APIs |
@@ -27,7 +27,7 @@ Role-scope framing: see [roles-and-capabilities](roles-and-capabilities.md) for 
 ## Main user flow
 
 1. Learner logs in → redirect `/home` (role-dependent routing in `app_router.dart`).
-2. Page loads suggested materials from discovery API.
+2. Page loads suggested materials from discovery API and shows read-only material like counts on cards.
 3. Learning spotlight loads up to 2 published projects from `learningProjectsProvider` (`GET /api/learning-projects`, `page=1`, `limit=2`).
 4. User taps **Browse Materials** → `/materials` (live API discovery).
 5. User taps **Explore Learning Hub** → `/learning` (API-backed catalog).
@@ -80,7 +80,7 @@ No dedicated `/api/home` or learner dashboard endpoint.
 
 Read-only via materials API: `materials`, `material_images`, `categories`, `locations` (city/area in DTO), supplier profile display fields.
 
-No home-specific tables.
+No home-specific tables. Suggested material engagement reads from `materials.views_count` and `material_likes` via the materials API.
 
 ## Reusable components
 
@@ -92,6 +92,7 @@ No home-specific tables.
 
 - Suggested materials uses unfiltered discovery list (first 4) — no personalization API.
 - No saved projects, followed suppliers/categories, materials-for-saved-projects, free-near-you, or continue-build sections yet.
+- Home shows material engagement counts, but like/unlike is handled from material detail.
 - Supplier users may land on `/supplier` after login via `postAuthRouteForUser` but can still open `/home` manually.
 
 ## Related docs

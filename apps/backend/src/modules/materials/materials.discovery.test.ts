@@ -5,7 +5,12 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
 
-import { getMaterialById, getMaterials } from './materials.service.js';
+import {
+  getMaterialById,
+  getMaterials,
+  likeMaterialById,
+  unlikeMaterialById,
+} from './materials.service.js';
 import { materialsQuerySchema } from './materials.validation.js';
 
 const TEST_MARKER = '[test-materials-discovery]';
@@ -40,6 +45,27 @@ async function createSupplierUser(suffix: string) {
           publicName: `${TEST_MARKER} supplier ${suffix}`,
           verificationStatus: 'VERIFIED',
         },
+      },
+    },
+    select: { id: true },
+  });
+}
+
+async function createLearnerUser(suffix: string) {
+  const passwordHash = await hashPassword('TestPassword123!');
+
+  return prisma.user.create({
+    data: {
+      displayName: `${TEST_MARKER} learner ${suffix}`,
+      email: `${TEST_MARKER}-learner-${suffix}-${Date.now()}@impactloop.test`,
+      passwordHash,
+      accountStatus: 'ACTIVE',
+      emailVerifiedAt: new Date(),
+      roles: {
+        create: [{ role: 'LEARNER', isPrimary: true }],
+      },
+      learnerProfile: {
+        create: { learnerType: 'STUDENT', skillLevel: 'BEGINNER' },
       },
     },
     select: { id: true },
@@ -301,6 +327,44 @@ describe('public material discovery', () => {
     assert.ok(result.items.some((item) => item.id === material.id));
   });
 
+  test('nearest sort orders by viewer distance without exposing exact coordinates', async () => {
+    const unique = `${TEST_MARKER}-nearest-${Date.now()}`;
+    const farMaterial = await createMaterial(ctx, {
+      title: `${unique} far stock`,
+      locationId: ctx.locationId,
+    });
+    const nearMaterial = await createMaterial(ctx, {
+      title: `${unique} near stock`,
+      locationId: ctx.areaLocationId,
+    });
+
+    const result = await getMaterials({
+      page: 1,
+      limit: 20,
+      q: unique,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      sort: 'nearest',
+      latitude: 31.904,
+      longitude: 35.204,
+    });
+
+    const ids = result.items.map((item) => item.id);
+    assert.equal(ids[0], nearMaterial.id);
+    assert.ok(ids.indexOf(nearMaterial.id) < ids.indexOf(farMaterial.id));
+
+    const listedNear = result.items.find((item) => item.id === nearMaterial.id);
+    assert.ok(listedNear);
+    const listedNearRecord = listedNear as Record<string, unknown>;
+    assert.equal('latitude' in listedNear!, false);
+    assert.equal('longitude' in listedNear!, false);
+    assert.equal('addressLine' in listedNear!, false);
+    assert.equal('location' in listedNear!, false);
+    assert.equal(listedNearRecord.approximateLatitude, 31.9);
+    assert.equal(listedNearRecord.approximateLongitude, 35.2);
+    assert.equal(typeof listedNearRecord.approximateDistanceKm, 'number');
+  });
+
   test('pagination metadata works', async () => {
     const unique = `${TEST_MARKER}-page-${Date.now()}`;
     await createMaterial(ctx, { title: `${unique} one` });
@@ -373,6 +437,96 @@ describe('public material discovery', () => {
 
     const second = await getMaterialById(material.id);
     assert.equal(second.viewsCount, 5);
+
+    const viewRows = await prisma.materialView.count({
+      where: { materialId: material.id },
+    });
+    assert.equal(viewRows, 2);
+  });
+
+  test('authenticated material detail records viewer and liked state', async () => {
+    const unique = `${TEST_MARKER}-viewer-${Date.now()}`;
+    const material = await createMaterial(ctx, {
+      title: `${unique} viewer stock`,
+    });
+    const learner = await createLearnerUser(`viewer-${Date.now()}`);
+    ctx.createdUserIds.push(learner.id);
+
+    await likeMaterialById(material.id, learner.id);
+
+    const detail = await getMaterialById(material.id, {
+      sub: learner.id,
+      roles: ['LEARNER'],
+    });
+
+    assert.equal(detail.likesCount, 1);
+    assert.equal(detail.isLiked, true);
+    assert.equal(detail.viewsCount, 1);
+
+    const repeatDetail = await getMaterialById(material.id, {
+      sub: learner.id,
+      roles: ['LEARNER'],
+    });
+
+    assert.equal(repeatDetail.viewsCount, 1);
+
+    const trackedViews = await prisma.materialView.findMany({
+      where: { materialId: material.id, viewerUserId: learner.id },
+    });
+    assert.equal(trackedViews.length, 1);
+  });
+
+  test('material likes are idempotent and exposed on list/detail', async () => {
+    const unique = `${TEST_MARKER}-likes-${Date.now()}`;
+    const material = await createMaterial(ctx, {
+      title: `${unique} liked stock`,
+    });
+    const learner = await createLearnerUser(`likes-${Date.now()}`);
+    ctx.createdUserIds.push(learner.id);
+
+    const liked = await likeMaterialById(material.id, learner.id);
+    const likedAgain = await likeMaterialById(material.id, learner.id);
+    assert.equal(liked.likesCount, 1);
+    assert.equal(likedAgain.likesCount, 1);
+    assert.equal(likedAgain.isLiked, true);
+
+    const authenticatedList = await getMaterials(
+      {
+        page: 1,
+        limit: 20,
+        q: unique,
+        status: 'AVAILABLE',
+        priceType: 'ANY',
+        sort: 'newest',
+      },
+      { sub: learner.id, roles: ['LEARNER'] },
+    );
+    const authenticatedItem = authenticatedList.items.find(
+      (item) => item.id === material.id,
+    );
+    assert.ok(authenticatedItem);
+    assert.equal(authenticatedItem?.likesCount, 1);
+    assert.equal(authenticatedItem?.isLiked, true);
+
+    const publicList = await getMaterials({
+      page: 1,
+      limit: 20,
+      q: unique,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      sort: 'newest',
+    });
+    const publicItem = publicList.items.find((item) => item.id === material.id);
+    assert.ok(publicItem);
+    assert.equal(publicItem?.likesCount, 1);
+    assert.equal(publicItem?.isLiked, false);
+
+    const unliked = await unlikeMaterialById(material.id, learner.id);
+    const unlikedAgain = await unlikeMaterialById(material.id, learner.id);
+    assert.equal(unliked.likesCount, 0);
+    assert.equal(unliked.isLiked, false);
+    assert.equal(unlikedAgain.likesCount, 0);
+    assert.equal(unlikedAgain.isLiked, false);
   });
 
   test('missing material detail does not increment viewsCount', async () => {
@@ -470,11 +624,59 @@ describe('public material discovery', () => {
     assert.equal(result.success, false);
   });
 
-  test('public list and detail omit precise pickup fields', async () => {
+  test('nearest sort validation requires one valid viewer location source', () => {
+    assert.equal(
+      materialsQuerySchema.safeParse({
+        sort: 'nearest',
+        latitude: 31.9,
+      }).success,
+      false,
+    );
+    assert.equal(
+      materialsQuerySchema.safeParse({
+        sort: 'nearest',
+        latitude: 91,
+        longitude: 35.2,
+      }).success,
+      false,
+    );
+    assert.equal(
+      materialsQuerySchema.safeParse({
+        sort: 'nearest',
+      }).success,
+      false,
+    );
+    assert.equal(
+      materialsQuerySchema.safeParse({
+        sort: 'nearest',
+        latitude: 31.9,
+        longitude: 35.2,
+        savedLocationId: 'saved-location-id',
+      }).success,
+      false,
+    );
+    assert.equal(
+      materialsQuerySchema.safeParse({
+        sort: 'nearest',
+        latitude: 31.9,
+        longitude: 35.2,
+      }).success,
+      true,
+    );
+  });
+
+  test('public list and detail expose only approximate location fields', async () => {
     const unique = `${TEST_MARKER}-privacy-${Date.now()}`;
     const material = await createMaterial(ctx, {
       title: `${unique} privacy stock`,
       locationId: ctx.locationId,
+    });
+
+    await prisma.material.update({
+      where: { id: material.id },
+      data: {
+        pickupNotes: 'Use the side entrance at the exact warehouse door.',
+      },
     });
 
     const listed = (
@@ -494,12 +696,27 @@ describe('public material discovery', () => {
     assert.equal('latitude' in listed!, false);
     assert.equal('longitude' in listed!, false);
     assert.equal('addressLine' in listed!, false);
+    assert.equal('pickupNotes' in listed!, false);
+    assert.equal('location' in listed!, false);
+    const listedRecord = listed as Record<string, unknown>;
+    assert.equal(listedRecord.approximateLatitude, 32.22);
+    assert.equal(listedRecord.approximateLongitude, 35.25);
+    assert.equal('supplierProfile' in listed!, false);
+    assert.equal('owner' in listed!, false);
     assert.equal(typeof listed?.viewsCount, 'number');
 
     const detail = await getMaterialById(material.id);
+    assert.equal(detail.city, `${TEST_MARKER}-Nablus`);
+    assert.equal(detail.area, `${TEST_MARKER}-Industrial`);
     assert.equal('latitude' in detail, false);
     assert.equal('longitude' in detail, false);
     assert.equal('addressLine' in detail, false);
+    assert.equal('pickupNotes' in detail, false);
+    assert.equal('location' in detail, false);
+    assert.equal('approximateLatitude' in detail, false);
+    assert.equal('approximateLongitude' in detail, false);
+    assert.equal('supplierProfile' in detail, false);
+    assert.equal('owner' in detail, false);
     assert.equal(typeof detail.viewsCount, 'number');
   });
 
@@ -586,7 +803,7 @@ describe('public material discovery', () => {
     assert.equal(detail.primaryImageUrl, coverUrl);
   });
 
-  test('public detail includes extended safe fields and omits precise location', async () => {
+  test('public detail includes extended safe fields and omits precise pickup data', async () => {
     const unique = `${TEST_MARKER}-detail-fields-${Date.now()}`;
     const material = await createMaterial(ctx, {
       title: `${unique} extended detail stock`,
@@ -605,7 +822,6 @@ describe('public material discovery', () => {
     const detail = await getMaterialById(material.id);
 
     assert.ok(detail);
-    assert.equal(detail.pickupNotes, 'Call one hour before pickup.');
     assert.equal(detail.suggestedUses, 'Useful for Arduino motor projects.');
     assert.equal(detail.sourceType, 'WORKSHOP_SURPLUS');
     assert.equal(detail.pickupAllowed, false);
@@ -615,6 +831,7 @@ describe('public material discovery', () => {
     assert.equal('latitude' in detail, false);
     assert.equal('longitude' in detail, false);
     assert.equal('addressLine' in detail, false);
+    assert.equal('pickupNotes' in detail, false);
     assert.equal('ownerId' in detail, false);
     assert.equal('isOwnMaterial' in detail, false);
   });

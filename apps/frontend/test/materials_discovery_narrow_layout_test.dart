@@ -28,7 +28,12 @@ void main() {
                 searchController: controllers.search,
                 cityController: controllers.city,
                 areaController: controllers.area,
+                latitudeController: controllers.latitude,
+                longitudeController: controllers.longitude,
                 searchValue: '',
+                savedLocations: const [],
+                savedLocationsLoading: false,
+                selectedSavedLocationId: null,
                 selectedCategoryIndex: 0,
                 selectedQuickFilterIndex: 0,
                 selectedSortIndex: 0,
@@ -39,6 +44,9 @@ void main() {
                 onSearchChanged: (_) {},
                 onCityChanged: (_) {},
                 onAreaChanged: (_) {},
+                onLatitudeChanged: (_) {},
+                onLongitudeChanged: (_) {},
+                onSavedLocationSelected: (_) {},
                 onCategorySelected: (_) {},
                 onQuickFilterSelected: (_) {},
                 onSortSelected: (_) {},
@@ -68,15 +76,21 @@ class _FilterControllers {
   _FilterControllers()
     : search = TextEditingController(),
       city = TextEditingController(),
-      area = TextEditingController();
+      area = TextEditingController(),
+      latitude = TextEditingController(),
+      longitude = TextEditingController();
 
   final TextEditingController search;
   final TextEditingController city;
   final TextEditingController area;
+  final TextEditingController latitude;
+  final TextEditingController longitude;
 
   void dispose() {
     search.dispose();
     city.dispose();
     area.dispose();
+    latitude.dispose();
+    longitude.dispose();
   }
 }

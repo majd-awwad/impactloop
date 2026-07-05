@@ -61,6 +61,24 @@ void main() {
   });
 
   group('registration UX defaults', () {
+    test('supplier goals do not include learner-only goals', () {
+      final goals = registrationGoalOptionsForIntent(
+        RegistrationIntent.supplier,
+      );
+
+      expect(goals, contains('Share surplus materials'));
+      expect(goals, contains('Manage pickup requests'));
+      expect(goals, isNot(contains('Build projects')));
+      expect(goals, isNot(contains('Find components')));
+    });
+
+    test('learner interests cover general reuse and non-technical topics', () {
+      expect(registrationInterestOptions, contains('Home improvement'));
+      expect(registrationInterestOptions, contains('Fashion and textiles'));
+      expect(registrationInterestOptions, contains('Community projects'));
+      expect(registrationInterestOptions, contains('Electronics'));
+    });
+
     test('student learners are suggested as student suppliers', () {
       expect(
         suggestedSupplierTypeForLearnerType('University student'),

@@ -23,6 +23,7 @@ import '../../features/learning_hub/presentation/pages/learning_add_draft_page.d
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
+import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
@@ -144,10 +145,10 @@ _RouteAccessLevel _routeAccessForPath(String path) {
     return _RouteAccessLevel.admin;
   }
 
-  if (path == '/learner/reservations' ||
+  if (path == '/learning/add-draft' ||
+      path == '/learner/reservations' ||
       path.startsWith('/learner/reservations/') ||
-      path.startsWith('/learner/deliveries/') ||
-      path == '/learning/add-draft') {
+      path.startsWith('/learner/deliveries/')) {
     return _RouteAccessLevel.learner;
   }
 
@@ -297,6 +298,7 @@ String? _resolveSupplierVerificationRedirect(AuthState authState, String path) {
 
 bool _isLearnerPortalHomePath(String path) {
   return path == '/home' ||
+      path == '/learning/add-draft' ||
       path == '/learner/reservations' ||
       path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/');
@@ -451,6 +453,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const UserNotificationsPage(),
+      ),
+      GoRoute(
+        path: '/profile/locations',
+        builder: (context, state) => const SavedLocationsPage(),
       ),
       GoRoute(
         path: '/learner/deliveries/:id',

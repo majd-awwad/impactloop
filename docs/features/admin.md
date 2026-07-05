@@ -21,14 +21,14 @@ Admin is an operational support role. It is not available through public registr
 | Backend approvals | **Implemented** | Category request and price request review |
 | Backend material moderation/reports | **Implemented** | List/detail, hide/unavailable/restore, report resolve/reject/hide material |
 | Backend people management | **Implemented** | Summary, list, detail, suspend, reactivate with safety guards |
-| Flutter admin portal | **Partial** | `/admin` shell with overview, users, supplier verification, materials, approvals, invitations |
-| Impact analytics route | **Frontend-only placeholder** | `/admin/impact` placeholder; overview has partial impact metrics |
-| Audit logs route | **Frontend-only placeholder** | `/admin/audit-logs` placeholder |
-| Delivery/reservation admin ops | **Not implemented** | No full operations dashboard yet |
+| Flutter admin portal | **Partial** | `/admin` shell with overview, users, supplier verification, materials, approvals, invitations, impact, audit logs, read-only operations monitors, and learning project moderation |
+| Impact analytics route | **Implemented** | `/admin/impact` uses dashboard impact data; broader analytics remain future work |
+| Audit logs route | **Implemented** | `/admin/audit-logs` reads paginated `admin_activity_logs` with filters/details |
+| Delivery/reservation admin ops | **Partial** | Read-only monitoring pages exist; reassignment/cancellation operations are not implemented |
 | AI usage/log viewer | **Not implemented** | Material-matching AI is not implemented |
-| Project moderation | **Not implemented** | Learning project submit/review workflow is not implemented |
+| Project moderation | **Implemented for ADMIN** | `/admin/learning-projects` review queue with approve/request changes/reject/hide/restore/archive actions |
 
-**Overall:** **Partial**. Admin portal and APIs cover several MVP operations, but analytics, delivery oversight, audit logs, AI logs, and project moderation remain future work.
+**Overall:** **Partial**. Admin portal and APIs cover several MVP operations, including learning project moderation, impact, audit logs, and read-only reservation/delivery monitors. AI logs and operational delivery/reservation actions remain future work.
 
 ## Main user flow
 
@@ -41,7 +41,7 @@ Admin is an operational support role. It is not available through public registr
    - Materials moderation and material reports.
    - Category and price approvals.
    - Invitations.
-   - Placeholder impact analytics and audit logs.
+   - Impact analytics, audit logs, read-only operations monitors, and learning project moderation.
 4. Admin actions use `/api/admin/*` endpoints guarded by `authMiddleware` + `requireRoles('ADMIN')`.
 
 ## Frontend files
@@ -49,9 +49,9 @@ Admin is an operational support role. It is not available through public registr
 | Area | Path |
 |------|------|
 | Feature root | `apps/frontend/lib/features/admin_portal/` |
-| Routes | `/admin`, `/admin/users`, `/admin/supplier-verification`, `/admin/materials`, `/admin/approvals`, `/admin/invitations`, `/admin/impact`, `/admin/audit-logs` |
-| Data | `data/admin_dashboard_api.dart`, `admin_invitations_api.dart`, `admin_supplier_verification_api.dart`, `admin_approvals_api.dart`, `admin_materials_api.dart`, `admin_people_api.dart` |
-| Pages | `presentation/pages/admin_overview_page.dart`, `admin_people_page.dart`, `admin_supplier_verification_page.dart`, `admin_materials_page.dart`, `admin_approvals_page.dart`, `admin_invitations_page.dart`, `admin_placeholder_page.dart` |
+| Routes | `/admin`, `/admin/users`, `/admin/supplier-verification`, `/admin/materials`, `/admin/approvals`, `/admin/invitations`, `/admin/impact`, `/admin/audit-logs`, `/admin/reservations`, `/admin/deliveries`, `/admin/learning-projects` |
+| Data | `data/admin_dashboard_api.dart`, `admin_invitations_api.dart`, `admin_supplier_verification_api.dart`, `admin_approvals_api.dart`, `admin_materials_api.dart`, `admin_people_api.dart`, `admin_learning_projects_api.dart` |
+| Pages | `presentation/pages/admin_overview_page.dart`, `admin_people_page.dart`, `admin_supplier_verification_page.dart`, `admin_materials_page.dart`, `admin_approvals_page.dart`, `admin_invitations_page.dart`, `admin_learning_projects_page.dart`, analytics/audit/monitoring pages |
 | Shell/widgets | `presentation/widgets/admin_shell.dart`, sidebar/topbar/dashboard widgets |
 
 ## Backend files
@@ -61,6 +61,7 @@ Admin is an operational support role. It is not available through public registr
 | `modules/admin/*` | Dashboard, invitation routes/controllers, parent admin router |
 | `modules/admin-approvals/*` | Category and price request review |
 | `modules/admin-materials/*` | Material moderation and material report review |
+| `modules/admin-learning-projects/*` | Learning project moderation |
 | `modules/admin-people/*` | People management |
 | `modules/admin-supplier-verifications/*` | Organization supplier verification review |
 | `modules/invitations/*` | Public validate/accept and invitation service primitives |
@@ -78,6 +79,7 @@ Mounted at `/api/admin` and guarded by `ADMIN`.
 | Materials | `GET /materials/summary`, `GET /materials`, `GET /materials/:id`, `PATCH /materials/:id/hide|mark-unavailable|restore` |
 | Material reports | `GET /material-reports`, `GET /material-reports/:id`, `PATCH /material-reports/:id/resolve|reject|hide-material` |
 | People | `GET /people/summary`, `GET /people`, `GET /people/:id`, `PATCH /people/:id/suspend|reactivate` |
+| Learning projects | `GET /learning-projects`, `GET /learning-projects/:id`, `PATCH /learning-projects/:id/approve|request-changes|reject|hide|restore|archive` |
 
 Full route details: [api-catalog](../backend/api-catalog.md#admin--apiadmin).
 
@@ -86,6 +88,7 @@ Full route details: [api-catalog](../backend/api-catalog.md#admin--apiadmin).
 - Admin can invite `DRIVER`, `MODERATOR`, and `ADMIN`.
 - Admin can review category and price requests; moderator cannot yet.
 - Admin can review material reports; a general reports module is not present.
+- Admin can review and publish/hide/archive learning projects; moderator cannot yet.
 - Admin people management cannot delete users or manually edit roles.
 - Admin suspension/reactivation is guarded against self-suspension, admin suspension, and last-active-admin risk.
 
@@ -97,10 +100,10 @@ From the role capability plan:
 - Material type and price rule management beyond request approvals.
 - Delivery operations dashboard.
 - Reservation operations dashboard.
-- Full impact analytics page.
-- Audit logs.
+- Deeper impact analytics beyond the current dashboard-backed route.
+- Audit log export/retention policy beyond the current paginated admin UI.
 - AI usage/log review if learner material matching AI is implemented.
-- Project submission/review administration.
+- Moderator-owned project review or shared moderator/admin review queues.
 
 ## Risks / open questions
 

@@ -1,6 +1,6 @@
 # Material Discovery Flow
 
-**Sources inspected:** `materials_discovery_page.dart`, `material_details_page.dart`, `api_material_discovery_repository.dart`, `materials_discovery_view.dart`, `materials.service.ts`, `materials.repository.ts`
+**Sources inspected:** `material_discovery_providers.dart`, `materials_discovery_page.dart`, `material_details_page.dart`, `api_material_discovery_repository.dart`, `materials_discovery_view.dart`, `materials.service.ts`, `materials.repository.ts`
 
 ## Trigger
 
@@ -20,7 +20,7 @@ User navigates to **Material Discovery** (`/materials`) or opens a shared materi
 
 ### Frontend path
 
-`MaterialsDiscoveryPage` loads categories via `materialCategoriesProvider` and materials via `ApiMaterialDiscoveryRepository.fetchMaterials(query)` → `GET /api/materials` with query params → `MaterialDiscoveryApiMapper` → `MaterialsDiscoveryView`.
+`MaterialsDiscoveryPage` loads categories via `discoveryMaterialCategoriesProvider` and materials via `materialDiscoveryRepositoryProvider` → `ApiMaterialDiscoveryRepository.fetchMaterials(query)` → `GET /api/materials` with query params and optional auth → `MaterialDiscoveryApiMapper` → `MaterialsDiscoveryView`.
 
 Filter changes rebuild `MaterialDiscoveryQuery` and refetch page 1. Load more increments `page` and appends items.
 
@@ -34,16 +34,18 @@ Filter changes rebuild `MaterialDiscoveryQuery` and refetch page 1. Load more in
 
 ### Success state
 
-Grid renders `AppMaterialCard` rows with optional **Popular** badge when `viewsCount >= 10`.
+Grid renders `AppMaterialCard` rows with optional **Popular** badge when `viewsCount >= 10` and read-only like counts.
 
 ### Error states
 
-- Network/API error → centered error message when no cached results.
-- Empty list → empty state copy from `material_discovery_content.dart`.
+- Initial network/API error with no cached results → centered error state + **Try again**.
+- Refetch error with cached results → inline retry banner while current results stay visible.
+- Empty list without active filters → “No materials available yet.”
+- Empty list with active search/filters → “No materials matched this combination yet.”
 
 ### Files involved
 
-`materials_discovery_page.dart`, `api_material_discovery_repository.dart`, `material_discovery_api_mapper.dart`, `materials_discovery_view.dart`, `material_search_filters.dart`, `app_material_card.dart`, `materials.controller.ts`, `materials.repository.ts`
+`material_discovery_providers.dart`, `materials_discovery_page.dart`, `api_material_discovery_repository.dart`, `material_discovery_api_mapper.dart`, `materials_discovery_view.dart`, `material_search_filters.dart`, `app_material_card.dart`, `materials.controller.ts`, `materials.repository.ts`
 
 ---
 
@@ -55,19 +57,26 @@ User opens `/materials/:id` or lands from home suggested materials.
 
 ### Frontend path
 
-`MaterialDetailsPage` → `getMaterialById(id)` → `GET /api/materials/:id` → mapper → detail layout. Reserve CTA unchanged.
+`MaterialDetailsPage` → `getMaterialById(id)` → `GET /api/materials/:id` → mapper → detail layout. The detail summary shows views, likes, and an authenticated learner like toggle. Reserve CTA unchanged.
 
 ### Backend path
 
-`getMaterial` loads public material, increments `viewsCount`, returns DTO with city/area only.
+`getMaterial` loads public material, records a material view, returns DTO with city/area only plus `likesCount` and viewer-specific `isLiked`.
 
 ### Database changes
 
-Read + `viewsCount` increment on successful detail fetch.
+Read + material view recording on successful detail fetch. Authenticated viewers are counted once per user/material; repeat opens by the same user do not create another `material_views` row or increment `viewsCount`. Guest opens still count per request because guests have no stable viewer identity.
+
+Learner like/unlike uses `POST /api/materials/:id/like` and `DELETE /api/materials/:id/like`, both idempotent. These mutate `material_likes` and return `{ materialId, likesCount, isLiked }`.
 
 ### Success state
 
-Detail renders views count; Popular badge when threshold met; location privacy panel explains map is future work.
+Detail renders views and likes; Popular badge when threshold met; location privacy panel explains map is future work.
+
+### Error states
+
+- 404 / material no longer public → “Material not found” + **Back to materials**.
+- Network/server error → “Unable to load material details right now” + **Try again** and **Back to materials**.
 
 ---
 

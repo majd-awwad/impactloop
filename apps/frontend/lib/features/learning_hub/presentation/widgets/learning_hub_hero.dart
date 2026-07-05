@@ -13,19 +13,19 @@ class LearningHubHero extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.stats,
-    this.onAddProject,
+    this.onSearchPressed,
+    this.onSubmitPressed,
   });
 
   final LocalizedText title;
   final LocalizedText subtitle;
   final Map<LocalizedText, int> stats;
-  final VoidCallback? onAddProject;
+  final VoidCallback? onSearchPressed;
+  final VoidCallback? onSubmitPressed;
 
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-
     return Container(
       constraints: const BoxConstraints(minHeight: 332),
       decoration: BoxDecoration(
@@ -79,29 +79,18 @@ class LearningHubHero extends StatelessWidget {
                       icon: Icons.search_rounded,
                       tooltip: const LocalizedText(
                         en: 'Search projects',
-                        ar: 'البحث في المشاريع',
+                        ar: '╪د╪ذ╪ص╪س ┘┘è ╪د┘┘à╪┤╪د╪▒┘è╪╣',
                       ).resolve(context),
-                      onPressed: () {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              const LocalizedText(
-                                en: 'Search is a visual placeholder for now.',
-                                ar: 'البحث عنصر بصري تجريبي حالياً.',
-                              ).resolve(context),
-                            ),
-                          ),
-                        );
-                      },
+                      onPressed: onSearchPressed,
                     ),
                     const Spacer(),
                     _HeroActionButton(
-                      icon: Icons.add_rounded,
+                      icon: Icons.edit_note_rounded,
                       tooltip: const LocalizedText(
-                        en: 'Add project',
-                        ar: 'إضافة مشروع',
+                        en: 'Submit a project',
+                        ar: '╪ح╪▒╪│╪د┘ ┘à╪┤╪▒┘ê╪╣',
                       ).resolve(context),
-                      onPressed: onAddProject,
+                      onPressed: onSubmitPressed,
                     ),
                   ],
                 ),
@@ -142,30 +131,6 @@ class LearningHubHero extends StatelessWidget {
                         );
                       }).toList(),
                     ),
-                    if (onAddProject != null) ...[
-                      const SizedBox(height: AppSpacing.xl),
-                      FilledButton.icon(
-                        onPressed: onAddProject,
-                        icon: const Icon(Icons.add_rounded),
-                        label: Text(
-                          const LocalizedText(
-                            en: 'Add project',
-                            ar: 'إضافة مشروع',
-                          ).resolve(context),
-                        ),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: palette.lime,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: AppSpacing.lg,
-                            vertical: AppSpacing.md,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppRadius.pillAll,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ],
@@ -211,7 +176,7 @@ class _HeroActionButton extends StatelessWidget {
   const _HeroActionButton({
     required this.icon,
     required this.tooltip,
-    required this.onPressed,
+    this.onPressed,
   });
 
   final IconData icon;
@@ -229,8 +194,8 @@ class _HeroActionButton extends StatelessWidget {
         border: Border.all(color: palette.cardSurface.withValues(alpha: 0.08)),
       ),
       child: IconButton(
-        tooltip: tooltip,
         onPressed: onPressed,
+        tooltip: tooltip,
         icon: Icon(icon, color: palette.textPrimary),
       ),
     );

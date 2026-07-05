@@ -20,6 +20,9 @@ class DiscoveryMaterial {
     this.categoryId,
     this.city,
     this.area,
+    this.approximateLatitude,
+    this.approximateLongitude,
+    this.approximateDistanceKm,
     required this.conditionLabel,
     required this.conditionTone,
     required this.statusLabel,
@@ -41,8 +44,9 @@ class DiscoveryMaterial {
     this.galleryImages = const [],
     this.ratingLabel,
     this.viewsCount = 0,
+    this.likesCount = 0,
+    this.isLiked = false,
     this.postedAt,
-    this.pickupNotes,
     this.suggestedUses,
     this.sourceType,
     this.isOwnMaterial,
@@ -61,6 +65,9 @@ class DiscoveryMaterial {
   final String? categoryId;
   final String? city;
   final String? area;
+  final double? approximateLatitude;
+  final double? approximateLongitude;
+  final double? approximateDistanceKm;
   final LocalizedText conditionLabel;
   final MaterialConditionBadgeTone conditionTone;
   final LocalizedText statusLabel;
@@ -82,8 +89,9 @@ class DiscoveryMaterial {
   final List<DiscoveryMaterialImage> galleryImages;
   final LocalizedText? ratingLabel;
   final int viewsCount;
+  final int likesCount;
+  final bool isLiked;
   final DateTime? postedAt;
-  final String? pickupNotes;
   final String? suggestedUses;
   final String? sourceType;
   final bool? isOwnMaterial;
@@ -91,6 +99,72 @@ class DiscoveryMaterial {
   final String? reserveBlockReason;
 
   bool get isPopular => viewsCount >= materialPopularViewsThreshold;
+
+  bool get hasApproximatePin =>
+      approximateLatitude != null && approximateLongitude != null;
+
+  LocalizedText? get approximateDistanceLabel {
+    final distance = approximateDistanceKm;
+    if (distance == null) return null;
+
+    final formatted = distance < 10
+        ? distance.toStringAsFixed(1)
+        : distance.toStringAsFixed(0);
+
+    return LocalizedText(en: '~$formatted km away', ar: 'حوالي $formatted كم');
+  }
+
+  DiscoveryMaterial copyWith({
+    int? viewsCount,
+    int? likesCount,
+    bool? isLiked,
+  }) {
+    return DiscoveryMaterial(
+      id: id,
+      status: status,
+      quantity: quantity,
+      availableQuantity: availableQuantity,
+      unit: unit,
+      title: title,
+      description: description,
+      category: category,
+      categoryId: categoryId,
+      city: city,
+      area: area,
+      approximateLatitude: approximateLatitude,
+      approximateLongitude: approximateLongitude,
+      approximateDistanceKm: approximateDistanceKm,
+      conditionLabel: conditionLabel,
+      conditionTone: conditionTone,
+      statusLabel: statusLabel,
+      statusTone: statusTone,
+      quantityLabel: quantityLabel,
+      priceLabel: priceLabel,
+      locationLabel: locationLabel,
+      availabilityLabel: availabilityLabel,
+      deliveryAvailable: deliveryAvailable,
+      pickupAllowed: pickupAllowed,
+      isFree: isFree,
+      supplierName: supplierName,
+      supplierSubtitle: supplierSubtitle,
+      supplierType: supplierType,
+      supplierVerified: supplierVerified,
+      heroIconData: heroIconData,
+      cardGradient: cardGradient,
+      imageUrl: imageUrl,
+      galleryImages: galleryImages,
+      ratingLabel: ratingLabel,
+      viewsCount: viewsCount ?? this.viewsCount,
+      likesCount: likesCount ?? this.likesCount,
+      isLiked: isLiked ?? this.isLiked,
+      postedAt: postedAt,
+      suggestedUses: suggestedUses,
+      sourceType: sourceType,
+      isOwnMaterial: isOwnMaterial,
+      canReserve: canReserve,
+      reserveBlockReason: reserveBlockReason,
+    );
+  }
 
   List<DiscoveryMaterialImage> get resolvedGalleryImages {
     if (galleryImages.isNotEmpty) {
@@ -103,12 +177,7 @@ class DiscoveryMaterial {
     }
 
     return [
-      DiscoveryMaterialImage(
-        id: id,
-        url: url,
-        isCover: true,
-        isPrimary: true,
-      ),
+      DiscoveryMaterialImage(id: id, url: url, isCover: true, isPrimary: true),
     ];
   }
 
@@ -119,20 +188,11 @@ class DiscoveryMaterial {
   static LocalizedText? _sourceTypeLabel(String? value) {
     switch (value) {
       case 'STUDENT_LEFTOVER':
-        return const LocalizedText(
-          en: 'Student leftover',
-          ar: 'فائض طلابي',
-        );
+        return const LocalizedText(en: 'Student leftover', ar: 'فائض طلابي');
       case 'WORKSHOP_SURPLUS':
-        return const LocalizedText(
-          en: 'Workshop surplus',
-          ar: 'فائض ورشة',
-        );
+        return const LocalizedText(en: 'Workshop surplus', ar: 'فائض ورشة');
       case 'FACTORY_SURPLUS':
-        return const LocalizedText(
-          en: 'Factory surplus',
-          ar: 'فائض مصنع',
-        );
+        return const LocalizedText(en: 'Factory surplus', ar: 'فائض مصنع');
       case 'EDUCATIONAL_INSTITUTION':
         return const LocalizedText(
           en: 'Educational institution',
@@ -146,15 +206,9 @@ class DiscoveryMaterial {
   static LocalizedText? supplierTypeLabelFor(String? value) {
     switch (value) {
       case 'INDIVIDUAL_SUPPLIER':
-        return const LocalizedText(
-          en: 'Individual supplier',
-          ar: 'مورد فردي',
-        );
+        return const LocalizedText(en: 'Individual supplier', ar: 'مورد فردي');
       case 'STUDENT_SUPPLIER':
-        return const LocalizedText(
-          en: 'Student supplier',
-          ar: 'مورد طالب',
-        );
+        return const LocalizedText(en: 'Student supplier', ar: 'مورد طالب');
       case 'WORKSHOP':
         return const LocalizedText(en: 'Workshop', ar: 'ورشة');
       case 'FACTORY':

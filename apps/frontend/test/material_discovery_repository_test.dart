@@ -16,7 +16,9 @@ void main() {
         pickupAllowed: true,
         city: 'Nablus',
         area: 'Industrial',
-        sort: 'popular',
+        sort: 'nearest',
+        latitude: 31.9,
+        longitude: 35.2,
         page: 2,
         limit: 10,
       ),
@@ -30,7 +32,9 @@ void main() {
     expect(params['pickupAllowed'], true);
     expect(params['city'], 'Nablus');
     expect(params['area'], 'Industrial');
-    expect(params['sort'], 'popular');
+    expect(params['sort'], 'nearest');
+    expect(params['latitude'], 31.9);
+    expect(params['longitude'], 35.2);
     expect(params['page'], 2);
     expect(params['limit'], 10);
     expect(params['status'], 'AVAILABLE');
@@ -100,4 +104,30 @@ void main() {
 
     expect(pageTwo['page'], 2);
   });
+
+  test('buildQueryParameters sends savedLocationId for nearest sort', () {
+    final params = ApiMaterialDiscoveryRepository.buildQueryParameters(
+      const MaterialDiscoveryQuery(sort: 'nearest', savedLocationId: 'loc-1'),
+    );
+
+    expect(params['sort'], 'nearest');
+    expect(params['savedLocationId'], 'loc-1');
+    expect(params.containsKey('latitude'), isFalse);
+    expect(params.containsKey('longitude'), isFalse);
+  });
+
+  test(
+    'buildQueryParameters does not send nearest without a location source',
+    () {
+      final params = ApiMaterialDiscoveryRepository.buildQueryParameters(
+        const MaterialDiscoveryQuery(sort: 'nearest', page: 2),
+      );
+
+      expect(params['page'], 2);
+      expect(params['sort'], 'newest');
+      expect(params.containsKey('savedLocationId'), isFalse);
+      expect(params.containsKey('latitude'), isFalse);
+      expect(params.containsKey('longitude'), isFalse);
+    },
+  );
 }

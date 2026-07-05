@@ -28,6 +28,7 @@ import {
   getHeldQuantitiesByMaterialIds,
   toDecimal,
 } from '../reservations/reservations.quantity.js';
+import { resolveSavedLocationCoordinates } from '../locations/locations.service.js';
 import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
 
 import * as materialsRepository from './materials.repository.js';
@@ -450,6 +451,23 @@ const mapPublicMaterialImages = (images: PublicMaterialImageRecord[]) => {
   }));
 };
 
+const approximateCoordinate = (
+  value: Parameters<typeof decimalToNumber>[0] | null,
+) => {
+  if (value == null) return null;
+
+  const numeric = decimalToNumber(value);
+  if (numeric == null) return null;
+
+  return Math.round(numeric * 100) / 100;
+};
+
+const approximateDistanceKm = (distanceKm: number | null | undefined) => {
+  if (distanceKm == null || !Number.isFinite(distanceKm)) return null;
+
+  return Math.round(distanceKm * 10) / 10;
+};
+
 const mapMaterial = (
   material: {
     id: string;
@@ -469,6 +487,8 @@ const mapMaterial = (
     location: {
       city: string;
       area: string | null;
+      latitude?: Parameters<typeof decimalToNumber>[0] | null;
+      longitude?: Parameters<typeof decimalToNumber>[0] | null;
     };
     deliveryAllowed: boolean;
     pickupAllowed: boolean;
@@ -482,12 +502,20 @@ const mapMaterial = (
     createdAt: Date;
   },
   heldQuantity = toDecimal(0),
+  engagement: {
+    likesCount?: number;
+    isLiked?: boolean;
+  } = {},
+  options: {
+    includeApproximateLocation?: boolean;
+    distanceKm?: number | null;
+  } = {},
 ) => {
   const quantity = toDecimal(material.quantity);
   const availableQuantity = computeAvailableQuantity(quantity, heldQuantity);
   const primaryImageUrl = resolvePrimaryImageUrl(material);
 
-  return {
+  const mapped = {
     id: material.id,
     title: material.title,
     description: material.description,
@@ -512,7 +540,27 @@ const mapMaterial = (
     supplierName: resolveSupplierName(material),
     ratingSummary: null,
     viewsCount: material.viewsCount,
+    likesCount: engagement.likesCount ?? 0,
+    isLiked: engagement.isLiked ?? false,
     createdAt: material.createdAt.toISOString(),
+  };
+
+  if (!options.includeApproximateLocation) {
+    return mapped;
+  }
+
+  const approximateLatitude = approximateCoordinate(
+    material.location.latitude ?? null,
+  );
+  const approximateLongitude = approximateCoordinate(
+    material.location.longitude ?? null,
+  );
+
+  return {
+    ...mapped,
+    approximateLatitude,
+    approximateLongitude,
+    approximateDistanceKm: approximateDistanceKm(options.distanceKm),
   };
 };
 
@@ -541,7 +589,6 @@ const resolvePublicSupplierVerified = (
 };
 
 const mapMaterialDetailFields = (material: MaterialDetailRecord) => ({
-  pickupNotes: material.pickupNotes?.trim() || null,
   suggestedUses: material.suggestedUses?.trim() || null,
   sourceType: material.sourceType,
   supplierType: material.supplierProfile?.supplierType ?? null,
@@ -609,17 +656,69 @@ const buildMaterialReserveEnrichment = async (
   };
 };
 
-export const getMaterials = async (query: MaterialsQuery) => {
-  const result = await materialsRepository.findMaterials(query);
+export const getMaterials = async (
+  query: MaterialsQuery,
+  viewer?: AccessTokenPayload,
+) => {
+  let viewerCoordinates: materialsRepository.ViewerCoordinates | undefined;
+
+  if (query.savedLocationId) {
+    if (!viewer) {
+      throw new AppError(
+        'Authentication required to use a saved location',
+        401,
+        'UNAUTHENTICATED',
+      );
+    }
+
+    viewerCoordinates = await resolveSavedLocationCoordinates(
+      viewer.sub,
+      query.savedLocationId,
+    );
+  } else if (query.latitude != null && query.longitude != null) {
+    viewerCoordinates = {
+      latitude: query.latitude,
+      longitude: query.longitude,
+    };
+  }
+
+  if (query.sort === 'nearest' && !viewerCoordinates) {
+    throw new AppError(
+      'Nearest sorting requires latitude/longitude or a saved location',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const result = await materialsRepository.findMaterials(
+    query,
+    viewerCoordinates,
+  );
   const materialIds = result.items.map((item) => item.id);
 
   await expireStalePendingReservationsForMaterials(materialIds);
 
-  const heldByMaterialId = await getHeldQuantitiesByMaterialIds(materialIds);
+  const [heldByMaterialId, likesByMaterialId, likedMaterialIds] =
+    await Promise.all([
+      getHeldQuantitiesByMaterialIds(materialIds),
+      materialsRepository.countLikesByMaterialIds(materialIds),
+      materialsRepository.findLikedMaterialIds(viewer?.sub, materialIds),
+    ]);
 
   return {
     items: result.items.map((item) =>
-      mapMaterial(item, heldByMaterialId.get(item.id) ?? toDecimal(0)),
+      mapMaterial(
+        item,
+        heldByMaterialId.get(item.id) ?? toDecimal(0),
+        {
+          likesCount: likesByMaterialId.get(item.id) ?? 0,
+          isLiked: likedMaterialIds.has(item.id),
+        },
+        {
+          includeApproximateLocation: true,
+          distanceKm: result.distanceByMaterialId.get(item.id),
+        },
+      ),
     ),
     pagination: {
       page: query.page,
@@ -640,17 +739,27 @@ export const getMaterialById = async (
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
 
-  const incremented = await materialsRepository.incrementMaterialViewsCount(
-    material.id,
-  );
-
   await expireStalePendingReservationsForMaterials([material.id]);
 
-  const heldByMaterialId = await getHeldQuantitiesByMaterialIds([material.id]);
+  const [incremented, heldByMaterialId, likesByMaterialId, likedMaterialIds] =
+    await Promise.all([
+      materialsRepository.recordMaterialView(
+        material.id,
+        viewer?.sub,
+        'material_detail',
+      ),
+      getHeldQuantitiesByMaterialIds([material.id]),
+      materialsRepository.countLikesByMaterialIds([material.id]),
+      materialsRepository.findLikedMaterialIds(viewer?.sub, [material.id]),
+    ]);
   const heldQuantity = heldByMaterialId.get(material.id) ?? toDecimal(0);
   const mappedMaterial = mapMaterial(
     { ...material, viewsCount: incremented.viewsCount },
     heldQuantity,
+    {
+      likesCount: likesByMaterialId.get(material.id) ?? 0,
+      isLiked: likedMaterialIds.has(material.id),
+    },
   );
   const detailFields = mapMaterialDetailFields(material);
 
@@ -671,6 +780,40 @@ export const getMaterialById = async (
     ...mappedMaterial,
     ...detailFields,
     ...reserveEnrichment,
+  };
+};
+
+export const likeMaterialById = async (id: string, userId: string) => {
+  const material = await materialsRepository.findPublicMaterialById(id);
+
+  if (!material) {
+    throw new AppError('Material not found', 404, 'NOT_FOUND');
+  }
+
+  await materialsRepository.setMaterialLiked(id, userId);
+  const likesCount = await materialsRepository.countLikesForMaterial(id);
+
+  return {
+    materialId: id,
+    likesCount,
+    isLiked: true,
+  };
+};
+
+export const unlikeMaterialById = async (id: string, userId: string) => {
+  const material = await materialsRepository.findPublicMaterialById(id);
+
+  if (!material) {
+    throw new AppError('Material not found', 404, 'NOT_FOUND');
+  }
+
+  await materialsRepository.unsetMaterialLiked(id, userId);
+  const likesCount = await materialsRepository.countLikesForMaterial(id);
+
+  return {
+    materialId: id,
+    likesCount,
+    isLiked: false,
   };
 };
 

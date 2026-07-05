@@ -99,6 +99,7 @@ class ApiLearningHubRepository implements LearningProjectRepository {
 
   @override
   Future<void> submitProjectForReview({
+    required String idempotencyKey,
     required String title,
     required String shortDescription,
     required String description,
@@ -120,13 +121,16 @@ class ApiLearningHubRepository implements LearningProjectRepository {
       if (steps != null && steps.isNotEmpty) 'steps': steps,
       if (links != null && links.isNotEmpty) 'links': links,
     };
-
     if (estimatedDurationMinutes != null) {
       data['estimatedDurationMinutes'] = estimatedDurationMinutes;
     }
 
     await unwrapApiResponse(
-      _client.post<Map<String, dynamic>>('$_basePath/submit', data: data),
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/submit',
+        data: data,
+        options: Options(headers: {'Idempotency-Key': idempotencyKey}),
+      ),
       (json) => json,
     );
   }

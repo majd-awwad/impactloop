@@ -402,8 +402,8 @@ const learningFeaturedTip = LocalizedText(
 );
 
 const learningAddDraftIntro = LocalizedText(
-  en: 'Share your idea as a draft for review. This screen is a UI mock only and does not submit data yet.',
-  ar: 'شارك فكرتك كمسودة للمراجعة. هذه الشاشة مجرد واجهة تجريبية ولا ترسل أي بيانات بعد.',
+  en: 'Share your idea as a draft for admin review.',
+  ar: 'شارك فكرتك كمسودة لمراجعة الإدارة.',
 );
 
 const learningDisabledAiTitle = LocalizedText(

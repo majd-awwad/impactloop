@@ -105,6 +105,9 @@ class SuggestedMaterialsSection extends ConsumerWidget {
                             gradientColors: materialGradient(material),
                             imageUrl: imageUrl,
                             ratingLabel: material.ratingLabel?.resolve(context),
+                            viewsCount: material.viewsCount,
+                            likesCount: material.likesCount,
+                            isLiked: material.isLiked,
                             fallbackIcon: material.heroIconData,
                             onTap: () =>
                                 context.push('/materials/${material.id}'),
@@ -168,6 +171,9 @@ class SuggestedMaterialsSection extends ConsumerWidget {
                           gradientColors: materialGradient(material),
                           imageUrl: imageUrl,
                           ratingLabel: material.ratingLabel?.resolve(context),
+                          viewsCount: material.viewsCount,
+                          likesCount: material.likesCount,
+                          isLiked: material.isLiked,
                           fallbackIcon: material.heroIconData,
                           variant: AppMaterialCardVariant.compact,
                           onTap: () =>
