@@ -7,6 +7,7 @@ import { AppError } from '../../utils/app-error.js';
 import { verifyAccessToken } from '../../utils/jwt.js';
 
 import {
+  becomeLearner,
   becomeSupplier,
   getAuthenticatedUser,
   switchActiveRole,
@@ -96,6 +97,8 @@ async function cleanup() {
 async function assertBecomeSupplierRejected(
   userId: string,
   supplierType: string,
+  expectedStatus = 400,
+  expectedMessage = /Unsupported supplier type for this flow|Organization supplier types require a separate verification flow/i,
 ): Promise<void> {
   await assert.rejects(
     () =>
@@ -107,11 +110,8 @@ async function assertBecomeSupplierRejected(
       }),
     (error: unknown) => {
       assert.ok(error instanceof AppError);
-      assert.equal(error.statusCode, 400);
-      assert.match(
-        error.message,
-        /Unsupported supplier type for this flow/i,
-      );
+      assert.equal(error.statusCode, expectedStatus);
+      assert.match(error.message, expectedMessage);
       return true;
     },
   );
@@ -189,7 +189,7 @@ describe('auth role switching', () => {
     assert.equal(user.supplierProfile?.supplierType, 'INDIVIDUAL_SUPPLIER');
   });
 
-  test('learner can become organization supplier types with pending verification', async () => {
+  test('learner self-upgrade rejects organization supplier types', async () => {
     const organizationTypes = [
       'WORKSHOP',
       'FACTORY',
@@ -198,22 +198,17 @@ describe('auth role switching', () => {
 
     for (const supplierType of organizationTypes) {
       const learner = await createUser({
-        suffix: `org-${supplierType.toLowerCase()}`,
+        suffix: `blocked-org-${supplierType.toLowerCase()}`,
         roles: ['LEARNER'],
         withLearnerProfile: true,
       });
 
-      const { user } = await becomeSupplier(learner.id, {
-        userId: learner.id,
+      await assertBecomeSupplierRejected(
+        learner.id,
         supplierType,
-        publicName: `Org ${supplierType}`,
-        pickupArea: 'Nablus, Rafidia',
-      });
-
-      assert.equal(user.roles.includes('LEARNER'), true);
-      assert.equal(user.roles.includes('SUPPLIER'), true);
-      assert.equal(user.supplierProfile?.supplierType, supplierType);
-      assert.equal(user.supplierProfile?.verificationStatus, 'PENDING');
+        400,
+        /Organization supplier types require a separate verification flow/i,
+      );
     }
   });
 
@@ -229,7 +224,7 @@ describe('auth role switching', () => {
     }
   });
 
-  test('become supplier does not create duplicate supplier profile', async () => {
+  test('existing supplier cannot use become-supplier again', async () => {
     const supplier = await createUser({
       suffix: 'duplicate-profile',
       roles: ['LEARNER', 'SUPPLIER'],
@@ -243,12 +238,21 @@ describe('auth role switching', () => {
       where: { userId: supplier.id },
     });
 
-    const { user } = await becomeSupplier(supplier.id, {
-      userId: supplier.id,
-      supplierType: 'INDIVIDUAL_SUPPLIER',
-      publicName: 'Should Not Duplicate',
-      pickupArea: 'Nablus, Rafidia',
-    });
+    await assert.rejects(
+      () =>
+        becomeSupplier(supplier.id, {
+          userId: supplier.id,
+          supplierType: 'INDIVIDUAL_SUPPLIER',
+          publicName: 'Should Not Duplicate',
+          pickupArea: 'Nablus, Rafidia',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(error.message, /already have a supplier profile/i);
+        return true;
+      },
+    );
 
     const profilesAfter = await prisma.supplierProfile.count({
       where: { userId: supplier.id },
@@ -256,14 +260,13 @@ describe('auth role switching', () => {
 
     assert.equal(profilesBefore, 1);
     assert.equal(profilesAfter, 1);
-    assert.equal(user.supplierProfile?.publicName, 'Supplier duplicate-profile');
-    assert.equal(user.activeRole, 'SUPPLIER');
   });
 
-  test('student/individual supplier can switch to learner and back without deleting roles', async () => {
+  test('student/individual supplier with learner role can switch to learner and back', async () => {
     const supplier = await createUser({
       suffix: 'switch-individual',
-      roles: ['SUPPLIER'],
+      roles: ['LEARNER', 'SUPPLIER'],
+      withLearnerProfile: true,
       withSupplierProfile: true,
       supplierType: 'INDIVIDUAL_SUPPLIER',
       activeRole: 'SUPPLIER',
@@ -278,6 +281,132 @@ describe('auth role switching', () => {
     assert.equal(asSupplier.activeRole, 'SUPPLIER');
     assert.equal(asSupplier.roles.includes('SUPPLIER'), true);
     assert.equal(asSupplier.roles.includes('LEARNER'), true);
+  });
+
+  test('supplier-only account cannot switch to learner without learner role', async () => {
+    const supplier = await createUser({
+      suffix: 'supplier-only',
+      roles: ['SUPPLIER'],
+      withSupplierProfile: true,
+      supplierType: 'INDIVIDUAL_SUPPLIER',
+      activeRole: 'SUPPLIER',
+    });
+
+    await assert.rejects(
+      () => switchActiveRole(supplier.id, 'LEARNER'),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 403);
+        return true;
+      },
+    );
+
+    const summary = await getAuthenticatedUser(supplier.id);
+    assert.equal(summary.canSwitchToLearner, false);
+    assert.equal(summary.canBecomeLearner, true);
+  });
+
+  test('student supplier can become learner', async () => {
+    const supplier = await createUser({
+      suffix: 'become-learner-student',
+      roles: ['SUPPLIER'],
+      withSupplierProfile: true,
+      supplierType: 'STUDENT_SUPPLIER',
+      activeRole: 'SUPPLIER',
+    });
+
+    const { user } = await becomeLearner(supplier.id, {
+      userId: supplier.id,
+      learnerType: 'University student',
+      skillLevel: 'Beginner',
+      interests: ['electronics'],
+      bio: 'Learning robotics',
+    });
+
+    assert.equal(user.roles.includes('LEARNER'), true);
+    assert.equal(user.roles.includes('SUPPLIER'), true);
+    assert.equal(user.activeRole, 'LEARNER');
+    assert.equal(user.learnerProfile?.learnerType, 'University student');
+    assert.equal(user.canSwitchToLearner, true);
+    assert.equal(user.canBecomeLearner, false);
+  });
+
+  test('individual supplier can become learner', async () => {
+    const supplier = await createUser({
+      suffix: 'become-learner-individual',
+      roles: ['SUPPLIER'],
+      withSupplierProfile: true,
+      supplierType: 'INDIVIDUAL_SUPPLIER',
+      activeRole: 'SUPPLIER',
+    });
+
+    const { user } = await becomeLearner(supplier.id, {
+      userId: supplier.id,
+      learnerType: 'Self learner',
+      skillLevel: 'Intermediate',
+    });
+
+    assert.equal(user.roles.includes('LEARNER'), true);
+    assert.equal(user.supplierProfile?.supplierType, 'INDIVIDUAL_SUPPLIER');
+    assert.equal(user.canBecomeLearner, false);
+  });
+
+  test('organization suppliers cannot become learner', async () => {
+    for (const supplierType of [
+      'WORKSHOP',
+      'FACTORY',
+      'EDUCATIONAL_INSTITUTION',
+    ]) {
+      const supplier = await createUser({
+        suffix: `become-learner-${supplierType.toLowerCase()}`,
+        roles: ['SUPPLIER'],
+        withSupplierProfile: true,
+        supplierType,
+        activeRole: 'SUPPLIER',
+      });
+
+      await assert.rejects(
+        () =>
+          becomeLearner(supplier.id, {
+            userId: supplier.id,
+            learnerType: 'Self learner',
+            skillLevel: 'Beginner',
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.statusCode, 403);
+          assert.match(
+            error.message,
+            /Only student and individual suppliers can add learner access/i,
+          );
+          return true;
+        },
+      );
+    }
+  });
+
+  test('admin cannot use become-learner endpoint', async () => {
+    const admin = await createUser({
+      suffix: 'become-learner-admin',
+      roles: ['ADMIN', 'SUPPLIER'],
+      withSupplierProfile: true,
+      supplierType: 'INDIVIDUAL_SUPPLIER',
+      activeRole: 'SUPPLIER',
+    });
+
+    await assert.rejects(
+      () =>
+        becomeLearner(admin.id, {
+          userId: admin.id,
+          learnerType: 'Self learner',
+          skillLevel: 'Beginner',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 403);
+        return true;
+      },
+    );
   });
 
   test('organization supplier types cannot switch to learner', async () => {
@@ -369,6 +498,54 @@ describe('auth role switching', () => {
     assert.equal(summary.canSwitchToLearner, true);
     assert.equal(summary.canSwitchToSupplier, true);
     assert.equal(summary.defaultPortalRoute, '/home');
+  });
+
+  test('admin cannot use become-supplier self-upgrade', async () => {
+    const admin = await createUser({
+      suffix: 'become-admin',
+      roles: ['ADMIN', 'LEARNER'],
+      withLearnerProfile: true,
+      activeRole: 'ADMIN',
+    });
+
+    await assert.rejects(
+      () =>
+        becomeSupplier(admin.id, {
+          userId: admin.id,
+          supplierType: 'STUDENT_SUPPLIER',
+          publicName: 'Admin Supplier',
+          pickupArea: 'Nablus, Rafidia',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 403);
+        return true;
+      },
+    );
+  });
+
+  test('driver cannot use become-supplier self-upgrade', async () => {
+    const driver = await createUser({
+      suffix: 'become-driver',
+      roles: ['DRIVER', 'LEARNER'],
+      withLearnerProfile: true,
+      activeRole: 'DRIVER',
+    });
+
+    await assert.rejects(
+      () =>
+        becomeSupplier(driver.id, {
+          userId: driver.id,
+          supplierType: 'INDIVIDUAL_SUPPLIER',
+          publicName: 'Driver Supplier',
+          pickupArea: 'Nablus, Rafidia',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 403);
+        return true;
+      },
+    );
   });
 
   test('admin role is unaffected by portal switch helpers', async () => {

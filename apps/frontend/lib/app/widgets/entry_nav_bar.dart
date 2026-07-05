@@ -793,135 +793,141 @@ class _AccountMenu extends StatelessWidget {
         );
       },
       menuChildren: [
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.md,
-            AppSpacing.md,
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+            maxWidth: 320,
           ),
-          child: SizedBox(
-            width: 280,
-            child: Row(
+          child: SingleChildScrollView(
+            primary: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                UserAvatar(
-                  displayName: _displayName,
-                  profileImageUrl: user.profileImageUrl,
-                  radius: 22,
-                  backgroundColor: accent.withValues(alpha: 0.14),
-                  foregroundColor: accent,
-                  initialTextStyle: AuthDarkTextStyles.title(
-                    context,
-                  ).copyWith(color: accent, fontSize: 18),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                  ),
+                  child: Row(
                     children: [
-                      Text(
-                        _displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AuthDarkTextStyles.label(context).copyWith(
-                          color: primaryText,
-                          fontWeight: FontWeight.w700,
+                      UserAvatar(
+                        displayName: _displayName,
+                        profileImageUrl: user.profileImageUrl,
+                        radius: 22,
+                        backgroundColor: accent.withValues(alpha: 0.14),
+                        foregroundColor: accent,
+                        initialTextStyle: AuthDarkTextStyles.title(
+                          context,
+                        ).copyWith(color: accent, fontSize: 18),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _displayName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AuthDarkTextStyles.label(context).copyWith(
+                                color: primaryText,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              user.email,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AuthDarkTextStyles.body(
+                                context,
+                              ).copyWith(color: secondaryText, fontSize: 12),
+                            ),
+                            Text(
+                              activePortalModeLabel(user),
+                              style: AuthDarkTextStyles.body(
+                                context,
+                              ).copyWith(color: accent, fontSize: 12),
+                            ),
+                          ],
                         ),
-                      ),
-                      Text(
-                        user.email,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AuthDarkTextStyles.body(
-                          context,
-                        ).copyWith(color: secondaryText, fontSize: 12),
-                      ),
-                      Text(
-                        activePortalModeLabel(user),
-                        style: AuthDarkTextStyles.body(
-                          context,
-                        ).copyWith(color: accent, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
+                const Divider(height: 1),
+                _AccountMenuItem(
+                  icon: Icons.person_outline_rounded,
+                  label: 'Profile',
+                  onPressed: () => context.go('/profile'),
+                ),
+                if (_showLearnerActions)
+                  _AccountMenuItem(
+                    icon: Icons.receipt_long_outlined,
+                    label: 'My reservations',
+                    onPressed: () => context.go(learnerReservationsRoute),
+                  ),
+                if (_isAdmin)
+                  _AccountMenuItem(
+                    icon: Icons.admin_panel_settings_outlined,
+                    label: 'Admin Portal',
+                    onPressed: () => context.go(adminPortalRoute),
+                  ),
+                if (_showSupplierDashboard)
+                  _AccountMenuItem(
+                    icon: Icons.dashboard_outlined,
+                    label: 'Supplier dashboard',
+                    onPressed: () => context.go('/supplier'),
+                  ),
+                if (shouldShowBecomeSupplier(user))
+                  _AccountMenuItem(
+                    icon: Icons.storefront_outlined,
+                    label: 'Become a supplier',
+                    onPressed: () => context.go(becomeSupplierRoute),
+                  ),
+                ...PortalSwitchMenuItems.build(
+                  context: context,
+                  ref: ref,
+                  user: user,
+                  labelStyle: AuthDarkTextStyles.label(
+                    context,
+                  ).copyWith(color: primaryText),
+                  noteStyle: AuthDarkTextStyles.body(
+                    context,
+                  ).copyWith(color: secondaryText, fontSize: 12),
+                  iconColor: primaryText,
+                ),
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Settings',
+                        style: AuthDarkTextStyles.label(context).copyWith(
+                          color: secondaryText,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      _UtilityPills(settings: settings, ref: ref, compact: true),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                _AccountMenuItem(
+                  icon: Icons.logout_rounded,
+                  label: isLoggingOut ? 'Logging out...' : 'Logout',
+                  destructive: true,
+                  onPressed: isLoggingOut ? null : () => _logout(context),
+                ),
               ],
             ),
           ),
-        ),
-        const Divider(height: 1),
-        _AccountMenuItem(
-          icon: Icons.person_outline_rounded,
-          label: 'Profile',
-          onPressed: () => context.go('/profile'),
-        ),
-        if (_showLearnerActions)
-          _AccountMenuItem(
-            icon: Icons.receipt_long_outlined,
-            label: 'My reservations',
-            onPressed: () => context.go(learnerReservationsRoute),
-          ),
-        if (_isAdmin)
-          _AccountMenuItem(
-            icon: Icons.admin_panel_settings_outlined,
-            label: 'Admin Portal',
-            onPressed: () => context.go(adminPortalRoute),
-          ),
-        if (_showSupplierDashboard)
-          _AccountMenuItem(
-            icon: Icons.dashboard_outlined,
-            label: 'Supplier dashboard',
-            onPressed: () => context.go('/supplier'),
-          ),
-        if (!_isSupplier)
-          _AccountMenuItem(
-            icon: Icons.storefront_outlined,
-            label: 'Become a supplier',
-            onPressed: () => context.go(supplierEntryRouteForUser(user)),
-          ),
-        ...PortalSwitchMenuItems.build(
-          context: context,
-          ref: ref,
-          user: user,
-          labelStyle: AuthDarkTextStyles.label(
-            context,
-          ).copyWith(color: primaryText),
-          noteStyle: AuthDarkTextStyles.body(
-            context,
-          ).copyWith(color: secondaryText, fontSize: 12),
-        ).map(
-          (item) => Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: AppSpacing.md,
-            ),
-            child: item,
-          ),
-        ),
-        const Divider(height: 1),
-        Padding(
-          padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Settings',
-                style: AuthDarkTextStyles.label(context).copyWith(
-                  color: secondaryText,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              _UtilityPills(settings: settings, ref: ref, compact: true),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
-        _AccountMenuItem(
-          icon: Icons.logout_rounded,
-          label: isLoggingOut ? 'Logging out...' : 'Logout',
-          destructive: true,
-          onPressed: isLoggingOut ? null : () => _logout(context),
         ),
       ],
     );

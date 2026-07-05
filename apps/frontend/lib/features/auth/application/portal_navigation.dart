@@ -2,6 +2,28 @@ import '../data/models/user.dart';
 import '../../supplier_portal/application/supplier_verification_gate.dart';
 import 'auth_route_helpers.dart';
 
+bool userHasRestrictedStaffRole(User user) {
+  return user.hasRole('ADMIN') ||
+      user.hasRole('MODERATOR') ||
+      user.hasRole('DRIVER');
+}
+
+bool shouldShowBecomeSupplier(User user) {
+  if (userHasRestrictedStaffRole(user)) {
+    return false;
+  }
+
+  if (!user.hasRole('LEARNER')) {
+    return false;
+  }
+
+  if (user.hasRole('SUPPLIER') || user.supplierProfile != null) {
+    return false;
+  }
+
+  return user.isLearnerMode;
+}
+
 String portalRouteForActiveRole(User user) {
   final activeRole = user.activeRole.trim().toUpperCase();
 
@@ -39,11 +61,14 @@ String activePortalModeLabel(User user) {
 bool shouldShowSwitchToLearner(User user) =>
     user.isSupplierMode && user.canSwitchToLearner;
 
+bool shouldShowBecomeLearner(User user) =>
+    user.isSupplierMode && user.canBecomeLearner;
+
 bool shouldShowSwitchToSupplier(User user) =>
     user.isLearnerMode && user.canSwitchToSupplier;
 
 bool isOrganizationSupplierWithoutLearnerSwitch(User user) {
-  if (user.canSwitchToLearner) {
+  if (user.canSwitchToLearner || user.canBecomeLearner) {
     return false;
   }
 

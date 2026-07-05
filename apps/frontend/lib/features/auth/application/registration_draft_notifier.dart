@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../presentation/models/registration_intent.dart';
+import '../data/models/become_learner_request.dart';
 import '../data/models/register_request.dart';
 import '../data/models/registration_draft.dart';
 
@@ -57,6 +58,14 @@ class RegistrationDraftNotifier extends Notifier<RegistrationDraft> {
   RegisterRequest? toRegisterRequest() {
     try {
       return RegisterRequest.fromDraft(state);
+    } on StateError {
+      return null;
+    }
+  }
+
+  BecomeLearnerRequest? toBecomeLearnerRequest() {
+    try {
+      return BecomeLearnerRequest.fromDraft(state);
     } on StateError {
       return null;
     }

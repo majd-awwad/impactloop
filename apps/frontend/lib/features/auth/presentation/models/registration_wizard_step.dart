@@ -74,6 +74,14 @@ List<RegistrationWizardStep> registrationWizardSteps({
   return steps;
 }
 
+const becomeLearnerWizardSteps = [
+  RegistrationWizardStep.interests,
+  RegistrationWizardStep.goals,
+  RegistrationWizardStep.location,
+  RegistrationWizardStep.learnerBasics,
+  RegistrationWizardStep.review,
+];
+
 RegistrationIntent? registrationIntentFromQuery(String? raw) {
   return switch (raw?.trim().toLowerCase()) {
     'learner' => RegistrationIntent.learner,

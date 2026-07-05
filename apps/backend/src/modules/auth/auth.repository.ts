@@ -77,6 +77,14 @@ export type BecomeSupplierInput = {
   pickupNotes?: string;
 };
 
+export type BecomeLearnerInput = {
+  userId: string;
+  learnerType: string;
+  skillLevel: string;
+  interests?: string[];
+  bio?: string;
+};
+
 const userWithRolesAndProfilesInclude = {
   roles: true,
   learnerProfile: true,
@@ -491,6 +499,56 @@ export const becomeSupplierForUser = async (
     return tx.user.update({
       where: { id: input.userId },
       data: { activeRole: 'SUPPLIER' },
+      include: userWithRolesAndProfilesInclude,
+    });
+  });
+};
+
+export const becomeLearnerForUser = async (
+  input: BecomeLearnerInput,
+): Promise<UserWithRolesAndProfiles> => {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.user.findUnique({
+      where: { id: input.userId },
+      include: {
+        roles: true,
+        learnerProfile: true,
+        supplierProfile: true,
+      },
+    });
+
+    if (!existing) {
+      throw new Error('User not found');
+    }
+
+    await tx.userRoleAssignment.upsert({
+      where: {
+        userId_role: {
+          userId: input.userId,
+          role: 'LEARNER',
+        },
+      },
+      create: {
+        userId: input.userId,
+        role: 'LEARNER',
+        isPrimary: false,
+      },
+      update: {},
+    });
+
+    await tx.learnerProfile.create({
+      data: {
+        userId: input.userId,
+        learnerType: input.learnerType,
+        skillLevel: input.skillLevel,
+        interests: input.interests ?? [],
+        bio: input.bio,
+      },
+    });
+
+    return tx.user.update({
+      where: { id: input.userId },
+      data: { activeRole: 'LEARNER' },
       include: userWithRolesAndProfilesInclude,
     });
   });

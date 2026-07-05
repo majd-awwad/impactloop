@@ -1,7 +1,11 @@
 import { z } from 'zod';
 
 import { bodyEmailSchema } from '../../utils/zod-helpers.js';
-import { isKnownBecomeSupplierType } from './role-capabilities.js';
+import {
+  isBlockedBecomeSupplierType,
+  isPersonalBecomeSupplierType,
+  ORGANIZATION_BECOME_SUPPLIER_MESSAGE,
+} from './role-capabilities.js';
 
 export const PUBLIC_SIGNUP_ROLES = ['LEARNER', 'SUPPLIER'] as const;
 
@@ -136,7 +140,16 @@ const becomeSupplierProfileSchema = z
     pickupNotes: z.string().trim().max(500).optional(),
   })
   .superRefine((data, ctx) => {
-    if (!isKnownBecomeSupplierType(data.supplierType)) {
+    if (isBlockedBecomeSupplierType(data.supplierType)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: ORGANIZATION_BECOME_SUPPLIER_MESSAGE,
+        path: ['supplierType'],
+      });
+      return;
+    }
+
+    if (!isPersonalBecomeSupplierType(data.supplierType)) {
       ctx.addIssue({
         code: 'custom',
         message: 'Unsupported supplier type for this flow.',
@@ -147,6 +160,8 @@ const becomeSupplierProfileSchema = z
 
 export const becomeSupplierSchema = becomeSupplierProfileSchema;
 
+export const becomeLearnerSchema = learnerProfileSchema;
+
 export const switchRoleSchema = z.object({
   activeRole: z.enum(['LEARNER', 'SUPPLIER'], {
     error: 'activeRole must be LEARNER or SUPPLIER',
@@ -154,4 +169,5 @@ export const switchRoleSchema = z.object({
 });
 
 export type BecomeSupplierInput = z.infer<typeof becomeSupplierSchema>;
+export type BecomeLearnerInput = z.infer<typeof becomeLearnerSchema>;
 export type SwitchRoleInput = z.infer<typeof switchRoleSchema>;

@@ -24,16 +24,24 @@ import * as authRepository from './auth.repository.js';
 
 import { formatPickupAreaLabel } from './pickup-area.js';
 import {
-  canGrantLearnerRoleOnSwitch,
+  canBecomeLearner,
+  canBecomeSupplier,
   canSwitchToLearner,
   canSwitchToSupplier,
-  isKnownBecomeSupplierType,
+  isBlockedBecomeSupplierType,
   isBlockedLearnerPortalSwitch,
+  isPersonalBecomeSupplierType,
+  ORGANIZATION_BECOME_SUPPLIER_MESSAGE,
+  PERSONAL_SUPPLIER_CANNOT_BECOME_LEARNER_MESSAGE,
   resolveDefaultActiveRole,
   resolveDefaultPortalRoute,
+  userHasRole as roleCapabilityUserHasRole,
   type PortalRole,
 } from './role-capabilities.js';
-import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
+import {
+  isIndividualSupplierType,
+  normalizeSupplierVerificationStatus,
+} from '../supplier/supplier-verification.status.js';
 import { getAuthEmailProvider } from './email/index.js';
 
 import type { ChangePasswordInput, LoginInput, RegisterInput } from './auth.validation.js';
@@ -68,6 +76,7 @@ export type UserSummary = {
   activeRole: UserRole;
   canSwitchToLearner: boolean;
   canSwitchToSupplier: boolean;
+  canBecomeLearner: boolean;
   defaultPortalRoute: string;
   learnerProfile: LearnerProfileSummary | null;
   supplierProfile: SupplierProfileSummary | null;
@@ -125,6 +134,7 @@ const toUserSummary = (
     roles,
     supplierType,
     hasSupplierProfile: user.supplierProfile != null,
+    hasLearnerProfile: user.learnerProfile != null,
   };
   const activeRole = resolveDefaultActiveRole({
     roles,
@@ -142,6 +152,7 @@ const toUserSummary = (
     activeRole,
     canSwitchToLearner: canSwitchToLearner(capabilityInput),
     canSwitchToSupplier: canSwitchToSupplier(capabilityInput),
+    canBecomeLearner: canBecomeLearner(capabilityInput),
     defaultPortalRoute: resolveDefaultPortalRoute(activeRole),
     learnerProfile: user.learnerProfile
       ? {
@@ -524,14 +535,26 @@ export const becomeSupplier = async (
     throw new AppError('User not found', 404, 'NOT_FOUND');
   }
 
-  if (
-    user.roles.some(
-      (assignment) =>
-        assignment.role === 'ADMIN' ||
-        assignment.role === 'DRIVER' ||
-        assignment.role === 'MODERATOR',
-    )
-  ) {
+  const roles = user.roles.map((assignment) => assignment.role);
+  const capabilityInput = {
+    roles,
+    supplierType: user.supplierProfile?.supplierType ?? null,
+    hasSupplierProfile: user.supplierProfile != null,
+    hasLearnerProfile: user.learnerProfile != null,
+  };
+
+  if (!canBecomeSupplier(capabilityInput)) {
+    if (
+      roleCapabilityUserHasRole(roles, 'SUPPLIER') ||
+      user.supplierProfile != null
+    ) {
+      throw new AppError(
+        'You already have a supplier profile.',
+        409,
+        'CONFLICT',
+      );
+    }
+
     throw new AppError(
       'This account cannot use the become-supplier flow',
       403,
@@ -539,7 +562,15 @@ export const becomeSupplier = async (
     );
   }
 
-  if (!isKnownBecomeSupplierType(input.supplierType)) {
+  if (isBlockedBecomeSupplierType(input.supplierType)) {
+    throw new AppError(
+      ORGANIZATION_BECOME_SUPPLIER_MESSAGE,
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if (!isPersonalBecomeSupplierType(input.supplierType)) {
     throw new AppError(
       'Unsupported supplier type for this flow.',
       400,
@@ -569,6 +600,63 @@ export const becomeSupplier = async (
   return createAuthSession(updatedUser);
 };
 
+export const becomeLearner = async (
+  userId: string,
+  input: authRepository.BecomeLearnerInput,
+): Promise<AuthResult> => {
+  const user = await authRepository.findUserByIdWithRoles(userId);
+
+  if (!user) {
+    throw new AppError('User not found', 404, 'NOT_FOUND');
+  }
+
+  const roles = user.roles.map((assignment) => assignment.role);
+  const supplierType = user.supplierProfile?.supplierType ?? null;
+  const capabilityInput = {
+    roles,
+    supplierType,
+    hasSupplierProfile: user.supplierProfile != null,
+    hasLearnerProfile: user.learnerProfile != null,
+  };
+
+  if (!isIndividualSupplierType(supplierType)) {
+    throw new AppError(
+      PERSONAL_SUPPLIER_CANNOT_BECOME_LEARNER_MESSAGE,
+      403,
+      'FORBIDDEN',
+    );
+  }
+
+  if (!canBecomeLearner(capabilityInput)) {
+    if (
+      roleCapabilityUserHasRole(roles, 'LEARNER') ||
+      user.learnerProfile != null
+    ) {
+      throw new AppError(
+        'You already have learner access on this account.',
+        409,
+        'CONFLICT',
+      );
+    }
+
+    throw new AppError(
+      PERSONAL_SUPPLIER_CANNOT_BECOME_LEARNER_MESSAGE,
+      403,
+      'FORBIDDEN',
+    );
+  }
+
+  const updatedUser = await authRepository.becomeLearnerForUser({
+    userId,
+    learnerType: input.learnerType,
+    skillLevel: input.skillLevel,
+    interests: input.interests,
+    bio: input.bio,
+  });
+
+  return createAuthSession(updatedUser);
+};
+
 export const switchActiveRole = async (
   userId: string,
   requestedRole: PortalRole,
@@ -585,6 +673,7 @@ export const switchActiveRole = async (
     roles,
     supplierType,
     hasSupplierProfile: user.supplierProfile != null,
+    hasLearnerProfile: user.learnerProfile != null,
   };
 
   if (requestedRole === 'SUPPLIER') {
@@ -613,10 +702,6 @@ export const switchActiveRole = async (
         403,
         'FORBIDDEN',
       );
-    }
-
-    if (canGrantLearnerRoleOnSwitch(capabilityInput)) {
-      await authRepository.ensureUserRole(userId, 'LEARNER');
     }
   } else {
     throw new AppError('Invalid active role', 400, 'VALIDATION_ERROR');
