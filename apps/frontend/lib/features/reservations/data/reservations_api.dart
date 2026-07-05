@@ -44,6 +44,13 @@ class ReservationsApi {
     );
   }
 
+  Future<LearnerReservation> fetchReservation(String reservationId) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>('/api/reservations/$reservationId'),
+      LearnerReservation.fromJson,
+    );
+  }
+
   Future<void> cancelReservation(String reservationId) {
     return unwrapApiResponse(
       _client.patch<Map<String, dynamic>>(

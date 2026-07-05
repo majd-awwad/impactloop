@@ -5,6 +5,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { prisma } from '../../database/prisma.js';
 import { requireRoles } from '../../middlewares/role.middleware.js';
 import { AppError } from '../../utils/app-error.js';
+import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import { hashPassword } from '../../utils/password.js';
 import {
   deleteSupplierMaterial,
@@ -20,7 +21,13 @@ import { getMaterialById } from '../materials/materials.service.js';
 import { createReservation } from './reservations.service.js';
 import { listMyReservations } from './reservations.service.js';
 import { cancelReservation } from './reservations.service.js';
-import type { CreateReservationInput } from './reservations.validation.js';
+import {
+  createReservationSchema,
+  type CreateReservationInput,
+} from './reservations.validation.js';
+import {
+  LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+} from './reservation-timing-policy.js';
 
 const TEST_MARKER = '[test-learner-reservations]';
 
@@ -58,6 +65,7 @@ async function acceptWithLearnerPreferredWindow(
   return acceptSupplierReservation(supplierId, reservation.id, {
     pickupWindowStart: window.start,
     pickupWindowEnd: window.end,
+    selectedPreferredWindowIndex: 0,
   });
 }
 
@@ -275,6 +283,32 @@ describe('createReservation', () => {
   after(async () => {
     await cleanup(ctx);
     await prisma.$disconnect();
+  });
+
+  test('validation rejects pickup preferred window that is too close to ending', () => {
+    const start = new Date(Date.now());
+    const end = new Date(Date.now() + 30 * 60_000);
+
+    const result = createReservationSchema.safeParse({
+      materialId: 'material-id',
+      quantityRequested: 1,
+      fulfillmentMethod: 'PICKUP',
+      learnerPreferredPickupWindows: [
+        {
+          start: start.toISOString(),
+          end: end.toISOString(),
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+    if (!result.success) {
+      const lastIssue = result.error.issues[result.error.issues.length - 1];
+      assert.equal(
+        lastIssue?.message,
+        LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+      );
+    }
   });
 
   test('learner can reserve part of available material and listing stays available', async () => {
@@ -640,9 +674,12 @@ describe('createReservation', () => {
 
   test('supplier accept keeps hold and complete consumes physical quantity once', async () => {
     const material = await createMaterial(ctx, 'AVAILABLE', 10);
+    const pickupWindow = futurePreferredWindow(0.1, 2);
     const reservation = await createReservation(
       ctx.learnerId,
-      pickupReservationPayload(material.id, 5),
+      pickupReservationPayload(material.id, 5, {
+        learnerPreferredPickupWindows: [pickupWindow],
+      }),
     );
     ctx.createdReservationIds.push(reservation.id);
 
@@ -652,7 +689,9 @@ describe('createReservation', () => {
 
     assert.equal((await getMaterialById(material.id)).availableQuantity, 5);
 
-    await completeSupplierReservation(ctx.supplierId, reservation.id);
+    await completeSupplierReservation(ctx.supplierId, reservation.id, {
+      confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+    });
 
     const stored = await prisma.material.findUnique({
       where: { id: material.id },

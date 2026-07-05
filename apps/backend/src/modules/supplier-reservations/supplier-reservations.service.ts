@@ -2,6 +2,10 @@ import type { ReservationStatus } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
+  expireStalePendingReservationsByIds,
+  expireStalePendingReservationsForOwner,
+} from '../reservations/reservations.pending-expiry.repository.js';
+import {
   mapReservationMessage,
   findLatestReservationMessagesByReservationIds,
   findReservationMessages,
@@ -17,6 +21,12 @@ import {
   mapPreferredWindowsForResponse,
   resolvePreferredWindowByIndex,
 } from './supplier-reservation-scheduling.js';
+import {
+  MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES,
+  MIN_PICKUP_NOTICE_MINUTES,
+  PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+  PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
+} from '../reservations/reservation-timing-policy.js';
 import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import {
   evaluateHandoverWindow,
@@ -29,12 +39,17 @@ import {
   resolveSelfPickupHandoverPhase,
 } from '../reservations/reservation-reschedule.js';
 import {
+  canSupplierMarkDeliveryPickupExpired,
   canSupplierMarkDriverNoShow,
 } from '../fulfillment-failures/fulfillment-failures.eligibility.js';
 import {
   canReportNoDriverAvailable,
   createNoDriverAvailableReport,
 } from '../reservations/reservations.incidents.repository.js';
+import {
+  notifyReservationAccepted,
+  notifyReservationDeclined,
+} from '../notifications/reservation-notifications.js';
 import type {
   AcceptSupplierReservationInput,
   CancelSupplierReservationInput,
@@ -65,7 +80,7 @@ const tabToReservationStatuses = (
     case 'completed':
       return ['COMPLETED'];
     case 'cancelled':
-      return ['CANCELLED'];
+      return ['CANCELLED', 'EXPIRED'];
     default:
       return null;
   }
@@ -274,15 +289,29 @@ export const mapSupplierReservation = (
       status: reservation.status,
       fulfillmentMethod: reservation.fulfillmentMethod,
       supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+      pickupWindowEnd: reservation.pickupWindowEnd,
       deliveryStatus: latestDelivery?.status ?? null,
       assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+      hasDelivery,
       hasPendingReport: hasOpenIncident,
     }),
+    canSupplierMarkDeliveryPickupExpired:
+      !hasOpenIncident &&
+      canSupplierMarkDeliveryPickupExpired({
+        status: reservation.status,
+        fulfillmentMethod: reservation.fulfillmentMethod,
+        supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+        pickupWindowEnd: reservation.pickupWindowEnd,
+        deliveryStatus: latestDelivery?.status ?? null,
+        assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+        hasDelivery,
+      }),
     canSupplierReportDriverNoShow:
       !hasOpenIncident &&
       canSupplierMarkDriverNoShow({
         status: reservation.status,
         supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+        pickupWindowEnd: reservation.pickupWindowEnd,
         deliveryStatus: latestDelivery?.status ?? null,
         assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
       }),
@@ -297,6 +326,8 @@ export const listSupplierReservations = async (
   ownerId: string,
   query: ListSupplierReservationsQuery,
 ) => {
+  await expireStalePendingReservationsForOwner(ownerId);
+
   const statuses = query.status
     ? tabToReservationStatuses(query.status)
     : null;
@@ -326,7 +357,7 @@ export const acceptSupplierReservation = async (
   reservationId: string,
   input: AcceptSupplierReservationInput,
 ) => {
-  const existing =
+  let existing =
     await supplierReservationsRepository.findSupplierReservationForOwner(
       ownerId,
       reservationId,
@@ -334,6 +365,34 @@ export const acceptSupplierReservation = async (
 
   if (!existing) {
     throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  await expireStalePendingReservationsByIds([reservationId], ownerId);
+
+  existing =
+    await supplierReservationsRepository.findSupplierReservationForOwner(
+      ownerId,
+      reservationId,
+    );
+
+  if (!existing) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if (existing.status === 'EXPIRED') {
+    throw new AppError(
+      'This reservation expired before it could be accepted.',
+      409,
+      'CONFLICT',
+    );
+  }
+
+  if (existing.status !== 'PENDING') {
+    throw new AppError(
+      'Only pending reservations can be accepted.',
+      409,
+      'CONFLICT',
+    );
   }
 
   let pickupWindowStart = new Date(input.pickupWindowStart);
@@ -390,13 +449,50 @@ export const acceptSupplierReservation = async (
     };
   }
 
-  if (pickupWindowEnd.getTime() <= Date.now()) {
-    const message =
-      existing.fulfillmentMethod === 'PICKUP' &&
-      input.selectedPreferredWindowIndex != null
-        ? 'Requested window has passed. Propose a new time.'
-        : 'Supplier window end must be in the future.';
-    throw new AppError(message, 400, 'VALIDATION_ERROR');
+  const now = Date.now();
+  const isSelectedLearnerPickupWindow =
+    existing.fulfillmentMethod === 'PICKUP' &&
+    input.selectedPreferredWindowIndex != null;
+
+  if (isSelectedLearnerPickupWindow) {
+    const latestAcceptableEnd =
+      now + MIN_PICKUP_NOTICE_MINUTES * 60_000;
+    if (pickupWindowEnd.getTime() < latestAcceptableEnd) {
+      throw new AppError(
+        PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+  } else {
+    const earliestCustomStart =
+      now + MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES * 60_000;
+    if (pickupWindowStart.getTime() < earliestCustomStart) {
+      throw new AppError(
+        PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+
+    if (pickupWindowEnd.getTime() <= now) {
+      throw new AppError(
+        'Supplier window end must be in the future.',
+        400,
+        'VALIDATION_ERROR',
+      );
+    }
+  }
+
+  if (
+    proposedDeliveryWindow &&
+    proposedDeliveryWindow.start.getTime() <= now
+  ) {
+    throw new AppError(
+      'Proposed delivery window start must be in the future.',
+      400,
+      'VALIDATION_ERROR',
+    );
   }
 
   if (existing.fulfillmentMethod === 'DELIVERY') {
@@ -451,6 +547,8 @@ export const acceptSupplierReservation = async (
     );
   }
 
+  void notifyReservationAccepted(result.reservation.id);
+
   return mapSupplierReservation(result.reservation);
 };
 
@@ -478,6 +576,8 @@ export const declineSupplierReservation = async (
       'CONFLICT',
     );
   }
+
+  void notifyReservationDeclined(result.reservation.id);
 
   return mapSupplierReservation(result.reservation);
 };
@@ -531,8 +631,22 @@ export const rescheduleSupplierReservation = async (
   reservationId: string,
   input: RescheduleSupplierReservationInput,
 ) => {
+  const start = new Date(input.pickupWindowStart);
   const end = new Date(input.pickupWindowEnd);
-  if (end.getTime() <= Date.now()) {
+  const now = Date.now();
+
+  if (
+    start.getTime() <
+    now + MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES * 60_000
+  ) {
+    throw new AppError(
+      PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if (end.getTime() <= now) {
     throw new AppError(
       'Pickup window end must be in the future.',
       400,
@@ -543,7 +657,7 @@ export const rescheduleSupplierReservation = async (
   const result = await supplierReservationsRepository.rescheduleSupplierReservation({
     reservationId,
     ownerId,
-    pickupWindowStart: new Date(input.pickupWindowStart),
+    pickupWindowStart: start,
     pickupWindowEnd: end,
     supplierNote: input.supplierNote,
     followUpMessage: input.messageToLearner,
@@ -598,6 +712,14 @@ export const acceptLearnerRescheduleProposal = async (
 
   if ('missingProposal' in result && result.missingProposal) {
     throw new AppError('Learner reschedule proposal is missing.', 409, 'CONFLICT');
+  }
+
+  if ('windowTooClose' in result && result.windowTooClose) {
+    throw new AppError(
+      PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+      400,
+      'VALIDATION_ERROR',
+    );
   }
 
   return mapSupplierReservation(result.reservation);

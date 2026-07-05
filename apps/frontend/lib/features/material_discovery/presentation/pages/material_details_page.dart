@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -23,6 +24,7 @@ import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../reservations/application/my_reservations_provider.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
+import '../../../reservations/application/reservation_timing_policy.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
 import '../../../reservations/data/models/learner_reservation.dart';
 import '../../../reservations/data/models/reservation_preferred_window.dart';
@@ -258,10 +260,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
     }
 
     if (authState.user?.hasRole('LEARNER') != true) {
-      showInfoSnackBar(
-        context,
-        'Use a learner account to reserve materials.',
-      );
+      showInfoSnackBar(context, 'Use a learner account to reserve materials.');
       return;
     }
 
@@ -279,9 +278,9 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
   Future<void> _submitReservationRequest(
     CreateReservationRequest request,
   ) async {
-    await ref.read(reservationCreateControllerProvider.notifier).create(
-          request,
-        );
+    await ref
+        .read(reservationCreateControllerProvider.notifier)
+        .create(request);
 
     if (!mounted) {
       return;
@@ -384,7 +383,9 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                   isWide ? AppSpacing.xl : AppSpacing.md,
                   isWide ? AppSpacing.lg : AppSpacing.md,
                   AppSpacing.xl +
-                      (showMobileStickyCta ? _materialDetailsStickyCtaHeight : 0),
+                      (showMobileStickyCta
+                          ? _materialDetailsStickyCtaHeight
+                          : 0),
                 ),
                 child: Center(
                   child: ConstrainedBox(
@@ -396,7 +397,9 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _DetailsPageHeader(material: material),
-                              const SizedBox(height: _materialDetailsSectionGap),
+                              const SizedBox(
+                                height: _materialDetailsSectionGap,
+                              ),
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -410,14 +413,15 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                                       onToggleLike: onToggleLike,
                                     ),
                                   ),
-                                  const SizedBox(width: _materialDetailsSectionGap),
-                                  Expanded(
-                                    flex: 2,
-                                    child: sideColumn,
+                                  const SizedBox(
+                                    width: _materialDetailsSectionGap,
                                   ),
+                                  Expanded(flex: 2, child: sideColumn),
                                 ],
                               ),
-                              const SizedBox(height: _materialDetailsRelatedSectionsTopGap),
+                              const SizedBox(
+                                height: _materialDetailsRelatedSectionsTopGap,
+                              ),
                               _RelatedMaterialsSections(
                                 material: material,
                                 layout: _RelatedMaterialsLayout.desktop,
@@ -563,11 +567,9 @@ class _ReservationUiState {
         : isOwnMaterial
         ? const LocalizedText(en: 'Your listing', ar: 'مادتك')
         : !isAvailable
-        ? const LocalizedText(
-            en: 'Not available',
-            ar: 'غير متاح',
-          )
-        : isAuthenticatedLearner || authState.status == AuthStatus.unauthenticated
+        ? const LocalizedText(en: 'Not available', ar: 'غير متاح')
+        : isAuthenticatedLearner ||
+              authState.status == AuthStatus.unauthenticated
         ? const LocalizedText(en: 'Reserve Material', ar: 'احجز المادة')
         : const LocalizedText(en: 'Sign in to Reserve', ar: 'سجل الدخول للحجز');
 
@@ -751,7 +753,7 @@ class _DetailsPageHeader extends StatelessWidget {
     return Row(
       children: [
         IconButton.outlined(
-          onPressed: () => context.go('/materials'),
+          onPressed: () => context.popOrGo('/materials'),
           style: IconButton.styleFrom(
             foregroundColor: palette.textPrimary,
             side: BorderSide(color: palette.borderStrong),
@@ -782,10 +784,7 @@ class _DetailsPageHeader extends StatelessWidget {
 }
 
 class _MaterialDetailsGallery extends StatelessWidget {
-  const _MaterialDetailsGallery({
-    required this.material,
-    this.compact = false,
-  });
+  const _MaterialDetailsGallery({required this.material, this.compact = false});
 
   final DiscoveryMaterial material;
   final bool compact;
@@ -1095,12 +1094,7 @@ class _MaterialDetailsPanel extends StatelessWidget {
                   spacing: AppSpacing.md,
                   runSpacing: AppSpacing.md,
                   children: rows
-                      .map(
-                        (row) => SizedBox(
-                          width: itemWidth,
-                          child: row,
-                        ),
-                      )
+                      .map((row) => SizedBox(width: itemWidth, child: row))
                       .toList(growable: false),
                 );
               },
@@ -1190,18 +1184,18 @@ class _DetailTextSection extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Text(
                 title.resolve(context),
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             body,
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textPrimary,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textPrimary),
           ),
         ],
       ),
@@ -1229,7 +1223,11 @@ class _SupplierCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: palette.borderSubtle),
             ),
-            child: Icon(Icons.storefront_outlined, color: palette.mint, size: 22),
+            child: Icon(
+              Icons.storefront_outlined,
+              color: palette.mint,
+              size: 22,
+            ),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -1237,9 +1235,10 @@ class _SupplierCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  const LocalizedText(en: 'Supplier', ar: 'المورد').resolve(
-                    context,
-                  ),
+                  const LocalizedText(
+                    en: 'Supplier',
+                    ar: 'المورد',
+                  ).resolve(context),
                   style: AppTextStyles.label(
                     context,
                   ).copyWith(color: palette.textMuted),
@@ -1275,9 +1274,9 @@ class _SupplierCard extends StatelessWidget {
                         en: 'Verified supplier',
                         ar: 'مورد موثّق',
                       ).resolve(context),
-                      style: AppTextStyles.label(context).copyWith(
-                        color: palette.textSecondary,
-                      ),
+                      style: AppTextStyles.label(
+                        context,
+                      ).copyWith(color: palette.textSecondary),
                     ),
                   ),
                 ],
@@ -1329,12 +1328,16 @@ class _ReservationPanel extends StatelessWidget {
         color: emphasized ? themeColors.primarySoft : palette.panelSurface,
         borderRadius: AppRadius.lgAll,
         border: Border.all(
-          color: emphasized ? themeColors.primary.withValues(alpha: 0.28) : palette.borderStrong,
+          color: emphasized
+              ? themeColors.primary.withValues(alpha: 0.28)
+              : palette.borderStrong,
           width: emphasized ? 1.2 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: palette.cardShadow.withValues(alpha: emphasized ? 0.16 : 0.12),
+            color: palette.cardShadow.withValues(
+              alpha: emphasized ? 0.16 : 0.12,
+            ),
             blurRadius: emphasized ? 20 : 16,
             offset: Offset(0, emphasized ? 8 : 6),
           ),
@@ -1628,10 +1631,7 @@ class _ReservationLoadingState extends StatelessWidget {
         SizedBox(
           width: 18,
           height: 18,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: palette.mint,
-          ),
+          child: CircularProgressIndicator(strokeWidth: 2, color: palette.mint),
         ),
         const SizedBox(width: AppSpacing.sm),
         Text(
@@ -1670,9 +1670,9 @@ class _PostReservationStatusCta extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           TextButton.icon(
-            onPressed: () => context.go('/learner/reservations'),
+            onPressed: () => context.push('/learner/reservations'),
             icon: const Icon(Icons.assignment_turned_in_outlined),
-            label: const Text('View reservation status'),
+            label: const Text('View all reservations'),
           ),
         ],
       ),
@@ -1734,13 +1734,14 @@ class _LearnerReservationStateCard extends StatelessWidget {
           if (activeDelivery != null)
             TextButton.icon(
               onPressed: () =>
-                  context.go('/learner/deliveries/${activeDelivery.id}'),
+                  context.push('/learner/deliveries/${activeDelivery.id}'),
               icon: const Icon(Icons.local_shipping_outlined),
               label: const Text('View delivery status'),
             )
           else
             TextButton.icon(
-              onPressed: () => context.go('/learner/reservations'),
+              onPressed: () =>
+                  context.push('/learner/reservations/${reservation.id}'),
               icon: const Icon(Icons.assignment_turned_in_outlined),
               label: Text(
                 reservation.isAccepted && deliveryAvailable
@@ -1853,7 +1854,9 @@ String? _pickupWindowText(LearnerReservation reservation) {
       ? null
       : _formatDateTime(reservation.pickupWindowEnd!);
 
-  return end == null ? 'Pickup starts $start.' : 'Pickup window: $start - $end.';
+  return end == null
+      ? 'Pickup starts $start.'
+      : 'Pickup window: $start - $end.';
 }
 
 String _formatDateTime(DateTime value) {
@@ -2067,7 +2070,9 @@ class _ReportMaterialSection extends ConsumerWidget {
     }
 
     try {
-      final message = await ref.read(materialReportsApiProvider).submitReport(
+      final message = await ref
+          .read(materialReportsApiProvider)
+          .submitReport(
             materialId: materialId,
             reason: selectedReason,
             note: noteController.text.trim(),
@@ -2105,9 +2110,9 @@ class _ReportMaterialSection extends ConsumerWidget {
             en: 'Report material',
             ar: 'الإبلاغ عن المادة',
           ).resolve(context),
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textSecondary,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary),
         ),
       ),
     );
@@ -2207,7 +2212,8 @@ class _RelatedMaterialsStrip extends ConsumerStatefulWidget {
       _RelatedMaterialsStripState();
 }
 
-class _RelatedMaterialsStripState extends ConsumerState<_RelatedMaterialsStrip> {
+class _RelatedMaterialsStripState
+    extends ConsumerState<_RelatedMaterialsStrip> {
   List<DiscoveryMaterial> _materials = const [];
   var _loaded = false;
 
@@ -2343,7 +2349,7 @@ class _RelatedMaterialCompactCard extends StatelessWidget {
       isLiked: material.isLiked,
       showPopularBadge: material.isPopular,
       fallbackIcon: material.heroIconData,
-      onTap: () => context.go('/materials/${material.id}'),
+      onTap: () => context.push('/materials/${material.id}'),
     );
   }
 }
@@ -2367,7 +2373,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
   final _messageController = TextEditingController();
   final _deliveryAddressController = TextEditingController();
   final _deliveryNoteController = TextEditingController();
-  var _fulfillmentMethod = 'PICKUP';
+  String? _fulfillmentMethod;
   final _pickupWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
   final _deliveryWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
   bool? _safeDropoffAllowed;
@@ -2384,6 +2390,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     _quantityController = TextEditingController(
       text: _formatQuantity(defaultQuantity),
     );
+    _fulfillmentMethod = _initialFulfillmentMethod();
   }
 
   @override
@@ -2395,28 +2402,50 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     super.dispose();
   }
 
+  String? _initialFulfillmentMethod() {
+    final canPickup = widget.material.pickupAllowed;
+    final canDelivery = widget.material.deliveryAvailable;
+
+    if (canPickup && !canDelivery) {
+      return 'PICKUP';
+    }
+
+    if (!canPickup && canDelivery) {
+      return 'DELIVERY';
+    }
+
+    return null;
+  }
+
   bool get _isPickup => _fulfillmentMethod == 'PICKUP';
+
+  bool get _isDelivery => _fulfillmentMethod == 'DELIVERY';
+
+  bool get _canChoosePickup => widget.material.pickupAllowed;
 
   bool get _canChooseDelivery => widget.material.deliveryAvailable;
 
   List<ReservationPreferredWindow>? _validatedPreferredWindows(
-    List<PreferredWindowDraft> drafts,
-  ) {
+    List<PreferredWindowDraft> drafts, {
+    Duration? minimumRemainingTime,
+    String? minimumRemainingTimeMessage,
+  }) {
     final now = DateTime.now();
     final windows = <ReservationPreferredWindow>[];
 
     for (final draft in drafts) {
-      final error = draft.validationError(now: now);
+      final error = draft.validationError(
+        now: now,
+        minimumRemainingTime: minimumRemainingTime,
+        minimumRemainingTimeMessage: minimumRemainingTimeMessage,
+      );
       if (error != null) {
         setState(() => _errorMessage = error);
         return null;
       }
 
       windows.add(
-        ReservationPreferredWindow(
-          start: draft.start!,
-          end: draft.end!,
-        ),
+        ReservationPreferredWindow(start: draft.start!, end: draft.end!),
       );
     }
 
@@ -2465,8 +2494,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     );
   }
 
-  String _formatQuantity(double value) =>
-      formatReservationQuantity(value);
+  String _formatQuantity(double value) => formatReservationQuantity(value);
 
   double? _parsedQuantity() {
     return double.tryParse(_quantityController.text.trim());
@@ -2516,8 +2544,19 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     final quantity = double.parse(_quantityController.text.trim());
     final message = _messageController.text.trim();
 
+    if (_fulfillmentMethod == null) {
+      setState(
+        () => _errorMessage = 'Choose pickup or delivery before reserving.',
+      );
+      return;
+    }
+
     if (_isPickup) {
-      final windows = _validatedPreferredWindows(_pickupWindows);
+      final windows = _validatedPreferredWindows(
+        _pickupWindows,
+        minimumRemainingTime: minPickupNotice,
+        minimumRemainingTimeMessage: learnerPickupWindowTooCloseMessage,
+      );
       if (windows == null) {
         return;
       }
@@ -2559,7 +2598,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
         });
         return;
       }
-    } else {
+    } else if (_isDelivery) {
       final windows = _validatedPreferredWindows(_deliveryWindows);
       if (windows == null) {
         return;
@@ -2620,6 +2659,12 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
         });
         return;
       }
+    } else {
+      setState(
+        () => _errorMessage =
+            'This material does not have an available receive method.',
+      );
+      return;
     }
 
     if (!mounted) {
@@ -2709,8 +2754,9 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                       children: [
                         _ReservationDialogMaterialSummary(
                           material: material,
-                          availabilityLabel:
-                              _formatAvailableQuantityLabel(material),
+                          availabilityLabel: _formatAvailableQuantityLabel(
+                            material,
+                          ),
                         ),
                         if (_errorMessage != null) ...[
                           const SizedBox(height: _reservationDialogSectionGap),
@@ -2725,30 +2771,32 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                             ),
                             child: Text(
                               _errorMessage!,
-                              style: AppTextStyles.body(context).copyWith(
-                                color: palette.textPrimary,
-                              ),
+                              style: AppTextStyles.body(
+                                context,
+                              ).copyWith(color: palette.textPrimary),
                             ),
                           ),
                         ],
                         const SizedBox(height: _reservationDialogSectionGap),
                         Text(
                           'Quantity',
-                          style: AppTextStyles.label(context).copyWith(
-                            color: palette.textSecondary,
-                          ),
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         _ReservationDialogQuantityStepper(
                           controller: _quantityController,
                           unit: material.unit,
                           enabled: !_isSubmitting,
-                          onDecrement: _isSubmitting ||
+                          onDecrement:
+                              _isSubmitting ||
                                   (_parsedQuantity() ?? 1) <=
                                       (_usesCountSteps ? 1.0 : 0.1)
                               ? null
                               : _decrementQuantity,
-                          onIncrement: _isSubmitting ||
+                          onIncrement:
+                              _isSubmitting ||
                                   (_parsedQuantity() ?? 0) >= _availableQuantity
                               ? null
                               : _incrementQuantity,
@@ -2766,17 +2814,21 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                         const SizedBox(height: _reservationDialogSectionGap),
                         Text(
                           'Fulfillment',
-                          style: AppTextStyles.label(context).copyWith(
-                            color: palette.textSecondary,
-                          ),
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         SegmentedButton<String>(
                           segments: [
-                            const ButtonSegment(
+                            ButtonSegment(
                               value: 'PICKUP',
-                              label: Text('Pickup'),
-                              icon: Icon(Icons.storefront_outlined, size: 18),
+                              enabled: _canChoosePickup,
+                              label: const Text('Pickup'),
+                              icon: const Icon(
+                                Icons.storefront_outlined,
+                                size: 18,
+                              ),
                             ),
                             ButtonSegment(
                               value: 'DELIVERY',
@@ -2788,23 +2840,32 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                               ),
                             ),
                           ],
-                          selected: {_fulfillmentMethod},
+                          emptySelectionAllowed: true,
+                          selected: _fulfillmentMethod == null
+                              ? const <String>{}
+                              : {_fulfillmentMethod!},
                           onSelectionChanged: _isSubmitting
                               ? null
                               : (selection) {
                                   setState(() {
-                                    _fulfillmentMethod = selection.first;
+                                    _fulfillmentMethod = selection.isEmpty
+                                        ? null
+                                        : selection.first;
                                     _errorMessage = null;
                                   });
                                 },
                         ),
-                        if (!_canChooseDelivery) ...[
+                        if (!_canChoosePickup || !_canChooseDelivery) ...[
                           const SizedBox(height: AppSpacing.xs),
                           Text(
-                            'This material is pickup only.',
-                            style: AppTextStyles.label(context).copyWith(
-                              color: palette.textMuted,
-                            ),
+                            !_canChooseDelivery
+                                ? 'This material is pickup only.'
+                                : !_canChoosePickup
+                                ? 'This material is delivery only.'
+                                : '',
+                            style: AppTextStyles.label(
+                              context,
+                            ).copyWith(color: palette.textMuted),
                           ),
                         ],
                         const SizedBox(height: _reservationDialogSectionGap),
@@ -2814,28 +2875,32 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                             enabled: !_isSubmitting,
                             label: 'Preferred pickup windows',
                             onChanged: (windows) {
-                              setState(() => _pickupWindows
-                                ..clear()
-                                ..addAll(windows));
+                              setState(
+                                () => _pickupWindows
+                                  ..clear()
+                                  ..addAll(windows),
+                              );
                             },
                           )
-                        else ...[
+                        else if (_isDelivery) ...[
                           PreferredWindowInput(
                             windows: _deliveryWindows,
                             enabled: !_isSubmitting,
                             label: 'Preferred delivery windows',
                             onChanged: (windows) {
-                              setState(() => _deliveryWindows
-                                ..clear()
-                                ..addAll(windows));
+                              setState(
+                                () => _deliveryWindows
+                                  ..clear()
+                                  ..addAll(windows),
+                              );
                             },
                           ),
                           const SizedBox(height: _reservationDialogSectionGap),
                           Text(
                             'Delivery address',
-                            style: AppTextStyles.label(context).copyWith(
-                              color: palette.textSecondary,
-                            ),
+                            style: AppTextStyles.label(
+                              context,
+                            ).copyWith(color: palette.textSecondary),
                           ),
                           const SizedBox(height: AppSpacing.xs),
                           TextFormField(
@@ -2852,13 +2917,15 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: AppRadius.mdAll,
-                                borderSide:
-                                    BorderSide(color: palette.borderSubtle),
+                                borderSide: BorderSide(
+                                  color: palette.borderSubtle,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: AppRadius.mdAll,
-                                borderSide:
-                                    BorderSide(color: palette.borderSubtle),
+                                borderSide: BorderSide(
+                                  color: palette.borderSubtle,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: AppRadius.mdAll,
@@ -2869,49 +2936,36 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                           const SizedBox(height: _reservationDialogSectionGap),
                           Text(
                             'Safe drop-off allowed?',
-                            style: AppTextStyles.label(context).copyWith(
-                              color: palette.textSecondary,
-                            ),
+                            style: AppTextStyles.label(
+                              context,
+                            ).copyWith(color: palette.textSecondary),
                           ),
                           const SizedBox(height: AppSpacing.xs),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: RadioListTile<bool>(
-                                  contentPadding: EdgeInsets.zero,
-                                  dense: true,
-                                  title: const Text('Yes'),
-                                  value: true,
-                                  groupValue: _safeDropoffAllowed,
-                                  onChanged: _isSubmitting
-                                      ? null
-                                      : (value) => setState(
-                                            () => _safeDropoffAllowed = value,
-                                          ),
-                                ),
-                              ),
-                              Expanded(
-                                child: RadioListTile<bool>(
-                                  contentPadding: EdgeInsets.zero,
-                                  dense: true,
-                                  title: const Text('No'),
-                                  value: false,
-                                  groupValue: _safeDropoffAllowed,
-                                  onChanged: _isSubmitting
-                                      ? null
-                                      : (value) => setState(
-                                            () => _safeDropoffAllowed = value,
-                                          ),
-                                ),
-                              ),
+                          SegmentedButton<bool>(
+                            emptySelectionAllowed: true,
+                            segments: const [
+                              ButtonSegment(value: true, label: Text('Yes')),
+                              ButtonSegment(value: false, label: Text('No')),
                             ],
+                            selected: _safeDropoffAllowed == null
+                                ? const <bool>{}
+                                : {_safeDropoffAllowed!},
+                            onSelectionChanged: _isSubmitting
+                                ? null
+                                : (selection) {
+                                    setState(() {
+                                      _safeDropoffAllowed = selection.isEmpty
+                                          ? null
+                                          : selection.first;
+                                    });
+                                  },
                           ),
                           const SizedBox(height: _reservationDialogSectionGap),
                           Text(
                             'Delivery note',
-                            style: AppTextStyles.label(context).copyWith(
-                              color: palette.textSecondary,
-                            ),
+                            style: AppTextStyles.label(
+                              context,
+                            ).copyWith(color: palette.textSecondary),
                           ),
                           const SizedBox(height: AppSpacing.xs),
                           TextFormField(
@@ -2921,7 +2975,8 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                             maxLines: 3,
                             maxLength: _reservationMessageMaxLength,
                             decoration: InputDecoration(
-                              hintText: 'Gate code, landmarks, or instructions…',
+                              hintText:
+                                  'Gate code, landmarks, or instructions…',
                               helperText: 'Optional',
                               filled: true,
                               fillColor: palette.inputSurface,
@@ -2930,13 +2985,15 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: AppRadius.mdAll,
-                                borderSide:
-                                    BorderSide(color: palette.borderSubtle),
+                                borderSide: BorderSide(
+                                  color: palette.borderSubtle,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: AppRadius.mdAll,
-                                borderSide:
-                                    BorderSide(color: palette.borderSubtle),
+                                borderSide: BorderSide(
+                                  color: palette.borderSubtle,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: AppRadius.mdAll,
@@ -2944,13 +3001,19 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                               ),
                             ),
                           ),
-                        ],
+                        ] else
+                          Text(
+                            'Choose how you want to receive this material to continue.',
+                            style: AppTextStyles.body(
+                              context,
+                            ).copyWith(color: palette.textMuted),
+                          ),
                         const SizedBox(height: _reservationDialogSectionGap),
                         Text(
                           'Message to supplier',
-                          style: AppTextStyles.label(context).copyWith(
-                            color: palette.textSecondary,
-                          ),
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         TextFormField(
@@ -2971,11 +3034,15 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                             ),
                             border: OutlineInputBorder(
                               borderRadius: AppRadius.mdAll,
-                              borderSide: BorderSide(color: palette.borderSubtle),
+                              borderSide: BorderSide(
+                                color: palette.borderSubtle,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: AppRadius.mdAll,
-                              borderSide: BorderSide(color: palette.borderSubtle),
+                              borderSide: BorderSide(
+                                color: palette.borderSubtle,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: AppRadius.mdAll,
@@ -3057,24 +3124,23 @@ class _ReservationDialogMaterialSummary extends StatelessWidget {
       children: [
         Text(
           material.title.resolve(context),
-          style: AppTextStyles.body(context).copyWith(
-            color: palette.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: palette.textPrimary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
           material.category.resolve(context),
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textMuted,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textMuted),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           availabilityLabel,
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textSecondary,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary),
         ),
       ],
     );
@@ -3116,18 +3182,16 @@ class _ReservationDialogQuantityStepper extends StatelessWidget {
             controller: controller,
             enabled: enabled,
             textAlign: TextAlign.center,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textPrimary, fontWeight: FontWeight.w600),
             decoration: InputDecoration(
               isDense: true,
               suffixText: unit,
-              suffixStyle: AppTextStyles.label(context).copyWith(
-                color: palette.textMuted,
-              ),
+              suffixStyle: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textMuted),
               contentPadding: const EdgeInsetsDirectional.symmetric(
                 horizontal: AppSpacing.sm,
                 vertical: AppSpacing.sm,
@@ -3190,11 +3254,7 @@ class _ReservationDialogSubmitButton extends StatelessWidget {
     );
 
     if (fullWidth) {
-      return Row(
-        children: [
-          Expanded(child: button),
-        ],
-      );
+      return Row(children: [Expanded(child: button)]);
     }
 
     return IntrinsicWidth(child: button);

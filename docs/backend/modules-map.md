@@ -255,7 +255,21 @@ Mount order: `apps/backend/src/app.ts`
 
 **Behavior:** `POST /api/reservations` requires a `LEARNER`, validates the material and requested quantity, prevents own-material reservations, enforces one open reservation per learner/material, creates a `PENDING` reservation hold, and recomputes material status from held/remaining quantity. `GET /api/reservations/my` returns the current learner's reservations newest first with safe material, supplier, status, delivery, and pickup-window summary fields. `PATCH /api/reservations/:id/cancel` supports learner cancellation while `PENDING`.
 
-**Not implemented:** Dedicated learner reservation detail route, expiry jobs, persisted generic notification flow, payment, and reviews.
+**Not implemented:** Payment and reviews.
+
+---
+
+## `notifications`
+
+**Purpose:** Authenticated persisted inbox backed by the `notifications` table.
+
+**Mounted at:** `/api/notifications`
+
+**Key files:** `notifications.routes.ts`, `notifications.controller.ts`, `notifications.service.ts`, `notifications.repository.ts`, `reservation-notifications.ts`, `notifications.test.ts`
+
+**Prisma:** `Notification`
+
+**Behavior:** List with pagination/unread summary, mark one read, mark all read. Reservation lifecycle hooks write supplier/learner notification rows.
 
 ---
 

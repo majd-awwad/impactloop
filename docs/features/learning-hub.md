@@ -60,6 +60,7 @@ Repository filter: `status: 'PUBLISHED'` (`learning-projects.repository.ts`).
 |--------|------|------|---------------|
 | GET | `/api/learning-projects` | Public | **Yes** — Learning Hub list |
 | GET | `/api/learning-projects/:id` | Public | **Yes** — Learning Hub detail |
+| POST | `/api/learning-projects/submit` | Learner auth | **Yes** — add-draft submit for admin review |
 | GET | `/api/categories?type=PROJECT` | Public | **Yes** — category chips |
 | POST | `/api/learning-projects/submit` | JWT + LEARNER + `Idempotency-Key` | **Yes** — add-draft submit |
 | GET/PATCH | `/api/admin/learning-projects*` | JWT + ADMIN | **Yes** — admin moderation portal |
@@ -85,8 +86,6 @@ Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. 
 
 ## Known gaps / Needs verification
 
-- Project IDs are backend UUIDs; old mock slug bookmarks will not resolve.
-- `ratingSummary` is currently null in backend responses — rating UI stays hidden.
 - Project moderation is admin-backed; a separate moderator portal/workspace is still **not implemented**.
 - Hub “Load more” is client-side within the first fetched page; server `page > 1` navigation is not exposed in the UI yet.
 - AI material matching — **not implemented**.

@@ -9,9 +9,8 @@ import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
-import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../material_discovery/presentation/widgets/preferred_window_input.dart';
-import '../../application/my_reservations_provider.dart';
+import '../../application/learner_reservation_cache.dart';
 import '../../application/reservation_confirmation_controller.dart';
 import '../../data/models/learner_reservation.dart';
 import '../../data/models/reservation_preferred_window.dart';
@@ -44,8 +43,7 @@ class _LearnerAwaitingConfirmationPanelState
   }
 
   Future<void> _refreshAfterSuccess(String successMessage) async {
-    ref.invalidate(myReservationsProvider);
-    ref.invalidate(learnerDeliveriesProvider);
+    invalidateLearnerReservationCaches(ref, reservationId: reservation.id);
     ref.invalidate(homeSuggestedMaterialsProvider);
 
     if (!mounted) {

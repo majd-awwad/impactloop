@@ -16,6 +16,10 @@ import {
 } from '../driver/driver.service.js';
 import { createDeliveryLocationPingSchema } from '../driver/driver.validation.js';
 import { completeSupplierReservation } from '../supplier-reservations/supplier-reservations.service.js';
+import {
+  activeConfirmedDeliveryWindowUpdate,
+  activePickupWindowReservationUpdate,
+} from '../../test-utils/handover-test-windows.js';
 
 import {
   getMyDelivery,
@@ -139,6 +143,8 @@ async function createAcceptedReservation(
   ctx.createdMaterialIds.push(material.id);
 
   const now = new Date();
+  const activePickup = activePickupWindowReservationUpdate();
+  const activeDelivery = activeConfirmedDeliveryWindowUpdate();
   const reservation = await prisma.reservation.create({
     data: {
       materialId: material.id,
@@ -147,11 +153,25 @@ async function createAcceptedReservation(
       quantityRequested: 1,
       status: input.status ?? 'ACCEPTED',
       pickupWindowStart:
-        input.status === 'PENDING' ? undefined : now,
+        input.status === 'PENDING' ? undefined : activePickup.pickupWindowStart,
       pickupWindowEnd:
+        input.status === 'PENDING' ? undefined : activePickup.pickupWindowEnd,
+      supplierPickupWindowStart:
         input.status === 'PENDING'
           ? undefined
-          : new Date(now.getTime() + 3_600_000),
+          : activePickup.supplierPickupWindowStart,
+      supplierPickupWindowEnd:
+        input.status === 'PENDING'
+          ? undefined
+          : activePickup.supplierPickupWindowEnd,
+      confirmedDeliveryWindowStart:
+        input.status === 'PENDING'
+          ? undefined
+          : activeDelivery.confirmedDeliveryWindowStart,
+      confirmedDeliveryWindowEnd:
+        input.status === 'PENDING'
+          ? undefined
+          : activeDelivery.confirmedDeliveryWindowEnd,
       acceptedAt: input.status === 'PENDING' ? undefined : now,
       completedAt: input.status === 'COMPLETED' ? now : undefined,
     },

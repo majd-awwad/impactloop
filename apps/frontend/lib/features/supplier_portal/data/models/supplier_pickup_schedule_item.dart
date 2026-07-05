@@ -77,6 +77,9 @@ class SupplierPickupScheduleItem {
     this.canSupplierReportAndCloseOverduePickup = false,
     this.canSupplierReschedule = false,
     this.canSendMessage = false,
+    this.canReportNoDriverAvailable = false,
+    this.canSupplierMarkDeliveryPickupExpired = false,
+    this.canSupplierReportDriverNoShow = false,
     this.noShowReport,
     this.latestMessage,
     this.materialImageUrl,
@@ -106,6 +109,9 @@ class SupplierPickupScheduleItem {
   final bool canSupplierReportAndCloseOverduePickup;
   final bool canSupplierReschedule;
   final bool canSendMessage;
+  final bool canReportNoDriverAvailable;
+  final bool canSupplierMarkDeliveryPickupExpired;
+  final bool canSupplierReportDriverNoShow;
   final Map<String, dynamic>? noShowReport;
   final ReservationMessage? latestMessage;
   final SupplierPickupWindow? pickupWindow;
@@ -118,6 +124,21 @@ class SupplierPickupScheduleItem {
   bool get hasDelivery => deliveryRequested || activeDelivery != null;
   String get deliveryStatusLabel =>
       activeDelivery?.statusLabel ?? 'Delivery requested';
+
+  bool get canMarkOrReportNoDriverAvailable =>
+      canSupplierMarkDeliveryPickupExpired || canReportNoDriverAvailable;
+
+  bool get showDeliveryPickupExpiredHint {
+    if (!hasDelivery || noShowReport != null) {
+      return false;
+    }
+
+    if (activeDelivery?.status.toUpperCase() != 'WAITING_FOR_DRIVER') {
+      return false;
+    }
+
+    return !canMarkOrReportNoDriverAvailable && !canSupplierReportDriverNoShow;
+  }
 
   bool get shouldShowSupplierHandoverCode =>
       hasDelivery &&
@@ -236,6 +257,11 @@ class SupplierPickupScheduleItem {
               json['noShowReport'] == null),
       canSupplierReschedule: json['canSupplierReschedule'] == true,
       canSendMessage: json['canSendMessage'] == true,
+      canReportNoDriverAvailable: json['canReportNoDriverAvailable'] == true,
+      canSupplierMarkDeliveryPickupExpired:
+          json['canSupplierMarkDeliveryPickupExpired'] == true,
+      canSupplierReportDriverNoShow:
+          json['canSupplierReportDriverNoShow'] == true,
       noShowReport: json['noShowReport'] is Map
           ? Map<String, dynamic>.from(json['noShowReport'] as Map)
           : null,

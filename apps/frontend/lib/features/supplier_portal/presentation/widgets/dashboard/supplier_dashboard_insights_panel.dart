@@ -9,10 +9,7 @@ import 'supplier_dashboard_colors.dart';
 
 /// Bottom dashboard insights: high demand + supplier engagement.
 class SupplierDashboardInsightsPanel extends StatelessWidget {
-  const SupplierDashboardInsightsPanel({
-    super.key,
-    required this.dashboard,
-  });
+  const SupplierDashboardInsightsPanel({super.key, required this.dashboard});
 
   final SupplierDashboard dashboard;
 
@@ -204,7 +201,7 @@ class _HighDemandRow extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: () =>
-                      context.go('/supplier/materials/${material.id}'),
+                      context.push('/supplier/materials/${material.id}'),
                   style: TextButton.styleFrom(
                     padding: EdgeInsets.zero,
                     minimumSize: Size.zero,
@@ -258,10 +255,7 @@ class _SupplierEngagementCard extends StatelessWidget {
           else
             _MostViewedRow(material: mostViewed!),
           const SizedBox(height: AppSpacing.md),
-          Divider(
-            height: 1,
-            color: colors.border.withValues(alpha: 0.35),
-          ),
+          Divider(height: 1, color: colors.border.withValues(alpha: 0.35)),
           const SizedBox(height: AppSpacing.sm),
           Text(
             context.s.engagementTotalsLabel,
@@ -357,7 +351,7 @@ class _MostViewedRow extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () =>
-                    context.go('/supplier/materials/${material.id}'),
+                    context.push('/supplier/materials/${material.id}'),
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
@@ -433,9 +427,7 @@ class _StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.backgroundElevated.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: colors.border.withValues(alpha: 0.35),
-        ),
+        border: Border.all(color: colors.border.withValues(alpha: 0.35)),
       ),
       child: Text(
         status.replaceAll('_', ' '),

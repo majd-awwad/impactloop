@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
@@ -22,10 +23,7 @@ import '../widgets/materials/supplier_my_materials_colors.dart';
 const _contentMaxWidth = 960.0;
 
 class SupplierOwnedMaterialDetailPage extends ConsumerWidget {
-  const SupplierOwnedMaterialDetailPage({
-    super.key,
-    required this.materialId,
-  });
+  const SupplierOwnedMaterialDetailPage({super.key, required this.materialId});
 
   final String materialId;
 
@@ -53,10 +51,7 @@ class SupplierOwnedMaterialDetailPage extends ConsumerWidget {
           data: (material) {
             return SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.lg),
-              child: _DetailBody(
-                material: material,
-                materialId: materialId,
-              ),
+              child: _DetailBody(material: material, materialId: materialId),
             );
           },
         ),
@@ -66,10 +61,7 @@ class SupplierOwnedMaterialDetailPage extends ConsumerWidget {
 }
 
 class _DetailBody extends ConsumerStatefulWidget {
-  const _DetailBody({
-    required this.material,
-    required this.materialId,
-  });
+  const _DetailBody({required this.material, required this.materialId});
 
   final SupplierMyMaterial material;
   final String materialId;
@@ -94,9 +86,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
           .markMaterialUnavailable(widget.materialId);
       await _refreshMaterial();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.s.markUnavailableAction)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.s.markUnavailableAction)));
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -120,9 +112,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
           .restoreMaterialAvailable(widget.materialId);
       await _refreshMaterial();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.s.restoreAvailableAction)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.s.restoreAvailableAction)));
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -144,10 +136,13 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     final l = context.s;
     final colors = context.supplierColors;
     final isArabic = l.isArabic;
-    final condition = SupplierMaterialLabelHelper.conditionMeta(material.condition);
+    final condition = SupplierMaterialLabelHelper.conditionMeta(
+      material.condition,
+    );
     final status = SupplierMaterialLabelHelper.statusMeta(material.status);
-    final category =
-        isArabic ? material.category.nameAr : material.category.nameEn;
+    final category = isArabic
+        ? material.category.nameAr
+        : material.category.nameEn;
     final deleteBlockedMessage = supplierMaterialDeleteBlockedMessage(
       l,
       material.deleteBlockedReason,
@@ -174,7 +169,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => Container(
                       color: colors.chipUnselected,
-                      child: Icon(Icons.image_outlined, color: colors.textMuted),
+                      child: Icon(
+                        Icons.image_outlined,
+                        color: colors.textMuted,
+                      ),
                     ),
                   );
                 },
@@ -188,11 +186,17 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
               color: colors.chipUnselected,
               borderRadius: AppRadius.xlAll,
             ),
-            child: Icon(Icons.image_outlined, size: 48, color: colors.textMuted),
+            child: Icon(
+              Icons.image_outlined,
+              size: 48,
+              color: colors.textMuted,
+            ),
           ),
         const SizedBox(height: AppSpacing.lg),
-        Text(category,
-            style: context.supplierChip().copyWith(color: colors.accent)),
+        Text(
+          category,
+          style: context.supplierChip().copyWith(color: colors.accent),
+        ),
         const SizedBox(height: AppSpacing.sm),
         Text(material.title, style: context.supplierTitle()),
         const SizedBox(height: AppSpacing.sm),
@@ -279,10 +283,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
         ),
         if (material.pickupNotes != null &&
             material.pickupNotes!.trim().isNotEmpty)
-          _InfoRow(
-            label: material.pickupNotes!,
-            icon: Icons.notes_outlined,
-          ),
+          _InfoRow(label: material.pickupNotes!, icon: Icons.notes_outlined),
         if (material.suggestedUses != null &&
             material.suggestedUses!.trim().isNotEmpty)
           _InfoRow(
@@ -313,7 +314,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
               ),
               Text(
                 '${l.viewsLabel}: ${material.viewsCount} · ${l.likesLabel}: ${material.likesCount}',
-                style: context.supplierBody().copyWith(color: colors.textSecondary),
+                style: context.supplierBody().copyWith(
+                  color: colors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -336,14 +339,8 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                 label: l.totalActiveRequestsLabel,
                 value: '${material.reservationsCount}',
               ),
-              _MetricRow(
-                label: l.viewsLabel,
-                value: '${material.viewsCount}',
-              ),
-              _MetricRow(
-                label: l.likesLabel,
-                value: '${material.likesCount}',
-              ),
+              _MetricRow(label: l.viewsLabel, value: '${material.viewsCount}'),
+              _MetricRow(label: l.likesLabel, value: '${material.likesCount}'),
               _MetricRow(
                 label: l.demandScoreLabel,
                 value: '${material.demandScore}',
@@ -369,7 +366,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
           child: material.reservations.isEmpty
               ? Text(
                   l.noMaterialReservationsYet,
-                  style: context.supplierBody().copyWith(color: colors.textMuted),
+                  style: context.supplierBody().copyWith(
+                    color: colors.textMuted,
+                  ),
                 )
               : Column(
                   children: [
@@ -397,7 +396,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
           runSpacing: AppSpacing.sm,
           children: [
             OutlinedButton(
-              onPressed: () => context.go('/supplier/materials'),
+              onPressed: () => context.popOrGo('/supplier/materials'),
               child: Text(l.backToMyMaterials),
             ),
             if (material.canMarkUnavailable)
@@ -426,8 +425,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
               message: material.canEdit ? '' : editBlockedMessage,
               child: OutlinedButton(
                 onPressed: material.canEdit
-                    ? () =>
-                        context.go('/supplier/materials/${material.id}/edit')
+                    ? () => context.push(
+                        '/supplier/materials/${material.id}/edit',
+                      )
                     : null,
                 style: SupplierMyMaterialsColors.editButtonStyle(
                   context,
@@ -441,10 +441,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
               child: OutlinedButton(
                 onPressed: material.canDelete
                     ? () => handleSupplierMaterialDelete(
-                          context: context,
-                          ref: ref,
-                          material: material,
-                        )
+                        context: context,
+                        ref: ref,
+                        material: material,
+                      )
                     : null,
                 style: SupplierMyMaterialsColors.deleteButtonStyle(
                   context,
@@ -555,14 +555,14 @@ class _ReservationTile extends StatelessWidget {
             children: [
               if (reservation.canReview)
                 TextButton(
-                  onPressed: () => context.go(
+                  onPressed: () => context.push(
                     '/supplier/reservations?tab=pending&focus=${reservation.id}',
                   ),
                   child: Text(l.reviewRequestAction),
                 ),
               if (reservation.canOpen)
                 TextButton(
-                  onPressed: () => context.go(
+                  onPressed: () => context.push(
                     '/supplier/reservations?focus=${reservation.id}',
                   ),
                   child: Text(l.openReservationActionLabel),
@@ -582,11 +582,7 @@ class _ReservationTile extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.label,
-    required this.icon,
-    this.value,
-  });
+  const _InfoRow({required this.label, required this.icon, this.value});
 
   final String label;
   final String? value;
@@ -601,12 +597,7 @@ class _InfoRow extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: context.supplierColors.textMuted),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              value ?? label,
-              style: context.supplierBody(),
-            ),
-          ),
+          Expanded(child: Text(value ?? label, style: context.supplierBody())),
         ],
       ),
     );
@@ -627,10 +618,7 @@ class _ErrorPanel extends StatelessWidget {
         children: [
           Text(message, textAlign: TextAlign.center),
           const SizedBox(height: AppSpacing.md),
-          FilledButton(
-            onPressed: onRetry,
-            child: Text(context.s.tryAgain),
-          ),
+          FilledButton(onPressed: onRetry, child: Text(context.s.tryAgain)),
         ],
       ),
     );

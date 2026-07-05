@@ -7,12 +7,10 @@ import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 
 class PreferredWindowDraft {
   PreferredWindowDraft({
-    DateTime? date,
-    TimeOfDay? startTime,
-    TimeOfDay? endTime,
-  })  : date = date,
-        startTime = startTime,
-        endTime = endTime;
+    this.date,
+    this.startTime,
+    this.endTime,
+  });
 
   DateTime? date;
   TimeOfDay? startTime;
@@ -46,7 +44,11 @@ class PreferredWindowDraft {
     );
   }
 
-  String? validationError({required DateTime now}) {
+  String? validationError({
+    required DateTime now,
+    Duration? minimumRemainingTime,
+    String? minimumRemainingTimeMessage,
+  }) {
     final startValue = start;
     final endValue = end;
 
@@ -60,6 +62,12 @@ class PreferredWindowDraft {
 
     if (!endValue.isAfter(now)) {
       return 'Preferred window must be in the future.';
+    }
+
+    if (minimumRemainingTime != null &&
+        endValue.isBefore(now.add(minimumRemainingTime))) {
+      return minimumRemainingTimeMessage ??
+          'Preferred window is too close to ending.';
     }
 
     return null;

@@ -59,6 +59,8 @@ async function createUser(input: {
 
 describe('admin audit logs', () => {
   before(async () => {
+    process.env.APP_PUBLIC_BASE_URL ??= 'http://localhost:53077';
+
     const actorAdmin = await createUser({ suffix: 'actor-admin', role: 'ADMIN' });
     const supplier = await createUser({ suffix: 'supplier', role: 'SUPPLIER' });
 

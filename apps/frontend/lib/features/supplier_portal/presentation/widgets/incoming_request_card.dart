@@ -7,6 +7,7 @@ import '../../../../core/config/api_config.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../theme/supplier_theme_extension.dart';
+import 'supplier_delivery_incident_actions.dart';
 import 'incoming_request_status_style.dart';
 import 'reservation_follow_up_actions.dart';
 
@@ -64,7 +65,7 @@ class IncomingRequestCard extends StatelessWidget {
     this.onReportToAdmin,
     this.onAcceptLearnerReschedule,
     this.onProposeDifferentTime,
-    this.onReportNoDriver,
+    this.onMarkDeliveryPickupExpired,
     this.onReportDriverNoShow,
     this.isCompleting = false,
   });
@@ -78,7 +79,7 @@ class IncomingRequestCard extends StatelessWidget {
   final VoidCallback? onReportToAdmin;
   final VoidCallback? onAcceptLearnerReschedule;
   final VoidCallback? onProposeDifferentTime;
-  final VoidCallback? onReportNoDriver;
+  final VoidCallback? onMarkDeliveryPickupExpired;
   final VoidCallback? onReportDriverNoShow;
   final bool isCompleting;
 
@@ -218,6 +219,12 @@ class IncomingRequestCard extends StatelessWidget {
                   supplierHandoverCode: request.shouldShowSupplierHandoverCode
                       ? request.supplierHandoverCode
                       : null,
+                  canMarkDeliveryPickupExpired:
+                      request.canMarkOrReportNoDriverAvailable,
+                  canReportDriverNoShow: request.canSupplierReportDriverNoShow,
+                  showMarkExpiredHint: request.showDeliveryPickupExpiredHint,
+                  onMarkDeliveryPickupExpired: onMarkDeliveryPickupExpired,
+                  onReportDriverNoShow: onReportDriverNoShow,
                 ),
               ),
             if (isDeclined)
@@ -284,19 +291,6 @@ class IncomingRequestCard extends StatelessWidget {
                 onReportToAdmin: onReportToAdmin,
                 onAcceptLearnerReschedule: onAcceptLearnerReschedule,
                 onProposeDifferentTime: onProposeDifferentTime,
-              ),
-            ],
-            if (isAccepted &&
-                !request.isReadOnlyFinalState &&
-                request.isDeliveryFulfillment &&
-                (request.canReportNoDriverAvailable ||
-                    request.canSupplierReportDriverNoShow)) ...[
-              const SizedBox(height: AppSpacing.md),
-              _DeliveryIncidentActions(
-                canReportNoDriver: request.canReportNoDriverAvailable,
-                canReportDriverNoShow: request.canSupplierReportDriverNoShow,
-                onReportNoDriver: onReportNoDriver,
-                onReportDriverNoShow: onReportDriverNoShow,
               ),
             ],
           ],
@@ -644,10 +638,20 @@ class _DeliveryFooter extends StatelessWidget {
   const _DeliveryFooter({
     required this.statusLabel,
     this.supplierHandoverCode,
+    this.canMarkDeliveryPickupExpired = false,
+    this.canReportDriverNoShow = false,
+    this.showMarkExpiredHint = false,
+    this.onMarkDeliveryPickupExpired,
+    this.onReportDriverNoShow,
   });
 
   final String statusLabel;
   final String? supplierHandoverCode;
+  final bool canMarkDeliveryPickupExpired;
+  final bool canReportDriverNoShow;
+  final bool showMarkExpiredHint;
+  final VoidCallback? onMarkDeliveryPickupExpired;
+  final VoidCallback? onReportDriverNoShow;
 
   @override
   Widget build(BuildContext context) {
@@ -712,6 +716,13 @@ class _DeliveryFooter extends StatelessWidget {
                     'Supplier handover code for the driver at pickup:',
               ),
             ],
+            SupplierDeliveryIncidentActions(
+              canMarkDeliveryPickupExpired: canMarkDeliveryPickupExpired,
+              canReportDriverNoShow: canReportDriverNoShow,
+              showMarkExpiredHint: showMarkExpiredHint,
+              onMarkDeliveryPickupExpired: onMarkDeliveryPickupExpired,
+              onReportDriverNoShow: onReportDriverNoShow,
+            ),
           ],
         ),
       ),
@@ -887,40 +898,6 @@ class _StatusBadge extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
-    );
-  }
-}
-
-class _DeliveryIncidentActions extends StatelessWidget {
-  const _DeliveryIncidentActions({
-    required this.canReportNoDriver,
-    required this.canReportDriverNoShow,
-    this.onReportNoDriver,
-    this.onReportDriverNoShow,
-  });
-
-  final bool canReportNoDriver;
-  final bool canReportDriverNoShow;
-  final VoidCallback? onReportNoDriver;
-  final VoidCallback? onReportDriverNoShow;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: [
-        if (canReportNoDriver && onReportNoDriver != null)
-          OutlinedButton(
-            onPressed: onReportNoDriver,
-            child: const Text('Report no driver available'),
-          ),
-        if (canReportDriverNoShow && onReportDriverNoShow != null)
-          OutlinedButton(
-            onPressed: onReportDriverNoShow,
-            child: const Text('Report driver no-show'),
-          ),
-      ],
     );
   }
 }

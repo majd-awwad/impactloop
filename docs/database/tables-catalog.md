@@ -486,7 +486,7 @@ No new PostGIS geography column is used for pings in Stage 1.
 | relatedEntityType, relatedEntityId | String? | |
 | isRead | Boolean | default false |
 
-**No general notifications API** — supplier uses derived notifications module.
+**No general notifications API** — **Updated:** generic authenticated API at `/api/notifications`; supplier derived inbox remains separate.
 
 ---
 

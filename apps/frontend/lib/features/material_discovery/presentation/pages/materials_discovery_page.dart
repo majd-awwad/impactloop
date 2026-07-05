@@ -491,7 +491,7 @@ class _MaterialsDiscoveryPageState
                         onClearFilters: () => _clearFilters(categories),
                         onLoadMore: () => _loadMore(categories),
                         onMaterialTap: (material) =>
-                            context.go('/materials/${material.id}'),
+                            context.push('/materials/${material.id}'),
                       ),
                     ),
                   ),

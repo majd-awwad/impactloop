@@ -7,8 +7,9 @@ import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../../data/pickup_schedule_grouping.dart';
 import '../theme/supplier_theme_extension.dart';
-import 'reservation_follow_up_actions.dart';
 import 'pickup_schedule_status_style.dart';
+import 'reservation_follow_up_actions.dart';
+import 'supplier_delivery_incident_actions.dart';
 
 class PickupScheduleCard extends StatelessWidget {
   const PickupScheduleCard({
@@ -20,6 +21,8 @@ class PickupScheduleCard extends StatelessWidget {
     this.onReschedule,
     this.onCloseReservation,
     this.onReportToAdmin,
+    this.onMarkDeliveryPickupExpired,
+    this.onReportDriverNoShow,
     this.isCompleting = false,
   });
 
@@ -30,6 +33,8 @@ class PickupScheduleCard extends StatelessWidget {
   final VoidCallback? onReschedule;
   final VoidCallback? onCloseReservation;
   final VoidCallback? onReportToAdmin;
+  final VoidCallback? onMarkDeliveryPickupExpired;
+  final VoidCallback? onReportDriverNoShow;
   final bool isCompleting;
 
   @override
@@ -177,6 +182,12 @@ class PickupScheduleCard extends StatelessWidget {
                 supplierHandoverCode: item.shouldShowSupplierHandoverCode
                     ? item.supplierHandoverCode
                     : null,
+                canMarkDeliveryPickupExpired:
+                    item.canMarkOrReportNoDriverAvailable,
+                canReportDriverNoShow: item.canSupplierReportDriverNoShow,
+                showMarkExpiredHint: item.showDeliveryPickupExpiredHint,
+                onMarkDeliveryPickupExpired: onMarkDeliveryPickupExpired,
+                onReportDriverNoShow: onReportDriverNoShow,
               ),
             ],
             if (showFollowUp) ...[
@@ -218,10 +229,20 @@ class _DeliveryStatusPanel extends StatelessWidget {
   const _DeliveryStatusPanel({
     required this.statusLabel,
     this.supplierHandoverCode,
+    this.canMarkDeliveryPickupExpired = false,
+    this.canReportDriverNoShow = false,
+    this.showMarkExpiredHint = false,
+    this.onMarkDeliveryPickupExpired,
+    this.onReportDriverNoShow,
   });
 
   final String statusLabel;
   final String? supplierHandoverCode;
+  final bool canMarkDeliveryPickupExpired;
+  final bool canReportDriverNoShow;
+  final bool showMarkExpiredHint;
+  final VoidCallback? onMarkDeliveryPickupExpired;
+  final VoidCallback? onReportDriverNoShow;
 
   @override
   Widget build(BuildContext context) {
@@ -271,6 +292,13 @@ class _DeliveryStatusPanel extends StatelessWidget {
                     'Give this code to the driver after handing over the material.',
               ),
             ],
+            SupplierDeliveryIncidentActions(
+              canMarkDeliveryPickupExpired: canMarkDeliveryPickupExpired,
+              canReportDriverNoShow: canReportDriverNoShow,
+              showMarkExpiredHint: showMarkExpiredHint,
+              onMarkDeliveryPickupExpired: onMarkDeliveryPickupExpired,
+              onReportDriverNoShow: onReportDriverNoShow,
+            ),
           ],
         ),
       ),

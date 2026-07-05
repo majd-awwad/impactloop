@@ -25,7 +25,7 @@ class SupplierQuickActionCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.go(route),
+        onTap: () => context.push(route),
         borderRadius: AppRadius.lgAll,
         hoverColor: context.supplierColors.chipSelected.withValues(alpha: 0.28),
         child: Ink(

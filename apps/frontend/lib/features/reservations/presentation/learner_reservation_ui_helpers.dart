@@ -630,3 +630,12 @@ String formatDeliveryAvailability(
 
 bool shouldShowAcceptedPickupInfo(LearnerReservation reservation) =>
     reservation.isAccepted;
+
+bool shouldShowSelfPickupMap(
+  LearnerReservation reservation, {
+  required bool hasDeliveryRecord,
+}) =>
+    reservation.shouldShowSelfPickupAddress(
+      hasDeliveryRecord: hasDeliveryRecord,
+    ) &&
+    reservation.pickupLocationFull?.hasCoordinates == true;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -68,7 +68,7 @@ class LearningProjectDetailsPage extends ConsumerWidget {
                         en: 'Back to Learning Hub',
                         ar: 'العودة إلى مركز التعلم',
                       ),
-                      onAction: () => context.go('/learning'),
+                      onAction: () => context.popOrGo('/learning'),
                     );
                   }
 
@@ -221,7 +221,7 @@ class _DetailsHero extends StatelessWidget {
               top: 52,
               end: 36,
               child: IconButton.filled(
-                onPressed: () => context.go('/learning'),
+                onPressed: () => context.popOrGo('/learning'),
                 style: IconButton.styleFrom(
                   backgroundColor: palette.cardSurface.withValues(
                     alpha: isDark ? 0.74 : 0.9,

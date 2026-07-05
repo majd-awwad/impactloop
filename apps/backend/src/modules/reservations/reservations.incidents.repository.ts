@@ -250,8 +250,10 @@ export const canReportNoDriverAvailable = (input: {
   status: string;
   fulfillmentMethod: string;
   supplierPickupWindowEnd: Date | null;
+  pickupWindowEnd?: Date | null;
   deliveryStatus: string | null;
   assignedDriverProfileId: string | null;
+  hasDelivery?: boolean;
   hasPendingReport: boolean;
 }) => {
   if (input.hasPendingReport || input.status !== 'ACCEPTED') {
@@ -262,10 +264,12 @@ export const canReportNoDriverAvailable = (input: {
     status: input.status as 'ACCEPTED',
     fulfillmentMethod: input.fulfillmentMethod,
     supplierPickupWindowEnd: input.supplierPickupWindowEnd,
+    pickupWindowEnd: input.pickupWindowEnd,
     deliveryStatus: input.deliveryStatus as
       | import('../../generated/prisma/client.js').DeliveryStatus
       | null,
     assignedDriverProfileId: input.assignedDriverProfileId,
+    hasDelivery: input.hasDelivery,
   });
 };
 

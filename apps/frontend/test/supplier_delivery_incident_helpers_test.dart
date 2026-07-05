@@ -9,14 +9,14 @@ void main() {
       'fulfillmentMethod': 'DELIVERY',
       'quantityRequested': 1,
       'createdAt': '2026-01-01T00:00:00.000Z',
-      'canReportNoDriverAvailable': true,
+      'canSupplierMarkDeliveryPickupExpired': true,
       'canSupplierReportDriverNoShow': true,
       'activeDelivery': {'id': 'del-1', 'status': 'DRIVER_ASSIGNED'},
       'material': {'title': 'Panels'},
       'learner': {'displayName': 'Learner'},
     });
 
-    expect(request.canReportNoDriverAvailable, isTrue);
+    expect(request.canSupplierMarkDeliveryPickupExpired, isTrue);
     expect(request.canSupplierReportDriverNoShow, isTrue);
     expect(request.isDeliveryFulfillment, isTrue);
   });

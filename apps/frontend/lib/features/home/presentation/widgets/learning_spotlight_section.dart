@@ -32,7 +32,7 @@ class LearningSpotlightSection extends ConsumerWidget {
           subtitle:
               'Start with project guides built from real reusable materials.',
           action: HomeSectionActionButton(
-            onPressed: () => context.go('/learning'),
+            onPressed: () => context.push('/learning'),
             icon: const Icon(Icons.arrow_forward_rounded),
             label: 'Browse all',
           ),
@@ -54,7 +54,7 @@ class LearningSpotlightSection extends ConsumerWidget {
                 description:
                     'When learning projects are published, featured guides will appear here.',
                 actionLabel: 'Open Learning Hub',
-                onAction: () => context.go('/learning'),
+                onAction: () => context.push('/learning'),
               );
             }
 
@@ -180,7 +180,7 @@ class _LearningSpotlightCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.go('/learning/${project.id}'),
+        onTap: () => context.push('/learning/${project.id}'),
         borderRadius: AppRadius.lgAll,
         child: SizedBox(
           height: 326,

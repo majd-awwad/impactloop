@@ -19,6 +19,10 @@ import {
   createReservation,
 } from './reservations.service.js';
 import type { CreateReservationInput } from './reservations.validation.js';
+import {
+  activeConfirmedDeliveryWindowUpdate,
+  activePickupWindowReservationUpdate,
+} from '../../test-utils/handover-test-windows.js';
 
 const TEST_MARKER = '[test-partial-reservations]';
 
@@ -53,10 +57,17 @@ async function acceptWithLearnerPreferredWindow(
   const window = reservation.learnerPreferredPickupWindows[0];
   assert.ok(window, 'preferred pickup window required');
 
-  return acceptSupplierReservation(supplierId, reservation.id, {
+  const accepted = await acceptSupplierReservation(supplierId, reservation.id, {
     pickupWindowStart: window.start,
     pickupWindowEnd: window.end,
   });
+
+  await prisma.reservation.update({
+    where: { id: reservation.id },
+    data: activePickupWindowReservationUpdate(),
+  });
+
+  return accepted;
 }
 
 type TestContext = {
@@ -504,6 +515,11 @@ describe('partial quantity reservations', () => {
       deliveryInput(),
     );
     ctx.createdDeliveryIds.push(delivery.id);
+
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: activeConfirmedDeliveryWindowUpdate(),
+    });
 
     await prisma.delivery.update({
       where: { id: delivery.id },

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../../app/router/navigation_extensions.dart';
 import '../../../../../core/errors/api_exception.dart';
 import '../../../application/supplier_my_materials_providers.dart';
 import '../../../data/models/supplier_my_materials_models.dart';
@@ -97,11 +97,7 @@ Future<void> handleSupplierMaterialDelete({
     ref.invalidate(supplierMyMaterialByIdProvider(material.id));
     showSupplierInfoSnackBar(context, l.materialDeletedSuccess);
 
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go('/supplier/materials');
-    }
+    context.popOrGo('/supplier/materials');
   } on ApiException catch (error) {
     if (!context.mounted) {
       return;

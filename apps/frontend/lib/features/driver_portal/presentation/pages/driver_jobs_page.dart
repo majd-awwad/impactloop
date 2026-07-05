@@ -161,7 +161,7 @@ class _ActiveDeliveryPanel extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
-            onPressed: () => context.go('/driver/deliveries/${delivery!.id}'),
+            onPressed: () => context.push('/driver/deliveries/${delivery!.id}'),
             icon: const Icon(Icons.route_outlined),
             label: const Text('Open active delivery'),
           ),
@@ -304,7 +304,7 @@ class _AvailableJobCard extends ConsumerWidget {
       }
 
       showInfoSnackBar(context, 'Delivery accepted.');
-      context.go('/driver/deliveries/${assigned.id}');
+      context.push('/driver/deliveries/${assigned.id}');
     } on ApiException catch (error) {
       ref.invalidate(availableDriverDeliveriesProvider);
       ref.invalidate(activeDriverDeliveriesProvider);

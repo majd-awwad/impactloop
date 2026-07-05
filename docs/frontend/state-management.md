@@ -80,6 +80,11 @@ Auth state is centralized in `authControllerProvider`.
 - bootstrap status
 - normalized API error
 
+Role-change methods on `AuthController`:
+
+- `becomeSupplier` — learner-only upgrade via `POST /api/auth/become-supplier`; reloads `me()` and invalidates supplier portal providers.
+- `switchActiveRole` — dual-role portal switch via `POST /api/auth/switch-role`; same session refresh behavior.
+
 `authNetworkBootstrapProvider` initializes the shared Dio client and schedules `bootstrapSession()`.
 
 Auth dependencies are provider-built:
@@ -126,7 +131,7 @@ Examples:
 - `savedLocationsControllerProvider` creates, updates, deletes, and sets default saved locations, then invalidates `savedLocationsProvider`.
 - `reservationCreateControllerProvider` submits learner reservation requests from material detail and exposes loading/error state for the Reserve button.
 - Material discovery list/detail and Home suggested materials use `materialDiscoveryRepositoryProvider` for `fetchMaterials`, `getMaterialById`, `likeMaterial`, and `unlikeMaterial`; the detail like toggle keeps optimistic widget-local state without replacing the page future and invalidates `homeSuggestedMaterialsProvider` after successful mutation.
-- `myReservationsProvider` loads `GET /api/reservations/my` for the learner reservation page and material-detail reservation state.
+- `myReservationsProvider` loads `GET /api/reservations/my` for the learner reservation page and material-detail reservation state. The learner reservations page invalidates `myReservationsProvider` and `learnerDeliveriesProvider` every 10 seconds while mounted so supplier-side reservation changes become visible without manual refresh.
 - `learnerDeliveriesProvider` and `learnerDeliveryProvider` load learner delivery status from `/api/deliveries`; `deliveryRequestControllerProvider` submits accepted-reservation delivery requests.
 - `supplierMyMaterialsProvider` checks auth, watches query state, then fetches supplier materials.
 - Supplier dashboard/profile/request/schedule/notification providers load supplier portal data.

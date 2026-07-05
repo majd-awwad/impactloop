@@ -19,6 +19,9 @@ import { isOtherCategory } from '../categories/categories.repository.js';
 import * as categoriesRepository from '../categories/categories.repository.js';
 import * as materialTypesRepository from '../material-types/material-types.repository.js';
 import {
+  expireStalePendingReservationsForMaterials,
+} from '../reservations/reservations.service.js';
+import {
   ACTIVE_HOLD_STATUSES,
   computeAvailableQuantity,
   decimalToNumber as quantityDecimalToNumber,
@@ -692,6 +695,9 @@ export const getMaterials = async (
     viewerCoordinates,
   );
   const materialIds = result.items.map((item) => item.id);
+
+  await expireStalePendingReservationsForMaterials(materialIds);
+
   const [heldByMaterialId, likesByMaterialId, likedMaterialIds] =
     await Promise.all([
       getHeldQuantitiesByMaterialIds(materialIds),
@@ -732,6 +738,8 @@ export const getMaterialById = async (
   if (!material) {
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
+
+  await expireStalePendingReservationsForMaterials([material.id]);
 
   const [incremented, heldByMaterialId, likesByMaterialId, likedMaterialIds] =
     await Promise.all([

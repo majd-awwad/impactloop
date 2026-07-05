@@ -98,7 +98,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
       context,
       const LocalizedText(
         en: 'Draft saved on this device.',
-        ar: 'تم حفظ المسودة على هذا الجهاز.',
+        ar: '╪ز┘à ╪ص┘╪╕ ╪د┘┘à╪│┘ê╪»╪ر ╪╣┘┘ë ┘ç╪░╪د ╪د┘╪ش┘ç╪د╪▓.',
       ).resolve(context),
     );
   }
@@ -137,7 +137,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         context,
         const LocalizedText(
           en: 'Select an available project category before submitting.',
-          ar: 'اختر فئة مشروع متاحة قبل الإرسال.',
+          ar: '╪د╪«╪ز╪▒ ┘╪خ╪ر ┘à╪┤╪▒┘ê╪╣ ┘à╪ز╪د╪ص╪ر ┘é╪ذ┘ ╪د┘╪ح╪▒╪│╪د┘.',
         ).resolve(context),
       );
       return;
@@ -166,7 +166,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         context,
         const LocalizedText(
           en: 'Your project was submitted for admin review.',
-          ar: 'تم إرسال مشروعك لمراجعة الإدارة.',
+          ar: '╪ز┘à ╪ح╪▒╪│╪د┘ ┘à╪┤╪▒┘ê╪╣┘â ┘┘à╪▒╪د╪ش╪╣╪ر ╪د┘╪ح╪»╪د╪▒╪ر.',
         ).resolve(context),
       );
       context.go('/learning');
@@ -432,10 +432,10 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _SectionHeading(
-            title: const LocalizedText(en: 'Project basics', ar: 'أساسيات المشروع'),
+            title: const LocalizedText(en: 'Project basics', ar: '╪ث╪│╪د╪│┘è╪د╪ز ╪د┘┘à╪┤╪▒┘ê╪╣'),
             subtitle: const LocalizedText(
               en: 'Share enough detail for admin review and future learners.',
-              ar: 'أضف تفاصيل كافية لمراجعة الإدارة وللمتعلمين لاحقاً.',
+              ar: '╪ث╪╢┘ ╪ز┘╪د╪╡┘è┘ ┘â╪د┘┘è╪ر ┘┘à╪▒╪د╪ش╪╣╪ر ╪د┘╪ح╪»╪د╪▒╪ر ┘ê┘┘┘à╪ز╪╣┘┘à┘è┘ ┘╪د╪ص┘é╪د┘ï.',
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -494,40 +494,40 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
           ),
           const SizedBox(height: AppSpacing.lg),
           _LearningChoiceGroup(
-            title: const LocalizedText(en: 'Difficulty', ar: 'المستوى'),
+            title: const LocalizedText(en: 'Difficulty', ar: '╪د┘┘à╪│╪ز┘ê┘ë'),
             selectedValue: _selectedDifficulty,
             options: const [
               _ChoiceOption(
                 value: 'easy',
-                label: LocalizedText(en: 'Easy', ar: 'سهل'),
+                label: LocalizedText(en: 'Easy', ar: '╪│┘ç┘'),
               ),
               _ChoiceOption(
                 value: 'medium',
-                label: LocalizedText(en: 'Medium', ar: 'متوسط'),
+                label: LocalizedText(en: 'Medium', ar: '┘à╪ز┘ê╪│╪╖'),
               ),
               _ChoiceOption(
                 value: 'advanced',
-                label: LocalizedText(en: 'Advanced', ar: 'متقدم'),
+                label: LocalizedText(en: 'Advanced', ar: '┘à╪ز┘é╪»┘à'),
               ),
             ],
             onSelected: (value) => setState(() => _selectedDifficulty = value),
           ),
           const SizedBox(height: AppSpacing.lg),
           _LearningChoiceGroup(
-            title: const LocalizedText(en: 'Duration', ar: 'المدة'),
+            title: const LocalizedText(en: 'Duration', ar: '╪د┘┘à╪»╪ر'),
             selectedValue: _selectedDuration,
             options: const [
               _ChoiceOption(
                 value: 'short',
-                label: LocalizedText(en: '1-2 hours', ar: '1-2 ساعة'),
+                label: LocalizedText(en: '1-2 hours', ar: '1-2 ╪│╪د╪╣╪ر'),
               ),
               _ChoiceOption(
                 value: 'medium',
-                label: LocalizedText(en: '3-4 hours', ar: '3-4 ساعات'),
+                label: LocalizedText(en: '3-4 hours', ar: '3-4 ╪│╪د╪╣╪د╪ز'),
               ),
               _ChoiceOption(
                 value: 'long',
-                label: LocalizedText(en: '5+ hours', ar: '5+ ساعات'),
+                label: LocalizedText(en: '5+ hours', ar: '5+ ╪│╪د╪╣╪د╪ز'),
               ),
             ],
             onSelected: (value) => setState(() => _selectedDuration = value),
@@ -536,11 +536,11 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
           _SectionHeading(
             title: const LocalizedText(
               en: 'Description and build notes',
-              ar: 'الوصف وملاحظات التنفيذ',
+              ar: '╪د┘┘ê╪╡┘ ┘ê┘à┘╪د╪ص╪╕╪د╪ز ╪د┘╪ز┘┘┘è╪░',
             ),
             subtitle: const LocalizedText(
               en: 'Components, steps, and links are optional, but they improve review quality.',
-              ar: 'المكونات والخطوات والروابط اختيارية، لكنها تساعد في تحسين جودة المراجعة.',
+              ar: '╪د┘┘à┘â┘ê┘╪د╪ز ┘ê╪د┘╪«╪╖┘ê╪د╪ز ┘ê╪د┘╪▒┘ê╪د╪ذ╪╖ ╪د╪«╪ز┘è╪د╪▒┘è╪ر╪î ┘┘â┘┘ç╪د ╪ز╪│╪د╪╣╪» ┘┘è ╪ز╪ص╪│┘è┘ ╪ش┘ê╪»╪ر ╪د┘┘à╪▒╪د╪ش╪╣╪ر.',
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -629,7 +629,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
           Text(
             const LocalizedText(
               en: 'Submitting sends the project to admin review. Local drafts stay on this device only.',
-              ar: 'الإرسال يوجّه المشروع لمراجعة الإدارة. المسودات المحلية تبقى على هذا الجهاز فقط.',
+              ar: '╪د┘╪ح╪▒╪│╪د┘ ┘è┘ê╪ش┘ّ┘ç ╪د┘┘à╪┤╪▒┘ê╪╣ ┘┘à╪▒╪د╪ش╪╣╪ر ╪د┘╪ح╪»╪د╪▒╪ر. ╪د┘┘à╪│┘ê╪»╪د╪ز ╪د┘┘à╪ص┘┘è╪ر ╪ز╪ذ┘é┘ë ╪╣┘┘ë ┘ç╪░╪د ╪د┘╪ش┘ç╪د╪▓ ┘┘é╪╖.',
             ).resolve(context),
             style: AppTextStyles.body(
               context,
@@ -690,7 +690,7 @@ class _AddDraftHeader extends StatelessWidget {
                 Text(
                   const LocalizedText(
                     en: 'Add project draft',
-                    ar: 'إضافة مسودة مشروع',
+                    ar: '╪ح╪╢╪د┘╪ر ┘à╪│┘ê╪»╪ر ┘à╪┤╪▒┘ê╪╣',
                   ).resolve(context),
                   style: AppTextStyles.brandingHeadline(context).copyWith(
                     color: palette.textPrimary,
@@ -701,7 +701,7 @@ class _AddDraftHeader extends StatelessWidget {
                 Text(
                   const LocalizedText(
                     en: 'Save your work locally, then submit a complete project for admin review.',
-                    ar: 'احفظ عملك محلياً، ثم أرسل مشروعاً مكتملاً لمراجعة الإدارة.',
+                    ar: '╪د╪ص┘╪╕ ╪╣┘à┘┘â ┘à╪ص┘┘è╪د┘ï╪î ╪س┘à ╪ث╪▒╪│┘ ┘à╪┤╪▒┘ê╪╣╪د┘ï ┘à┘â╪ز┘à┘╪د┘ï ┘┘à╪▒╪د╪ش╪╣╪ر ╪د┘╪ح╪»╪د╪▒╪ر.',
                   ).resolve(context),
                   style: AppTextStyles.brandingSubtitle(
                     context,
@@ -716,7 +716,7 @@ class _AddDraftHeader extends StatelessWidget {
             label: Text(
               const LocalizedText(
                 en: 'Back to hub',
-                ar: 'العودة للمركز',
+                ar: '╪د┘╪╣┘ê╪»╪ر ┘┘┘à╪▒┘â╪▓',
               ).resolve(context),
             ),
           ),
@@ -745,30 +745,30 @@ class _SupportColumn extends StatelessWidget {
               _SectionHeading(
                 title: const LocalizedText(
                   en: 'Review checklist',
-                  ar: 'قائمة المراجعة',
+                  ar: '┘é╪د╪خ┘à╪ر ╪د┘┘à╪▒╪د╪ش╪╣╪ر',
                 ),
                 subtitle: const LocalizedText(
                   en: 'Required fields are title, category, summary, difficulty, and duration.',
-                  ar: 'الحقول المطلوبة هي العنوان والفئة والملخص والمستوى والمدة.',
+                  ar: '╪د┘╪ص┘é┘ê┘ ╪د┘┘à╪╖┘┘ê╪ذ╪ر ┘ç┘è ╪د┘╪╣┘┘ê╪د┘ ┘ê╪د┘┘╪خ╪ر ┘ê╪د┘┘à┘╪«╪╡ ┘ê╪د┘┘à╪│╪ز┘ê┘ë ┘ê╪د┘┘à╪»╪ر.',
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
               _ChecklistItem(
                 text: const LocalizedText(
                   en: 'Use clear learner-facing language.',
-                  ar: 'استخدم لغة واضحة للمتعلمين.',
+                  ar: '╪د╪│╪ز╪«╪»┘à ┘╪║╪ر ┘ê╪د╪╢╪ص╪ر ┘┘┘à╪ز╪╣┘┘à┘è┘.',
                 ),
               ),
               _ChecklistItem(
                 text: const LocalizedText(
                   en: 'Add components and steps when you have them.',
-                  ar: 'أضف المكونات والخطوات عندما تكون متاحة.',
+                  ar: '╪ث╪╢┘ ╪د┘┘à┘â┘ê┘╪د╪ز ┘ê╪د┘╪«╪╖┘ê╪د╪ز ╪╣┘╪»┘à╪د ╪ز┘â┘ê┘ ┘à╪ز╪د╪ص╪ر.',
                 ),
               ),
               _ChecklistItem(
                 text: const LocalizedText(
                   en: 'Links must be valid http or https URLs.',
-                  ar: 'يجب أن تكون الروابط بصيغة http أو https صحيحة.',
+                  ar: '┘è╪ش╪ذ ╪ث┘ ╪ز┘â┘ê┘ ╪د┘╪▒┘ê╪د╪ذ╪╖ ╪ذ╪╡┘è╪║╪ر http ╪ث┘ê https ╪╡╪ص┘è╪ص╪ر.',
                 ),
               ),
             ],
@@ -783,7 +783,7 @@ class _SupportColumn extends StatelessWidget {
           label: Text(
             const LocalizedText(
               en: 'Browse Learning Hub',
-              ar: 'تصفح مركز التعلم',
+              ar: '╪ز╪╡┘╪ص ┘à╪▒┘â╪▓ ╪د┘╪ز╪╣┘┘à',
             ).resolve(context),
           ),
         ),

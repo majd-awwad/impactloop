@@ -4,6 +4,7 @@ import {
   type ReservationStatus,
 } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 export const ACTIVE_HOLD_STATUSES = [
   'PENDING',
@@ -23,33 +24,7 @@ export const MATERIAL_IN_CUSTODY_DELIVERY_STATUSES = [
 
 /** Reservation statuses that reduce public availableQuantity. COMPLETED consumes stock instead. */
 
-const isPrismaCode = (error: unknown, code: string) =>
-  typeof error === 'object' &&
-  error !== null &&
-  'code' in error &&
-  (error as { code?: unknown }).code === code;
-
-export const runSerializableTransaction = async <T>(
-  operation: (tx: Prisma.TransactionClient) => Promise<T>,
-) => {
-  const maxAttempts = 5;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      return await prisma.$transaction(operation, {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      });
-    } catch (error) {
-      if (attempt < maxAttempts && isPrismaCode(error, 'P2034')) {
-        continue;
-      }
-
-      throw error;
-    }
-  }
-
-  throw new Error('Unable to complete transaction.');
-};
+export { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 export const toDecimal = (
   value: Prisma.Decimal | number | null | undefined,

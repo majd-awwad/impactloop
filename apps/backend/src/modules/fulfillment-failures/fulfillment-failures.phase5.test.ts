@@ -22,6 +22,7 @@ import {
   acceptSupplierReservation,
   completeSupplierReservation,
 } from '../supplier-reservations/supplier-reservations.service.js';
+import { activePickupWindowReservationUpdate } from '../../test-utils/handover-test-windows.js';
 
 const TEST_MARKER = '[test-phase5-failures]';
 
@@ -653,10 +654,7 @@ describe('fulfillment failures phase 5', () => {
     const start = new Date(Date.now() - 30 * 60_000);
     const end = new Date(Date.now() + 30 * 60_000);
     const material = await createMaterial(ctx);
-    const preferred = {
-      start: start.toISOString(),
-      end: end.toISOString(),
-    };
+    const preferred = futurePreferredWindow();
     const reservation = await createReservation(ctx.learnerId, {
       materialId: material.id,
       quantityRequested: 1,
@@ -668,6 +666,15 @@ describe('fulfillment failures phase 5', () => {
     await acceptSupplierReservation(ctx.supplierId, reservation.id, {
       pickupWindowStart: preferred.start,
       pickupWindowEnd: preferred.end,
+    });
+
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        pickupWindowStart: start,
+        pickupWindowEnd: end,
+        ...activePickupWindowReservationUpdate(),
+      },
     });
 
     await completeSupplierReservation(ctx.supplierId, reservation.id, {

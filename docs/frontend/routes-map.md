@@ -38,7 +38,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 |-------|-------|----------------|
 | **public** | Most routes (landing, materials, learning, auth pages, register deprecated fallbacks) | No login required |
 | **authenticated** | `/home`, `/profile`, `/profile/*`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
-| **learner** | `/learning/add-draft`, `/learner/reservations`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
+| **learner** | `/learning/add-draft`, `/learner/reservations`, `/learner/reservations/:id`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
 | **driver** | `/driver`, `/driver/*` | Requires login + `DRIVER` role; non-drivers redirect to `/home` |
 | **admin** | `/admin`, `/admin/*` (except access-denied) | Requires login + `ADMIN` role |
@@ -72,8 +72,10 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/profile/edit` | `ProfileEditPage` | authenticated | Edit display name, phone, and profile photo |
 | `/profile/learner/edit` | `LearnerProfileEditPage` | authenticated | Edit learner type, skill level, interests, and bio (`LEARNER` role required) |
 | `/profile/security` | `ProfileSecurityPage` | authenticated | Change password via `/api/auth/change-password` |
+| `/notifications` | `UserNotificationsPage` | authenticated | Persisted inbox from `/api/notifications`; reservation rows deep-link to learner/supplier reservation routes |
 | `/profile/locations` | `SavedLocationsPage` | authenticated | Manage private saved locations via `/api/locations/saved`; exact address and coordinates are visible only to the owner |
 | `/learner/reservations` | `LearnerReservationsPage` | learner | Learner reservation status list |
+| `/learner/reservations/:id` | `LearnerReservationDetailPage` | learner | Single reservation detail with refresh + shared reservation card |
 | `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline, latest driver ping summary, and page-scoped polling map marker when tracking coordinates are allowed |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
 | `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, and category filters; add-draft submits for review; AI remains disabled |
@@ -88,7 +90,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/complete-learner-profile` | `DeprecatedOnboardingPage` | public | Deprecated fallback; redirects to `/register` |
 | `/complete-supplier-profile` | `DeprecatedOnboardingPage` | public | Deprecated fallback; redirects to `/register` |
 | `/supplier/onboarding` | redirect | authenticated | Legacy alias → `/become-supplier` |
-| `/become-supplier` | `BecomeSupplierPage` | authenticated | Personal learner → supplier wizard (Student/Individual only) |
+| `/become-supplier` | `BecomeSupplierPage` | authenticated | Personal learner → supplier wizard (Student/Individual only); redirects to `/supplier/profile` when `SUPPLIER` role already exists |
 | `/supplier/access-denied` | `SupplierAccessDeniedPage` | authenticated | |
 | `/driver` | redirect | driver | Redirects to `/driver/jobs` |
 | `/driver/jobs` | `DriverJobsPage` | driver | Driver available jobs + active delivery panel inside `DriverPortalShell` |
@@ -171,6 +173,14 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 | `/complete-learner-profile`, `/complete-supplier-profile` | any | Deprecated fallback paths; redirected to `/register` |
 | `/supplier/materials/new` | `categoryRequestId`, `priceRuleRequestId` | Resume listing from approved request |
 | `/supplier/reservations` | `tab`, `focus` | Deep link into reservation inbox |
+
+## Navigation stack behavior
+
+Primary app navigation replaces the current route with `context.go(...)`: entry nav links, mobile bottom tabs, supplier/admin sidebars, portal switchers, auth redirects, and direct filter-reset URL updates.
+
+Page-level drill-ins preserve the previous page with `context.push(...)`: material/project/reservation/delivery detail opens, profile subpages, supplier material add/edit/detail flows, notification deep links, dashboard shortcut cards, and admin overview shortcut cards.
+
+Back/save/delete completion paths use `context.popOrGo(<fallback>)` from `app/router/navigation_extensions.dart` when a page must return to the caller if history exists, while still supporting direct web URL entry with a stable fallback route.
 
 ## Post-auth default destination
 

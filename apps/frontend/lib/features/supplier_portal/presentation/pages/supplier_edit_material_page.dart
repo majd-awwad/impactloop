@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
@@ -18,22 +18,14 @@ import '../widgets/supplier_feedback.dart';
 
 const _contentMaxWidth = 720.0;
 
-const _conditions = [
-  'NEW',
-  'LIKE_NEW',
-  'GOOD',
-  'NEEDS_REPAIR',
-];
+const _conditions = ['NEW', 'LIKE_NEW', 'GOOD', 'NEEDS_REPAIR'];
 
 String _editableConditionValue(String? value) {
   return value == 'USED' ? 'GOOD' : value ?? 'GOOD';
 }
 
 class SupplierEditMaterialPage extends ConsumerStatefulWidget {
-  const SupplierEditMaterialPage({
-    super.key,
-    required this.materialId,
-  });
+  const SupplierEditMaterialPage({super.key, required this.materialId});
 
   final String materialId;
 
@@ -42,7 +34,8 @@ class SupplierEditMaterialPage extends ConsumerStatefulWidget {
       _SupplierEditMaterialPageState();
 }
 
-class _SupplierEditMaterialPageState extends ConsumerState<SupplierEditMaterialPage> {
+class _SupplierEditMaterialPageState
+    extends ConsumerState<SupplierEditMaterialPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -99,11 +92,7 @@ class _SupplierEditMaterialPageState extends ConsumerState<SupplierEditMaterialP
   }
 
   void _goBack() {
-    if (context.canPop()) {
-      context.pop();
-      return;
-    }
-    context.go('/supplier/materials');
+    context.popOrGo('/supplier/materials');
   }
 
   Future<void> _save() async {
@@ -145,7 +134,7 @@ class _SupplierEditMaterialPageState extends ConsumerState<SupplierEditMaterialP
       invalidateSupplierMyMaterials(ref);
       ref.invalidate(supplierMyMaterialByIdProvider(widget.materialId));
       showSupplierInfoSnackBar(context, context.s.materialUpdatedSuccess);
-      context.go('/supplier/materials');
+      context.popOrGo('/supplier/materials');
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -166,8 +155,9 @@ class _SupplierEditMaterialPageState extends ConsumerState<SupplierEditMaterialP
   @override
   Widget build(BuildContext context) {
     final l = context.s;
-    final materialAsync =
-        ref.watch(supplierMyMaterialByIdProvider(widget.materialId));
+    final materialAsync = ref.watch(
+      supplierMyMaterialByIdProvider(widget.materialId),
+    );
 
     return Align(
       alignment: Alignment.topCenter,
@@ -240,8 +230,9 @@ class _SupplierEditMaterialPageState extends ConsumerState<SupplierEditMaterialP
             }
 
             final isArabic = l.isArabic;
-            final category =
-                isArabic ? material.category.nameAr : material.category.nameEn;
+            final category = isArabic
+                ? material.category.nameAr
+                : material.category.nameEn;
             final priceLabel = SupplierMaterialLabelHelper.resolveText(
               SupplierMaterialLabelHelper.priceLabel(
                 isFree: material.isFree,
@@ -302,8 +293,9 @@ class _SupplierEditMaterialPageState extends ConsumerState<SupplierEditMaterialP
                               decimal: true,
                             ),
                             validator: (value) {
-                              final parsed =
-                                  double.tryParse(value?.trim() ?? '');
+                              final parsed = double.tryParse(
+                                value?.trim() ?? '',
+                              );
                               if (parsed == null || parsed <= 0) {
                                 return l.enterValidQuantityPrice;
                               }
@@ -367,7 +359,10 @@ class _SupplierEditMaterialPageState extends ConsumerState<SupplierEditMaterialP
                       hint: l.suggestedUsesHint,
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    Text(l.readOnlyLabel, style: context.supplierSectionTitle()),
+                    Text(
+                      l.readOnlyLabel,
+                      style: context.supplierSectionTitle(),
+                    ),
                     const SizedBox(height: AppSpacing.sm),
                     if (coverUrl != null) ...[
                       ClipRRect(

@@ -1,4 +1,6 @@
 import { AppError } from '../../utils/app-error.js';
+import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
+import { notifyReservationCancelledByLearner } from '../notifications/reservation-notifications.js';
 import {
   deriveHandoverCode,
   ensureSelfPickupCodeStored,
@@ -17,6 +19,10 @@ import {
   resolveReservationFollowUp,
 } from './reservation-follow-up.js';
 import {
+  LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+  MIN_PICKUP_NOTICE_MINUTES,
+} from './reservation-timing-policy.js';
+import {
   canRequestPickupReschedule,
   mapPendingRescheduleSummary,
   resolveSelfPickupHandoverPhase,
@@ -30,6 +36,11 @@ import {
   createNoDriverAvailableReport,
 } from './reservations.incidents.repository.js';
 import { resolveLearnerConfirmation as resolveLearnerConfirmationInRepository } from './reservations.learner-confirmation.repository.js';
+import {
+  expireStalePendingReservationsByIds,
+  expireStalePendingReservationsForMaterialIds,
+} from './reservations.pending-expiry.repository.js';
+import { notifyReservationCreated } from '../notifications/reservation-notifications.js';
 import type {
   CreateReservationInput,
   CreateReservationMessageInput,
@@ -192,10 +203,20 @@ const mapLearnerReservation = (
     status: reservation.status,
     fulfillmentMethod: reservation.fulfillmentMethod,
     supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+    pickupWindowEnd: reservation.pickupWindowEnd,
     deliveryStatus: latestDelivery?.status ?? null,
     assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+    hasDelivery: deliveryCount > 0,
     hasPendingReport: hasOpenIncident,
   });
+  const canLearnerRequestDelivery =
+    reservation.status === 'ACCEPTED' &&
+    reservation.fulfillmentMethod === 'PICKUP' &&
+    reservation.material.deliveryAllowed &&
+    (!latestDelivery ||
+      !(ACTIVE_DELIVERY_STATUSES as readonly string[]).includes(
+        latestDelivery.status,
+      ));
 
   return {
     id: reservation.id,
@@ -262,6 +283,7 @@ const mapLearnerReservation = (
     canLearnerReschedule,
     canLearnerReportSupplier,
     canReportNoDriverAvailable: canReportNoDriverAvailableFlag,
+    canLearnerRequestDelivery,
     canSendMessage:
       reservationAllowsMessaging(reservation.status) && !hasOpenIncident,
     latestMessage: latestMessage ?? null,
@@ -305,8 +327,18 @@ const mapCancelledReservation = (
 });
 
 export const listMyReservations = async (requesterId: string) => {
-  const reservations =
+  let reservations =
     await reservationsRepository.findLearnerReservations(requesterId);
+
+  const pendingIds = reservations
+    .filter((reservation) => reservation.status === 'PENDING')
+    .map((reservation) => reservation.id);
+
+  if (pendingIds.length > 0) {
+    await expireStalePendingReservationsByIds(pendingIds, requesterId);
+    reservations =
+      await reservationsRepository.findLearnerReservations(requesterId);
+  }
 
   const legacyPickupReservations = reservations.filter(
     (reservation) =>
@@ -316,11 +348,14 @@ export const listMyReservations = async (requesterId: string) => {
   );
 
   if (legacyPickupReservations.length) {
-    await prisma.$transaction(async (tx) => {
-      for (const reservation of legacyPickupReservations) {
-        await ensureSelfPickupCodeStored(tx, reservation.id);
-      }
-    });
+    await prisma.$transaction(
+      async (tx) => {
+        for (const reservation of legacyPickupReservations) {
+          await ensureSelfPickupCodeStored(tx, reservation.id);
+        }
+      },
+      { timeout: 15_000 },
+    );
   }
 
   const latestMessages = await findLatestReservationMessagesByReservationIds(
@@ -336,6 +371,66 @@ export const listMyReservations = async (requesterId: string) => {
     ),
   );
 };
+
+export const getMyReservationById = async (
+  requesterId: string,
+  reservationId: string,
+) => {
+  let reservation = await reservationsRepository.findLearnerReservationById(
+    requesterId,
+    reservationId,
+  );
+
+  if (!reservation) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if (reservation.status === 'PENDING') {
+    await expireStalePendingReservationsByIds([reservationId], requesterId);
+    reservation = await reservationsRepository.findLearnerReservationById(
+      requesterId,
+      reservationId,
+    );
+
+    if (!reservation) {
+      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    }
+  }
+
+  if (
+    reservation.status === 'ACCEPTED' &&
+    reservation.fulfillmentMethod === 'PICKUP' &&
+    !reservation.selfPickupCodeHash
+  ) {
+    await prisma.$transaction(async (tx) => {
+      await ensureSelfPickupCodeStored(tx, reservation!.id);
+    });
+
+    reservation = await reservationsRepository.findLearnerReservationById(
+      requesterId,
+      reservationId,
+    );
+
+    if (!reservation) {
+      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    }
+  }
+
+  const latestMessages = await findLatestReservationMessagesByReservationIds([
+    reservationId,
+  ]);
+
+  return mapLearnerReservation(
+    reservation,
+    latestMessages.has(reservation.id)
+      ? mapReservationMessage(latestMessages.get(reservation.id)!)
+      : null,
+  );
+};
+
+export const expireStalePendingReservationsForMaterials = async (
+  materialIds: string[],
+) => expireStalePendingReservationsForMaterialIds(materialIds);
 
 export const createReservation = async (
   requesterId: string,
@@ -356,6 +451,7 @@ export const createReservation = async (
 
   switch (result.outcome) {
     case 'CREATED':
+      void notifyReservationCreated(result.reservation.id);
       return mapReservation(result.reservation);
     case 'NOT_FOUND':
       throw new AppError('Material not found.', 404, 'NOT_FOUND');
@@ -412,6 +508,7 @@ export const cancelReservation = async (
 
   switch (result.outcome) {
     case 'CANCELLED':
+      void notifyReservationCancelledByLearner(result.reservation.id);
       return mapCancelledReservation(result.reservation);
     case 'NOT_FOUND':
       throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
@@ -499,9 +596,18 @@ export const requestLearnerPickupReschedule = async (
   input: import('./reservations.validation.js').RequestPickupRescheduleInput,
 ) => {
   const end = new Date(input.pickupWindowEnd);
+  const now = Date.now();
   if (end.getTime() <= Date.now()) {
     throw new AppError(
       'Pickup window end must be in the future.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if (end.getTime() < now + MIN_PICKUP_NOTICE_MINUTES * 60_000) {
+    throw new AppError(
+      LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
       400,
       'VALIDATION_ERROR',
     );

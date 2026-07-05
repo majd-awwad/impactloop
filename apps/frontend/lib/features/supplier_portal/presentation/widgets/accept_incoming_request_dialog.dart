@@ -7,6 +7,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../application/supplier_delivery_scheduling_preview.dart';
 import '../../data/models/supplier_incoming_request.dart';
+import '../../../reservations/application/reservation_timing_policy.dart';
 import '../../../reservations/data/models/reservation_preferred_window.dart';
 import 'incoming_request_card.dart';
 import 'supplier_dark_form_field.dart';
@@ -420,7 +421,7 @@ class _AcceptIncomingRequestDialogState
                               fontWeight: FontWeight.w600,
                               color: deliveryPreview.isFeasible
                                   ? colors.accentMuted
-                                  : colors.warningText,
+                                  : colors.amberAccent,
                             ),
                           ),
                         ],
@@ -582,6 +583,8 @@ class _AcceptIncomingRequestDialogState
   }
 
   void _submit() {
+    final now = DateTime.now();
+
     if (_pickupDate == null || _startTime == null || _endTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.s.choosePickupDateAndTime)),
@@ -616,6 +619,15 @@ class _AcceptIncomingRequestDialogState
         return;
       }
 
+      if (supplierStart.isBefore(now.add(minCustomPickupStartNotice))) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(proposedPickupStartTooSoonMessage),
+          ),
+        );
+        return;
+      }
+
       if (_useCustomDeliveryWindow) {
         if (_customDeliveryDate == null ||
             _customDeliveryStartTime == null ||
@@ -644,6 +656,15 @@ class _AcceptIncomingRequestDialogState
         if (!proposedEnd.isAfter(proposedStart)) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(context.s.endTimeMustBeAfterStart)),
+          );
+          return;
+        }
+
+        if (!proposedStart.isAfter(now)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Delivery window must start in the future.'),
+            ),
           );
           return;
         }
@@ -691,6 +712,15 @@ class _AcceptIncomingRequestDialogState
       final selected =
           widget.request.learnerPreferredPickupWindows[_selectedPreferredIndex!];
 
+      if (selected.end.isBefore(now.add(minPickupNotice))) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(pickupWindowTooCloseMessage),
+          ),
+        );
+        return;
+      }
+
       Navigator.of(context).pop(
         SupplierPickupWindow(
           start: selected.start,
@@ -720,6 +750,15 @@ class _AcceptIncomingRequestDialogState
     if (!end.isAfter(start)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.s.endTimeMustBeAfterStart)),
+      );
+      return;
+    }
+
+    if (start.isBefore(now.add(minCustomPickupStartNotice))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(proposedPickupStartTooSoonMessage),
+        ),
       );
       return;
     }

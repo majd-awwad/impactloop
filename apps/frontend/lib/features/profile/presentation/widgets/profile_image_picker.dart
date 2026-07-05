@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -200,17 +200,16 @@ class ProfileSubpageScaffold extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () => context.pop(),
+                    onPressed: () => context.popOrGo('/profile'),
                     icon: const Icon(Icons.arrow_back_rounded),
                     tooltip: 'Back',
                   ),
                   Expanded(
                     child: Text(
                       title,
-                      style: AppTextStyles.title(context).copyWith(
-                        color: colors.textPrimary,
-                        fontSize: 20,
-                      ),
+                      style: AppTextStyles.title(
+                        context,
+                      ).copyWith(color: colors.textPrimary, fontSize: 20),
                     ),
                   ),
                 ],

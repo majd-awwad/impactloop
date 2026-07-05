@@ -5,7 +5,7 @@ import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 import { getMaterialById, getMaterials } from '../materials/materials.service.js';
 
-import { createReservation, listMyReservations } from './reservations.service.js';
+import { createReservation, getMyReservationById, listMyReservations } from './reservations.service.js';
 
 const TEST_MARKER = '[test-reservation-pickup-location]';
 
@@ -338,5 +338,59 @@ describe('listMyReservations pickupLocationFull privacy', () => {
     assert.equal('latitude' in listed!, false);
     assert.equal('longitude' in listed!, false);
     assert.equal('addressLine' in listed!, false);
+  });
+
+  test('getMyReservationById returns learner-owned reservation', async () => {
+    const material = await createMaterial(ctx);
+    const reservation = await createReservation(ctx.learnerId, {
+      materialId: material.id,
+      quantityRequested: 1,
+      fulfillmentMethod: 'PICKUP',
+      learnerPreferredPickupWindows: [
+        {
+          start: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+          end: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+        },
+      ],
+    });
+
+    const loaded = await getMyReservationById(ctx.learnerId, reservation.id);
+
+    assert.equal(loaded.id, reservation.id);
+    assert.equal(loaded.status, 'PENDING');
+    assert.equal(loaded.material.id, material.id);
+  });
+
+  test('getMyReservationById rejects other learners', async () => {
+    const material = await createMaterial(ctx);
+    const reservation = await createReservation(ctx.learnerId, {
+      materialId: material.id,
+      quantityRequested: 1,
+      fulfillmentMethod: 'PICKUP',
+      learnerPreferredPickupWindows: [
+        {
+          start: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+          end: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+        },
+      ],
+    });
+
+    const otherLearner = await prisma.user.create({
+      data: {
+        email: `${TEST_MARKER}-other-${Date.now()}@test.local`,
+        passwordHash: await hashPassword('Password123!'),
+        displayName: 'Other Learner',
+        accountStatus: 'ACTIVE',
+      },
+    });
+    ctx.createdUserIds.push(otherLearner.id);
+
+    await assert.rejects(
+      () => getMyReservationById(otherLearner.id, reservation.id),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        return /not found/i.test(error.message);
+      },
+    );
   });
 });

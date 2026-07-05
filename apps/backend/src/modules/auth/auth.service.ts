@@ -27,7 +27,7 @@ import {
   canGrantLearnerRoleOnSwitch,
   canSwitchToLearner,
   canSwitchToSupplier,
-  isAllowedBecomeSupplierType,
+  isKnownBecomeSupplierType,
   isBlockedLearnerPortalSwitch,
   resolveDefaultActiveRole,
   resolveDefaultPortalRoute,
@@ -539,9 +539,9 @@ export const becomeSupplier = async (
     );
   }
 
-  if (!isAllowedBecomeSupplierType(input.supplierType)) {
+  if (!isKnownBecomeSupplierType(input.supplierType)) {
     throw new AppError(
-      'This flow only supports student or individual supplier profiles.',
+      'Unsupported supplier type for this flow.',
       400,
       'VALIDATION_ERROR',
     );

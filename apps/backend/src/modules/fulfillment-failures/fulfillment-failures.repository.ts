@@ -193,7 +193,10 @@ export const markDeliveryPickupWindowExpired = async (input: {
       return { outcome: 'DRIVER_ASSIGNED' as const };
     }
 
-    if (!existing.supplierPickupWindowEnd) {
+    const supplierPickupWindowEnd =
+      existing.supplierPickupWindowEnd ?? existing.pickupWindowEnd;
+
+    if (!supplierPickupWindowEnd) {
       return { outcome: 'MISSING_WINDOW' as const };
     }
 
@@ -202,7 +205,7 @@ export const markDeliveryPickupWindowExpired = async (input: {
     if (
       !isAfterWindowWithGrace(
         now,
-        existing.supplierPickupWindowEnd,
+        supplierPickupWindowEnd,
         HANDOVER_GRACE_MINUTES,
       )
     ) {

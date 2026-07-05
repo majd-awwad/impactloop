@@ -14,6 +14,7 @@ import '../widgets/pickup_schedule_card.dart';
 import '../widgets/pickup_schedule_date_section.dart';
 import '../widgets/pickup_schedule_details_dialog.dart';
 import '../widgets/pickup_schedule_filter_chips.dart';
+import '../widgets/supplier_delivery_incident_flow.dart';
 import '../widgets/supplier_feedback.dart';
 
 const _contentMaxWidth = 960.0;
@@ -186,6 +187,24 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                                       context,
                                       ref,
                                       reservationId: item.id,
+                                    )
+                                : null,
+                            onMarkDeliveryPickupExpired:
+                                item.canMarkOrReportNoDriverAvailable
+                                ? () => handleMarkDeliveryPickupExpired(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                    )
+                                : null,
+                            onReportDriverNoShow:
+                                item.canSupplierReportDriverNoShow &&
+                                        item.activeDelivery?.id.isNotEmpty ==
+                                            true
+                                ? () => handleReportDriverNoShow(
+                                      context,
+                                      ref,
+                                      deliveryId: item.activeDelivery!.id,
                                     )
                                 : null,
                           ),

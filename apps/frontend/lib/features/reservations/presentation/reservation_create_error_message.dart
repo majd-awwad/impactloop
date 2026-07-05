@@ -2,6 +2,7 @@ import '../../../core/errors/api_exception.dart';
 
 String reservationCreateErrorMessage(ApiException error) {
   final message = error.message.trim();
+  final displayMessage = error.displayMessage.trim();
 
   if (_isSelfReservationError(message)) {
     return 'You cannot reserve a material you listed yourself.';
@@ -18,6 +19,10 @@ String reservationCreateErrorMessage(ApiException error) {
   final invalidQuantityMessage = _invalidQuantityErrorMessage(error);
   if (invalidQuantityMessage != null) {
     return invalidQuantityMessage;
+  }
+
+  if (displayMessage.isNotEmpty && displayMessage != 'Validation failed') {
+    return displayMessage;
   }
 
   if (message.isNotEmpty) {

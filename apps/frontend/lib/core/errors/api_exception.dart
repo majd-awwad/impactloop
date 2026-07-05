@@ -43,9 +43,13 @@ class ApiException implements Exception {
       case 'TIMEOUT':
         return 'The server took too long to respond. Please try again.';
       case 'CONFLICT':
-        return 'An account with that email or phone already exists.';
+        return message.isNotEmpty
+            ? message
+            : 'This request conflicts with the current state. Please refresh and try again.';
       case 'VALIDATION_ERROR':
-        final firstIssue = fieldIssues.isNotEmpty ? fieldIssues.first.message : null;
+        final firstIssue = fieldIssues.isNotEmpty
+            ? fieldIssues.first.message
+            : null;
         if (firstIssue != null && firstIssue.isNotEmpty) {
           return firstIssue;
         }

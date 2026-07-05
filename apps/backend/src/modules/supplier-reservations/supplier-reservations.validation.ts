@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+import {
+  MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES,
+  PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
+} from '../reservations/reservation-timing-policy.js';
+
 export const listSupplierReservationsQuerySchema = z.object({
   status: z
     .enum([
@@ -50,7 +55,24 @@ const pickupWindowSchema = z
       return;
     }
 
-    if (end.getTime() <= Date.now()) {
+    const hasSelectedPreferredWindow =
+      value.selectedPreferredWindowIndex != null;
+    const customStartThreshold =
+      Date.now() + MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES * 60_000;
+
+    if (
+      !hasSelectedPreferredWindow &&
+      start.getTime() < customStartThreshold
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
+        path: ['pickupWindowStart'],
+      });
+      return;
+    }
+
+    if (!hasSelectedPreferredWindow && end.getTime() <= Date.now()) {
       ctx.addIssue({
         code: 'custom',
         message: 'Supplier window end must be in the future.',
@@ -94,6 +116,15 @@ const pickupWindowSchema = z
           message: 'Proposed delivery end time must be after start time.',
           path: ['proposedDeliveryWindowEnd'],
         });
+        return;
+      }
+
+      if (proposedStart.getTime() <= Date.now()) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Proposed delivery window start must be in the future.',
+          path: ['proposedDeliveryWindowStart'],
+        });
       }
     }
   });
@@ -131,6 +162,18 @@ export const rescheduleSupplierReservationSchema = z
         code: 'custom',
         message: 'Pickup end time must be after start time.',
         path: ['pickupWindowEnd'],
+      });
+      return;
+    }
+
+    if (
+      start.getTime() <
+      Date.now() + MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES * 60_000
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
+        path: ['pickupWindowStart'],
       });
       return;
     }

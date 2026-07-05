@@ -7,6 +7,7 @@ import {
   createReservation,
   createLearnerReservationMessage,
   listLearnerReservationMessages,
+  getMyReservationById,
   listMyReservations,
   requestLearnerPickupReschedule,
   reportLearnerSupplierIssue,
@@ -43,6 +44,18 @@ export const listMyReservationsHandler = async (
   const reservations = await listMyReservations(req.auth!.sub);
 
   res.json(successResponse('Reservations loaded.', { reservations }));
+};
+
+export const getMyReservationByIdHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const reservation = await getMyReservationById(
+    req.auth!.sub,
+    req.params.id as string,
+  );
+
+  res.json(successResponse('Reservation loaded.', reservation));
 };
 
 export const cancelReservationHandler = async (
