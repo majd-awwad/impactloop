@@ -8,6 +8,8 @@ User _user({
   String activeRole = 'LEARNER',
   bool canSwitchToLearner = false,
   bool canSwitchToSupplier = false,
+  bool canBecomeLearner = false,
+  SupplierProfile? supplierProfile,
 }) {
   return User(
     id: 'user-1',
@@ -18,6 +20,8 @@ User _user({
     activeRole: activeRole,
     canSwitchToLearner: canSwitchToLearner,
     canSwitchToSupplier: canSwitchToSupplier,
+    canBecomeLearner: canBecomeLearner,
+    supplierProfile: supplierProfile,
     createdAt: DateTime.utc(2026, 1, 1),
   );
 }
@@ -88,6 +92,57 @@ void main() {
 
       expect(shouldShowSwitchToLearner(user), isTrue);
       expect(shouldShowSwitchToSupplier(user), isFalse);
+    });
+
+    test('become supplier is hidden for existing suppliers', () {
+      final user = _user(
+        roles: const ['LEARNER', 'SUPPLIER'],
+        activeRole: 'LEARNER',
+        canSwitchToSupplier: true,
+        supplierProfile: const SupplierProfile(
+          supplierType: 'STUDENT_SUPPLIER',
+          publicName: 'Test Supplier',
+        ),
+      );
+
+      expect(shouldShowBecomeSupplier(user), isFalse);
+    });
+
+    test('become supplier is shown for learner-only accounts', () {
+      final user = _user(
+        roles: const ['LEARNER'],
+        activeRole: 'LEARNER',
+      );
+
+      expect(shouldShowBecomeSupplier(user), isTrue);
+    });
+
+    test('become learner is hidden for admin accounts', () {
+      final user = _user(
+        roles: const ['ADMIN', 'SUPPLIER'],
+        activeRole: 'SUPPLIER',
+        supplierProfile: const SupplierProfile(
+          supplierType: 'INDIVIDUAL_SUPPLIER',
+          publicName: 'Test Supplier',
+        ),
+      );
+
+      expect(shouldShowBecomeLearner(user), isFalse);
+    });
+
+    test('become learner is shown for personal supplier without learner access', () {
+      final user = _user(
+        roles: const ['SUPPLIER'],
+        activeRole: 'SUPPLIER',
+        canBecomeLearner: true,
+        supplierProfile: const SupplierProfile(
+          supplierType: 'INDIVIDUAL_SUPPLIER',
+          publicName: 'Test Supplier',
+        ),
+      );
+
+      expect(shouldShowBecomeLearner(user), isTrue);
+      expect(shouldShowSwitchToLearner(user), isFalse);
     });
   });
 }

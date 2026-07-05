@@ -1,0 +1,4 @@
+enum LearnerSetupMode {
+  registration,
+  addToExistingAccount,
+}

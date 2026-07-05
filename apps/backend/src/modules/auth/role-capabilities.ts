@@ -28,7 +28,11 @@ export type RoleCapabilityInput = {
   roles: UserRole[];
   supplierType: string | null | undefined;
   hasSupplierProfile: boolean;
+  hasLearnerProfile: boolean;
 };
+
+export const PERSONAL_SUPPLIER_CANNOT_BECOME_LEARNER_MESSAGE =
+  'Only student and individual suppliers can add learner access.';
 
 export const userHasRole = (
   roles: UserRole[],
@@ -51,9 +55,39 @@ export const isKnownBecomeSupplierType = (
 /** @deprecated Use isKnownBecomeSupplierType */
 export const isAllowedBecomeSupplierType = isKnownBecomeSupplierType;
 
+export const ORGANIZATION_BECOME_SUPPLIER_MESSAGE =
+  'Organization supplier types require a separate verification flow.';
+
+export const isPersonalBecomeSupplierType = (
+  supplierType: string,
+): supplierType is PersonalBecomeSupplierType => {
+  const normalized = normalizeBecomeSupplierType(supplierType);
+  return isIndividualSupplierType(normalized);
+};
+
 export const isBlockedBecomeSupplierType = (supplierType: string): boolean => {
   const normalized = normalizeBecomeSupplierType(supplierType);
   return isOrganizationSupplierType(normalized);
+};
+
+export const canBecomeSupplier = (input: RoleCapabilityInput): boolean => {
+  if (
+    userHasRole(input.roles, 'ADMIN') ||
+    userHasRole(input.roles, 'MODERATOR') ||
+    userHasRole(input.roles, 'DRIVER')
+  ) {
+    return false;
+  }
+
+  if (!userHasRole(input.roles, 'LEARNER')) {
+    return false;
+  }
+
+  if (userHasRole(input.roles, 'SUPPLIER') || input.hasSupplierProfile) {
+    return false;
+  }
+
+  return true;
 };
 
 export const isBlockedLearnerPortalSwitch = (
@@ -69,7 +103,39 @@ export const isBlockedLearnerPortalSwitch = (
 export const canSwitchToSupplier = (input: RoleCapabilityInput): boolean =>
   userHasRole(input.roles, 'SUPPLIER') && input.hasSupplierProfile;
 
+export const canBecomeLearner = (input: RoleCapabilityInput): boolean => {
+  if (
+    userHasRole(input.roles, 'ADMIN') ||
+    userHasRole(input.roles, 'MODERATOR') ||
+    userHasRole(input.roles, 'DRIVER')
+  ) {
+    return false;
+  }
+
+  if (!input.hasSupplierProfile || !userHasRole(input.roles, 'SUPPLIER')) {
+    return false;
+  }
+
+  if (!isIndividualSupplierType(input.supplierType)) {
+    return false;
+  }
+
+  if (userHasRole(input.roles, 'LEARNER') || input.hasLearnerProfile) {
+    return false;
+  }
+
+  return true;
+};
+
 export const canSwitchToLearner = (input: RoleCapabilityInput): boolean => {
+  if (!userHasRole(input.roles, 'LEARNER')) {
+    return false;
+  }
+
+  if (!input.hasLearnerProfile) {
+    return false;
+  }
+
   if (
     input.hasSupplierProfile &&
     isBlockedLearnerPortalSwitch(input.supplierType)
@@ -77,15 +143,7 @@ export const canSwitchToLearner = (input: RoleCapabilityInput): boolean => {
     return false;
   }
 
-  if (userHasRole(input.roles, 'LEARNER')) {
-    return true;
-  }
-
-  if (!input.hasSupplierProfile) {
-    return false;
-  }
-
-  return isIndividualSupplierType(input.supplierType);
+  return true;
 };
 
 export const canGrantLearnerRoleOnSwitch = (

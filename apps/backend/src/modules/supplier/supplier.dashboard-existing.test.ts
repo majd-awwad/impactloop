@@ -156,18 +156,26 @@ describe('existing supplier dashboard scope', () => {
     assert.equal(supplierDashboard.recentMaterials.length, 1);
   });
 
-  test('become supplier reuses existing profile and keeps material counts', async () => {
+  test('become supplier rejects accounts that already have a supplier profile', async () => {
     const user = await createExistingSupplierWithMaterials();
     const profilesBefore = await prisma.supplierProfile.count({
       where: { userId: user.id },
     });
 
-    const session = await becomeSupplier(user.id, {
-      userId: user.id,
-      supplierType: 'INDIVIDUAL_SUPPLIER',
-      publicName: 'Should Not Replace',
-      pickupArea: 'Nablus, Rafidia',
-    });
+    await assert.rejects(
+      () =>
+        becomeSupplier(user.id, {
+          userId: user.id,
+          supplierType: 'INDIVIDUAL_SUPPLIER',
+          publicName: 'Should Not Replace',
+          pickupArea: 'Nablus, Rafidia',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /already have a supplier profile/i);
+        return true;
+      },
+    );
 
     const profilesAfter = await prisma.supplierProfile.count({
       where: { userId: user.id },
@@ -175,17 +183,9 @@ describe('existing supplier dashboard scope', () => {
 
     assert.equal(profilesBefore, 1);
     assert.equal(profilesAfter, 1);
-    assert.equal(session.user.supplierProfile?.publicName, 'Existing Supplier Shop');
 
     const dashboard = await getSupplierDashboard(user.id);
     assert.equal(dashboard.stats.materials.total, 1);
-
-    const materials = await getSupplierMaterials(user.id, {
-      page: 1,
-      limit: 20,
-      isFree: undefined,
-    });
-    assert.equal(materials.pagination.totalItems, 1);
   });
 
   test('/auth/me supplierProfile id matches dashboard supplier profile id', async () => {

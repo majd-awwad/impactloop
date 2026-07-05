@@ -75,6 +75,7 @@ class User {
     this.activeRole = 'LEARNER',
     this.canSwitchToLearner = false,
     this.canSwitchToSupplier = false,
+    this.canBecomeLearner = false,
     this.defaultPortalRoute = '/home',
     this.learnerProfile,
     this.supplierProfile,
@@ -94,6 +95,7 @@ class User {
   final String activeRole;
   final bool canSwitchToLearner;
   final bool canSwitchToSupplier;
+  final bool canBecomeLearner;
   final String defaultPortalRoute;
   final LearnerProfile? learnerProfile;
   final SupplierProfile? supplierProfile;
@@ -128,6 +130,7 @@ class User {
           (parsedRoles.isNotEmpty ? parsedRoles.first : 'LEARNER'),
       canSwitchToLearner: json['canSwitchToLearner'] as bool? ?? false,
       canSwitchToSupplier: json['canSwitchToSupplier'] as bool? ?? false,
+      canBecomeLearner: json['canBecomeLearner'] as bool? ?? false,
       defaultPortalRoute:
           json['defaultPortalRoute'] as String? ?? '/home',
       learnerProfile: learnerProfileJson is Map<String, dynamic>

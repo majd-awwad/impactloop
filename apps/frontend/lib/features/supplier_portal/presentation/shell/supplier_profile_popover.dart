@@ -152,12 +152,17 @@ class SupplierProfilePopoverContent extends ConsumerWidget {
     final user = ref.watch(authControllerProvider).user;
 
     return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+      ),
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: decorations.dashboardCard,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: SingleChildScrollView(
+        primary: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Row(
             children: [
               SupplierPortalAvatar(
@@ -234,6 +239,8 @@ class SupplierProfilePopoverContent extends ConsumerWidget {
               ),
               noteStyle: context.supplierBody(),
               onBeforeSwitch: onBeforePortalSwitch,
+              iconColor: colors.textPrimary,
+              useListTileStyle: true,
             ),
           ],
           Divider(color: colors.border, height: 24),
@@ -244,6 +251,7 @@ class SupplierProfilePopoverContent extends ConsumerWidget {
             destructive: true,
           ),
         ],
+        ),
       ),
     );
   }

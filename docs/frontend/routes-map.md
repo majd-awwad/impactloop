@@ -90,7 +90,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/complete-learner-profile` | `DeprecatedOnboardingPage` | public | Deprecated fallback; redirects to `/register` |
 | `/complete-supplier-profile` | `DeprecatedOnboardingPage` | public | Deprecated fallback; redirects to `/register` |
 | `/supplier/onboarding` | redirect | authenticated | Legacy alias → `/become-supplier` |
-| `/become-supplier` | `BecomeSupplierPage` | authenticated | Personal learner → supplier wizard (Student/Individual only); redirects to `/supplier/profile` when `SUPPLIER` role already exists |
+| `/become-learner` | `BecomeLearnerPage` | authenticated personal supplier without learner profile | Reuses `RegistrationWizard` in `LearnerSetupMode.addToExistingAccount` (interests, goals, location, learner basics, review); no email/password; redirects when learner access already exists |
+| `/become-supplier` | `BecomeSupplierPage` | authenticated learner without supplier profile | Personal learner → supplier wizard (Student/Individual only); redirects to `/supplier/overview` when supplier profile already exists; blocked for admin/moderator/driver |
 | `/supplier/access-denied` | `SupplierAccessDeniedPage` | authenticated | |
 | `/driver` | redirect | driver | Redirects to `/driver/jobs` |
 | `/driver/jobs` | `DriverJobsPage` | driver | Driver available jobs + active delivery panel inside `DriverPortalShell` |

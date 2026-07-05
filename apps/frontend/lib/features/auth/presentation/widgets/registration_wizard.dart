@@ -6,12 +6,14 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
+import '../../../../shared/widgets/app_feedback.dart';
 import '../../../supplier_portal/application/supplier_verification_access.dart';
 import '../../../supplier_portal/data/supplier_verification_api.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
 import '../../application/registration_draft_notifier.dart';
 import '../../data/models/registration_draft.dart';
+import '../models/learner_setup_mode.dart';
 import '../models/registration_intent.dart';
 import '../models/registration_wizard_step.dart';
 import '../utils/registration_onboarding_helpers.dart';
@@ -22,9 +24,14 @@ import 'auth_text_field.dart';
 import 'auth_ui_palette.dart';
 
 class RegistrationWizard extends ConsumerStatefulWidget {
-  const RegistrationWizard({super.key, this.initialIntent});
+  const RegistrationWizard({
+    super.key,
+    this.initialIntent,
+    this.mode = LearnerSetupMode.registration,
+  });
 
   final RegistrationIntent? initialIntent;
+  final LearnerSetupMode mode;
 
   @override
   ConsumerState<RegistrationWizard> createState() => _RegistrationWizardState();
@@ -71,13 +78,18 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
     (RegistrationIntent.both, 'Do both'),
   ];
 
+  bool get _isAddToExistingAccount =>
+      widget.mode == LearnerSetupMode.addToExistingAccount;
+
   bool get _needsVerification => isOrganizationSupplierInput(_supplierType);
 
   bool get _needsSupplierProfile =>
-      _intent == RegistrationIntent.supplier ||
-      _intent == RegistrationIntent.both;
+      !_isAddToExistingAccount &&
+      (_intent == RegistrationIntent.supplier ||
+          _intent == RegistrationIntent.both);
 
   bool get _needsLearnerProfile =>
+      _isAddToExistingAccount ||
       _intent == RegistrationIntent.learner ||
       _intent == RegistrationIntent.both;
 
@@ -89,6 +101,10 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   List<RegistrationWizardStep> get _steps {
+    if (_isAddToExistingAccount) {
+      return becomeLearnerWizardSteps;
+    }
+
     final intent = _intent;
     if (intent == null) {
       return const [RegistrationWizardStep.account];
@@ -105,7 +121,17 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   @override
   void initState() {
     super.initState();
-    _intent = widget.initialIntent;
+    if (_isAddToExistingAccount) {
+      _intent = RegistrationIntent.learner;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        ref.read(registrationDraftProvider.notifier).clear();
+      });
+    } else {
+      _intent = widget.initialIntent;
+    }
   }
 
   @override
@@ -142,9 +168,11 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
     setState(() {
       _learnerTypeError = firstFieldError(error, const [
         'learnerProfile.learnerType',
+        'learnerType',
       ]);
       _skillLevelError = firstFieldError(error, const [
         'learnerProfile.skillLevel',
+        'skillLevel',
       ]);
       _supplierTypeError = firstFieldError(error, const [
         'supplierProfile.supplierType',
@@ -355,7 +383,11 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         (_currentStep == RegistrationWizardStep.verification &&
             _accountCreated &&
             _verificationPendingRetry)) {
-      _handleCreateAccount();
+      if (_isAddToExistingAccount) {
+        _handleBecomeLearner();
+      } else {
+        _handleCreateAccount();
+      }
       return;
     }
 
@@ -370,7 +402,14 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   void _goBack() {
-    if (_isSubmitting || _stepIndex == 0) {
+    if (_isSubmitting) {
+      return;
+    }
+
+    if (_stepIndex == 0) {
+      if (_isAddToExistingAccount) {
+        context.go(supplierOverviewRoute);
+      }
       return;
     }
 
@@ -433,11 +472,14 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
       }
     }
 
-    if (_needsSupplierProfile) {
+    if (_needsSupplierProfile || _isAddToExistingAccount) {
       draftNotifier.setOnboardingLocation(
         city: _cityController.text.trim(),
         area: _areaController.text.trim(),
       );
+    }
+
+    if (_needsSupplierProfile) {
       if (_supplierType != null && _supplierPublicName.isNotEmpty) {
         final pickupArea = formatPickupArea(
           city: _cityController.text.trim(),
@@ -553,6 +595,63 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
     }
   }
 
+  Future<void> _handleBecomeLearner() async {
+    if (_isSubmitting) {
+      return;
+    }
+
+    _clearErrors();
+    setState(() => _isSubmitting = true);
+
+    try {
+      _syncAllProfiles();
+
+      final request = ref
+          .read(registrationDraftProvider.notifier)
+          .toBecomeLearnerRequest();
+
+      if (request == null) {
+        setState(() {
+          _isSubmitting = false;
+          _formError =
+              'Learner setup is incomplete. Please review your answers.';
+        });
+        return;
+      }
+
+      await ref.read(authControllerProvider.notifier).becomeLearner(request);
+      ref.read(registrationDraftProvider.notifier).clear();
+
+      if (!mounted) {
+        return;
+      }
+
+      showInfoSnackBar(
+        context,
+        'Learner access added to your account.',
+      );
+
+      final user = ref.read(authControllerProvider).user;
+      context.go(user == null ? homeRoute : postAuthRouteForUser(user));
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      _applyServerError(error);
+      setState(() => _isSubmitting = false);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _formError = 'Something went wrong. Please try again.';
+      });
+    }
+  }
+
   void _toggleInterest(String interest) {
     _clearErrors();
     setState(() {
@@ -616,6 +715,10 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
     }
 
     if (step == RegistrationWizardStep.review) {
+      if (_isAddToExistingAccount) {
+        return 'Review your learner details before adding access to your account.';
+      }
+
       return switch (_intent) {
         RegistrationIntent.supplier =>
           'Review your supplier account and pickup area before creating it.',
@@ -690,6 +793,26 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_isAddToExistingAccount) ...[
+          Text(
+            'Become a learner',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Add learner access to your current account and personalize your learning interests.',
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.5,
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
         Row(
           children: [
             DecoratedBox(
@@ -1253,6 +1376,14 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
     final draft = ref.watch(registrationDraftProvider);
     final interests = draft.onboardingInterests;
     final goals = draft.onboardingGoals;
+    final user = ref.watch(authControllerProvider).user;
+    final learnerLocation =
+        draft.onboardingCity != null && draft.onboardingCity!.trim().isNotEmpty
+        ? formatPickupArea(
+            city: draft.onboardingCity!,
+            area: draft.onboardingArea ?? '',
+          )
+        : null;
     final pickupArea =
         (_intent == RegistrationIntent.supplier ||
                 _intent == RegistrationIntent.both) &&
@@ -1266,14 +1397,23 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _ReviewRow(label: 'Intent', value: _intentLabel(_intent)),
-        _ReviewRow(label: 'Name', value: _displayNameController.text.trim()),
-        _ReviewRow(label: 'Email', value: _emailController.text.trim()),
+        if (_isAddToExistingAccount) ...[
+          if (user != null) ...[
+            _ReviewRow(label: 'Account', value: user.displayName.trim()),
+            _ReviewRow(label: 'Email', value: user.email.trim()),
+          ],
+        ] else ...[
+          _ReviewRow(label: 'Intent', value: _intentLabel(_intent)),
+          _ReviewRow(label: 'Name', value: _displayNameController.text.trim()),
+          _ReviewRow(label: 'Email', value: _emailController.text.trim()),
+        ],
         if (interests.isNotEmpty)
           _ReviewRow(label: 'Interests', value: interests.join(', ')),
         if (goals.isNotEmpty)
           _ReviewRow(label: 'Goals', value: goals.join(', ')),
-        if (pickupArea != null)
+        if (_isAddToExistingAccount && learnerLocation != null)
+          _ReviewRow(label: 'Location', value: learnerLocation),
+        if (!_isAddToExistingAccount && pickupArea != null)
           _ReviewRow(label: 'Location', value: pickupArea),
         if (draft.learnerProfile != null) ...[
           _ReviewRow(
@@ -1347,6 +1487,10 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   String _reviewHelperText() {
+    if (_isAddToExistingAccount) {
+      return 'Goals stay in onboarding only. Learner access will be added to your existing account with the learner profile shown above.';
+    }
+
     return switch (_intent) {
       RegistrationIntent.supplier =>
         'Supplier goals stay in onboarding only. The server receives your account, supplier profile, and pickup area.',
@@ -1386,12 +1530,16 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         _accountCreated &&
         _verificationPendingRetry;
     final primaryLabel = isReview
-        ? (_accountCreated && _verificationPendingRetry
-              ? 'Retry verification'
-              : 'Create account')
+        ? (_isAddToExistingAccount
+              ? 'Add learner access'
+              : (_accountCreated && _verificationPendingRetry
+                    ? 'Retry verification'
+                    : 'Create account'))
         : isVerificationRetry
         ? 'Retry verification'
         : 'Continue';
+
+    final showBackButton = _stepIndex > 0 || _isAddToExistingAccount;
 
     return Form(
       key: _formKey,
@@ -1411,7 +1559,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
             isLoading: _isSubmitting,
             onPressed: _goNext,
           ),
-          if (_stepIndex > 0) ...[
+          if (showBackButton) ...[
             const SizedBox(height: AppSpacing.sm),
             AuthOutlinedButton(label: 'Back', onPressed: _goBack),
           ],

@@ -10,6 +10,7 @@ const supplierPortalRoute = '/supplier';
 const supplierOverviewRoute = '/supplier/overview';
 const learningHubRoute = '/learning';
 const becomeSupplierRoute = '/become-supplier';
+const becomeLearnerRoute = '/become-learner';
 const supplierOnboardingRoute = becomeSupplierRoute;
 const driverPortalRoute = '/driver/jobs';
 const adminPortalRoute = '/admin';

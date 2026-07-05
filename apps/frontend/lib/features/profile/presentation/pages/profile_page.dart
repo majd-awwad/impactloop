@@ -192,6 +192,15 @@ class _ProfileContent extends ConsumerWidget {
           ),
         ),
       );
+    } else if (shouldShowBecomeLearner(user)) {
+      items.add(
+        _ProfileActionTile(
+          icon: Icons.school_outlined,
+          title: 'Become a Learner',
+          subtitle: 'Add learner access to browse materials and projects.',
+          onTap: () => context.push(becomeLearnerRoute),
+        ),
+      );
     } else if (isOrganizationSupplierWithoutLearnerSwitch(user) &&
         user.isSupplierMode) {
       items.add(
@@ -304,17 +313,19 @@ class _ProfileContent extends ConsumerWidget {
           subtitle: 'Track pickups and material requests.',
           onTap: () => context.push(learnerReservationsRoute),
         ),
-        _ProfileDivider(),
-        _ProfileActionTile(
-          icon: _hasSupplierAccess
-              ? Icons.storefront_outlined
-              : Icons.add_business_outlined,
-          title: _hasSupplierAccess ? 'Supplier profile' : 'Become a supplier',
-          subtitle: _hasSupplierAccess
-              ? 'Manage your supplier details.'
-              : 'Start sharing reusable materials.',
-          onTap: () => context.push(supplierEntryRouteForUser(user)),
-        ),
+        if (shouldShowBecomeSupplier(user) || _hasSupplierAccess) ...[
+          _ProfileDivider(),
+          _ProfileActionTile(
+            icon: _hasSupplierAccess
+                ? Icons.storefront_outlined
+                : Icons.add_business_outlined,
+            title: _hasSupplierAccess ? 'Supplier profile' : 'Become a supplier',
+            subtitle: _hasSupplierAccess
+                ? 'Manage your supplier details.'
+                : 'Start sharing reusable materials.',
+            onTap: () => context.push(supplierEntryRouteForUser(user)),
+          ),
+        ],
         if (portalSwitchActions.isNotEmpty) ...[
           _ProfileDivider(),
           ...portalSwitchActions,

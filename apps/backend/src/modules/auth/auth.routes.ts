@@ -22,6 +22,7 @@ import {
   resetPassword,
   changePassword,
   postBecomeSupplier,
+  postBecomeLearner,
   postSwitchRole,
 } from './auth.controller.js';
 
@@ -33,6 +34,7 @@ import {
   registerSchema,
   resetPasswordSchema,
   becomeSupplierSchema,
+  becomeLearnerSchema,
   switchRoleSchema,
 } from './auth.validation.js';
 
@@ -143,6 +145,13 @@ authRouter.post(
   authMiddleware,
   validate(becomeSupplierSchema),
   asyncHandler(postBecomeSupplier),
+);
+
+authRouter.post(
+  '/become-learner',
+  authMiddleware,
+  validate(becomeLearnerSchema),
+  asyncHandler(postBecomeLearner),
 );
 
 authRouter.post(

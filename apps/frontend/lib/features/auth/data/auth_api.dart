@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../core/auth/auth_interceptor.dart';
 import '../../../core/network/api_response.dart';
 import 'models/auth_tokens.dart';
+import 'models/become_learner_request.dart';
 import 'models/become_supplier_request.dart';
 import 'models/register_request.dart';
 import 'models/user.dart';
@@ -71,6 +72,15 @@ class AuthApi {
   ) {
     return _postAuthSession(
       '$_authBasePath/become-supplier',
+      data: request.toJson(),
+    );
+  }
+
+  Future<({AuthTokens tokens, User user})> becomeLearner(
+    BecomeLearnerRequest request,
+  ) {
+    return _postAuthSession(
+      '$_authBasePath/become-learner',
       data: request.toJson(),
     );
   }
