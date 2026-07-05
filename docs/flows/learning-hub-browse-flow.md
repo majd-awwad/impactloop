@@ -133,27 +133,27 @@ Same as list: `GET /api/learning-projects? page=1&limit=2`.
 
 ---
 
-## Flow — Add draft (mock only)
+## Flow — Add draft submit (`/learning/add-draft`)
 
 ### Trigger
 
-User navigates to `/learning/add-draft`.
+Authenticated learner navigates to `/learning/add-draft`.
 
 ### User path
 
-Fill title, summary, components, steps, links → tap submit → snackbar only (“Project review flow will be connected later.”).
+Fill title, summary, components, steps, links → tap **Submit for review** → project is created as `PENDING_REVIEW` and a success snackbar is shown.
 
 ### Frontend path
 
-`LearningAddDraftPage` — local controllers; imports `learning_hub_mock_data.dart` for palette re-export and legacy copy only.
+`LearningAddDraftPage` — local controllers; resolves a project category from `projectCategoriesProvider`; posts through `LearningProjectRepository.submitProjectForReview`.
 
 ### Backend path
 
-**None.** No create/submit endpoint mounted.
+`POST /api/learning-projects/submit` with `authMiddleware`, `requireRoles('LEARNER')`, and `submitLearningProjectSchema`.
 
 ### Database changes
 
-**None.**
+Creates a `learning_projects` row with `status = PENDING_REVIEW`, related components/steps/links, and `submittedAt`.
 
 ### Files involved
 

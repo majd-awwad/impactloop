@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -176,6 +177,7 @@ class _HubContent extends StatelessWidget {
                   ar: 'اكتشف المشاريع وتعلم ما يمكنك بناؤه من مواد معاد تدويرها.',
                 ),
                 stats: heroStats,
+                onAddProject: () => context.push('/learning/add-draft'),
               ),
               const SizedBox(height: AppSpacing.lg),
               if (categoryLabels.isNotEmpty)

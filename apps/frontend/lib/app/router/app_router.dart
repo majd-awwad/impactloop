@@ -65,7 +65,14 @@ import '../../features/invitations/presentation/pages/invite_accept_page.dart';
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
 const _adminAccessDeniedRoute = '/admin/access-denied';
 
-enum _RouteAccessLevel { public, authenticated, learner, supplier, driver, admin }
+enum _RouteAccessLevel {
+  public,
+  authenticated,
+  learner,
+  supplier,
+  driver,
+  admin,
+}
 
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   final path = state.matchedLocation;
@@ -139,7 +146,8 @@ _RouteAccessLevel _routeAccessForPath(String path) {
 
   if (path == '/learner/reservations' ||
       path.startsWith('/learner/reservations/') ||
-      path.startsWith('/learner/deliveries/')) {
+      path.startsWith('/learner/deliveries/') ||
+      path == '/learning/add-draft') {
     return _RouteAccessLevel.learner;
   }
 
@@ -250,10 +258,7 @@ String? _resolveAuthPageRedirect(AuthState authState, GoRouterState state) {
   return _resolveProtectedRoute(authState, accessLevel, target) ?? target;
 }
 
-String? _resolveSupplierVerificationRedirect(
-  AuthState authState,
-  String path,
-) {
+String? _resolveSupplierVerificationRedirect(AuthState authState, String path) {
   if (_isAuthPage(path) ||
       path == '/complete-supplier-profile' ||
       path == '/complete-learner-profile' ||
@@ -275,7 +280,8 @@ String? _resolveSupplierVerificationRedirect(
     verificationStatus: profile?.verificationStatus,
   );
 
-  final onVerificationPage = isSupplierVerificationStatusRoute(path) ||
+  final onVerificationPage =
+      isSupplierVerificationStatusRoute(path) ||
       path == supplierVerificationPendingRoute;
 
   if (gate != null && _isSupplierPortalPath(path) && !onVerificationPage) {
@@ -314,7 +320,7 @@ String? _resolveActivePortalRedirect(AuthState authState, String path) {
       path != becomeSupplierRoute &&
       path != '/supplier/onboarding' &&
       user.canSwitchToSupplier) {
-    return learningHubRoute;
+    return homeRoute;
   }
 
   return null;
@@ -371,7 +377,10 @@ String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
     return portalRedirect;
   }
 
-  final becomeSupplierRedirect = _resolveBecomeSupplierRedirect(authState, path);
+  final becomeSupplierRedirect = _resolveBecomeSupplierRedirect(
+    authState,
+    path,
+  );
   if (becomeSupplierRedirect != null) {
     return becomeSupplierRedirect;
   }
@@ -652,8 +661,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/supplier-verification',
-            builder: (context, state) =>
-                const AdminSupplierVerificationPage(),
+            builder: (context, state) => const AdminSupplierVerificationPage(),
           ),
           GoRoute(
             path: '/admin/materials',

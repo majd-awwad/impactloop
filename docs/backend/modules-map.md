@@ -183,13 +183,13 @@ Mount order: `apps/backend/src/app.ts`
 
 ## `learning-projects`
 
-**Purpose:** Public read API for learning hub projects (list + detail).
+**Purpose:** Public read API for learning hub projects (list + detail) and authenticated learner project submission for admin review.
 
 **Key files:** `learning-projects.routes.ts`, `learning-projects.controller.ts`, `learning-projects.service.ts`, `learning-projects.repository.ts`, `learning-projects.validation.ts`
 
 **Prisma:** `LearningProject` and related project tables
 
-**Frontend:** Learning hub list/detail and home spotlight are API-backed; add-draft remains mock-only — see [08-implementation-status.md](../08-implementation-status.md)
+**Frontend:** Learning hub list/detail and home spotlight are API-backed; add-draft submits learner drafts for admin review — see [08-implementation-status.md](../08-implementation-status.md)
 
 ---
 

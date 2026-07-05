@@ -13,14 +13,14 @@ Browse educational project ideas (components, steps, links) for inspiration. **L
 | Backend `learning-projects` | **Implemented** | Public read list + detail (`PUBLISHED` only in repository) |
 | Flutter list/detail pages | **Partial** | `/learning` and `/learning/:id` use `ApiLearningHubRepository` + Riverpod providers |
 | Home learning spotlight | **Implemented** | Reuses `learningProjectsProvider` with `limit: 2` on `/home` |
-| Add draft page | **Mock-only** | Interactive form; **no submit API** |
+| Add draft page | **Partial** | Authenticated learner form submits drafts to admin review; no draft-saving or media upload |
 | AI panel on detail | **Frontend-only** | `disabled_ai_panel.dart` — placeholder |
 | Ratings on cards/detail | **Partial** | Hidden when backend `ratingSummary` is null (current API returns null) |
 | AI material agent | **Not implemented** | No `ai-agent` module |
 
 Product intent from role planning: the learning hub should eventually support project-to-material matching, material coverage, missing materials, alternatives, already-owned markers, saved projects, likes, and start-build/checklist flows. These are planned/future unless code changes prove otherwise.
 
-**Critical:** Learning Hub list/detail and Home spotlight are API-backed. Add-draft remains mock-only.
+**Critical:** Learning Hub list/detail and Home spotlight are API-backed. Add-draft can submit authenticated learner drafts for admin review, but draft saving, media upload, and public visibility still depend on admin approval.
 
 ## Main user flow (as shipped in Flutter)
 
@@ -29,7 +29,7 @@ Product intent from role planning: the learning hub should eventually support pr
 3. Category chips filter by `categoryId` using `GET /api/categories?type=PROJECT`.
 4. First list item is shown as featured; remaining items render in the grid.
 5. Tap project → `/learning/:id` → `learningProjectProvider(id)` loads detail from `GET /api/learning-projects/:id`.
-6. Optional: `/learning/add-draft` — mock form only; submit does not persist.
+6. Optional: `/learning/add-draft` — learner-only form posts to `POST /api/learning-projects/submit`; created projects enter admin review and do not appear publicly until approved.
 7. Home `/home` learning spotlight loads up to 2 published projects via `learningProjectsProvider`.
 
 ## Frontend files
@@ -58,6 +58,7 @@ Repository filter: `status: 'PUBLISHED'` (`learning-projects.repository.ts`).
 |--------|------|------|---------------|
 | GET | `/api/learning-projects` | Public | **Yes** — Learning Hub list |
 | GET | `/api/learning-projects/:id` | Public | **Yes** — Learning Hub detail |
+| POST | `/api/learning-projects/submit` | Learner auth | **Yes** — add-draft submit for admin review |
 | GET | `/api/categories?type=PROJECT` | Public | **Yes** — category chips |
 
 Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`.
@@ -81,10 +82,10 @@ Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`.
 
 ## Known gaps / Needs verification
 
-- Add-draft page remains mock-only (no submit API).
+- Add-draft page has no local draft-saving, image upload, or rich component editing yet.
 - Project IDs are backend UUIDs; old mock slug bookmarks will not resolve.
 - `ratingSummary` is currently null in backend responses — rating UI stays hidden.
 - Project links are display-only (`url_launcher` not in dependencies).
-- Project submission / moderator review — **not implemented** in Flutter; draft page is mock.
+- Project submission to admin review is wired in Flutter; moderator review remains **not implemented**.
 - AI material matching — **not implemented**.
 - Save project, like project, follow project/category, start build, build checklist, and available/missing/alternative material coverage — **not implemented**.

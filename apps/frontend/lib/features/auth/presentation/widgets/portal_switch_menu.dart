@@ -11,42 +11,36 @@ Future<void> handlePortalRoleSwitch({
   required BuildContext context,
   required WidgetRef ref,
   required String targetRole,
+  VoidCallback? onBeforeSwitch,
 }) async {
+  final router = GoRouter.of(context);
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final authController = ref.read(authControllerProvider.notifier);
+
+  onBeforeSwitch?.call();
+
   try {
-    final user = await ref
-        .read(authControllerProvider.notifier)
-        .switchActiveRole(targetRole);
+    final user = await authController.switchActiveRole(targetRole);
 
-    if (!context.mounted) {
-      return;
-    }
-
-    context.go(oppositePortalSwitchRoute(user, targetRole));
+    router.go(oppositePortalSwitchRoute(user, targetRole));
   } on ApiException catch (error) {
-    if (!context.mounted) {
+    if (messenger == null) {
       return;
     }
 
-    showAppInlineErrorSnackBar(context, error.displayMessage);
+    showAppInlineErrorSnackBar(messenger, error.displayMessage);
   }
 }
 
 class PortalModeLabel extends StatelessWidget {
-  const PortalModeLabel({
-    super.key,
-    required this.user,
-    this.style,
-  });
+  const PortalModeLabel({super.key, required this.user, this.style});
 
   final User user;
   final TextStyle? style;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      activePortalModeLabel(user),
-      style: style,
-    );
+    return Text(activePortalModeLabel(user), style: style);
   }
 }
 
@@ -59,6 +53,7 @@ class PortalSwitchMenuItems {
     required User user,
     TextStyle? labelStyle,
     TextStyle? noteStyle,
+    VoidCallback? onBeforeSwitch,
   }) {
     final items = <Widget>[];
 
@@ -72,6 +67,7 @@ class PortalSwitchMenuItems {
             context: context,
             ref: ref,
             targetRole: 'LEARNER',
+            onBeforeSwitch: onBeforeSwitch,
           ),
           dense: true,
           visualDensity: VisualDensity.compact,
@@ -100,6 +96,7 @@ class PortalSwitchMenuItems {
             context: context,
             ref: ref,
             targetRole: 'SUPPLIER',
+            onBeforeSwitch: onBeforeSwitch,
           ),
           dense: true,
           visualDensity: VisualDensity.compact,
@@ -111,11 +108,11 @@ class PortalSwitchMenuItems {
   }
 }
 
-void showAppInlineErrorSnackBar(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      behavior: SnackBarBehavior.floating,
-    ),
+void showAppInlineErrorSnackBar(
+  ScaffoldMessengerState messenger,
+  String message,
+) {
+  messenger.showSnackBar(
+    SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
   );
 }

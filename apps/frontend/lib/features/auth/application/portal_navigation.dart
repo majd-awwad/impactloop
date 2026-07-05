@@ -29,7 +29,7 @@ String oppositePortalSwitchRoute(User user, String targetRole) {
   if (normalized == 'SUPPLIER') {
     return supplierOverviewRoute;
   }
-  return learningHubRoute;
+  return homeRoute;
 }
 
 String activePortalModeLabel(User user) {

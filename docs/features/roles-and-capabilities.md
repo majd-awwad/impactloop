@@ -76,7 +76,7 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 
 - Preferences and interests exist on profile/registration, but recommendation logic is currently simple and not a dedicated personalization engine.
 - Delivery tracking is polling/latest-ping based, not realtime.
-- Learning hub is read-only; add-draft is mock-only.
+- Learning hub browse/detail is read-oriented; add-draft can submit learner drafts for admin review, but AI matching and build checklist are not implemented.
 
 **Planned / future:**
 

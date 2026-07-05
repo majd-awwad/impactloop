@@ -91,7 +91,7 @@ Derived **only** from `apps/frontend/lib/features/`:
 | `home` | `/home` | **Partial** — materials and learning spotlight via API; personalization pending |
 | `invitations` | `/invite/accept` | **Implemented** — invitation validate/accept UI backed by API |
 | `landing` | `/` | Static UI |
-| `learning_hub` | `/learning`, `/learning/:id`, `/learning/add-draft` | **Partial** — read path API-backed; add-draft mock-only |
+| `learning_hub` | `/learning`, `/learning/:id`, `/learning/add-draft` | **Partial** — read path API-backed; add-draft submits learner drafts for admin review |
 | `material_discovery` | `/materials`, `/materials/:id` | API default (`ApiMaterialDiscoveryRepository`); detail reserve CTA calls reservations data layer |
 | `materials` | (no dedicated routes) | Shared data layer for listing/taxonomy — used by supplier add material |
 | `profile` | `/profile`, `/profile/edit`, `/profile/learner/edit`, `/profile/security` | **Implemented** — account/profile/security pages |

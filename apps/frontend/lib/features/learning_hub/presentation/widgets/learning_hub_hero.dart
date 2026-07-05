@@ -13,11 +13,13 @@ class LearningHubHero extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.stats,
+    this.onAddProject,
   });
 
   final LocalizedText title;
   final LocalizedText subtitle;
   final Map<LocalizedText, int> stats;
+  final VoidCallback? onAddProject;
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +77,10 @@ class LearningHubHero extends StatelessWidget {
                   children: [
                     _HeroActionButton(
                       icon: Icons.search_rounded,
+                      tooltip: const LocalizedText(
+                        en: 'Search projects',
+                        ar: 'البحث في المشاريع',
+                      ).resolve(context),
                       onPressed: () {
                         messenger.showSnackBar(
                           SnackBar(
@@ -90,19 +96,12 @@ class LearningHubHero extends StatelessWidget {
                     ),
                     const Spacer(),
                     _HeroActionButton(
-                      icon: Icons.arrow_forward_rounded,
-                      onPressed: () {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              const LocalizedText(
-                                en: 'Header action is a visual placeholder for now.',
-                                ar: 'زر العنوان عنصر بصري تجريبي حالياً.',
-                              ).resolve(context),
-                            ),
-                          ),
-                        );
-                      },
+                      icon: Icons.add_rounded,
+                      tooltip: const LocalizedText(
+                        en: 'Add project',
+                        ar: 'إضافة مشروع',
+                      ).resolve(context),
+                      onPressed: onAddProject,
                     ),
                   ],
                 ),
@@ -143,6 +142,30 @@ class LearningHubHero extends StatelessWidget {
                         );
                       }).toList(),
                     ),
+                    if (onAddProject != null) ...[
+                      const SizedBox(height: AppSpacing.xl),
+                      FilledButton.icon(
+                        onPressed: onAddProject,
+                        icon: const Icon(Icons.add_rounded),
+                        label: Text(
+                          const LocalizedText(
+                            en: 'Add project',
+                            ar: 'إضافة مشروع',
+                          ).resolve(context),
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: palette.lime,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.md,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppRadius.pillAll,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -185,10 +208,15 @@ class _HeroStat extends StatelessWidget {
 }
 
 class _HeroActionButton extends StatelessWidget {
-  const _HeroActionButton({required this.icon, required this.onPressed});
+  const _HeroActionButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
 
   final IconData icon;
-  final VoidCallback onPressed;
+  final String tooltip;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -201,6 +229,7 @@ class _HeroActionButton extends StatelessWidget {
         border: Border.all(color: palette.cardSurface.withValues(alpha: 0.08)),
       ),
       child: IconButton(
+        tooltip: tooltip,
         onPressed: onPressed,
         icon: Icon(icon, color: palette.textPrimary),
       ),

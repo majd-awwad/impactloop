@@ -94,7 +94,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Implemented for auth MVP** — forgot/reset UI and API exist; verification enforcement needs verification |
 | Material discovery | [features/material-discovery.md](features/material-discovery.md) | [flows/material-discovery-flow.md](flows/material-discovery-flow.md) | **Implemented** |
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** — material read/create/edit/delete; supplier reservations; delivery complete guarded backend-only |
-| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed (`/learning`, `/learning/:id`, Home spotlight); add-draft mock-only; legacy mock file for disabled AI/add-draft only |
+| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed (`/learning`, `/learning/:id`, Home spotlight); add-draft submits learner drafts for admin review; legacy mock file remains for disabled AI/old copy only |
 
 ### Phase 2B — supporting features
 

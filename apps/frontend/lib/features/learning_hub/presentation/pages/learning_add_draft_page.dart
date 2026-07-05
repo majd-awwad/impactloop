@@ -54,6 +54,17 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     }
   }
 
+  int _mapDurationMinutes(String value) {
+    switch (value) {
+      case 'short':
+        return 120;
+      case 'long':
+        return 300;
+      default:
+        return 240;
+    }
+  }
+
   String? _resolveCategoryId() {
     final categories = ref.read(projectCategoriesProvider).value;
     if (categories == null || categories.isEmpty) return null;
@@ -81,9 +92,10 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
   }
 
   List<Map<String, dynamic>> _parseSteps(String raw) {
-    final lines = raw.split('\n').map((line) => line.trim()).where(
-          (line) => line.isNotEmpty,
-        );
+    final lines = raw
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty);
     final steps = <Map<String, dynamic>>[];
     var index = 0;
     for (final line in lines) {
@@ -147,6 +159,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         description: summary,
         categoryId: categoryId,
         difficulty: _mapDifficulty(_selectedDifficulty),
+        estimatedDurationMinutes: _mapDurationMinutes(_selectedDuration),
         requiredComponents: _parseComponents(_componentsController.text),
         steps: _parseSteps(_stepsController.text),
         links: _parseLinks(_linksController.text),
@@ -164,9 +177,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
       );
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -307,8 +320,8 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
                       ar: 'إضافة مسودة مشروع',
                     ),
                     subtitle: const LocalizedText(
-                      en: 'Build a polished draft for review. This mock form is editable and interactive, but it does not submit data yet.',
-                      ar: 'أنشئ مسودة مشروع جاهزة للمراجعة. هذا النموذج التجريبي قابل للتحرير والتفاعل لكنه لا يرسل أي بيانات بعد.',
+                      en: 'Build a polished draft and submit it for admin review before it appears publicly.',
+                      ar: 'أنشئ مسودة مشروع جاهزة وأرسلها لمراجعة الإدارة قبل أن تظهر علناً.',
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -523,7 +536,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.arrow_forward_rounded),
                         label: Text(
@@ -630,8 +645,8 @@ class _AddDraftHero extends StatelessWidget {
                 ),
                 child: Text(
                   const LocalizedText(
-                    en: 'Mock only',
-                    ar: 'تجريبي فقط',
+                    en: 'Review draft',
+                    ar: 'مسودة للمراجعة',
                   ).resolve(context),
                   style: AppTextStyles.label(
                     context,

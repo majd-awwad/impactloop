@@ -119,7 +119,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Driver portal | **Partial** | Flutter `/driver/jobs` and `/driver/deliveries/:id` use driver APIs for available jobs, active assignments, accept, status updates with supplier/learner code prompts on `PICKED_UP`/`DELIVERED`, foreground auto-location sharing on the active delivery detail page, and manual foreground location ping — [delivery.md](features/delivery.md) |
 | AI material matching agent | **Not implemented** | No `ai-agent` module; no `ai_requests` table — [ai-agent.md](features/ai-agent.md) |
 | AI price suggestions (listing) | **Partial** | `ai-price-suggestion.service.ts`, `AiPriceLookupLog` — internal to price rules; **not** material-matching agent |
-| Learning hub API → Flutter | **Partial** | Read path wired: `/learning`, `/learning/:id`, Home spotlight; add-draft/AI/ratings/review pending |
+| Learning hub API → Flutter | **Partial** | Read path wired: `/learning`, `/learning/:id`, Home spotlight; add-draft submits learner drafts for admin review; AI/ratings remain pending |
 | Reviews | **Not implemented** | `reviews` table; no API/UI |
 | General notifications API | **Implemented** | `GET/PATCH /api/notifications` + reservation lifecycle writes to `notifications` table; supplier derived inbox unchanged |
 | Admin / moderator dashboards | **Partial** | Admin overview dashboard **Partial** ([admin.md](features/admin.md)); moderator **Not implemented** |
@@ -139,7 +139,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | Reservations | Yes | Partial (learner create/read + supplier workflow) | Partial (learner detail CTA + My Reservations + supplier portal) |
 | Delivery domain | Yes | Yes | Partial |
 | Legacy delivery fields on reservation | Yes | Deprecated compatibility only | No |
-| Learning projects | Yes | Yes (PUBLISHED only) | **Partial** — browse/detail/spotlight API-backed; add-draft mock-only |
+| Learning projects | Yes | Yes (PUBLISHED only + learner submit) | **Partial** — browse/detail/spotlight API-backed; add-draft submits for admin review |
 | Reviews | Yes | No | No |
 | Notifications (generic) | Yes | Yes | Partial (`/notifications` page) |
 | Price/category requests | Yes | Yes | Yes (supplier add flow) |
@@ -157,7 +157,7 @@ Mapped from [05-roadmap.md](05-roadmap.md) to **code reality** — roadmap text 
 | 2 Profiles/locations | Profile + location screens | **Partial** — profiles yes; saved locations API **not implemented** |
 | 3 Materials | Supply + discovery | **Implemented** (supplier create + public browse) |
 | 4 Reservations | Learner reserve, supplier accept | **Partial** — partial-quantity holds, learner PENDING cancel, supplier accept/reject/self-pickup complete |
-| 5 Learning hub + AI | Projects + AI matching | **Partial** — read API wired (Hub list/detail + Home spotlight); add-draft/AI/ratings/review **not implemented** |
+| 5 Learning hub + AI | Projects + AI matching | **Partial** — read API wired (Hub list/detail + Home spotlight); add-draft submit and admin review wired; AI/ratings remain **not implemented** |
 | 6 Delivery | Internal delivery | **Partial** — schema + learner/driver APIs; learner request/status/tracking summary and polling map marker UI; driver jobs/status/manual ping UI; no realtime stream |
 | 7 Admin/moderator | Dashboards, moderation | **Partial** — admin dashboard/invitations/approvals/material moderation/people management exist; moderator portal not implemented |
 
@@ -193,9 +193,9 @@ Unresolved risks and **Needs verification** items: [09-open-questions.md](09-ope
 | Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Implemented for auth MVP** |
 | Material discovery | [features/material-discovery.md](features/material-discovery.md) | [flows/material-discovery-flow.md](flows/material-discovery-flow.md) | **Implemented** |
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** |
-| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed; add-draft/AI/ratings/review pending |
+| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed; add-draft submit/admin review wired; AI/ratings pending |
 
-**Not covered as implemented:** AI agent, moderator portal, saved/liked/followed content, build checklist, project submission/review, realtime driver tracking stream, scheduled background reservation expiry cron, and QR polish remain pending/deferred.
+**Not covered as implemented:** AI agent, moderator portal, saved/liked/followed content, build checklist, moderator review, realtime driver tracking stream, scheduled background reservation expiry cron, and QR polish remain pending/deferred.
 
 ### Phase 2B supporting docs (code-derived)
 

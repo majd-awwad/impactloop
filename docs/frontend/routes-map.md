@@ -38,7 +38,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 |-------|-------|----------------|
 | **public** | Most routes (landing, materials, learning, auth pages, register deprecated fallbacks) | No login required |
 | **authenticated** | `/home`, `/profile`, `/profile/*`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
-| **learner** | `/learner/reservations`, `/learner/reservations/:id`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
+| **learner** | `/learner/reservations`, `/learner/reservations/:id`, `/learner/deliveries/:id`, `/learning/add-draft` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
 | **driver** | `/driver`, `/driver/*` | Requires login + `DRIVER` role; non-drivers redirect to `/home` |
 | **admin** | `/admin`, `/admin/*` (except access-denied) | Requires login + `ADMIN` role |
@@ -77,8 +77,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/learner/reservations/:id` | `LearnerReservationDetailPage` | learner | Single reservation detail with refresh + shared reservation card |
 | `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline, latest driver ping summary, and page-scoped polling map marker when tracking coordinates are allowed |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
-| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list; add-draft/AI paths remain mock/disabled |
-| `/learning/add-draft` | `LearningAddDraftPage` | public | **Mock form** — no submit API |
+| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail; add-draft submits learner drafts for admin review; AI paths remain disabled |
+| `/learning/add-draft` | `LearningAddDraftPage` | learner | Authenticated learner project draft form; submits to admin review |
 | `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail |
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default |
 | `/materials/:id` | `MaterialDetailsPage` | public | API-backed default |
