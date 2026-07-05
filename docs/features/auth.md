@@ -36,7 +36,7 @@ Public signup and login for **LEARNER** and **SUPPLIER** roles, session bootstra
 | Application | `features/auth/application/auth_controller.dart`, `auth_providers.dart`, `auth_navigation.dart`, `registration_draft_notifier.dart` |
 | Data | `features/auth/data/auth_api.dart`, `auth_repository.dart`, `models/` |
 | Pages | `presentation/pages/login_page.dart`, `register_page.dart`, `forgot_password_page.dart`, `reset_password_page.dart`, `auth_checking_page.dart`, `deprecated_onboarding_page.dart` |
-| Forms | `presentation/widgets/registration_wizard.dart`, `forgot_password_form.dart`, `reset_password_form.dart`, `complete_learner_profile_form.dart` (deprecated), `complete_supplier_profile_form.dart` (deprecated), `login_form.dart`, `become_supplier_wizard.dart`, `portal_switch_menu.dart` |
+| Forms | `presentation/widgets/registration_wizard.dart`, `forgot_password_form.dart`, `reset_password_form.dart`, `complete_learner_profile_form.dart` (deprecated), `complete_supplier_profile_form.dart` (deprecated), `login_form.dart`, `become_learner_wizard.dart`, `become_supplier_wizard.dart`, `portal_switch_menu.dart` |
 | Shell / theme | `presentation/widgets/auth_shell.dart`, `auth_*` widgets |
 
 **Legacy (unwired):** `presentation/pages/choose_role_page.dart`, `choose_role_form.dart`.
@@ -64,6 +64,7 @@ Public signup and login for **LEARNER** and **SUPPLIER** roles, session bootstra
 | PATCH | `/api/auth/change-password` | Yes (supplier portal) |
 | POST | `/api/auth/forgot-password` | Yes |
 | POST | `/api/auth/become-supplier` | Yes |
+| POST | `/api/auth/become-learner` | Yes |
 | POST | `/api/auth/switch-role` | Yes (account menu, profile, supplier popover) |
 
 Forgot/reset password behavior:
@@ -95,7 +96,8 @@ From [reusable-widgets](../frontend/reusable-widgets.md):
 ## Known gaps / Needs verification
 
 - Web refresh token: `WebCookieTokenStorage` is a no-op; refresh relies on **httpOnly cookie** from backend (`auth-token-delivery.ts`) and a credentialed bare refresh Dio client — **Needs verification** on all browsers.
-- Existing learner accounts can become suppliers from `/become-supplier` via `POST /api/auth/become-supplier` without creating a second account or removing `LEARNER`. Student/Individual types can list materials immediately; Workshop/Factory/Educational institution types require verification document upload and admin approval before publishing (same as registration). The response issues fresh auth tokens so supplier API routes authorize immediately.
+- Existing learner accounts can become suppliers from `/become-supplier` via `POST /api/auth/become-supplier` without creating a second account or removing `LEARNER`. Only **Student supplier** and **Individual supplier** types are allowed in this self-upgrade flow; organization types (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) are rejected with a separate-verification message. Admin, moderator, driver, and accounts that already have a supplier profile cannot use this endpoint. The response issues fresh auth tokens so supplier API routes authorize immediately.
+- Personal suppliers (`STUDENT_SUPPLIER`, `INDIVIDUAL_SUPPLIER`) without learner access can add learner role from `/become-learner` via `POST /api/auth/become-learner`. The page reuses `RegistrationWizard` with `LearnerSetupMode.addToExistingAccount` (same interests/goals/location/learner-basics steps as registration, without account fields). Organization supplier types, admin, moderator, and driver cannot use this endpoint. Response sets `activeRole` to `LEARNER` and returns refreshed auth session.
 - Dual-role users switch active portal with `POST /api/auth/switch-role` (`activeRole` = `LEARNER` or `SUPPLIER`). Organization supplier types (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) cannot switch to learner unless they already have the `LEARNER` role. Response includes refreshed auth tokens and updated `user`.
 - `RegistrationIntent.both` registers both roles in one `/register` wizard. Interests are collected once and mapped to `learnerProfile.interests`; learner bio is not collected during registration. Student/self-learner selections can suggest a matching supplier type, supplier public name defaults to the account full name, and supplier `pickupArea` is derived from onboarding city/area. Default `activeRole` after register is `LEARNER` when both roles are present.
 - Email/phone verification enforcement — **Needs verification** (`account_status` vs actual gate).

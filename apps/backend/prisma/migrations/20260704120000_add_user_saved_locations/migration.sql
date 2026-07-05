@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS "user_saved_locations" (
   "label" TEXT NOT NULL,
   "is_default" BOOLEAN NOT NULL DEFAULT false,
   "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP(3) NOT NULL,
 
   CONSTRAINT "user_saved_locations_pkey" PRIMARY KEY ("id")
 );

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/api_exception.dart';
 import '../../application/auth_controller.dart';
+import '../../application/auth_route_helpers.dart';
 import '../../application/portal_navigation.dart';
 import '../../data/models/user.dart';
 
@@ -54,30 +55,50 @@ class PortalSwitchMenuItems {
     TextStyle? labelStyle,
     TextStyle? noteStyle,
     VoidCallback? onBeforeSwitch,
+    Color? iconColor,
+    bool useListTileStyle = false,
   }) {
     final items = <Widget>[];
+    final resolvedIconColor =
+        iconColor ?? Theme.of(context).colorScheme.onSurface;
 
     if (shouldShowSwitchToLearner(user)) {
       items.add(
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.school_outlined, size: 20),
-          title: Text('Switch to Learner', style: labelStyle),
-          onTap: () => handlePortalRoleSwitch(
+        _buildAction(
+          context: context,
+          icon: Icons.school_outlined,
+          label: 'Switch to Learner',
+          iconColor: resolvedIconColor,
+          labelStyle: labelStyle,
+          onPressed: () => handlePortalRoleSwitch(
             context: context,
             ref: ref,
             targetRole: 'LEARNER',
             onBeforeSwitch: onBeforeSwitch,
           ),
-          dense: true,
-          visualDensity: VisualDensity.compact,
+          useListTileStyle: useListTileStyle,
+        ),
+      );
+    } else if (shouldShowBecomeLearner(user)) {
+      items.add(
+        _buildAction(
+          context: context,
+          icon: Icons.school_outlined,
+          label: 'Become a Learner',
+          iconColor: resolvedIconColor,
+          labelStyle: labelStyle,
+          onPressed: () {
+            onBeforeSwitch?.call();
+            context.push(becomeLearnerRoute);
+          },
+          useListTileStyle: useListTileStyle,
         ),
       );
     } else if (isOrganizationSupplierWithoutLearnerSwitch(user) &&
         user.isSupplierMode) {
       items.add(
         Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 8),
           child: Text(
             'Organization supplier accounts stay in supplier mode.',
             style: noteStyle,
@@ -88,23 +109,51 @@ class PortalSwitchMenuItems {
 
     if (shouldShowSwitchToSupplier(user)) {
       items.add(
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.storefront_outlined, size: 20),
-          title: Text('Switch to Supplier', style: labelStyle),
-          onTap: () => handlePortalRoleSwitch(
+        _buildAction(
+          context: context,
+          icon: Icons.storefront_outlined,
+          label: 'Switch to Supplier',
+          iconColor: resolvedIconColor,
+          labelStyle: labelStyle,
+          onPressed: () => handlePortalRoleSwitch(
             context: context,
             ref: ref,
             targetRole: 'SUPPLIER',
             onBeforeSwitch: onBeforeSwitch,
           ),
-          dense: true,
-          visualDensity: VisualDensity.compact,
+          useListTileStyle: useListTileStyle,
         ),
       );
     }
 
     return items;
+  }
+
+  static Widget _buildAction({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required Color iconColor,
+    required TextStyle? labelStyle,
+    required VoidCallback onPressed,
+    required bool useListTileStyle,
+  }) {
+    if (useListTileStyle) {
+      return ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Icon(icon, color: iconColor, size: 20),
+        title: Text(label, style: labelStyle),
+        onTap: onPressed,
+        dense: true,
+        visualDensity: VisualDensity.compact,
+      );
+    }
+
+    return MenuItemButton(
+      onPressed: onPressed,
+      leadingIcon: Icon(icon, color: iconColor, size: 20),
+      child: Text(label, style: labelStyle),
+    );
   }
 }
 

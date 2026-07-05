@@ -295,6 +295,7 @@ class _QuickActionsSection extends ConsumerWidget {
     final user = ref.watch(authControllerProvider).user;
     final isAdmin = userHasAdminRole(user);
     final hasSupplierRole = userHasSupplierRole(user);
+    final showBecomeSupplier = user != null && shouldShowBecomeSupplier(user);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -350,22 +351,27 @@ class _QuickActionsSection extends ConsumerWidget {
                 compact: useCompactActions,
                 onPressed: () => context.push(learnerReservationsRoute),
               ),
-              HomeActionCard(
-                icon: Icons.storefront_outlined,
-                title: useCompactActions ? 'Supplier' : 'Become a supplier',
-                description: useCompactActions
-                    ? 'Share materials'
-                    : hasSupplierRole
-                    ? 'Update your supplier profile and pickup details.'
-                    : 'Start the supplier setup path for your account.',
-                badge: useCompactActions
-                    ? null
-                    : hasSupplierRole
-                    ? 'Profile'
-                    : null,
-                compact: useCompactActions,
-                onPressed: () => context.push(supplierEntryRouteForUser(user)),
-              ),
+              if (showBecomeSupplier || hasSupplierRole)
+                HomeActionCard(
+                  icon: Icons.storefront_outlined,
+                  title: useCompactActions
+                      ? 'Supplier'
+                      : hasSupplierRole
+                      ? 'Supplier profile'
+                      : 'Become a supplier',
+                  description: useCompactActions
+                      ? 'Share materials'
+                      : hasSupplierRole
+                      ? 'Update your supplier profile and pickup details.'
+                      : 'Start the supplier setup path for your account.',
+                  badge: useCompactActions
+                      ? null
+                      : hasSupplierRole
+                      ? 'Profile'
+                      : null,
+                  compact: useCompactActions,
+                  onPressed: () => context.push(supplierEntryRouteForUser(user)),
+                ),
             ];
 
             return _ResponsiveGrid(

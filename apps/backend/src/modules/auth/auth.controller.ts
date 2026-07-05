@@ -21,6 +21,7 @@ import {
   resetPasswordWithToken,
   changePasswordForUser,
   becomeSupplier,
+  becomeLearner,
   switchActiveRole,
 } from './auth.service.js';
 
@@ -31,6 +32,7 @@ import type {
   RegisterInput,
   ResetPasswordInput,
   BecomeSupplierInput,
+  BecomeLearnerInput,
   SwitchRoleInput,
 } from './auth.validation.js';
 
@@ -123,6 +125,22 @@ export const postBecomeSupplier = async (
   });
 
   sendAuthSessionResponse(req, res, 'Supplier profile ready', result);
+};
+
+export const postBecomeLearner = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const body = req.body as BecomeLearnerInput;
+  const result = await becomeLearner(req.auth!.sub, {
+    userId: req.auth!.sub,
+    learnerType: body.learnerType,
+    skillLevel: body.skillLevel,
+    interests: body.interests,
+    bio: body.bio,
+  });
+
+  sendAuthSessionResponse(req, res, 'Learner access added', result);
 };
 
 export const postSwitchRole = async (

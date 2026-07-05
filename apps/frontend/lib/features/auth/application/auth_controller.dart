@@ -5,6 +5,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../supplier_portal/application/supplier_portal_refresh.dart';
 import '../data/auth_repository.dart';
 import '../data/models/auth_tokens.dart';
+import '../data/models/become_learner_request.dart';
 import '../data/models/become_supplier_request.dart';
 import '../data/models/register_request.dart';
 import '../data/models/user.dart';
@@ -286,6 +287,29 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       final freshUser = await _repository.becomeSupplier(request);
+      state = AuthState(
+        user: freshUser,
+        accessToken: _repository.accessToken,
+        isLoading: false,
+        hasBootstrapped: true,
+      );
+      _invalidateSupplierPortalProvidersSafely();
+      return freshUser;
+    } on ApiException catch (error) {
+      state = state.copyWith(isLoading: false, error: error);
+      rethrow;
+    } catch (error) {
+      final apiError = normalizeApiException(error);
+      state = state.copyWith(isLoading: false, error: apiError);
+      throw apiError;
+    }
+  }
+
+  Future<User> becomeLearner(BecomeLearnerRequest request) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      final freshUser = await _repository.becomeLearner(request);
       state = AuthState(
         user: freshUser,
         accessToken: _repository.accessToken,

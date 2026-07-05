@@ -60,6 +60,7 @@ void main() {
 
     expect(find.text('My reservations'), findsOneWidget);
     expect(find.text('Switch to Supplier'), findsOneWidget);
+    expect(find.text('Become a supplier'), findsNothing);
     expect(find.text('Supplier dashboard'), findsNothing);
   });
 
@@ -77,6 +78,34 @@ void main() {
       expect(find.text('My reservations'), findsNothing);
     },
   );
+
+  testWidgets('supplier-only personal supplier menu shows become learner', (
+    tester,
+  ) async {
+    await _pumpEntryNavBar(
+      tester,
+      User(
+        id: 'user-1',
+        displayName: 'Supplier User',
+        email: 'supplier@test.com',
+        accountStatus: 'ACTIVE',
+        roles: const ['SUPPLIER'],
+        activeRole: 'SUPPLIER',
+        canBecomeLearner: true,
+        supplierProfile: const SupplierProfile(
+          supplierType: 'INDIVIDUAL_SUPPLIER',
+          publicName: 'Supplier User',
+        ),
+        createdAt: DateTime(2026),
+      ),
+    );
+
+    await tester.tap(find.byType(UserAvatar).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Become a Learner'), findsOneWidget);
+    expect(find.text('Switch to Learner'), findsNothing);
+  });
 }
 
 Future<void> _pumpEntryNavBar(WidgetTester tester, User user) async {

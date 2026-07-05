@@ -7,6 +7,7 @@ import '../../features/auth/application/auth_navigation.dart';
 import '../widgets/app_mobile_bottom_nav_bar.dart';
 import '../../features/auth/presentation/models/registration_wizard_step.dart';
 import '../../features/auth/presentation/pages/auth_checking_page.dart';
+import '../../features/auth/presentation/widgets/become_learner_wizard.dart';
 import '../../features/auth/presentation/widgets/become_supplier_wizard.dart';
 import '../../features/auth/presentation/pages/deprecated_onboarding_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
@@ -95,6 +96,10 @@ bool _isSupplierPortalPath(String path) {
     return false;
   }
 
+  if (path == becomeLearnerRoute) {
+    return false;
+  }
+
   if (isSupplierVerificationStatusRoute(path) ||
       path == supplierVerificationPendingRoute) {
     return false;
@@ -125,6 +130,10 @@ bool _isAuthPage(String path) =>
 
 _RouteAccessLevel _routeAccessForPath(String path) {
   if (path == becomeSupplierRoute || path == '/supplier/onboarding') {
+    return _RouteAccessLevel.authenticated;
+  }
+
+  if (path == becomeLearnerRoute) {
     return _RouteAccessLevel.authenticated;
   }
 
@@ -337,11 +346,55 @@ String? _resolveBecomeSupplierRedirect(AuthState authState, String path) {
     return null;
   }
 
-  if (userHasSupplierRole(authState.user)) {
-    return supplierProfileRoute;
+  final user = authState.user!;
+
+  if (userHasSupplierRole(user) || user.supplierProfile != null) {
+    return supplierOverviewRoute;
+  }
+
+  if (userHasAdminRole(user) ||
+      userHasRole(user, 'MODERATOR') ||
+      userHasDriverRole(user)) {
+    return homeRoute;
+  }
+
+  if (!userHasRole(user, 'LEARNER')) {
+    return homeRoute;
   }
 
   return null;
+}
+
+String? _resolveBecomeLearnerRedirect(AuthState authState, String path) {
+  if (path != becomeLearnerRoute) {
+    return null;
+  }
+
+  if (!authState.isAuthenticated || authState.user == null) {
+    return null;
+  }
+
+  final user = authState.user!;
+
+  if (user.canBecomeLearner) {
+    return null;
+  }
+
+  if (userHasAdminRole(user) ||
+      userHasRole(user, 'MODERATOR') ||
+      userHasDriverRole(user)) {
+    return homeRoute;
+  }
+
+  if (user.canSwitchToLearner) {
+    return homeRoute;
+  }
+
+  if (user.isSupplierMode || userHasSupplierRole(user)) {
+    return supplierOverviewRoute;
+  }
+
+  return homeRoute;
 }
 
 String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
@@ -385,6 +438,11 @@ String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
   );
   if (becomeSupplierRedirect != null) {
     return becomeSupplierRedirect;
+  }
+
+  final becomeLearnerRedirect = _resolveBecomeLearnerRedirect(authState, path);
+  if (becomeLearnerRedirect != null) {
+    return becomeLearnerRedirect;
   }
 
   if (authState.status == AuthStatus.unknown) {
@@ -534,6 +592,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: becomeSupplierRoute,
         builder: (context, state) => const BecomeSupplierPage(),
+      ),
+      GoRoute(
+        path: becomeLearnerRoute,
+        builder: (context, state) => const BecomeLearnerPage(),
       ),
       GoRoute(
         path: '/supplier/onboarding',

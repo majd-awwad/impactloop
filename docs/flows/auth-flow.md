@@ -264,7 +264,7 @@ Entry routing uses `supplierEntryRouteForUser`: learner-only → `/become-suppli
 
 ### Backend path
 
-`POST /api/auth/become-supplier` (authenticated) → `auth.service.becomeSupplier` → `authRepository.becomeSupplierForUser` adds `SUPPLIER` role, creates or reuses supplier profile, sets `activeRole` to `SUPPLIER`, returns fresh auth session (JWT roles in sync).
+`POST /api/auth/become-supplier` (authenticated) → `auth.service.becomeSupplier` → `authRepository.becomeSupplierForUser` adds `SUPPLIER` role, creates supplier profile, sets `activeRole` to `SUPPLIER`, returns fresh auth session (JWT roles in sync). Rejects organization supplier types, restricted staff roles, and accounts that already have a supplier profile.
 
 ### Database changes
 
@@ -286,7 +286,48 @@ Dual-role session; supplier API routes authorize immediately; learner data and r
 
 ---
 
-## Flow J — Switch active portal (dual-role)
+## Flow J — Become learner (existing personal supplier)
+
+### Trigger
+
+Personal supplier (`STUDENT_SUPPLIER` or `INDIVIDUAL_SUPPLIER`) without learner profile taps **Become a Learner** from the supplier account menu.
+
+### User path
+
+1. `/become-learner` reuses `RegistrationWizard` in `LearnerSetupMode.addToExistingAccount`: interests, goals, optional location, learner type, skill level, review.
+2. Submit → account keeps `SUPPLIER` role, gains `LEARNER` role and learner profile → snackbar “Learner access added to your account.” → lands on learner portal (`postAuthRouteForUser`).
+
+No email, password, or new user creation. Organization supplier types are rejected.
+
+### Frontend path
+
+`BecomeLearnerPage` → `RegistrationWizard(mode: addToExistingAccount)` → `registrationDraftProvider.toBecomeLearnerRequest()` → `authController.becomeLearner` → `POST /api/auth/become-learner` → `context.go(postAuthRouteForUser(user))`.
+
+### Backend path
+
+`POST /api/auth/become-learner` (authenticated) → `auth.service.becomeLearner` → `authRepository.becomeLearnerForUser` adds `LEARNER` role, creates learner profile, sets `activeRole` to `LEARNER`, returns fresh auth session. Rejects organization supplier types, restricted staff roles, and idempotently handles existing learner profile.
+
+### Database changes
+
+Insert or update: `user_roles` (LEARNER), `learner_profiles`; update `users.active_role`.
+
+### Success state
+
+Dual-role session; learner portal routes authorize immediately; supplier data remains on the same account.
+
+### Error states
+
+- Organization supplier type → `403 FORBIDDEN`.
+- Admin/driver/moderator account → `403 FORBIDDEN`.
+- Field validation errors map to wizard inline errors.
+
+### Files involved
+
+`become_learner_wizard.dart`, `registration_wizard.dart`, `learner_setup_mode.dart`, `become_learner_request.dart`, `auth_controller.dart`, `auth_api.dart`, `auth.service.ts`, `auth.repository.ts`, `role-capabilities.ts`
+
+---
+
+## Flow K — Switch active portal (dual-role)
 
 ### Trigger
 

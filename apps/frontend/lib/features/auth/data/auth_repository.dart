@@ -2,6 +2,7 @@ import '../../../core/auth/access_token_holder.dart';
 import '../../../core/auth/token_storage.dart';
 import 'auth_api.dart';
 import 'models/auth_tokens.dart';
+import 'models/become_learner_request.dart';
 import 'models/become_supplier_request.dart';
 import 'models/register_request.dart';
 import 'models/user.dart';
@@ -76,6 +77,12 @@ class AuthRepository {
 
   Future<User> becomeSupplier(BecomeSupplierRequest request) async {
     final result = await _api.becomeSupplier(request);
+    await _persistSession(result.tokens, result.user);
+    return result.user;
+  }
+
+  Future<User> becomeLearner(BecomeLearnerRequest request) async {
+    final result = await _api.becomeLearner(request);
     await _persistSession(result.tokens, result.user);
     return result.user;
   }
