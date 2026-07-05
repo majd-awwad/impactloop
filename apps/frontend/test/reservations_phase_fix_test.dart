@@ -49,7 +49,7 @@ void main() {
   test('supplier awaiting confirmation status label', () {
     expect(
       SupplierIncomingRequestStatus.awaitingConfirmation.label,
-      'Needs learner confirmation',
+      'Waiting for learner confirmation',
     );
   });
 }

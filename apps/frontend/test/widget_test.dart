@@ -23,6 +23,10 @@ import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/auth/application/auth_navigation.dart';
 import 'package:frontend/features/supplier_portal/data/models/supplier_dashboard.dart';
 import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_dashboard_providers.dart';
+import 'package:frontend/features/material_discovery/application/material_discovery_providers.dart';
+import 'package:frontend/features/material_discovery/data/mock_material_discovery_repository.dart';
+import 'package:frontend/features/locations/application/saved_locations_providers.dart';
+import 'package:frontend/features/materials/application/material_listing_providers.dart';
 import 'package:frontend/features/learning_hub/application/learning_hub_providers.dart';
 import 'package:go_router/go_router.dart';
 
@@ -32,11 +36,22 @@ final _learningHubTestOverride = learningHubRepositoryProvider.overrideWithValue
   emptyLearningHubRepository,
 );
 
+final _materialDiscoveryTestOverrides = [
+  materialDiscoveryRepositoryProvider.overrideWithValue(
+    const MockMaterialDiscoveryRepository(),
+  ),
+  discoveryMaterialCategoriesProvider.overrideWith((ref) => Future.value([])),
+  savedLocationsProvider.overrideWith((ref) => Future.value([])),
+];
+
 void main() {
   Future<void> pumpApp(WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [_learningHubTestOverride],
+        overrides: [
+          _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
+        ],
         child: const ImpactLoopApp(),
       ),
     );
@@ -316,6 +331,7 @@ void main() {
       ProviderScope(
         overrides: [
           _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
           authRepositoryProvider.overrideWithValue(repository),
         ],
         child: const ImpactLoopApp(),
@@ -357,6 +373,7 @@ void main() {
       ProviderScope(
         overrides: [
           _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
           authRepositoryProvider.overrideWithValue(repository),
         ],
         child: const ImpactLoopApp(),
@@ -399,6 +416,7 @@ void main() {
       ProviderScope(
         overrides: [
           _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
           authRepositoryProvider.overrideWithValue(repository),
         ],
         child: const ImpactLoopApp(),
@@ -421,6 +439,9 @@ void main() {
   testWidgets('supplier users are redirected from /login to /supplier', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(1400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     final tokenStorage = _FakeTokenStorage(
       initialRefreshToken: 'stored-refresh',
     );
@@ -441,6 +462,7 @@ void main() {
       ProviderScope(
         overrides: [
           _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
           authRepositoryProvider.overrideWithValue(repository),
           supplierDashboardProvider.overrideWith(
             (ref) async => _testSupplierDashboard(),
@@ -461,12 +483,15 @@ void main() {
     ).go('/login');
     await tester.pumpAndSettle();
 
-    expect(router.routeInformationProvider.value.uri.path, '/supplier');
+    expect(router.routeInformationProvider.value.uri.path, '/supplier/overview');
   });
 
   testWidgets('supplier users are redirected from /register to /supplier', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(1400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     final tokenStorage = _FakeTokenStorage(
       initialRefreshToken: 'stored-refresh',
     );
@@ -477,7 +502,10 @@ void main() {
           accessToken: 'restored-access',
           refreshToken: 'rotated-refresh',
         ),
-        meResult: _testUser(roles: const ['LEARNER', 'SUPPLIER']),
+        meResult: _testUser(
+          roles: const ['LEARNER', 'SUPPLIER'],
+          activeRole: 'SUPPLIER',
+        ),
       ),
       tokenStorage: tokenStorage,
       accessTokenHolder: accessTokenHolder,
@@ -487,6 +515,7 @@ void main() {
       ProviderScope(
         overrides: [
           _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
           authRepositoryProvider.overrideWithValue(repository),
           supplierDashboardProvider.overrideWith(
             (ref) async => _testSupplierDashboard(),
@@ -507,7 +536,7 @@ void main() {
     ).go('/register');
     await tester.pumpAndSettle();
 
-    expect(router.routeInformationProvider.value.uri.path, '/supplier');
+    expect(router.routeInformationProvider.value.uri.path, '/supplier/overview');
   });
 
   testWidgets('logged out users are redirected from /supplier to /login', (
@@ -531,6 +560,7 @@ void main() {
       ProviderScope(
         overrides: [
           _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
           authRepositoryProvider.overrideWithValue(repository),
         ],
         child: const ImpactLoopApp(),
@@ -572,6 +602,7 @@ void main() {
       ProviderScope(
         overrides: [
           _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
           authRepositoryProvider.overrideWithValue(repository),
         ],
         child: const ImpactLoopApp(),
@@ -624,6 +655,7 @@ void main() {
         {'role': 'SUPPLIER'},
       ],
       'primaryRole': 'ADMIN',
+      'activeRole': 'ADMIN',
       'createdAt': '2026-01-01T00:00:00.000Z',
     });
 
@@ -655,10 +687,11 @@ void main() {
           'email': 'supplier@example.com',
           'accountStatus': 'ACTIVE',
           'roles': ['SUPPLIER'],
+          'activeRole': 'SUPPLIER',
           'createdAt': '2026-01-01T00:00:00.000Z',
         }),
       ),
-      '/supplier',
+      '/supplier/overview',
     );
 
     expect(
@@ -781,13 +814,20 @@ class _FakeAuthApi extends AuthApi {
   }) async {}
 }
 
-User _testUser({List<String> roles = const ['LEARNER']}) {
+User _testUser({
+  List<String> roles = const ['LEARNER'],
+  String? activeRole,
+}) {
+  final resolvedActiveRole = activeRole ??
+      (roles.length == 1 && roles.first == 'SUPPLIER' ? 'SUPPLIER' : 'LEARNER');
+
   return User(
     id: 'user-1',
     displayName: 'Restored User',
     email: 'restored@example.com',
     accountStatus: 'ACTIVE',
     roles: roles,
+    activeRole: resolvedActiveRole,
     createdAt: DateTime(2026),
   );
 }

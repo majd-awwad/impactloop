@@ -313,7 +313,11 @@ describe('supplier reservations phase fix', () => {
   test('pickup complete 30 minutes before window start with correct code succeeds', async () => {
     const start = new Date(Date.now() + 30 * 60_000);
     const end = new Date(start.getTime() + 3_600_000);
-    const { reservation } = await acceptPickupReservation(ctx, start, end);
+    const { reservation } = await acceptPickupReservationWithPastWindow(
+      ctx,
+      start,
+      end,
+    );
 
     const completed = await completeSupplierReservation(
       ctx.supplierId,
@@ -348,7 +352,11 @@ describe('supplier reservations phase fix', () => {
   test('pickup complete during window with correct code succeeds', async () => {
     const start = new Date(Date.now() - 30 * 60_000);
     const end = new Date(Date.now() + 30 * 60_000);
-    const { reservation } = await acceptPickupReservation(ctx, start, end);
+    const { reservation } = await acceptPickupReservationWithPastWindow(
+      ctx,
+      start,
+      end,
+    );
 
     const completed = await completeSupplierReservation(
       ctx.supplierId,
@@ -410,7 +418,11 @@ describe('supplier reservations phase fix', () => {
   test('wrong pickup code is rejected regardless of time', async () => {
     const start = new Date(Date.now() - 15 * 60_000);
     const end = new Date(Date.now() + 45 * 60_000);
-    const { reservation } = await acceptPickupReservation(ctx, start, end);
+    const { reservation } = await acceptPickupReservationWithPastWindow(
+      ctx,
+      start,
+      end,
+    );
 
     await assert.rejects(
       () =>
@@ -451,7 +463,7 @@ describe('supplier reservations phase fix', () => {
   test('COMPLETED consumes stock once', async () => {
     const start = new Date(Date.now() - 15 * 60_000);
     const end = new Date(Date.now() + 45 * 60_000);
-    const { material, reservation } = await acceptPickupReservation(
+    const { material, reservation } = await acceptPickupReservationWithPastWindow(
       ctx,
       start,
       end,
@@ -647,10 +659,15 @@ describe('supplier reservations phase fix', () => {
     ctx.createdUserIds.push(extraDriver.id);
 
     const material = await createMaterial(ctx, { deliveryAllowed: true });
-    const supplierPickupStart = new Date(Date.now() - 15 * 60_000);
-    const supplierPickupEnd = new Date(Date.now() + 45 * 60_000);
-    const earliestDelivery = new Date(supplierPickupEnd.getTime() + 60 * 60_000);
+    const supplierPickupStartFuture = new Date(Date.now() + 24 * 3_600_000);
+    const supplierPickupEndFuture = new Date(
+      supplierPickupStartFuture.getTime() + 2 * 3_600_000,
+    );
+    const earliestDelivery = new Date(supplierPickupEndFuture.getTime() + 60 * 60_000);
+    const learnerDeliveryStart = new Date(earliestDelivery.getTime() - 30 * 60_000);
     const learnerDeliveryEnd = new Date(earliestDelivery.getTime() + 3 * 3_600_000);
+    const activeSupplierPickupStart = new Date(Date.now() - 15 * 60_000);
+    const activeSupplierPickupEnd = new Date(Date.now() + 45 * 60_000);
 
     const reservation = await createReservation(ctx.learnerId, {
       materialId: material.id,
@@ -658,7 +675,7 @@ describe('supplier reservations phase fix', () => {
       fulfillmentMethod: 'DELIVERY',
       learnerPreferredDeliveryWindows: [
         {
-          start: earliestDelivery.toISOString(),
+          start: learnerDeliveryStart.toISOString(),
           end: learnerDeliveryEnd.toISOString(),
         },
       ],
@@ -668,9 +685,19 @@ describe('supplier reservations phase fix', () => {
     ctx.createdReservationIds.push(reservation.id);
 
     await acceptSupplierReservation(ctx.supplierId, reservation.id, {
-      pickupWindowStart: supplierPickupStart.toISOString(),
-      pickupWindowEnd: supplierPickupEnd.toISOString(),
+      pickupWindowStart: supplierPickupStartFuture.toISOString(),
+      pickupWindowEnd: supplierPickupEndFuture.toISOString(),
       selectedPreferredWindowIndex: 0,
+    });
+
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        supplierPickupWindowStart: activeSupplierPickupStart,
+        supplierPickupWindowEnd: activeSupplierPickupEnd,
+        pickupWindowStart: activeSupplierPickupStart,
+        pickupWindowEnd: activeSupplierPickupEnd,
+      },
     });
 
     const delivery = await prisma.delivery.findFirstOrThrow({
@@ -793,7 +820,11 @@ describe('supplier reservations phase fix', () => {
   test('learner apology message is visible to supplier on reservation card', async () => {
     const start = new Date(Date.now() - 15 * 60_000);
     const end = new Date(Date.now() + 45 * 60_000);
-    const { reservation } = await acceptPickupReservation(ctx, start, end);
+    const { reservation } = await acceptPickupReservationWithPastWindow(
+      ctx,
+      start,
+      end,
+    );
 
     const apology = 'Sorry, I am late. Can we reschedule?';
     await createLearnerReservationMessage(ctx.learnerId, reservation.id, {

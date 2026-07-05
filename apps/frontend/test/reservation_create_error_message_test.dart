@@ -67,7 +67,7 @@ void main() {
 
     expect(
       reservationCreateErrorMessage(error),
-      'This material is no longer available for new reservations.',
+      'This request conflicts with the current state. Please refresh and try again.',
     );
   });
 }
