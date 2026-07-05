@@ -12,6 +12,8 @@ import {
   declineSupplierReservation,
   listSupplierReservations,
 } from './supplier-reservations.service.js';
+import { deriveHandoverCode } from '../../utils/handover-codes.js';
+import { safeSupplierAcceptPickupWindow } from '../../test-utils/handover-test-windows.js';
 
 const TEST_MARKER = '[test-complete-pickup]';
 
@@ -205,6 +207,9 @@ describe('completeSupplierReservation', () => {
     const result = await completeSupplierReservation(
       ctx.supplierId,
       reservation.id,
+      {
+        confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+      },
     );
 
     assert.equal(result.status, 'COMPLETED');
@@ -295,7 +300,10 @@ describe('completeSupplierReservation', () => {
     assert.equal(listed.canSupplierComplete, false);
 
     await assert.rejects(
-      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);
@@ -324,7 +332,10 @@ describe('completeSupplierReservation', () => {
       assert.equal(listed.canSupplierComplete, false);
 
       await assert.rejects(
-        () => completeSupplierReservation(ctx.supplierId, reservation.id),
+        () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
         (error: unknown) => {
           assert.ok(error instanceof AppError);
           assert.equal(error.statusCode, 409);
@@ -360,7 +371,10 @@ describe('completeSupplierReservation', () => {
     assert.equal(listed.canSupplierComplete, false);
 
     await assert.rejects(
-      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);
@@ -371,14 +385,14 @@ describe('completeSupplierReservation', () => {
 
   test('supplier accept sets material reserved', async () => {
     const { reservation, material } = await createReservation(ctx, 'PENDING');
-    const now = new Date();
+    const { start, end } = safeSupplierAcceptPickupWindow();
 
     const result = await acceptSupplierReservation(
       ctx.supplierId,
       reservation.id,
       {
-        pickupWindowStart: now.toISOString(),
-        pickupWindowEnd: new Date(now.getTime() + 3_600_000).toISOString(),
+        pickupWindowStart: start.toISOString(),
+        pickupWindowEnd: end.toISOString(),
       },
     );
 
@@ -398,15 +412,16 @@ describe('completeSupplierReservation', () => {
   });
 
   test('supplier accept requires pending reservation', async () => {
+    const { start, end } = safeSupplierAcceptPickupWindow();
+
     for (const status of ['ACCEPTED', 'REJECTED', 'COMPLETED'] as const) {
       const { reservation } = await createReservation(ctx, status);
-      const now = new Date();
 
       await assert.rejects(
         () =>
           acceptSupplierReservation(ctx.supplierId, reservation.id, {
-            pickupWindowStart: now.toISOString(),
-            pickupWindowEnd: new Date(now.getTime() + 3_600_000).toISOString(),
+            pickupWindowStart: start.toISOString(),
+            pickupWindowEnd: end.toISOString(),
           }),
         (error: unknown) => {
           assert.ok(error instanceof AppError);
@@ -473,7 +488,10 @@ describe('completeSupplierReservation', () => {
     );
 
     await assert.rejects(
-      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 404);
@@ -486,7 +504,10 @@ describe('completeSupplierReservation', () => {
     const { reservation } = await createReservation(ctx, 'PENDING');
 
     await assert.rejects(
-      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);
@@ -499,7 +520,10 @@ describe('completeSupplierReservation', () => {
     const { reservation } = await createReservation(ctx, 'REJECTED');
 
     await assert.rejects(
-      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);

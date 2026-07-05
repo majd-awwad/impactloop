@@ -115,11 +115,51 @@ enum VerificationDocumentStatus {
 
 enum ReservationStatus {
   PENDING
+  AWAITING_LEARNER_CONFIRMATION
+  AWAITING_SUPPLIER_CONFIRMATION
   ACCEPTED
   REJECTED
   CANCELLED
   COMPLETED
   EXPIRED
+  NO_SHOW
+  FULFILLMENT_FAILED
+  AWAITING_RESOLUTION
+}
+
+enum RescheduleRequestedBy {
+  SUPPLIER
+  LEARNER
+}
+
+enum NoShowReportReason {
+  LEARNER_DID_NOT_ARRIVE
+  DRIVER_DID_NOT_ARRIVE
+  NO_RESPONSE_AFTER_PICKUP_WINDOW
+  REPEATED_DELAY
+  WRONG_INFORMATION
+  SAFETY_OR_TRUST_CONCERN
+  SUPPLIER_UNAVAILABLE
+  SUPPLIER_MATERIAL_NOT_READY
+  NO_DRIVER_AVAILABLE
+  PICKUP_FAILED
+  DELIVERY_FAILED
+  DRIVER_ISSUE
+  OTHER
+}
+
+enum NoShowReportStatus {
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED
+  RESOLVED_NO_STRIKE
+}
+
+enum NoShowReportTargetRole {
+  LEARNER
+  SUPPLIER
+  DRIVER
+  SYSTEM
 }
 
 enum ReservationStatusGroup {
@@ -130,6 +170,11 @@ enum ReservationStatusGroup {
 enum PickupType {
   SELF_PICKUP
   DELIVERY_ALLOWED
+}
+
+enum ReservationFulfillmentMethod {
+  PICKUP
+  DELIVERY
 }
 
 enum DeliveryStatus {
@@ -143,6 +188,9 @@ enum DeliveryStatus {
   CANCELLED
   FAILED_PICKUP
   FAILED_DELIVERY
+  DRIVER_NO_SHOW
+  LEARNER_NO_SHOW
+  AWAITING_RESOLUTION
 }
 
 enum DriverProfileStatus {
@@ -284,10 +332,15 @@ model User {
   categoryRequests             CategoryRequest[]
   materialReportsSubmitted     MaterialReport[] @relation("MaterialReportReporter")
   materialReportsReviewed      MaterialReport[] @relation("MaterialReportReviewedBy")
+  reservationMessagesSent      ReservationMessage[] @relation("ReservationMessageSender")
+  noShowReportsSubmitted       NoShowReport[] @relation("NoShowReportReporter")
+  noShowReportsTargeted        NoShowReport[] @relation("NoShowReportTarget")
+  noShowReportsReviewed        NoShowReport[] @relation("NoShowReportReviewedBy")
   moderatedMaterials           Material[]       @relation("MaterialModeratedBy")
   supplierFollows              SupplierFollower[] @relation("SupplierFollowerUser")
   materialLikes                MaterialLike[]     @relation("MaterialLikeUser")
   materialViews                MaterialView[]     @relation("MaterialViewUser")
+  savedLocations               UserSavedLocation[]
   suspendedBy                  User?            @relation("UserSuspendedBy", fields: [suspendedById], references: [id], onDelete: SetNull)
   accountsSuspended            User[]           @relation("UserSuspendedBy")
   reactivatedBy                User?            @relation("UserReactivatedBy", fields: [reactivatedById], references: [id], onDelete: SetNull)
@@ -501,9 +554,27 @@ model Location {
   reservationDropoffs     Reservation[]                         @relation("ReservationDropoffLocation")
   deliveryPickups         Delivery[]                            @relation("DeliveryPickupLocation")
   deliveryDropoffs        Delivery[]                            @relation("DeliveryDropoffLocation")
+  savedByUsers            UserSavedLocation[]
 
   @@index([country, city])
   @@map("locations")
+}
+
+model UserSavedLocation {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  locationId  String   @map("location_id")
+  label       String
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@index([locationId])
+  @@map("user_saved_locations")
 }
 
 model Category {
@@ -807,9 +878,28 @@ model Reservation {
   ownerId           String                     @map("owner_id")
   quantityRequested Decimal                    @map("quantity_requested") @db.Decimal(12, 3)
   message           String?
+  fulfillmentMethod ReservationFulfillmentMethod @default(PICKUP) @map("fulfillment_method")
+  learnerPreferredPickupWindows Json?          @map("learner_preferred_pickup_windows")
+  learnerPreferredDeliveryWindows Json?        @map("learner_preferred_delivery_windows")
+  deliveryAddressText String?                  @map("delivery_address_text")
+  safeDropoffAllowed Boolean?                  @map("safe_dropoff_allowed")
+  deliveryNote      String?                    @map("delivery_note")
   status            ReservationStatus          @default(PENDING)
   pickupWindowStart DateTime?                  @map("pickup_window_start")
   pickupWindowEnd   DateTime?                  @map("pickup_window_end")
+  supplierProposedPickupWindowStart DateTime?    @map("supplier_proposed_pickup_window_start")
+  supplierProposedPickupWindowEnd   DateTime?    @map("supplier_proposed_pickup_window_end")
+  learnerProposedPickupWindowStart  DateTime?    @map("learner_proposed_pickup_window_start")
+  learnerProposedPickupWindowEnd    DateTime?    @map("learner_proposed_pickup_window_end")
+  pendingRescheduleRequestedBy      RescheduleRequestedBy? @map("pending_reschedule_requested_by")
+  pendingRescheduleReason           String?                  @map("pending_reschedule_reason")
+  pendingRescheduleNote             String?                  @map("pending_reschedule_note")
+  supplierPickupWindowStart DateTime?            @map("supplier_pickup_window_start")
+  supplierPickupWindowEnd   DateTime?            @map("supplier_pickup_window_end")
+  confirmedDeliveryWindowStart DateTime?         @map("confirmed_delivery_window_start")
+  confirmedDeliveryWindowEnd   DateTime?         @map("confirmed_delivery_window_end")
+  earliestDeliveryStart DateTime?                @map("earliest_delivery_start")
+  schedulingConflictReason String?               @map("scheduling_conflict_reason")
   pickupType        PickupType                 @default(SELF_PICKUP) @map("pickup_type")
   supplierNote      String?                    @map("supplier_note")
   rejectionReason   String?                    @map("rejection_reason")
@@ -822,6 +912,8 @@ model Reservation {
   dropoffLocationId String?                    @map("dropoff_location_id")
   driverProfileId   String?                    @map("driver_profile_id")
   completedAt       DateTime?                  @map("completed_at")
+  selfPickupCodeHash String?                   @map("self_pickup_code_hash")
+  selfPickupCodeGeneratedAt DateTime?         @map("self_pickup_code_generated_at")
   createdAt         DateTime                   @default(now()) @map("created_at")
   updatedAt         DateTime                   @updatedAt @map("updated_at")
   material          Material                   @relation(fields: [materialId], references: [id], onDelete: Cascade)
@@ -832,6 +924,8 @@ model Reservation {
   deliveries        Delivery[]
   reviews           Review[]
   statusHistory     ReservationStatusHistory[]
+  messages          ReservationMessage[]
+  noShowReports     NoShowReport[]
 
   @@index([ownerId])
   @@index([requesterId])
@@ -860,6 +954,10 @@ model Delivery {
   learnerNote             String?                 @map("learner_note")
   driverNote              String?                 @map("driver_note")
   failureReason           String?                 @map("failure_reason")
+  supplierHandoverCodeHash String?                @map("supplier_handover_code_hash")
+  supplierHandoverCodeGeneratedAt DateTime?       @map("supplier_handover_code_generated_at")
+  learnerDeliveryCodeHash String?                 @map("learner_delivery_code_hash")
+  learnerDeliveryCodeGeneratedAt DateTime?        @map("learner_delivery_code_generated_at")
   createdAt               DateTime                @default(now()) @map("created_at")
   updatedAt               DateTime                @updatedAt @map("updated_at")
   reservation             Reservation             @relation(fields: [reservationId], references: [id], onDelete: Cascade)
@@ -870,6 +968,7 @@ model Delivery {
   assignments             DeliveryAssignment[]
   statusHistory           DeliveryStatusHistory[]
   locationPings           DeliveryLocationPing[]
+  incidentReports         NoShowReport[]
 
   @@index([reservationId])
   @@index([status])
@@ -952,6 +1051,50 @@ model ReservationStatusHistory {
   @@index([statusGroup])
   @@index([changedBy])
   @@map("reservation_status_history")
+}
+
+model ReservationMessage {
+  id            String      @id @default(cuid())
+  reservationId String      @map("reservation_id")
+  senderUserId  String      @map("sender_user_id")
+  body          String
+  createdAt     DateTime    @default(now()) @map("created_at")
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  sender        User        @relation("ReservationMessageSender", fields: [senderUserId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId, createdAt])
+  @@index([senderUserId])
+  @@map("reservation_messages")
+}
+
+model NoShowReport {
+  id                String                 @id @default(cuid())
+  reservationId     String                 @map("reservation_id")
+  deliveryId        String?                @map("delivery_id")
+  reporterUserId    String                 @map("reporter_user_id")
+  targetUserId      String?                @map("target_user_id")
+  targetRole        NoShowReportTargetRole @map("target_role")
+  reasonCode        NoShowReportReason     @map("reason_code")
+  note              String?
+  pickupWindowStart DateTime?              @map("pickup_window_start")
+  pickupWindowEnd   DateTime?              @map("pickup_window_end")
+  status            NoShowReportStatus     @default(PENDING_REVIEW)
+  reviewedById      String?                @map("reviewed_by_id")
+  reviewedAt        DateTime?              @map("reviewed_at")
+  reviewNote        String?                @map("review_note")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  reservation       Reservation            @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  delivery          Delivery?              @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  reporter          User                   @relation("NoShowReportReporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+  target            User?                  @relation("NoShowReportTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  reviewedBy        User?                  @relation("NoShowReportReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([reservationId, targetUserId])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([targetUserId, status])
+  @@index([reporterUserId])
+  @@index([deliveryId])
+  @@map("no_show_reports")
 }
 
 model Review {

@@ -94,14 +94,14 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Implemented for auth MVP** — forgot/reset UI and API exist; verification enforcement needs verification |
 | Material discovery | [features/material-discovery.md](features/material-discovery.md) | [flows/material-discovery-flow.md](flows/material-discovery-flow.md) | **Implemented** |
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** — material read/create/edit/delete; supplier reservations; delivery complete guarded backend-only |
-| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed (`/learning`, `/learning/:id`, Home spotlight); add-draft mock-only; legacy mock file for disabled AI/add-draft only |
+| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed (`/learning`, `/learning/:id`, Home spotlight); add-draft submit and admin moderation wired; legacy mock file retained for disabled AI/sample catalog only |
 
 ### Phase 2B — supporting features
 
 | Area | Feature doc | Flow doc(s) | Ship status (summary) |
 |------|-------------|-------------|------------------------|
 | Materials listing (shared data layer) | [features/materials-listing.md](features/materials-listing.md) | — (see [supplier-material-listing-flow](flows/supplier-material-listing-flow.md)) | **Partial** — supplier create support; no update/delete |
-| Locations | [features/locations.md](features/locations.md) | — | **Partial** — reverse geocode + profile/material usage; public redaction **Needs verification** |
+| Locations | [features/locations.md](features/locations.md) | — | **Partial** — forward/reverse geocode + profile/material usage; public redaction **Needs verification** |
 | Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Implemented** — admin UI + accept UI exist; email delivery depends on provider |
 | Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static UI; no API |
 | Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — suggested materials + learning spotlight **API-backed** |
@@ -119,7 +119,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 
 Gap docs are stubs — see [09-open-questions.md](09-open-questions.md) before implementing.
 
-**Not documented as implemented:** live realtime tracking stream, AI material matching agent, moderator portal, saved/liked/followed content, project build checklist, and project submission/review workflow (unless code changes prove otherwise).
+**Not documented as implemented:** live realtime tracking stream, AI material matching agent, moderator portal, saved/followed content, project likes, project build checklist, moderator-owned project review workflow, and server-side Learning Hub page navigation.
 
 ADRs (`docs/adr/`) — accepted architecture decisions.
 

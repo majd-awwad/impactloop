@@ -13,6 +13,7 @@ import '../../../../core/config/api_config.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
+import '../../../auth/presentation/widgets/portal_switch_menu.dart';
 import '../../../auth/data/models/user.dart';
 
 const _profileDesktopBreakpoint = 600.0;
@@ -160,13 +161,62 @@ class _ProfileContent extends ConsumerWidget {
     return words.isEmpty ? value : words.join(' ');
   }
 
+  List<Widget> _buildPortalSwitchSection(BuildContext context, WidgetRef ref) {
+    final items = <Widget>[];
+
+    if (shouldShowSwitchToSupplier(user)) {
+      items.add(
+        _ProfileActionTile(
+          icon: Icons.storefront_outlined,
+          title: 'Switch to Supplier',
+          subtitle: 'Open the supplier portal on this account.',
+          onTap: () => handlePortalRoleSwitch(
+            context: context,
+            ref: ref,
+            targetRole: 'SUPPLIER',
+          ),
+        ),
+      );
+    }
+
+    if (shouldShowSwitchToLearner(user)) {
+      items.add(
+        _ProfileActionTile(
+          icon: Icons.school_outlined,
+          title: 'Switch to Learner',
+          subtitle: 'Return to learning, materials, and reservations.',
+          onTap: () => handlePortalRoleSwitch(
+            context: context,
+            ref: ref,
+            targetRole: 'LEARNER',
+          ),
+        ),
+      );
+    } else if (isOrganizationSupplierWithoutLearnerSwitch(user) &&
+        user.isSupplierMode) {
+      items.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          child: Text(
+            'Organization supplier accounts stay in supplier mode.',
+            style: AppTextStyles.body(context).copyWith(
+              color: AppThemeColors.of(context).textSecondary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return items;
+  }
+
   String? _memberSinceLabel(BuildContext context) {
     if (user.createdAt.millisecondsSinceEpoch == 0) {
       return null;
     }
-    final date = MaterialLocalizations.of(context).formatMediumDate(
-      user.createdAt,
-    );
+    final date = MaterialLocalizations.of(
+      context,
+    ).formatMediumDate(user.createdAt);
     return 'Member since $date';
   }
 
@@ -230,6 +280,13 @@ class _ProfileContent extends ConsumerWidget {
         ],
         _ProfileDivider(),
         _ProfileActionTile(
+          icon: Icons.location_on_outlined,
+          title: 'Saved locations',
+          subtitle: 'Manage private addresses for nearest-first discovery.',
+          onTap: () => context.push('/profile/locations'),
+        ),
+        _ProfileDivider(),
+        _ProfileActionTile(
           icon: Icons.lock_outline_rounded,
           title: 'Security',
           subtitle: 'Change your password.',
@@ -237,6 +294,7 @@ class _ProfileContent extends ConsumerWidget {
         ),
       ],
     );
+    final portalSwitchActions = _buildPortalSwitchSection(context, ref);
     final accountActions = _ProfileSection(
       title: 'Account actions',
       children: [
@@ -244,7 +302,7 @@ class _ProfileContent extends ConsumerWidget {
           icon: Icons.receipt_long_outlined,
           title: 'My reservations',
           subtitle: 'Track pickups and material requests.',
-          onTap: () => context.go(learnerReservationsRoute),
+          onTap: () => context.push(learnerReservationsRoute),
         ),
         _ProfileDivider(),
         _ProfileActionTile(
@@ -255,8 +313,12 @@ class _ProfileContent extends ConsumerWidget {
           subtitle: _hasSupplierAccess
               ? 'Manage your supplier details.'
               : 'Start sharing reusable materials.',
-          onTap: () => context.go(supplierEntryRouteForUser(user)),
+          onTap: () => context.push(supplierEntryRouteForUser(user)),
         ),
+        if (portalSwitchActions.isNotEmpty) ...[
+          _ProfileDivider(),
+          ...portalSwitchActions,
+        ],
       ],
     );
     final accountStatus = _ProfileSection(
@@ -507,7 +569,9 @@ class _LearnerProfileCard extends StatelessWidget {
     }
     if (skillLevel.isNotEmpty) {
       if (rows.isNotEmpty) rows.add(_ProfileDivider());
-      rows.add(_ProfileInfoRow(label: 'Skill level', value: humanize(skillLevel)));
+      rows.add(
+        _ProfileInfoRow(label: 'Skill level', value: humanize(skillLevel)),
+      );
     }
     if (interests.isNotEmpty) {
       if (rows.isNotEmpty) rows.add(_ProfileDivider());
@@ -671,9 +735,7 @@ class _ProfileActionTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: AppRadius.mdAll,
       child: Padding(
-        padding: const EdgeInsetsDirectional.symmetric(
-          vertical: AppSpacing.sm,
-        ),
+        padding: const EdgeInsetsDirectional.symmetric(vertical: AppSpacing.sm),
         child: Row(
           children: [
             Container(
@@ -713,7 +775,11 @@ class _ProfileActionTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            Icon(Icons.arrow_forward_rounded, color: colors.textMuted, size: 18),
+            Icon(
+              Icons.arrow_forward_rounded,
+              color: colors.textMuted,
+              size: 18,
+            ),
           ],
         ),
       ),
@@ -783,7 +849,11 @@ class _StatusLine extends StatelessWidget {
 
     return Row(
       children: [
-        Icon(icon, color: emphasized ? colors.primary : colors.textMuted, size: 18),
+        Icon(
+          icon,
+          color: emphasized ? colors.primary : colors.textMuted,
+          size: 18,
+        ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Column(
@@ -964,19 +1034,15 @@ class _ProfileBodyText extends StatelessWidget {
 
     return Text(
       text,
-      style: AppTextStyles.body(context).copyWith(
-        color: colors.textSecondary,
-        height: 1.45,
-      ),
+      style: AppTextStyles.body(
+        context,
+      ).copyWith(color: colors.textSecondary, height: 1.45),
     );
   }
 }
 
 class _LearnerCompletionHint extends StatelessWidget {
-  const _LearnerCompletionHint({
-    required this.title,
-    required this.body,
-  });
+  const _LearnerCompletionHint({required this.title, required this.body});
 
   final String title;
   final String body;
@@ -994,7 +1060,11 @@ class _LearnerCompletionHint extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lightbulb_outline_rounded, color: colors.primary, size: 18),
+          Icon(
+            Icons.lightbulb_outline_rounded,
+            color: colors.primary,
+            size: 18,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(

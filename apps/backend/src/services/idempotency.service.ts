@@ -5,6 +5,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { AppError } from "../utils/app-error.js";
 
 export const SUPPLIER_CREATE_MATERIAL_SCOPE = "SUPPLIER_CREATE_MATERIAL";
+export const LEARNING_PROJECT_SUBMIT_SCOPE = "LEARNING_PROJECT_SUBMIT";
 
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9._:-]{16,128}$/;
 

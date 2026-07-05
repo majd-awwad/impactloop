@@ -679,6 +679,10 @@ class _AccountMenu extends StatelessWidget {
 
   bool get _isAdmin => userHasAdminRole(user);
 
+  bool get _showLearnerActions => _isLearner && user.isLearnerMode;
+
+  bool get _showSupplierDashboard => _isSupplier && user.isSupplierMode;
+
   Future<void> _logout(BuildContext context) async {
     final logoutError = await ref
         .read(authControllerProvider.notifier)
@@ -751,7 +755,9 @@ class _AccountMenu extends StatelessWidget {
                     displayName: _displayName,
                     profileImageUrl: user.profileImageUrl,
                     radius: 15,
-                    backgroundColor: accent.withValues(alpha: isDark ? 0.16 : 0.1),
+                    backgroundColor: accent.withValues(
+                      alpha: isDark ? 0.16 : 0.1,
+                    ),
                     foregroundColor: accent,
                     initialTextStyle: AuthDarkTextStyles.label(
                       context,
@@ -849,7 +855,7 @@ class _AccountMenu extends StatelessWidget {
           label: 'Profile',
           onPressed: () => context.go('/profile'),
         ),
-        if (_isLearner)
+        if (_showLearnerActions)
           _AccountMenuItem(
             icon: Icons.receipt_long_outlined,
             label: 'My reservations',
@@ -861,7 +867,7 @@ class _AccountMenu extends StatelessWidget {
             label: 'Admin Portal',
             onPressed: () => context.go(adminPortalRoute),
           ),
-        if (_isSupplier)
+        if (_showSupplierDashboard)
           _AccountMenuItem(
             icon: Icons.dashboard_outlined,
             label: 'Supplier dashboard',
@@ -877,13 +883,12 @@ class _AccountMenu extends StatelessWidget {
           context: context,
           ref: ref,
           user: user,
-          labelStyle: AuthDarkTextStyles.label(context).copyWith(
-            color: primaryText,
-          ),
-          noteStyle: AuthDarkTextStyles.body(context).copyWith(
-            color: secondaryText,
-            fontSize: 12,
-          ),
+          labelStyle: AuthDarkTextStyles.label(
+            context,
+          ).copyWith(color: primaryText),
+          noteStyle: AuthDarkTextStyles.body(
+            context,
+          ).copyWith(color: secondaryText, fontSize: 12),
         ).map(
           (item) => Padding(
             padding: const EdgeInsetsDirectional.symmetric(

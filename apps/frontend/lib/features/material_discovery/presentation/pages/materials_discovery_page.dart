@@ -4,15 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
-import '../../../../core/network/api_client.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../materials/application/material_listing_providers.dart';
 import '../../../materials/data/models/category.dart';
-import '../../data/api_material_discovery_repository.dart';
+import '../../../locations/application/saved_locations_providers.dart';
+import '../../../locations/data/saved_location.dart';
+import '../../application/material_discovery_providers.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_list_merge.dart';
 import '../../domain/material_discovery_query.dart';
@@ -31,7 +33,8 @@ class MaterialsDiscoveryPage extends ConsumerStatefulWidget {
       _MaterialsDiscoveryPageState();
 }
 
-class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage> {
+class _MaterialsDiscoveryPageState
+    extends ConsumerState<MaterialsDiscoveryPage> {
   static const _debounceDuration = Duration(milliseconds: 300);
 
   late final MaterialDiscoveryRepository _defaultRepository;
@@ -40,6 +43,8 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
   final _searchController = TextEditingController();
   final _cityController = TextEditingController();
   final _areaController = TextEditingController();
+  final _latitudeController = TextEditingController();
+  final _longitudeController = TextEditingController();
 
   Timer? _debounceTimer;
   MaterialDiscoveryQuery _query = const MaterialDiscoveryQuery();
@@ -58,13 +63,12 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
   int _selectedSortIndex = 0;
   int _selectedConditionIndex = 0;
   String _searchValue = '';
+  String? _selectedSavedLocationId;
 
   @override
   void initState() {
     super.initState();
-    _defaultRepository = ApiMaterialDiscoveryRepository(
-      ref.read(apiClientProvider),
-    );
+    _defaultRepository = ref.read(materialDiscoveryRepositoryProvider);
     _activeRepository = widget.repository ?? _defaultRepository;
     _fetchMaterials(reset: true);
   }
@@ -86,6 +90,8 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
     _searchController.dispose();
     _cityController.dispose();
     _areaController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     super.dispose();
   }
 
@@ -97,7 +103,8 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
     required List<MaterialCategory> categories,
     int? page,
   }) {
-    final categoryId = _selectedCategoryIndex == 0 ||
+    final categoryId =
+        _selectedCategoryIndex == 0 ||
             categories.isEmpty ||
             _selectedCategoryIndex - 1 >= categories.length
         ? null
@@ -113,7 +120,27 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
     final pickupAllowed = quickFilter == 4 ? true : null;
 
     final condition = materialConditionFilters[_selectedConditionIndex].value;
-    final sort = _selectedSortIndex == 1 ? 'popular' : 'newest';
+    final selectedSort = switch (_selectedSortIndex) {
+      1 => 'popular',
+      2 => 'nearest',
+      _ => 'newest',
+    };
+    final latitude = double.tryParse(_latitudeController.text.trim());
+    final longitude = double.tryParse(_longitudeController.text.trim());
+    final savedLocationId = _selectedSavedLocationId?.trim();
+    final useSavedLocation =
+        selectedSort == 'nearest' &&
+        savedLocationId != null &&
+        savedLocationId.isNotEmpty;
+    final useManualCoordinates =
+        selectedSort == 'nearest' &&
+        !useSavedLocation &&
+        latitude != null &&
+        longitude != null;
+    final sort =
+        selectedSort == 'nearest' && !useSavedLocation && !useManualCoordinates
+        ? 'newest'
+        : selectedSort;
 
     return MaterialDiscoveryQuery(
       q: _searchController.text.trim().isEmpty
@@ -131,6 +158,9 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
           ? null
           : _areaController.text.trim(),
       sort: sort,
+      latitude: useManualCoordinates ? latitude : null,
+      longitude: useManualCoordinates ? longitude : null,
+      savedLocationId: useSavedLocation ? savedLocationId : null,
       page: page ?? 1,
     );
   }
@@ -172,6 +202,36 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
       _fetchMaterials(reset: true).whenComplete(() {
         _pendingCategoryRefetch = false;
       });
+    });
+  }
+
+  void _clearUnavailableSavedLocationSelection({
+    required List<MaterialCategory> categories,
+    required List<SavedLocation> savedLocations,
+    required bool savedLocationsLoaded,
+  }) {
+    final selectedId = _selectedSavedLocationId;
+    if (!savedLocationsLoaded || selectedId == null) {
+      return;
+    }
+
+    final selectedStillUsable = savedLocations.any(
+      (location) => location.id == selectedId && location.hasCoordinates,
+    );
+    if (selectedStillUsable) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _selectedSavedLocationId != selectedId) {
+        return;
+      }
+
+      setState(() {
+        _selectedSavedLocationId = null;
+        _query = _buildQuery(categories: categories);
+      });
+      _fetchMaterials(reset: true);
     });
   }
 
@@ -256,10 +316,7 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
     }
 
     setState(() {
-      _query = _buildQuery(
-        categories: categories,
-        page: pagination.page + 1,
-      );
+      _query = _buildQuery(categories: categories, page: pagination.page + 1);
     });
     _fetchMaterials(reset: false);
   }
@@ -269,12 +326,15 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
     _searchController.clear();
     _cityController.clear();
     _areaController.clear();
+    _latitudeController.clear();
+    _longitudeController.clear();
     setState(() {
       _searchValue = '';
       _selectedCategoryIndex = 0;
       _selectedQuickFilterIndex = 0;
       _selectedSortIndex = 0;
       _selectedConditionIndex = 0;
+      _selectedSavedLocationId = null;
       _query = _buildQuery(categories: categories);
     });
     _fetchMaterials(reset: true);
@@ -295,10 +355,7 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
   void _retryFetch(List<MaterialCategory> categories) {
     final shouldReset = _query.page <= 1;
     setState(() {
-      _query = _buildQuery(
-        categories: categories,
-        page: _query.page,
-      );
+      _query = _buildQuery(categories: categories, page: _query.page);
     });
     _fetchMaterials(reset: shouldReset);
   }
@@ -307,12 +364,22 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final categoriesAsync = ref.watch(discoveryMaterialCategoriesProvider);
+    final savedLocationsAsync = ref.watch(savedLocationsProvider);
     final categories = categoriesAsync.maybeWhen(
       data: (value) => value,
       orElse: () => const <MaterialCategory>[],
     );
+    final savedLocations = savedLocationsAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => const <SavedLocation>[],
+    );
 
     _maybeRefetchForLoadedCategories(categories);
+    _clearUnavailableSavedLocationSelection(
+      categories: categories,
+      savedLocations: savedLocations,
+      savedLocationsLoaded: savedLocationsAsync.hasValue,
+    );
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -335,21 +402,8 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
 
                 if (_errorMessage != null && _materials.isEmpty) {
                   return _CenteredState(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _StateMessage(
-                          text: LocalizedText(
-                            en: _errorMessage!,
-                            ar: 'تعذر تحميل المواد حالياً.',
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        FilledButton(
-                          onPressed: () => _retryFetch(categories),
-                          child: const Text('Try again'),
-                        ),
-                      ],
+                    child: _InitialLoadErrorState(
+                      onRetry: () => _retryFetch(categories),
                     ),
                   );
                 }
@@ -366,7 +420,12 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
                         searchController: _searchController,
                         cityController: _cityController,
                         areaController: _areaController,
+                        latitudeController: _latitudeController,
+                        longitudeController: _longitudeController,
                         searchValue: _searchValue,
+                        savedLocations: savedLocations,
+                        savedLocationsLoading: savedLocationsAsync.isLoading,
+                        selectedSavedLocationId: _selectedSavedLocationId,
                         selectedCategoryIndex: _selectedCategoryIndex,
                         selectedQuickFilterIndex: _selectedQuickFilterIndex,
                         selectedSortIndex: _selectedSortIndex,
@@ -386,6 +445,33 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
                         },
                         onCityChanged: (_) => _scheduleRefetch(categories),
                         onAreaChanged: (_) => _scheduleRefetch(categories),
+                        onLatitudeChanged: (value) {
+                          if (value.trim().isNotEmpty) {
+                            setState(() {
+                              _selectedSavedLocationId = null;
+                              _selectedSortIndex = 2;
+                            });
+                          }
+                          _scheduleRefetch(categories);
+                        },
+                        onLongitudeChanged: (value) {
+                          if (value.trim().isNotEmpty) {
+                            setState(() {
+                              _selectedSavedLocationId = null;
+                              _selectedSortIndex = 2;
+                            });
+                          }
+                          _scheduleRefetch(categories);
+                        },
+                        onSavedLocationSelected: (id) =>
+                            _applyImmediateFilter(categories, () {
+                              _selectedSavedLocationId = id;
+                              if (id != null) {
+                                _latitudeController.clear();
+                                _longitudeController.clear();
+                                _selectedSortIndex = 2;
+                              }
+                            }),
                         onCategorySelected: (index) => _applyImmediateFilter(
                           categories,
                           () => _selectedCategoryIndex = index,
@@ -405,7 +491,7 @@ class _MaterialsDiscoveryPageState extends ConsumerState<MaterialsDiscoveryPage>
                         onClearFilters: () => _clearFilters(categories),
                         onLoadMore: () => _loadMore(categories),
                         onMaterialTap: (material) =>
-                            context.go('/materials/${material.id}'),
+                            context.push('/materials/${material.id}'),
                       ),
                     ),
                   ),
@@ -448,6 +534,56 @@ class _StateMessage extends StatelessWidget {
         color: MaterialsUiPalette.of(context).textPrimary,
       ),
       textAlign: TextAlign.center,
+    );
+  }
+}
+
+class _InitialLoadErrorState extends StatelessWidget {
+  const _InitialLoadErrorState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 520),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_off_outlined, size: 42, color: palette.mint),
+          const SizedBox(height: AppSpacing.md),
+          _StateMessage(
+            text: const LocalizedText(
+              en: 'Unable to load materials',
+              ar: 'تعذر تحميل المواد',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            const LocalizedText(
+              en: 'Check your connection or try again in a moment.',
+              ar: 'تحقق من الاتصال أو حاول مرة أخرى بعد قليل.',
+            ).resolve(context),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text(
+              const LocalizedText(
+                en: 'Try again',
+                ar: 'حاول مرة أخرى',
+              ).resolve(context),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

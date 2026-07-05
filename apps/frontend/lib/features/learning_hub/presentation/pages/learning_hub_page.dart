@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
@@ -31,15 +35,100 @@ class LearningHubPage extends ConsumerStatefulWidget {
 class _LearningHubPageState extends ConsumerState<LearningHubPage> {
   static const int _chunkSize = 4;
 
+  late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
+  Timer? _searchDebounce;
+
   int _visibleProjectCount = _chunkSize;
   int _selectedCategoryIndex = 0;
   String? _selectedCategoryId;
+  String _searchDraft = '';
+  String? _searchTerm;
+  String? _selectedDifficulty;
+  String? _selectedTag;
 
   LearningProjectsQuery get _query => LearningProjectsQuery(
     page: 1,
     limit: 20,
+    q: _searchTerm,
     categoryId: _selectedCategoryId,
+    difficulty: _selectedDifficulty,
+    tag: _selectedTag,
   );
+
+  bool get _hasActiveFilters =>
+      _selectedCategoryId != null ||
+      (_searchTerm != null && _searchTerm!.isNotEmpty) ||
+      _selectedDifficulty != null ||
+      _selectedTag != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _searchFocusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchFocusNode.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    setState(() {
+      _searchDraft = value;
+    });
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      _applySearch(value);
+    });
+  }
+
+  void _applySearch(String value) {
+    _searchDebounce?.cancel();
+    final trimmed = value.trim();
+    final nextSearchTerm = trimmed.isEmpty ? null : trimmed;
+    if (_searchTerm == nextSearchTerm) {
+      return;
+    }
+
+    setState(() {
+      _searchTerm = nextSearchTerm;
+      _visibleProjectCount = _chunkSize;
+    });
+  }
+
+  void _setDifficulty(String? difficulty) {
+    setState(() {
+      _selectedDifficulty = difficulty;
+      _visibleProjectCount = _chunkSize;
+    });
+  }
+
+  void _setTag(String? tag) {
+    setState(() {
+      _selectedTag = tag;
+      _visibleProjectCount = _chunkSize;
+    });
+  }
+
+  void _clearFilters() {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    setState(() {
+      _selectedCategoryIndex = 0;
+      _selectedCategoryId = null;
+      _searchDraft = '';
+      _searchTerm = null;
+      _selectedDifficulty = null;
+      _selectedTag = null;
+      _visibleProjectCount = _chunkSize;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,25 +164,24 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
                       ref.invalidate(learningProjectsProvider(_query)),
                 ),
                 data: (result) {
-                  if (result.items.isEmpty) {
-                    return _HubStatePanel(
-                      icon: Icons.school_outlined,
-                      title: const LocalizedText(
-                        en: 'No published projects yet',
-                        ar: 'لا توجد مشاريع منشورة بعد',
-                      ),
-                      subtitle: const LocalizedText(
-                        en: 'When learning projects are published, they will appear here.',
-                        ar: 'عند نشر مشاريع تعليمية، ستظهر هنا.',
-                      ),
-                    );
-                  }
-
                   return _HubContent(
                     result: result,
                     categoriesAsync: categoriesAsync,
                     selectedCategoryIndex: _selectedCategoryIndex,
+                    searchController: _searchController,
+                    searchFocusNode: _searchFocusNode,
+                    searchDraft: _searchDraft,
+                    selectedDifficulty: _selectedDifficulty,
+                    selectedTag: _selectedTag,
+                    hasActiveFilters: _hasActiveFilters,
                     visibleProjectCount: _visibleProjectCount,
+                    onSearchChanged: _onSearchChanged,
+                    onSearchSubmitted: _applySearch,
+                    onDifficultySelected: _setDifficulty,
+                    onTagSelected: _setTag,
+                    onClearFilters: _clearFilters,
+                    onSubmitProject: () => context.go('/learning/add-draft'),
+                    onFocusSearch: () => _searchFocusNode.requestFocus(),
                     onCategorySelected: (index, categoryId) {
                       setState(() {
                         _selectedCategoryIndex = index;
@@ -126,7 +214,20 @@ class _HubContent extends StatelessWidget {
     required this.result,
     required this.categoriesAsync,
     required this.selectedCategoryIndex,
+    required this.searchController,
+    required this.searchFocusNode,
+    required this.searchDraft,
+    required this.selectedDifficulty,
+    required this.selectedTag,
+    required this.hasActiveFilters,
     required this.visibleProjectCount,
+    required this.onSearchChanged,
+    required this.onSearchSubmitted,
+    required this.onDifficultySelected,
+    required this.onTagSelected,
+    required this.onClearFilters,
+    required this.onSubmitProject,
+    required this.onFocusSearch,
     required this.onCategorySelected,
     required this.onLoadMore,
   });
@@ -134,14 +235,27 @@ class _HubContent extends StatelessWidget {
   final LearningProjectsResult result;
   final AsyncValue<List<MaterialCategory>> categoriesAsync;
   final int selectedCategoryIndex;
+  final TextEditingController searchController;
+  final FocusNode searchFocusNode;
+  final String searchDraft;
+  final String? selectedDifficulty;
+  final String? selectedTag;
+  final bool hasActiveFilters;
   final int visibleProjectCount;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<String> onSearchSubmitted;
+  final ValueChanged<String?> onDifficultySelected;
+  final ValueChanged<String?> onTagSelected;
+  final VoidCallback onClearFilters;
+  final VoidCallback onSubmitProject;
+  final VoidCallback onFocusSearch;
   final void Function(int index, String? categoryId) onCategorySelected;
   final VoidCallback onLoadMore;
 
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
-    final featuredProject = result.items.first;
+    final featuredProject = result.items.isEmpty ? null : result.items.first;
     final otherProjects = result.items.length > 1
         ? result.items.sublist(1)
         : const <LearningProject>[];
@@ -150,6 +264,7 @@ class _HubContent extends StatelessWidget {
         .toList(growable: false);
     final hasMoreProjects = visibleProjectCount < otherProjects.length;
     final categoryLabels = _categoryLabels(categoriesAsync);
+    final tagOptions = _tagOptions(result.items, selectedTag);
     final heroStats = <LocalizedText, int>{
       const LocalizedText(en: 'Published projects', ar: 'مشاريع منشورة'):
           result.total,
@@ -176,7 +291,11 @@ class _HubContent extends StatelessWidget {
                   ar: 'اكتشف المشاريع وتعلم ما يمكنك بناؤه من مواد معاد تدويرها.',
                 ),
                 stats: heroStats,
+                onSearchPressed: onFocusSearch,
+                onSubmitPressed: onSubmitProject,
               ),
+              const SizedBox(height: AppSpacing.lg),
+              _SubmitProjectCallout(onSubmitProject: onSubmitProject),
               const SizedBox(height: AppSpacing.lg),
               if (categoryLabels.isNotEmpty)
                 LearningCategoryChips(
@@ -191,17 +310,65 @@ class _HubContent extends StatelessWidget {
                 ),
               if (categoryLabels.isNotEmpty)
                 const SizedBox(height: AppSpacing.xl),
-              Text(
-                const LocalizedText(
-                  en: 'Project of the week',
-                  ar: 'مشروع الأسبوع',
-                ).resolve(context),
-                style: AppTextStyles.display(
-                  context,
-                ).copyWith(color: palette.textPrimary),
+              _LearningHubFilters(
+                searchController: searchController,
+                searchFocusNode: searchFocusNode,
+                searchDraft: searchDraft,
+                selectedDifficulty: selectedDifficulty,
+                selectedTag: selectedTag,
+                tagOptions: tagOptions,
+                hasActiveFilters: hasActiveFilters,
+                onSearchChanged: onSearchChanged,
+                onSearchSubmitted: onSearchSubmitted,
+                onDifficultySelected: onDifficultySelected,
+                onTagSelected: onTagSelected,
+                onClearFilters: onClearFilters,
               ),
-              const SizedBox(height: AppSpacing.md),
-              FeaturedProjectCard(project: featuredProject),
+              const SizedBox(height: AppSpacing.xl),
+              if (featuredProject == null)
+                _HubStatePanel(
+                  icon: hasActiveFilters
+                      ? Icons.search_off_rounded
+                      : Icons.school_outlined,
+                  title: hasActiveFilters
+                      ? const LocalizedText(
+                          en: 'No projects match your filters',
+                          ar: 'لا توجد مشاريع تطابق عوامل التصفية',
+                        )
+                      : const LocalizedText(
+                          en: 'No published projects yet',
+                          ar: 'لا توجد مشاريع منشورة بعد',
+                        ),
+                  subtitle: hasActiveFilters
+                      ? const LocalizedText(
+                          en: 'Try a different search, difficulty, category, or tag.',
+                          ar: 'جرّب بحثاً أو مستوى أو فئة أو وسم مختلف.',
+                        )
+                      : const LocalizedText(
+                          en: 'When learning projects are published, they will appear here.',
+                          ar: 'عند نشر مشاريع تعليمية، ستظهر هنا.',
+                        ),
+                  actionLabel: hasActiveFilters
+                      ? const LocalizedText(
+                          en: 'Clear filters',
+                          ar: 'مسح عوامل التصفية',
+                        )
+                      : null,
+                  onAction: hasActiveFilters ? onClearFilters : null,
+                )
+              else ...[
+                Text(
+                  const LocalizedText(
+                    en: 'Project of the week',
+                    ar: 'مشروع الأسبوع',
+                  ).resolve(context),
+                  style: AppTextStyles.display(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                FeaturedProjectCard(project: featuredProject),
+              ],
               if (otherProjects.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.xl),
                 Text(
@@ -351,6 +518,341 @@ class _HubContent extends StatelessWidget {
       orElse: () => null,
     );
   }
+
+  List<String> _tagOptions(List<LearningProject> projects, String? selectedTag) {
+    final tags = <String>{};
+    if (selectedTag != null && selectedTag.trim().isNotEmpty) {
+      tags.add(selectedTag.trim());
+    }
+
+    for (final project in projects) {
+      for (final tag in project.tags) {
+        final trimmed = tag.trim();
+        if (trimmed.isNotEmpty) {
+          tags.add(trimmed);
+        }
+      }
+    }
+
+    return tags.toList(growable: false)
+      ..sort((left, right) => left.toLowerCase().compareTo(right.toLowerCase()));
+  }
+}
+
+class _SubmitProjectCallout extends StatelessWidget {
+  const _SubmitProjectCallout({required this.onSubmitProject});
+
+  final VoidCallback onSubmitProject;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.xlAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 720;
+          final copy = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                const LocalizedText(
+                  en: 'Have a project idea?',
+                  ar: 'هل لديك فكرة مشروع؟',
+                ).resolve(context),
+                style: AppTextStyles.title(
+                  context,
+                ).copyWith(color: palette.textPrimary),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                const LocalizedText(
+                  en: 'Create a draft and submit it for admin review.',
+                  ar: 'أنشئ مسودة وأرسلها لمراجعة الإدارة.',
+                ).resolve(context),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textSecondary),
+              ),
+            ],
+          );
+          final action = FilledButton.icon(
+            onPressed: onSubmitProject,
+            icon: const Icon(Icons.edit_note_rounded),
+            label: Text(
+              const LocalizedText(
+                en: 'Add project draft',
+                ar: 'إضافة مسودة مشروع',
+              ).resolve(context),
+            ),
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                copy,
+                const SizedBox(height: AppSpacing.md),
+                action,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: copy),
+              const SizedBox(width: AppSpacing.lg),
+              SizedBox(width: 240, child: action),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _LearningHubFilters extends StatelessWidget {
+  const _LearningHubFilters({
+    required this.searchController,
+    required this.searchFocusNode,
+    required this.searchDraft,
+    required this.selectedDifficulty,
+    required this.selectedTag,
+    required this.tagOptions,
+    required this.hasActiveFilters,
+    required this.onSearchChanged,
+    required this.onSearchSubmitted,
+    required this.onDifficultySelected,
+    required this.onTagSelected,
+    required this.onClearFilters,
+  });
+
+  static const _difficultyOptions = <_DifficultyFilterOption>[
+    _DifficultyFilterOption(
+      value: 'BEGINNER',
+      label: LocalizedText(en: 'Easy', ar: 'سهل'),
+    ),
+    _DifficultyFilterOption(
+      value: 'INTERMEDIATE',
+      label: LocalizedText(en: 'Medium', ar: 'متوسط'),
+    ),
+    _DifficultyFilterOption(
+      value: 'ADVANCED',
+      label: LocalizedText(en: 'Advanced', ar: 'متقدم'),
+    ),
+  ];
+
+  final TextEditingController searchController;
+  final FocusNode searchFocusNode;
+  final String searchDraft;
+  final String? selectedDifficulty;
+  final String? selectedTag;
+  final List<String> tagOptions;
+  final bool hasActiveFilters;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<String> onSearchSubmitted;
+  final ValueChanged<String?> onDifficultySelected;
+  final ValueChanged<String?> onTagSelected;
+  final VoidCallback onClearFilters;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxWidth < 720;
+              final searchField = TextField(
+                controller: searchController,
+                focusNode: searchFocusNode,
+                textInputAction: TextInputAction.search,
+                onChanged: onSearchChanged,
+                onSubmitted: onSearchSubmitted,
+                decoration: InputDecoration(
+                  labelText: const LocalizedText(
+                    en: 'Search projects',
+                    ar: 'ابحث في المشاريع',
+                  ).resolve(context),
+                  hintText: const LocalizedText(
+                    en: 'Title, summary, or component',
+                    ar: 'العنوان أو الملخص أو المكوّن',
+                  ).resolve(context),
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: searchDraft.trim().isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: const LocalizedText(
+                            en: 'Clear search',
+                            ar: 'مسح البحث',
+                          ).resolve(context),
+                          onPressed: () {
+                            searchController.clear();
+                            onSearchChanged('');
+                            onSearchSubmitted('');
+                          },
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                ),
+              );
+              final clearButton = Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  onPressed: hasActiveFilters ? onClearFilters : null,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: Text(
+                    const LocalizedText(
+                      en: 'Clear filters',
+                      ar: 'مسح عوامل التصفية',
+                    ).resolve(context),
+                  ),
+                ),
+              );
+
+              if (isCompact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    searchField,
+                    const SizedBox(height: AppSpacing.sm),
+                    clearButton,
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: searchField),
+                  const SizedBox(width: AppSpacing.md),
+                  clearButton,
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _FilterGroup(
+            title: const LocalizedText(en: 'Difficulty', ar: 'المستوى'),
+            children: [
+              _LearningFilterChip(
+                label: const LocalizedText(
+                  en: 'All levels',
+                  ar: 'كل المستويات',
+                ).resolve(context),
+                selected: selectedDifficulty == null,
+                onSelected: () => onDifficultySelected(null),
+              ),
+              for (final option in _difficultyOptions)
+                _LearningFilterChip(
+                  label: option.label.resolve(context),
+                  selected: selectedDifficulty == option.value,
+                  onSelected: () => onDifficultySelected(option.value),
+                ),
+            ],
+          ),
+          if (tagOptions.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            _FilterGroup(
+              title: const LocalizedText(en: 'Tags', ar: 'الوسوم'),
+              children: [
+                for (final tag in tagOptions)
+                  _LearningFilterChip(
+                    label: tag,
+                    selected: selectedTag == tag,
+                    onSelected: () =>
+                        onTagSelected(selectedTag == tag ? null : tag),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterGroup extends StatelessWidget {
+  const _FilterGroup({required this.title, required this.children});
+
+  final LocalizedText title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title.resolve(context),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textPrimary),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: children,
+        ),
+      ],
+    );
+  }
+}
+
+class _LearningFilterChip extends StatelessWidget {
+  const _LearningFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onSelected(),
+      selectedColor: palette.lime,
+      checkmarkColor: palette.textPrimary,
+      labelStyle: AppTextStyles.label(context).copyWith(
+        color: palette.textPrimary,
+        fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+      ),
+      backgroundColor: palette.cardSurfaceAlt,
+      side: BorderSide(color: selected ? palette.lime : palette.borderSubtle),
+    );
+  }
+}
+
+class _DifficultyFilterOption {
+  const _DifficultyFilterOption({required this.value, required this.label});
+
+  final String value;
+  final LocalizedText label;
 }
 
 class _HubStatePanel extends StatelessWidget {

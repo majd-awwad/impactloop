@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -11,6 +11,7 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/learner_deliveries_provider.dart';
+import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/learner_delivery.dart';
 import '../delivery_status_presentation.dart';
 
@@ -226,11 +227,19 @@ class _DeliverySummaryPanel extends StatelessWidget {
           ],
           if (delivery.driverNote?.trim().isNotEmpty == true)
             _InfoRow(label: 'Driver note', value: delivery.driverNote!),
+          if (delivery.shouldShowLearnerDeliveryCode) ...[
+            const SizedBox(height: AppSpacing.md),
+            HandoverConfirmationCodePanel(
+              code: delivery.learnerDeliveryCode!,
+              instructions:
+                  'Give this code to the driver when you receive the material.',
+            ),
+          ],
           if (delivery.failureReason?.trim().isNotEmpty == true)
             _InfoRow(label: 'Failure reason', value: delivery.failureReason!),
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
-            onPressed: () => context.go('/learner/reservations'),
+            onPressed: () => context.popOrGo('/learner/reservations'),
             icon: const Icon(Icons.assignment_turned_in_outlined),
             label: const Text('Back to reservations'),
           ),

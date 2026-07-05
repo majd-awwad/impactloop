@@ -23,12 +23,15 @@ import '../../features/learning_hub/presentation/pages/learning_add_draft_page.d
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
+import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_security_page.dart';
+import '../../features/notifications/presentation/pages/user_notifications_page.dart';
+import '../../features/reservations/presentation/pages/learner_reservation_detail_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
 import '../../features/supplier_portal/application/supplier_verification_access.dart';
@@ -51,6 +54,7 @@ import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart
 import '../../features/admin_portal/presentation/pages/admin_audit_logs_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_deliveries_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_learning_projects_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_no_show_reports_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_reservations_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_impact_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_materials_page.dart';
@@ -62,7 +66,14 @@ import '../../features/invitations/presentation/pages/invite_accept_page.dart';
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
 const _adminAccessDeniedRoute = '/admin/access-denied';
 
-enum _RouteAccessLevel { public, authenticated, learner, supplier, driver, admin }
+enum _RouteAccessLevel {
+  public,
+  authenticated,
+  learner,
+  supplier,
+  driver,
+  admin,
+}
 
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   final path = state.matchedLocation;
@@ -134,7 +145,9 @@ _RouteAccessLevel _routeAccessForPath(String path) {
     return _RouteAccessLevel.admin;
   }
 
-  if (path == '/learner/reservations' ||
+  if (path == '/learning/add-draft' ||
+      path == '/learner/reservations' ||
+      path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/')) {
     return _RouteAccessLevel.learner;
   }
@@ -142,6 +155,7 @@ _RouteAccessLevel _routeAccessForPath(String path) {
   if (path == '/home' ||
       path == '/profile' ||
       path.startsWith('/profile/') ||
+      path == '/notifications' ||
       path == _supplierAccessDeniedRoute) {
     return _RouteAccessLevel.authenticated;
   }
@@ -245,10 +259,7 @@ String? _resolveAuthPageRedirect(AuthState authState, GoRouterState state) {
   return _resolveProtectedRoute(authState, accessLevel, target) ?? target;
 }
 
-String? _resolveSupplierVerificationRedirect(
-  AuthState authState,
-  String path,
-) {
+String? _resolveSupplierVerificationRedirect(AuthState authState, String path) {
   if (_isAuthPage(path) ||
       path == '/complete-supplier-profile' ||
       path == '/complete-learner-profile' ||
@@ -270,7 +281,8 @@ String? _resolveSupplierVerificationRedirect(
     verificationStatus: profile?.verificationStatus,
   );
 
-  final onVerificationPage = isSupplierVerificationStatusRoute(path) ||
+  final onVerificationPage =
+      isSupplierVerificationStatusRoute(path) ||
       path == supplierVerificationPendingRoute;
 
   if (gate != null && _isSupplierPortalPath(path) && !onVerificationPage) {
@@ -286,7 +298,9 @@ String? _resolveSupplierVerificationRedirect(
 
 bool _isLearnerPortalHomePath(String path) {
   return path == '/home' ||
+      path == '/learning/add-draft' ||
       path == '/learner/reservations' ||
+      path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/');
 }
 
@@ -308,7 +322,23 @@ String? _resolveActivePortalRedirect(AuthState authState, String path) {
       path != becomeSupplierRoute &&
       path != '/supplier/onboarding' &&
       user.canSwitchToSupplier) {
-    return learningHubRoute;
+    return homeRoute;
+  }
+
+  return null;
+}
+
+String? _resolveBecomeSupplierRedirect(AuthState authState, String path) {
+  if (path != becomeSupplierRoute && path != '/supplier/onboarding') {
+    return null;
+  }
+
+  if (!authState.isAuthenticated || authState.user == null) {
+    return null;
+  }
+
+  if (userHasSupplierRole(authState.user)) {
+    return supplierProfileRoute;
   }
 
   return null;
@@ -347,6 +377,14 @@ String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
   final portalRedirect = _resolveActivePortalRedirect(authState, path);
   if (portalRedirect != null) {
     return portalRedirect;
+  }
+
+  final becomeSupplierRedirect = _resolveBecomeSupplierRedirect(
+    authState,
+    path,
+  );
+  if (becomeSupplierRedirect != null) {
+    return becomeSupplierRedirect;
   }
 
   if (authState.status == AuthStatus.unknown) {
@@ -413,9 +451,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ProfileSecurityPage(),
       ),
       GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const UserNotificationsPage(),
+      ),
+      GoRoute(
+        path: '/profile/locations',
+        builder: (context, state) => const SavedLocationsPage(),
+      ),
+      GoRoute(
         path: '/learner/deliveries/:id',
         builder: (context, state) =>
             LearnerDeliveryDetailPage(deliveryId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/learner/reservations/:id',
+        builder: (context, state) => LearnerReservationDetailPage(
+          reservationId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: authCheckingRoute,
@@ -615,8 +667,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/supplier-verification',
-            builder: (context, state) =>
-                const AdminSupplierVerificationPage(),
+            builder: (context, state) => const AdminSupplierVerificationPage(),
           ),
           GoRoute(
             path: '/admin/materials',
@@ -647,6 +698,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/reservations',
             builder: (context, state) => const AdminReservationsPage(),
+          ),
+          GoRoute(
+            path: '/admin/no-show-reports',
+            builder: (context, state) => const AdminNoShowReportsPage(),
           ),
           GoRoute(
             path: '/admin/deliveries',

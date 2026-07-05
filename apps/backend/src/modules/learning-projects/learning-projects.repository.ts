@@ -3,6 +3,8 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import type { LearningProjectsQuery } from './learning-projects.validation.js';
 
+const clientOrPrisma = (client?: Prisma.TransactionClient) => client ?? prisma;
+
 const publicProjectWhere: Prisma.LearningProjectWhereInput = {
   status: 'PUBLISHED',
   category: {
@@ -246,10 +248,12 @@ export const createLearningProjectForReview = async (input: {
   }[];
   steps?: { title: string; description: string }[];
   links?: { url: string; title?: string }[];
+  client?: Prisma.TransactionClient;
 }) => {
   const now = new Date();
+  const client = clientOrPrisma(input.client);
 
-  return prisma.learningProject.create({
+  return client.learningProject.create({
     data: {
       categoryId: input.categoryId,
       createdBy: input.createdBy,

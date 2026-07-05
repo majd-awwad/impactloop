@@ -35,10 +35,7 @@ class SupplierDashboardRecentActivityPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.s.recentActivity,
-            style: context.supplierSectionTitle(),
-          ),
+          Text(context.s.recentActivity, style: context.supplierSectionTitle()),
           const SizedBox(height: AppSpacing.xs),
           Text(
             context.s.recentActivitySubtitle,
@@ -61,7 +58,7 @@ class SupplierDashboardRecentActivityPanel extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
-              onPressed: () => context.go(_footerRoute),
+              onPressed: () => context.push(_footerRoute),
               icon: Icon(
                 _footerRoute == '/supplier/reservations'
                     ? Icons.inbox_outlined
@@ -106,15 +103,15 @@ class SupplierDashboardRecentActivityPanel extends StatelessWidget {
     if (stats.reservations.pending > 0) {
       final pendingActivity = _findActivity(
         predicate: (item) =>
-            item.type.toUpperCase() == 'RESERVATION' &&
-            _looksPending(item),
+            item.type.toUpperCase() == 'RESERVATION' && _looksPending(item),
       );
 
       items.add(
         _CuratedActivityItem(
           icon: Icons.inbox_outlined,
           title: pendingActivity?.title ?? context.s.recentActivityPendingTitle,
-          body: pendingActivity?.body ??
+          body:
+              pendingActivity?.body ??
               context.s.pendingRequestsNeedResponse(stats.reservations.pending),
           accent: SupplierDashboardColors.pending,
           chip: context.s.tabPending,
@@ -241,8 +238,18 @@ class _ActivityTile extends StatelessWidget {
       return weekdays[timestamp.weekday - 1];
     }
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[timestamp.month - 1]} ${timestamp.day}';
   }
@@ -260,9 +267,7 @@ class _ActivityTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.backgroundElevated.withValues(alpha: 0.38),
         borderRadius: AppRadius.mdAll,
-        border: Border.all(
-          color: colors.border.withValues(alpha: 0.22),
-        ),
+        border: Border.all(color: colors.border.withValues(alpha: 0.22)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -364,9 +369,7 @@ class _EmptyActivityState extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.backgroundElevated.withValues(alpha: 0.4),
         borderRadius: AppRadius.lgAll,
-        border: Border.all(
-          color: colors.border.withValues(alpha: 0.22),
-        ),
+        border: Border.all(color: colors.border.withValues(alpha: 0.22)),
       ),
       child: Row(
         children: [

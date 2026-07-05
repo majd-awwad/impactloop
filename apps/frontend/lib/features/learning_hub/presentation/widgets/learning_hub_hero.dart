@@ -13,17 +13,19 @@ class LearningHubHero extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.stats,
+    this.onSearchPressed,
+    this.onSubmitPressed,
   });
 
   final LocalizedText title;
   final LocalizedText subtitle;
   final Map<LocalizedText, int> stats;
+  final VoidCallback? onSearchPressed;
+  final VoidCallback? onSubmitPressed;
 
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-
     return Container(
       constraints: const BoxConstraints(minHeight: 332),
       decoration: BoxDecoration(
@@ -75,34 +77,20 @@ class LearningHubHero extends StatelessWidget {
                   children: [
                     _HeroActionButton(
                       icon: Icons.search_rounded,
-                      onPressed: () {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              const LocalizedText(
-                                en: 'Search is a visual placeholder for now.',
-                                ar: 'البحث عنصر بصري تجريبي حالياً.',
-                              ).resolve(context),
-                            ),
-                          ),
-                        );
-                      },
+                      tooltip: const LocalizedText(
+                        en: 'Search projects',
+                        ar: '╪د╪ذ╪ص╪س ┘┘è ╪د┘┘à╪┤╪د╪▒┘è╪╣',
+                      ).resolve(context),
+                      onPressed: onSearchPressed,
                     ),
                     const Spacer(),
                     _HeroActionButton(
-                      icon: Icons.arrow_forward_rounded,
-                      onPressed: () {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              const LocalizedText(
-                                en: 'Header action is a visual placeholder for now.',
-                                ar: 'زر العنوان عنصر بصري تجريبي حالياً.',
-                              ).resolve(context),
-                            ),
-                          ),
-                        );
-                      },
+                      icon: Icons.edit_note_rounded,
+                      tooltip: const LocalizedText(
+                        en: 'Submit a project',
+                        ar: '╪ح╪▒╪│╪د┘ ┘à╪┤╪▒┘ê╪╣',
+                      ).resolve(context),
+                      onPressed: onSubmitPressed,
                     ),
                   ],
                 ),
@@ -185,10 +173,15 @@ class _HeroStat extends StatelessWidget {
 }
 
 class _HeroActionButton extends StatelessWidget {
-  const _HeroActionButton({required this.icon, required this.onPressed});
+  const _HeroActionButton({
+    required this.icon,
+    required this.tooltip,
+    this.onPressed,
+  });
 
   final IconData icon;
-  final VoidCallback onPressed;
+  final String tooltip;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -202,6 +195,7 @@ class _HeroActionButton extends StatelessWidget {
       ),
       child: IconButton(
         onPressed: onPressed,
+        tooltip: tooltip,
         icon: Icon(icon, color: palette.textPrimary),
       ),
     );

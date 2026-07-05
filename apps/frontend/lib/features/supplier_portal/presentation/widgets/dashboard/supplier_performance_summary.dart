@@ -9,10 +9,7 @@ import 'supplier_dashboard_colors.dart';
 
 /// Actionable next-step guidance derived from existing dashboard data.
 class SupplierPerformanceSummary extends StatelessWidget {
-  const SupplierPerformanceSummary({
-    super.key,
-    required this.dashboard,
-  });
+  const SupplierPerformanceSummary({super.key, required this.dashboard});
 
   final SupplierDashboard dashboard;
 
@@ -92,12 +89,12 @@ class SupplierPerformanceSummary extends StatelessWidget {
                 final highDemand = hasHighDemand
                     ? const _HighDemandInsight()
                     : null;
-                final engagement =
-                    totalViews > 0 && totalLikes <= 1
-                        ? const _EngagementInsight()
-                        : null;
-                final addMaterial =
-                    activeMaterials == 0 ? const _AddMaterialInsight() : null;
+                final engagement = totalViews > 0 && totalLikes <= 1
+                    ? const _EngagementInsight()
+                    : null;
+                final addMaterial = activeMaterials == 0
+                    ? const _AddMaterialInsight()
+                    : null;
 
                 if (wide) {
                   return IntrinsicHeight(
@@ -283,7 +280,7 @@ class _RequestsInsight extends StatelessWidget {
         title: context.s.requestsNeedAttention,
         message: context.s.pendingRequestsMessage(pending),
         actionLabel: context.s.reviewRequests,
-        onAction: () => context.go('/supplier/reservations'),
+        onAction: () => context.push('/supplier/reservations'),
       );
     }
 
@@ -298,10 +295,7 @@ class _RequestsInsight extends StatelessWidget {
 }
 
 class _PickupInsight extends StatelessWidget {
-  const _PickupInsight({
-    required this.locationSet,
-    required this.hasProfile,
-  });
+  const _PickupInsight({required this.locationSet, required this.hasProfile});
 
   final bool locationSet;
   final bool hasProfile;
@@ -326,7 +320,7 @@ class _PickupInsight extends StatelessWidget {
           ? context.s.pickupLocationMissing
           : context.s.completeProfileForPickup,
       actionLabel: context.s.updateProfile,
-      onAction: () => context.go('/supplier/profile'),
+      onAction: () => context.push('/supplier/profile'),
     );
   }
 }
@@ -351,15 +345,15 @@ class _GrowReuseInsight extends StatelessWidget {
     if (activeMaterials > 0 && reusedMaterials == 0) {
       message = context.s.growReuseActiveListings;
       actionLabel = compact ? null : context.s.viewMaterials;
-      onAction = compact ? null : () => context.go('/supplier/materials');
+      onAction = compact ? null : () => context.push('/supplier/materials');
     } else if (reusedMaterials > 0) {
       message = context.s.growReuseStarting;
       actionLabel = compact ? null : context.s.viewMaterials;
-      onAction = compact ? null : () => context.go('/supplier/materials');
+      onAction = compact ? null : () => context.push('/supplier/materials');
     } else {
       message = context.s.growReuseEmpty;
       actionLabel = compact ? null : context.s.addMaterial;
-      onAction = compact ? null : () => context.go('/supplier/materials/new');
+      onAction = compact ? null : () => context.push('/supplier/materials/new');
     }
 
     return _InsightShell(
@@ -390,9 +384,7 @@ class _AllCaughtUpBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.backgroundElevated.withValues(alpha: 0.35),
         borderRadius: AppRadius.lgAll,
-        border: Border.all(
-          color: colors.border.withValues(alpha: 0.22),
-        ),
+        border: Border.all(color: colors.border.withValues(alpha: 0.22)),
       ),
       child: Row(
         children: [
@@ -428,7 +420,7 @@ class _HighDemandInsight extends StatelessWidget {
       title: context.s.highDemandMaterialsTitle,
       message: context.s.strongDemandInsight,
       actionLabel: context.s.viewMaterials,
-      onAction: () => context.go('/supplier/materials'),
+      onAction: () => context.push('/supplier/materials'),
     );
   }
 }
@@ -444,7 +436,7 @@ class _EngagementInsight extends StatelessWidget {
       title: context.s.statTotalViews,
       message: context.s.improveEngagementInsight,
       actionLabel: context.s.viewMaterials,
-      onAction: () => context.go('/supplier/materials'),
+      onAction: () => context.push('/supplier/materials'),
     );
   }
 }
@@ -460,7 +452,7 @@ class _AddMaterialInsight extends StatelessWidget {
       title: context.s.addMaterial,
       message: context.s.addFirstMaterialInsight,
       actionLabel: context.s.addMaterial,
-      onAction: () => context.go('/supplier/materials/new'),
+      onAction: () => context.push('/supplier/materials/new'),
     );
   }
 }

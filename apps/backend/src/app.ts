@@ -17,8 +17,10 @@ import { materialsRouter } from './modules/materials/materials.routes.js';
 import { priceRuleRequestsRouter } from './modules/price-rule-requests/price-rule-requests.routes.js';
 import { reservationsRouter } from './modules/reservations/reservations.routes.js';
 import { adminRouter } from './modules/admin/admin.routes.js';
+import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { supplierRouter } from './modules/supplier/supplier.routes.js';
 import { locationsRouter } from './modules/locations/locations.routes.js';
+import { savedDropoffAddressesRouter } from './modules/saved-dropoff-addresses/saved-dropoff-addresses.routes.js';
 import { profileRouter } from './modules/profile/profile.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
 import {
@@ -77,6 +79,11 @@ app.use('/api/deliveries', deliveriesRouter);
 app.use('/api/driver', driverRouter);
 app.use('/api/uploads', uploadsRouter);
 app.use('/api/locations', locationsRouter);
+app.use(
+  '/api/learner/saved-dropoff-addresses',
+  savedDropoffAddressesRouter,
+);
+app.use('/api/notifications', notificationsRouter);
 app.use('/api/supplier', supplierRouter);
 app.use('/api/admin', adminRouter);
 

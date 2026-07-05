@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { bodyEmailSchema } from '../../utils/zod-helpers.js';
-import { isAllowedBecomeSupplierType } from './role-capabilities.js';
+import { isKnownBecomeSupplierType } from './role-capabilities.js';
 
 export const PUBLIC_SIGNUP_ROLES = ['LEARNER', 'SUPPLIER'] as const;
 
@@ -136,11 +136,10 @@ const becomeSupplierProfileSchema = z
     pickupNotes: z.string().trim().max(500).optional(),
   })
   .superRefine((data, ctx) => {
-    if (!isAllowedBecomeSupplierType(data.supplierType)) {
+    if (!isKnownBecomeSupplierType(data.supplierType)) {
       ctx.addIssue({
         code: 'custom',
-        message:
-          'This flow only supports student or individual supplier profiles.',
+        message: 'Unsupported supplier type for this flow.',
         path: ['supplierType'],
       });
     }

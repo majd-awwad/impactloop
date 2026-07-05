@@ -82,7 +82,8 @@ class _SupplierNotificationsPageState
                 data: (result) {
                   final filtered = result.notifications
                       .where(
-                        (item) => matchesSupplierNotificationFilter(item, filter),
+                        (item) =>
+                            matchesSupplierNotificationFilter(item, filter),
                       )
                       .toList();
 
@@ -96,7 +97,8 @@ class _SupplierNotificationsPageState
                         if (i > 0) const SizedBox(height: AppSpacing.sm),
                         SupplierNotificationCard(
                           notification: filtered[i],
-                          onAction: filtered[i].actionLabel == null ||
+                          onAction:
+                              filtered[i].actionLabel == null ||
                                   filtered[i].isCompleted
                               ? null
                               : () => _handleAction(context, ref, filtered[i]),
@@ -127,13 +129,13 @@ class _SupplierNotificationsPageState
     switch (notification.actionType) {
       case SupplierActionNotificationActionType.continueListing:
         if (notification.priceRuleRequestId != null) {
-          context.go(
+          context.push(
             '/supplier/materials/new?priceRuleRequestId=${notification.priceRuleRequestId}',
           );
           return;
         }
         if (notification.categoryRequestId != null) {
-          context.go(
+          context.push(
             '/supplier/materials/new?categoryRequestId=${notification.categoryRequestId}',
           );
           return;
@@ -143,17 +145,17 @@ class _SupplierNotificationsPageState
       case SupplierActionNotificationActionType.editListing:
         final id = notification.categoryRequestId;
         if (id == null) return;
-        context.go('/supplier/materials/new?categoryRequestId=$id');
+        context.push('/supplier/materials/new?categoryRequestId=$id');
         return;
       case SupplierActionNotificationActionType.editPrice:
         final id = notification.priceRuleRequestId;
         if (id == null) return;
-        context.go('/supplier/materials/new?priceRuleRequestId=$id');
+        context.push('/supplier/materials/new?priceRuleRequestId=$id');
         return;
       case SupplierActionNotificationActionType.reviewRequest:
         final id = notification.reservationId;
         final query = id == null ? 'tab=pending' : 'tab=pending&focus=$id';
-        context.go('/supplier/reservations?$query');
+        context.push('/supplier/reservations?$query');
         return;
       case null:
         showSupplierInfoSnackBar(context, l.noActionAvailable);
@@ -218,10 +220,7 @@ class _SummaryItem extends StatelessWidget {
           ),
           TextSpan(
             text: '$count',
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: color, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -245,9 +244,7 @@ class _EmptyState extends StatelessWidget {
         child: Text(
           filter == SupplierNotificationFilter.all
               ? l.noNotificationsYet
-              : l.noFilterNotifications(
-                  l.notificationFilterLabel(filter),
-                ),
+              : l.noFilterNotifications(l.notificationFilterLabel(filter)),
           textAlign: TextAlign.center,
           style: context.supplierBody().copyWith(color: colors.textMuted),
         ),

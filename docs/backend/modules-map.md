@@ -183,25 +183,25 @@ Mount order: `apps/backend/src/app.ts`
 
 ## `learning-projects`
 
-**Purpose:** Public read API for learning hub projects (list + detail).
+**Purpose:** Public read API for learning hub projects (list + detail) plus learner project submit-for-review.
 
 **Key files:** `learning-projects.routes.ts`, `learning-projects.controller.ts`, `learning-projects.service.ts`, `learning-projects.repository.ts`, `learning-projects.validation.ts`
 
 **Prisma:** `LearningProject` and related project tables
 
-**Frontend:** Learning hub list/detail and home spotlight are API-backed; add-draft remains mock-only — see [08-implementation-status.md](../08-implementation-status.md)
+**Frontend:** Learning hub list/detail, home spotlight, and add-draft submission are API-backed; admin moderation lives under `/api/admin/learning-projects*` — see [08-implementation-status.md](../08-implementation-status.md)
 
 ---
 
 ## `locations`
 
-**Purpose:** Authenticated reverse geocoding for supplier location input.
+**Purpose:** Authenticated reverse geocoding for supplier location input and private user saved-location CRUD.
 
-**Key files:** `locations.routes.ts`, `locations.controller.ts`, `locations.service.ts`, `locations.validation.ts`, `locations.test.ts`
+**Key files:** `locations.routes.ts`, `locations.controller.ts`, `locations.service.ts`, `locations.repository.ts`, `locations.validation.ts`, `locations.test.ts`
 
 **Cross-cutting:** `apps/backend/src/services/reverse-geocoding.service.ts`
 
-**Prisma:** `Location` (PostGIS `geography(Point,4326)` on column `location`)
+**Prisma:** `Location` (PostGIS `geography(Point,4326)` on column `location`), `UserSavedLocation`
 
 ---
 
@@ -217,13 +217,13 @@ Mount order: `apps/backend/src/app.ts`
 
 ## `materials`
 
-**Purpose:** Public material discovery (list/detail), listing policy, authenticated price check before listing.
+**Purpose:** Public material discovery (list/detail, nearest sort, approximate map pins), listing policy, authenticated price check before listing, and learner material engagement (views/likes).
 
 **Key files:** `materials.routes.ts`, `materials.controller.ts`, `materials.service.ts`, `materials.repository.ts`, `materials.validation.ts`, `materials.price.test.ts`
 
 **Constants:** `apps/backend/src/constants/material-listing-policy.ts`
 
-**Prisma:** `Material`, `MaterialImage`, `MaterialTag`
+**Prisma:** `Material`, `MaterialImage`, `MaterialTag`, `MaterialView`, `MaterialLike`
 
 ---
 
@@ -255,7 +255,21 @@ Mount order: `apps/backend/src/app.ts`
 
 **Behavior:** `POST /api/reservations` requires a `LEARNER`, validates the material and requested quantity, prevents own-material reservations, enforces one open reservation per learner/material, creates a `PENDING` reservation hold, and recomputes material status from held/remaining quantity. `GET /api/reservations/my` returns the current learner's reservations newest first with safe material, supplier, status, delivery, and pickup-window summary fields. `PATCH /api/reservations/:id/cancel` supports learner cancellation while `PENDING`.
 
-**Not implemented:** Dedicated learner reservation detail route, expiry jobs, persisted generic notification flow, payment, and reviews.
+**Not implemented:** Payment and reviews.
+
+---
+
+## `notifications`
+
+**Purpose:** Authenticated persisted inbox backed by the `notifications` table.
+
+**Mounted at:** `/api/notifications`
+
+**Key files:** `notifications.routes.ts`, `notifications.controller.ts`, `notifications.service.ts`, `notifications.repository.ts`, `reservation-notifications.ts`, `notifications.test.ts`
+
+**Prisma:** `Notification`
+
+**Behavior:** List with pagination/unread summary, mark one read, mark all read. Reservation lifecycle hooks write supplier/learner notification rows.
 
 ---
 

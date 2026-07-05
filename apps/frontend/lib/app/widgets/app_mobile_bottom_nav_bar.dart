@@ -71,6 +71,7 @@ class AppMobileBottomNavBar extends ConsumerWidget {
         icon: Icons.receipt_long_rounded,
         route: '/learner/reservations',
         selected: currentPath == '/learner/reservations' ||
+            currentPath.startsWith('/learner/reservations/') ||
             currentPath.startsWith('/learner/deliveries/'),
       ),
       _MobileNavDestination(

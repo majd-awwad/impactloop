@@ -122,6 +122,18 @@ import {
   adminLearningProjectsListQuerySchema,
   moderationReasonSchema,
 } from '../admin-learning-projects/admin-learning-projects.validation.js';
+import {
+  getAdminNoShowReportHandler,
+  listAdminNoShowReportsHandler,
+  rejectAdminNoShowReportHandler,
+  resolveAdminNoShowReportHandler,
+  verifyAdminNoShowReportHandler,
+} from '../admin-no-show-reports/admin-no-show-reports.controller.js';
+import {
+  adminNoShowReportIdParamSchema,
+  adminNoShowReportsListQuerySchema,
+  reviewNoShowReportSchema,
+} from '../admin-no-show-reports/admin-no-show-reports.validation.js';
 
 export const adminRouter = Router();
 
@@ -519,5 +531,91 @@ adminRouter.patch(
   validate(adminLearningProjectIdParamSchema, 'params'),
   validate(moderationReasonSchema),
   asyncHandler(archiveAdminLearningProjectHandler),
+);
+
+adminRouter.get(
+  '/no-show-reports',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportsListQuerySchema, 'query'),
+  asyncHandler(listAdminNoShowReportsHandler),
+);
+
+adminRouter.get(
+  '/no-show-reports/:id',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  asyncHandler(getAdminNoShowReportHandler),
+);
+
+adminRouter.patch(
+  '/no-show-reports/:id/verify',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  validate(reviewNoShowReportSchema),
+  asyncHandler(verifyAdminNoShowReportHandler),
+);
+
+adminRouter.patch(
+  '/no-show-reports/:id/reject',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  validate(reviewNoShowReportSchema),
+  asyncHandler(rejectAdminNoShowReportHandler),
+);
+
+adminRouter.patch(
+  '/no-show-reports/:id/resolve',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  validate(reviewNoShowReportSchema),
+  asyncHandler(resolveAdminNoShowReportHandler),
+);
+
+adminRouter.get(
+  '/reservation-reports',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportsListQuerySchema, 'query'),
+  asyncHandler(listAdminNoShowReportsHandler),
+);
+
+adminRouter.get(
+  '/reservation-reports/:id',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  asyncHandler(getAdminNoShowReportHandler),
+);
+
+adminRouter.post(
+  '/reservation-reports/:id/verify',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  validate(reviewNoShowReportSchema),
+  asyncHandler(verifyAdminNoShowReportHandler),
+);
+
+adminRouter.post(
+  '/reservation-reports/:id/reject',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  validate(reviewNoShowReportSchema),
+  asyncHandler(rejectAdminNoShowReportHandler),
+);
+
+adminRouter.post(
+  '/reservation-reports/:id/resolve',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  validate(reviewNoShowReportSchema),
+  asyncHandler(resolveAdminNoShowReportHandler),
 );
 

@@ -464,14 +464,14 @@ export const listSupplierActionNotifications = async (userId: string) => {
     await Promise.all([
       categoryRequestsRepository.listCategoryRequestsWithDrafts(userId),
       priceRuleRequestsRepository.listPriceRuleRequestsForSupplier(userId),
-      supplierReservationsRepository.findSupplierReservations(userId, 'PENDING'),
+      supplierReservationsRepository.findSupplierReservations(userId, ['PENDING']),
     ]);
 
   const notifications: SupplierActionNotification[] = [
     ...categoryRequests.map(mapCategoryRequestNotification),
     ...priceRuleRequests.map(mapPriceRuleRequestNotification),
     ...pendingReservations
-      .map(mapSupplierReservation)
+      .map((reservation) => mapSupplierReservation(reservation))
       .map(mapReservationNotification),
   ];
 

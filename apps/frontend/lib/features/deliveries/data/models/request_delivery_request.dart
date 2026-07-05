@@ -34,16 +34,29 @@ class DeliveryLocationInput {
 
 class RequestDeliveryRequest {
   const RequestDeliveryRequest({
-    required this.dropoffLocation,
+    this.dropoffLocation,
+    this.savedDropoffAddressId,
+    this.saveDropoffAddressLabel,
     this.learnerNote,
-  });
+  }) : assert(
+          (dropoffLocation != null) ^ (savedDropoffAddressId != null),
+          'Provide either dropoffLocation or savedDropoffAddressId.',
+        );
 
-  final DeliveryLocationInput dropoffLocation;
+  final DeliveryLocationInput? dropoffLocation;
+  final String? savedDropoffAddressId;
+  final String? saveDropoffAddressLabel;
   final String? learnerNote;
 
   Map<String, dynamic> toJson() {
     return {
-      'dropoffLocation': dropoffLocation.toJson(),
+      if (dropoffLocation != null)
+        'dropoffLocation': dropoffLocation!.toJson(),
+      if (savedDropoffAddressId != null)
+        'savedDropoffAddressId': savedDropoffAddressId,
+      if (saveDropoffAddressLabel != null &&
+          saveDropoffAddressLabel!.trim().isNotEmpty)
+        'saveDropoffAddressLabel': saveDropoffAddressLabel!.trim(),
       if (learnerNote != null && learnerNote!.trim().isNotEmpty)
         'learnerNote': learnerNote!.trim(),
     };

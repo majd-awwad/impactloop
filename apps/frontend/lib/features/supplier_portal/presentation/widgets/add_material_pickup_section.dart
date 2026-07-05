@@ -86,8 +86,7 @@ class AddMaterialPickupSectionState
   @override
   void didUpdateWidget(covariant AddMaterialPickupSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.profilePickupLocation.id !=
-            widget.profilePickupLocation.id ||
+    if (oldWidget.profilePickupLocation.id != widget.profilePickupLocation.id ||
         oldWidget.supplierType != widget.supplierType) {
       _applyProfileDefaults();
     }
@@ -128,8 +127,7 @@ class AddMaterialPickupSectionState
         _addressLineController.text = draft['addressLine'] as String? ?? '';
         _latitude = _parseCoordinate(draft['latitude']);
         _longitude = _parseCoordinate(draft['longitude']);
-        _locationCapturedThisSession =
-            _latitude != null && _longitude != null;
+        _locationCapturedThisSession = _latitude != null && _longitude != null;
       } else {
         _applyProfileDefaults();
       }
@@ -405,7 +403,7 @@ class AddMaterialPickupSectionState
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: TextButton.icon(
-              onPressed: () => context.go('/supplier/profile'),
+              onPressed: () => context.push('/supplier/profile'),
               icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
               label: Text(l.editPickupInProfile),
             ),
@@ -493,7 +491,8 @@ class AddMaterialPickupSectionState
           fallbackCity: _cityController.text.trim().isEmpty
               ? widget.profilePickupLocation.city
               : _cityController.text.trim(),
-          fallbackArea: _emptyToNull(_areaController.text) ??
+          fallbackArea:
+              _emptyToNull(_areaController.text) ??
               widget.profilePickupLocation.area,
           fallbackCountry: _countryController.text.trim().isEmpty
               ? widget.profilePickupLocation.country

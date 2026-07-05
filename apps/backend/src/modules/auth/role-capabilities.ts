@@ -4,6 +4,7 @@ import {
   isIndividualSupplierType,
   isOrganizationSupplierType,
   INDIVIDUAL_SUPPLIER_TYPES,
+  ORGANIZATION_SUPPLIER_TYPES,
 } from '../supplier/supplier-verification.status.js';
 import { normalizeSupplierTypeInput } from './supplier-type.js';
 
@@ -14,13 +15,14 @@ export type PortalRole = (typeof PORTAL_ROLES)[number];
 export type PersonalBecomeSupplierType =
   (typeof INDIVIDUAL_SUPPLIER_TYPES)[number];
 
-export const BECOME_SUPPLIER_BLOCKED_TYPES = [
-  'WORKSHOP',
-  'STORE',
-  'FACTORY',
-  'UNIVERSITY_LAB',
-  'EDUCATIONAL_INSTITUTION',
-] as const;
+export type KnownBecomeSupplierType =
+  | PersonalBecomeSupplierType
+  | (typeof ORGANIZATION_SUPPLIER_TYPES)[number];
+
+const KNOWN_BECOME_SUPPLIER_TYPES = [
+  ...INDIVIDUAL_SUPPLIER_TYPES,
+  ...ORGANIZATION_SUPPLIER_TYPES,
+] as const satisfies readonly KnownBecomeSupplierType[];
 
 export type RoleCapabilityInput = {
   roles: UserRole[];
@@ -37,23 +39,21 @@ export const normalizeBecomeSupplierType = (
   supplierType: string,
 ): string => normalizeSupplierTypeInput(supplierType);
 
-export const isAllowedBecomeSupplierType = (
+export const isKnownBecomeSupplierType = (
   supplierType: string,
-): supplierType is PersonalBecomeSupplierType => {
+): supplierType is KnownBecomeSupplierType => {
   const normalized = normalizeBecomeSupplierType(supplierType);
-  return INDIVIDUAL_SUPPLIER_TYPES.includes(
-    normalized as PersonalBecomeSupplierType,
+  return (KNOWN_BECOME_SUPPLIER_TYPES as readonly string[]).includes(
+    normalized,
   );
 };
 
+/** @deprecated Use isKnownBecomeSupplierType */
+export const isAllowedBecomeSupplierType = isKnownBecomeSupplierType;
+
 export const isBlockedBecomeSupplierType = (supplierType: string): boolean => {
   const normalized = normalizeBecomeSupplierType(supplierType);
-  return (
-    isOrganizationSupplierType(normalized) ||
-    BECOME_SUPPLIER_BLOCKED_TYPES.includes(
-      normalized as (typeof BECOME_SUPPLIER_BLOCKED_TYPES)[number],
-    )
-  );
+  return isOrganizationSupplierType(normalized);
 };
 
 export const isBlockedLearnerPortalSwitch = (

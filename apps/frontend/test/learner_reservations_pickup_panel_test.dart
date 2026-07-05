@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:frontend/features/auth/application/auth_controller.dart';
@@ -123,6 +124,7 @@ void main() {
     expect(find.text('Wood panels'), findsOneWidget);
     expect(find.textContaining('Pickup:'), findsOneWidget);
     expect(find.textContaining('Pickup address:'), findsOneWidget);
+    expect(find.bySemanticsLabel('Pickup location map'), findsOneWidget);
     expect(find.text('Delivery available'), findsOneWidget);
   });
 

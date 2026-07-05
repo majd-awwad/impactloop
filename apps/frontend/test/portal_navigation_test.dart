@@ -37,22 +37,48 @@ void main() {
       );
     });
 
-    test('dual-role user with supplier active role lands on supplier overview', () {
-      expect(
-        postAuthRouteForUser(
-          _user(
-            roles: const ['LEARNER', 'SUPPLIER'],
-            activeRole: 'SUPPLIER',
-            canSwitchToLearner: true,
-            canSwitchToSupplier: true,
+    test(
+      'dual-role user with supplier active role lands on supplier overview',
+      () {
+        expect(
+          postAuthRouteForUser(
+            _user(
+              roles: const ['LEARNER', 'SUPPLIER'],
+              activeRole: 'SUPPLIER',
+              canSwitchToLearner: true,
+              canSwitchToSupplier: true,
+            ),
           ),
-        ),
-        supplierOverviewRoute,
-      );
-    });
+          supplierOverviewRoute,
+        );
+      },
+    );
   });
 
   group('portal switch helpers', () {
+    test('switching to learner lands on home', () {
+      final user = _user(
+        roles: const ['LEARNER', 'SUPPLIER'],
+        activeRole: 'LEARNER',
+        canSwitchToSupplier: true,
+      );
+
+      expect(oppositePortalSwitchRoute(user, 'LEARNER'), homeRoute);
+    });
+
+    test('switching to supplier lands on supplier overview', () {
+      final user = _user(
+        roles: const ['LEARNER', 'SUPPLIER'],
+        activeRole: 'SUPPLIER',
+        canSwitchToLearner: true,
+      );
+
+      expect(
+        oppositePortalSwitchRoute(user, 'SUPPLIER'),
+        supplierOverviewRoute,
+      );
+    });
+
     test('shows learner switch for supplier mode individual supplier', () {
       final user = _user(
         roles: const ['LEARNER', 'SUPPLIER'],

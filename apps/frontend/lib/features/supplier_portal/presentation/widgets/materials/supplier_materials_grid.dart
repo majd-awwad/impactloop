@@ -101,9 +101,10 @@ Widget buildSupplierMaterialCard({
     statusLabel: SupplierMaterialLabelHelper.resolveText(status.label, isArabic),
     statusTone: status.tone,
     quantityLabel: SupplierMaterialLabelHelper.resolveText(
-      SupplierMaterialLabelHelper.quantityLabel(
-        material.quantity,
-        material.unit,
+      SupplierMaterialLabelHelper.stockLabel(
+        quantity: material.quantity,
+        availableQuantity: material.availableQuantity ?? material.quantity,
+        unit: material.unit,
       ),
       isArabic,
     ),

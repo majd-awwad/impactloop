@@ -35,18 +35,28 @@ class MaterialDiscoveryApiMapper {
     final price = _numberFromDynamic(json['price']);
     final city = _nullableString(json['city']);
     final area = _nullableString(json['area']);
+    final approximateLatitude = _numberFromDynamic(json['approximateLatitude']);
+    final approximateLongitude = _numberFromDynamic(
+      json['approximateLongitude'],
+    );
+    final approximateDistanceKm = _numberFromDynamic(
+      json['approximateDistanceKm'],
+    );
     final deliveryAvailable = json['deliveryAvailable'] == true;
     final pickupAllowed = json['pickupAllowed'] != false;
-    final pickupNotes = _nullableString(json['pickupNotes']);
     final suggestedUses = _nullableString(json['suggestedUses']);
     final sourceType = _nullableString(json['sourceType']);
     final supplierType = _nullableString(json['supplierType']);
     final supplierVerified = json['supplierVerified'] == true;
     final isOwnMaterial = json['isOwnMaterial'] == true ? true : null;
-    final canReserve = json['canReserve'] is bool ? json['canReserve'] as bool : null;
+    final canReserve = json['canReserve'] is bool
+        ? json['canReserve'] as bool
+        : null;
     final reserveBlockReason = _nullableString(json['reserveBlockReason']);
     final ratingSummary = _numberFromDynamic(json['ratingSummary']);
     final viewsCount = _intFromDynamic(json['viewsCount']) ?? 0;
+    final likesCount = _intFromDynamic(json['likesCount']) ?? 0;
+    final isLiked = json['isLiked'] == true;
 
     final conditionMeta = _conditionMeta(condition);
     final statusMeta = _statusMeta(
@@ -59,14 +69,13 @@ class MaterialDiscoveryApiMapper {
       fallback: 'Untitled material',
     );
     final description = DiscoveryMaterialDisplay.sanitizedDescriptionOrFallback(
-      _stringOrFallback(
-        json['description'],
-        fallback: '',
-      ),
+      _stringOrFallback(json['description'], fallback: ''),
     );
 
     final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
-    final supplierTypeLabel = DiscoveryMaterial.supplierTypeLabelFor(supplierType);
+    final supplierTypeLabel = DiscoveryMaterial.supplierTypeLabelFor(
+      supplierType,
+    );
     final galleryImages = _mapGalleryImages(json);
     final imageUrl = galleryImages.isNotEmpty
         ? galleryImages.first.url
@@ -85,6 +94,9 @@ class MaterialDiscoveryApiMapper {
       categoryId: categoryId,
       city: city,
       area: area,
+      approximateLatitude: approximateLatitude,
+      approximateLongitude: approximateLongitude,
+      approximateDistanceKm: approximateDistanceKm,
       conditionLabel: conditionMeta.label,
       conditionTone: conditionMeta.tone,
       statusLabel: statusMeta.label,
@@ -95,7 +107,11 @@ class MaterialDiscoveryApiMapper {
         unit: unit,
       ),
       priceLabel: _priceLabel(isFree: isFree, price: price),
-      locationLabel: _locationLabel(city: city, area: area),
+      locationLabel: _locationLabel(
+        city: city,
+        area: area,
+        approximateDistanceKm: approximateDistanceKm,
+      ),
       availabilityLabel: _availabilityLabel(
         deliveryAvailable: deliveryAvailable,
         pickupAllowed: pickupAllowed,
@@ -104,7 +120,8 @@ class MaterialDiscoveryApiMapper {
       pickupAllowed: pickupAllowed,
       isFree: isFree,
       supplierName: LocalizedText(en: supplierName, ar: supplierName),
-      supplierSubtitle: supplierTypeLabel ??
+      supplierSubtitle:
+          supplierTypeLabel ??
           const LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
       supplierType: supplierType,
       supplierVerified: supplierVerified,
@@ -119,8 +136,9 @@ class MaterialDiscoveryApiMapper {
               ar: _formatCompactNumber(ratingSummary),
             ),
       viewsCount: viewsCount,
+      likesCount: likesCount,
+      isLiked: isLiked,
       postedAt: _dateTimeFromDynamic(json['createdAt']),
-      pickupNotes: pickupNotes,
       suggestedUses: suggestedUses,
       sourceType: sourceType,
       isOwnMaterial: isOwnMaterial,
@@ -198,7 +216,8 @@ class MaterialDiscoveryApiMapper {
           id: _stringOrFallback(imageMap['id'], fallback: url),
           url: ApiConfig.resolveMediaUrl(url),
           isCover: imageMap['isCover'] == true,
-          isPrimary: imageMap['isPrimary'] == true || imageMap['isCover'] == true,
+          isPrimary:
+              imageMap['isPrimary'] == true || imageMap['isCover'] == true,
           sortOrder: _intFromDynamic(imageMap['sortOrder']) ?? mapped.length,
         ),
       );
@@ -225,7 +244,8 @@ class MaterialDiscoveryApiMapper {
   }
 
   static String? _resolveImageUrl(Map<String, dynamic> json) {
-    final directImage = _nullableString(json['primaryImageUrl']) ??
+    final directImage =
+        _nullableString(json['primaryImageUrl']) ??
         _nullableString(json['imageUrl']);
     if (directImage != null) {
       return ApiConfig.resolveMediaUrl(directImage);
@@ -304,10 +324,7 @@ class MaterialDiscoveryApiMapper {
     final totalText = quantity == null ? '--' : _formatCompactNumber(quantity);
     final available = availableQuantity ?? quantity;
 
-    if (available != null &&
-        quantity != null &&
-        available < quantity &&
-        available > 0) {
+    if (available != null && quantity != null && available < quantity) {
       final availableText = _formatCompactNumber(available);
       return LocalizedText(
         en: 'Available: $availableText of $totalText $unit',
@@ -346,17 +363,11 @@ class MaterialDiscoveryApiMapper {
     }
 
     if (deliveryAvailable) {
-      return const LocalizedText(
-        en: 'Delivery available',
-        ar: 'التوصيل متاح',
-      );
+      return const LocalizedText(en: 'Delivery available', ar: 'التوصيل متاح');
     }
 
     if (pickupAllowed) {
-      return const LocalizedText(
-        en: 'Pickup only',
-        ar: 'استلام فقط',
-      );
+      return const LocalizedText(en: 'Pickup only', ar: 'استلام فقط');
     }
 
     return const LocalizedText(
@@ -368,8 +379,19 @@ class MaterialDiscoveryApiMapper {
   static LocalizedText _locationLabel({
     required String? city,
     required String? area,
+    required double? approximateDistanceKm,
   }) {
+    final distanceText = approximateDistanceKm == null
+        ? null
+        : approximateDistanceKm < 10
+        ? '~${approximateDistanceKm.toStringAsFixed(1)} km'
+        : '~${approximateDistanceKm.toStringAsFixed(0)} km';
+
     if (city == null && area == null) {
+      if (distanceText != null) {
+        return LocalizedText(en: distanceText, ar: distanceText);
+      }
+
       return const LocalizedText(
         en: 'Location shared on request',
         ar: 'يتم مشاركة الموقع عند الطلب',
@@ -377,11 +399,23 @@ class MaterialDiscoveryApiMapper {
     }
 
     if (city != null && area != null) {
-      return LocalizedText(en: '$city, $area', ar: '$city، $area');
+      final label = '$city, $area';
+      final arLabel = '$city، $area';
+      return distanceText == null
+          ? LocalizedText(en: label, ar: arLabel)
+          : LocalizedText(
+              en: '$label - $distanceText',
+              ar: '$arLabel - $distanceText',
+            );
     }
 
     final label = city ?? area!;
-    return LocalizedText(en: label, ar: label);
+    return distanceText == null
+        ? LocalizedText(en: label, ar: label)
+        : LocalizedText(
+            en: '$label - $distanceText',
+            ar: '$label - $distanceText',
+          );
   }
 
   static ({LocalizedText label, MaterialConditionBadgeTone tone})
@@ -420,9 +454,7 @@ class MaterialDiscoveryApiMapper {
     String value, {
     required double availableQuantity,
   }) {
-    if (availableQuantity > 0 &&
-        value != 'REUSED' &&
-        value != 'UNAVAILABLE') {
+    if (availableQuantity > 0 && value != 'REUSED' && value != 'UNAVAILABLE') {
       return (
         label: const LocalizedText(en: 'Available', ar: 'متاح'),
         tone: MaterialStatusBadgeTone.available,

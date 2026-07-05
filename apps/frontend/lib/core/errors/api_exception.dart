@@ -43,9 +43,13 @@ class ApiException implements Exception {
       case 'TIMEOUT':
         return 'The server took too long to respond. Please try again.';
       case 'CONFLICT':
-        return 'An account with that email or phone already exists.';
+        return message.isNotEmpty
+            ? message
+            : 'This request conflicts with the current state. Please refresh and try again.';
       case 'VALIDATION_ERROR':
-        final firstIssue = fieldIssues.isNotEmpty ? fieldIssues.first.message : null;
+        final firstIssue = fieldIssues.isNotEmpty
+            ? fieldIssues.first.message
+            : null;
         if (firstIssue != null && firstIssue.isNotEmpty) {
           return firstIssue;
         }
@@ -56,6 +60,8 @@ class ApiException implements Exception {
         return message.isNotEmpty
             ? message
             : 'You do not have permission to complete this action.';
+      case 'ACCOUNT_SUSPENDED':
+        return 'Your account has been suspended after repeated verified reports. Contact admin.';
       default:
         if (statusCode != null && statusCode! >= 500) {
           return 'The server hit a problem. Please try again in a moment.';

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import 'driver_deliveries_api.dart';
+import 'models/driver_delivery_failure_request.dart';
 import 'models/driver_delivery.dart';
 import 'models/driver_location_ping_request.dart';
 import 'models/update_driver_delivery_status_request.dart';
@@ -45,5 +46,26 @@ class DriverDeliveriesRepository {
     DriverLocationPingRequest request,
   ) {
     return _api.createLocationPing(deliveryId, request);
+  }
+
+  Future<DriverDelivery> reportPickupFailed(
+    String deliveryId,
+    DriverDeliveryFailureRequest request,
+  ) {
+    return _api.reportPickupFailed(deliveryId, request);
+  }
+
+  Future<DriverDelivery> reportDeliveryFailed(
+    String deliveryId,
+    DriverDeliveryFailureRequest request,
+  ) {
+    return _api.reportDeliveryFailed(deliveryId, request);
+  }
+
+  Future<DriverDelivery> reportDriverIssue(
+    String deliveryId, {
+    required String note,
+  }) {
+    return _api.reportDriverIssue(deliveryId, note: note);
   }
 }

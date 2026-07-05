@@ -46,6 +46,7 @@ class LearningHubApiMapper {
     final durationMinutes = _intFromDynamic(json['estimatedDurationMinutes']);
     final coverImageUrl = _nullableString(json['coverImageUrl']);
     final rating = _parseRatingSummary(json['ratingSummary']);
+    final tags = _mapTags(json['tags']);
 
     final components = includeDetailFields
         ? _mapComponents(json['requiredComponents'])
@@ -94,6 +95,7 @@ class LearningHubApiMapper {
       heroIconData: heroIconForCategory(categoryNameEn, id: id),
       cardGradient: gradientForCategory(categoryNameEn, id: id),
       isFeatured: false,
+      tags: tags,
     );
   }
 
@@ -191,8 +193,22 @@ class LearningHubApiMapper {
           return ProjectLinkItem(
             label: LocalizedText(en: labelText, ar: labelText),
             urlLabel: LocalizedText(en: url, ar: url),
+            url: url,
           );
         })
+        .toList(growable: false);
+  }
+
+  static List<String> _mapTags(Object? raw) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    return raw
+        .whereType<String>()
+        .map((tag) => tag.trim())
+        .where((tag) => tag.isNotEmpty)
+        .toSet()
         .toList(growable: false);
   }
 

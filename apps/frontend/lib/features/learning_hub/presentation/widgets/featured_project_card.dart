@@ -76,7 +76,7 @@ class _FeaturedContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final buttonChild = FilledButton.icon(
-      onPressed: () => context.go('/learning/${project.id}'),
+      onPressed: () => context.push('/learning/${project.id}'),
       style: FilledButton.styleFrom(
         backgroundColor: palette.lime,
         foregroundColor: AppColorTokens.emeraldDeep,

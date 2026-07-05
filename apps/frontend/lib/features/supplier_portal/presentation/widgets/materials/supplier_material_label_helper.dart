@@ -84,6 +84,27 @@ abstract final class SupplierMaterialLabelHelper {
     return LocalizedText(en: '$qty $unit', ar: '$qty $unit');
   }
 
+  static LocalizedText stockLabel({
+    required double quantity,
+    required double availableQuantity,
+    required String unit,
+  }) {
+    final totalQty =
+        quantity % 1 == 0 ? quantity.toInt().toString() : quantity.toString();
+    final availableQty = availableQuantity % 1 == 0
+        ? availableQuantity.toInt().toString()
+        : availableQuantity.toString();
+
+    if (availableQuantity < quantity) {
+      return LocalizedText(
+        en: 'Available: $availableQty of $totalQty $unit',
+        ar: 'المتاح: $availableQty من $totalQty $unit',
+      );
+    }
+
+    return quantityLabel(quantity, unit);
+  }
+
   static LocalizedText priceLabel({
     required bool isFree,
     double? price,

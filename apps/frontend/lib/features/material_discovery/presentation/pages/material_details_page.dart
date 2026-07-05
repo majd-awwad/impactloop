@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/errors/api_exception.dart';
-import '../../../../core/network/api_client.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
@@ -24,10 +24,13 @@ import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../reservations/application/my_reservations_provider.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
+import '../../../reservations/application/reservation_timing_policy.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
 import '../../../reservations/data/models/learner_reservation.dart';
+import '../../../reservations/data/models/reservation_preferred_window.dart';
+import '../../../reservations/presentation/learner_reservation_ui_helpers.dart';
 import '../../../reservations/presentation/reservation_create_error_message.dart';
-import '../../data/api_material_discovery_repository.dart';
+import '../../application/material_discovery_providers.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_query.dart';
 import '../../domain/material_discovery_repository.dart';
@@ -36,6 +39,7 @@ import '../widgets/material_details_gallery.dart';
 import '../discovery_material_display.dart';
 import '../reservation_dialog_copy.dart';
 import '../widgets/discovery_location_privacy_panel.dart';
+import '../widgets/preferred_window_input.dart';
 
 const _materialDetailsStickyCtaHeight = 76.0;
 const _materialDetailsDesktopMaxWidth = 1160.0;
@@ -67,16 +71,24 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
   late final MaterialDiscoveryRepository _defaultRepository;
   late MaterialDiscoveryRepository _activeRepository;
   late Future<DiscoveryMaterial?> _materialFuture;
+  DiscoveryMaterial? _materialOverride;
   bool _showReservationStatusCta = false;
+  bool _isLikeUpdating = false;
 
   @override
   void initState() {
     super.initState();
-    _defaultRepository = ApiMaterialDiscoveryRepository(
-      ref.read(apiClientProvider),
-    );
+    _defaultRepository = ref.read(materialDiscoveryRepositoryProvider);
     _activeRepository = widget.repository ?? _defaultRepository;
     _materialFuture = _activeRepository.getMaterialById(widget.materialId);
+  }
+
+  void _retryLoadMaterial() {
+    setState(() {
+      _materialOverride = null;
+      _showReservationStatusCta = false;
+      _materialFuture = _activeRepository.getMaterialById(widget.materialId);
+    });
   }
 
   @override
@@ -88,6 +100,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
         _activeRepository != nextRepository) {
       _activeRepository = nextRepository;
       _showReservationStatusCta = false;
+      _materialOverride = null;
       _materialFuture = _activeRepository.getMaterialById(widget.materialId);
     }
   }
@@ -112,31 +125,50 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 
         if (snapshot.hasError) {
           return _SimpleStateScaffold(
-            child: Text(
-              const LocalizedText(
+            child: _MaterialDetailsStatePanel(
+              icon: Icons.cloud_off_outlined,
+              title: const LocalizedText(
                 en: 'Unable to load material details right now.',
                 ar: 'تعذر تحميل تفاصيل المادة حالياً.',
-              ).resolve(context),
-              style: AppTextStyles.title(
-                context,
-              ).copyWith(color: palette.textPrimary),
-              textAlign: TextAlign.center,
+              ),
+              subtitle: const LocalizedText(
+                en: 'Check your connection, then try loading this material again.',
+                ar: 'تحقق من الاتصال، ثم حاول تحميل هذه المادة مرة أخرى.',
+              ),
+              primaryActionLabel: const LocalizedText(
+                en: 'Try again',
+                ar: 'حاول مرة أخرى',
+              ),
+              primaryActionIcon: Icons.refresh_rounded,
+              onPrimaryAction: _retryLoadMaterial,
+              secondaryActionLabel: const LocalizedText(
+                en: 'Back to materials',
+                ar: 'العودة إلى المواد',
+              ),
+              onSecondaryAction: () => context.go('/materials'),
             ),
           );
         }
 
-        final material = snapshot.data;
+        final material = _materialOverride ?? snapshot.data;
         if (material == null) {
           return _SimpleStateScaffold(
-            child: Text(
-              const LocalizedText(
+            child: _MaterialDetailsStatePanel(
+              icon: Icons.inventory_2_outlined,
+              title: const LocalizedText(
                 en: 'Material not found',
                 ar: 'المادة غير موجودة',
-              ).resolve(context),
-              style: AppTextStyles.title(
-                context,
-              ).copyWith(color: palette.textPrimary),
-              textAlign: TextAlign.center,
+              ),
+              subtitle: const LocalizedText(
+                en: 'This material may have been removed, reused, or made unavailable.',
+                ar: 'قد تكون هذه المادة حُذفت أو أُعيد استخدامها أو أصبحت غير متاحة.',
+              ),
+              primaryActionLabel: const LocalizedText(
+                en: 'Back to materials',
+                ar: 'العودة إلى المواد',
+              ),
+              primaryActionIcon: Icons.arrow_back_rounded,
+              onPrimaryAction: () => context.go('/materials'),
             ),
           );
         }
@@ -144,10 +176,78 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
         return _MaterialDetailsLoadedContent(
           material: material,
           showReservationStatusCta: _showReservationStatusCta,
+          isLikeUpdating: _isLikeUpdating,
           onReserve: () => _handleReserve(material),
+          onToggleLike: () => _handleToggleLike(material),
         );
       },
     );
+  }
+
+  Future<void> _handleToggleLike(DiscoveryMaterial material) async {
+    final authState = ref.read(authControllerProvider);
+
+    if (authState.status != AuthStatus.authenticated) {
+      final from = Uri.encodeQueryComponent('/materials/${material.id}');
+      context.go('/login?from=$from');
+      return;
+    }
+
+    if (authState.user?.hasRole('LEARNER') != true) {
+      showInfoSnackBar(context, 'Use a learner account to like materials.');
+      return;
+    }
+
+    if (_isLikeUpdating) {
+      return;
+    }
+
+    final shouldLike = !material.isLiked;
+    final optimisticLikes = shouldLike
+        ? material.likesCount + 1
+        : (material.likesCount > 0 ? material.likesCount - 1 : 0);
+    final optimisticMaterial = material.copyWith(
+      likesCount: optimisticLikes,
+      isLiked: shouldLike,
+    );
+
+    setState(() {
+      _isLikeUpdating = true;
+      _materialOverride = optimisticMaterial;
+    });
+
+    try {
+      final engagement = shouldLike
+          ? await _activeRepository.likeMaterial(material.id)
+          : await _activeRepository.unlikeMaterial(material.id);
+
+      if (!mounted) {
+        return;
+      }
+
+      ref.invalidate(homeSuggestedMaterialsProvider);
+      setState(() {
+        _materialOverride = optimisticMaterial.copyWith(
+          likesCount: engagement.likesCount,
+          isLiked: engagement.isLiked,
+        );
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _materialOverride = material;
+      });
+      showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLikeUpdating = false;
+        });
+      }
+    }
   }
 
   Future<void> _handleReserve(DiscoveryMaterial material) async {
@@ -160,10 +260,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
     }
 
     if (authState.user?.hasRole('LEARNER') != true) {
-      showInfoSnackBar(
-        context,
-        'Use a learner account to reserve materials.',
-      );
+      showInfoSnackBar(context, 'Use a learner account to reserve materials.');
       return;
     }
 
@@ -181,9 +278,9 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
   Future<void> _submitReservationRequest(
     CreateReservationRequest request,
   ) async {
-    await ref.read(reservationCreateControllerProvider.notifier).create(
-          request,
-        );
+    await ref
+        .read(reservationCreateControllerProvider.notifier)
+        .create(request);
 
     if (!mounted) {
       return;
@@ -193,7 +290,6 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
     ref.invalidate(homeSuggestedMaterialsProvider);
     setState(() {
       _showReservationStatusCta = true;
-      _materialFuture = _activeRepository.getMaterialById(widget.materialId);
     });
     showInfoSnackBar(context, 'Reservation request sent to the supplier.');
   }
@@ -203,20 +299,27 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
   const _MaterialDetailsLoadedContent({
     required this.material,
     required this.showReservationStatusCta,
+    required this.isLikeUpdating,
     required this.onReserve,
+    required this.onToggleLike,
   });
 
   final DiscoveryMaterial material;
   final bool showReservationStatusCta;
+  final bool isLikeUpdating;
   final VoidCallback onReserve;
+  final VoidCallback onToggleLike;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
     final reserveState = ref.watch(reservationCreateControllerProvider);
-    final myReservationsState =
+    final shouldLoadReservationDetails =
         authState.status == AuthStatus.authenticated &&
-            authState.user?.hasRole('LEARNER') == true
+        authState.user?.hasRole('LEARNER') == true &&
+        material.reserveBlockReason == 'OPEN_RESERVATION_EXISTS' &&
+        !showReservationStatusCta;
+    final myReservationsState = shouldLoadReservationDetails
         ? ref.watch(myReservationsProvider)
         : null;
     final learnerReservation = myReservationsState?.maybeWhen(
@@ -235,7 +338,8 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
       material: material,
       authState: authState,
       isSubmitting: reserveState.isLoading,
-      isLoadingReservation: myReservationsState?.isLoading == true,
+      isLoadingReservation:
+          myReservationsState?.isLoading == true && material.canReserve == null,
       showReservationStatusCta: showReservationStatusCta,
       learnerReservation: learnerReservation,
     );
@@ -279,7 +383,9 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                   isWide ? AppSpacing.xl : AppSpacing.md,
                   isWide ? AppSpacing.lg : AppSpacing.md,
                   AppSpacing.xl +
-                      (showMobileStickyCta ? _materialDetailsStickyCtaHeight : 0),
+                      (showMobileStickyCta
+                          ? _materialDetailsStickyCtaHeight
+                          : 0),
                 ),
                 child: Center(
                   child: ConstrainedBox(
@@ -291,7 +397,9 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _DetailsPageHeader(material: material),
-                              const SizedBox(height: _materialDetailsSectionGap),
+                              const SizedBox(
+                                height: _materialDetailsSectionGap,
+                              ),
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -301,16 +409,19 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                                       material: material,
                                       includeHeader: false,
                                       compactDetailsLayout: true,
+                                      isLikeUpdating: isLikeUpdating,
+                                      onToggleLike: onToggleLike,
                                     ),
                                   ),
-                                  const SizedBox(width: _materialDetailsSectionGap),
-                                  Expanded(
-                                    flex: 2,
-                                    child: sideColumn,
+                                  const SizedBox(
+                                    width: _materialDetailsSectionGap,
                                   ),
+                                  Expanded(flex: 2, child: sideColumn),
                                 ],
                               ),
-                              const SizedBox(height: _materialDetailsRelatedSectionsTopGap),
+                              const SizedBox(
+                                height: _materialDetailsRelatedSectionsTopGap,
+                              ),
                               _RelatedMaterialsSections(
                                 material: material,
                                 layout: _RelatedMaterialsLayout.desktop,
@@ -326,7 +437,11 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                                 compact: true,
                               ),
                               const SizedBox(height: AppSpacing.md),
-                              _MaterialSummaryPanel(material: material),
+                              _MaterialSummaryPanel(
+                                material: material,
+                                isLikeUpdating: isLikeUpdating,
+                                onToggleLike: onToggleLike,
+                              ),
                               const SizedBox(height: AppSpacing.md),
                               _ReservationPanel(
                                 material: material,
@@ -419,8 +534,8 @@ class _ReservationUiState {
 
     final helperText = !isAvailable
         ? const LocalizedText(
-            en: 'This material is not available for new reservations.',
-            ar: 'هذه المادة غير متاحة لحجوزات جديدة.',
+            en: 'This material is no longer available.',
+            ar: 'هذه المادة لم تعد متاحة.',
           )
         : isOwnMaterial
         ? const LocalizedText(
@@ -452,11 +567,9 @@ class _ReservationUiState {
         : isOwnMaterial
         ? const LocalizedText(en: 'Your listing', ar: 'مادتك')
         : !isAvailable
-        ? const LocalizedText(
-            en: 'Not available',
-            ar: 'غير متاح',
-          )
-        : isAuthenticatedLearner || authState.status == AuthStatus.unauthenticated
+        ? const LocalizedText(en: 'Not available', ar: 'غير متاح')
+        : isAuthenticatedLearner ||
+              authState.status == AuthStatus.unauthenticated
         ? const LocalizedText(en: 'Reserve Material', ar: 'احجز المادة')
         : const LocalizedText(en: 'Sign in to Reserve', ar: 'سجل الدخول للحجز');
 
@@ -520,16 +633,110 @@ class _SimpleStateScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const EntryNavBar(
-          showSignIn: true,
-          showCreateAccount: true,
-          homeRoute: '/',
+    final palette = MaterialsUiPalette.of(context);
+
+    return Scaffold(
+      backgroundColor: palette.pageBackground,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const EntryNavBar(
+              showSignIn: true,
+              showCreateAccount: true,
+              homeRoute: '/',
+            ),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
+                  child: child,
+                ),
+              ),
+            ),
+          ],
         ),
-        Expanded(child: Center(child: child)),
-      ],
+      ),
+    );
+  }
+}
+
+class _MaterialDetailsStatePanel extends StatelessWidget {
+  const _MaterialDetailsStatePanel({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.primaryActionLabel,
+    required this.primaryActionIcon,
+    required this.onPrimaryAction,
+    this.secondaryActionLabel,
+    this.onSecondaryAction,
+  });
+
+  final IconData icon;
+  final LocalizedText title;
+  final LocalizedText subtitle;
+  final LocalizedText primaryActionLabel;
+  final IconData primaryActionIcon;
+  final VoidCallback onPrimaryAction;
+  final LocalizedText? secondaryActionLabel;
+  final VoidCallback? onSecondaryAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 540),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: palette.mint.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: palette.mint, size: 34),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            title.resolve(context),
+            style: AppTextStyles.title(
+              context,
+            ).copyWith(color: palette.textPrimary),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            subtitle.resolve(context),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              FilledButton.icon(
+                onPressed: onPrimaryAction,
+                icon: Icon(primaryActionIcon),
+                label: Text(primaryActionLabel.resolve(context)),
+              ),
+              if (secondaryActionLabel != null &&
+                  onSecondaryAction != null)
+                OutlinedButton(
+                  onPressed: onSecondaryAction,
+                  child: Text(secondaryActionLabel!.resolve(context)),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -546,7 +753,7 @@ class _DetailsPageHeader extends StatelessWidget {
     return Row(
       children: [
         IconButton.outlined(
-          onPressed: () => context.go('/materials'),
+          onPressed: () => context.popOrGo('/materials'),
           style: IconButton.styleFrom(
             foregroundColor: palette.textPrimary,
             side: BorderSide(color: palette.borderStrong),
@@ -577,10 +784,7 @@ class _DetailsPageHeader extends StatelessWidget {
 }
 
 class _MaterialDetailsGallery extends StatelessWidget {
-  const _MaterialDetailsGallery({
-    required this.material,
-    this.compact = false,
-  });
+  const _MaterialDetailsGallery({required this.material, this.compact = false});
 
   final DiscoveryMaterial material;
   final bool compact;
@@ -598,9 +802,15 @@ class _MaterialDetailsGallery extends StatelessWidget {
 }
 
 class _MaterialSummaryPanel extends StatelessWidget {
-  const _MaterialSummaryPanel({required this.material});
+  const _MaterialSummaryPanel({
+    required this.material,
+    required this.isLikeUpdating,
+    required this.onToggleLike,
+  });
 
   final DiscoveryMaterial material;
+  final bool isLikeUpdating;
+  final VoidCallback onToggleLike;
 
   @override
   Widget build(BuildContext context) {
@@ -616,12 +826,25 @@ class _MaterialSummaryPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            material.title.resolve(context),
-            style: AppTextStyles.title(
-              context,
-            ).copyWith(color: palette.textPrimary),
-            textAlign: TextAlign.start,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  material.title.resolve(context),
+                  style: AppTextStyles.title(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                  textAlign: TextAlign.start,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _MaterialLikeButton(
+                isLiked: material.isLiked,
+                isLoading: isLikeUpdating,
+                onPressed: onToggleLike,
+              ),
+            ],
           ),
           if (showDescription) ...[
             const SizedBox(height: AppSpacing.sm),
@@ -652,18 +875,129 @@ class _MaterialSummaryPanel extends StatelessWidget {
               ),
             ],
           ),
-          if (material.viewsCount > 0) ...[
+          if (material.viewsCount > 0 || material.likesCount > 0) ...[
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              LocalizedText(
-                en: '${material.viewsCount} views',
-                ar: '${material.viewsCount} مشاهدة',
-              ).resolve(context),
-              style: AppTextStyles.label(
-                context,
-              ).copyWith(color: palette.textMuted),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
+              children: [
+                _EngagementChip(
+                  icon: Icons.visibility_outlined,
+                  label: LocalizedText(
+                    en: '${material.viewsCount} views',
+                    ar: '${material.viewsCount} مشاهدة',
+                  ).resolve(context),
+                ),
+                _EngagementChip(
+                  icon: material.isLiked
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  label: LocalizedText(
+                    en: '${material.likesCount} likes',
+                    ar: '${material.likesCount} إعجاب',
+                  ).resolve(context),
+                  highlighted: material.isLiked,
+                ),
+              ],
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MaterialLikeButton extends StatelessWidget {
+  const _MaterialLikeButton({
+    required this.isLiked,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  final bool isLiked;
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final foreground = isLiked ? Colors.white : palette.mint;
+    final background = isLiked
+        ? palette.mint
+        : palette.mint.withValues(alpha: 0.10);
+
+    return Tooltip(
+      message: isLiked ? 'Unlike material' : 'Like material',
+      child: SizedBox(
+        width: 42,
+        height: 42,
+        child: IconButton(
+          onPressed: isLoading ? null : onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: background,
+            foregroundColor: foreground,
+            disabledBackgroundColor: background.withValues(alpha: 0.6),
+            disabledForegroundColor: foreground.withValues(alpha: 0.6),
+            side: BorderSide(color: palette.borderSubtle),
+          ),
+          icon: isLoading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: foreground,
+                  ),
+                )
+              : Icon(
+                  isLiked
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EngagementChip extends StatelessWidget {
+  const _EngagementChip({
+    required this.icon,
+    required this.label,
+    this.highlighted = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final foreground = highlighted ? palette.mint : palette.textMuted;
+
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: palette.panelSurface,
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: foreground),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            label,
+            style: AppTextStyles.label(context).copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -760,12 +1094,7 @@ class _MaterialDetailsPanel extends StatelessWidget {
                   spacing: AppSpacing.md,
                   runSpacing: AppSpacing.md,
                   children: rows
-                      .map(
-                        (row) => SizedBox(
-                          width: itemWidth,
-                          child: row,
-                        ),
-                      )
+                      .map((row) => SizedBox(width: itemWidth, child: row))
                       .toList(growable: false),
                 );
               },
@@ -798,20 +1127,6 @@ class _MaterialDetailExtraSections extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sections = <Widget>[];
-
-    final pickupNotes = material.pickupNotes?.trim();
-    if (pickupNotes != null && pickupNotes.isNotEmpty) {
-      sections.add(
-        _DetailTextSection(
-          title: const LocalizedText(
-            en: 'Pickup notes',
-            ar: 'ملاحظات الاستلام',
-          ),
-          body: pickupNotes,
-          icon: Icons.notes_outlined,
-        ),
-      );
-    }
 
     final suggestedUses = material.suggestedUses?.trim();
     if (suggestedUses != null && suggestedUses.isNotEmpty) {
@@ -869,18 +1184,18 @@ class _DetailTextSection extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Text(
                 title.resolve(context),
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             body,
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textPrimary,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textPrimary),
           ),
         ],
       ),
@@ -908,7 +1223,11 @@ class _SupplierCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: palette.borderSubtle),
             ),
-            child: Icon(Icons.storefront_outlined, color: palette.mint, size: 22),
+            child: Icon(
+              Icons.storefront_outlined,
+              color: palette.mint,
+              size: 22,
+            ),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -916,9 +1235,10 @@ class _SupplierCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  const LocalizedText(en: 'Supplier', ar: 'المورد').resolve(
-                    context,
-                  ),
+                  const LocalizedText(
+                    en: 'Supplier',
+                    ar: 'المورد',
+                  ).resolve(context),
                   style: AppTextStyles.label(
                     context,
                   ).copyWith(color: palette.textMuted),
@@ -954,9 +1274,9 @@ class _SupplierCard extends StatelessWidget {
                         en: 'Verified supplier',
                         ar: 'مورد موثّق',
                       ).resolve(context),
-                      style: AppTextStyles.label(context).copyWith(
-                        color: palette.textSecondary,
-                      ),
+                      style: AppTextStyles.label(
+                        context,
+                      ).copyWith(color: palette.textSecondary),
                     ),
                   ),
                 ],
@@ -1008,12 +1328,16 @@ class _ReservationPanel extends StatelessWidget {
         color: emphasized ? themeColors.primarySoft : palette.panelSurface,
         borderRadius: AppRadius.lgAll,
         border: Border.all(
-          color: emphasized ? themeColors.primary.withValues(alpha: 0.28) : palette.borderStrong,
+          color: emphasized
+              ? themeColors.primary.withValues(alpha: 0.28)
+              : palette.borderStrong,
           width: emphasized ? 1.2 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: palette.cardShadow.withValues(alpha: emphasized ? 0.16 : 0.12),
+            color: palette.cardShadow.withValues(
+              alpha: emphasized ? 0.16 : 0.12,
+            ),
             blurRadius: emphasized ? 20 : 16,
             offset: Offset(0, emphasized ? 8 : 6),
           ),
@@ -1214,11 +1538,15 @@ String _formatPostedDate(DateTime value) {
 class _DetailsMainColumn extends StatelessWidget {
   const _DetailsMainColumn({
     required this.material,
+    required this.isLikeUpdating,
+    required this.onToggleLike,
     this.includeHeader = true,
     this.compactDetailsLayout = false,
   });
 
   final DiscoveryMaterial material;
+  final bool isLikeUpdating;
+  final VoidCallback onToggleLike;
   final bool includeHeader;
   final bool compactDetailsLayout;
 
@@ -1233,7 +1561,11 @@ class _DetailsMainColumn extends StatelessWidget {
         ],
         _MaterialDetailsGallery(material: material),
         const SizedBox(height: _materialDetailsSectionGap),
-        _MaterialSummaryPanel(material: material),
+        _MaterialSummaryPanel(
+          material: material,
+          isLikeUpdating: isLikeUpdating,
+          onToggleLike: onToggleLike,
+        ),
         const SizedBox(height: _materialDetailsSectionGap),
         _MaterialDetailsPanel(
           material: material,
@@ -1299,10 +1631,7 @@ class _ReservationLoadingState extends StatelessWidget {
         SizedBox(
           width: 18,
           height: 18,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: palette.mint,
-          ),
+          child: CircularProgressIndicator(strokeWidth: 2, color: palette.mint),
         ),
         const SizedBox(width: AppSpacing.sm),
         Text(
@@ -1341,9 +1670,9 @@ class _PostReservationStatusCta extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           TextButton.icon(
-            onPressed: () => context.go('/learner/reservations'),
+            onPressed: () => context.push('/learner/reservations'),
             icon: const Icon(Icons.assignment_turned_in_outlined),
-            label: const Text('View reservation status'),
+            label: const Text('View all reservations'),
           ),
         ],
       ),
@@ -1405,13 +1734,14 @@ class _LearnerReservationStateCard extends StatelessWidget {
           if (activeDelivery != null)
             TextButton.icon(
               onPressed: () =>
-                  context.go('/learner/deliveries/${activeDelivery.id}'),
+                  context.push('/learner/deliveries/${activeDelivery.id}'),
               icon: const Icon(Icons.local_shipping_outlined),
               label: const Text('View delivery status'),
             )
           else
             TextButton.icon(
-              onPressed: () => context.go('/learner/reservations'),
+              onPressed: () =>
+                  context.push('/learner/reservations/${reservation.id}'),
               icon: const Icon(Icons.assignment_turned_in_outlined),
               label: Text(
                 reservation.isAccepted && deliveryAvailable
@@ -1460,24 +1790,7 @@ String _reservationActionLabel(String status) {
   }
 }
 
-String _reservationStatusLabel(String status) {
-  switch (status) {
-    case 'PENDING':
-      return 'Reservation request sent';
-    case 'ACCEPTED':
-      return 'Reservation accepted';
-    case 'REJECTED':
-      return 'Reservation rejected';
-    case 'COMPLETED':
-      return 'Reservation completed';
-    case 'CANCELLED':
-      return 'Reservation cancelled';
-    case 'EXPIRED':
-      return 'Reservation expired';
-    default:
-      return status;
-  }
-}
+String _reservationStatusLabel(String status) => reservationStatusLabel(status);
 
 MaterialStatusBadgeTone _reservationStatusTone(String status) {
   switch (status) {
@@ -1541,7 +1854,9 @@ String? _pickupWindowText(LearnerReservation reservation) {
       ? null
       : _formatDateTime(reservation.pickupWindowEnd!);
 
-  return end == null ? 'Pickup starts $start.' : 'Pickup window: $start - $end.';
+  return end == null
+      ? 'Pickup starts $start.'
+      : 'Pickup window: $start - $end.';
 }
 
 String _formatDateTime(DateTime value) {
@@ -1755,7 +2070,9 @@ class _ReportMaterialSection extends ConsumerWidget {
     }
 
     try {
-      final message = await ref.read(materialReportsApiProvider).submitReport(
+      final message = await ref
+          .read(materialReportsApiProvider)
+          .submitReport(
             materialId: materialId,
             reason: selectedReason,
             note: noteController.text.trim(),
@@ -1793,9 +2110,9 @@ class _ReportMaterialSection extends ConsumerWidget {
             en: 'Report material',
             ar: 'الإبلاغ عن المادة',
           ).resolve(context),
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textSecondary,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary),
         ),
       ),
     );
@@ -1895,7 +2212,8 @@ class _RelatedMaterialsStrip extends ConsumerStatefulWidget {
       _RelatedMaterialsStripState();
 }
 
-class _RelatedMaterialsStripState extends ConsumerState<_RelatedMaterialsStrip> {
+class _RelatedMaterialsStripState
+    extends ConsumerState<_RelatedMaterialsStrip> {
   List<DiscoveryMaterial> _materials = const [];
   var _loaded = false;
 
@@ -1918,9 +2236,7 @@ class _RelatedMaterialsStripState extends ConsumerState<_RelatedMaterialsStrip> 
 
   Future<void> _loadMaterials() async {
     try {
-      final repository = ApiMaterialDiscoveryRepository(
-        ref.read(apiClientProvider),
-      );
+      final repository = ref.read(materialDiscoveryRepositoryProvider);
       final result = await repository.fetchMaterials(widget.query);
       final materials = result.items
           .where((item) => item.id != widget.excludeMaterialId)
@@ -2028,9 +2344,12 @@ class _RelatedMaterialCompactCard extends StatelessWidget {
       ratingLabel: material.isPopular
           ? null
           : material.ratingLabel?.resolve(context),
+      viewsCount: material.viewsCount,
+      likesCount: material.likesCount,
+      isLiked: material.isLiked,
       showPopularBadge: material.isPopular,
       fallbackIcon: material.heroIconData,
-      onTap: () => context.go('/materials/${material.id}'),
+      onTap: () => context.push('/materials/${material.id}'),
     );
   }
 }
@@ -2052,6 +2371,12 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _quantityController;
   final _messageController = TextEditingController();
+  final _deliveryAddressController = TextEditingController();
+  final _deliveryNoteController = TextEditingController();
+  String? _fulfillmentMethod;
+  final _pickupWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
+  final _deliveryWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
+  bool? _safeDropoffAllowed;
   var _isSubmitting = false;
   String? _errorMessage;
 
@@ -2065,13 +2390,66 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     _quantityController = TextEditingController(
       text: _formatQuantity(defaultQuantity),
     );
+    _fulfillmentMethod = _initialFulfillmentMethod();
   }
 
   @override
   void dispose() {
     _quantityController.dispose();
     _messageController.dispose();
+    _deliveryAddressController.dispose();
+    _deliveryNoteController.dispose();
     super.dispose();
+  }
+
+  String? _initialFulfillmentMethod() {
+    final canPickup = widget.material.pickupAllowed;
+    final canDelivery = widget.material.deliveryAvailable;
+
+    if (canPickup && !canDelivery) {
+      return 'PICKUP';
+    }
+
+    if (!canPickup && canDelivery) {
+      return 'DELIVERY';
+    }
+
+    return null;
+  }
+
+  bool get _isPickup => _fulfillmentMethod == 'PICKUP';
+
+  bool get _isDelivery => _fulfillmentMethod == 'DELIVERY';
+
+  bool get _canChoosePickup => widget.material.pickupAllowed;
+
+  bool get _canChooseDelivery => widget.material.deliveryAvailable;
+
+  List<ReservationPreferredWindow>? _validatedPreferredWindows(
+    List<PreferredWindowDraft> drafts, {
+    Duration? minimumRemainingTime,
+    String? minimumRemainingTimeMessage,
+  }) {
+    final now = DateTime.now();
+    final windows = <ReservationPreferredWindow>[];
+
+    for (final draft in drafts) {
+      final error = draft.validationError(
+        now: now,
+        minimumRemainingTime: minimumRemainingTime,
+        minimumRemainingTimeMessage: minimumRemainingTimeMessage,
+      );
+      if (error != null) {
+        setState(() => _errorMessage = error);
+        return null;
+      }
+
+      windows.add(
+        ReservationPreferredWindow(start: draft.start!, end: draft.end!),
+      );
+    }
+
+    return windows;
   }
 
   bool get _usesCountSteps => _isCountLikeUnit(widget.material.unit);
@@ -2116,8 +2494,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     );
   }
 
-  String _formatQuantity(double value) =>
-      formatReservationQuantity(value);
+  String _formatQuantity(double value) => formatReservationQuantity(value);
 
   double? _parsedQuantity() {
     return double.tryParse(_quantityController.text.trim());
@@ -2167,45 +2544,134 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     final quantity = double.parse(_quantityController.text.trim());
     final message = _messageController.text.trim();
 
-    setState(() {
-      _isSubmitting = true;
-      _errorMessage = null;
-    });
-
-    try {
-      await widget.onSubmit(
-        CreateReservationRequest(
-          materialId: widget.material.id,
-          quantityRequested: quantity,
-          message: message.isEmpty ? null : message,
-        ),
+    if (_fulfillmentMethod == null) {
+      setState(
+        () => _errorMessage = 'Choose pickup or delivery before reserving.',
       );
-
-      if (!mounted) {
-        return;
-      }
-
-      Navigator.of(context).pop();
-    } on ApiException catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _isSubmitting = false;
-        _errorMessage = reservationCreateErrorMessage(error);
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _isSubmitting = false;
-        _errorMessage =
-            'Could not request this reservation. Please try again.';
-      });
+      return;
     }
+
+    if (_isPickup) {
+      final windows = _validatedPreferredWindows(
+        _pickupWindows,
+        minimumRemainingTime: minPickupNotice,
+        minimumRemainingTimeMessage: learnerPickupWindowTooCloseMessage,
+      );
+      if (windows == null) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = true;
+        _errorMessage = null;
+      });
+
+      try {
+        await widget.onSubmit(
+          CreateReservationRequest(
+            materialId: widget.material.id,
+            quantityRequested: quantity,
+            fulfillmentMethod: 'PICKUP',
+            message: message.isEmpty ? null : message,
+            learnerPreferredPickupWindows: windows,
+          ),
+        );
+      } on ApiException catch (error) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage = reservationCreateErrorMessage(error);
+        });
+        return;
+      } catch (_) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage =
+              'Could not request this reservation. Please try again.';
+        });
+        return;
+      }
+    } else if (_isDelivery) {
+      final windows = _validatedPreferredWindows(_deliveryWindows);
+      if (windows == null) {
+        return;
+      }
+
+      final deliveryAddress = _deliveryAddressController.text.trim();
+      if (deliveryAddress.isEmpty) {
+        setState(() => _errorMessage = 'Enter a delivery address.');
+        return;
+      }
+
+      if (_safeDropoffAllowed == null) {
+        setState(
+          () => _errorMessage = 'Choose whether safe drop-off is allowed.',
+        );
+        return;
+      }
+
+      final deliveryNote = _deliveryNoteController.text.trim();
+
+      setState(() {
+        _isSubmitting = true;
+        _errorMessage = null;
+      });
+
+      try {
+        await widget.onSubmit(
+          CreateReservationRequest(
+            materialId: widget.material.id,
+            quantityRequested: quantity,
+            fulfillmentMethod: 'DELIVERY',
+            message: message.isEmpty ? null : message,
+            learnerPreferredDeliveryWindows: windows,
+            deliveryAddressText: deliveryAddress,
+            safeDropoffAllowed: _safeDropoffAllowed,
+            deliveryNote: deliveryNote.isEmpty ? null : deliveryNote,
+          ),
+        );
+      } on ApiException catch (error) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage = reservationCreateErrorMessage(error);
+        });
+        return;
+      } catch (_) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage =
+              'Could not request this reservation. Please try again.';
+        });
+        return;
+      }
+    } else {
+      setState(
+        () => _errorMessage =
+            'This material does not have an available receive method.',
+      );
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pop();
   }
 
   @override
@@ -2288,8 +2754,9 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                       children: [
                         _ReservationDialogMaterialSummary(
                           material: material,
-                          availabilityLabel:
-                              _formatAvailableQuantityLabel(material),
+                          availabilityLabel: _formatAvailableQuantityLabel(
+                            material,
+                          ),
                         ),
                         if (_errorMessage != null) ...[
                           const SizedBox(height: _reservationDialogSectionGap),
@@ -2304,30 +2771,32 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                             ),
                             child: Text(
                               _errorMessage!,
-                              style: AppTextStyles.body(context).copyWith(
-                                color: palette.textPrimary,
-                              ),
+                              style: AppTextStyles.body(
+                                context,
+                              ).copyWith(color: palette.textPrimary),
                             ),
                           ),
                         ],
                         const SizedBox(height: _reservationDialogSectionGap),
                         Text(
                           'Quantity',
-                          style: AppTextStyles.label(context).copyWith(
-                            color: palette.textSecondary,
-                          ),
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         _ReservationDialogQuantityStepper(
                           controller: _quantityController,
                           unit: material.unit,
                           enabled: !_isSubmitting,
-                          onDecrement: _isSubmitting ||
+                          onDecrement:
+                              _isSubmitting ||
                                   (_parsedQuantity() ?? 1) <=
                                       (_usesCountSteps ? 1.0 : 0.1)
                               ? null
                               : _decrementQuantity,
-                          onIncrement: _isSubmitting ||
+                          onIncrement:
+                              _isSubmitting ||
                                   (_parsedQuantity() ?? 0) >= _availableQuantity
                               ? null
                               : _incrementQuantity,
@@ -2344,10 +2813,207 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                         ),
                         const SizedBox(height: _reservationDialogSectionGap),
                         Text(
-                          'Message to supplier',
-                          style: AppTextStyles.label(context).copyWith(
-                            color: palette.textSecondary,
+                          'Fulfillment',
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        SegmentedButton<String>(
+                          segments: [
+                            ButtonSegment(
+                              value: 'PICKUP',
+                              enabled: _canChoosePickup,
+                              label: const Text('Pickup'),
+                              icon: const Icon(
+                                Icons.storefront_outlined,
+                                size: 18,
+                              ),
+                            ),
+                            ButtonSegment(
+                              value: 'DELIVERY',
+                              enabled: _canChooseDelivery,
+                              label: const Text('Delivery'),
+                              icon: const Icon(
+                                Icons.local_shipping_outlined,
+                                size: 18,
+                              ),
+                            ),
+                          ],
+                          emptySelectionAllowed: true,
+                          selected: _fulfillmentMethod == null
+                              ? const <String>{}
+                              : {_fulfillmentMethod!},
+                          onSelectionChanged: _isSubmitting
+                              ? null
+                              : (selection) {
+                                  setState(() {
+                                    _fulfillmentMethod = selection.isEmpty
+                                        ? null
+                                        : selection.first;
+                                    _errorMessage = null;
+                                  });
+                                },
+                        ),
+                        if (!_canChoosePickup || !_canChooseDelivery) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            !_canChooseDelivery
+                                ? 'This material is pickup only.'
+                                : !_canChoosePickup
+                                ? 'This material is delivery only.'
+                                : '',
+                            style: AppTextStyles.label(
+                              context,
+                            ).copyWith(color: palette.textMuted),
                           ),
+                        ],
+                        const SizedBox(height: _reservationDialogSectionGap),
+                        if (_isPickup)
+                          PreferredWindowInput(
+                            windows: _pickupWindows,
+                            enabled: !_isSubmitting,
+                            label: 'Preferred pickup windows',
+                            onChanged: (windows) {
+                              setState(
+                                () => _pickupWindows
+                                  ..clear()
+                                  ..addAll(windows),
+                              );
+                            },
+                          )
+                        else if (_isDelivery) ...[
+                          PreferredWindowInput(
+                            windows: _deliveryWindows,
+                            enabled: !_isSubmitting,
+                            label: 'Preferred delivery windows',
+                            onChanged: (windows) {
+                              setState(
+                                () => _deliveryWindows
+                                  ..clear()
+                                  ..addAll(windows),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: _reservationDialogSectionGap),
+                          Text(
+                            'Delivery address',
+                            style: AppTextStyles.label(
+                              context,
+                            ).copyWith(color: palette.textSecondary),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          TextFormField(
+                            controller: _deliveryAddressController,
+                            enabled: !_isSubmitting,
+                            minLines: 2,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              hintText: 'Street, building, city…',
+                              filled: true,
+                              fillColor: palette.inputSurface,
+                              contentPadding: const EdgeInsetsDirectional.all(
+                                AppSpacing.sm,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide: BorderSide(
+                                  color: palette.borderSubtle,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide: BorderSide(
+                                  color: palette.borderSubtle,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide: BorderSide(color: palette.mint),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: _reservationDialogSectionGap),
+                          Text(
+                            'Safe drop-off allowed?',
+                            style: AppTextStyles.label(
+                              context,
+                            ).copyWith(color: palette.textSecondary),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          SegmentedButton<bool>(
+                            emptySelectionAllowed: true,
+                            segments: const [
+                              ButtonSegment(value: true, label: Text('Yes')),
+                              ButtonSegment(value: false, label: Text('No')),
+                            ],
+                            selected: _safeDropoffAllowed == null
+                                ? const <bool>{}
+                                : {_safeDropoffAllowed!},
+                            onSelectionChanged: _isSubmitting
+                                ? null
+                                : (selection) {
+                                    setState(() {
+                                      _safeDropoffAllowed = selection.isEmpty
+                                          ? null
+                                          : selection.first;
+                                    });
+                                  },
+                          ),
+                          const SizedBox(height: _reservationDialogSectionGap),
+                          Text(
+                            'Delivery note',
+                            style: AppTextStyles.label(
+                              context,
+                            ).copyWith(color: palette.textSecondary),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          TextFormField(
+                            controller: _deliveryNoteController,
+                            enabled: !_isSubmitting,
+                            minLines: 2,
+                            maxLines: 3,
+                            maxLength: _reservationMessageMaxLength,
+                            decoration: InputDecoration(
+                              hintText:
+                                  'Gate code, landmarks, or instructions…',
+                              helperText: 'Optional',
+                              filled: true,
+                              fillColor: palette.inputSurface,
+                              contentPadding: const EdgeInsetsDirectional.all(
+                                AppSpacing.sm,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide: BorderSide(
+                                  color: palette.borderSubtle,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide: BorderSide(
+                                  color: palette.borderSubtle,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide: BorderSide(color: palette.mint),
+                              ),
+                            ),
+                          ),
+                        ] else
+                          Text(
+                            'Choose how you want to receive this material to continue.',
+                            style: AppTextStyles.body(
+                              context,
+                            ).copyWith(color: palette.textMuted),
+                          ),
+                        const SizedBox(height: _reservationDialogSectionGap),
+                        Text(
+                          'Message to supplier',
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         TextFormField(
@@ -2357,7 +3023,9 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                           maxLines: 5,
                           maxLength: _reservationMessageMaxLength,
                           decoration: InputDecoration(
-                            hintText: 'Add pickup notes or questions…',
+                            hintText: _isPickup
+                                ? 'Add pickup notes or questions…'
+                                : 'Add reservation notes or questions…',
                             helperText: 'Optional',
                             filled: true,
                             fillColor: palette.inputSurface,
@@ -2366,11 +3034,15 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                             ),
                             border: OutlineInputBorder(
                               borderRadius: AppRadius.mdAll,
-                              borderSide: BorderSide(color: palette.borderSubtle),
+                              borderSide: BorderSide(
+                                color: palette.borderSubtle,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: AppRadius.mdAll,
-                              borderSide: BorderSide(color: palette.borderSubtle),
+                              borderSide: BorderSide(
+                                color: palette.borderSubtle,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: AppRadius.mdAll,
@@ -2452,24 +3124,23 @@ class _ReservationDialogMaterialSummary extends StatelessWidget {
       children: [
         Text(
           material.title.resolve(context),
-          style: AppTextStyles.body(context).copyWith(
-            color: palette.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: palette.textPrimary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
           material.category.resolve(context),
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textMuted,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textMuted),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           availabilityLabel,
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textSecondary,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary),
         ),
       ],
     );
@@ -2511,18 +3182,16 @@ class _ReservationDialogQuantityStepper extends StatelessWidget {
             controller: controller,
             enabled: enabled,
             textAlign: TextAlign.center,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textPrimary, fontWeight: FontWeight.w600),
             decoration: InputDecoration(
               isDense: true,
               suffixText: unit,
-              suffixStyle: AppTextStyles.label(context).copyWith(
-                color: palette.textMuted,
-              ),
+              suffixStyle: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textMuted),
               contentPadding: const EdgeInsetsDirectional.symmetric(
                 horizontal: AppSpacing.sm,
                 vertical: AppSpacing.sm,
@@ -2585,11 +3254,7 @@ class _ReservationDialogSubmitButton extends StatelessWidget {
     );
 
     if (fullWidth) {
-      return Row(
-        children: [
-          Expanded(child: button),
-        ],
-      );
+      return Row(children: [Expanded(child: button)]);
     }
 
     return IntrinsicWidth(child: button);

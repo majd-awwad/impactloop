@@ -12,7 +12,7 @@ User chooses **Sign up** or **Sign in**, or app loads a protected route while se
 
 ### User path
 
-1. `/register` → select **Find materials**, fill account fields, interests, goals, optional city/area, learner type, and skill level.
+1. `/register` → select **Find materials**, fill account fields, broad learner interests, learner-specific goals, optional city/area, learner type, and skill level.
 2. Review inside `/register`.
 3. Submit → account created → land on `/home`.
 
@@ -46,14 +46,14 @@ Authenticated session; access token in memory; refresh via cookie/body; user red
 
 ## Flow B — Register (supplier only)
 
-Same as Flow A but intent **Share materials** collects goals/location, supplier type, supplier display name, and optional description. Supplier display name defaults to the account full name if the user does not change it. The register payload includes `supplierProfile.pickupArea` derived from onboarding city/area. If the supplier type requires organization verification, the wizard creates the authenticated session, uploads the document to `/api/uploads/supplier-verification-document`, submits `/api/supplier/verification/submit`, then routes to `/supplier/verification-pending`. Student and individual suppliers skip the verification step. If verification upload/submission fails after account creation, the wizard stays recoverable inside `/register` and lets the user retry verification without recreating the account.
+Same as Flow A but intent **Share materials** collects supplier-specific goals, general pickup city/area, supplier type, supplier display name, and optional description. Supplier display name defaults to the account full name if the user does not change it. Learner-only interests are not shown for supplier-only registration. The register payload includes `supplierProfile.pickupArea` derived from onboarding city/area. If the supplier type requires organization verification, the wizard creates the authenticated session, uploads the document to `/api/uploads/supplier-verification-document`, submits `/api/supplier/verification/submit`, then routes to `/supplier/verification-pending`. Student and individual suppliers skip the verification step. If verification upload/submission fails after account creation, the wizard stays recoverable inside `/register` and lets the user retry verification without recreating the account.
 
 ---
 
 ## Flow C — Register (both roles)
 
 1. Intent **Do both** stays inside `/register`.
-2. The wizard collects interests once, goals/location, learner basics, supplier basics, verification document only when required, and review. Student learner types can preselect **Student supplier**; self-learners and makers can preselect **Individual supplier**.
+2. The wizard collects broad learner interests once, dual-role goals, supplier pickup location, learner basics, supplier basics, verification document only when required, and review. Student learner types can preselect **Student supplier**; self-learners and makers can preselect **Individual supplier**.
 3. Submit sends one register payload with roles `[LEARNER, SUPPLIER]`, `learnerProfile.interests`, and supplier `pickupArea` from city/area.
 4. Redirect: organization suppliers go to `/supplier/verification-pending` after verification submission; otherwise `postAuthRouteForUser` routes the authenticated user.
 
@@ -240,6 +240,90 @@ Missing token shows a clean inline error. The reset flow does not auto-login.
 - New password under policy length → validation error.
 - Notification email failure is logged server-side and does not undo the password reset.
 
+
+---
+
+## Flow I — Become supplier (existing learner)
+
+### Trigger
+
+Learner-only account taps **Become a supplier** from `/home`, `/profile`, or the account menu.
+
+### User path
+
+1. `/become-supplier` wizard collects supplier type (Student/Individual only), public name, pickup area, and optional description/hours/notes.
+2. Submit → account keeps `LEARNER` role, gains `SUPPLIER` role and supplier profile → lands on supplier portal (`postAuthRouteForUser`).
+
+Organization supplier types are rejected; those users must register as supplier or use `/register?intent=supplier`.
+
+### Frontend path
+
+`BecomeSupplierWizard` → `authController.becomeSupplier` → `authRepository.becomeSupplier` → `POST /api/auth/become-supplier` → refresh session via `me()` → `context.go(postAuthRouteForUser(user))`.
+
+Entry routing uses `supplierEntryRouteForUser`: learner-only → `/become-supplier`; existing supplier → `/supplier/profile`.
+
+### Backend path
+
+`POST /api/auth/become-supplier` (authenticated) → `auth.service.becomeSupplier` → `authRepository.becomeSupplierForUser` adds `SUPPLIER` role, creates or reuses supplier profile, sets `activeRole` to `SUPPLIER`, returns fresh auth session (JWT roles in sync).
+
+### Database changes
+
+Insert or update: `user_roles` (SUPPLIER), `supplier_profiles`, optional `locations` from `pickupArea`; update `users.active_role`.
+
+### Success state
+
+Dual-role session; supplier API routes authorize immediately; learner data and reservations remain on the same account.
+
+### Error states
+
+- Organization supplier type → `400 VALIDATION_ERROR`.
+- Admin/driver/moderator account → `403 FORBIDDEN`.
+- Field validation errors map to wizard inline errors.
+
+### Files involved
+
+`become_supplier_wizard.dart`, `become_supplier_request.dart`, `auth_controller.dart`, `auth_api.dart`, `auth.service.ts`, `auth.repository.ts`, `role-capabilities.ts`
+
+---
+
+## Flow J — Switch active portal (dual-role)
+
+### Trigger
+
+Dual-role user chooses **Switch to Supplier** or **Switch to Learner** from the account menu, profile page, or supplier profile popover.
+
+### User path
+
+Switch action → navigate to the opposite portal home (`/supplier/overview` or `/learning` per `oppositePortalSwitchRoute`).
+
+### Frontend path
+
+`PortalSwitchMenuItems` → `handlePortalRoleSwitch` → `authController.switchActiveRole` → `POST /api/auth/switch-role` → `me()` → `context.go(oppositePortalSwitchRoute(...))`.
+
+Router guards redirect mismatched portal URLs when `activeRole` does not match the destination (learner mode cannot browse supplier portal except onboarding/verification routes).
+
+### Backend path
+
+`POST /api/auth/switch-role` body `{ activeRole: "LEARNER" | "SUPPLIER" }` → capability checks in `role-capabilities.ts` → may grant `LEARNER` on first switch for student/individual suppliers → `setUserActiveRole` → fresh auth session.
+
+Organization suppliers without an existing `LEARNER` role cannot switch to learner mode.
+
+### Database changes
+
+Update `users.active_role`; may insert `user_roles` (LEARNER) on first eligible switch.
+
+### Success state
+
+Updated `activeRole`, refreshed tokens, portal routes match active mode.
+
+### Error states
+
+- Switch not allowed for account type → `403 FORBIDDEN` snackbar.
+- Invalid `activeRole` → `400`.
+
+### Files involved
+
+`portal_switch_menu.dart`, `portal_navigation.dart`, `auth_controller.dart`, `app_router.dart`, `auth.service.ts`, `role-capabilities.ts`
 
 ---
 

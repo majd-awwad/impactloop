@@ -10,6 +10,8 @@ import '../theme/supplier_theme_extension.dart';
 import '../widgets/accept_incoming_request_dialog.dart';
 import '../widgets/complete_pickup_dialog.dart';
 import '../widgets/decline_incoming_request_dialog.dart';
+import '../widgets/reservation_follow_up_flow.dart';
+import '../widgets/supplier_delivery_incident_flow.dart';
 import '../widgets/incoming_request_card.dart';
 import '../widgets/incoming_request_filter_chips.dart';
 import '../widgets/supplier_feedback.dart';
@@ -69,9 +71,12 @@ class _SupplierIncomingRequestsPageState
     }
 
     final tab = switch (tabName) {
+      'all' => SupplierIncomingRequestTab.all,
       'accepted' => SupplierIncomingRequestTab.accepted,
+      'needs_learner' || 'needslearner' => SupplierIncomingRequestTab.needsLearner,
       'declined' => SupplierIncomingRequestTab.declined,
       'completed' => SupplierIncomingRequestTab.completed,
+      'cancelled' => SupplierIncomingRequestTab.cancelled,
       _ => SupplierIncomingRequestTab.pending,
     };
 
@@ -155,6 +160,67 @@ class _SupplierIncomingRequestsPageState
                       request.canSupplierComplete
                   ? () => _handleComplete(context, ref, request)
                   : null,
+              onReschedule: request.canSupplierReschedule
+                  ? () => handleRequestReschedulePickup(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                        materialTitle: request.materialTitle,
+                        learnerName: request.learnerName,
+                      )
+                  : null,
+              onCloseReservation:
+                  request.canSupplierCloseOverduePickup ||
+                      request.canSupplierCloseAwaitingLearnerRequest
+                  ? () => handleCloseOverduePickup(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
+              onReportToAdmin:
+                  request.canSupplierReportAndCloseOverduePickup ||
+                      request.canSupplierReportAwaitingLearnerRequest
+                  ? () => handleReportToAdminAndClose(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
+              onAcceptLearnerReschedule:
+                  request.canSupplierAcceptLearnerReschedule
+                  ? () => handleAcceptLearnerReschedule(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
+              onProposeDifferentTime: request.canSupplierProposeDifferentTime
+                  ? () => handleRequestReschedulePickup(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                        materialTitle: request.materialTitle,
+                        learnerName: request.learnerName,
+                      )
+                  : null,
+              onMarkDeliveryPickupExpired:
+                  request.canMarkOrReportNoDriverAvailable
+                  ? () => handleMarkDeliveryPickupExpired(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
+              onReportDriverNoShow:
+                  request.canSupplierReportDriverNoShow &&
+                          request.activeDelivery?.id != null
+                  ? () => handleReportDriverNoShow(
+                        context,
+                        ref,
+                        deliveryId: request.activeDelivery!.id,
+                      )
+                  : null,
             ),
           ),
         )
@@ -168,27 +234,35 @@ class _SupplierIncomingRequestsPageState
   ) async {
     final pickupWindow = await AcceptIncomingRequestDialog.show(
       context,
-      materialTitle: request.materialTitle,
-      learnerName: request.learnerName,
+      request: request,
     );
     if (pickupWindow == null || !context.mounted) {
       return;
     }
 
     try {
-      await acceptIncomingRequest(
+      final updated = await acceptIncomingRequest(
         ref,
         requestId: request.id,
         pickupWindow: pickupWindow,
       );
       if (!context.mounted) return;
-      showSupplierInfoSnackBar(context, context.s.requestAccepted);
+      final message =
+          updated.status == SupplierIncomingRequestStatus.awaitingConfirmation
+          ? context.s.requestAwaitingConfirmation
+          : context.s.requestAccepted;
+      showSupplierInfoSnackBar(context, message);
       ref
           .read(incomingRequestTabProvider.notifier)
           .selectTab(SupplierIncomingRequestTab.accepted);
-    } catch (_) {
+    } catch (error) {
       if (!context.mounted) return;
-      showSupplierErrorSnackBar(context, context.s.requestAcceptFailed);
+      showSupplierErrorSnackBar(
+        context,
+        error is ApiException
+            ? error.displayMessage
+            : context.s.requestAcceptFailed,
+      );
     }
   }
 
@@ -231,7 +305,7 @@ class _SupplierIncomingRequestsPageState
     SupplierIncomingRequest request,
   ) async {
     final confirmed = await CompletePickupDialog.show(context);
-    if (confirmed != true || !context.mounted) {
+    if (confirmed == null || confirmed.trim().isEmpty || !context.mounted) {
       return;
     }
 
@@ -239,7 +313,11 @@ class _SupplierIncomingRequestsPageState
         .read(completingReservationIdProvider.notifier)
         .setCompleting(request.id);
     try {
-      await completeIncomingRequest(ref, requestId: request.id);
+      await completeIncomingRequest(
+        ref,
+        requestId: request.id,
+        confirmationCode: confirmed.trim(),
+      );
       if (!context.mounted) return;
       showSupplierInfoSnackBar(context, context.s.pickupCompleted);
       ref

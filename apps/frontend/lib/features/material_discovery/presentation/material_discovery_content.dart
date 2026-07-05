@@ -3,6 +3,16 @@ import 'package:flutter/material.dart';
 import '../../../shared/models/localized_text.dart';
 import '../domain/discovery_material.dart';
 
+const materialDiscoveryNoMaterialsTitle = LocalizedText(
+  en: 'No materials available yet',
+  ar: 'لا توجد مواد متاحة حالياً',
+);
+
+const materialDiscoveryNoMaterialsSubtitle = LocalizedText(
+  en: 'When suppliers publish reusable materials, they will appear here.',
+  ar: 'عندما ينشر الموردون مواد قابلة لإعادة الاستخدام، ستظهر هنا.',
+);
+
 const materialDiscoveryEmptyTitle = LocalizedText(
   en: 'No materials matched this combination yet',
   ar: 'لا توجد مواد تطابق هذا الجمع حالياً',
@@ -24,6 +34,7 @@ const materialQuickFilters = <LocalizedText>[
 const materialSortOptions = <LocalizedText>[
   LocalizedText(en: 'Newest', ar: 'الأحدث'),
   LocalizedText(en: 'Popular', ar: 'الأكثر شعبية'),
+  LocalizedText(en: 'Nearest', ar: 'الأقرب'),
 ];
 
 const materialConditionFilters = <({String? value, LocalizedText label})>[

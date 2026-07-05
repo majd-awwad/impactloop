@@ -50,10 +50,12 @@ class _ReservationFilters {
       status: status ?? this.status,
       hasDelivery: hasDelivery ?? this.hasDelivery,
       timeRange: timeRange ?? this.timeRange,
-      customDateFrom:
-          clearCustomDates ? null : (customDateFrom ?? this.customDateFrom),
-      customDateTo:
-          clearCustomDates ? null : (customDateTo ?? this.customDateTo),
+      customDateFrom: clearCustomDates
+          ? null
+          : (customDateFrom ?? this.customDateFrom),
+      customDateTo: clearCustomDates
+          ? null
+          : (customDateTo ?? this.customDateTo),
     );
   }
 
@@ -69,12 +71,12 @@ class _ReservationFilters {
 class _ReservationFiltersNotifier extends Notifier<_ReservationFilters> {
   @override
   _ReservationFilters build() => const _ReservationFilters(
-        page: 1,
-        search: '',
-        status: 'ALL',
-        hasDelivery: 'ALL',
-        timeRange: kTimeRangeAll,
-      );
+    page: 1,
+    search: '',
+    status: 'ALL',
+    hasDelivery: 'ALL',
+    timeRange: kTimeRangeAll,
+  );
 
   void setPage(int page) => state = state.copyWith(page: page);
   void setSearch(String search) =>
@@ -84,10 +86,10 @@ class _ReservationFiltersNotifier extends Notifier<_ReservationFilters> {
   void setHasDelivery(String hasDelivery) =>
       state = state.copyWith(page: 1, hasDelivery: hasDelivery);
   void setTimeRange(String timeRange) => state = state.copyWith(
-        page: 1,
-        timeRange: timeRange,
-        clearCustomDates: timeRange != kTimeRangeCustom,
-      );
+    page: 1,
+    timeRange: timeRange,
+    clearCustomDates: timeRange != kTimeRangeCustom,
+  );
   void setCustomDateFrom(String? value) =>
       state = state.copyWith(page: 1, customDateFrom: value);
   void setCustomDateTo(String? value) =>
@@ -97,8 +99,8 @@ class _ReservationFiltersNotifier extends Notifier<_ReservationFilters> {
 
 final _reservationFiltersProvider =
     NotifierProvider<_ReservationFiltersNotifier, _ReservationFilters>(
-  _ReservationFiltersNotifier.new,
-);
+      _ReservationFiltersNotifier.new,
+    );
 
 final adminReservationsListProvider = FutureProvider.autoDispose((ref) async {
   final filters = ref.watch(_reservationFiltersProvider);
@@ -110,7 +112,9 @@ final adminReservationsListProvider = FutureProvider.autoDispose((ref) async {
   final skipDates =
       filters.timeRange == kTimeRangeCustom && resolved.error != null;
 
-  return ref.read(adminReservationsApiProvider).fetchReservations(
+  return ref
+      .read(adminReservationsApiProvider)
+      .fetchReservations(
         page: filters.page,
         limit: _ReservationFilters.limit,
         search: filters.search,
@@ -121,16 +125,13 @@ final adminReservationsListProvider = FutureProvider.autoDispose((ref) async {
       );
 });
 
-final _adminReservationDetailProvider =
-    FutureProvider.autoDispose.family<AdminReservationDetail, String>(
-  (ref, id) => ref.read(adminReservationsApiProvider).fetchReservationDetail(id),
-);
+final _adminReservationDetailProvider = FutureProvider.autoDispose
+    .family<AdminReservationDetail, String>(
+      (ref, id) =>
+          ref.read(adminReservationsApiProvider).fetchReservationDetail(id),
+    );
 
-String _statusLabel(String status) {
-  final label = humanizeEnum(status);
-  if (label.isEmpty) return status;
-  return '${label[0].toUpperCase()}${label.substring(1)}';
-}
+String _statusLabel(String status) => monitoringStatusLabel(status);
 
 Color _reservationStatusAccent(AdminPalette palette, String status) {
   final normalized = status.toUpperCase();
@@ -176,7 +177,9 @@ Color _reservationStatusAccent(AdminPalette palette, String status) {
   if (normalized == 'PENDING' || normalized.contains('WAITING')) {
     return (
       background: palette.amber.withValues(alpha: palette.isDark ? 0.26 : 0.18),
-      foreground: palette.isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309),
+      foreground: palette.isDark
+          ? const Color(0xFFFCD34D)
+          : const Color(0xFFB45309),
     );
   }
   if (normalized == 'ACCEPTED' ||
@@ -189,13 +192,19 @@ Color _reservationStatusAccent(AdminPalette palette, String status) {
       normalized.contains('ARRIVED')) {
     return (
       background: palette.green.withValues(alpha: palette.isDark ? 0.26 : 0.16),
-      foreground: palette.isDark ? const Color(0xFF86EFAC) : const Color(0xFF15803D),
+      foreground: palette.isDark
+          ? const Color(0xFF86EFAC)
+          : const Color(0xFF15803D),
     );
   }
   if (normalized == 'COMPLETED' || normalized == 'DELIVERED') {
     return (
-      background: palette.purple.withValues(alpha: palette.isDark ? 0.26 : 0.16),
-      foreground: palette.isDark ? const Color(0xFFC4B5FD) : const Color(0xFF6D28D9),
+      background: palette.purple.withValues(
+        alpha: palette.isDark ? 0.26 : 0.16,
+      ),
+      foreground: palette.isDark
+          ? const Color(0xFFC4B5FD)
+          : const Color(0xFF6D28D9),
     );
   }
   if (normalized == 'REJECTED' ||
@@ -203,18 +212,24 @@ Color _reservationStatusAccent(AdminPalette palette, String status) {
       normalized.contains('FAILED')) {
     return (
       background: palette.red.withValues(alpha: palette.isDark ? 0.26 : 0.14),
-      foreground: palette.isDark ? const Color(0xFFFDA4AF) : const Color(0xFFB91C1C),
+      foreground: palette.isDark
+          ? const Color(0xFFFDA4AF)
+          : const Color(0xFFB91C1C),
     );
   }
   if (normalized == 'EXPIRED') {
     return (
       background: palette.red.withValues(alpha: palette.isDark ? 0.2 : 0.12),
-      foreground: palette.isDark ? const Color(0xFFFDA4AF) : const Color(0xFFBE123C),
+      foreground: palette.isDark
+          ? const Color(0xFFFDA4AF)
+          : const Color(0xFFBE123C),
     );
   }
 
   return (
-    background: palette.textMuted.withValues(alpha: palette.isDark ? 0.22 : 0.14),
+    background: palette.textMuted.withValues(
+      alpha: palette.isDark ? 0.22 : 0.14,
+    ),
     foreground: palette.textSecondary,
   );
 }
@@ -327,10 +342,9 @@ class _ReservationSummaryCard extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               value,
-                              style: AdminTypography.kpiValue(palette).copyWith(
-                                fontSize: 17,
-                                color: accent,
-                              ),
+                              style: AdminTypography.kpiValue(
+                                palette,
+                              ).copyWith(fontSize: 17, color: accent),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -400,7 +414,8 @@ class _AdminReservationsPageState extends ConsumerState<AdminReservationsPage> {
   Future<void> _showDetails(String reservationId) async {
     await showDialog<void>(
       context: context,
-      builder: (context) => _ReservationDetailDialog(reservationId: reservationId),
+      builder: (context) =>
+          _ReservationDetailDialog(reservationId: reservationId),
     );
   }
 
@@ -499,13 +514,13 @@ class _AdminReservationsPageState extends ConsumerState<AdminReservationsPage> {
                       total: data.pagination.total,
                       onPrevious: data.pagination.page > 1
                           ? () => ref
-                              .read(_reservationFiltersProvider.notifier)
-                              .setPage(data.pagination.page - 1)
+                                .read(_reservationFiltersProvider.notifier)
+                                .setPage(data.pagination.page - 1)
                           : null,
                       onNext: data.pagination.page < data.pagination.totalPages
                           ? () => ref
-                              .read(_reservationFiltersProvider.notifier)
-                              .setPage(data.pagination.page + 1)
+                                .read(_reservationFiltersProvider.notifier)
+                                .setPage(data.pagination.page + 1)
                           : null,
                     ),
                   ],
@@ -570,10 +585,10 @@ class _SummaryRow extends StatelessWidget {
         final columns = constraints.maxWidth >= 1100
             ? 5
             : constraints.maxWidth >= 720
-                ? 3
-                : constraints.maxWidth >= 480
-                    ? 2
-                    : 1;
+            ? 3
+            : constraints.maxWidth >= 480
+            ? 2
+            : 1;
         return Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -641,18 +656,14 @@ class _FiltersPanelState extends State<_FiltersPanel> {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final dropdownWidth = widget.compact ? double.infinity : 170.0;
-    final statusValue = safeDropdownValue(
-      widget.filters.status,
-      widget.statuses,
-    ) ?? 'ALL';
+    final statusValue =
+        safeDropdownValue(widget.filters.status, widget.statuses) ?? 'ALL';
 
     final statusEntries = [
       const DropdownMenuEntry(value: 'ALL', label: 'All statuses'),
       ...widget.statuses.map(
-        (status) => DropdownMenuEntry(
-          value: status,
-          label: _statusLabel(status),
-        ),
+        (status) =>
+            DropdownMenuEntry(value: status, label: _statusLabel(status)),
       ),
     ];
     const hasDeliveryEntries = [
@@ -799,9 +810,9 @@ class _FiltersPanelState extends State<_FiltersPanel> {
               const SizedBox(height: 6),
               Text(
                 widget.dateRangeError!,
-                style: AdminTypography.kpiHelper(palette).copyWith(
-                  color: palette.red,
-                ),
+                style: AdminTypography.kpiHelper(
+                  palette,
+                ).copyWith(color: palette.red),
               ),
             ],
           ],
@@ -890,8 +901,9 @@ class _ReservationsList extends StatelessWidget {
               color: palette.isDark
                   ? palette.cardBackground
                   : const Color(0xFFF9FAFB),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(14)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(14),
+              ),
               border: Border(bottom: BorderSide(color: palette.cardBorder)),
             ),
             child: Row(
@@ -919,7 +931,10 @@ class _ReservationsList extends StatelessWidget {
                 ),
                 SizedBox(
                   width: 96,
-                  child: Text('Status', style: AdminTypography.kpiLabel(palette)),
+                  child: Text(
+                    'Status',
+                    style: AdminTypography.kpiLabel(palette),
+                  ),
                 ),
                 SizedBox(
                   width: 72,
@@ -927,7 +942,10 @@ class _ReservationsList extends StatelessWidget {
                 ),
                 SizedBox(
                   width: 120,
-                  child: Text('Created', style: AdminTypography.kpiLabel(palette)),
+                  child: Text(
+                    'Created',
+                    style: AdminTypography.kpiLabel(palette),
+                  ),
                 ),
                 SizedBox(
                   width: 100,
@@ -968,15 +986,20 @@ class _ReservationRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final created = formatAdminDateTime(item.createdAt) ?? item.createdAt;
-    final learnerLabel =
-        displayPersonLabel(item.learner.displayName, item.learner.email);
-    final supplierLabel =
-        displayPersonLabel(item.supplier.displayName, item.supplier.email);
-    final deliveryLabel = item.delivery != null && item.delivery!.status.isNotEmpty
+    final learnerLabel = displayPersonLabel(
+      item.learner.displayName,
+      item.learner.email,
+    );
+    final supplierLabel = displayPersonLabel(
+      item.supplier.displayName,
+      item.supplier.email,
+    );
+    final deliveryLabel =
+        item.delivery != null && item.delivery!.status.isNotEmpty
         ? _statusLabel(item.delivery!.status)
         : item.hasDelivery
-            ? 'Linked'
-            : '—';
+        ? 'Linked'
+        : '—';
     final statusAccent = _reservationStatusAccent(palette, item.status);
 
     final inner = InkWell(
@@ -1035,9 +1058,9 @@ class _ReservationRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   item.material.title,
-                  style: AdminTypography.sectionTitle(palette).copyWith(
-                    fontSize: 13,
-                  ),
+                  style: AdminTypography.sectionTitle(
+                    palette,
+                  ).copyWith(fontSize: 13),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1090,10 +1113,7 @@ class _ReservationRow extends StatelessWidget {
                   status: item.delivery!.status,
                   isDelivery: true,
                 )
-              : Text(
-                  deliveryLabel,
-                  style: AdminTypography.kpiHelper(palette),
-                ),
+              : Text(deliveryLabel, style: AdminTypography.kpiHelper(palette)),
         ),
       ],
     );
@@ -1127,9 +1147,9 @@ class _ReservationRow extends StatelessWidget {
                   children: [
                     Text(
                       item.material.title,
-                      style: AdminTypography.sectionTitle(palette).copyWith(
-                        fontSize: 14,
-                      ),
+                      style: AdminTypography.sectionTitle(
+                        palette,
+                      ).copyWith(fontSize: 14),
                     ),
                     const SizedBox(height: 6),
                     Wrap(
@@ -1151,7 +1171,11 @@ class _ReservationRow extends StatelessWidget {
           const SizedBox(height: 10),
           _CardMetaRow(label: 'Learner', value: learnerLabel, palette: palette),
           const SizedBox(height: 4),
-          _CardMetaRow(label: 'Supplier', value: supplierLabel, palette: palette),
+          _CardMetaRow(
+            label: 'Supplier',
+            value: supplierLabel,
+            palette: palette,
+          ),
           const SizedBox(height: 4),
           _CardMetaRow(label: 'Created', value: created, palette: palette),
           if (item.hasDelivery) ...[
@@ -1160,11 +1184,12 @@ class _ReservationRow extends StatelessWidget {
               label: 'Delivery',
               value: deliveryLabel,
               palette: palette,
-              trailing: item.delivery != null && item.delivery!.status.isNotEmpty
+              trailing:
+                  item.delivery != null && item.delivery!.status.isNotEmpty
                   ? _ReservationStatusBadge(
-                  status: item.delivery!.status,
-                  isDelivery: true,
-                )
+                      status: item.delivery!.status,
+                      isDelivery: true,
+                    )
                   : null,
             ),
           ],
@@ -1197,12 +1222,13 @@ class _CardMetaRow extends StatelessWidget {
           child: Text(label, style: AdminTypography.kpiHelper(palette)),
         ),
         Expanded(
-          child: trailing ??
+          child:
+              trailing ??
               Text(
                 value,
-                style: AdminTypography.pageSubtitle(palette).copyWith(
-                  fontSize: 13,
-                ),
+                style: AdminTypography.pageSubtitle(
+                  palette,
+                ).copyWith(fontSize: 13),
               ),
         ),
       ],
@@ -1230,7 +1256,11 @@ class _MaterialThumb extends StatelessWidget {
         height: size,
         color: palette.bannerBackground,
         child: resolved == null
-            ? Icon(Icons.image_outlined, color: palette.textMuted, size: size * 0.4)
+            ? Icon(
+                Icons.image_outlined,
+                color: palette.textMuted,
+                size: size * 0.4,
+              )
             : Image.network(
                 resolved,
                 width: size,
@@ -1254,7 +1284,9 @@ class _ReservationDetailDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(_adminReservationDetailProvider(reservationId));
+    final detailAsync = ref.watch(
+      _adminReservationDetailProvider(reservationId),
+    );
 
     return AlertDialog(
       title: const Text('Reservation details'),
@@ -1296,10 +1328,14 @@ class _ReservationDetailBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    final learnerLabel =
-        displayPersonLabel(detail.learner.displayName, detail.learner.email);
-    final supplierLabel =
-        displayPersonLabel(detail.supplier.displayName, detail.supplier.email);
+    final learnerLabel = displayPersonLabel(
+      detail.learner.displayName,
+      detail.learner.email,
+    );
+    final supplierLabel = displayPersonLabel(
+      detail.supplier.displayName,
+      detail.supplier.email,
+    );
     final pickupWindow = _formatPickupWindow(
       detail.pickupWindowStart,
       detail.pickupWindowEnd,
@@ -1317,7 +1353,10 @@ class _ReservationDetailBody extends StatelessWidget {
               value: _formatQuantity(detail.quantityRequested, detail.unit),
             ),
             if (detail.message != null && detail.message!.trim().isNotEmpty)
-              AdminDetailRow(label: 'Learner message', value: detail.message!.trim()),
+              AdminDetailRow(
+                label: 'Learner message',
+                value: detail.message!.trim(),
+              ),
             AdminDetailRow(
               label: 'Created',
               value: formatAdminDateTime(detail.createdAt) ?? detail.createdAt,
@@ -1330,7 +1369,8 @@ class _ReservationDetailBody extends StatelessWidget {
               AdminDetailRow(
                 label: 'Completed',
                 value:
-                    formatAdminDateTime(detail.completedAt) ?? detail.completedAt!,
+                    formatAdminDateTime(detail.completedAt) ??
+                    detail.completedAt!,
               ),
           ],
         ),
@@ -1339,7 +1379,11 @@ class _ReservationDetailBody extends StatelessWidget {
           children: [
             AdminDetailRow(label: 'Name', value: learnerLabel),
             AdminDetailRow(label: 'Email', value: detail.learner.email),
-            AdminDetailRow(label: 'User ID', value: detail.learner.id, muted: true),
+            AdminDetailRow(
+              label: 'User ID',
+              value: detail.learner.id,
+              muted: true,
+            ),
           ],
         ),
         AdminDetailSection(
@@ -1376,7 +1420,10 @@ class _ReservationDetailBody extends StatelessWidget {
                   ? '—'
                   : _statusLabel(detail.material.condition),
             ),
-            AdminDetailRow(label: 'Price', value: _formatPrice(detail.material)),
+            AdminDetailRow(
+              label: 'Price',
+              value: _formatPrice(detail.material),
+            ),
             AdminDetailRow(
               label: 'Pickup allowed',
               value: detail.material.pickupAllowed ? 'Yes' : 'No',
@@ -1405,21 +1452,30 @@ class _ReservationDetailBody extends StatelessWidget {
             if (detail.acceptedAt != null)
               AdminDetailRow(
                 label: 'Accepted',
-                value: formatAdminDateTime(detail.acceptedAt) ?? detail.acceptedAt!,
+                value:
+                    formatAdminDateTime(detail.acceptedAt) ??
+                    detail.acceptedAt!,
               ),
             if (detail.rejectedAt != null)
               AdminDetailRow(
                 label: 'Rejected',
-                value: formatAdminDateTime(detail.rejectedAt) ?? detail.rejectedAt!,
+                value:
+                    formatAdminDateTime(detail.rejectedAt) ??
+                    detail.rejectedAt!,
               ),
             if (detail.cancelledAt != null)
               AdminDetailRow(
                 label: 'Cancelled',
                 value:
-                    formatAdminDateTime(detail.cancelledAt) ?? detail.cancelledAt!,
+                    formatAdminDateTime(detail.cancelledAt) ??
+                    detail.cancelledAt!,
               ),
-            if (detail.supplierNote != null && detail.supplierNote!.trim().isNotEmpty)
-              AdminDetailRow(label: 'Supplier note', value: detail.supplierNote!.trim()),
+            if (detail.supplierNote != null &&
+                detail.supplierNote!.trim().isNotEmpty)
+              AdminDetailRow(
+                label: 'Supplier note',
+                value: detail.supplierNote!.trim(),
+              ),
             if (detail.rejectionReason != null &&
                 detail.rejectionReason!.trim().isNotEmpty)
               AdminDetailRow(
@@ -1430,7 +1486,8 @@ class _ReservationDetailBody extends StatelessWidget {
         ),
         if (detail.deliveryRequested ||
             detail.delivery != null ||
-            (detail.deliveryStatus != null && detail.deliveryStatus!.isNotEmpty))
+            (detail.deliveryStatus != null &&
+                detail.deliveryStatus!.isNotEmpty))
           AdminDetailSection(
             title: 'Linked delivery',
             children: [
@@ -1438,12 +1495,14 @@ class _ReservationDetailBody extends StatelessWidget {
                 label: 'Delivery requested',
                 value: detail.deliveryRequested ? 'Yes' : 'No',
               ),
-              if (detail.deliveryStatus != null && detail.deliveryStatus!.isNotEmpty)
+              if (detail.deliveryStatus != null &&
+                  detail.deliveryStatus!.isNotEmpty)
                 AdminDetailRow(
                   label: 'Delivery status',
                   value: _statusLabel(detail.deliveryStatus!),
                 ),
-              if (detail.delivery != null && detail.delivery!.id.isNotEmpty) ...[
+              if (detail.delivery != null &&
+                  detail.delivery!.id.isNotEmpty) ...[
                 AdminDetailRow(
                   label: 'Delivery ID',
                   value: detail.delivery!.id,
@@ -1465,7 +1524,8 @@ class _ReservationDetailBody extends StatelessWidget {
                 if (detail.delivery!.requestedAt.isNotEmpty)
                   AdminDetailRow(
                     label: 'Requested',
-                    value: formatAdminDateTime(detail.delivery!.requestedAt) ??
+                    value:
+                        formatAdminDateTime(detail.delivery!.requestedAt) ??
                         detail.delivery!.requestedAt,
                   ),
               ],
@@ -1475,9 +1535,9 @@ class _ReservationDetailBody extends StatelessWidget {
                   final deliveryId = detail.delivery?.id;
                   Navigator.pop(context);
                   if (deliveryId != null && deliveryId.isNotEmpty) {
-                    context.go('/admin/deliveries?open=$deliveryId');
+                    context.push('/admin/deliveries?open=$deliveryId');
                   } else {
-                    context.go('/admin/deliveries');
+                    context.push('/admin/deliveries');
                   }
                 },
                 icon: const Icon(Icons.local_shipping_outlined, size: 18),
