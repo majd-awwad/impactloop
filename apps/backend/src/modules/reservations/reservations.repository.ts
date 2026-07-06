@@ -12,6 +12,10 @@ import {
 } from './reservations.quantity.js';
 import { expireStalePendingReservationsForLearnerMaterial } from './reservations.pending-expiry.repository.js';
 import { expireStaleMissedPickupsForMaterialIdsInTransaction } from './reservations.missed-pickup-expiry.repository.js';
+import {
+  setBuildItemLinkedReservationId,
+  validateBuildItemForReservationLink,
+} from '../learning-projects/learning-projects.build-reservation-linking.js';
 
 const reservationInclude = {
   material: {
@@ -159,6 +163,7 @@ export const createLearnerReservation = async (input: {
   deliveryAddressText?: string;
   safeDropoffAllowed?: boolean;
   deliveryNote?: string;
+  buildItemId?: string;
 }) => {
   return runSerializableTransaction(async (tx) => {
     const material = await tx.material.findUnique({
@@ -237,6 +242,24 @@ export const createLearnerReservation = async (input: {
       return { outcome: 'OPEN_RESERVATION_EXISTS' as const };
     }
 
+    let linkedBuildItemId: string | null = null;
+
+    if (input.buildItemId) {
+      const buildItemValidation = await validateBuildItemForReservationLink(tx, {
+        learnerId: input.requesterId,
+        buildItemId: input.buildItemId,
+        materialId: material.id,
+      });
+
+      if (!buildItemValidation.ok) {
+        return {
+          outcome: buildItemValidation.code,
+        };
+      }
+
+      linkedBuildItemId = buildItemValidation.buildItemId;
+    }
+
     const message = input.message?.trim() || null;
     const deliveryNote = input.deliveryNote?.trim() || null;
 
@@ -283,6 +306,14 @@ export const createLearnerReservation = async (input: {
     });
 
     await recomputeAndUpdateMaterialStatus(tx, material.id);
+
+    if (linkedBuildItemId) {
+      await setBuildItemLinkedReservationId(
+        tx,
+        linkedBuildItemId,
+        reservation.id,
+      );
+    }
 
     const updatedReservation = await tx.reservation.findUniqueOrThrow({
       where: { id: reservation.id },

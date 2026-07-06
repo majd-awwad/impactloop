@@ -592,8 +592,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/materials/:id',
         builder: (context, state) {
           final materialId = state.pathParameters['id']!;
+          final query = state.uri.queryParameters;
 
-          return MaterialDetailsPage(materialId: materialId);
+          return MaterialDetailsPage(
+            materialId: materialId,
+            projectId: query['projectId'],
+            buildItemId: query['buildItemId'],
+            returnTo: query['returnTo'],
+            componentName: query['componentName'],
+          );
         },
       ),
       GoRoute(

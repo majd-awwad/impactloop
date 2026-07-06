@@ -86,7 +86,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/learning/:id/build` | `LearningProjectBuildPage` | learner | Persisted manual project build checklist with per-item material candidates, link/unlink, and linked-material panel; no AI matching or auto-reservation |
 | `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail with start/continue build action |
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default; optional `q` query pre-fills search |
-| `/materials/:id` | `MaterialDetailsPage` | public | API-backed default |
+| `/materials/:id` | `MaterialDetailsPage` | public | API-backed default; optional query `projectId`, `buildItemId`, `returnTo`, `componentName` for Learning Hub build-context reserve flow |
 | `/login` | `LoginPage` | public | `_AuthPageGuard` |
 | `/forgot-password` | `ForgotPasswordPage` | public | `_AuthPageGuard`; optional `email` query pre-fills the form |
 | `/reset-password` | `ResetPasswordPage` | public | `_AuthPageGuard`; reads reset `token` query |

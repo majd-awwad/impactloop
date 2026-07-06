@@ -188,7 +188,30 @@ class _LearningProjectBuildPageState
       return;
     }
 
-    context.go('/materials/$materialId');
+    context.go(
+      buildChecklistMaterialDetailUri(
+        materialId: materialId,
+        projectId: widget.projectId,
+        buildItemId: item.id,
+        componentName: item.component.name.en,
+      ),
+    );
+  }
+
+  void _reserveLinkedMaterial(ProjectBuildItem item) {
+    final materialId = item.linkedMaterial?.id;
+    if (materialId == null) {
+      return;
+    }
+
+    context.go(
+      buildChecklistMaterialDetailUri(
+        materialId: materialId,
+        projectId: widget.projectId,
+        buildItemId: item.id,
+        componentName: item.component.name.en,
+      ),
+    );
   }
 
   @override
@@ -217,6 +240,7 @@ class _LearningProjectBuildPageState
                         onShowMaterialCandidates: _showMaterialCandidates,
                         onUnlinkMaterial: _unlinkMaterial,
                         onViewLinkedMaterial: _viewLinkedMaterial,
+                        onReserveLinkedMaterial: _reserveLinkedMaterial,
                       ),
                 error: (error, stackTrace) => _BuildStatePanel(
                   icon: Icons.cloud_off_outlined,
@@ -250,6 +274,7 @@ class _LearningProjectBuildPageState
                     onShowMaterialCandidates: _showMaterialCandidates,
                     onUnlinkMaterial: _unlinkMaterial,
                     onViewLinkedMaterial: _viewLinkedMaterial,
+                    onReserveLinkedMaterial: _reserveLinkedMaterial,
                   );
                 },
               ),
@@ -272,6 +297,7 @@ class _BuildContent extends StatelessWidget {
     required this.onShowMaterialCandidates,
     required this.onUnlinkMaterial,
     required this.onViewLinkedMaterial,
+    required this.onReserveLinkedMaterial,
   });
 
   final String projectId;
@@ -288,6 +314,7 @@ class _BuildContent extends StatelessWidget {
   final ValueChanged<ProjectBuildItem> onShowMaterialCandidates;
   final ValueChanged<ProjectBuildItem> onUnlinkMaterial;
   final ValueChanged<ProjectBuildItem> onViewLinkedMaterial;
+  final ValueChanged<ProjectBuildItem> onReserveLinkedMaterial;
 
   @override
   Widget build(BuildContext context) {
@@ -326,6 +353,7 @@ class _BuildContent extends StatelessWidget {
                           onShowMaterialCandidates(item),
                       onUnlinkMaterial: () => onUnlinkMaterial(item),
                       onViewLinkedMaterial: () => onViewLinkedMaterial(item),
+                      onReserveLinkedMaterial: () => onReserveLinkedMaterial(item),
                     ),
                   );
                 }),
@@ -413,6 +441,7 @@ class _BuildItemCard extends StatelessWidget {
     required this.onShowMaterialCandidates,
     required this.onUnlinkMaterial,
     required this.onViewLinkedMaterial,
+    required this.onReserveLinkedMaterial,
   });
 
   final int index;
@@ -424,6 +453,7 @@ class _BuildItemCard extends StatelessWidget {
   final VoidCallback onShowMaterialCandidates;
   final VoidCallback onUnlinkMaterial;
   final VoidCallback onViewLinkedMaterial;
+  final VoidCallback onReserveLinkedMaterial;
 
   @override
   Widget build(BuildContext context) {
@@ -566,6 +596,9 @@ class _BuildItemCard extends StatelessWidget {
               readinessLabel: item.readinessLabel,
               isBusy: isUpdating,
               onViewMaterial: onViewLinkedMaterial,
+              onReserveMaterial: item.linkedReservation == null
+                  ? onReserveLinkedMaterial
+                  : null,
               onUnlink: onUnlinkMaterial,
             ),
           ],

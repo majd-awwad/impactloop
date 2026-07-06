@@ -174,7 +174,7 @@ export const mapLinkedReservationSummary = (
 const formatReservationStatusLabel = (status: string) => {
   switch (status) {
     case 'PENDING':
-      return 'Awaiting supplier response';
+      return 'Reservation pending — waiting for supplier';
     case 'AWAITING_LEARNER_CONFIRMATION':
       return 'Awaiting your confirmation';
     case 'AWAITING_SUPPLIER_CONFIRMATION':
@@ -182,17 +182,13 @@ const formatReservationStatusLabel = (status: string) => {
     case 'ACCEPTED':
       return 'Accepted — pickup or delivery in progress';
     case 'COMPLETED':
-      return 'Completed';
+      return 'Ready for build — material acquired';
     case 'REJECTED':
-      return 'Rejected — choose another option';
     case 'CANCELLED':
-      return 'Cancelled';
     case 'EXPIRED':
-      return 'Expired — choose another option';
     case 'NO_SHOW':
-      return 'No-show reported';
     case 'FULFILLMENT_FAILED':
-      return 'Fulfillment failed';
+      return 'Reservation ended — choose another option';
     case 'AWAITING_RESOLUTION':
       return 'Awaiting resolution';
     default:
@@ -218,7 +214,7 @@ export const resolveBuildItemReadiness = (input: {
   if (input.linkedReservation?.status === 'COMPLETED') {
     return {
       isReadyForBuild: true,
-      readinessLabel: 'Reservation completed',
+      readinessLabel: 'Ready for build — material acquired',
     };
   }
 

@@ -9,6 +9,26 @@ import '../../domain/models/project_build.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../theme/learning_ui_palette.dart';
 
+String buildChecklistMaterialDetailUri({
+  required String materialId,
+  required String projectId,
+  required String buildItemId,
+  String? componentName,
+}) {
+  final returnTo = Uri.encodeComponent('/learning/$projectId/build');
+
+  return Uri(
+    path: '/materials/$materialId',
+    queryParameters: {
+      'projectId': projectId,
+      'buildItemId': buildItemId,
+      'returnTo': returnTo,
+      if (componentName != null && componentName.trim().isNotEmpty)
+        'componentName': componentName.trim(),
+    },
+  ).toString();
+}
+
 class ProjectBuildMaterialCandidatesSheet extends StatefulWidget {
   const ProjectBuildMaterialCandidatesSheet({
     super.key,
@@ -202,7 +222,14 @@ class _ProjectBuildMaterialCandidatesSheetState
                                   onLink: () => _linkMaterial(candidate),
                                   onView: () {
                                     Navigator.of(context).pop();
-                                    context.go('/materials/${candidate.id}');
+                                    context.go(
+                                      buildChecklistMaterialDetailUri(
+                                        materialId: candidate.id,
+                                        projectId: widget.projectId,
+                                        buildItemId: widget.item.id,
+                                        componentName: componentName,
+                                      ),
+                                    );
                                   },
                                 ),
                               ),
@@ -227,6 +254,7 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
     required this.readinessLabel,
     required this.isBusy,
     required this.onViewMaterial,
+    this.onReserveMaterial,
     required this.onUnlink,
   });
 
@@ -236,6 +264,7 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
   final String readinessLabel;
   final bool isBusy;
   final VoidCallback onViewMaterial;
+  final VoidCallback? onReserveMaterial;
   final VoidCallback onUnlink;
 
   @override
@@ -344,6 +373,12 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
+              if (linkedReservation == null && onReserveMaterial != null)
+                FilledButton.icon(
+                  onPressed: isBusy ? null : onReserveMaterial,
+                  icon: const Icon(Icons.event_available_outlined),
+                  label: const Text('Reserve this material'),
+                ),
               OutlinedButton.icon(
                 onPressed: isBusy ? null : onViewMaterial,
                 icon: const Icon(Icons.open_in_new_rounded),

@@ -16,6 +16,7 @@ import {
   getMyProjectBuild,
   likeLearningProject,
   linkBuildItemMaterial,
+  linkBuildItemReservation,
   listFollowedLearningProjects,
   listLearningProjects,
   listSavedLearningProjects,
@@ -33,6 +34,7 @@ import {
   learningProjectIdParamSchema,
   learningProjectsQuerySchema,
   linkBuildItemMaterialSchema,
+  linkBuildItemReservationSchema,
   projectBuildItemParamSchema,
   projectReviewSchema,
   submitLearningProjectSchema,
@@ -120,6 +122,15 @@ learningProjectsRouter.delete(
   requireRoles('LEARNER'),
   validate(projectBuildItemParamSchema, 'params'),
   asyncHandler(unlinkBuildItemMaterial),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/items/:itemId/link-reservation',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectBuildItemParamSchema, 'params'),
+  validate(linkBuildItemReservationSchema),
+  asyncHandler(linkBuildItemReservation),
 );
 
 learningProjectsRouter.post(

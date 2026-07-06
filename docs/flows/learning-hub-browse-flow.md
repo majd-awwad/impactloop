@@ -90,7 +90,7 @@ Invalid UUID → validation error panel with retry (not crash).
 
 The build checklist panel reads learner build state only for authenticated learner sessions. **Start build** calls `POST /api/learning-projects/:id/builds/start`, then opens `/learning/:id/build`. Existing builds show **Continue checklist**. Guests are sent to `/login?from=/learning/<id>/build`; non-learner authenticated users receive an info snackbar.
 
-The build page fetches `GET /api/learning-projects/:id/builds/me`. If no build exists, the learner can start one. Checklist rows are initialized from required components and manually updated with `PATCH /api/learning-projects/:id/builds/me/items/:itemId`, body `{ status, learnerNote? }`. Supported statuses are `MISSING`, `ALREADY_OWNED`, `AVAILABLE`, `RESERVED`, and `ALTERNATIVE`. Each row exposes **Browse matching materials**, which loads `GET .../material-candidates`, lets the learner link/unlink a platform material, and shows a linked-material panel. Linking does **not** auto-mark the item ready; progress uses `isReadyForBuild` (`ALREADY_OWNED` / `AVAILABLE` / `ALTERNATIVE`, or linked reservation `COMPLETED`). **Browse all materials** still opens `/materials?q=<component name>`. No AI matching, automatic reservation creation, or related-projects API is used.
+The build page fetches `GET /api/learning-projects/:id/builds/me`. If no build exists, the learner can start one. Checklist rows are initialized from required components and manually updated with `PATCH /api/learning-projects/:id/builds/me/items/:itemId`, body `{ status, learnerNote? }`. Supported statuses are `MISSING`, `ALREADY_OWNED`, `AVAILABLE`, `RESERVED`, and `ALTERNATIVE`. Each row exposes **Browse matching materials**, which loads `GET .../material-candidates`, lets the learner link/unlink a platform material, and shows a linked-material panel with reservation status when linked. **Reserve this material** opens `/materials/:id` with build context query params; reservation create may include `buildItemId` to set `linkedReservationId` in the same transaction. Linking alone does **not** auto-mark the item ready; progress uses `isReadyForBuild` (`ALREADY_OWNED` / `AVAILABLE` / `ALTERNATIVE`, or linked reservation `COMPLETED`). **Browse all materials** still opens `/materials?q=<component name>`. No AI matching or related-projects API is used.
 
 **No mock fallback** on API failure.
 
@@ -117,6 +117,10 @@ The build page fetches `GET /api/learning-projects/:id/builds/me`. If no build e
 `POST /api/learning-projects/:id/builds/me/items/:itemId/link-material` — learner-only link a platform material to the checklist item; body `{ materialId }`.
 
 `DELETE /api/learning-projects/:id/builds/me/items/:itemId/link-material` — learner-only unlink; blocked while an active linked reservation exists.
+
+`POST /api/learning-projects/:id/builds/me/items/:itemId/link-reservation` — learner-only repair link for an existing owned reservation; body `{ reservationId }`.
+
+`POST /api/reservations` — optional `buildItemId` links the created reservation to the checklist item when `linkedMaterialId` matches.
 
 ### Database changes
 
@@ -222,7 +226,7 @@ Hub page controls fetch server pages beyond `page=1` while preserving active fil
 - Learner booking materials directly from project components
 - AI material matching (`ai-agent` module)
 - Followed categories
-- Automatic reservation creation from checklist links
+- Automatic reservation without learner action from checklist links
 - Related projects API on material detail
 - Moderator project review UI / moderator workspace
 - Admin/moderator-selected Project of the week spotlight workflow

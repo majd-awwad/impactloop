@@ -1,10 +1,15 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
+import { AppError } from '../../utils/app-error.js';
 import type {
   LearningProjectsQuery,
   UpdateProjectBuildItemInput,
 } from './learning-projects.validation.js';
+import {
+  setBuildItemLinkedReservationId,
+  validateBuildItemForReservationLink,
+} from './learning-projects.build-reservation-linking.js';
 
 const clientOrPrisma = (client?: Prisma.TransactionClient) => client ?? prisma;
 
@@ -661,6 +666,113 @@ export const unlinkBuildItemMaterial = async (input: {
 
     return tx.projectBuild.findUnique({
       where: { id: item.buildId },
+      include: projectBuildInclude,
+    });
+  });
+};
+
+export const linkBuildItemReservation = async (input: {
+  projectId: string;
+  learnerId: string;
+  itemId: string;
+  reservationId: string;
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const buildItem = await tx.projectBuildItem.findFirst({
+      where: {
+        id: input.itemId,
+        build: {
+          projectId: input.projectId,
+          learnerId: input.learnerId,
+          project: {
+            is: publicProjectWhere,
+          },
+        },
+      },
+      select: {
+        id: true,
+        buildId: true,
+        linkedMaterialId: true,
+        linkedReservationId: true,
+      },
+    });
+
+    if (!buildItem) {
+      throw new AppError('Project build item not found', 404, 'NOT_FOUND');
+    }
+
+    const reservation = await tx.reservation.findFirst({
+      where: {
+        id: input.reservationId,
+        requesterId: input.learnerId,
+      },
+      select: {
+        id: true,
+        materialId: true,
+      },
+    });
+
+    if (!reservation) {
+      throw new AppError('Reservation not found', 404, 'NOT_FOUND');
+    }
+
+    if (
+      !buildItem.linkedMaterialId ||
+      buildItem.linkedMaterialId !== reservation.materialId
+    ) {
+      throw new AppError(
+        'Reservation material does not match the linked build item material',
+        400,
+        'BUILD_ITEM_MATERIAL_MISMATCH',
+      );
+    }
+
+    if (
+      buildItem.linkedReservationId &&
+      buildItem.linkedReservationId === reservation.id
+    ) {
+      return tx.projectBuild.findUnique({
+        where: { id: buildItem.buildId },
+        include: projectBuildInclude,
+      });
+    }
+
+    const validation = await validateBuildItemForReservationLink(tx, {
+      learnerId: input.learnerId,
+      buildItemId: buildItem.id,
+      materialId: reservation.materialId,
+      ignoreReservationId: reservation.id,
+    });
+
+    if (!validation.ok) {
+      switch (validation.code) {
+        case 'BUILD_ITEM_NOT_FOUND':
+          throw new AppError('Project build item not found', 404, 'NOT_FOUND');
+        case 'BUILD_ITEM_MATERIAL_MISMATCH':
+          throw new AppError(
+            'Reservation material does not match the linked build item material',
+            400,
+            'BUILD_ITEM_MATERIAL_MISMATCH',
+          );
+        case 'ACTIVE_BUILD_ITEM_RESERVATION':
+          throw new AppError(
+            'This build checklist item already has an active linked reservation',
+            409,
+            'ACTIVE_BUILD_ITEM_RESERVATION',
+          );
+        default:
+          throw new AppError(
+            'Unable to link reservation to build item',
+            500,
+            'INTERNAL_ERROR',
+          );
+      }
+    }
+
+    await setBuildItemLinkedReservationId(tx, buildItem.id, reservation.id);
+
+    return tx.projectBuild.findUnique({
+      where: { id: buildItem.buildId },
       include: projectBuildInclude,
     });
   });

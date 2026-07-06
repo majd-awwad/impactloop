@@ -35,6 +35,7 @@ export const createReservationSchema = z
     deliveryAddressText: z.string().trim().min(1).max(500).optional(),
     safeDropoffAllowed: z.boolean().optional(),
     deliveryNote: z.string().trim().max(1000).optional(),
+    buildItemId: z.string().trim().min(1).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.fulfillmentMethod === 'PICKUP') {

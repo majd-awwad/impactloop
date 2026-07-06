@@ -18,6 +18,7 @@ import {
   getSavedLearningProjects,
   likeLearningProjectById,
   linkBuildItemMaterialById,
+  linkBuildItemReservationById,
   reviewLearningProjectById,
   saveLearningProjectById,
   startProjectBuildById,
@@ -168,6 +169,24 @@ export const unlinkBuildItemMaterial = async (
   const build = await unlinkBuildItemMaterialById(id, req.auth!.sub, itemId);
 
   res.json(successResponse('Material unlinked successfully', build));
+};
+
+export const linkBuildItemReservation = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, itemId } = readValidatedParams<{ id: string; itemId: string }>(
+    req,
+  );
+  const { reservationId } = req.body as { reservationId: string };
+  const build = await linkBuildItemReservationById(
+    id,
+    req.auth!.sub,
+    itemId,
+    reservationId,
+  );
+
+  res.json(successResponse('Reservation linked successfully', build));
 };
 
 export const likeLearningProject = async (

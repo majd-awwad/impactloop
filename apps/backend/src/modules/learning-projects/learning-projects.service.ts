@@ -504,6 +504,34 @@ export const unlinkBuildItemMaterialById = async (
   return mapProjectBuild(build);
 };
 
+export const linkBuildItemReservationById = async (
+  projectId: string,
+  userId: string,
+  itemId: string,
+  reservationId: string,
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    projectId,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  const build = await learningProjectsRepository.linkBuildItemReservation({
+    projectId,
+    learnerId: userId,
+    itemId,
+    reservationId,
+  });
+
+  if (!build) {
+    throw new AppError('Project build not found', 404, 'NOT_FOUND');
+  }
+
+  return mapProjectBuild(build);
+};
+
 export const likeLearningProjectById = async (id: string, userId: string) => {
   const project = await learningProjectsRepository.findPublicLearningProjectById(
     id,

@@ -18,12 +18,12 @@ Browse educational project ideas (components, steps, links) for inspiration. The
 | Project follows | **Implemented** | List/home/detail surfaces have optimistic learner-only follow/unfollow controls backed by `POST`/`DELETE /api/learning-projects/:id/follow` |
 | Add draft page | **Implemented for learner submit** | `LearningAddDraftPage` is reachable from Learning Hub, can save a local device draft, and posts to `POST /api/learning-projects/submit` with `Idempotency-Key`; submitted projects enter `PENDING_REVIEW` |
 | Admin project moderation | **Implemented** | `/admin/learning-projects` lists, filters, reviews, approves/rejects/request-changes, hides/restores, and archives projects |
-| Project build checklist | **Implemented** | Learners can start/continue a persisted manual checklist at `/learning/:id/build`, mark manual statuses, browse deterministic material candidates per item, link/unlink a platform material, and see linked material state without auto-ready behavior |
+| Project build checklist | **Implemented** | Learners can start/continue a persisted manual checklist at `/learning/:id/build`, mark manual statuses, browse deterministic material candidates per item, link/unlink a platform material, reserve linked materials with build-context linking, and see linked reservation progress/readiness |
 | Ratings/reviews | **Implemented** | List/home cards show real `ratingSummary` when reviews exist; detail shows recent reviews and a learner-only review form backed by `PUT`/`DELETE /api/learning-projects/:id/review` |
 | Project links | **Implemented** | Detail links open safe `http`/`https` URLs through `url_launcher`; invalid/missing URLs are disabled |
 | AI material agent | **Not implemented** | No `ai-agent` module |
 
-Product intent from role planning: the learning hub should support project-to-material linking and automatic material coverage later. Saved/followed project listing is API-backed in the Learning Hub page; build checklist progress is stored per learner/project. Learners can link platform materials to checklist items; reservation-aware readiness uses `linkedReservationId` when present but automatic reservation creation is not shipped yet.
+Product intent from role planning: the learning hub should support project-to-material linking and automatic material coverage later. Saved/followed project listing is API-backed in the Learning Hub page; build checklist progress is stored per learner/project. Learners can link platform materials to checklist items and reserve them from build context; `linkedReservationId` is written during reservation create (optional `buildItemId`) or via the fallback link-reservation endpoint. Readiness counts a linked reservation only when `status = COMPLETED` (or manual ready statuses). Future supplier/project impact can be derived from completed linked reservations without a dedicated impact table in MVP.
 
 **Critical:** Learning Hub list/detail, Home spotlight, learner project submission, and admin project moderation are API-backed. The legacy mock catalog is not a production read path.
 
@@ -37,7 +37,7 @@ Product intent from role planning: the learning hub should support project-to-ma
 6. Next/previous pagination changes the `page` query sent to the active list endpoint while preserving active filters.
 7. Tap project → `/learning/:id` → `learningProjectProvider(id)` loads detail from `GET /api/learning-projects/:id`; existing project links can be opened when they contain valid `http`/`https` URLs.
 8. Authenticated learners can like/unlike, save/unsave, and follow/unfollow from list, Home spotlight, and detail cards; they can review the project from detail. Guests are sent to login and non-learner roles get an info snackbar.
-9. Optional: detail **Start build** calls `POST /api/learning-projects/:id/builds/start` and opens `/learning/:id/build`; existing builds show **Continue checklist**. The checklist uses `GET /api/learning-projects/:id/builds/me` and `PATCH /api/learning-projects/:id/builds/me/items/:itemId`. Learners can open material candidates per item, link/unlink a platform material, and view linked material summaries without auto-ready behavior.
+9. Optional: detail **Start build** calls `POST /api/learning-projects/:id/builds/start` and opens `/learning/:id/build`; existing builds show **Continue checklist**. The checklist uses `GET /api/learning-projects/:id/builds/me` and `PATCH /api/learning-projects/:id/builds/me/items/:itemId`. Learners can open material candidates per item, link/unlink a platform material, **Reserve this material** (navigates to `/materials/:id?projectId&buildItemId&returnTo`), and see linked material + reservation status. Reservation create with `buildItemId` links `project_build_items.linked_reservation_id` in the same transaction.
 10. Optional: `/learning/add-draft` — authenticated learner submits a draft to `POST /api/learning-projects/submit` with an `Idempotency-Key`; backend stores it as `PENDING_REVIEW` and replays duplicate same-key submissions without creating another project.
 11. Home `/home` learning spotlight loads up to 2 published projects via `learningProjectsProvider`.
 
@@ -83,6 +83,7 @@ Repository filter: `status: 'PUBLISHED'` (`learning-projects.repository.ts`).
 | GET | `/api/learning-projects/:id/builds/me/items/:itemId/material-candidates` | JWT + LEARNER | **Yes** — build checklist candidate sheet |
 | POST | `/api/learning-projects/:id/builds/me/items/:itemId/link-material` | JWT + LEARNER | **Yes** — link material to checklist item |
 | DELETE | `/api/learning-projects/:id/builds/me/items/:itemId/link-material` | JWT + LEARNER | **Yes** — unlink material from checklist item |
+| POST | `/api/learning-projects/:id/builds/me/items/:itemId/link-reservation` | JWT + LEARNER | **Yes** — fallback repair link for an existing learner reservation |
 | POST | `/api/learning-projects/submit` | Learner auth | **Yes** — add-draft submit for admin review |
 | GET | `/api/categories?type=PROJECT` | Public | **Yes** — category chips |
 | POST | `/api/learning-projects/submit` | JWT + LEARNER + `Idempotency-Key` | **Yes** — add-draft submit |
