@@ -31,51 +31,35 @@ class ApiLearningHubRepository implements LearningProjectRepository {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
         _basePath,
-        queryParameters: {
-          'page': query.page,
-          'limit': query.limit,
-          if (query.q != null && query.q!.trim().isNotEmpty) 'q': query.q,
-          if (query.categoryId != null && query.categoryId!.trim().isNotEmpty)
-            'categoryId': query.categoryId,
-          if (query.difficulty != null && query.difficulty!.trim().isNotEmpty)
-            'difficulty': query.difficulty,
-          if (query.tag != null && query.tag!.trim().isNotEmpty)
-            'tag': query.tag,
-        },
+        queryParameters: _queryParameters(query),
       ),
-      (json) {
-        final itemsJson = json['items'];
-        final paginationJson = json['pagination'];
-        final items = itemsJson is List
-            ? itemsJson
-                  .whereType<Map>()
-                  .map(
-                    (item) => LearningHubApiMapper.fromListItemJson(
-                      Map<String, dynamic>.from(item),
-                    ),
-                  )
-                  .toList(growable: false)
-            : const <LearningProject>[];
+      (json) => _mapProjectsResult(json, query),
+    );
+  }
 
-        final pagination = paginationJson is Map
-            ? Map<String, dynamic>.from(paginationJson)
-            : const <String, dynamic>{};
+  @override
+  Future<LearningProjectsResult> fetchSavedProjects(
+    LearningProjectsQuery query,
+  ) async {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/me/saved',
+        queryParameters: _queryParameters(query),
+      ),
+      (json) => _mapProjectsResult(json, query),
+    );
+  }
 
-        final page = _intFromDynamic(pagination['page']) ?? query.page;
-        final limit = _intFromDynamic(pagination['limit']) ?? query.limit;
-        final total = _intFromDynamic(pagination['total']) ?? items.length;
-        final totalPages =
-            _intFromDynamic(pagination['totalPages']) ??
-            (total == 0 ? 0 : ((total + limit - 1) / limit).ceil());
-
-        return LearningProjectsResult(
-          items: items,
-          page: page,
-          limit: limit,
-          total: total,
-          totalPages: totalPages,
-        );
-      },
+  @override
+  Future<LearningProjectsResult> fetchFollowedProjects(
+    LearningProjectsQuery query,
+  ) async {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/me/followed',
+        queryParameters: _queryParameters(query),
+      ),
+      (json) => _mapProjectsResult(json, query),
     );
   }
 
@@ -149,6 +133,33 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<void> reviewProject(
+    String id, {
+    required int rating,
+    String? comment,
+  }) async {
+    await unwrapApiResponse(
+      _client.put<Map<String, dynamic>>(
+        '$_basePath/$id/review',
+        data: {
+          'rating': rating,
+          if (comment != null && comment.trim().isNotEmpty)
+            'comment': comment.trim(),
+        },
+      ),
+      (json) => json,
+    );
+  }
+
+  @override
+  Future<void> deleteProjectReview(String id) async {
+    await unwrapApiResponse(
+      _client.delete<Map<String, dynamic>>('$_basePath/$id/review'),
+      (json) => json,
+    );
+  }
+
+  @override
   Future<void> submitProjectForReview({
     required String idempotencyKey,
     required String title,
@@ -200,5 +211,55 @@ class ApiLearningHubRepository implements LearningProjectRepository {
     }
 
     return null;
+  }
+
+  Map<String, dynamic> _queryParameters(LearningProjectsQuery query) {
+    return {
+      'page': query.page,
+      'limit': query.limit,
+      if (query.q != null && query.q!.trim().isNotEmpty) 'q': query.q,
+      if (query.categoryId != null && query.categoryId!.trim().isNotEmpty)
+        'categoryId': query.categoryId,
+      if (query.difficulty != null && query.difficulty!.trim().isNotEmpty)
+        'difficulty': query.difficulty,
+      if (query.tag != null && query.tag!.trim().isNotEmpty) 'tag': query.tag,
+    };
+  }
+
+  LearningProjectsResult _mapProjectsResult(
+    Map<String, dynamic> json,
+    LearningProjectsQuery query,
+  ) {
+    final itemsJson = json['items'];
+    final paginationJson = json['pagination'];
+    final items = itemsJson is List
+        ? itemsJson
+              .whereType<Map>()
+              .map(
+                (item) => LearningHubApiMapper.fromListItemJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList(growable: false)
+        : const <LearningProject>[];
+
+    final pagination = paginationJson is Map
+        ? Map<String, dynamic>.from(paginationJson)
+        : const <String, dynamic>{};
+
+    final page = _intFromDynamic(pagination['page']) ?? query.page;
+    final limit = _intFromDynamic(pagination['limit']) ?? query.limit;
+    final total = _intFromDynamic(pagination['total']) ?? items.length;
+    final totalPages =
+        _intFromDynamic(pagination['totalPages']) ??
+        (total == 0 ? 0 : ((total + limit - 1) / limit).ceil());
+
+    return LearningProjectsResult(
+      items: items,
+      page: page,
+      limit: limit,
+      total: total,
+      totalPages: totalPages,
+    );
   }
 }

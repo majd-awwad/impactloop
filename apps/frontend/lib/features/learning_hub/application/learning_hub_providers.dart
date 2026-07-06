@@ -28,6 +28,18 @@ final learningProjectsProvider = FutureProvider.autoDispose
       return ref.watch(learningHubRepositoryProvider).fetchProjects(query);
     });
 
+final savedLearningProjectsProvider = FutureProvider.autoDispose
+    .family<LearningProjectsResult, LearningProjectsQuery>((ref, query) async {
+      return ref.watch(learningHubRepositoryProvider).fetchSavedProjects(query);
+    });
+
+final followedLearningProjectsProvider = FutureProvider.autoDispose
+    .family<LearningProjectsResult, LearningProjectsQuery>((ref, query) async {
+      return ref
+          .watch(learningHubRepositoryProvider)
+          .fetchFollowedProjects(query);
+    });
+
 final learningProjectProvider = FutureProvider.autoDispose
     .family<LearningProject?, String>((ref, id) async {
       return ref.watch(learningHubRepositoryProvider).fetchProjectById(id);

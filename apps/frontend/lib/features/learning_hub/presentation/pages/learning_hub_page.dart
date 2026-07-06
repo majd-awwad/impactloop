@@ -9,6 +9,8 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../shared/widgets/app_feedback.dart';
+import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/learning_projects_result.dart';
 import '../../domain/models/learning_project.dart';
@@ -24,8 +26,12 @@ const _featuredTip = LocalizedText(
   ar: ' يساعد المتعلمين على تحويل المواد الفائضة إلى مشاريع عملية. تصفح المشاريع المنشورة للإلهام، ثم احجز المواد عندما تكون مستعداً.',
 );
 
+enum _LearningProjectListMode { all, saved, followed }
+
 class LearningHubPage extends ConsumerStatefulWidget {
-  const LearningHubPage({super.key});
+  const LearningHubPage({super.key, this.initialSearch});
+
+  final String? initialSearch;
 
   @override
   ConsumerState<LearningHubPage> createState() => _LearningHubPageState();
@@ -45,6 +51,7 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
   String? _searchTerm;
   String? _selectedDifficulty;
   String? _selectedTag;
+  _LearningProjectListMode _listMode = _LearningProjectListMode.all;
 
   LearningProjectsQuery get _query => LearningProjectsQuery(
     page: _currentPage,
@@ -64,8 +71,29 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
   @override
   void initState() {
     super.initState();
-    _searchController = TextEditingController();
+    final initialSearch = _normalizedSearch(widget.initialSearch);
+    _searchController = TextEditingController(text: initialSearch ?? '');
     _searchFocusNode = FocusNode();
+    _searchDraft = initialSearch ?? '';
+    _searchTerm = initialSearch;
+  }
+
+  @override
+  void didUpdateWidget(covariant LearningHubPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextSearch = _normalizedSearch(widget.initialSearch);
+    if (_normalizedSearch(oldWidget.initialSearch) == nextSearch ||
+        nextSearch == _searchTerm) {
+      return;
+    }
+
+    _searchDebounce?.cancel();
+    _searchController.text = nextSearch ?? '';
+    setState(() {
+      _searchDraft = nextSearch ?? '';
+      _searchTerm = nextSearch;
+      _currentPage = 1;
+    });
   }
 
   @override
@@ -85,6 +113,11 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
       if (!mounted) return;
       _applySearch(value);
     });
+  }
+
+  String? _normalizedSearch(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 
   void _applySearch(String value) {
@@ -139,11 +172,63 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
     });
   }
 
+  void _setListMode(_LearningProjectListMode mode) {
+    if (mode == _listMode) {
+      return;
+    }
+
+    if (mode != _LearningProjectListMode.all) {
+      final authState = ref.read(authControllerProvider);
+      if (authState.status != AuthStatus.authenticated) {
+        context.go('/login?from=${Uri.encodeQueryComponent('/learning')}');
+        return;
+      }
+
+      if (authState.user?.hasRole('LEARNER') != true) {
+        showInfoSnackBar(
+          context,
+          'Use a learner account to view saved and followed projects.',
+        );
+        return;
+      }
+    }
+
+    setState(() {
+      _listMode = mode;
+      _currentPage = 1;
+    });
+  }
+
+  void _invalidateCurrentProjects(LearningProjectsQuery query) {
+    switch (_listMode) {
+      case _LearningProjectListMode.all:
+        ref.invalidate(learningProjectsProvider(query));
+        break;
+      case _LearningProjectListMode.saved:
+        ref.invalidate(savedLearningProjectsProvider(query));
+        break;
+      case _LearningProjectListMode.followed:
+        ref.invalidate(followedLearningProjectsProvider(query));
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final categoriesAsync = ref.watch(projectCategoriesProvider);
-    final projectsAsync = ref.watch(learningProjectsProvider(_query));
+    final query = _query;
+    final projectsAsync = switch (_listMode) {
+      _LearningProjectListMode.all => ref.watch(
+        learningProjectsProvider(query),
+      ),
+      _LearningProjectListMode.saved => ref.watch(
+        savedLearningProjectsProvider(query),
+      ),
+      _LearningProjectListMode.followed => ref.watch(
+        followedLearningProjectsProvider(query),
+      ),
+    };
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -169,8 +254,7 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
                     en: 'Try again',
                     ar: 'حاول مرة أخرى',
                   ),
-                  onAction: () =>
-                      ref.invalidate(learningProjectsProvider(_query)),
+                  onAction: () => _invalidateCurrentProjects(query),
                 ),
                 data: (result) {
                   return _HubContent(
@@ -182,11 +266,13 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
                     searchDraft: _searchDraft,
                     selectedDifficulty: _selectedDifficulty,
                     selectedTag: _selectedTag,
+                    listMode: _listMode,
                     hasActiveFilters: _hasActiveFilters,
                     onSearchChanged: _onSearchChanged,
                     onSearchSubmitted: _applySearch,
                     onDifficultySelected: _setDifficulty,
                     onTagSelected: _setTag,
+                    onListModeSelected: _setListMode,
                     onClearFilters: _clearFilters,
                     onSubmitProject: () => context.go('/learning/add-draft'),
                     onFocusSearch: () => _searchFocusNode.requestFocus(),
@@ -219,11 +305,13 @@ class _HubContent extends StatelessWidget {
     required this.searchDraft,
     required this.selectedDifficulty,
     required this.selectedTag,
+    required this.listMode,
     required this.hasActiveFilters,
     required this.onSearchChanged,
     required this.onSearchSubmitted,
     required this.onDifficultySelected,
     required this.onTagSelected,
+    required this.onListModeSelected,
     required this.onClearFilters,
     required this.onSubmitProject,
     required this.onFocusSearch,
@@ -239,11 +327,13 @@ class _HubContent extends StatelessWidget {
   final String searchDraft;
   final String? selectedDifficulty;
   final String? selectedTag;
+  final _LearningProjectListMode listMode;
   final bool hasActiveFilters;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onSearchSubmitted;
   final ValueChanged<String?> onDifficultySelected;
   final ValueChanged<String?> onTagSelected;
+  final ValueChanged<_LearningProjectListMode> onListModeSelected;
   final VoidCallback onClearFilters;
   final VoidCallback onSubmitProject;
   final VoidCallback onFocusSearch;
@@ -254,7 +344,9 @@ class _HubContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final isFirstPage = result.page <= 1;
-    final featuredProject = isFirstPage && result.items.isNotEmpty
+    final canShowFeatured =
+        listMode == _LearningProjectListMode.all && isFirstPage;
+    final featuredProject = canShowFeatured && result.items.isNotEmpty
         ? result.items.first
         : null;
     final gridProjects = featuredProject != null && result.items.length > 1
@@ -328,7 +420,12 @@ class _HubContent extends StatelessWidget {
                 onClearFilters: onClearFilters,
               ),
               const SizedBox(height: AppSpacing.xl),
-              if (featuredProject == null)
+              _LearningListModeTabs(
+                selectedMode: listMode,
+                onModeSelected: onListModeSelected,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              if (result.items.isEmpty)
                 _HubStatePanel(
                   icon: hasActiveFilters
                       ? Icons.search_off_rounded
@@ -338,19 +435,13 @@ class _HubContent extends StatelessWidget {
                           en: 'No projects match your filters',
                           ar: 'لا توجد مشاريع تطابق عوامل التصفية',
                         )
-                      : const LocalizedText(
-                          en: 'No published projects yet',
-                          ar: 'لا توجد مشاريع منشورة بعد',
-                        ),
+                      : _emptyTitleForMode(listMode),
                   subtitle: hasActiveFilters
                       ? const LocalizedText(
                           en: 'Try a different search, difficulty, category, or tag.',
                           ar: 'جرّب بحثاً أو مستوى أو فئة أو وسم مختلف.',
                         )
-                      : const LocalizedText(
-                          en: 'When learning projects are published, they will appear here.',
-                          ar: 'عند نشر مشاريع تعليمية، ستظهر هنا.',
-                        ),
+                      : _emptySubtitleForMode(listMode),
                   actionLabel: hasActiveFilters
                       ? const LocalizedText(
                           en: 'Clear filters',
@@ -359,7 +450,7 @@ class _HubContent extends StatelessWidget {
                       : null,
                   onAction: hasActiveFilters ? onClearFilters : null,
                 )
-              else ...[
+              else if (featuredProject != null) ...[
                 Text(
                   const LocalizedText(
                     en: 'Project of the week',
@@ -375,15 +466,12 @@ class _HubContent extends StatelessWidget {
               if (gridProjects.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  (isFirstPage
+                  (listMode == _LearningProjectListMode.all && isFirstPage
                           ? const LocalizedText(
                               en: 'More projects',
                               ar: 'مشاريع أخرى',
                             )
-                          : const LocalizedText(
-                              en: 'Projects',
-                              ar: 'المشاريع',
-                            ))
+                          : _sectionTitleForMode(listMode))
                       .resolve(context),
                   style: AppTextStyles.display(
                     context,
@@ -520,7 +608,10 @@ class _HubContent extends StatelessWidget {
     );
   }
 
-  List<String> _tagOptions(List<LearningProject> projects, String? selectedTag) {
+  List<String> _tagOptions(
+    List<LearningProject> projects,
+    String? selectedTag,
+  ) {
     final tags = <String>{};
     if (selectedTag != null && selectedTag.trim().isNotEmpty) {
       tags.add(selectedTag.trim());
@@ -535,8 +626,9 @@ class _HubContent extends StatelessWidget {
       }
     }
 
-    return tags.toList(growable: false)
-      ..sort((left, right) => left.toLowerCase().compareTo(right.toLowerCase()));
+    return tags.toList(
+      growable: false,
+    )..sort((left, right) => left.toLowerCase().compareTo(right.toLowerCase()));
   }
 
   String _pageSummary(
@@ -545,20 +637,145 @@ class _HubContent extends StatelessWidget {
     int pageEnd,
     int total,
   ) {
-    final results = const LocalizedText(en: 'results', ar: 'نتيجة').resolve(
-      context,
-    );
+    final results = const LocalizedText(
+      en: 'results',
+      ar: 'نتيجة',
+    ).resolve(context);
 
     if (total == 0) {
       return '0 $results';
     }
 
-    final showing = const LocalizedText(en: 'Showing', ar: 'عرض').resolve(
-      context,
-    );
+    final showing = const LocalizedText(
+      en: 'Showing',
+      ar: 'عرض',
+    ).resolve(context);
     final of = const LocalizedText(en: 'of', ar: 'من').resolve(context);
 
     return '$showing $pageStart-$pageEnd $of $total $results';
+  }
+
+  LocalizedText _sectionTitleForMode(_LearningProjectListMode mode) {
+    return switch (mode) {
+      _LearningProjectListMode.all => const LocalizedText(
+        en: 'Projects',
+        ar: 'المشاريع',
+      ),
+      _LearningProjectListMode.saved => const LocalizedText(
+        en: 'Saved projects',
+        ar: 'المشاريع المحفوظة',
+      ),
+      _LearningProjectListMode.followed => const LocalizedText(
+        en: 'Followed projects',
+        ar: 'المشاريع المتابعة',
+      ),
+    };
+  }
+
+  LocalizedText _emptyTitleForMode(_LearningProjectListMode mode) {
+    return switch (mode) {
+      _LearningProjectListMode.all => const LocalizedText(
+        en: 'No published projects yet',
+        ar: 'لا توجد مشاريع منشورة بعد',
+      ),
+      _LearningProjectListMode.saved => const LocalizedText(
+        en: 'No saved projects yet',
+        ar: 'لا توجد مشاريع محفوظة بعد',
+      ),
+      _LearningProjectListMode.followed => const LocalizedText(
+        en: 'No followed projects yet',
+        ar: 'لا توجد مشاريع متابعة بعد',
+      ),
+    };
+  }
+
+  LocalizedText _emptySubtitleForMode(_LearningProjectListMode mode) {
+    return switch (mode) {
+      _LearningProjectListMode.all => const LocalizedText(
+        en: 'When learning projects are published, they will appear here.',
+        ar: 'عند نشر مشاريع تعليمية، ستظهر هنا.',
+      ),
+      _LearningProjectListMode.saved => const LocalizedText(
+        en: 'Save projects from Learning Hub cards or project details to return to them here.',
+        ar: 'احفظ المشاريع من بطاقات مركز التعلم أو تفاصيل المشروع للعودة إليها هنا.',
+      ),
+      _LearningProjectListMode.followed => const LocalizedText(
+        en: 'Follow projects from Learning Hub cards or project details to keep them grouped here.',
+        ar: 'تابع المشاريع من بطاقات مركز التعلم أو تفاصيل المشروع لتجميعها هنا.',
+      ),
+    };
+  }
+}
+
+class _LearningListModeTabs extends StatelessWidget {
+  const _LearningListModeTabs({
+    required this.selectedMode,
+    required this.onModeSelected,
+  });
+
+  final _LearningProjectListMode selectedMode;
+  final ValueChanged<_LearningProjectListMode> onModeSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: _LearningProjectListMode.values
+            .map((mode) {
+              final selected = mode == selectedMode;
+              final label = switch (mode) {
+                _LearningProjectListMode.all => const LocalizedText(
+                  en: 'All projects',
+                  ar: 'كل المشاريع',
+                ),
+                _LearningProjectListMode.saved => const LocalizedText(
+                  en: 'Saved',
+                  ar: 'محفوظ',
+                ),
+                _LearningProjectListMode.followed => const LocalizedText(
+                  en: 'Following',
+                  ar: 'المتابعة',
+                ),
+              };
+              final icon = switch (mode) {
+                _LearningProjectListMode.all => Icons.school_outlined,
+                _LearningProjectListMode.saved => Icons.bookmark_border_rounded,
+                _LearningProjectListMode.followed =>
+                  Icons.notifications_none_rounded,
+              };
+
+              return ChoiceChip(
+                selected: selected,
+                avatar: Icon(
+                  icon,
+                  size: 18,
+                  color: selected ? palette.limeSoft : palette.textSecondary,
+                ),
+                label: Text(label.resolve(context)),
+                onSelected: (_) => onModeSelected(mode),
+                selectedColor: palette.lime.withValues(alpha: 0.18),
+                backgroundColor: palette.mutedChip,
+                side: BorderSide(
+                  color: selected ? palette.lime : palette.borderSubtle,
+                ),
+                labelStyle: AppTextStyles.label(context).copyWith(
+                  color: selected ? palette.limeSoft : palette.textSecondary,
+                ),
+              );
+            })
+            .toList(growable: false),
+      ),
+    );
   }
 }
 
@@ -603,9 +820,10 @@ class _LearningPaginationControls extends StatelessWidget {
             onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
             icon: const Icon(Icons.chevron_left_rounded),
             label: Text(
-              const LocalizedText(en: 'Previous', ar: 'السابق').resolve(
-                context,
-              ),
+              const LocalizedText(
+                en: 'Previous',
+                ar: 'السابق',
+              ).resolve(context),
             ),
           );
           final next = FilledButton.icon(
@@ -683,8 +901,8 @@ class _LearningHubRoadmapPanel extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 const LocalizedText(
-                  en: 'The next Learning Hub steps are saved projects, project likes, reviews, and build checklists that connect projects to materials without automated matching.',
-                  ar: 'الخطوات القادمة في مركز التعلم هي حفظ المشاريع، الإعجابات، المراجعات، وقوائم البناء التي تربط المشاريع بالمواد بدون مطابقة آلية.',
+                  en: 'Saved and followed project lists are available. The next Learning Hub steps are persisted build progress, stronger project-material linking, and in-hub reservation handoff without automated matching.',
+                  ar: 'قوائم المشاريع المحفوظة والمتابعة متاحة. الخطوات القادمة هي حفظ تقدم البناء، وتقوية ربط المشاريع بالمواد، وتحويل الحجز من داخل المركز بدون مطابقة آلية.',
                 ).resolve(context),
                 style: AppTextStyles.body(
                   context,

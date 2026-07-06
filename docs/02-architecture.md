@@ -131,7 +131,7 @@ Shared widgets: [frontend/reusable-widgets.md](frontend/reusable-widgets.md)
 
 ## Database architecture
 
-- 35 Prisma models → 35 PostgreSQL tables
+- 46 Prisma models → 46 PostgreSQL tables
 - PostGIS on `locations.location`
 - No `delivery_requests` table — delivery attempts live in `deliveries`; legacy reservation delivery columns remain
 - No `impact_logs` / `impact_summaries` tables in schema

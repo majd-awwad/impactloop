@@ -16,6 +16,7 @@ import '../theme/learning_ui_palette.dart';
 import '../widgets/project_build_actions_panel.dart';
 import '../widgets/project_components_section.dart';
 import '../widgets/project_link_list.dart';
+import '../widgets/project_reviews_section.dart';
 import '../widgets/project_steps_timeline.dart';
 
 class LearningProjectDetailsPage extends ConsumerWidget {
@@ -112,6 +113,8 @@ class _ProjectDetailsBody extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _DetailsSummaryCard(project: project),
+                      const SizedBox(height: AppSpacing.lg),
+                      ProjectReviewsSection(project: project),
                       const SizedBox(height: AppSpacing.lg),
                       if (project.components.isNotEmpty) ...[
                         ProjectComponentsSection(

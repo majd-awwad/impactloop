@@ -55,7 +55,7 @@ Derived **only** from `apps/backend/src/modules/`:
 | `driver` | `/api/driver` | Internal driver jobs, assignment, status updates, location pings |
 | `health` | `/health` | Health check |
 | `invitations` | `/api/invitations` | Admin role invitations + accept |
-| `learning-projects` | `/api/learning-projects` | Public read list/detail + learner submit + learner likes/saves/follows |
+| `learning-projects` | `/api/learning-projects` | Public read list/detail + learner submit + learner likes/saves/follows/reviews |
 | `locations` | `/api/locations` | Authenticated forward/reverse geocode and private saved locations |
 | `material-types` | `/api/material-types` | Search types + price rules |
 | `materials` | `/api/materials` | Public discovery read + listing policy + price check |
@@ -92,7 +92,7 @@ Derived **only** from `apps/frontend/lib/features/`:
 | `home` | `/home` | **Partial** — materials and learning spotlight via API; personalization pending |
 | `invitations` | `/invite/accept` | **Implemented** — invitation validate/accept UI backed by API |
 | `landing` | `/` | Static UI |
-| `learning_hub` | `/learning`, `/learning/:id`, `/learning/add-draft` | **Partial** — read path API-backed; add-draft submits for admin review; search/filters, server-side page navigation, project likes/saves/follows, and admin moderation wired; AI/ratings/checklist/material linking pending |
+| `learning_hub` | `/learning`, `/learning/:id`, `/learning/add-draft` | **Partial** — read path API-backed; add-draft submits for admin review; search/filters, server-side page navigation, project likes/saves/follows/reviews, and admin moderation wired; AI/checklist/material linking pending |
 | `material_discovery` | `/materials`, `/materials/:id` | API default (`ApiMaterialDiscoveryRepository`); detail reserve CTA calls reservations data layer |
 | `materials` | (no dedicated routes) | Shared data layer for listing/taxonomy — used by supplier add material |
 | `profile` | `/profile`, `/profile/edit`, `/profile/learner/edit`, `/profile/security` | **Implemented** — account/profile/security pages |
@@ -118,8 +118,8 @@ Not Express modules; live in `apps/backend/src/services/`:
 
 ## Database
 
-- **45** Prisma models → **45** PostgreSQL tables (see [database/schema-overview.md](database/schema-overview.md))
-- Migrations: `apps/backend/prisma/migrations/` (40 migration folders)
+- **46** Prisma models → **46** PostgreSQL tables (see [database/schema-overview.md](database/schema-overview.md))
+- Migrations: `apps/backend/prisma/migrations/` (43 migration folders)
 - Seed: `apps/backend/prisma/seed.ts` + `prisma/seeds/*`
 
 **Stale doc:** [03-database.md](03-database.md) lists tables not in schema — use `docs/database/*` instead.

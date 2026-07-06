@@ -8,8 +8,8 @@
 
 | Metric | Value | Source |
 |--------|-------|--------|
-| Prisma models | 45 | `schema.prisma` (`^model ` count) |
-| PostgreSQL tables | 45 | `@@map(...)` on each model |
+| Prisma models | 46 | `schema.prisma` (`^model ` count) |
+| PostgreSQL tables | 46 | `@@map(...)` on each model |
 | Enums | 33 | [enums.md](enums.md) |
 | PostGIS | Yes | `Location.location` — `Unsupported("geography(Point,4326)")`; enabled in migration `20260614145408_add_auth_schema` |
 
@@ -103,13 +103,15 @@ LearningProject ──┬── ProjectImage
                   ├── ProjectTag
                   ├── ProjectLike
                   ├── ProjectSave
-                  └── ProjectFollow
+                  ├── ProjectFollow
+                  └── ProjectUserReview
 ```
 
 ### Reviews and notifications
 
 ```
 Review → Reservation, User (reviewer, reviewedUser)
+ProjectUserReview → LearningProject, User
 MaterialReport → Material, User (reporter, reviewedBy)
 Notification → User (generic table; no REST module in apps/backend/src/modules/)
 ```
@@ -163,6 +165,7 @@ Tables listed in [03-database.md](../03-database.md) but **absent** from current
 | `20260705120000_add_project_likes` | Learner likes for published learning projects |
 | `20260705130000_add_project_saves` | Private learner saves for published learning projects |
 | `20260705140000_add_project_follows` | Learner follows for published learning projects |
+| `20260706100000_add_project_user_reviews` | Learner ratings/reviews for published learning projects |
 
 ## Design rules (still valid from code)
 

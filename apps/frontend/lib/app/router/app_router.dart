@@ -24,6 +24,7 @@ import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/locations/presentation/pages/saved_locations_page.dart';
+import '../../features/material_discovery/domain/material_discovery_query.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
@@ -418,13 +419,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/materials',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: MaterialsDiscoveryPage()),
+            pageBuilder: (context, state) {
+              final search = state.uri.queryParameters['q']?.trim();
+              return NoTransitionPage(
+                child: MaterialsDiscoveryPage(
+                  initialQuery: search == null || search.isEmpty
+                      ? null
+                      : MaterialDiscoveryQuery(q: search),
+                ),
+              );
+            },
           ),
           GoRoute(
             path: '/learning',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: LearningHubPage()),
+            pageBuilder: (context, state) {
+              final search = state.uri.queryParameters['q']?.trim();
+              return NoTransitionPage(
+                child: LearningHubPage(
+                  initialSearch: search == null || search.isEmpty
+                      ? null
+                      : search,
+                ),
+              );
+            },
           ),
           GoRoute(
             path: '/learner/reservations',

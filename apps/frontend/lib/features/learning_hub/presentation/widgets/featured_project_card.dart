@@ -8,6 +8,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../presentation/theme/learning_project_visuals.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
+import 'project_engagement_strip.dart';
 
 class FeaturedProjectCard extends StatelessWidget {
   const FeaturedProjectCard({super.key, required this.project});
@@ -140,32 +141,6 @@ class _FeaturedContent extends StatelessWidget {
           children: [
             _MetaChip(label: project.difficulty.resolve(context)),
             _MetaChip(label: project.duration.resolve(context)),
-            if (project.likesCount > 0 || project.isLiked)
-              _MetaChip(
-                label: project.likesCount == 1
-                    ? '1 like'
-                    : '${project.likesCount} likes',
-                icon: project.isLiked
-                    ? Icons.favorite_rounded
-                    : Icons.favorite_border_rounded,
-                accent: project.isLiked,
-              ),
-            if (project.isSaved)
-              _MetaChip(
-                label: 'Saved',
-                icon: Icons.bookmark_rounded,
-                accent: true,
-              ),
-            if (project.followersCount > 0 || project.isFollowing)
-              _MetaChip(
-                label: project.followersCount == 1
-                    ? '1 follower'
-                    : '${project.followersCount} followers',
-                icon: project.isFollowing
-                    ? Icons.notifications_active_rounded
-                    : Icons.notifications_none_rounded,
-                accent: project.isFollowing,
-              ),
             if (project.componentCountLabel.en.trim().isNotEmpty)
               _MetaChip(label: project.componentCountLabel.resolve(context)),
             if (project.hasRatings)
@@ -176,6 +151,8 @@ class _FeaturedContent extends StatelessWidget {
               ),
           ],
         ),
+        const SizedBox(height: AppSpacing.md),
+        ProjectEngagementStrip(project: project),
         const SizedBox(height: AppSpacing.lg),
         compact
             ? SizedBox(width: double.infinity, child: buttonChild)
@@ -242,11 +219,10 @@ class _FeaturedMedia extends StatelessWidget {
 }
 
 class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.label, this.accent = false, this.icon});
+  const _MetaChip({required this.label, this.accent = false});
 
   final String label;
   final bool accent;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -268,18 +244,6 @@ class _MetaChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(
-              icon,
-              size: 16,
-              color: accent
-                  ? isDark
-                        ? palette.limeSoft
-                        : AppColorTokens.emeraldDeep
-                  : palette.textSecondary,
-            ),
-            const SizedBox(width: AppSpacing.xs),
-          ],
           Text(
             label,
             style: AppTextStyles.body(context).copyWith(

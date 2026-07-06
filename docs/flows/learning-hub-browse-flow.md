@@ -14,29 +14,32 @@ Public API returns **PUBLISHED** projects only (`learning-projects.repository.ts
 
 ### User path
 
-1. Land on Learning Hub hero + category chips + search/difficulty/tag filters + featured card + project grid.
+1. Land on Learning Hub hero + category chips + search/difficulty/tag filters + list-mode tabs + featured card + project grid. Optional `/learning?q=<search>` opens with the search box pre-filled.
 2. Optional: tap a category chip → list refetches with `categoryId`.
 3. Optional: type a search term → list refetches with `q` after a short debounce.
 4. Optional: choose difficulty → list refetches with `difficulty`.
 5. Optional: tap a tag chip → list refetches with `tag`.
-6. Optional: use **Previous** / **Next** pagination controls → refetches the project list with the selected server page.
-7. Tap a project card → detail page at `/learning/<uuid>`.
+6. Optional: switch to **Saved** or **Following** → learner-only list refetches with the same filters from the saved/followed endpoint.
+7. Optional: use **Previous** / **Next** pagination controls → refetches the active project list with the selected server page.
+8. Tap a project card → detail page at `/learning/<uuid>`.
 
 ### Frontend path
 
-`LearningHubPage` → `learningProjectsProvider(LearningProjectsQuery(page: selectedPage, limit: 12, q: …, categoryId: …, difficulty: …, tag: …))` → `ApiLearningHubRepository.fetchProjects` → `LearningHubApiMapper`.
+`LearningHubPage(initialSearch: state.uri.queryParameters['q'])` → `learningProjectsProvider`, `savedLearningProjectsProvider`, or `followedLearningProjectsProvider` with `LearningProjectsQuery(page: selectedPage, limit: 12, q: …, categoryId: …, difficulty: …, tag: …)` → `ApiLearningHubRepository` → `LearningHubApiMapper`.
 
 Category chips → `projectCategoriesProvider` → `GET /api/categories?type=PROJECT`.
 
 Tag chips are derived from the `tags` array already returned by the project list response. There is no separate tags endpoint.
 
-Featured project = first item on page 1 (not a backend field). Later pages render as regular project grids.
+Featured project = first item on page 1 of **All projects** (not a backend field). Later pages and saved/followed tabs render as regular project grids.
 
 **No mock fallback** on API failure — error panel with retry (`ref.invalidate`).
 
 ### Backend path
 
 `GET /api/learning-projects` with optional query: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`.
+
+`GET /api/learning-projects/me/saved` and `GET /api/learning-projects/me/followed` require learner auth, accept the same query params, and filter the list to the viewer's saved or followed projects.
 
 Repository filter: `status = PUBLISHED`, active PROJECT/BOTH categories.
 
@@ -54,6 +57,7 @@ Grid shows API-backed project cards with UUID ids. Hero stats use `pagination.to
 |-----------|-----|
 | Network/server error | “Unable to load learning projects” + **Try again** |
 | Empty published list without active filters | “No published projects yet.” |
+| Empty saved/followed tab without active filters | Saved/followed-specific empty state |
 | Active filters return zero | “No projects match your filters” + **Clear filters** |
 
 ### Files involved
@@ -70,25 +74,27 @@ Navigation to `/learning/:id` where `:id` is a backend UUID.
 
 ### User path
 
-View title, summary/description, cover/first image, required components, project like count/toggle, save toggle, follow count/toggle, non-AI project planning actions, steps, and clickable safe project links.
+View title, summary/description, cover/first image, required components, project like count/toggle, save toggle, follow count/toggle, learner reviews, non-AI build checklist actions, steps, and clickable safe project links. Learning Hub list cards and Home spotlight cards expose the same compact like/save/follow controls.
 
-Ratings are **hidden** when backend `ratingSummary` is null (current API always returns null).
+Ratings are hidden when `ratingSummary` is null. When learner reviews exist, list/detail cards show the real average/count and detail shows recent reviews plus the authenticated learner's own review form.
 
 ### Frontend path
 
 `LearningProjectDetailsPage` → `learningProjectProvider(id)` → `GET /api/learning-projects/:id` → mapper.
 
-The like, save, and follow pills use widget-local optimistic state. Guests are routed to `/login?from=/learning/<id>`, non-learner authenticated users receive an info snackbar, and learners call repository `likeProject` / `unlikeProject` / `saveProject` / `unsaveProject` / `followProject` / `unfollowProject` methods.
+The like, save, and follow pills use widget-local optimistic state on list, Home spotlight, and detail surfaces. Guests are routed to `/login?from=/learning/<id>`, non-learner authenticated users receive an info snackbar, and learners call repository `likeProject` / `unlikeProject` / `saveProject` / `unsaveProject` / `followProject` / `unfollowProject` methods. The reviews section uses repository `reviewProject` and `deleteProjectReview`, then invalidates `learningProjectProvider(id)`.
 
 404 / missing published project → “Project not found” (not mock slug lookup).
 
 Invalid UUID → validation error panel with retry (not crash).
 
+The build checklist panel is frontend-local. Learners can start a checklist from project components and manually mark each component as `Available`, `Missing`, `Alternative`, `Already owned`, or `Reserved`. Each row has **Find materials**, which opens `/materials?q=<component name>` and lets the existing Materials Discovery search handle results. No project-build table, automatic coverage scoring, or AI matching is used.
+
 **No mock fallback** on API failure.
 
 ### Backend path
 
-`GET /api/learning-projects/:id` — single project where `status = PUBLISHED`; optional Bearer auth enables viewer-specific `isLiked`, `isSaved`, and `isFollowing`.
+`GET /api/learning-projects/:id` — single project where `status = PUBLISHED`; optional Bearer auth enables viewer-specific `isLiked`, `isSaved`, `isFollowing`, and `viewerReview`. Detail also returns `recentReviews`.
 
 `POST /api/learning-projects/:id/like` / `DELETE /api/learning-projects/:id/like` — learner-only, idempotent project engagement actions returning `{ projectId, likesCount, isLiked }`.
 
@@ -96,13 +102,15 @@ Invalid UUID → validation error panel with retry (not crash).
 
 `POST /api/learning-projects/:id/follow` / `DELETE /api/learning-projects/:id/follow` — learner-only, idempotent follow actions returning `{ projectId, followersCount, isFollowing }`.
 
+`PUT /api/learning-projects/:id/review` / `DELETE /api/learning-projects/:id/review` — learner-only project review upsert/delete. Upsert body is `{ rating: 1..5, comment? }`; responses include the updated `ratingSummary`.
+
 ### Database changes
 
-Like/unlike writes `project_likes`; save/unsave writes `project_saves`; follow/unfollow writes `project_follows`; detail read is otherwise read-only.
+Like/unlike writes `project_likes`; save/unsave writes `project_saves`; follow/unfollow writes `project_follows`; review upsert/delete writes `project_user_reviews`.
 
 ### Success state
 
-Detail sections render from API DTOs (components, steps, links, images). Project links use `url_launcher` for valid `http`/`https` URLs; invalid or missing URLs render disabled. Like count, save state, and follow count/state update optimistically and then reconcile to the server response.
+Detail sections render from API DTOs (components, steps, links, images, review summary/recent reviews). Project links use `url_launcher` for valid `http`/`https` URLs; invalid or missing URLs render disabled. Like count, save state, and follow count/state update optimistically on card/detail controls and then reconcile to the server response. Review create/update/delete refreshes the detail provider after success. Checklist state stays in the mounted detail page and resets on navigation/refresh.
 
 ### Error states
 
@@ -114,7 +122,7 @@ Detail sections render from API DTOs (components, steps, links, images). Project
 
 ### Files involved
 
-`learning_project_details_page.dart`, `learning_hub_providers.dart`, `api_learning_hub_repository.dart`, `project_components_section.dart`, `project_build_actions_panel.dart`, `project_steps_timeline.dart`, `project_link_list.dart`
+`learning_project_details_page.dart`, `learning_hub_providers.dart`, `api_learning_hub_repository.dart`, `project_components_section.dart`, `project_build_actions_panel.dart`, `project_reviews_section.dart`, `project_steps_timeline.dart`, `project_link_list.dart`
 
 **Not used on detail:** `learning_hub_mock_data.dart`, `mock_rating_summary_card.dart`
 
@@ -197,10 +205,10 @@ Hub page controls fetch server pages beyond `page=1` while preserving active fil
 
 ## Not implemented
 
-- Learner booking materials from project components
+- Learner booking materials directly from project components
 - AI material matching (`ai-agent` module)
-- Learning project ratings/reviews (API returns `ratingSummary: null`; no project review target type)
-- Saved/followed-project listing and followed categories
+- Followed categories
+- Persisted build checklist / stored component coverage
 - Moderator project review UI / moderator workspace
 
 ---

@@ -29,6 +29,28 @@ class ProjectStep {
   final LocalizedText title;
 }
 
+class ProjectReviewItem {
+  const ProjectReviewItem({
+    required this.id,
+    required this.projectId,
+    required this.reviewerName,
+    required this.rating,
+    required this.isViewerReview,
+    this.comment,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  final String id;
+  final String projectId;
+  final String reviewerName;
+  final int rating;
+  final String? comment;
+  final bool isViewerReview;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+}
+
 class LearningProject {
   const LearningProject({
     required this.id,
@@ -53,6 +75,8 @@ class LearningProject {
     this.isSaved = false,
     this.followersCount = 0,
     this.isFollowing = false,
+    this.recentReviews = const <ProjectReviewItem>[],
+    this.viewerReview,
     this.tags = const <String>[],
     this.longDescription,
     this.hasRatings = false,
@@ -81,6 +105,8 @@ class LearningProject {
   final bool isSaved;
   final int followersCount;
   final bool isFollowing;
+  final List<ProjectReviewItem> recentReviews;
+  final ProjectReviewItem? viewerReview;
   final List<String> tags;
   final bool hasRatings;
 
@@ -90,6 +116,8 @@ class LearningProject {
     bool? isSaved,
     int? followersCount,
     bool? isFollowing,
+    List<ProjectReviewItem>? recentReviews,
+    ProjectReviewItem? viewerReview,
   }) {
     return LearningProject(
       id: id,
@@ -116,6 +144,8 @@ class LearningProject {
       isSaved: isSaved ?? this.isSaved,
       followersCount: followersCount ?? this.followersCount,
       isFollowing: isFollowing ?? this.isFollowing,
+      recentReviews: recentReviews ?? this.recentReviews,
+      viewerReview: viewerReview ?? this.viewerReview,
       tags: tags,
     );
   }

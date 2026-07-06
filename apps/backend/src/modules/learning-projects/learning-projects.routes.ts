@@ -9,10 +9,14 @@ import { validate } from '../../middlewares/validate.middleware.js';
 import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
+  deleteLearningProjectReview,
   followLearningProject,
   getLearningProject,
   likeLearningProject,
+  listFollowedLearningProjects,
   listLearningProjects,
+  listSavedLearningProjects,
+  reviewLearningProject,
   saveLearningProject,
   submitLearningProject,
   unlikeLearningProject,
@@ -22,6 +26,7 @@ import {
 import {
   learningProjectIdParamSchema,
   learningProjectsQuerySchema,
+  projectReviewSchema,
   submitLearningProjectSchema,
 } from './learning-projects.validation.js';
 
@@ -40,6 +45,22 @@ learningProjectsRouter.post(
   requireRoles('LEARNER'),
   validate(submitLearningProjectSchema),
   asyncHandler(submitLearningProject),
+);
+
+learningProjectsRouter.get(
+  '/me/saved',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectsQuerySchema, 'query'),
+  asyncHandler(listSavedLearningProjects),
+);
+
+learningProjectsRouter.get(
+  '/me/followed',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectsQuerySchema, 'query'),
+  asyncHandler(listFollowedLearningProjects),
 );
 
 learningProjectsRouter.post(
@@ -88,6 +109,23 @@ learningProjectsRouter.delete(
   requireRoles('LEARNER'),
   validate(learningProjectIdParamSchema, 'params'),
   asyncHandler(unfollowLearningProject),
+);
+
+learningProjectsRouter.put(
+  '/:id/review',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  validate(projectReviewSchema),
+  asyncHandler(reviewLearningProject),
+);
+
+learningProjectsRouter.delete(
+  '/:id/review',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  asyncHandler(deleteLearningProjectReview),
 );
 
 learningProjectsRouter.get(

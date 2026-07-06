@@ -31,6 +31,20 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<LearningProjectsResult> fetchSavedProjects(
+    LearningProjectsQuery query,
+  ) async {
+    return _emptyResult;
+  }
+
+  @override
+  Future<LearningProjectsResult> fetchFollowedProjects(
+    LearningProjectsQuery query,
+  ) async {
+    return _emptyResult;
+  }
+
+  @override
   Future<LearningProject?> fetchProjectById(String id) async => null;
 
   @override
@@ -69,6 +83,20 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
       followersCount: 0,
       isFollowing: false,
     );
+  }
+
+  @override
+  Future<void> reviewProject(
+    String id, {
+    required int rating,
+    String? comment,
+  }) async {
+    return;
+  }
+
+  @override
+  Future<void> deleteProjectReview(String id) async {
+    return;
   }
 
   @override

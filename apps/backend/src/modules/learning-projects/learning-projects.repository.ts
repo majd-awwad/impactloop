@@ -220,6 +220,66 @@ export const findLearningProjects = async (query: LearningProjectsQuery) => {
   return { items, total };
 };
 
+export const findSavedLearningProjects = async (
+  query: LearningProjectsQuery,
+  userId: string,
+) => {
+  const where: Prisma.LearningProjectWhereInput = {
+    ...buildLearningProjectsWhere(query),
+    saves: {
+      some: {
+        userId,
+      },
+    },
+  };
+  const skip = (query.page - 1) * query.limit;
+
+  const [items, total] = await Promise.all([
+    prisma.learningProject.findMany({
+      where,
+      include: learningProjectListInclude,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip,
+      take: query.limit,
+    }),
+    prisma.learningProject.count({ where }),
+  ]);
+
+  return { items, total };
+};
+
+export const findFollowedLearningProjects = async (
+  query: LearningProjectsQuery,
+  userId: string,
+) => {
+  const where: Prisma.LearningProjectWhereInput = {
+    ...buildLearningProjectsWhere(query),
+    follows: {
+      some: {
+        userId,
+      },
+    },
+  };
+  const skip = (query.page - 1) * query.limit;
+
+  const [items, total] = await Promise.all([
+    prisma.learningProject.findMany({
+      where,
+      include: learningProjectListInclude,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip,
+      take: query.limit,
+    }),
+    prisma.learningProject.count({ where }),
+  ]);
+
+  return { items, total };
+};
+
 export const findLearningProjectById = async (id: string) => {
   return prisma.learningProject.findFirst({
     where: {
@@ -420,6 +480,143 @@ export const unsetProjectFollowed = async (
 export const countFollowsForProject = async (projectId: string) => {
   return prisma.projectFollow.count({
     where: { projectId },
+  });
+};
+
+export const summarizeReviewsByProjectIds = async (projectIds: string[]) => {
+  if (projectIds.length === 0) {
+    return new Map<string, { average: number; count: number }>();
+  }
+
+  const groups = await prisma.projectUserReview.groupBy({
+    by: ['projectId'],
+    where: { projectId: { in: projectIds } },
+    _avg: { rating: true },
+    _count: { _all: true },
+  });
+
+  return new Map(
+    groups.map((group) => [
+      group.projectId,
+      {
+        average: group._avg.rating ?? 0,
+        count: group._count._all,
+      },
+    ]),
+  );
+};
+
+export const findRecentReviewsForProject = async (
+  projectId: string,
+  limit = 5,
+) => {
+  return prisma.projectUserReview.findMany({
+    where: { projectId },
+    select: {
+      id: true,
+      projectId: true,
+      userId: true,
+      rating: true,
+      comment: true,
+      createdAt: true,
+      updatedAt: true,
+      user: {
+        select: {
+          displayName: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    take: limit,
+  });
+};
+
+export const findReviewForViewer = async (
+  projectId: string,
+  userId: string | undefined,
+) => {
+  if (!userId) {
+    return null;
+  }
+
+  return prisma.projectUserReview.findUnique({
+    where: {
+      projectId_userId: {
+        projectId,
+        userId,
+      },
+    },
+    select: {
+      id: true,
+      projectId: true,
+      userId: true,
+      rating: true,
+      comment: true,
+      createdAt: true,
+      updatedAt: true,
+      user: {
+        select: {
+          displayName: true,
+          email: true,
+        },
+      },
+    },
+  });
+};
+
+export const upsertProjectReview = async (input: {
+  projectId: string;
+  userId: string;
+  rating: number;
+  comment: string | null;
+}) => {
+  return prisma.projectUserReview.upsert({
+    where: {
+      projectId_userId: {
+        projectId: input.projectId,
+        userId: input.userId,
+      },
+    },
+    create: {
+      projectId: input.projectId,
+      userId: input.userId,
+      rating: input.rating,
+      comment: input.comment,
+    },
+    update: {
+      rating: input.rating,
+      comment: input.comment,
+    },
+    select: {
+      id: true,
+      projectId: true,
+      userId: true,
+      rating: true,
+      comment: true,
+      createdAt: true,
+      updatedAt: true,
+      user: {
+        select: {
+          displayName: true,
+          email: true,
+        },
+      },
+    },
+  });
+};
+
+export const deleteProjectReview = async (
+  projectId: string,
+  userId: string,
+) => {
+  await prisma.projectUserReview.deleteMany({
+    where: {
+      projectId,
+      userId,
+    },
   });
 };
 

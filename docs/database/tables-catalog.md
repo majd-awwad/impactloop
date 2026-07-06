@@ -22,7 +22,7 @@ Per-table reference from `apps/backend/prisma/schema.prisma`. Column names shown
 | activeRole | UserRole? | Current portal selection (`LEARNER`, `SUPPLIER`, etc.); does not remove stored roles |
 | createdAt, updatedAt | DateTime | |
 
-Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, material reports, learning projects, project likes/saves/follows, requests.
+Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, material reports, learning projects, project likes/saves/follows/reviews, requests.
 
 ---
 
@@ -206,7 +206,7 @@ Indexes: `userId`, `(userId, isDefault)`, `locationId`.
 | stepsGeneratedByAi | Boolean | default false |
 | aiStepsGeneratedAt | DateTime? | |
 
-Child tables: project_images, project_required_components, project_steps, project_links, project_tags, project_likes, project_saves, project_follows.
+Child tables: project_images, project_required_components, project_steps, project_links, project_tags, project_likes, project_saves, project_follows, project_user_reviews.
 
 ---
 
@@ -312,6 +312,21 @@ Child tables: project_images, project_required_components, project_steps, projec
 | createdAt | DateTime | default now |
 
 **Unique:** `(projectId, userId)`. Used by learner project follow/unfollow and public Learning Hub `followersCount` / viewer-specific `isFollowing` fields.
+
+---
+
+## `project_user_reviews` — model `ProjectUserReview`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| projectId | String | FK → learning_projects; cascade delete |
+| userId | String | FK → users; cascade delete |
+| rating | Int | 1–5 by API validation |
+| comment | String? | Optional learner review text |
+| createdAt, updatedAt | DateTime | |
+
+**Unique:** `(projectId, userId)`. Used by learner project rating/review upsert/delete, public `ratingSummary`, detail `recentReviews`, and viewer-specific `viewerReview`.
 
 ---
 

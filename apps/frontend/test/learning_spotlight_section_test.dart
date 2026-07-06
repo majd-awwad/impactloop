@@ -79,6 +79,42 @@ void main() {
       },
     );
 
+    testWidgets('shows compact engagement controls on project cards', (
+      tester,
+    ) async {
+      final router = _buildRouter(
+        repository: _FakeLearningHubRepository(
+          fetchProjects: () async => LearningProjectsResult(
+            items: [
+              _project(
+                id: '11111111-1111-1111-1111-111111111111',
+                title: 'Solar Station',
+                likesCount: 7,
+                followersCount: 3,
+                isSaved: true,
+              ),
+            ],
+            page: 1,
+            limit: 2,
+            total: 1,
+            totalPages: 1,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(router);
+      await tester.pumpAndSettle();
+
+      expect(find.text('7 likes'), findsOneWidget);
+      expect(find.text('Saved'), findsOneWidget);
+      expect(find.text('3 followers'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Remove saved project'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('login'), findsOneWidget);
+    });
+
     testWidgets('shows empty state when no published projects exist', (
       tester,
     ) async {
@@ -148,6 +184,10 @@ Widget _buildRouter({required LearningProjectRepository repository}) {
           return Scaffold(body: Text('detail:$id'));
         },
       ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const Scaffold(body: Text('login')),
+      ),
     ],
   );
 
@@ -167,7 +207,15 @@ LearningProjectsResult _emptyResult() {
   );
 }
 
-LearningProject _project({required String id, required String title}) {
+LearningProject _project({
+  required String id,
+  required String title,
+  int likesCount = 0,
+  bool isLiked = false,
+  bool isSaved = false,
+  int followersCount = 0,
+  bool isFollowing = false,
+}) {
   return LearningProject(
     id: id,
     category: const LocalizedText(en: 'Robotics', ar: 'Robotics'),
@@ -187,6 +235,11 @@ LearningProject _project({required String id, required String title}) {
     cardGradient: const [0xFF1F2937, 0xFF243B53],
     isFeatured: false,
     hasRatings: false,
+    likesCount: likesCount,
+    isLiked: isLiked,
+    isSaved: isSaved,
+    followersCount: followersCount,
+    isFollowing: isFollowing,
   );
 }
 
@@ -199,6 +252,20 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
 
   @override
   Future<LearningProjectsResult> fetchProjects(LearningProjectsQuery query) {
+    return _fetchProjects();
+  }
+
+  @override
+  Future<LearningProjectsResult> fetchSavedProjects(
+    LearningProjectsQuery query,
+  ) {
+    return _fetchProjects();
+  }
+
+  @override
+  Future<LearningProjectsResult> fetchFollowedProjects(
+    LearningProjectsQuery query,
+  ) {
     return _fetchProjects();
   }
 
@@ -241,6 +308,20 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
       followersCount: 0,
       isFollowing: false,
     );
+  }
+
+  @override
+  Future<void> reviewProject(
+    String id, {
+    required int rating,
+    String? comment,
+  }) async {
+    return;
+  }
+
+  @override
+  Future<void> deleteProjectReview(String id) async {
+    return;
   }
 
   @override
