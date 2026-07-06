@@ -766,8 +766,14 @@ class _ReservationCardActions extends ConsumerWidget {
       reservation: reservation,
       delivery: delivery,
       desktopColumn: desktopColumn,
-      onNavigate: (deliveryId) =>
-          context.push('/learner/deliveries/$deliveryId'),
+      onNavigate: (deliveryId) {
+        final canTrack = delivery?.canTrack == true;
+        if (canTrack) {
+          context.push('/learner/deliveries/$deliveryId/track');
+        } else {
+          context.push('/learner/deliveries/$deliveryId');
+        }
+      },
     );
 
     final requestDelivery = reservation.canLearnerRequestDelivery

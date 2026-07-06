@@ -29,9 +29,9 @@ Learner requests internal delivery after a supplier accepts a reservation.
    - `PICKED_UP -> ON_THE_WAY`
    - `ON_THE_WAY -> ARRIVED_DROPOFF`
    - `ARRIVED_DROPOFF -> DELIVERED`
-13. Driver may turn on **Share automatically** on `/driver/deliveries/:id` while assigned to an active delivery. Flutter captures foreground location every 45 seconds while that page stays open and posts it through `POST /api/driver/deliveries/:id/location-pings`. Drivers can still tap **Send my location** for a one-off update. This is not background GPS.
+13. Driver may turn on **Share automatically** on `/driver/deliveries/:id` only after `PICKED_UP` (`PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`). Flutter captures foreground location every 45 seconds while that page stays open and posts it through `POST /api/driver/deliveries/:id/location-pings`. The backend rejects pings before pickup. Drivers can still tap **Send my location** when eligible. This is not background GPS.
 14. `DELIVERED` completes the reservation, subtracts `quantityRequested`, and marks material `REUSED` only when remaining quantity reaches `0`.
-15. Learner delivery detail polls `GET /api/deliveries/:id/tracking` only after pickup (`PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`). Before pickup and after terminal states, the backend returns `canTrack: false` and `latestDriverLocation: null`; Flutter shows status text only and does not render a driver map marker. When `canTrack` is true and a ping exists, Flutter renders a simple driver marker map plus last update time and accuracy. Raw driver coordinates are not printed as text. Learner tracking uses polling, not WebSocket/SSE.
+15. Learner opens `/learner/deliveries/:id/track` (or **Track delivery** from reservations/detail) only after pickup. The tracking page polls `GET /api/deliveries/:id/tracking` every 45 seconds. Before pickup and after terminal states, the backend returns `canTrack: false` and `latestDriverLocation: null`; Flutter shows status text only. When `canTrack` is true and a ping exists, Flutter renders a simple driver marker map (plus drop-off marker when available), last update time, and stale warning when the ping is older than 90 seconds. Learner tracking uses polling, not WebSocket/SSE.
 
 ## Active Delivery Rule
 
@@ -72,7 +72,7 @@ Only one active delivery is allowed per reservation. The database allows many de
 - The current portal does not expose a separate availability toggle; an active driver profile can accept a waiting job from `OFFLINE` or `AVAILABLE`, and accept moves the profile to `ON_DELIVERY`.
 - `/driver/deliveries/:id` is resolved from active assigned deliveries. If the id is not active or not assigned to the driver, the page shows a back-to-jobs state.
 - The detail page exposes one next action at a time, matching the backend transition order.
-- The detail page exposes a manual **Send my location** action and a **Share automatically** toggle on active assigned deliveries. Auto-sharing sends foreground location every 45 seconds while the page stays open. It does not start automatic tracking in the background or on `/driver/jobs`.
+- The detail page exposes a manual **Send my location** action and a **Share automatically** toggle only after pickup (`PICKED_UP` onward). Auto-sharing sends foreground location every 45 seconds while the page stays open. It does not start automatic tracking in the background or on `/driver/jobs`.
 
 ## Learner Tracking Summary
 

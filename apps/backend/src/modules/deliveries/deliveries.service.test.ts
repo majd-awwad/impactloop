@@ -1044,7 +1044,7 @@ describe('internal delivery backend core', () => {
     );
   });
 
-  test('location pings are stored for assigned active driver', async () => {
+  test('location pings are stored for assigned active driver after pickup', async () => {
     const driverId = await createAvailableDriver(ctx, 'ping');
     const { reservation } = await createAcceptedReservation(ctx);
     const delivery = await requestDeliveryForReservation(
@@ -1053,6 +1053,7 @@ describe('internal delivery backend core', () => {
       deliveryInput(),
     );
     await acceptDelivery(driverId, delivery.id);
+    await progressToPickedUp(driverId, delivery.id);
 
     const ping = await createDeliveryLocationPing(driverId, delivery.id, {
       latitude: 31.91,
@@ -1068,6 +1069,32 @@ describe('internal delivery backend core', () => {
     assert.equal(typeof ping.accuracyMeters, 'number');
   });
 
+  test('location ping is rejected before PICKED_UP', async () => {
+    const driverId = await createAvailableDriver(ctx, 'pre-pickup-ping');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+
+    await assert.rejects(
+      () =>
+        createDeliveryLocationPing(driverId, delivery.id, {
+          latitude: 31.91,
+          longitude: 35.21,
+          accuracyMeters: 12,
+          capturedAt: new Date().toISOString(),
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 404);
+        return true;
+      },
+    );
+  });
+
   test('owning learner cannot see driver coordinates before pickup', async () => {
     const driverId = await createAvailableDriver(ctx, 'pre-pickup-hidden');
     const { reservation } = await createAcceptedReservation(ctx);
@@ -1078,18 +1105,14 @@ describe('internal delivery backend core', () => {
     );
     await acceptDelivery(driverId, delivery.id);
 
-    await createDeliveryLocationPing(driverId, delivery.id, {
-      latitude: 31.91,
-      longitude: 35.21,
-      accuracyMeters: 12,
-      capturedAt: new Date().toISOString(),
-    });
-
     const learnerDelivery = await getMyDelivery(ctx.learnerId, delivery.id);
 
     assert.equal(learnerDelivery.status, 'DRIVER_ASSIGNED');
     assert.equal(learnerDelivery.canTrack, false);
-    assert.equal(learnerDelivery.trackingMessage, 'Driver assigned.');
+    assert.equal(
+      learnerDelivery.trackingMessage,
+      'Driver is heading to supplier pickup.',
+    );
     assert.equal(learnerDelivery.latestDriverPing, null);
   });
 
@@ -1102,13 +1125,6 @@ describe('internal delivery backend core', () => {
       deliveryInput(),
     );
     await acceptDelivery(driverId, delivery.id);
-
-    await createDeliveryLocationPing(driverId, delivery.id, {
-      latitude: 31.91,
-      longitude: 35.21,
-      accuracyMeters: 12,
-      capturedAt: new Date(Date.now() - 30_000).toISOString(),
-    });
 
     const beforePickup = await getMyDelivery(ctx.learnerId, delivery.id);
     assert.equal(beforePickup.latestDriverPing, null);
@@ -1174,13 +1190,23 @@ describe('internal delivery backend core', () => {
       deliveryInput(),
     );
     await acceptDelivery(driverId, delivery.id);
-    const latest = await createDeliveryLocationPing(driverId, delivery.id, {
+    await progressToPickedUp(driverId, delivery.id);
+    await createDeliveryLocationPing(driverId, delivery.id, {
       latitude: 31.92,
       longitude: 35.22,
       accuracyMeters: 8,
       capturedAt: new Date().toISOString(),
     });
-    await progressToDelivered(driverId, delivery.id);
+    await updateDriverDeliveryStatus(driverId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(driverId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
+    await updateDriverDeliveryStatus(driverId, delivery.id, {
+      status: 'DELIVERED',
+      confirmationCode: deriveHandoverCode('learner-delivery', delivery.id),
+    });
 
     const learnerDelivery = await getMyDelivery(ctx.learnerId, delivery.id);
 
@@ -1199,13 +1225,6 @@ describe('internal delivery backend core', () => {
     );
     await acceptDelivery(driverId, delivery.id);
 
-    await createDeliveryLocationPing(driverId, delivery.id, {
-      latitude: 31.91,
-      longitude: 35.21,
-      accuracyMeters: 12,
-      capturedAt: new Date().toISOString(),
-    });
-
     const tracking = await getLearnerDeliveryTracking(
       ctx.learnerId,
       delivery.id,
@@ -1213,7 +1232,10 @@ describe('internal delivery backend core', () => {
 
     assert.equal(tracking.canTrack, false);
     assert.equal(tracking.latestDriverLocation, null);
-    assert.equal(tracking.trackingMessage, 'Driver assigned.');
+    assert.equal(
+      tracking.trackingMessage,
+      'Driver is heading to supplier pickup.',
+    );
   });
 
   test('learner tracking endpoint returns coordinates after pickup', async () => {

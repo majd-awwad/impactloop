@@ -37,13 +37,16 @@ export const TERMINAL_DELIVERY_STATUSES = [
   'AWAITING_RESOLUTION',
 ] as const satisfies readonly DeliveryStatus[];
 
-export const TRACKING_ELIGIBLE_DELIVERY_STATUSES = [
-  'DRIVER_ASSIGNED',
-  'ARRIVED_PICKUP',
+/** Driver may send location pings only after supplier pickup is confirmed. */
+export const LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES = [
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
 ] as const satisfies readonly DeliveryStatus[];
+
+/** @deprecated Use LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES for pings. */
+export const TRACKING_ELIGIBLE_DELIVERY_STATUSES =
+  LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES;
 
 /** Learner may see driver coordinates only after material is picked up. */
 export const LEARNER_DRIVER_COORDINATE_VISIBLE_STATUSES = [
@@ -62,7 +65,7 @@ export const learnerTrackingMessage = (status: DeliveryStatus) => {
     case 'WAITING_FOR_DRIVER':
       return 'Waiting for driver.';
     case 'DRIVER_ASSIGNED':
-      return 'Driver assigned.';
+      return 'Driver is heading to supplier pickup.';
     case 'ARRIVED_PICKUP':
       return 'Driver is heading to supplier pickup.';
     case 'PICKED_UP':
@@ -92,7 +95,9 @@ export const learnerTrackingMessage = (status: DeliveryStatus) => {
 
 /** Assigned in-progress deliveries that count toward the driver active queue. */
 export const DRIVER_IN_PROGRESS_ASSIGNED_STATUSES = [
-  ...TRACKING_ELIGIBLE_DELIVERY_STATUSES,
+  'DRIVER_ASSIGNED',
+  'ARRIVED_PICKUP',
+  ...LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES,
 ] as const satisfies readonly DeliveryStatus[];
 
 export const MAX_ACTIVE_DRIVER_DELIVERIES = 3;
@@ -565,12 +570,50 @@ export const getLearnerDeliveryTracking = async (
   }
 
   const canTrack = canLearnerTrackDriver(delivery.status);
+  const latestDriverLocation = canTrack
+    ? mapLatestDriverLocation(delivery)
+    : null;
+  const locationRecordedAt = latestDriverLocation?.capturedAt
+    ? new Date(latestDriverLocation.capturedAt)
+    : null;
+  const isLocationStale =
+    canTrack &&
+    locationRecordedAt != null &&
+    Date.now() - locationRecordedAt.getTime() > 90_000;
+
+  const dropoffLat =
+    delivery.dropoffLocation.latitude == null
+      ? null
+      : typeof delivery.dropoffLocation.latitude === 'number'
+        ? delivery.dropoffLocation.latitude
+        : delivery.dropoffLocation.latitude.toNumber();
+  const dropoffLng =
+    delivery.dropoffLocation.longitude == null
+      ? null
+      : typeof delivery.dropoffLocation.longitude === 'number'
+        ? delivery.dropoffLocation.longitude
+        : delivery.dropoffLocation.longitude.toNumber();
+
+  let trackingMessage = learnerTrackingMessage(delivery.status);
+  if (canTrack && latestDriverLocation == null) {
+    trackingMessage = 'Waiting for driver location.';
+  }
 
   return {
     deliveryId: delivery.id,
+    reservationId: delivery.reservationId,
+    materialTitle: delivery.reservation.material.title,
     status: delivery.status,
     canTrack,
-    trackingMessage: learnerTrackingMessage(delivery.status),
-    latestDriverLocation: canTrack ? mapLatestDriverLocation(delivery) : null,
+    trackingMessage,
+    driverDisplayName: delivery.assignedDriverProfile?.displayName ?? null,
+    latestDriverLocation,
+    isLocationStale,
+    pickupCity: delivery.pickupLocation.city,
+    pickupArea: delivery.pickupLocation.area,
+    dropoffCity: delivery.dropoffLocation.city,
+    dropoffArea: delivery.dropoffLocation.area,
+    dropoffLatitude: dropoffLat,
+    dropoffLongitude: dropoffLng,
   };
 };
