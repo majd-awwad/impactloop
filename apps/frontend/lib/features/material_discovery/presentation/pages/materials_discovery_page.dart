@@ -24,9 +24,10 @@ import '../material_discovery_content.dart';
 import '../views/materials_discovery_view.dart';
 
 class MaterialsDiscoveryPage extends ConsumerStatefulWidget {
-  const MaterialsDiscoveryPage({super.key, this.repository});
+  const MaterialsDiscoveryPage({super.key, this.repository, this.initialQuery});
 
   final MaterialDiscoveryRepository? repository;
+  final MaterialDiscoveryQuery? initialQuery;
 
   @override
   ConsumerState<MaterialsDiscoveryPage> createState() =>
@@ -70,6 +71,7 @@ class _MaterialsDiscoveryPageState
     super.initState();
     _defaultRepository = ref.read(materialDiscoveryRepositoryProvider);
     _activeRepository = widget.repository ?? _defaultRepository;
+    _applyInitialQuery(widget.initialQuery);
     _fetchMaterials(reset: true);
   }
 
@@ -80,6 +82,11 @@ class _MaterialsDiscoveryPageState
     if (oldWidget.repository != widget.repository ||
         _activeRepository != nextRepository) {
       _activeRepository = nextRepository;
+      _fetchMaterials(reset: true);
+    }
+
+    if (oldWidget.initialQuery != widget.initialQuery) {
+      _applyInitialQuery(widget.initialQuery);
       _fetchMaterials(reset: true);
     }
   }
@@ -97,6 +104,16 @@ class _MaterialsDiscoveryPageState
 
   bool _hasActiveFilters(List<MaterialCategory> categories) {
     return _buildQuery(categories: categories).hasActiveFilters;
+  }
+
+  void _applyInitialQuery(MaterialDiscoveryQuery? initialQuery) {
+    if (initialQuery == null) {
+      return;
+    }
+
+    _query = initialQuery;
+    _searchController.text = initialQuery.q ?? '';
+    _searchValue = initialQuery.q ?? '';
   }
 
   MaterialDiscoveryQuery _buildQuery({

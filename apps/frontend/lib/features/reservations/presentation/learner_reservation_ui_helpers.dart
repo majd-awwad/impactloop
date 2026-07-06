@@ -39,6 +39,11 @@ extension LearnerReservationStatusFilterX on LearnerReservationStatusFilter {
 
 const missedPickupExpiryReason = 'PICKUP_WINDOW_MISSED';
 const noDriverCancelReason = 'NO_DRIVER_UNAVAILABLE';
+const stalePickupCancelReason = 'PICKUP_NOT_COMPLETED';
+const adminPickupReconfirmReasons = {
+  'NO_DRIVER_ADMIN_REQUEST',
+  'STALE_PICKUP_ADMIN_REQUEST',
+};
 
 bool isMissedPickupExpiry(LearnerReservation reservation) =>
     reservation.isExpired &&
@@ -54,7 +59,9 @@ bool learnerReservationNeedsAction(LearnerReservation reservation) {
   }
 
   return reservation.isAccepted &&
-      (reservation.isOverdue || reservation.needsFollowUp);
+      (reservation.isOverdue ||
+          reservation.needsFollowUp ||
+          reservation.assignedDriverPickupOverdue);
 }
 
 bool reservationMatchesStatusFilter(
@@ -207,6 +214,7 @@ String reservationStatusLabel(
   bool isOverdue = false,
   bool needsFollowUp = false,
   String? rejectionReason,
+  String? pendingRescheduleReason,
 }) {
   switch (status) {
     case 'PENDING':
@@ -214,6 +222,10 @@ String reservationStatusLabel(
     case 'AWAITING_LEARNER_CONFIRMATION':
       return 'Needs your confirmation';
     case 'AWAITING_SUPPLIER_CONFIRMATION':
+      if (pendingRescheduleReason != null &&
+          adminPickupReconfirmReasons.contains(pendingRescheduleReason)) {
+        return 'Waiting for supplier to choose a new pickup window';
+      }
       return 'Waiting for supplier response';
     case 'ACCEPTED':
       if (fulfillmentMethod == 'DELIVERY') {
@@ -242,6 +254,12 @@ String reservationStatusLabel(
       }
       if (rejectionReason == noDriverCancelReason) {
         return 'Cancelled — no driver available';
+      }
+      if (rejectionReason == stalePickupCancelReason) {
+        return 'Admin cancelled due to unresolved pickup';
+      }
+      if (rejectionReason == null || rejectionReason.trim().isEmpty) {
+        return 'Expired — no response';
       }
       return 'Expired';
     case 'NO_SHOW':
@@ -315,6 +333,7 @@ LearnerReservationStatusChipLabels learnerReservationStatusChipLabels(
         isOverdue: reservation.isOverdue,
         needsFollowUp: reservation.needsFollowUp,
         rejectionReason: reservation.rejectionReason,
+        pendingRescheduleReason: reservation.pendingRescheduleReason,
       );
 
   final secondary = learnerDeliverySecondaryStatusLabel(
@@ -323,6 +342,8 @@ LearnerReservationStatusChipLabels learnerReservationStatusChipLabels(
     deliveryStatus: deliveryStatus,
     incidentReviewStatus: reservation.incidentReviewStatus,
     noDriverOverdue: reservation.canReportNoDriverAvailable,
+    assignedDriverPickupOverdue: reservation.assignedDriverPickupOverdue,
+    pendingIncidentReasonCode: reservation.pendingIncidentReasonCode,
     activeDeliveryStatus: reservation.activeDelivery?.status,
   );
 
@@ -354,6 +375,8 @@ String? learnerDeliverySecondaryStatusLabel({
   String? deliveryStatus,
   String? incidentReviewStatus,
   bool noDriverOverdue = false,
+  bool assignedDriverPickupOverdue = false,
+  String? pendingIncidentReasonCode,
   String? activeDeliveryStatus,
 }) {
   if (fulfillmentMethod.toUpperCase() != 'DELIVERY') {
@@ -369,13 +392,11 @@ String? learnerDeliverySecondaryStatusLabel({
   }
 
   if (reservationStatus == 'AWAITING_RESOLUTION') {
-    if (learnerNoDriverIncidentAwaitingResolution(
-      reservationStatus: reservationStatus,
-      fulfillmentMethod: fulfillmentMethod,
-      deliveryStatus: deliveryStatus,
-      activeDeliveryStatus: activeDeliveryStatus,
-    )) {
-      return 'No driver available';
+    switch (pendingIncidentReasonCode) {
+      case 'NO_DRIVER_AVAILABLE':
+        return 'No driver available';
+      case 'NO_RESPONSE_AFTER_PICKUP_WINDOW':
+        return 'Driver pickup overdue';
     }
 
     switch (normalizedDeliveryStatus) {
@@ -401,8 +422,13 @@ String? learnerDeliverySecondaryStatusLabel({
           ? 'Driver not assigned in time'
           : 'Waiting for driver';
     case 'DRIVER_ASSIGNED':
+      return assignedDriverPickupOverdue
+          ? 'Driver pickup overdue'
+          : 'Driver assigned';
     case 'ARRIVED_PICKUP':
-      return 'Driver assigned';
+      return assignedDriverPickupOverdue
+          ? 'Pickup not completed'
+          : 'At supplier pickup';
     case 'PICKED_UP':
     case 'ON_THE_WAY':
     case 'ARRIVED_DROPOFF':
@@ -741,6 +767,10 @@ String? reservationStatusMessage(LearnerReservation reservation) {
   if (reservation.isExpired) {
     if (isMissedPickupExpiry(reservation)) {
       return 'This reservation expired after the pickup window passed without follow-up. Create a new reservation if you still need the material.';
+    }
+    if (reservation.rejectionReason == null ||
+        reservation.rejectionReason!.trim().isEmpty) {
+      return 'This request expired because the supplier did not respond in time.';
     }
     return 'This reservation expired.';
   }

@@ -35,7 +35,8 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
       case SupplierIncomingRequestTab.completed:
         return request.status == SupplierIncomingRequestStatus.completed;
       case SupplierIncomingRequestTab.cancelled:
-        return request.status == SupplierIncomingRequestStatus.cancelled;
+        return request.status == SupplierIncomingRequestStatus.cancelled ||
+            request.status == SupplierIncomingRequestStatus.expired;
     }
   }
 

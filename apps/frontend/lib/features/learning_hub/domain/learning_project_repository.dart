@@ -1,13 +1,40 @@
 import 'learning_projects_result.dart';
 import 'models/learning_project.dart';
+import 'project_engagement.dart';
+import 'project_follow_status.dart';
+import 'project_save_status.dart';
 import '../../materials/data/models/category.dart';
 
 abstract class LearningProjectRepository {
   Future<LearningProjectsResult> fetchProjects(LearningProjectsQuery query);
 
+  Future<LearningProjectsResult> fetchSavedProjects(
+    LearningProjectsQuery query,
+  );
+
+  Future<LearningProjectsResult> fetchFollowedProjects(
+    LearningProjectsQuery query,
+  );
+
   Future<LearningProject?> fetchProjectById(String id);
 
   Future<List<MaterialCategory>> fetchProjectCategories();
+
+  Future<ProjectEngagement> likeProject(String id);
+
+  Future<ProjectEngagement> unlikeProject(String id);
+
+  Future<ProjectSaveStatus> saveProject(String id);
+
+  Future<ProjectSaveStatus> unsaveProject(String id);
+
+  Future<ProjectFollowStatus> followProject(String id);
+
+  Future<ProjectFollowStatus> unfollowProject(String id);
+
+  Future<void> reviewProject(String id, {required int rating, String? comment});
+
+  Future<void> deleteProjectReview(String id);
 
   Future<void> submitProjectForReview({
     required String idempotencyKey,

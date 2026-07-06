@@ -1,4 +1,24 @@
 import '../../driver_portal/data/models/driver_delivery.dart';
+import '../data/models/learner_delivery.dart';
+
+String learnerReservationPickupWindowDetail(
+  LearnerDeliveryReservation reservation,
+) {
+  final start =
+      reservation.supplierPickupWindowStart ?? reservation.pickupWindowStart;
+  final end =
+      reservation.supplierPickupWindowEnd ?? reservation.pickupWindowEnd;
+
+  if (start == null && end == null) {
+    return 'Pickup window not set';
+  }
+
+  if (start != null && end != null) {
+    return '${_formatDateTime(start)} – ${_formatDateTime(end)}';
+  }
+
+  return _formatDateTime(start ?? end!);
+}
 
 String driverPickupWindowSummary(
   DriverDelivery delivery, {

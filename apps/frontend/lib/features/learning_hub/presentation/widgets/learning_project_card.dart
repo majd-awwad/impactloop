@@ -8,6 +8,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../presentation/theme/learning_project_visuals.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
+import 'project_engagement_strip.dart';
 
 class LearningProjectCard extends StatelessWidget {
   const LearningProjectCard({super.key, required this.project});
@@ -19,7 +20,7 @@ class LearningProjectCard extends StatelessWidget {
     final palette = LearningUiPalette.of(context);
 
     return SizedBox(
-      height: 392,
+      height: 430,
       child: InkWell(
         borderRadius: AppRadius.xlAll,
         onTap: () => context.push('/learning/${project.id}'),
@@ -93,6 +94,11 @@ class LearningProjectCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      ProjectEngagementStrip(
+                        project: project,
+                        density: ProjectEngagementDensity.compact,
                       ),
                     ],
                   ),
@@ -298,11 +304,16 @@ class _ProjectMetaChip extends StatelessWidget {
         borderRadius: AppRadius.pillAll,
         border: Border.all(color: palette.borderSubtle),
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.body(
-          context,
-        ).copyWith(color: palette.textSecondary),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+          ),
+        ],
       ),
     );
   }

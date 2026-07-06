@@ -1,9 +1,31 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_exception.dart';
 import '../data/driver_deliveries_repository.dart';
 import '../data/models/driver_deliveries_list_result.dart';
+import '../data/models/driver_delivery_inactive_context.dart';
 import '../data/models/driver_delivery.dart';
 import 'driver_jobs_filter_helpers.dart';
+
+sealed class DriverDeliveryDetailState {
+  const DriverDeliveryDetailState();
+}
+
+final class DriverDeliveryDetailActive extends DriverDeliveryDetailState {
+  const DriverDeliveryDetailActive(this.delivery);
+
+  final DriverDelivery delivery;
+}
+
+final class DriverDeliveryDetailInactive extends DriverDeliveryDetailState {
+  const DriverDeliveryDetailInactive(this.context);
+
+  final DriverDeliveryInactiveContext context;
+}
+
+final class DriverDeliveryDetailNotFound extends DriverDeliveryDetailState {
+  const DriverDeliveryDetailNotFound();
+}
 
 const kInitialDriverJobsFilter = DriverAvailableJobsFilter();
 
@@ -128,6 +150,40 @@ final activeDriverDeliveriesProvider =
       return ref.read(driverDeliveriesRepositoryProvider).fetchActiveDeliveries();
     });
 
+final driverDeliveryDetailProvider =
+    FutureProvider.family<DriverDeliveryDetailState, String>((ref, deliveryId) async {
+      final result = await ref.watch(activeDriverDeliveriesProvider.future);
+
+      for (final delivery in result.deliveries) {
+        if (delivery.id == deliveryId) {
+          return DriverDeliveryDetailActive(delivery);
+        }
+      }
+
+      try {
+        final context = await ref
+            .read(driverDeliveriesRepositoryProvider)
+            .fetchInactiveContext(deliveryId);
+
+        if (context.isActive) {
+          ref.invalidate(activeDriverDeliveriesProvider);
+          final refreshed = await ref.read(activeDriverDeliveriesProvider.future);
+          for (final delivery in refreshed.deliveries) {
+            if (delivery.id == deliveryId) {
+              return DriverDeliveryDetailActive(delivery);
+            }
+          }
+        }
+
+        return DriverDeliveryDetailInactive(context);
+      } on ApiException catch (error) {
+        if (error.statusCode == 404) {
+          return const DriverDeliveryDetailNotFound();
+        }
+        rethrow;
+      }
+    });
+
 final activeDriverDeliveryProvider = FutureProvider.family<DriverDelivery?, String>(
   (ref, deliveryId) async {
     final result = await ref.watch(activeDriverDeliveriesProvider.future);
@@ -145,4 +201,10 @@ final activeDriverDeliveryProvider = FutureProvider.family<DriverDelivery?, Stri
 void refreshDriverJobs(WidgetRef ref) {
   ref.invalidate(activeDriverDeliveriesProvider);
   ref.invalidate(availableDriverDeliveriesProvider);
+}
+
+void refreshActiveDriverDelivery(WidgetRef ref, String deliveryId) {
+  ref.invalidate(activeDriverDeliveriesProvider);
+  ref.invalidate(activeDriverDeliveryProvider(deliveryId));
+  ref.invalidate(driverDeliveryDetailProvider(deliveryId));
 }

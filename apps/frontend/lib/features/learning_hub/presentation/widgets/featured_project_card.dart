@@ -8,6 +8,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../presentation/theme/learning_project_visuals.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
+import 'project_engagement_strip.dart';
 
 class FeaturedProjectCard extends StatelessWidget {
   const FeaturedProjectCard({super.key, required this.project});
@@ -150,6 +151,8 @@ class _FeaturedContent extends StatelessWidget {
               ),
           ],
         ),
+        const SizedBox(height: AppSpacing.md),
+        ProjectEngagementStrip(project: project),
         const SizedBox(height: AppSpacing.lg),
         compact
             ? SizedBox(width: double.infinity, child: buttonChild)
@@ -238,15 +241,20 @@ class _MetaChip extends StatelessWidget {
         borderRadius: AppRadius.pillAll,
         border: Border.all(color: palette.borderSubtle),
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.body(context).copyWith(
-          color: accent
-              ? isDark
-                    ? palette.limeSoft
-                    : AppColorTokens.emeraldDeep
-              : palette.textSecondary,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.body(context).copyWith(
+              color: accent
+                  ? isDark
+                        ? palette.limeSoft
+                        : AppColorTokens.emeraldDeep
+                  : palette.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }

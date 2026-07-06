@@ -2,7 +2,7 @@
 
 **Gap / stub flow.** Product “AI agent” for matching project components to materials is **not built**. Internal **price** AI is separate.
 
-**Sources inspected:** `docs/01-requirements.md`, `docs/05-roadmap.md`, `docs/features/ai-agent.md`, `apps/backend/src/app.ts`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/features/learning_hub/presentation/widgets/disabled_ai_panel.dart`, `apps/frontend/lib/features/home/presentation/pages/learner_home_page.dart`, `apps/backend/src/services/ai-price-suggestion.service.ts`
+**Sources inspected:** `docs/01-requirements.md`, `docs/05-roadmap.md`, `docs/features/ai-agent.md`, `apps/backend/src/app.ts`, `apps/backend/prisma/schema.prisma`, `apps/frontend/lib/features/learning_hub/presentation/widgets/project_build_actions_panel.dart`, `apps/frontend/lib/features/home/presentation/pages/learner_home_page.dart`, `apps/backend/src/services/ai-price-suggestion.service.ts`
 
 ## Trigger (planned)
 
@@ -16,7 +16,7 @@ Authenticated learner views a learning project (or home AI helper) and requests 
 |------|--------|
 | `ai-agent` module / matching API | **Not implemented** |
 | `ai_requests`, `ai_material_matches`, credit tables | **Not implemented** in schema |
-| Learning hub AI panel | **Frontend-only** — `DisabledAiPanel` (no API) |
+| Learning hub AI panel | **Not implemented** — old disabled panel removed; detail shows non-AI build planning actions |
 | Home AI helper card | **Frontend-only** — coming soon |
 | Price suggestion on price-rule create | **Partial** — not material matching |
 
@@ -31,7 +31,7 @@ Authenticated learner views a learning project (or home AI helper) and requests 
 
 ### Frontend path (planned)
 
-- Replace `disabled_ai_panel.dart` with wired repository.
+- Add a new AI matching UI/repository when this flow is intentionally implemented.
 - Credit balance display — no UI today.
 
 ### Backend path (planned)
@@ -55,7 +55,7 @@ Structured match list per component with links to `/materials` items.
 
 ### Files involved today (non-matching)
 
-`disabled_ai_panel.dart`, `learner_home_page.dart` (placeholder), `ai-price-suggestion.service.ts` (price only)
+`project_build_actions_panel.dart` (non-AI planning handoff), `learner_home_page.dart` (placeholder), `ai-price-suggestion.service.ts` (price only)
 
 ---
 

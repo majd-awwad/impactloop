@@ -17,6 +17,7 @@ enum SupplierIncomingRequestStatus {
   awaitingConfirmation,
   awaitingSupplierConfirmation,
   declined,
+  expired,
   completed,
   cancelled,
   noShow,
@@ -115,6 +116,8 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
         return 'Waiting for supplier response';
       case SupplierIncomingRequestStatus.declined:
         return 'Declined';
+      case SupplierIncomingRequestStatus.expired:
+        return 'Expired — no response';
       case SupplierIncomingRequestStatus.completed:
         return 'Completed';
       case SupplierIncomingRequestStatus.cancelled:
@@ -140,8 +143,9 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
       case 'AWAITING_SUPPLIER_CONFIRMATION':
         return SupplierIncomingRequestStatus.awaitingSupplierConfirmation;
       case 'REJECTED':
-      case 'EXPIRED':
         return SupplierIncomingRequestStatus.declined;
+      case 'EXPIRED':
+        return SupplierIncomingRequestStatus.expired;
       case 'CANCELLED':
         return SupplierIncomingRequestStatus.cancelled;
       case 'COMPLETED':
@@ -169,6 +173,8 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
         return 'AWAITING_SUPPLIER_CONFIRMATION';
       case SupplierIncomingRequestStatus.declined:
         return 'REJECTED';
+      case SupplierIncomingRequestStatus.expired:
+        return 'EXPIRED';
       case SupplierIncomingRequestStatus.completed:
         return 'COMPLETED';
       case SupplierIncomingRequestStatus.cancelled:
@@ -316,6 +322,7 @@ class SupplierIncomingRequest {
     this.canReportNoDriverAvailable = false,
     this.canSupplierMarkDeliveryPickupExpired = false,
     this.canSupplierReportDriverNoShow = false,
+    this.assignedDriverPickupOverdue = false,
     this.canSubmitNoDriverPickupWindow = false,
     this.pendingRescheduleReason,
     this.pendingRescheduleNote,
@@ -364,6 +371,7 @@ class SupplierIncomingRequest {
   final bool canReportNoDriverAvailable;
   final bool canSupplierMarkDeliveryPickupExpired;
   final bool canSupplierReportDriverNoShow;
+  final bool assignedDriverPickupOverdue;
   final bool canSubmitNoDriverPickupWindow;
   final String? pendingRescheduleReason;
   final String? pendingRescheduleNote;
@@ -384,11 +392,26 @@ class SupplierIncomingRequest {
       return false;
     }
 
-    if (activeDelivery?.status.toUpperCase() != 'WAITING_FOR_DRIVER') {
+    final status = activeDelivery?.status.toUpperCase();
+
+    if (status == 'WAITING_FOR_DRIVER') {
+      return canMarkOrReportNoDriverAvailable;
+    }
+
+    if (status == 'DRIVER_ASSIGNED' || status == 'ARRIVED_PICKUP') {
+      return canSupplierReportDriverNoShow || assignedDriverPickupOverdue;
+    }
+
+    return false;
+  }
+
+  bool get showAssignedDriverPickupOverdueWarning {
+    if (!showNoDriverOverdueWarning) {
       return false;
     }
 
-    return canMarkOrReportNoDriverAvailable;
+    final status = activeDelivery?.status.toUpperCase();
+    return status == 'DRIVER_ASSIGNED' || status == 'ARRIVED_PICKUP';
   }
 
   /// @deprecated Use [showNoDriverOverdueWarning]
@@ -396,9 +419,19 @@ class SupplierIncomingRequest {
 
   bool get isDeliveryFulfillment => fulfillmentMethod.toUpperCase() == 'DELIVERY';
 
+  String get supplierActionStatusLabel {
+    if (status == SupplierIncomingRequestStatus.awaitingSupplierConfirmation &&
+        canSubmitNoDriverPickupWindow) {
+      return 'New pickup window needed';
+    }
+
+    return status.label;
+  }
+
   bool get isReadOnlyFinalState =>
       status == SupplierIncomingRequestStatus.completed ||
       status == SupplierIncomingRequestStatus.cancelled ||
+      status == SupplierIncomingRequestStatus.expired ||
       status == SupplierIncomingRequestStatus.needsResolution ||
       noShowReport != null;
 
@@ -638,6 +671,8 @@ class SupplierIncomingRequest {
           json['canSupplierMarkDeliveryPickupExpired'] == true,
       canSupplierReportDriverNoShow:
           json['canSupplierReportDriverNoShow'] == true,
+      assignedDriverPickupOverdue:
+          json['assignedDriverPickupOverdue'] == true,
       canSubmitNoDriverPickupWindow:
           json['canSubmitNoDriverPickupWindow'] == true,
       pendingRescheduleReason: () {

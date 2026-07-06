@@ -9,6 +9,10 @@ import {
   TRACKING_ELIGIBLE_DELIVERY_STATUSES,
 } from '../deliveries/deliveries.service.js';
 import {
+  escalateStaleAssignedDriverPickupsByIds,
+} from '../reservations/reservations.stale-assigned-driver-auto-escalation.repository.js';
+import { isAssignedDriverPickupOverdue } from '../reservations/reservation-assigned-driver-pickup-overdue.js';
+import {
   canDriverMarkDeliveryFailed,
   canDriverMarkPickupFailed,
   canDriverReportDriverIssue,
@@ -221,6 +225,11 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
     deliveryStatus: delivery.status,
     supplierPickupWindowEnd: delivery.reservation.supplierPickupWindowEnd,
   }),
+  assignedDriverPickupOverdue: isAssignedDriverPickupOverdue({
+    supplierPickupWindowEnd: delivery.reservation.supplierPickupWindowEnd,
+    pickupWindowEnd: delivery.reservation.pickupWindowEnd,
+    deliveryStatus: delivery.status,
+  }),
   canDriverReportDeliveryFailed: canDriverMarkDeliveryFailed({
     reservationStatus: delivery.reservation.status,
     deliveryStatus: delivery.status,
@@ -417,7 +426,7 @@ export const listActiveDriverDeliveries = async (driverUserId: string) => {
   const referencePoint = await resolveDriverReferencePoint(profile.id);
   const activeDeliveryCount = await countActiveAssignedDeliveries(profile.id);
 
-  const deliveries = await prisma.delivery.findMany({
+  let deliveries = await prisma.delivery.findMany({
     where: {
       assignedDriverProfileId: profile.id,
       status: { in: [...DRIVER_IN_PROGRESS_ASSIGNED_STATUSES] },
@@ -426,9 +435,96 @@ export const listActiveDriverDeliveries = async (driverUserId: string) => {
     orderBy: { updatedAt: 'desc' },
   });
 
+  const reservationIds = [
+    ...new Set(deliveries.map((delivery) => delivery.reservationId)),
+  ];
+
+  if (reservationIds.length > 0) {
+    await escalateStaleAssignedDriverPickupsByIds(reservationIds);
+    deliveries = await prisma.delivery.findMany({
+      where: {
+        assignedDriverProfileId: profile.id,
+        status: { in: [...DRIVER_IN_PROGRESS_ASSIGNED_STATUSES] },
+      },
+      include: driverDeliveryInclude,
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
+
   return {
     deliveries: deliveries.map(mapAssignedDelivery),
     ...buildDriverJobsMeta(profile, activeDeliveryCount, referencePoint),
+  };
+};
+
+const driverInactiveDeliveryMessage = (status: DeliveryStatus) => {
+  if (status === 'AWAITING_RESOLUTION') {
+    return 'This delivery is no longer active. It was moved to admin review because pickup was not completed within the pickup window.';
+  }
+
+  return 'This delivery is no longer active.';
+};
+
+export const getDriverDeliveryInactiveContext = async (
+  driverUserId: string,
+  deliveryId: string,
+) => {
+  const profile = await findActiveDriverProfile(driverUserId);
+
+  const assignment = await prisma.deliveryAssignment.findFirst({
+    where: {
+      deliveryId,
+      driverProfileId: profile.id,
+    },
+    orderBy: { acceptedAt: 'desc' },
+    include: {
+      delivery: {
+        select: {
+          id: true,
+          status: true,
+          assignedDriverProfileId: true,
+        },
+      },
+    },
+  });
+
+  if (!assignment) {
+    throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+  }
+
+  const delivery = assignment.delivery;
+  const isActive =
+    delivery.assignedDriverProfileId === profile.id &&
+    (DRIVER_IN_PROGRESS_ASSIGNED_STATUSES as readonly DeliveryStatus[]).includes(
+      delivery.status,
+    );
+
+  if (isActive) {
+    return {
+      deliveryId: delivery.id,
+      isActive: true as const,
+      status: delivery.status,
+      closureReason: null,
+      message: null,
+    };
+  }
+
+  if (delivery.status === 'AWAITING_RESOLUTION') {
+    return {
+      deliveryId: delivery.id,
+      isActive: false as const,
+      status: delivery.status,
+      closureReason: 'MOVED_TO_ADMIN_REVIEW' as const,
+      message: driverInactiveDeliveryMessage(delivery.status),
+    };
+  }
+
+  return {
+    deliveryId: delivery.id,
+    isActive: false as const,
+    status: delivery.status,
+    closureReason: 'NO_LONGER_ACTIVE' as const,
+    message: driverInactiveDeliveryMessage(delivery.status),
   };
 };
 

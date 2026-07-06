@@ -27,6 +27,7 @@ class IncomingRequestStatusStyle {
       SupplierIncomingRequestStatus.awaitingConfirmation => _accepted,
       SupplierIncomingRequestStatus.awaitingSupplierConfirmation => _accepted,
       SupplierIncomingRequestStatus.declined => _declined,
+      SupplierIncomingRequestStatus.expired => _expired,
       SupplierIncomingRequestStatus.completed => _completed,
       SupplierIncomingRequestStatus.cancelled => _declined,
       SupplierIncomingRequestStatus.noShow => _declined,
@@ -75,6 +76,14 @@ class IncomingRequestStatusStyle {
     background: AppColorTokens.supplierIncomingCompletedBackground,
     border: AppColorTokens.supplierIncomingCompletedBorder,
     foreground: AppColorTokens.supplierDashboardReserved,
+    selectedBackground: AppColorTokens.supplierIncomingCompletedSelectedBackground,
+    selectedBorder: AppColorTokens.supplierIncomingCompletedSelectedBorder,
+  );
+
+  static const _expired = IncomingRequestStatusStyle(
+    background: AppColorTokens.supplierIncomingCompletedBackground,
+    border: AppColorTokens.supplierIncomingCompletedBorder,
+    foreground: AppColorTokens.supplierDashboardUnavailable,
     selectedBackground: AppColorTokens.supplierIncomingCompletedSelectedBackground,
     selectedBorder: AppColorTokens.supplierIncomingCompletedSelectedBorder,
   );

@@ -203,6 +203,18 @@ DriverActionTimingGate? evaluateInformationalPickupWindow(
   }
 
   if (windowEnd != null && reference.isAfter(windowEnd)) {
+    final allowedEnd = allowedPickupHandoverEnd(windowEnd);
+    if (reference.isAfter(allowedEnd)) {
+      return DriverActionTimingGate(
+        isBlocked: false,
+        title: 'Supplier pickup window overdue',
+        body:
+            'The allowed pickup confirmation window ended at '
+            '${formatDriverDateTime(allowedEnd)}. Report pickup failed if you '
+            'cannot complete pickup.',
+      );
+    }
+
     return DriverActionTimingGate(
       isBlocked: false,
       title: 'Scheduled pickup window has ended',

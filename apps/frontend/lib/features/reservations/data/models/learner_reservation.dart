@@ -185,8 +185,10 @@ class LearnerReservation {
     this.pendingRescheduleReason,
     this.canLearnerReportSupplier = false,
     this.canReportNoDriverAvailable = false,
+    this.assignedDriverPickupOverdue = false,
     this.canLearnerRequestDelivery = false,
     this.incidentReviewStatus,
+    this.pendingIncidentReasonCode,
   });
 
   final String id;
@@ -228,8 +230,10 @@ class LearnerReservation {
   final String? pendingRescheduleReason;
   final bool canLearnerReportSupplier;
   final bool canReportNoDriverAvailable;
+  final bool assignedDriverPickupOverdue;
   final bool canLearnerRequestDelivery;
   final String? incidentReviewStatus;
+  final String? pendingIncidentReasonCode;
 
   factory LearnerReservation.fromJson(Map<String, dynamic> json) {
     final materialJson = json['material'];
@@ -326,8 +330,10 @@ class LearnerReservation {
       }(),
       canLearnerReportSupplier: json['canLearnerReportSupplier'] == true,
       canReportNoDriverAvailable: json['canReportNoDriverAvailable'] == true,
+      assignedDriverPickupOverdue: json['assignedDriverPickupOverdue'] == true,
       canLearnerRequestDelivery: json['canLearnerRequestDelivery'] == true,
       incidentReviewStatus: json['incidentReviewStatus'] as String?,
+      pendingIncidentReasonCode: json['pendingIncidentReasonCode'] as String?,
     );
   }
 

@@ -79,6 +79,7 @@ class SupplierPickupScheduleItem {
     this.canReportNoDriverAvailable = false,
     this.canSupplierMarkDeliveryPickupExpired = false,
     this.canSupplierReportDriverNoShow = false,
+    this.assignedDriverPickupOverdue = false,
     this.noShowReport,
     this.latestMessage,
     this.materialImageUrl,
@@ -110,6 +111,7 @@ class SupplierPickupScheduleItem {
   final bool canReportNoDriverAvailable;
   final bool canSupplierMarkDeliveryPickupExpired;
   final bool canSupplierReportDriverNoShow;
+  final bool assignedDriverPickupOverdue;
   final Map<String, dynamic>? noShowReport;
   final ReservationMessage? latestMessage;
   final SupplierPickupWindow? pickupWindow;
@@ -126,6 +128,14 @@ class SupplierPickupScheduleItem {
       return 'Driver not assigned in time';
     }
 
+    final status = activeDelivery?.status.toUpperCase();
+    if ((status == 'DRIVER_ASSIGNED' || status == 'ARRIVED_PICKUP') &&
+        (canSupplierReportDriverNoShow || assignedDriverPickupOverdue)) {
+      return status == 'ARRIVED_PICKUP'
+          ? 'Pickup not completed'
+          : 'Driver pickup overdue';
+    }
+
     return activeDelivery?.statusLabel ?? 'Delivery requested';
   }
 
@@ -137,11 +147,26 @@ class SupplierPickupScheduleItem {
       return false;
     }
 
-    if (activeDelivery?.status.toUpperCase() != 'WAITING_FOR_DRIVER') {
+    final status = activeDelivery?.status.toUpperCase();
+
+    if (status == 'WAITING_FOR_DRIVER') {
+      return canMarkOrReportNoDriverAvailable;
+    }
+
+    if (status == 'DRIVER_ASSIGNED' || status == 'ARRIVED_PICKUP') {
+      return canSupplierReportDriverNoShow || assignedDriverPickupOverdue;
+    }
+
+    return false;
+  }
+
+  bool get showAssignedDriverPickupOverdueWarning {
+    if (!showNoDriverOverdueWarning) {
       return false;
     }
 
-    return canMarkOrReportNoDriverAvailable;
+    final status = activeDelivery?.status.toUpperCase();
+    return status == 'DRIVER_ASSIGNED' || status == 'ARRIVED_PICKUP';
   }
 
   /// @deprecated Use [showNoDriverOverdueWarning]
@@ -264,6 +289,8 @@ class SupplierPickupScheduleItem {
           json['canSupplierMarkDeliveryPickupExpired'] == true,
       canSupplierReportDriverNoShow:
           json['canSupplierReportDriverNoShow'] == true,
+      assignedDriverPickupOverdue:
+          json['assignedDriverPickupOverdue'] == true,
       noShowReport: json['noShowReport'] is Map
           ? Map<String, dynamic>.from(json['noShowReport'] as Map)
           : null,

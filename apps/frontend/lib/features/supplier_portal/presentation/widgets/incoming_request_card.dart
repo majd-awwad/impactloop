@@ -92,6 +92,7 @@ class IncomingRequestCard extends StatelessWidget {
     final colors = context.supplierColors;
     final isPending = request.status == SupplierIncomingRequestStatus.pending;
     final isDeclined = request.status == SupplierIncomingRequestStatus.declined;
+    final isExpired = request.status == SupplierIncomingRequestStatus.expired;
     final isAccepted = request.status == SupplierIncomingRequestStatus.accepted;
     final isAwaiting =
         request.status == SupplierIncomingRequestStatus.awaitingConfirmation;
@@ -103,7 +104,7 @@ class IncomingRequestCard extends StatelessWidget {
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
 
     return Opacity(
-      opacity: isDeclined ? 0.78 : 1,
+      opacity: isDeclined || isExpired ? 0.78 : 1,
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
@@ -151,7 +152,10 @@ class IncomingRequestCard extends StatelessWidget {
                             _FollowUpBadge(label: l.overdueBadge),
                             const SizedBox(width: AppSpacing.xs),
                           ],
-                          _StatusBadge(status: request.status),
+                          _StatusBadge(
+                            label: request.supplierActionStatusLabel,
+                            status: request.status,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -246,6 +250,11 @@ class IncomingRequestCard extends StatelessWidget {
                       ? request.declineReason!.trim()
                       : l.noDeclineReasonProvided,
                 ),
+              ),
+            if (isExpired)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: _ExpiredFooter(message: l.expiredIncomingRequestMessage),
               ),
             if (isPending) ...[
               const SizedBox(height: AppSpacing.md),
@@ -733,6 +742,33 @@ class _DeclineFooter extends StatelessWidget {
   }
 }
 
+class _ExpiredFooter extends StatelessWidget {
+  const _ExpiredFooter({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.backgroundElevated.withValues(alpha: 0.45),
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Text(
+          message,
+          style: context.supplierBody().copyWith(
+            fontSize: 12,
+            color: colors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _DeliveryFooter extends StatelessWidget {
   const _DeliveryFooter({
     required this.statusLabel,
@@ -1004,8 +1040,9 @@ class _FollowUpBadge extends StatelessWidget {
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
+  const _StatusBadge({required this.label, required this.status});
 
+  final String label;
   final SupplierIncomingRequestStatus status;
 
   @override
@@ -1020,7 +1057,7 @@ class _StatusBadge extends StatelessWidget {
         border: Border.all(color: style.border),
       ),
       child: Text(
-        context.s.incomingRequestStatusLabel(status),
+        label,
         style: context.supplierChip().copyWith(
           color: style.foreground,
           fontSize: 11,

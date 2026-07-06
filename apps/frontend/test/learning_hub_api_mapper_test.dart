@@ -71,7 +71,29 @@ void main() {
           },
         ],
         'tags': ['electronics'],
-        'ratingSummary': null,
+        'ratingSummary': {'average': 4.5, 'count': 2},
+        'recentReviews': [
+          {
+            'id': 'review-1',
+            'projectId': '22222222-2222-2222-2222-222222222222',
+            'rating': 5,
+            'comment': 'Clear steps and easy to source.',
+            'reviewerName': 'Mira',
+            'isViewerReview': true,
+            'createdAt': '2026-01-02T00:00:00.000Z',
+            'updatedAt': '2026-01-02T00:00:00.000Z',
+          },
+        ],
+        'viewerReview': {
+          'id': 'review-1',
+          'projectId': '22222222-2222-2222-2222-222222222222',
+          'rating': 5,
+          'comment': 'Clear steps and easy to source.',
+          'reviewerName': 'Mira',
+          'isViewerReview': true,
+          'createdAt': '2026-01-02T00:00:00.000Z',
+          'updatedAt': '2026-01-02T00:00:00.000Z',
+        },
         'createdAt': '2026-01-01T00:00:00.000Z',
       });
 
@@ -87,7 +109,15 @@ void main() {
       ]);
       expect(project.links.first.label.en, 'Reference guide');
       expect(project.links.first.urlLabel.en, 'https://example.com/guide');
-      expect(project.hasRatings, isFalse);
+      expect(project.hasRatings, isTrue);
+      expect(project.ratingValue, 4.5);
+      expect(project.ratingCount, 2);
+      expect(
+        project.recentReviews.single.comment,
+        'Clear steps and easy to source.',
+      );
+      expect(project.viewerReview?.rating, 5);
+      expect(project.viewerReview?.isViewerReview, isTrue);
     });
 
     test('maps ratingSummary when present', () {

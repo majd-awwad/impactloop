@@ -140,7 +140,7 @@ Treat supplier theme as scoped/legacy-compatible, not unified with the central a
 | `LandingColors` | `app/theme/landing_colors.dart` | App-level landing palette derived from `AppThemeColors`. |
 | `MaterialsUiPalette` | `shared/widgets/materials/materials_ui_palette.dart` | Shared material-card/discovery palette; used by shared material widgets. |
 | `SupplierUiPalette` | `features/supplier_portal/presentation/theme/supplier_ui_palette.dart` | Supplier-only palette; separate from central theme. |
-| Learning tokens | `app_color_tokens.dart`, `features/learning_hub/presentation/theme/learning_ui_palette.dart`, `features/learning_hub/data/learning_hub_mock_data.dart` | Learning Hub list/detail and submit flows are API-backed; legacy mock data remains for disabled AI copy and sample catalog only. |
+| Learning tokens | `app_color_tokens.dart`, `features/learning_hub/presentation/theme/learning_ui_palette.dart`, `features/learning_hub/data/learning_hub_mock_data.dart` | Learning Hub list/detail and submit flows are API-backed; legacy mock data remains for the unused sample catalog only. |
 
 ## Practical Rules
 

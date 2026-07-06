@@ -80,10 +80,10 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/learner/reservations/:id` | `LearnerReservationDetailPage` | learner | Single reservation detail with refresh + shared reservation card |
 | `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline, latest driver ping summary, and page-scoped polling map marker when tracking coordinates are allowed |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
-| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, and category filters; add-draft submits for review; AI remains disabled |
+| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, category filters, saved/followed learner tabs, and server-side page navigation; optional `q` query pre-fills search; add-draft submits for review; AI material matching is not implemented |
 | `/learning/add-draft` | `LearningAddDraftPage` | learner | Learner project submission form; posts to `/api/learning-projects/submit` |
-| `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail |
-| `/materials` | `MaterialsDiscoveryPage` | public | API-backed default |
+| `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail with local build checklist and material-search handoff |
+| `/materials` | `MaterialsDiscoveryPage` | public | API-backed default; optional `q` query pre-fills search |
 | `/materials/:id` | `MaterialDetailsPage` | public | API-backed default |
 | `/login` | `LoginPage` | public | `_AuthPageGuard` |
 | `/forgot-password` | `ForgotPasswordPage` | public | `_AuthPageGuard`; optional `email` query pre-fills the form |
@@ -174,6 +174,8 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 | `/forgot-password` | `email` | Optional email prefill from the login form |
 | `/reset-password` | `token` | Password reset token from email link |
 | `/complete-learner-profile`, `/complete-supplier-profile` | any | Deprecated fallback paths; redirected to `/register` |
+| `/materials` | `q` | Optional initial search term, used by Learning Hub component handoff |
+| `/learning` | `q` | Optional initial search term, used by material detail project handoff |
 | `/supplier/materials/new` | `categoryRequestId`, `priceRuleRequestId` | Resume listing from approved request |
 | `/supplier/reservations` | `tab`, `focus` | Deep link into reservation inbox |
 

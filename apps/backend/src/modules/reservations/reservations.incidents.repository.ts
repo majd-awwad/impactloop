@@ -7,6 +7,7 @@ import { prisma } from '../../database/prisma.js';
 import {
   canSupplierMarkDeliveryPickupExpired,
 } from '../fulfillment-failures/fulfillment-failures.eligibility.js';
+import { releaseDriverFromDelivery } from '../fulfillment-failures/fulfillment-failures.repository.js';
 import {
   isAfterAllowedEnd,
   isAfterWindowWithGrace,
@@ -225,6 +226,136 @@ export const escalateNoDriverAvailableInTransaction = async (
   });
 
   return { created: true as const, report };
+};
+
+export const escalateStaleAssignedDriverPickupInTransaction = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    reservation: {
+      id: string;
+      status: string;
+      requesterId: string;
+      supplierPickupWindowStart: Date | null;
+      supplierPickupWindowEnd: Date | null;
+    };
+    delivery: {
+      id: string;
+      status: string;
+      assignedDriverProfileId: string | null;
+    };
+    reporterUserId: string;
+    changedBy: string | null;
+    note: string;
+    deliveryHistoryNote: string;
+    reservationHistoryNote: string;
+  },
+) => {
+  if (input.reservation.status !== 'ACCEPTED') {
+    return { created: false as const, report: null, driverUserId: null };
+  }
+
+  if (!input.delivery.assignedDriverProfileId) {
+    return { created: false as const, report: null, driverUserId: null };
+  }
+
+  const driverProfile = await tx.driverProfile.findUnique({
+    where: { id: input.delivery.assignedDriverProfileId },
+    select: { userId: true },
+  });
+
+  if (!driverProfile) {
+    return { created: false as const, report: null, driverUserId: null };
+  }
+
+  const isDriverAssignedNoArrival = input.delivery.status === 'DRIVER_ASSIGNED';
+  const targetRole = isDriverAssignedNoArrival ? 'DRIVER' : 'SYSTEM';
+  const targetUserId = isDriverAssignedNoArrival ? driverProfile.userId : null;
+
+  const duplicate = isDriverAssignedNoArrival
+    ? await tx.noShowReport.findUnique({
+        where: {
+          reservationId_targetUserId: {
+            reservationId: input.reservation.id,
+            targetUserId: driverProfile.userId,
+          },
+        },
+      })
+    : await tx.noShowReport.findFirst({
+        where: {
+          reservationId: input.reservation.id,
+          targetRole: 'SYSTEM',
+          reasonCode: 'NO_RESPONSE_AFTER_PICKUP_WINDOW',
+        },
+      });
+
+  if (duplicate) {
+    return {
+      created: false as const,
+      report: duplicate,
+      driverUserId: driverProfile.userId,
+    };
+  }
+
+  const report = await tx.noShowReport.create({
+    data: {
+      reservationId: input.reservation.id,
+      deliveryId: input.delivery.id,
+      reporterUserId: input.reporterUserId,
+      targetUserId,
+      targetRole,
+      reasonCode: 'NO_RESPONSE_AFTER_PICKUP_WINDOW',
+      note: input.note.trim() || null,
+      pickupWindowStart: input.reservation.supplierPickupWindowStart,
+      pickupWindowEnd: input.reservation.supplierPickupWindowEnd,
+    },
+  });
+
+  await releaseDriverFromDelivery(tx, {
+    deliveryId: input.delivery.id,
+    driverProfileId: input.delivery.assignedDriverProfileId,
+    releaseReason: 'Assigned-driver pickup auto-escalated',
+  });
+
+  await tx.delivery.update({
+    where: { id: input.delivery.id },
+    data: {
+      status: 'AWAITING_RESOLUTION',
+      assignedDriverProfileId: null,
+    },
+  });
+
+  await tx.deliveryStatusHistory.create({
+    data: {
+      deliveryId: input.delivery.id,
+      oldStatus: input.delivery.status,
+      newStatus: 'AWAITING_RESOLUTION',
+      changedByUserId: input.changedBy ?? input.reporterUserId,
+      note: input.deliveryHistoryNote,
+    },
+  });
+
+  await tx.reservation.update({
+    where: { id: input.reservation.id },
+    data: { status: 'AWAITING_RESOLUTION' },
+  });
+
+  await tx.reservationStatusHistory.create({
+    data: {
+      reservationId: input.reservation.id,
+      statusGroup: 'RESERVATION',
+      oldStatus: input.reservation.status,
+      newStatus: 'AWAITING_RESOLUTION',
+      changedBy: input.changedBy ?? input.reporterUserId,
+      note: input.reservationHistoryNote,
+    },
+  });
+
+  return {
+    created: true as const,
+    report,
+    driverUserId: driverProfile.userId,
+    deliveryId: input.delivery.id,
+  };
 };
 
 export const createNoDriverAvailableReport = async (input: {

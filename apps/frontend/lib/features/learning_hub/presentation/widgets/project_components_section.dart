@@ -132,8 +132,8 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
             ),
             child: Text(
               const LocalizedText(
-                en: 'Note: these components are shown for learning only and will later connect to the AI Material Agent.',
-                ar: 'ملاحظة: هذه المكونات معروضة لأغراض التعلم فقط وستتصل لاحقاً بوكيل المواد الذكي.',
+                en: 'Use these components as the starting point for your material search and build checklist.',
+                ar: 'استخدم هذه المكونات كنقطة بداية للبحث عن المواد وقائمة البناء.',
               ).resolve(context),
               style: AppTextStyles.body(
                 context,

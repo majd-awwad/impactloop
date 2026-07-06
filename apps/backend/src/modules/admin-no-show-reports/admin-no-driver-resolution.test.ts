@@ -236,7 +236,7 @@ describe('admin no-driver resolution', () => {
       { adminNote: 'Please propose a new handover time' },
     );
 
-    assert.equal(result.status, 'PENDING_REVIEW');
+    assert.equal(result.status, 'RESOLVED_NO_STRIKE');
 
     const updatedReservation = await prisma.reservation.findUnique({
       where: { id: reservation.id },

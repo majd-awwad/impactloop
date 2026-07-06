@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import 'driver_deliveries_api.dart';
+import 'models/driver_delivery_inactive_context.dart';
 import 'models/driver_delivery_failure_request.dart';
 import 'models/driver_deliveries_list_result.dart';
 import 'models/driver_delivery.dart';
@@ -31,6 +32,10 @@ class DriverDeliveriesRepository {
 
   Future<DriverDeliveriesListResult> fetchActiveDeliveries() {
     return _api.fetchActiveDeliveries();
+  }
+
+  Future<DriverDeliveryInactiveContext> fetchInactiveContext(String deliveryId) {
+    return _api.fetchInactiveContext(deliveryId);
   }
 
   Future<DriverDelivery> acceptDelivery(String deliveryId) {

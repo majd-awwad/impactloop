@@ -6,15 +6,19 @@ import { getMaterialQuantityState } from '../reservations/reservations.quantity.
 import { prisma } from '../../database/prisma.js';
 import * as repository from './admin-no-show-reports.repository.js';
 import {
-  cancelAndReleaseHoldForNoDriverReport,
-  requestSupplierRescheduleForNoDriverReport,
-} from './admin-no-driver-resolution.repository.js';
+  cancelAndReleaseHoldForPickupRecoveryReport,
+  requestSupplierRescheduleForPickupRecoveryReport,
+  requiresPickupRecoveryOperationalAction,
+} from './admin-delivery-pickup-recovery.repository.js';
 import type {
   AdminNoShowReportsListQuery,
   CancelReleaseHoldInput,
   RequestSupplierRescheduleInput,
 } from './admin-no-show-reports.validation.js';
-import { notifyNoDriverSupplierRescheduleRequested } from '../notifications/reservation-notifications.js';
+import {
+  notifyNoDriverSupplierRescheduleRequested,
+  notifyStalePickupSupplierRescheduleRequested,
+} from '../notifications/reservation-notifications.js';
 
 const mapReport = (report: repository.AdminNoShowReportRecord) => ({
   id: report.id,
@@ -177,6 +181,22 @@ export const resolveAdminNoShowReport = async (
   reportId: string,
   reviewNote?: string,
 ) => {
+  const existing = await repository.findNoShowReportByIdForAdmin(reportId);
+
+  if (
+    existing &&
+    requiresPickupRecoveryOperationalAction({
+      report: existing,
+      reservationStatus: existing.reservation.status,
+    })
+  ) {
+    throw new AppError(
+      'Pickup recovery reports require an operational action: ask the supplier for a new pickup window or cancel and release the hold.',
+      409,
+      'OPERATIONAL_ACTION_REQUIRED',
+    );
+  }
+
   const result = await repository.resolveNoShowReportWithoutStrike({
     reportId,
     adminUserId,
@@ -200,7 +220,7 @@ export const resolveAdminNoShowReport = async (
 
 const mapNoDriverResolutionError = (
   result: Exclude<
-    Awaited<ReturnType<typeof requestSupplierRescheduleForNoDriverReport>>,
+    Awaited<ReturnType<typeof requestSupplierRescheduleForPickupRecoveryReport>>,
     { outcome: 'REQUESTED' }
   >,
 ) => {
@@ -210,7 +230,7 @@ const mapNoDriverResolutionError = (
 
   if (result.outcome === 'NOT_ELIGIBLE') {
     throw new AppError(
-      'This action is only available for system no-driver reports.',
+      'This action is only available for delivery pickup recovery reports.',
       409,
       'NOT_ELIGIBLE',
     );
@@ -244,7 +264,7 @@ export const requestSupplierRescheduleAdminNoShowReport = async (
   reportId: string,
   input: RequestSupplierRescheduleInput,
 ) => {
-  const result = await requestSupplierRescheduleForNoDriverReport({
+  const result = await requestSupplierRescheduleForPickupRecoveryReport({
     reportId,
     adminUserId,
     adminNote: input.adminNote,
@@ -254,10 +274,17 @@ export const requestSupplierRescheduleAdminNoShowReport = async (
     mapNoDriverResolutionError(result);
   }
 
-  await notifyNoDriverSupplierRescheduleRequested(
-    result.reservationId,
-    input.adminNote,
-  );
+  if (result.recoveryKind === 'NO_DRIVER') {
+    await notifyNoDriverSupplierRescheduleRequested(
+      result.reservationId,
+      input.adminNote,
+    );
+  } else {
+    await notifyStalePickupSupplierRescheduleRequested(
+      result.reservationId,
+      input.adminNote,
+    );
+  }
 
   return mapReport(result.report);
 };
@@ -267,7 +294,7 @@ export const cancelReleaseHoldAdminNoShowReport = async (
   reportId: string,
   input: CancelReleaseHoldInput,
 ) => {
-  const result = await cancelAndReleaseHoldForNoDriverReport({
+  const result = await cancelAndReleaseHoldForPickupRecoveryReport({
     reportId,
     adminUserId,
     adminNote: input.adminNote,

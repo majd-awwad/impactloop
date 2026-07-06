@@ -94,7 +94,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Implemented for auth MVP** — forgot/reset UI and API exist; verification enforcement needs verification |
 | Material discovery | [features/material-discovery.md](features/material-discovery.md) | [flows/material-discovery-flow.md](flows/material-discovery-flow.md) | **Implemented** |
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** — material read/create/edit/delete; supplier reservations; delivery complete guarded backend-only |
-| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed (`/learning`, `/learning/:id`, Home spotlight); add-draft submit and admin moderation wired; legacy mock file retained for disabled AI/sample catalog only |
+| Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed (`/learning`, `/learning/:id`, Home spotlight); add-draft submit, admin moderation, server-side page navigation, and learner project likes/saves/follows/reviews wired; legacy mock file retained for sample catalog only |
 
 ### Phase 2B — supporting features
 
@@ -119,7 +119,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 
 Gap docs are stubs — see [09-open-questions.md](09-open-questions.md) before implementing.
 
-**Not documented as implemented:** live realtime tracking stream, AI material matching agent, moderator portal, saved/followed content, project likes, project build checklist, moderator-owned project review workflow, and server-side Learning Hub page navigation.
+**Not documented as implemented:** live realtime tracking stream, AI material matching agent, moderator portal, persisted project build checklist, and moderator-owned project review workflow.
 
 ADRs (`docs/adr/`) — accepted architecture decisions.
 

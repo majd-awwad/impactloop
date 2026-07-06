@@ -123,6 +123,8 @@ class LearnerDeliveryReservation {
     required this.supplier,
     this.pickupWindowStart,
     this.pickupWindowEnd,
+    this.supplierPickupWindowStart,
+    this.supplierPickupWindowEnd,
     this.completedAt,
   });
 
@@ -132,6 +134,8 @@ class LearnerDeliveryReservation {
   final LearnerDeliverySupplier supplier;
   final DateTime? pickupWindowStart;
   final DateTime? pickupWindowEnd;
+  final DateTime? supplierPickupWindowStart;
+  final DateTime? supplierPickupWindowEnd;
   final DateTime? completedAt;
 
   factory LearnerDeliveryReservation.fromJson(Map<String, dynamic> json) {
@@ -146,6 +150,12 @@ class LearnerDeliveryReservation {
       ),
       pickupWindowEnd: DateTime.tryParse(
         json['pickupWindowEnd'] as String? ?? '',
+      ),
+      supplierPickupWindowStart: DateTime.tryParse(
+        json['supplierPickupWindowStart'] as String? ?? '',
+      ),
+      supplierPickupWindowEnd: DateTime.tryParse(
+        json['supplierPickupWindowEnd'] as String? ?? '',
       ),
       completedAt: DateTime.tryParse(json['completedAt'] as String? ?? ''),
       material: LearnerDeliveryMaterial.fromJson(
@@ -249,6 +259,7 @@ class LearnerDelivery {
     this.history = const [],
     this.learnerDeliveryCode,
     this.canTrack = false,
+    this.assignedDriverPickupOverdue = false,
     this.trackingMessage,
   });
 
@@ -275,6 +286,7 @@ class LearnerDelivery {
   final List<LearnerDeliveryHistoryItem> history;
   final String? learnerDeliveryCode;
   final bool canTrack;
+  final bool assignedDriverPickupOverdue;
   final String? trackingMessage;
 
   factory LearnerDelivery.fromJson(Map<String, dynamic> json) {
@@ -340,6 +352,7 @@ class LearnerDelivery {
           : const [],
       learnerDeliveryCode: json['learnerDeliveryCode'] as String?,
       canTrack: json['canTrack'] == true,
+      assignedDriverPickupOverdue: json['assignedDriverPickupOverdue'] == true,
       trackingMessage: json['trackingMessage'] as String?,
     );
   }

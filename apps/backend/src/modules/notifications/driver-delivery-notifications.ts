@@ -418,3 +418,20 @@ export const syncDriverDeliveryRemindersForUser = async (
       ),
     );
   });
+
+export const notifyDriverDeliveryMovedToAdminReview = async (input: {
+  deliveryId: string;
+  driverUserId: string;
+}) =>
+  notifySafely(async () => {
+    await createNotificationIfMissing({
+      userId: input.driverUserId,
+      notificationType:
+        DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW,
+      title: 'Delivery moved to admin review',
+      body:
+        'Delivery moved to admin review because pickup was not completed within the pickup window.',
+      relatedEntityType: 'DELIVERY',
+      relatedEntityId: input.deliveryId,
+    });
+  });

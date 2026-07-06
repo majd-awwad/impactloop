@@ -163,6 +163,11 @@ void main() {
       'Expired',
     );
     expect(
+      reservationStatusLabel('EXPIRED'),
+      'Expired — no response',
+    );
+    expect(reservationStatusLabel('REJECTED'), 'Rejected');
+    expect(
       reservationStatusLabel(
         'EXPIRED',
         rejectionReason: noDriverCancelReason,
@@ -238,6 +243,7 @@ void main() {
         fulfillmentMethod: 'DELIVERY',
         deliveryStatus: 'AWAITING_RESOLUTION',
         incidentReviewStatus: 'PENDING_REVIEW',
+        pendingIncidentReasonCode: 'NO_DRIVER_AVAILABLE',
       ),
       'No driver available',
     );
@@ -247,8 +253,46 @@ void main() {
         fulfillmentMethod: 'DELIVERY',
         activeDeliveryStatus: 'AWAITING_RESOLUTION',
         incidentReviewStatus: 'PENDING_REVIEW',
+        pendingIncidentReasonCode: 'NO_RESPONSE_AFTER_PICKUP_WINDOW',
       ),
-      'No driver available',
+      'Driver pickup overdue',
+    );
+    expect(
+      learnerDeliverySecondaryStatusLabel(
+        reservationStatus: 'ACCEPTED',
+        fulfillmentMethod: 'DELIVERY',
+        deliveryStatus: 'DRIVER_ASSIGNED',
+        assignedDriverPickupOverdue: true,
+      ),
+      'Driver pickup overdue',
+    );
+    expect(
+      learnerDeliverySecondaryStatusLabel(
+        reservationStatus: 'ACCEPTED',
+        fulfillmentMethod: 'DELIVERY',
+        deliveryStatus: 'ARRIVED_PICKUP',
+        assignedDriverPickupOverdue: true,
+      ),
+      'Pickup not completed',
+    );
+  });
+
+  test('reservationStatusLabel maps stale pickup admin reconfirm and cancel', () {
+    expect(
+      reservationStatusLabel(
+        'AWAITING_SUPPLIER_CONFIRMATION',
+        fulfillmentMethod: 'DELIVERY',
+        pendingRescheduleReason: 'STALE_PICKUP_ADMIN_REQUEST',
+      ),
+      'Waiting for supplier to choose a new pickup window',
+    );
+    expect(
+      reservationStatusLabel(
+        'EXPIRED',
+        fulfillmentMethod: 'DELIVERY',
+        rejectionReason: 'PICKUP_NOT_COMPLETED',
+      ),
+      'Admin cancelled due to unresolved pickup',
     );
   });
 
@@ -258,6 +302,7 @@ void main() {
       'status': 'AWAITING_RESOLUTION',
       'fulfillmentMethod': 'DELIVERY',
       'incidentReviewStatus': 'PENDING_REVIEW',
+      'pendingIncidentReasonCode': 'NO_DRIVER_AVAILABLE',
       'quantityRequested': 1,
       'createdAt': '2026-01-01T00:00:00.000Z',
       'updatedAt': '2026-01-01T00:00:00.000Z',
