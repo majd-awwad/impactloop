@@ -14,6 +14,7 @@ import {
   maybeSaveDropoffAddressAfterDeliveryRequest,
   resolveSavedDropoffAddressForDelivery,
 } from '../saved-dropoff-addresses/saved-dropoff-addresses.service.js';
+import { notifyNewDeliveryJobAvailable } from '../notifications/driver-delivery-notifications.js';
 
 export const ACTIVE_DELIVERY_STATUSES = [
   'WAITING_FOR_DRIVER',
@@ -41,6 +42,58 @@ export const TRACKING_ELIGIBLE_DELIVERY_STATUSES = [
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
 ] as const satisfies readonly DeliveryStatus[];
+
+/** Learner may see driver coordinates only after material is picked up. */
+export const LEARNER_DRIVER_COORDINATE_VISIBLE_STATUSES = [
+  'PICKED_UP',
+  'ON_THE_WAY',
+  'ARRIVED_DROPOFF',
+] as const satisfies readonly DeliveryStatus[];
+
+export const canLearnerTrackDriver = (status: DeliveryStatus) =>
+  (LEARNER_DRIVER_COORDINATE_VISIBLE_STATUSES as readonly DeliveryStatus[]).includes(
+    status,
+  );
+
+export const learnerTrackingMessage = (status: DeliveryStatus) => {
+  switch (status) {
+    case 'WAITING_FOR_DRIVER':
+      return 'Waiting for driver.';
+    case 'DRIVER_ASSIGNED':
+      return 'Driver assigned.';
+    case 'ARRIVED_PICKUP':
+      return 'Driver is heading to supplier pickup.';
+    case 'PICKED_UP':
+      return 'Driver picked up the material and is heading your way.';
+    case 'ON_THE_WAY':
+      return 'Driver is on the way to your drop-off location.';
+    case 'ARRIVED_DROPOFF':
+      return 'Driver has arrived at your drop-off location.';
+    case 'DELIVERED':
+      return 'Delivery completed.';
+    case 'CANCELLED':
+      return 'Delivery cancelled.';
+    case 'FAILED_PICKUP':
+      return 'Pickup could not be completed.';
+    case 'FAILED_DELIVERY':
+      return 'Delivery could not be completed.';
+    case 'DRIVER_NO_SHOW':
+      return 'Driver did not complete the delivery.';
+    case 'LEARNER_NO_SHOW':
+      return 'Delivery could not be completed.';
+    case 'AWAITING_RESOLUTION':
+      return 'Delivery is awaiting resolution.';
+    default:
+      return 'Delivery status updated.';
+  }
+};
+
+/** Assigned in-progress deliveries that count toward the driver active queue. */
+export const DRIVER_IN_PROGRESS_ASSIGNED_STATUSES = [
+  ...TRACKING_ELIGIBLE_DELIVERY_STATUSES,
+] as const satisfies readonly DeliveryStatus[];
+
+export const MAX_ACTIVE_DRIVER_DELIVERIES = 3;
 
 const deliveryInclude = {
   reservation: {
@@ -130,26 +183,44 @@ const mapLocation = (location: DeliveryRecord['pickupLocation']) => ({
 
 const mapLatestDriverPing = (
   delivery: DeliveryRecord,
-  options: { includeCoordinates?: boolean } = {},
+  options: { includeTrackingCoordinates?: boolean } = {},
 ) => {
+  if (
+    options.includeTrackingCoordinates !== true ||
+    !canLearnerTrackDriver(delivery.status)
+  ) {
+    return null;
+  }
+
   const ping = delivery.locationPings[0];
   if (!ping) {
     return null;
   }
 
-  const includeCoordinates =
-    options.includeCoordinates === true &&
-    (TRACKING_ELIGIBLE_DELIVERY_STATUSES as readonly DeliveryStatus[]).includes(
-      delivery.status,
-    );
+  return {
+    latitude: Number(ping.latitude),
+    longitude: Number(ping.longitude),
+    capturedAt: ping.capturedAt.toISOString(),
+    accuracyMeters:
+      ping.accuracyMeters == null ? null : Number(ping.accuracyMeters),
+    coordinatesVisible: true,
+    trackingLockedReason: null,
+  };
+};
+
+const mapLatestDriverLocation = (delivery: DeliveryRecord) => {
+  if (!canLearnerTrackDriver(delivery.status)) {
+    return null;
+  }
+
+  const ping = delivery.locationPings[0];
+  if (!ping) {
+    return null;
+  }
 
   return {
-    ...(includeCoordinates
-      ? {
-          latitude: Number(ping.latitude),
-          longitude: Number(ping.longitude),
-        }
-      : {}),
+    latitude: Number(ping.latitude),
+    longitude: Number(ping.longitude),
     capturedAt: ping.capturedAt.toISOString(),
     accuracyMeters:
       ping.accuracyMeters == null ? null : Number(ping.accuracyMeters),
@@ -192,8 +263,10 @@ export const mapLearnerDelivery = (
   pickupLocation: mapLocation(delivery.pickupLocation),
   dropoffLocation: mapLocation(delivery.dropoffLocation),
   driver: delivery.assignedDriverProfile,
+  canTrack: canLearnerTrackDriver(delivery.status),
+  trackingMessage: learnerTrackingMessage(delivery.status),
   latestDriverPing: mapLatestDriverPing(delivery, {
-    includeCoordinates: options.includeTrackingCoordinates,
+    includeTrackingCoordinates: options.includeTrackingCoordinates,
   }),
   history: delivery.statusHistory.map((item) => ({
     id: item.id,
@@ -358,6 +431,8 @@ export const requestDeliveryForReservation = async (
         });
       }
 
+      await notifyNewDeliveryJobAvailable(result.delivery!.id);
+
       return mapLearnerDelivery(result.delivery!);
     }
     case 'NOT_FOUND':
@@ -431,4 +506,31 @@ export const getMyDelivery = async (learnerId: string, deliveryId: string) => {
   }
 
   return mapLearnerDelivery(delivery, { includeTrackingCoordinates: true });
+};
+
+export const getLearnerDeliveryTracking = async (
+  learnerId: string,
+  deliveryId: string,
+) => {
+  const delivery = await prisma.delivery.findFirst({
+    where: {
+      id: deliveryId,
+      requestedByUserId: learnerId,
+    },
+    include: deliveryInclude,
+  });
+
+  if (!delivery) {
+    throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+  }
+
+  const canTrack = canLearnerTrackDriver(delivery.status);
+
+  return {
+    deliveryId: delivery.id,
+    status: delivery.status,
+    canTrack,
+    trackingMessage: learnerTrackingMessage(delivery.status),
+    latestDriverLocation: canTrack ? mapLatestDriverLocation(delivery) : null,
+  };
 };

@@ -125,6 +125,12 @@ class DriverDelivery {
     this.canDriverReportPickupFailed = false,
     this.canDriverReportDeliveryFailed = false,
     this.canDriverReportDriverIssue = false,
+    this.pickupCity,
+    this.pickupArea,
+    this.dropoffCity,
+    this.dropoffArea,
+    this.distanceKm,
+    this.distanceLabel,
   });
 
   final String id;
@@ -153,6 +159,12 @@ class DriverDelivery {
   final bool canDriverReportPickupFailed;
   final bool canDriverReportDeliveryFailed;
   final bool canDriverReportDriverIssue;
+  final String? pickupCity;
+  final String? pickupArea;
+  final String? dropoffCity;
+  final String? dropoffArea;
+  final double? distanceKm;
+  final String? distanceLabel;
 
   factory DriverDelivery.fromJson(Map<String, dynamic> json) {
     return DriverDelivery(
@@ -200,6 +212,12 @@ class DriverDelivery {
           json['canDriverReportDeliveryFailed'] == true,
       canDriverReportDriverIssue:
           json['canDriverReportDriverIssue'] == true,
+      pickupCity: json['pickupCity'] as String?,
+      pickupArea: json['pickupArea'] as String?,
+      dropoffCity: json['dropoffCity'] as String?,
+      dropoffArea: json['dropoffArea'] as String?,
+      distanceKm: _doubleFromJson(json['distanceKm']),
+      distanceLabel: json['distanceLabel'] as String?,
     );
   }
 

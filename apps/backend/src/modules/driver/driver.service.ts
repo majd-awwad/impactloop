@@ -1,8 +1,13 @@
 import type { DeliveryStatus, Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
+import { formatDistanceLabel, haversineDistanceKm } from '../../utils/haversine.js';
 import { applyReservationCompletionToMaterial } from '../reservations/reservations.quantity.js';
-import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
+import {
+  DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
+  MAX_ACTIVE_DRIVER_DELIVERIES,
+  TRACKING_ELIGIBLE_DELIVERY_STATUSES,
+} from '../deliveries/deliveries.service.js';
 import {
   canDriverMarkDeliveryFailed,
   canDriverMarkPickupFailed,
@@ -19,11 +24,18 @@ import {
   supplierPickupWindowNotStartedMessage,
   supplierPickupWindowPassedMessage,
 } from '../../utils/handover-timing.js';
+import {
+  notifyDriverDeliveryAccepted,
+  notifyDriverDeliveryNextStep,
+  syncDriverDeliveryRemindersForUser,
+} from '../notifications/driver-delivery-notifications.js';
 
 import type {
   CreateDeliveryLocationPingInput,
+  ListAvailableDeliveriesQuery,
   UpdateDriverDeliveryStatusInput,
 } from './driver.validation.js';
+import { resolveDriverReferencePoint } from './driver-location.js';
 
 const terminalStatuses = [
   'DELIVERED',
@@ -109,6 +121,30 @@ const mapSafeLocation = (location: DriverDeliveryRecord['pickupLocation']) => ({
   area: location.area,
 });
 
+const locationCoordinate = (
+  location: DriverDeliveryRecord['pickupLocation'],
+): number | null => {
+  if (location.latitude == null) {
+    return null;
+  }
+
+  return typeof location.latitude === 'number'
+    ? location.latitude
+    : location.latitude.toNumber();
+};
+
+const locationLongitude = (
+  location: DriverDeliveryRecord['pickupLocation'],
+): number | null => {
+  if (location.longitude == null) {
+    return null;
+  }
+
+  return typeof location.longitude === 'number'
+    ? location.longitude
+    : location.longitude.toNumber();
+};
+
 const mapExactLocation = (location: DriverDeliveryRecord['pickupLocation']) => ({
   id: location.id,
   country: location.country,
@@ -130,26 +166,45 @@ const mapExactLocation = (location: DriverDeliveryRecord['pickupLocation']) => (
   isApproximate: location.isApproximate,
 });
 
-const mapAvailableDelivery = (delivery: DriverDeliveryRecord) => ({
-  id: delivery.id,
-  reservationId: delivery.reservationId,
-  status: delivery.status,
-  requestedAt: delivery.requestedAt.toISOString(),
-  pickupWindowStart:
-    delivery.reservation.pickupWindowStart?.toISOString() ?? null,
-  pickupWindowEnd: delivery.reservation.pickupWindowEnd?.toISOString() ?? null,
-  material: {
-    id: delivery.reservation.material.id,
-    title: delivery.reservation.material.title,
-    quantityRequested: Number(delivery.reservation.quantityRequested),
-    unit: delivery.reservation.material.unit,
-  },
-  supplier: {
-    displayName: resolveSupplierDisplayName(delivery.reservation.owner),
-  },
-  pickupLocation: mapSafeLocation(delivery.pickupLocation),
-  dropoffLocation: mapSafeLocation(delivery.dropoffLocation),
-});
+const mapAvailableDelivery = (
+  delivery: DriverDeliveryRecord,
+  options?: { distanceKm?: number | null },
+) => {
+  const distanceKm = options?.distanceKm ?? null;
+
+  return {
+    id: delivery.id,
+    reservationId: delivery.reservationId,
+    status: delivery.status,
+    requestedAt: delivery.requestedAt.toISOString(),
+    pickupWindowStart:
+      delivery.reservation.pickupWindowStart?.toISOString() ?? null,
+    pickupWindowEnd:
+      delivery.reservation.pickupWindowEnd?.toISOString() ?? null,
+    supplierPickupWindowStart:
+      delivery.reservation.supplierPickupWindowStart?.toISOString() ?? null,
+    supplierPickupWindowEnd:
+      delivery.reservation.supplierPickupWindowEnd?.toISOString() ?? null,
+    learnerNote: delivery.learnerNote,
+    material: {
+      id: delivery.reservation.material.id,
+      title: delivery.reservation.material.title,
+      quantityRequested: Number(delivery.reservation.quantityRequested),
+      unit: delivery.reservation.material.unit,
+    },
+    supplier: {
+      displayName: resolveSupplierDisplayName(delivery.reservation.owner),
+    },
+    pickupCity: delivery.pickupLocation.city,
+    pickupArea: delivery.pickupLocation.area,
+    dropoffCity: delivery.dropoffLocation.city,
+    dropoffArea: delivery.dropoffLocation.area,
+    distanceKm,
+    distanceLabel: formatDistanceLabel(distanceKm),
+    pickupLocation: mapSafeLocation(delivery.pickupLocation),
+    dropoffLocation: mapSafeLocation(delivery.dropoffLocation),
+  };
+};
 
 const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
   ...mapAvailableDelivery(delivery),
@@ -201,6 +256,33 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
 export const mapDriverDeliveryForResponse = (delivery: DriverDeliveryRecord) =>
   mapAssignedDelivery(delivery);
 
+const countActiveAssignedDeliveries = async (
+  driverProfileId: string,
+  tx: Prisma.TransactionClient | typeof prisma = prisma,
+) =>
+  tx.delivery.count({
+    where: {
+      assignedDriverProfileId: driverProfileId,
+      status: { in: [...DRIVER_IN_PROGRESS_ASSIGNED_STATUSES] },
+    },
+  });
+
+const buildDriverJobsMeta = (
+  profile: { city: string; area: string },
+  activeDeliveryCount: number,
+  referencePoint: Awaited<ReturnType<typeof resolveDriverReferencePoint>>,
+) => ({
+  activeDeliveryCount,
+  maxActiveDeliveries: MAX_ACTIVE_DRIVER_DELIVERIES,
+  canAcceptMore: activeDeliveryCount < MAX_ACTIVE_DRIVER_DELIVERIES,
+  driverProfileCity: profile.city,
+  driverProfileArea: profile.area,
+  driverHasRecentLocation:
+    referencePoint.source === 'recent_ping' &&
+    referencePoint.latitude != null &&
+    referencePoint.longitude != null,
+});
+
 const findActiveDriverProfile = async (
   userId: string,
   tx: Prisma.TransactionClient | typeof prisma = prisma,
@@ -216,68 +298,188 @@ const findActiveDriverProfile = async (
   return profile;
 };
 
-export const listAvailableDeliveries = async (driverUserId: string) => {
-  await findActiveDriverProfile(driverUserId);
+export const listAvailableDeliveries = async (
+  driverUserId: string,
+  query: ListAvailableDeliveriesQuery = {},
+) => {
+  void syncDriverDeliveryRemindersForUser(driverUserId);
+  const profile = await findActiveDriverProfile(driverUserId);
+  const referencePoint = await resolveDriverReferencePoint(profile.id);
+  const activeDeliveryCount = await countActiveAssignedDeliveries(profile.id);
+
+  const explicitCity = query.city?.trim();
+  const explicitArea = query.area?.trim();
+
+  const hasDriverCoordinates =
+    referencePoint.latitude != null && referencePoint.longitude != null;
+
+  let sortBy = query.sortBy;
+  if (!sortBy) {
+    sortBy = hasDriverCoordinates ? 'nearest' : 'newest';
+  }
+
+  const effectiveMaxDistanceKm = query.maxDistanceKm;
 
   const deliveries = await prisma.delivery.findMany({
     where: {
       status: 'WAITING_FOR_DRIVER',
       assignedDriverProfileId: null,
+      ...(explicitCity
+        ? {
+            pickupLocation: {
+              city: { equals: explicitCity, mode: 'insensitive' },
+            },
+          }
+        : {}),
+      ...(explicitArea
+        ? {
+            pickupLocation: {
+              area: { equals: explicitArea, mode: 'insensitive' },
+            },
+          }
+        : {}),
     },
     include: driverDeliveryInclude,
-    orderBy: { requestedAt: 'asc' },
   });
 
-  return deliveries.map(mapAvailableDelivery);
+  const withDistance = deliveries.map((delivery) => {
+    const pickupLat = locationCoordinate(delivery.pickupLocation);
+    const pickupLng = locationLongitude(delivery.pickupLocation);
+    let distanceKm: number | null = null;
+
+    if (
+      hasDriverCoordinates &&
+      pickupLat != null &&
+      pickupLng != null &&
+      referencePoint.latitude != null &&
+      referencePoint.longitude != null
+    ) {
+      distanceKm = haversineDistanceKm(
+        referencePoint.latitude,
+        referencePoint.longitude,
+        pickupLat,
+        pickupLng,
+      );
+    }
+
+    return { delivery, distanceKm };
+  });
+
+  let filtered = withDistance;
+  if (effectiveMaxDistanceKm != null && hasDriverCoordinates) {
+    filtered = filtered.filter(
+      (item) =>
+        item.distanceKm != null && item.distanceKm <= effectiveMaxDistanceKm,
+    );
+  }
+
+  filtered.sort((left, right) => {
+    if (sortBy === 'nearest') {
+      if (left.distanceKm == null && right.distanceKm == null) {
+        return (
+          left.delivery.requestedAt.getTime() -
+          right.delivery.requestedAt.getTime()
+        );
+      }
+
+      if (left.distanceKm == null) {
+        return 1;
+      }
+
+      if (right.distanceKm == null) {
+        return -1;
+      }
+
+      const distanceDiff = left.distanceKm - right.distanceKm;
+      if (distanceDiff !== 0) {
+        return distanceDiff;
+      }
+    }
+
+    return (
+      left.delivery.requestedAt.getTime() - right.delivery.requestedAt.getTime()
+    );
+  });
+
+  return {
+    deliveries: filtered.map((item) =>
+      mapAvailableDelivery(item.delivery, { distanceKm: item.distanceKm }),
+    ),
+    nearbyAvailableCount: filtered.length,
+    totalAvailableCount: withDistance.length,
+    ...buildDriverJobsMeta(profile, activeDeliveryCount, referencePoint),
+  };
 };
 
 export const listActiveDriverDeliveries = async (driverUserId: string) => {
+  void syncDriverDeliveryRemindersForUser(driverUserId);
   const profile = await findActiveDriverProfile(driverUserId);
+  const referencePoint = await resolveDriverReferencePoint(profile.id);
+  const activeDeliveryCount = await countActiveAssignedDeliveries(profile.id);
 
   const deliveries = await prisma.delivery.findMany({
     where: {
       assignedDriverProfileId: profile.id,
-      status: { in: [...ACTIVE_DELIVERY_STATUSES] },
+      status: { in: [...DRIVER_IN_PROGRESS_ASSIGNED_STATUSES] },
     },
     include: driverDeliveryInclude,
     orderBy: { updatedAt: 'desc' },
   });
 
-  return deliveries.map(mapAssignedDelivery);
+  return {
+    deliveries: deliveries.map(mapAssignedDelivery),
+    ...buildDriverJobsMeta(profile, activeDeliveryCount, referencePoint),
+  };
 };
 
 export const acceptDelivery = async (
   driverUserId: string,
   deliveryId: string,
 ) => {
-  return prisma.$transaction(async (tx) => {
+  const delivery = await prisma.$transaction(async (tx) => {
     const profile = await findActiveDriverProfile(driverUserId, tx);
 
-    const activeDriverDeliveryCount = await tx.delivery.count({
-      where: {
-        assignedDriverProfileId: profile.id,
-        status: { in: [...ACTIVE_DELIVERY_STATUSES] },
-      },
-    });
+    const activeDriverDeliveryCount = await countActiveAssignedDeliveries(
+      profile.id,
+      tx,
+    );
 
-    if (activeDriverDeliveryCount > 0) {
+    if (activeDriverDeliveryCount >= MAX_ACTIVE_DRIVER_DELIVERIES) {
       throw new AppError(
-        'Driver already has an active delivery.',
+        'You have reached the active delivery limit.',
         409,
         'CONFLICT',
       );
     }
 
-    const driverAvailabilityUpdate = await tx.driverProfile.updateMany({
-      where: {
-        id: profile.id,
-        status: 'ACTIVE',
-        availability: { in: ['OFFLINE', 'AVAILABLE'] },
-      },
-      data: { availability: 'ON_DELIVERY' },
-    });
+    if (
+      profile.availability === 'OFFLINE' ||
+      profile.availability === 'AVAILABLE'
+    ) {
+      const driverAvailabilityUpdate = await tx.driverProfile.updateMany({
+        where: {
+          id: profile.id,
+          status: 'ACTIVE',
+          availability: { in: ['OFFLINE', 'AVAILABLE'] },
+        },
+        data: { availability: 'ON_DELIVERY' },
+      });
 
-    if (driverAvailabilityUpdate.count !== 1) {
+      if (driverAvailabilityUpdate.count !== 1) {
+        const refreshedProfile = await tx.driverProfile.findUnique({
+          where: { id: profile.id },
+          select: { availability: true },
+        });
+
+        if (refreshedProfile?.availability !== 'ON_DELIVERY') {
+          throw new AppError(
+            'Driver is not available to accept a delivery.',
+            409,
+            'CONFLICT',
+          );
+        }
+      }
+    } else if (profile.availability !== 'ON_DELIVERY') {
       throw new AppError(
         'Driver is not available to accept a delivery.',
         409,
@@ -332,6 +534,11 @@ export const acceptDelivery = async (
 
     return mapAssignedDelivery(delivery);
   });
+
+  await notifyDriverDeliveryAccepted(deliveryId);
+  void syncDriverDeliveryRemindersForUser(driverUserId);
+
+  return delivery;
 };
 
 export const updateDriverDeliveryStatus = async (
@@ -462,10 +669,17 @@ export const updateDriverDeliveryStatus = async (
         completedAt: now,
       });
 
-      await tx.driverProfile.update({
-        where: { id: profile.id },
-        data: { availability: 'AVAILABLE' },
-      });
+      const remainingActive = await countActiveAssignedDeliveries(
+        profile.id,
+        tx,
+      );
+
+      if (remainingActive === 0) {
+        await tx.driverProfile.update({
+          where: { id: profile.id },
+          data: { availability: 'AVAILABLE' },
+        });
+      }
 
       await tx.reservationStatusHistory.create({
         data: {
@@ -499,6 +713,8 @@ export const updateDriverDeliveryStatus = async (
 
   switch (result.outcome) {
     case 'UPDATED':
+      void notifyDriverDeliveryNextStep(deliveryId, input.status);
+      void syncDriverDeliveryRemindersForUser(driverUserId);
       return mapAssignedDelivery(result.delivery);
     case 'NOT_FOUND':
       throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
@@ -548,7 +764,7 @@ export const createDeliveryLocationPing = async (
     where: {
       id: deliveryId,
       assignedDriverProfileId: profile.id,
-      status: { in: [...ACTIVE_DELIVERY_STATUSES] },
+      status: { in: [...TRACKING_ELIGIBLE_DELIVERY_STATUSES] },
     },
     select: { id: true },
   });

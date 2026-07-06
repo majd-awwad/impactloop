@@ -142,8 +142,8 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
     await ref
         .read(driverDeliveriesRepositoryProvider)
         .createLocationPing(deliveryId, request);
-    ref.invalidate(activeDriverDeliveriesProvider);
-    ref.invalidate(activeDriverDeliveryProvider(deliveryId));
+    // Do not invalidate delivery providers here — frequent pings were
+    // remounting the detail page and disposing auto/demo tracking timers.
   }
 
   Future<void> captureAndSendLocationPing(String deliveryId) async {

@@ -1,8 +1,7 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 
-export type CreateNotificationInput = {
-  userId: string;
+export type CreateNotificationInput = {  userId: string;
   notificationType: string;
   title: string;
   body: string;
@@ -22,12 +21,62 @@ export const createNotification = async (input: CreateNotificationInput) =>
     },
   });
 
+export const findNotificationForUser = async (input: {
+  userId: string;
+  notificationType: string;
+  relatedEntityType?: string | null;
+  relatedEntityId?: string | null;
+}) =>
+  prisma.notification.findFirst({
+    where: {
+      userId: input.userId,
+      notificationType: input.notificationType,
+      relatedEntityType: input.relatedEntityType ?? null,
+      relatedEntityId: input.relatedEntityId ?? null,
+    },
+    select: { id: true },
+  });
+
+export const createNotificationIfMissing = async (
+  input: CreateNotificationInput,
+) =>
+  prisma.$transaction(async (tx) => {
+    const existing = await tx.notification.findFirst({
+      where: {
+        userId: input.userId,
+        notificationType: input.notificationType,
+        relatedEntityType: input.relatedEntityType ?? null,
+        relatedEntityId: input.relatedEntityId ?? null,
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return null;
+    }
+
+    return tx.notification.create({
+      data: {
+        userId: input.userId,
+        notificationType: input.notificationType,
+        title: input.title,
+        body: input.body,
+        relatedEntityType: input.relatedEntityType ?? null,
+        relatedEntityId: input.relatedEntityId ?? null,
+      },
+    });
+  });
 export const findNotificationsForUser = async (input: {
   userId: string;
   isRead?: boolean;
   page: number;
   limit: number;
 }) => {
+  const page = Number.isFinite(input.page) ? Math.max(1, Math.floor(input.page)) : 1;
+  const limit = Number.isFinite(input.limit)
+    ? Math.min(50, Math.max(1, Math.floor(input.limit)))
+    : 20;
+
   const where: Prisma.NotificationWhereInput = {
     userId: input.userId,
     ...(input.isRead === undefined ? {} : { isRead: input.isRead }),
@@ -37,8 +86,8 @@ export const findNotificationsForUser = async (input: {
     prisma.notification.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      skip: (input.page - 1) * input.limit,
-      take: input.limit,
+      skip: (page - 1) * limit,
+      take: limit,
     }),
     prisma.notification.count({ where }),
     prisma.notification.count({

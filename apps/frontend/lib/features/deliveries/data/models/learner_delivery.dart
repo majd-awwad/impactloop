@@ -196,12 +196,16 @@ class LearnerDeliveryDriverPing {
     this.latitude,
     this.longitude,
     this.accuracyMeters,
+    this.coordinatesVisible = false,
+    this.trackingLockedReason,
   });
 
   final DateTime capturedAt;
   final double? latitude;
   final double? longitude;
   final double? accuracyMeters;
+  final bool coordinatesVisible;
+  final String? trackingLockedReason;
 
   factory LearnerDeliveryDriverPing.fromJson(Map<String, dynamic> json) {
     return LearnerDeliveryDriverPing(
@@ -211,10 +215,13 @@ class LearnerDeliveryDriverPing {
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       accuracyMeters: (json['accuracyMeters'] as num?)?.toDouble(),
+      coordinatesVisible: json['coordinatesVisible'] == true,
+      trackingLockedReason: json['trackingLockedReason'] as String?,
     );
   }
 
-  bool get hasCoordinates => latitude != null && longitude != null;
+  bool get hasCoordinates =>
+      coordinatesVisible && latitude != null && longitude != null;
 }
 
 class LearnerDelivery {
@@ -241,6 +248,8 @@ class LearnerDelivery {
     this.latestDriverPing,
     this.history = const [],
     this.learnerDeliveryCode,
+    this.canTrack = false,
+    this.trackingMessage,
   });
 
   final String id;
@@ -265,6 +274,8 @@ class LearnerDelivery {
   final LearnerDeliveryDriverPing? latestDriverPing;
   final List<LearnerDeliveryHistoryItem> history;
   final String? learnerDeliveryCode;
+  final bool canTrack;
+  final String? trackingMessage;
 
   factory LearnerDelivery.fromJson(Map<String, dynamic> json) {
     final reservationJson = json['reservation'];
@@ -328,6 +339,8 @@ class LearnerDelivery {
                 .toList(growable: false)
           : const [],
       learnerDeliveryCode: json['learnerDeliveryCode'] as String?,
+      canTrack: json['canTrack'] == true,
+      trackingMessage: json['trackingMessage'] as String?,
     );
   }
 
@@ -347,15 +360,7 @@ class LearnerDelivery {
     }.contains(status);
   }
 
-  bool get isTrackingEligible {
-    return const {
-      'DRIVER_ASSIGNED',
-      'ARRIVED_PICKUP',
-      'PICKED_UP',
-      'ON_THE_WAY',
-      'ARRIVED_DROPOFF',
-    }.contains(status);
-  }
+  bool get isLearnerLocationVisible => canTrack;
 
   bool get isTerminal {
     return const {
@@ -363,6 +368,9 @@ class LearnerDelivery {
       'CANCELLED',
       'FAILED_PICKUP',
       'FAILED_DELIVERY',
+      'DRIVER_NO_SHOW',
+      'LEARNER_NO_SHOW',
+      'AWAITING_RESOLUTION',
     }.contains(status);
   }
 }

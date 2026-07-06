@@ -6,6 +6,7 @@ import {
 import { successResponse } from '../../utils/api-response.js';
 
 import {
+  getLearnerDeliveryTracking,
   getMyDelivery,
   listMyDeliveries,
   requestDeliveryForReservation,
@@ -37,6 +38,16 @@ export const listMyDeliveriesHandler = async (
   const deliveries = await listMyDeliveries(req.auth!.sub);
 
   res.json(successResponse('Deliveries loaded.', { deliveries }));
+};
+
+export const getLearnerDeliveryTrackingHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<DeliveryIdParams>(req);
+  const tracking = await getLearnerDeliveryTracking(req.auth!.sub, id);
+
+  res.json(successResponse('Delivery tracking loaded.', tracking));
 };
 
 export const getMyDeliveryHandler = async (

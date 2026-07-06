@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_response.dart';
 import 'models/learner_delivery.dart';
+import 'models/learner_delivery_tracking.dart';
 import 'models/request_delivery_request.dart';
 
 class DeliveriesApi {
@@ -46,6 +47,13 @@ class DeliveriesApi {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>('/api/deliveries/$deliveryId'),
       LearnerDelivery.fromJson,
+    );
+  }
+
+  Future<LearnerDeliveryTracking> fetchDeliveryTracking(String deliveryId) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>('/api/deliveries/$deliveryId/tracking'),
+      LearnerDeliveryTracking.fromJson,
     );
   }
 }

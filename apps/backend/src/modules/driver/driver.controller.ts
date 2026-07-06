@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 
-import { readValidatedParams } from '../../middlewares/validate.middleware.js';
+import { readValidatedParams, readValidatedQuery } from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
 
 import {
@@ -13,6 +13,7 @@ import {
 import type {
   CreateDeliveryLocationPingInput,
   DeliveryIdParams,
+  ListAvailableDeliveriesQuery,
   UpdateDriverDeliveryStatusInput,
 } from './driver.validation.js';
 
@@ -20,18 +21,19 @@ export const listAvailableDriverDeliveriesHandler = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const deliveries = await listAvailableDeliveries(req.auth!.sub);
+  const query = readValidatedQuery<ListAvailableDeliveriesQuery>(req);
+  const result = await listAvailableDeliveries(req.auth!.sub, query);
 
-  res.json(successResponse('Available deliveries loaded.', { deliveries }));
+  res.json(successResponse('Available deliveries loaded.', result));
 };
 
 export const listActiveDriverDeliveriesHandler = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const deliveries = await listActiveDriverDeliveries(req.auth!.sub);
+  const result = await listActiveDriverDeliveries(req.auth!.sub);
 
-  res.json(successResponse('Active deliveries loaded.', { deliveries }));
+  res.json(successResponse('Active deliveries loaded.', result));
 };
 
 export const acceptDriverDeliveryHandler = async (

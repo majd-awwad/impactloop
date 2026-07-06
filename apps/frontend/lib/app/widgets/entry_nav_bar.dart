@@ -27,6 +27,7 @@ class EntryNavBar extends ConsumerWidget {
     this.trailingActions = const [],
     this.showPhoneAccountMenu = true,
     this.phoneTitle,
+    this.showPublicNavLinks = true,
   });
 
   final bool showSignIn;
@@ -37,6 +38,7 @@ class EntryNavBar extends ConsumerWidget {
   final List<Widget> trailingActions;
   final bool showPhoneAccountMenu;
   final String? phoneTitle;
+  final bool showPublicNavLinks;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -144,6 +146,7 @@ class EntryNavBar extends ConsumerWidget {
                       ref: ref,
                       condensed: useCondensedDesktop,
                       trailingActions: trailingActions,
+                      showPublicNavLinks: showPublicNavLinks,
                     ),
             ),
           ),
@@ -241,6 +244,7 @@ class _DesktopNavLayout extends StatelessWidget {
     required this.ref,
     required this.condensed,
     required this.trailingActions,
+    required this.showPublicNavLinks,
   });
 
   final bool showSignIn;
@@ -255,6 +259,7 @@ class _DesktopNavLayout extends StatelessWidget {
   final WidgetRef ref;
   final bool condensed;
   final List<Widget> trailingActions;
+  final bool showPublicNavLinks;
 
   @override
   Widget build(BuildContext context) {
@@ -268,7 +273,7 @@ class _DesktopNavLayout extends StatelessWidget {
           borderRadius: AppRadius.mdAll,
           child: const ImpactLoopLogo(compact: true),
         ),
-        if (!condensed) ...[
+        if (showPublicNavLinks && !condensed) ...[
           const SizedBox(width: AppSpacing.md),
           Container(
             padding: const EdgeInsets.symmetric(
@@ -290,12 +295,15 @@ class _DesktopNavLayout extends StatelessWidget {
           ),
         ],
         SizedBox(width: condensed ? AppSpacing.md : AppSpacing.lg),
-        Expanded(
-          child: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: _NavLinks(compact: condensed),
-          ),
-        ),
+        if (showPublicNavLinks)
+          Expanded(
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: _NavLinks(compact: condensed),
+            ),
+          )
+        else
+          const Spacer(),
         const SizedBox(width: AppSpacing.md),
         _UtilityPills(settings: settings, ref: ref),
         if (trailingActions.isNotEmpty) ...[

@@ -6,6 +6,7 @@ import { validate } from '../../middlewares/validate.middleware.js';
 import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
+  getLearnerDeliveryTrackingHandler,
   getMyDeliveryHandler,
   listMyDeliveriesHandler,
 } from './deliveries.controller.js';
@@ -18,6 +19,14 @@ deliveriesRouter.get(
   authMiddleware,
   requireRoles('LEARNER'),
   asyncHandler(listMyDeliveriesHandler),
+);
+
+deliveriesRouter.get(
+  '/:id/tracking',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(deliveryIdParamsSchema, 'params'),
+  asyncHandler(getLearnerDeliveryTrackingHandler),
 );
 
 deliveriesRouter.get(
