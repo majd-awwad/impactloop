@@ -763,7 +763,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/no-show-reports',
-            builder: (context, state) => const AdminNoShowReportsPage(),
+            builder: (context, state) => AdminNoShowReportsPage(
+              initialOpenReportId: state.uri.queryParameters['open'],
+            ),
           ),
           GoRoute(
             path: '/admin/deliveries',

@@ -133,6 +133,26 @@ final _adminReservationDetailProvider = FutureProvider.autoDispose
 
 String _statusLabel(String status) => monitoringStatusLabel(status);
 
+bool _reservationDeliveryStatusesMatch({
+  required String reservationStatus,
+  required String? deliveryStatus,
+}) {
+  final normalizedDelivery = deliveryStatus?.trim();
+  if (normalizedDelivery == null || normalizedDelivery.isEmpty) {
+    return false;
+  }
+  return reservationStatus.toUpperCase() == normalizedDelivery.toUpperCase();
+}
+
+String _statusBadgeText(
+  String status, {
+  String? scope,
+}) {
+  final label = _statusLabel(status);
+  if (scope == null || scope.isEmpty) return label;
+  return '$scope · $label';
+}
+
 Color _reservationStatusAccent(AdminPalette palette, String status) {
   final normalized = status.toUpperCase();
   if (normalized == 'PENDING' || normalized.contains('WAITING')) {
@@ -238,10 +258,12 @@ class _ReservationStatusBadge extends StatelessWidget {
   const _ReservationStatusBadge({
     required this.status,
     this.isDelivery = false,
+    this.scope,
   });
 
   final String status;
   final bool isDelivery;
+  final String? scope;
 
   @override
   Widget build(BuildContext context) {
@@ -260,7 +282,7 @@ class _ReservationStatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        _statusLabel(status),
+        _statusBadgeText(status, scope: scope),
         style: AdminTypography.kpiHelper(palette).copyWith(
           color: colors.foreground,
           fontWeight: FontWeight.w700,
@@ -994,9 +1016,14 @@ class _ReservationRow extends StatelessWidget {
       item.supplier.displayName,
       item.supplier.email,
     );
+    final deliveryStatus = item.delivery?.status;
+    final statusesMatch = _reservationDeliveryStatusesMatch(
+      reservationStatus: item.status,
+      deliveryStatus: deliveryStatus,
+    );
     final deliveryLabel =
-        item.delivery != null && item.delivery!.status.isNotEmpty
-        ? _statusLabel(item.delivery!.status)
+        deliveryStatus != null && deliveryStatus.isNotEmpty
+        ? _statusLabel(deliveryStatus)
         : item.hasDelivery
         ? 'Linked'
         : '—';
@@ -1013,6 +1040,7 @@ class _ReservationRow extends StatelessWidget {
                 supplierLabel,
                 created,
                 deliveryLabel,
+                statusesMatch,
               ),
             )
           : _buildCard(
@@ -1021,6 +1049,7 @@ class _ReservationRow extends StatelessWidget {
               supplierLabel,
               created,
               deliveryLabel,
+              statusesMatch,
             ),
     );
 
@@ -1044,6 +1073,7 @@ class _ReservationRow extends StatelessWidget {
     String supplierLabel,
     String created,
     String deliveryLabel,
+    bool statusesMatch,
   ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1088,7 +1118,10 @@ class _ReservationRow extends StatelessWidget {
         ),
         SizedBox(
           width: 96,
-          child: _ReservationStatusBadge(status: item.status),
+          child: _ReservationStatusBadge(
+            status: item.status,
+            scope: statusesMatch ? 'Reservation' : null,
+          ),
         ),
         SizedBox(
           width: 72,
@@ -1112,6 +1145,7 @@ class _ReservationRow extends StatelessWidget {
               ? _ReservationStatusBadge(
                   status: item.delivery!.status,
                   isDelivery: true,
+                  scope: statusesMatch ? 'Delivery' : null,
                 )
               : Text(deliveryLabel, style: AdminTypography.kpiHelper(palette)),
         ),
@@ -1125,6 +1159,7 @@ class _ReservationRow extends StatelessWidget {
     String supplierLabel,
     String created,
     String deliveryLabel,
+    bool statusesMatch,
   ) {
     return Container(
       padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 14, 12),
@@ -1156,7 +1191,10 @@ class _ReservationRow extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 4,
                       children: [
-                        _ReservationStatusBadge(status: item.status),
+                        _ReservationStatusBadge(
+                          status: item.status,
+                          scope: statusesMatch ? 'Reservation' : null,
+                        ),
                         Text(
                           _formatQuantity(item.quantityRequested, item.unit),
                           style: AdminTypography.kpiHelper(palette),
@@ -1182,13 +1220,16 @@ class _ReservationRow extends StatelessWidget {
             const SizedBox(height: 4),
             _CardMetaRow(
               label: 'Delivery',
-              value: deliveryLabel,
+              value: item.delivery != null && item.delivery!.status.isNotEmpty
+                  ? '—'
+                  : deliveryLabel,
               palette: palette,
               trailing:
                   item.delivery != null && item.delivery!.status.isNotEmpty
                   ? _ReservationStatusBadge(
                       status: item.delivery!.status,
                       isDelivery: true,
+                      scope: statusesMatch ? 'Delivery' : null,
                     )
                   : null,
             ),
@@ -1444,11 +1485,10 @@ class _ReservationDetailBody extends StatelessWidget {
           children: [
             if (pickupWindow != null)
               AdminDetailRow(label: 'Pickup window', value: pickupWindow),
-            if (detail.pickupType != null && detail.pickupType!.isNotEmpty)
-              AdminDetailRow(
-                label: 'Pickup type',
-                value: _statusLabel(detail.pickupType!),
-              ),
+            AdminDetailRow(
+              label: 'Fulfillment',
+              value: _statusLabel(detail.fulfillmentMethod),
+            ),
             if (detail.acceptedAt != null)
               AdminDetailRow(
                 label: 'Accepted',
@@ -1484,31 +1524,55 @@ class _ReservationDetailBody extends StatelessWidget {
               ),
           ],
         ),
-        if (detail.deliveryRequested ||
-            detail.delivery != null ||
-            (detail.deliveryStatus != null &&
-                detail.deliveryStatus!.isNotEmpty))
+        if (detail.linkedReport != null)
+          AdminDetailSection(
+            title: 'Linked report',
+            children: [
+              AdminDetailRow(
+                label: 'Reason',
+                value: humanizeEnum(detail.linkedReport!.reasonCode),
+              ),
+              AdminDetailRow(
+                label: 'Status',
+                value: adminIncidentReportStatusLabel(
+                  detail.linkedReport!.status,
+                ),
+              ),
+              const SizedBox(height: 4),
+              TextButton.icon(
+                onPressed: () {
+                  final reportId = detail.linkedReport!.id;
+                  Navigator.pop(context);
+                  if (reportId.isNotEmpty) {
+                    context.push('/admin/no-show-reports?open=$reportId');
+                  } else {
+                    context.push('/admin/no-show-reports');
+                  }
+                },
+                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                label: const Text('Open report'),
+              ),
+              Text(
+                'Opens Reservation reports where admins can review and resolve this incident.',
+                style: AdminTypography.kpiHelper(palette),
+              ),
+            ],
+          ),
+        if (detail.delivery != null)
           AdminDetailSection(
             title: 'Linked delivery',
             children: [
-              AdminDetailRow(
-                label: 'Delivery requested',
-                value: detail.deliveryRequested ? 'Yes' : 'No',
-              ),
-              if (detail.deliveryStatus != null &&
-                  detail.deliveryStatus!.isNotEmpty)
-                AdminDetailRow(
-                  label: 'Delivery status',
-                  value: _statusLabel(detail.deliveryStatus!),
-                ),
-              if (detail.delivery != null &&
-                  detail.delivery!.id.isNotEmpty) ...[
+              if (detail.delivery!.id.isNotEmpty) ...[
                 AdminDetailRow(
                   label: 'Delivery ID',
                   value: detail.delivery!.id,
                   muted: true,
                 ),
-                if (detail.delivery!.status.isNotEmpty)
+                if (detail.delivery!.status.isNotEmpty &&
+                    !_reservationDeliveryStatusesMatch(
+                      reservationStatus: detail.status,
+                      deliveryStatus: detail.delivery!.status,
+                    ))
                   AdminDetailRow(
                     label: 'Current status',
                     value: _statusLabel(detail.delivery!.status),

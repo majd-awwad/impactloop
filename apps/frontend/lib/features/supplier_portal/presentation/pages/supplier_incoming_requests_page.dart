@@ -204,8 +204,16 @@ class _SupplierIncomingRequestsPageState
                         learnerName: request.learnerName,
                       )
                   : null,
+              onReportNoDriverAvailable: request.canReportNoDriverAvailable
+                  ? () => handleReportNoDriverAvailable(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
               onMarkDeliveryPickupExpired:
-                  request.canMarkOrReportNoDriverAvailable
+                  !request.canReportNoDriverAvailable &&
+                          request.canSupplierMarkDeliveryPickupExpired
                   ? () => handleMarkDeliveryPickupExpired(
                         context,
                         ref,
@@ -219,6 +227,15 @@ class _SupplierIncomingRequestsPageState
                         context,
                         ref,
                         deliveryId: request.activeDelivery!.id,
+                      )
+                  : null,
+              onSubmitNoDriverPickupWindow: request.canSubmitNoDriverPickupWindow
+                  ? () => handleSubmitNoDriverPickupWindow(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                        materialTitle: request.materialTitle,
+                        learnerName: request.learnerName,
                       )
                   : null,
             ),
@@ -293,9 +310,14 @@ class _SupplierIncomingRequestsPageState
       ref
           .read(incomingRequestTabProvider.notifier)
           .selectTab(SupplierIncomingRequestTab.declined);
-    } catch (_) {
+    } catch (error) {
       if (!context.mounted) return;
-      showSupplierErrorSnackBar(context, context.s.requestDeclineFailed);
+      showSupplierErrorSnackBar(
+        context,
+        error is ApiException
+            ? error.displayMessage
+            : context.s.requestDeclineFailed,
+      );
     }
   }
 

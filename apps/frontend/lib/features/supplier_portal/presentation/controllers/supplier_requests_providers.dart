@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../../data/supplier_requests_api_repository.dart';
 import '../../application/supplier_portal_session.dart';
-import 'supplier_dashboard_providers.dart';
-import 'supplier_notifications_providers.dart';
-import 'supplier_pickup_schedule_providers.dart';
+import '../../application/reservation_sync.dart';
 
 export '../../data/supplier_requests_api_repository.dart'
     show supplierRequestsRepositoryProvider;
@@ -41,11 +39,7 @@ Future<SupplierIncomingRequest> acceptIncomingRequest(
   final updated = await ref
       .read(supplierRequestsRepositoryProvider)
       .acceptRequest(requestId, pickupWindow);
-  ref.invalidate(incomingRequestsProvider);
-  ref.invalidate(supplierNotificationsProvider);
-  ref.invalidate(supplierDashboardProvider);
-  ref.invalidate(pickupScheduleProvider);
-  ref.invalidate(pickupScheduleSummaryProvider);
+  invalidateReservationSyncProviders(ref);
   return updated;
 }
 
@@ -57,11 +51,7 @@ Future<void> declineIncomingRequest(
   await ref
       .read(supplierRequestsRepositoryProvider)
       .declineRequest(requestId, reason: reason);
-  ref.invalidate(incomingRequestsProvider);
-  ref.invalidate(supplierNotificationsProvider);
-  ref.invalidate(supplierDashboardProvider);
-  ref.invalidate(pickupScheduleProvider);
-  ref.invalidate(pickupScheduleSummaryProvider);
+  invalidateReservationSyncProviders(ref);
 }
 
 class CompletingReservationNotifier extends Notifier<String?> {
@@ -89,20 +79,12 @@ Future<SupplierIncomingRequest> completeIncomingRequest(
         requestId,
         confirmationCode: confirmationCode,
       );
-  ref.invalidate(incomingRequestsProvider);
-  ref.invalidate(supplierNotificationsProvider);
-  ref.invalidate(supplierDashboardProvider);
-  ref.invalidate(pickupScheduleProvider);
-  ref.invalidate(pickupScheduleSummaryProvider);
+  invalidateReservationSyncProviders(ref);
   return result;
 }
 
 void _invalidateReservationFollowUp(WidgetRef ref) {
-  ref.invalidate(incomingRequestsProvider);
-  ref.invalidate(supplierNotificationsProvider);
-  ref.invalidate(supplierDashboardProvider);
-  ref.invalidate(pickupScheduleProvider);
-  ref.invalidate(pickupScheduleSummaryProvider);
+  invalidateReservationSyncProviders(ref);
 }
 
 Future<void> rescheduleIncomingRequest(
@@ -130,6 +112,18 @@ Future<void> acceptLearnerReschedule(
   await ref
       .read(supplierRequestsRepositoryProvider)
       .acceptLearnerReschedule(requestId);
+  _invalidateReservationFollowUp(ref);
+}
+
+Future<void> submitNoDriverPickupWindow(
+  WidgetRef ref, {
+  required String requestId,
+  required SupplierPickupWindow pickupWindow,
+}) async {
+  await ref.read(supplierRequestsRepositoryProvider).submitNoDriverPickupWindow(
+        requestId,
+        pickupWindow,
+      );
   _invalidateReservationFollowUp(ref);
 }
 

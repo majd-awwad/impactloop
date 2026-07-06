@@ -369,14 +369,10 @@ Used by authenticated material reporting and admin material report review. This 
 | confirmedDeliveryWindowStart, confirmedDeliveryWindowEnd | DateTime? | Feasible delivery window after supplier pickup + buffer |
 | earliestDeliveryStart | DateTime? | Computed earliest learner delivery start |
 | schedulingConflictReason | String? | Set when delivery scheduling is infeasible |
-| pickupType | PickupType | default `SELF_PICKUP` (legacy) |
 | supplierNote, rejectionReason | String? | |
 | acceptedAt, rejectedAt, cancelledAt, completedAt | DateTime? | |
-| deliveryRequested | Boolean | default false |
-| deliveryStatus | DeliveryStatus? | legacy compatibility |
-| deliveryCost | Decimal? | |
-| dropoffLocationId | String? | legacy FK → locations |
-| driverProfileId | String? | legacy string-only field; use `deliveries.assignedDriverProfileId` |
+
+Logistics (driver, delivery status, dropoff location, cost) live on `deliveries`, not `reservations`.
 
 ---
 

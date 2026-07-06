@@ -152,3 +152,29 @@ export const notifyReservationsExpired = async (reservationIds: string[]) => {
     );
   });
 };
+
+export const notifyNoDriverSupplierRescheduleRequested = async (
+  reservationId: string,
+  adminNote?: string,
+) =>
+  notifySafely(async () => {
+    const reservation = await loadReservationContext(reservationId);
+    if (!reservation) {
+      return;
+    }
+
+    const noteSuffix = adminNote?.trim()
+      ? ` Admin note: ${adminNote.trim()}`
+      : '';
+
+    await createNotification({
+      userId: reservation.ownerId,
+      notificationType: 'NO_DRIVER_SUPPLIER_RESCHEDULE_REQUESTED',
+      title: 'Choose a new pickup window',
+      body:
+        'No driver was available. Please choose a new pickup window if the material is still available.'
+        + noteSuffix,
+      relatedEntityType: 'RESERVATION',
+      relatedEntityId: reservation.id,
+    });
+  });

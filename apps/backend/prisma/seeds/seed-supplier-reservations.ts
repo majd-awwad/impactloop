@@ -277,7 +277,6 @@ async function createSeedReservations(
         quantityRequested: spec.quantityRequested,
         message: reservationSeedMessage(spec.key, spec.learnerMessage),
         status: spec.status,
-        pickupType: spec.pickupType ?? 'SELF_PICKUP',
         pickupWindowStart: pickupWindow?.start ?? null,
         pickupWindowEnd: pickupWindow?.end ?? null,
         supplierNote: spec.supplierNote ?? null,

@@ -32,7 +32,7 @@ class LearningSpotlightSection extends ConsumerWidget {
           subtitle:
               'Start with project guides built from real reusable materials.',
           action: HomeSectionActionButton(
-            onPressed: () => context.push('/learning'),
+            onPressed: () => context.go('/learning'),
             icon: const Icon(Icons.arrow_forward_rounded),
             label: 'Browse all',
           ),
@@ -54,7 +54,7 @@ class LearningSpotlightSection extends ConsumerWidget {
                 description:
                     'When learning projects are published, featured guides will appear here.',
                 actionLabel: 'Open Learning Hub',
-                onAction: () => context.push('/learning'),
+                onAction: () => context.go('/learning'),
               );
             }
 

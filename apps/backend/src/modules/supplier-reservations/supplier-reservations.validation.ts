@@ -1,9 +1,8 @@
 import { z } from 'zod';
 
 import {
-  MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES,
-  PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
-} from '../reservations/reservation-timing-policy.js';
+  validatePickupWindow,
+} from '../reservations/pickup-window-validation.js';
 
 export const listSupplierReservationsQuerySchema = z.object({
   status: z
@@ -24,6 +23,39 @@ export type ListSupplierReservationsQuery = z.infer<
   typeof listSupplierReservationsQuerySchema
 >;
 
+const validateSupplierPickupProposal = (
+  value: {
+    pickupWindowStart: string;
+    pickupWindowEnd: string;
+    selectedPreferredWindowIndex?: number;
+  },
+  ctx: z.RefinementCtx,
+) => {
+  const mode =
+    value.selectedPreferredWindowIndex != null
+      ? 'supplier_selected_preferred'
+      : 'supplier_custom_proposal';
+
+  const failure = validatePickupWindow(
+    {
+      start: new Date(value.pickupWindowStart),
+      end: new Date(value.pickupWindowEnd),
+    },
+    mode,
+  );
+
+  if (failure) {
+    ctx.addIssue({
+      code: 'custom',
+      message: failure.message,
+      path:
+        failure.field === 'start'
+          ? ['pickupWindowStart']
+          : ['pickupWindowEnd'],
+    });
+  }
+};
+
 const pickupWindowSchema = z
   .object({
     pickupWindowStart: z.iso.datetime(),
@@ -34,51 +66,7 @@ const pickupWindowSchema = z
     proposedDeliveryWindowEnd: z.iso.datetime().optional(),
   })
   .superRefine((value, ctx) => {
-    const start = new Date(value.pickupWindowStart);
-    const end = new Date(value.pickupWindowEnd);
-
-    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Pickup window dates must be valid.',
-        path: ['pickupWindowEnd'],
-      });
-      return;
-    }
-
-    if (end <= start) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Pickup end time must be after start time.',
-        path: ['pickupWindowEnd'],
-      });
-      return;
-    }
-
-    const hasSelectedPreferredWindow =
-      value.selectedPreferredWindowIndex != null;
-    const customStartThreshold =
-      Date.now() + MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES * 60_000;
-
-    if (
-      !hasSelectedPreferredWindow &&
-      start.getTime() < customStartThreshold
-    ) {
-      ctx.addIssue({
-        code: 'custom',
-        message: PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
-        path: ['pickupWindowStart'],
-      });
-      return;
-    }
-
-    if (!hasSelectedPreferredWindow && end.getTime() <= Date.now()) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Supplier window end must be in the future.',
-        path: ['pickupWindowEnd'],
-      });
-    }
+    validateSupplierPickupProposal(value, ctx);
 
     const proposedStartRaw = value.proposedDeliveryWindowStart;
     const proposedEndRaw = value.proposedDeliveryWindowEnd;
@@ -145,50 +133,25 @@ export const rescheduleSupplierReservationSchema = z
     note: z.string().trim().max(1000).optional(),
   })
   .superRefine((value, ctx) => {
-    const start = new Date(value.pickupWindowStart);
-    const end = new Date(value.pickupWindowEnd);
-
-    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Pickup window dates must be valid.',
-        path: ['pickupWindowEnd'],
-      });
-      return;
-    }
-
-    if (end <= start) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Pickup end time must be after start time.',
-        path: ['pickupWindowEnd'],
-      });
-      return;
-    }
-
-    if (
-      start.getTime() <
-      Date.now() + MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES * 60_000
-    ) {
-      ctx.addIssue({
-        code: 'custom',
-        message: PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
-        path: ['pickupWindowStart'],
-      });
-      return;
-    }
-
-    if (end.getTime() <= Date.now()) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Supplier window end must be in the future.',
-        path: ['pickupWindowEnd'],
-      });
-    }
+    validateSupplierPickupProposal(value, ctx);
   });
 
 export type RescheduleSupplierReservationInput = z.infer<
   typeof rescheduleSupplierReservationSchema
+>;
+
+export const submitNoDriverPickupWindowSchema = z
+  .object({
+    pickupWindowStart: z.iso.datetime(),
+    pickupWindowEnd: z.iso.datetime(),
+    supplierNote: z.string().trim().max(1000).optional(),
+  })
+  .superRefine((value, ctx) => {
+    validateSupplierPickupProposal(value, ctx);
+  });
+
+export type SubmitNoDriverPickupWindowInput = z.infer<
+  typeof submitNoDriverPickupWindowSchema
 >;
 
 export const cancelSupplierReservationSchema = z.object({

@@ -19,9 +19,8 @@ import {
   resolveReservationFollowUp,
 } from './reservation-follow-up.js';
 import {
-  LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
-  MIN_PICKUP_NOTICE_MINUTES,
-} from './reservation-timing-policy.js';
+  assertValidPickupWindow,
+} from './pickup-window-validation.js';
 import {
   canRequestPickupReschedule,
   mapPendingRescheduleSummary,
@@ -35,11 +34,21 @@ import {
   createLearnerSupplierIssueReport,
   createNoDriverAvailableReport,
 } from './reservations.incidents.repository.js';
+import { resolveIncidentReviewStatus } from './incident-review-status.js';
 import { resolveLearnerConfirmation as resolveLearnerConfirmationInRepository } from './reservations.learner-confirmation.repository.js';
 import {
   expireStalePendingReservationsByIds,
   expireStalePendingReservationsForMaterialIds,
 } from './reservations.pending-expiry.repository.js';
+import {
+  expireStaleMissedPickupsByIds,
+  expireStaleMissedPickupsForMaterialIds,
+  expireStaleMissedPickupsForRequester,
+} from './reservations.missed-pickup-expiry.repository.js';
+import {
+  escalateStaleNoDriverDeliveriesByIds,
+  escalateStaleNoDriverDeliveriesForRequester,
+} from './reservations.no-driver-auto-escalation.repository.js';
 import { notifyReservationCreated } from '../notifications/reservation-notifications.js';
 import type {
   CreateReservationInput,
@@ -173,13 +182,11 @@ const mapLearnerReservation = (
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
     fulfillmentMethod: reservation.fulfillmentMethod,
-    deliveryRequested: reservation.deliveryRequested,
     deliveryCount,
   });
   const canLearnerReschedule = canRequestPickupReschedule({
     status: reservation.status,
     fulfillmentMethod: reservation.fulfillmentMethod,
-    deliveryRequested: reservation.deliveryRequested,
     deliveryCount,
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
@@ -192,10 +199,13 @@ const mapLearnerReservation = (
   const hasOpenIncident = reservation.noShowReports.some(
     (report) => report.status === 'PENDING_REVIEW',
   );
+  const incidentReviewStatus = resolveIncidentReviewStatus(
+    reservation.noShowReports,
+  );
   const canLearnerReportSupplier = canLearnerReportSupplierIssue({
     status: reservation.status,
     fulfillmentMethod: reservation.fulfillmentMethod,
-    deliveryRequested: reservation.deliveryRequested,
+    deliveryCount,
     pickupWindowEnd: reservation.pickupWindowEnd,
     hasPendingReport: hasOpenIncident,
   });
@@ -259,7 +269,6 @@ const mapLearnerReservation = (
     schedulingConflictReason: reservation.schedulingConflictReason,
     supplierNote: reservation.supplierNote,
     rejectionReason: reservation.rejectionReason,
-    deliveryRequested: reservation.deliveryRequested,
     selfPickupCode:
       reservation.status === 'ACCEPTED' &&
       reservation.fulfillmentMethod === 'PICKUP'
@@ -286,6 +295,7 @@ const mapLearnerReservation = (
     canLearnerRequestDelivery,
     canSendMessage:
       reservationAllowsMessaging(reservation.status) && !hasOpenIncident,
+    incidentReviewStatus,
     latestMessage: latestMessage ?? null,
     material: {
       id: reservation.material.id,
@@ -339,6 +349,11 @@ export const listMyReservations = async (requesterId: string) => {
     reservations =
       await reservationsRepository.findLearnerReservations(requesterId);
   }
+
+  await expireStaleMissedPickupsForRequester(requesterId);
+  await escalateStaleNoDriverDeliveriesForRequester(requesterId);
+  reservations =
+    await reservationsRepository.findLearnerReservations(requesterId);
 
   const legacyPickupReservations = reservations.filter(
     (reservation) =>
@@ -397,6 +412,19 @@ export const getMyReservationById = async (
     }
   }
 
+  if (reservation.status === 'ACCEPTED') {
+    await expireStaleMissedPickupsByIds([reservationId], requesterId);
+    await escalateStaleNoDriverDeliveriesByIds([reservationId]);
+    reservation = await reservationsRepository.findLearnerReservationById(
+      requesterId,
+      reservationId,
+    );
+
+    if (!reservation) {
+      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    }
+  }
+
   if (
     reservation.status === 'ACCEPTED' &&
     reservation.fulfillmentMethod === 'PICKUP' &&
@@ -430,12 +458,27 @@ export const getMyReservationById = async (
 
 export const expireStalePendingReservationsForMaterials = async (
   materialIds: string[],
-) => expireStalePendingReservationsForMaterialIds(materialIds);
+) => {
+  await expireStalePendingReservationsForMaterialIds(materialIds);
+  await expireStaleMissedPickupsForMaterialIds(materialIds);
+};
 
 export const createReservation = async (
   requesterId: string,
   input: CreateReservationInput,
 ) => {
+  if (input.fulfillmentMethod === 'PICKUP') {
+    for (const window of input.learnerPreferredPickupWindows ?? []) {
+      assertValidPickupWindow(
+        {
+          start: new Date(window.start),
+          end: new Date(window.end),
+        },
+        'learner_preferred',
+      );
+    }
+  }
+
   const result = await reservationsRepository.createLearnerReservation({
     requesterId,
     materialId: input.materialId,
@@ -595,28 +638,31 @@ export const requestLearnerPickupReschedule = async (
   reservationId: string,
   input: import('./reservations.validation.js').RequestPickupRescheduleInput,
 ) => {
-  const end = new Date(input.pickupWindowEnd);
-  const now = Date.now();
-  if (end.getTime() <= Date.now()) {
+  const startRaw = input.pickupWindowStart?.trim();
+  const endRaw = input.pickupWindowEnd?.trim();
+
+  if (!startRaw || !endRaw) {
     throw new AppError(
-      'Pickup window end must be in the future.',
+      'A new pickup window is required for reschedule requests.',
       400,
-      'VALIDATION_ERROR',
+      'PICKUP_WINDOW_REQUIRED',
     );
   }
 
-  if (end.getTime() < now + MIN_PICKUP_NOTICE_MINUTES * 60_000) {
-    throw new AppError(
-      LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
-      400,
-      'VALIDATION_ERROR',
-    );
-  }
+  assertValidPickupWindow(
+    {
+      start: new Date(startRaw),
+      end: new Date(endRaw),
+    },
+    'learner_preferred',
+  );
+
+  const end = new Date(endRaw);
 
   const result = await reservationsRescheduleRepository.requestLearnerPickupReschedule({
     requesterId,
     reservationId,
-    pickupWindowStart: new Date(input.pickupWindowStart),
+    pickupWindowStart: new Date(startRaw),
     pickupWindowEnd: end,
     reason: input.reason,
     note: input.note,

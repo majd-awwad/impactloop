@@ -83,7 +83,11 @@ export const createLearnerSupplierIssueReport = async (input: {
       return { outcome: 'INVALID_STATUS' as const };
     }
 
-    if (existing.fulfillmentMethod !== 'PICKUP' || existing.deliveryRequested) {
+    const deliveryCount = await tx.delivery.count({
+      where: { reservationId: existing.id },
+    });
+
+    if (existing.fulfillmentMethod !== 'PICKUP' || deliveryCount > 0) {
       return { outcome: 'NOT_SELF_PICKUP' as const };
     }
 
@@ -138,6 +142,91 @@ export const createLearnerSupplierIssueReport = async (input: {
     return { outcome: 'CREATED' as const, report };
   });
 
+export const escalateNoDriverAvailableInTransaction = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    reservation: {
+      id: string;
+      status: string;
+      requesterId: string;
+      supplierPickupWindowStart: Date | null;
+      supplierPickupWindowEnd: Date | null;
+    };
+    delivery: {
+      id: string;
+      status: string;
+    };
+    reporterUserId: string;
+    changedBy: string | null;
+    note: string;
+    deliveryHistoryNote: string;
+    reservationHistoryNote: string;
+  },
+) => {
+  const duplicate = await tx.noShowReport.findFirst({
+    where: {
+      reservationId: input.reservation.id,
+      targetRole: 'SYSTEM',
+      reasonCode: 'NO_DRIVER_AVAILABLE',
+    },
+  });
+
+  if (duplicate) {
+    return { created: false as const, report: duplicate };
+  }
+
+  if (input.reservation.status !== 'ACCEPTED') {
+    return { created: false as const, report: null };
+  }
+
+  const report = await tx.noShowReport.create({
+    data: {
+      reservationId: input.reservation.id,
+      deliveryId: input.delivery.id,
+      reporterUserId: input.reporterUserId,
+      targetUserId: null,
+      targetRole: 'SYSTEM',
+      reasonCode: 'NO_DRIVER_AVAILABLE',
+      note: input.note.trim() || null,
+      pickupWindowStart: input.reservation.supplierPickupWindowStart,
+      pickupWindowEnd: input.reservation.supplierPickupWindowEnd,
+    },
+  });
+
+  await tx.delivery.update({
+    where: { id: input.delivery.id },
+    data: { status: 'AWAITING_RESOLUTION' },
+  });
+
+  await tx.deliveryStatusHistory.create({
+    data: {
+      deliveryId: input.delivery.id,
+      oldStatus: input.delivery.status,
+      newStatus: 'AWAITING_RESOLUTION',
+      changedByUserId: input.changedBy ?? input.reporterUserId,
+      note: input.deliveryHistoryNote,
+    },
+  });
+
+  await tx.reservation.update({
+    where: { id: input.reservation.id },
+    data: { status: 'AWAITING_RESOLUTION' },
+  });
+
+  await tx.reservationStatusHistory.create({
+    data: {
+      reservationId: input.reservation.id,
+      statusGroup: 'RESERVATION',
+      oldStatus: input.reservation.status,
+      newStatus: 'AWAITING_RESOLUTION',
+      changedBy: input.changedBy ?? input.reporterUserId,
+      note: input.reservationHistoryNote,
+    },
+  });
+
+  return { created: true as const, report };
+};
+
 export const createNoDriverAvailableReport = async (input: {
   reporterUserId: string;
   reservationId: string;
@@ -186,64 +275,21 @@ export const createNoDriverAvailableReport = async (input: {
       return { outcome: 'WINDOW_NOT_EXPIRED' as const };
     }
 
-    const duplicate = await tx.noShowReport.findFirst({
-      where: {
-        reservationId: existing.id,
-        targetRole: 'SYSTEM',
-        reasonCode: 'NO_DRIVER_AVAILABLE',
-      },
+    const result = await escalateNoDriverAvailableInTransaction(tx, {
+      reservation: existing,
+      delivery,
+      reporterUserId: input.reporterUserId,
+      changedBy: input.reporterUserId,
+      note: input.note ?? 'No driver available',
+      deliveryHistoryNote: 'No driver available reported',
+      reservationHistoryNote: 'No driver available',
     });
 
-    if (duplicate) {
-      return { outcome: 'DUPLICATE' as const, report: duplicate };
+    if (!result.created) {
+      return { outcome: 'DUPLICATE' as const, report: result.report };
     }
 
-    const report = await tx.noShowReport.create({
-      data: {
-        reservationId: existing.id,
-        deliveryId: delivery.id,
-        reporterUserId: input.reporterUserId,
-        targetUserId: null,
-        targetRole: 'SYSTEM',
-        reasonCode: 'NO_DRIVER_AVAILABLE',
-        note: input.note?.trim() || null,
-        pickupWindowStart: existing.supplierPickupWindowStart,
-        pickupWindowEnd: existing.supplierPickupWindowEnd,
-      },
-    });
-
-    await tx.delivery.update({
-      where: { id: delivery.id },
-      data: { status: 'AWAITING_RESOLUTION' },
-    });
-
-    await tx.deliveryStatusHistory.create({
-      data: {
-        deliveryId: delivery.id,
-        oldStatus: delivery.status,
-        newStatus: 'AWAITING_RESOLUTION',
-        changedByUserId: input.reporterUserId,
-        note: 'No driver available reported',
-      },
-    });
-
-    await tx.reservation.update({
-      where: { id: existing.id },
-      data: { status: 'AWAITING_RESOLUTION' },
-    });
-
-    await tx.reservationStatusHistory.create({
-      data: {
-        reservationId: existing.id,
-        statusGroup: 'RESERVATION',
-        oldStatus: existing.status,
-        newStatus: 'AWAITING_RESOLUTION',
-        changedBy: input.reporterUserId,
-        note: 'No driver available',
-      },
-    });
-
-    return { outcome: 'CREATED' as const, report };
+    return { outcome: 'CREATED' as const, report: result.report };
   });
 
 export const canReportNoDriverAvailable = (input: {
@@ -276,7 +322,7 @@ export const canReportNoDriverAvailable = (input: {
 export const canLearnerReportSupplierIssue = (input: {
   status: string;
   fulfillmentMethod: string;
-  deliveryRequested: boolean;
+  deliveryCount: number;
   pickupWindowEnd: Date | null;
   hasPendingReport: boolean;
 }) => {
@@ -284,7 +330,7 @@ export const canLearnerReportSupplierIssue = (input: {
     return false;
   }
 
-  if (input.fulfillmentMethod !== 'PICKUP' || input.deliveryRequested) {
+  if (input.fulfillmentMethod !== 'PICKUP' || input.deliveryCount > 0) {
     return false;
   }
 

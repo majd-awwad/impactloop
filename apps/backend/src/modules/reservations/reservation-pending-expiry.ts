@@ -1,6 +1,8 @@
 import type { ReservationFulfillmentMethod } from '../../generated/prisma/client.js';
 
-import { PENDING_RESERVATION_FALLBACK_HOURS } from './reservation-timing-policy.js';
+import {
+  PENDING_SUPPLIER_RESPONSE_HOURS,
+} from './reservation-timing-policy.js';
 
 type PreferredWindow = {
   start: string;
@@ -41,26 +43,34 @@ const parsePreferredWindows = (value: unknown): PreferredWindow[] => {
   });
 };
 
+const resolveSupplierResponseDeadline = (createdAt: Date) =>
+  new Date(
+    createdAt.getTime() + PENDING_SUPPLIER_RESPONSE_HOURS * 60 * 60 * 1000,
+  );
+
 export const resolvePendingReservationDeadline = (
   reservation: PendingReservationExpiryRecord,
 ): Date => {
+  const supplierResponseDeadline = resolveSupplierResponseDeadline(
+    reservation.createdAt,
+  );
+
   const windows =
     reservation.fulfillmentMethod === 'DELIVERY'
       ? parsePreferredWindows(reservation.learnerPreferredDeliveryWindows)
       : parsePreferredWindows(reservation.learnerPreferredPickupWindows);
 
   if (windows.length > 0) {
-    const latestEndMs = Math.max(
+    const latestWindowEndMs = Math.max(
       ...windows.map((window) => new Date(window.end).getTime()),
     );
 
-    return new Date(latestEndMs);
+    return new Date(
+      Math.min(supplierResponseDeadline.getTime(), latestWindowEndMs),
+    );
   }
 
-  return new Date(
-    reservation.createdAt.getTime() +
-      PENDING_RESERVATION_FALLBACK_HOURS * 60 * 60 * 1000,
-  );
+  return supplierResponseDeadline;
 };
 
 export const isPendingReservationExpired = (
@@ -82,9 +92,17 @@ export const pendingReservationExpiredNote = (
       ? parsePreferredWindows(reservation.learnerPreferredDeliveryWindows)
       : parsePreferredWindows(reservation.learnerPreferredPickupWindows);
 
-  if (windows.length > 0) {
+  const supplierResponseDeadline = resolveSupplierResponseDeadline(
+    reservation.createdAt,
+  );
+  const deadline = resolvePendingReservationDeadline(reservation);
+
+  if (
+    windows.length > 0 &&
+    deadline.getTime() < supplierResponseDeadline.getTime()
+  ) {
     return 'Expired automatically after the last preferred scheduling window passed without supplier response.';
   }
 
-  return `Expired automatically after ${PENDING_RESERVATION_FALLBACK_HOURS} hours without supplier response.`;
+  return `Expired automatically after ${PENDING_SUPPLIER_RESPONSE_HOURS} hours without supplier response.`;
 };

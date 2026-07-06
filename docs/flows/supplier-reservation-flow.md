@@ -30,7 +30,7 @@ Read-only.
 
 ### Success state
 
-List renders `SupplierIncomingRequest` cards. Each reservation DTO includes `deliveryRequested`, nullable `activeDelivery` (`id`, `status`), and `canSupplierComplete`. The supplier UI uses `canSupplierComplete` instead of guessing whether the complete action is allowed.
+List renders `SupplierIncomingRequest` cards. Each reservation DTO includes `fulfillmentMethod`, `fulfillmentLabel`, nullable `activeDelivery` (`id`, `status`), and `canSupplierComplete`. The supplier UI uses `canSupplierComplete` instead of guessing whether the complete action is allowed.
 
 ### Error states
 
@@ -58,15 +58,15 @@ Confirm window → reservation becomes `ACCEPTED` or `AWAITING_LEARNER_CONFIRMAT
 
 **PICKUP**
 
-- Selected learner preferred window → `ACCEPTED`, set `pickupWindowStart/End` when the window still has at least 60 minutes remaining, even if its start time already passed
-- Selected learner preferred window with less than 60 minutes remaining → `400` with “This pickup window is too close to ending. Propose a new time.”
+- Selected learner preferred window → `ACCEPTED`, set `pickupWindowStart/End` when the window still has at least 30 minutes remaining, even if its start time already passed
+- Selected learner preferred window with less than 30 minutes remaining → `400` / `PICKUP_WINDOW_TOO_CLOSE_TO_ENDING`
 - Custom supplier proposal → must start at least 30 minutes in the future; matching a learner preferred window → `ACCEPTED`, non-matching proposal → `AWAITING_LEARNER_CONFIRMATION`, set `supplierProposedPickupWindowStart/End`
 - Legacy null preferred windows → `ACCEPTED` (old behavior)
 
 **DELIVERY**
 
 - Supplier window = driver pickup from supplier
-- Feasible learner delivery window (60-minute buffer after supplier pickup end) → `ACCEPTED`, store supplier pickup + confirmed delivery windows, `deliveryRequested = true`, create `Delivery` `WAITING_FOR_DRIVER`
+- Feasible learner delivery window (60-minute buffer after supplier pickup end) → `ACCEPTED`, store supplier pickup + confirmed delivery windows, create `Delivery` `WAITING_FOR_DRIVER`
 - Not feasible → `AWAITING_LEARNER_CONFIRMATION`, store supplier pickup + `schedulingConflictReason`, no delivery row
 
 All paths: keep quantity hold; insert `reservation_status_history`; recompute material status.
@@ -134,7 +134,7 @@ Transaction:
 - `material.quantity` decreases by `quantityRequested`
 - `materials.status` → `AVAILABLE` if quantity remains, else `REUSED` with `reusedAt` and `reusedByReservationId`
 
-If the reservation has `deliveryRequested` or any `Delivery` row, supplier complete returns `409 CONFLICT`. Delivery reservations complete only through the assigned driver `DELIVERED` transition. The supplier UI maps this stale/race conflict to: “This reservation is handled by delivery. The driver will mark it completed.”
+If the reservation has `fulfillmentMethod = DELIVERY` or any `Delivery` row, supplier complete returns `409 CONFLICT`. Delivery reservations complete only through the assigned driver `DELIVERED` transition. The supplier UI maps this stale/race conflict to: “This reservation is handled by delivery. The driver will mark it completed.”
 
 ### Database changes
 

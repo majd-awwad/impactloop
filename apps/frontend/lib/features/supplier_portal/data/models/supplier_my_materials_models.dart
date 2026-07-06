@@ -99,8 +99,7 @@ class SupplierMaterialReservationSummary {
     required this.status,
     required this.quantityRequested,
     required this.unit,
-    required this.pickupPreference,
-    required this.deliveryRequested,
+    required this.fulfillmentLabel,
     required this.createdAt,
     required this.canReview,
     required this.canOpen,
@@ -114,8 +113,7 @@ class SupplierMaterialReservationSummary {
   final String status;
   final double quantityRequested;
   final String unit;
-  final String pickupPreference;
-  final bool deliveryRequested;
+  final String fulfillmentLabel;
   final DateTime createdAt;
   final bool canReview;
   final bool canOpen;
@@ -131,8 +129,10 @@ class SupplierMaterialReservationSummary {
       status: json['status'] as String? ?? 'PENDING',
       quantityRequested: (json['quantityRequested'] as num?)?.toDouble() ?? 0,
       unit: json['unit'] as String? ?? '',
-      pickupPreference: json['pickupPreference'] as String? ?? '',
-      deliveryRequested: json['deliveryRequested'] == true,
+      fulfillmentLabel:
+          json['fulfillmentLabel'] as String? ??
+          json['pickupPreference'] as String? ??
+          '',
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),

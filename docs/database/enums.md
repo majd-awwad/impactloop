@@ -152,19 +152,11 @@ Used by: `ReservationStatusHistory.statusGroup`
 
 ---
 
-## `PickupType`
-
-`SELF_PICKUP`, `DELIVERY_ALLOWED`
-
-Used by: `Reservation.pickupType`
-
----
-
 ## `DeliveryStatus`
 
 `WAITING_FOR_DRIVER`, `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`, `DELIVERED`, `CANCELLED`, `FAILED_PICKUP`, `FAILED_DELIVERY`
 
-Used by: `Delivery.status`, `DeliveryStatusHistory.oldStatus`, `DeliveryStatusHistory.newStatus`, legacy `Reservation.deliveryStatus`
+Used by: `Delivery.status`, `DeliveryStatusHistory.oldStatus`, `DeliveryStatusHistory.newStatus`
 
 Active delivery statuses: `WAITING_FOR_DRIVER`, `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`.
 

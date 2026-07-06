@@ -46,7 +46,7 @@ void main() {
     'id': reservationId,
     'status': 'ACCEPTED',
     'quantityRequested': 1,
-    'deliveryRequested': true,
+    'activeDelivery': {'id': 'del-1', 'status': 'WAITING_FOR_DRIVER'},
     'createdAt': '2026-01-01T00:00:00.000Z',
     'updatedAt': '2026-01-01T00:00:00.000Z',
     'material': {
@@ -122,7 +122,7 @@ void main() {
 
     expect(find.text('Request delivery'), findsNothing);
     expect(find.text('Wood panels'), findsOneWidget);
-    expect(find.textContaining('Pickup:'), findsOneWidget);
+    expect(find.textContaining('Confirmed pickup:'), findsOneWidget);
     expect(find.textContaining('Pickup address:'), findsOneWidget);
     expect(find.bySemanticsLabel('Pickup location map'), findsOneWidget);
     expect(find.text('Delivery available'), findsOneWidget);
@@ -142,7 +142,7 @@ void main() {
   });
 
   testWidgets(
-    'accepted reservation with deliveryRequested shows delivery requested label',
+    'accepted reservation with active delivery shows delivery requested label',
     (tester) async {
       await pumpPage(
         tester,

@@ -15,8 +15,8 @@ void main() {
       'status': 'COMPLETED',
       'quantityRequested': 1,
       'message': 'Need this for class.',
-      'pickupType': 'SELF_PICKUP',
-      'deliveryRequested': false,
+      'fulfillmentMethod': 'PICKUP',
+      'fulfillmentLabel': 'Pickup selected',
       'completedAt': '2026-06-17T14:00:00.000Z',
       'createdAt': '2026-06-17T10:30:00.000Z',
       'material': {'title': 'Arduino Uno', 'unit': 'piece'},
@@ -70,13 +70,12 @@ void main() {
         unit: 'kg',
         status: SupplierIncomingRequestStatus.accepted,
         requestedAt: DateTime(2026, 6, 17, 9),
-        deliveryRequested: true,
+        fulfillmentLabel: 'Delivery requested',
         activeDelivery: const SupplierReservationDeliverySummary(
           id: 'del-1',
           status: 'WAITING_FOR_DRIVER',
         ),
         canSupplierComplete: false,
-        pickupPreference: 'Delivery requested',
       );
 
       await tester.pumpWidget(
@@ -107,7 +106,6 @@ void main() {
       unit: 'kg',
       status: SupplierPickupScheduleStatus.accepted,
       pickupType: 'Delivery requested',
-      deliveryRequested: true,
       activeDelivery: SupplierReservationDeliverySummary(
         id: 'del-2',
         status: 'ON_THE_WAY',

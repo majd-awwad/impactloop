@@ -80,6 +80,14 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
   }
 
   @override
+  Future<SupplierIncomingRequest> submitNoDriverPickupWindow(
+    String requestId,
+    SupplierPickupWindow pickupWindow,
+  ) {
+    return _api.submitNoDriverPickupWindow(requestId, pickupWindow);
+  }
+
+  @override
   Future<SupplierIncomingRequest> cancelAcceptedRequest(
     String requestId, {
     String? reason,

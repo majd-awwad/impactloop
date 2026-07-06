@@ -112,7 +112,6 @@ async function createAcceptedDeliveryReservation(ctx: TestContext) {
       quantityRequested: 1,
       status: 'ACCEPTED',
       fulfillmentMethod: 'DELIVERY',
-      deliveryRequested: true,
       supplierPickupWindowStart: supplierPickupStart,
       supplierPickupWindowEnd: pastSupplierPickupEnd,
       acceptedAt: supplierPickupStart,
@@ -283,6 +282,35 @@ describe('reservation incidents (phase 6+7)', () => {
         ?.quantity,
     );
     assert.equal(qtyBefore, qtyAfter);
+  });
+
+  test('verified admin report exposes incidentReviewStatus to learner list', async () => {
+    const pastEnd = pickupWindowEndAfterGrace();
+    const { reservation } = await createAcceptedPickupReservation(ctx, pastEnd);
+
+    await reportLearnerSupplierIssue(ctx.learnerId, reservation.id, {
+      reason: 'SUPPLIER_UNAVAILABLE',
+      note: 'Supplier was not at pickup location',
+    });
+
+    const reports = await listAdminNoShowReports({
+      status: 'PENDING_REVIEW',
+      page: 1,
+      limit: 50,
+    });
+    const item = reports.items.find(
+      (entry) => entry.reservationId === reservation.id,
+    );
+    assert.ok(item);
+    ctx.createdReportIds.push(item.id);
+
+    await verifyAdminNoShowReport(ctx.adminId, item.id, 'Verified supplier issue');
+
+    const reservations = await listMyReservations(ctx.learnerId);
+    const mapped = reservations.find((entry) => entry.id === reservation.id);
+    assert.ok(mapped);
+    assert.equal(mapped.status, 'AWAITING_RESOLUTION');
+    assert.equal(mapped.incidentReviewStatus, 'VERIFIED');
   });
 
   test('no driver available -> system report without strike target', async () => {

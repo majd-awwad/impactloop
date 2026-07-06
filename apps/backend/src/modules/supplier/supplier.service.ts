@@ -34,6 +34,7 @@ import {
   SUPPLIER_CREATE_MATERIAL_SCOPE,
 } from "../../services/idempotency.service.js";
 import * as supplierRepository from "./supplier.repository.js";
+import { mapReservationFulfillmentLabel } from "../reservations/reservation-delivery.js";
 import {
   assertCanMarkMaterialUnavailable,
   assertCanRestoreMaterial,
@@ -1408,13 +1409,11 @@ const mapMaterialReservationSummary = (
     quantityRequested: Number(reservation.quantityRequested),
     unit,
     message: reservation.message,
-    pickupType: reservation.pickupType,
-    deliveryRequested: reservation.deliveryRequested,
-    pickupPreference: reservation.deliveryRequested
-      ? "Delivery requested"
-      : reservation.pickupType === "SELF_PICKUP"
-        ? "Self pickup"
-        : reservation.pickupType,
+    fulfillmentMethod: reservation.fulfillmentMethod,
+    fulfillmentLabel: mapReservationFulfillmentLabel(
+      reservation.fulfillmentMethod,
+      reservation.deliveries.length,
+    ),
     pickupWindowStart: reservation.pickupWindowStart?.toISOString() ?? null,
     pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
     activeDelivery: latestDelivery

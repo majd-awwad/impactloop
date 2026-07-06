@@ -1,5 +1,6 @@
 import type { AccountStatus, Prisma, UserRole } from '../../generated/prisma/index.js';
 import { prisma } from '../../database/prisma.js';
+import { STRIKE_ELIGIBLE_TARGET_ROLES } from '../reservations/account-suspension.js';
 
 import type { AdminPeopleListQuery } from './admin-people.validation.js';
 
@@ -157,6 +158,28 @@ export const listUsersForAdmin = async (query: AdminPeopleListQuery) => {
   ]);
 
   return { total, items };
+};
+
+export const countVerifiedStrikesForUserIds = async (userIds: string[]) => {
+  if (userIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await prisma.noShowReport.groupBy({
+    by: ['targetUserId'],
+    where: {
+      targetUserId: { in: userIds },
+      status: 'VERIFIED',
+      targetRole: { in: [...STRIKE_ELIGIBLE_TARGET_ROLES] },
+    },
+    _count: { _all: true },
+  });
+
+  return new Map(
+    rows
+      .filter((row) => row.targetUserId != null)
+      .map((row) => [row.targetUserId!, row._count._all]),
+  );
 };
 
 export const findUserWithRoles = async (userId: string) =>

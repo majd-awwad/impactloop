@@ -13,7 +13,6 @@ import 'reservation_follow_up_actions.dart';
 
 const _noteAreaHeight = 48.0;
 const _footerHeight = 52.0;
-const _pendingCardHeight = 360.0;
 
 String formatIncomingRequestDateTime(DateTime value) {
   final local = value.toLocal();
@@ -66,7 +65,9 @@ class IncomingRequestCard extends StatelessWidget {
     this.onAcceptLearnerReschedule,
     this.onProposeDifferentTime,
     this.onMarkDeliveryPickupExpired,
+    this.onReportNoDriverAvailable,
     this.onReportDriverNoShow,
+    this.onSubmitNoDriverPickupWindow,
     this.isCompleting = false,
   });
 
@@ -80,7 +81,9 @@ class IncomingRequestCard extends StatelessWidget {
   final VoidCallback? onAcceptLearnerReschedule;
   final VoidCallback? onProposeDifferentTime;
   final VoidCallback? onMarkDeliveryPickupExpired;
+  final VoidCallback? onReportNoDriverAvailable;
   final VoidCallback? onReportDriverNoShow;
+  final VoidCallback? onSubmitNoDriverPickupWindow;
   final bool isCompleting;
 
   @override
@@ -98,13 +101,11 @@ class IncomingRequestCard extends StatelessWidget {
         request.status == SupplierIncomingRequestStatus.completed;
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
-    final pendingHeight = compact ? 404.0 : _pendingCardHeight;
 
     return Opacity(
       opacity: isDeclined ? 0.78 : 1,
       child: Container(
         width: double.infinity,
-        height: isPending ? pendingHeight : null,
         decoration: BoxDecoration(
           color: colors.surfaceSolid.withValues(alpha: 0.78),
           borderRadius: AppRadius.lgAll,
@@ -116,6 +117,7 @@ class IncomingRequestCard extends StatelessWidget {
         ),
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
@@ -193,7 +195,6 @@ class IncomingRequestCard extends StatelessWidget {
                   ),
                 ),
               ),
-            if (isPending) const Spacer(),
             if ((isAccepted || isCompleted) && request.pickupWindow != null)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
@@ -219,12 +220,22 @@ class IncomingRequestCard extends StatelessWidget {
                   supplierHandoverCode: request.shouldShowSupplierHandoverCode
                       ? request.supplierHandoverCode
                       : null,
+                  canReportNoDriverAvailable:
+                      request.canReportNoDriverAvailable,
                   canMarkDeliveryPickupExpired:
-                      request.canMarkOrReportNoDriverAvailable,
+                      request.canSupplierMarkDeliveryPickupExpired,
                   canReportDriverNoShow: request.canSupplierReportDriverNoShow,
-                  showMarkExpiredHint: request.showDeliveryPickupExpiredHint,
+                  showNoDriverOverdueWarning: request.showNoDriverOverdueWarning,
+                  onReportNoDriverAvailable: onReportNoDriverAvailable,
                   onMarkDeliveryPickupExpired: onMarkDeliveryPickupExpired,
                   onReportDriverNoShow: onReportDriverNoShow,
+                ),
+              ),
+            if (isAwaitingSupplier && request.canSubmitNoDriverPickupWindow)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: _NoDriverPickupRescheduleFooter(
+                  onChoosePickupWindow: onSubmitNoDriverPickupWindow,
                 ),
               ),
             if (isDeclined)
@@ -254,16 +265,13 @@ class IncomingRequestCard extends StatelessWidget {
                 request.isPickupFulfillment &&
                 (request.pickupHandoverPhase != null || isAwaitingSupplier)) ...[
               if (isAwaitingSupplier &&
-                  request.pendingRescheduleReason?.trim().isNotEmpty ==
-                      true) ...[
+                  (request.learnerProposedPickupWindow != null ||
+                      request.pendingRescheduleReason?.trim().isNotEmpty ==
+                          true ||
+                      request.pendingRescheduleNote?.trim().isNotEmpty ==
+                          true)) ...[
                 const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Learner requested reschedule: ${request.pendingRescheduleReason!.trim()}',
-                  style: context.supplierBody().copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                _LearnerRescheduleRequestSummary(request: request),
               ],
               const SizedBox(height: AppSpacing.md),
               ReservationFollowUpActions(
@@ -473,6 +481,46 @@ class _FulfillmentDetails extends StatelessWidget {
   }
 }
 
+class _NoDriverPickupRescheduleFooter extends StatelessWidget {
+  const _NoDriverPickupRescheduleFooter({this.onChoosePickupWindow});
+
+  final VoidCallback? onChoosePickupWindow;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.accentSoft.withValues(alpha: 0.16),
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: colors.border.withValues(alpha: 0.28)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'No driver was available. Please choose a new pickup window if the material is still available.',
+              style: context.supplierBody().copyWith(
+                fontSize: 13,
+                color: colors.textPrimary,
+              ),
+            ),
+            if (onChoosePickupWindow != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              FilledButton(
+                onPressed: onChoosePickupWindow,
+                child: const Text('Choose new pickup window'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _AwaitingConfirmationFooter extends StatelessWidget {
   const _AwaitingConfirmationFooter({required this.message});
 
@@ -538,6 +586,57 @@ class _LearnerNoteSlot extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LearnerRescheduleRequestSummary extends StatelessWidget {
+  const _LearnerRescheduleRequestSummary({required this.request});
+
+  final SupplierIncomingRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final bodyStyle = context.supplierBody().copyWith(
+      fontSize: 13,
+      color: colors.textPrimary,
+    );
+    final labelStyle = bodyStyle.copyWith(fontWeight: FontWeight.w600);
+    final window = request.learnerProposedPickupWindow;
+    final reason = request.pendingRescheduleReason?.trim();
+    final note = request.pendingRescheduleNote?.trim();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: colors.accentSoft.withValues(alpha: 0.12),
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: colors.border.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (window != null) ...[
+            Text('Requested new pickup', style: labelStyle),
+            const SizedBox(height: 4),
+            Text(formatPickupWindowShort(window), style: bodyStyle),
+          ],
+          if (reason != null && reason.isNotEmpty) ...[
+            if (window != null) const SizedBox(height: AppSpacing.sm),
+            Text('Reason', style: labelStyle),
+            const SizedBox(height: 4),
+            Text(reason, style: bodyStyle),
+          ],
+          if (note != null && note.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text('Learner note', style: labelStyle),
+            const SizedBox(height: 4),
+            Text(note, style: bodyStyle.copyWith(fontStyle: FontStyle.italic)),
+          ],
+        ],
       ),
     );
   }
@@ -638,29 +737,59 @@ class _DeliveryFooter extends StatelessWidget {
   const _DeliveryFooter({
     required this.statusLabel,
     this.supplierHandoverCode,
+    this.canReportNoDriverAvailable = false,
     this.canMarkDeliveryPickupExpired = false,
     this.canReportDriverNoShow = false,
-    this.showMarkExpiredHint = false,
+    this.showNoDriverOverdueWarning = false,
+    this.onReportNoDriverAvailable,
     this.onMarkDeliveryPickupExpired,
     this.onReportDriverNoShow,
   });
 
   final String statusLabel;
   final String? supplierHandoverCode;
+  final bool canReportNoDriverAvailable;
   final bool canMarkDeliveryPickupExpired;
   final bool canReportDriverNoShow;
-  final bool showMarkExpiredHint;
+  final bool showNoDriverOverdueWarning;
+  final VoidCallback? onReportNoDriverAvailable;
   final VoidCallback? onMarkDeliveryPickupExpired;
   final VoidCallback? onReportDriverNoShow;
+
+  String get _title {
+    if (statusLabel == 'Delivered') {
+      return 'Delivered';
+    }
+    if (statusLabel == 'Driver not assigned in time') {
+      return 'Driver not assigned in time';
+    }
+    return 'Waiting for driver delivery';
+  }
+
+  String get _subtitle {
+    if (statusLabel == 'Driver not assigned in time') {
+      return 'No driver accepted before the supplier pickup window ended.';
+    }
+    if (supplierHandoverCode == null) {
+      return 'The driver will complete this reservation after delivery.';
+    }
+    return 'Give the handover code to the driver after handing over the material.';
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final isOverdue = statusLabel == 'Driver not assigned in time';
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.accentSoft.withValues(alpha: 0.16),
+        color: (isOverdue ? colors.surfaceSolid : colors.accentSoft)
+            .withValues(alpha: isOverdue ? 0.92 : 0.16),
         borderRadius: AppRadius.mdAll,
-        border: Border.all(color: colors.border.withValues(alpha: 0.24)),
+        border: Border.all(
+          color: isOverdue
+              ? colors.border.withValues(alpha: 0.5)
+              : colors.border.withValues(alpha: 0.24),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -674,9 +803,11 @@ class _DeliveryFooter extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  Icons.local_shipping_outlined,
+                  isOverdue
+                      ? Icons.warning_amber_outlined
+                      : Icons.local_shipping_outlined,
                   size: 18,
-                  color: colors.accent,
+                  color: isOverdue ? colors.textPrimary : colors.accent,
                 ),
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
@@ -684,9 +815,7 @@ class _DeliveryFooter extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        statusLabel == 'Delivered'
-                            ? 'Delivered'
-                            : 'Waiting for driver delivery',
+                        _title,
                         style: context.supplierLabel().copyWith(
                           color: colors.textPrimary,
                           fontWeight: FontWeight.w700,
@@ -695,9 +824,7 @@ class _DeliveryFooter extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        supplierHandoverCode == null
-                            ? 'The driver will complete this reservation after delivery.'
-                            : 'Give the handover code to the driver after handing over the material.',
+                        _subtitle,
                         style: context.supplierBody().copyWith(
                           color: colors.textSecondary,
                           fontSize: 12,
@@ -717,9 +844,11 @@ class _DeliveryFooter extends StatelessWidget {
               ),
             ],
             SupplierDeliveryIncidentActions(
+              canReportNoDriverAvailable: canReportNoDriverAvailable,
               canMarkDeliveryPickupExpired: canMarkDeliveryPickupExpired,
               canReportDriverNoShow: canReportDriverNoShow,
-              showMarkExpiredHint: showMarkExpiredHint,
+              showNoDriverOverdueWarning: showNoDriverOverdueWarning,
+              onReportNoDriverAvailable: onReportNoDriverAvailable,
               onMarkDeliveryPickupExpired: onMarkDeliveryPickupExpired,
               onReportDriverNoShow: onReportDriverNoShow,
             ),

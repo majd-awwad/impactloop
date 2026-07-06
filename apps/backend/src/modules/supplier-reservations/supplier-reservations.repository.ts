@@ -34,7 +34,7 @@ import {
   clearPendingRescheduleFields,
 } from '../reservations/reservation-reschedule.js';
 
-const reservationInclude = {
+export const reservationInclude = {
   material: {
     include: {
       category: { select: { nameEn: true } },
@@ -84,7 +84,6 @@ export type SupplierReservationRecord = Prisma.ReservationGetPayload<{
 export const supplierCanCompleteReservation = (input: {
   status: ReservationStatus;
   fulfillmentMethod: string;
-  deliveryRequested: boolean;
   hasDelivery: boolean;
 }) => {
   if (input.status !== 'ACCEPTED') {
@@ -95,7 +94,7 @@ export const supplierCanCompleteReservation = (input: {
     return false;
   }
 
-  if (input.deliveryRequested || input.hasDelivery) {
+  if (input.hasDelivery) {
     return false;
   }
 
@@ -319,7 +318,6 @@ const acceptDeliveryWithConfirmedWindow = async (
       schedulingConflictReason: null,
       supplierProposedPickupWindowStart: null,
       supplierProposedPickupWindowEnd: null,
-      deliveryRequested: true,
       supplierNote: input.supplierNote,
       acceptedAt: new Date(),
     },
@@ -652,7 +650,7 @@ export const completeSupplierReservation = async (input: {
       where: { reservationId: existing.id },
     });
 
-    if (existing.deliveryRequested || deliveryCount > 0) {
+    if (deliveryCount > 0) {
       return { conflict: true as const, reservation: existing };
     }
 
@@ -941,7 +939,7 @@ export const cancelSupplierAcceptedReservation = async (input: {
       where: { reservationId: existing.id },
     });
 
-    if (deliveryCount > 0 || existing.deliveryRequested) {
+    if (deliveryCount > 0) {
       return { deliveryBlocked: true as const, reservation: existing };
     }
 
@@ -1029,7 +1027,7 @@ export const createSupplierNoShowReport = async (input: {
     let targetUserId = existing.requesterId;
     let targetRole: 'LEARNER' | 'DRIVER' = 'LEARNER';
 
-    if (existing.deliveryRequested || latestDelivery) {
+    if (latestDelivery) {
       const driverUserId = latestDelivery?.assignedDriverProfile?.userId;
       if (driverUserId) {
         targetUserId = driverUserId;
@@ -1070,7 +1068,6 @@ export const createSupplierNoShowReport = async (input: {
 
     const isSelfPickupOverdue =
       existing.fulfillmentMethod === 'PICKUP' &&
-      !existing.deliveryRequested &&
       existing.deliveries.length === 0 &&
       (existing.status === 'AWAITING_SUPPLIER_CONFIRMATION' ||
         (existing.pickupWindowEnd != null &&

@@ -619,7 +619,7 @@ class _AcceptIncomingRequestDialogState
         return;
       }
 
-      if (supplierStart.isBefore(now.add(minCustomPickupStartNotice))) {
+      if (supplierStart.isBefore(now.add(minPickupLeadTime))) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(proposedPickupStartTooSoonMessage),
@@ -712,7 +712,7 @@ class _AcceptIncomingRequestDialogState
       final selected =
           widget.request.learnerPreferredPickupWindows[_selectedPreferredIndex!];
 
-      if (selected.end.isBefore(now.add(minPickupNotice))) {
+      if (selected.end.isBefore(now.add(minRemainingPickupWindow))) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(pickupWindowTooCloseMessage),
@@ -754,7 +754,7 @@ class _AcceptIncomingRequestDialogState
       return;
     }
 
-    if (start.isBefore(now.add(minCustomPickupStartNotice))) {
+    if (start.isBefore(now.add(minPickupLeadTime))) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(proposedPickupStartTooSoonMessage),

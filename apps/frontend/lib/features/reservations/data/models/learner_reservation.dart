@@ -166,7 +166,6 @@ class LearnerReservation {
     this.supplierNote,
     this.rejectionReason,
     this.pickupLocationFull,
-    this.deliveryRequested = false,
     this.fulfillmentMethod = 'PICKUP',
     this.learnerPreferredPickupWindows = const [],
     this.learnerPreferredDeliveryWindows = const [],
@@ -187,6 +186,7 @@ class LearnerReservation {
     this.canLearnerReportSupplier = false,
     this.canReportNoDriverAvailable = false,
     this.canLearnerRequestDelivery = false,
+    this.incidentReviewStatus,
   });
 
   final String id;
@@ -209,7 +209,6 @@ class LearnerReservation {
   final String? supplierNote;
   final String? rejectionReason;
   final LearnerReservationPickupLocation? pickupLocationFull;
-  final bool deliveryRequested;
   final String fulfillmentMethod;
   final List<ReservationPreferredWindow> learnerPreferredPickupWindows;
   final List<ReservationPreferredWindow> learnerPreferredDeliveryWindows;
@@ -230,6 +229,7 @@ class LearnerReservation {
   final bool canLearnerReportSupplier;
   final bool canReportNoDriverAvailable;
   final bool canLearnerRequestDelivery;
+  final String? incidentReviewStatus;
 
   factory LearnerReservation.fromJson(Map<String, dynamic> json) {
     final materialJson = json['material'];
@@ -285,7 +285,6 @@ class LearnerReservation {
       pickupLocationFull: pickupLocationJson is Map<String, dynamic>
           ? LearnerReservationPickupLocation.fromJson(pickupLocationJson)
           : null,
-      deliveryRequested: json['deliveryRequested'] == true,
       fulfillmentMethod: json['fulfillmentMethod'] as String? ?? 'PICKUP',
       learnerPreferredPickupWindows: _parsePreferredWindows(
         json['learnerPreferredPickupWindows'],
@@ -328,6 +327,7 @@ class LearnerReservation {
       canLearnerReportSupplier: json['canLearnerReportSupplier'] == true,
       canReportNoDriverAvailable: json['canReportNoDriverAvailable'] == true,
       canLearnerRequestDelivery: json['canLearnerRequestDelivery'] == true,
+      incidentReviewStatus: json['incidentReviewStatus'] as String?,
     );
   }
 
@@ -353,6 +353,9 @@ class LearnerReservation {
 
   bool get isPickupFulfillment => fulfillmentMethod == 'PICKUP';
   bool get isDeliveryFulfillment => fulfillmentMethod == 'DELIVERY';
+
+  bool get hasDeliveryJob =>
+      isDeliveryFulfillment || activeDelivery != null;
 
   static List<ReservationPreferredWindow> _parsePreferredWindows(Object? value) {
     if (value is! List) {

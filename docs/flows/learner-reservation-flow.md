@@ -34,7 +34,7 @@ Authenticated **LEARNER** reserves an available material from public material de
 3. If unauthenticated, the app redirects to login with `from=/materials/:id`.
 4. If authenticated as a non-learner, the UI blocks the action.
 5. The learner chooses pickup or delivery when both are available. Pickup-only or delivery-only materials preselect the only valid method.
-6. The app submits `POST /api/reservations` with the material id, requested quantity, fulfillment method, and the method-specific scheduling fields. Pickup preferred windows must leave at least 60 minutes before ending; shorter windows are blocked before creating the reservation.
+6. The app submits `POST /api/reservations` with the material id, requested quantity, fulfillment method, and the method-specific scheduling fields. Pickup preferred windows must start at least 30 minutes from now and end at least 30 minutes from now; invalid windows are blocked before creating the reservation with specific `PICKUP_*` error codes.
 7. Success creates a `PENDING` reservation, keeps the success snackbar, shows a **View reservation status** CTA, invalidates learner reservations, and reloads material detail so the status becomes `PENDING_RESERVATION`.
 8. Learner can open `/learner/reservations` from home to see pending/accepted/rejected/completed status. Accepted self-pickup cards show the full pickup address; delivery reservations keep pickup details on the delivery status page.
 9. Supplier handles the request through the existing incoming requests page.
@@ -79,7 +79,8 @@ Learner sees a success snack bar, refreshed material detail, and a pending card 
 - Unauthenticated → 401
 - Non-learner → 403
 - Validation errors → 400
-  - Pickup windows with less than 60 minutes remaining → `Preferred pickup window is too close to ending. Choose a window with at least 60 minutes remaining.`
+  - Pickup windows with less than 30 minutes remaining → `PICKUP_WINDOW_TOO_CLOSE_TO_ENDING`
+  - Pickup start too soon → `PICKUP_START_TOO_SOON`
 
 ### Files Involved
 
