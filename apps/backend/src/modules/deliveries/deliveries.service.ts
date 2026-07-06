@@ -15,6 +15,8 @@ import {
   resolveSavedDropoffAddressForDelivery,
 } from '../saved-dropoff-addresses/saved-dropoff-addresses.service.js';
 import { notifyNewDeliveryJobAvailable } from '../notifications/driver-delivery-notifications.js';
+import { escalateStaleAssignedDriverPickupsByIds } from '../reservations/reservations.stale-assigned-driver-auto-escalation.repository.js';
+import { isAssignedDriverPickupOverdue } from '../reservations/reservation-assigned-driver-pickup-overdue.js';
 
 export const ACTIVE_DELIVERY_STATUSES = [
   'WAITING_FOR_DRIVER',
@@ -102,6 +104,8 @@ const deliveryInclude = {
       status: true,
       pickupWindowStart: true,
       pickupWindowEnd: true,
+      supplierPickupWindowStart: true,
+      supplierPickupWindowEnd: true,
       completedAt: true,
       material: {
         select: {
@@ -253,6 +257,10 @@ export const mapLearnerDelivery = (
       delivery.reservation.pickupWindowStart?.toISOString() ?? null,
     pickupWindowEnd:
       delivery.reservation.pickupWindowEnd?.toISOString() ?? null,
+    supplierPickupWindowStart:
+      delivery.reservation.supplierPickupWindowStart?.toISOString() ?? null,
+    supplierPickupWindowEnd:
+      delivery.reservation.supplierPickupWindowEnd?.toISOString() ?? null,
     completedAt: delivery.reservation.completedAt?.toISOString() ?? null,
     material: delivery.reservation.material,
     supplier: {
@@ -264,6 +272,11 @@ export const mapLearnerDelivery = (
   dropoffLocation: mapLocation(delivery.dropoffLocation),
   driver: delivery.assignedDriverProfile,
   canTrack: canLearnerTrackDriver(delivery.status),
+  assignedDriverPickupOverdue: isAssignedDriverPickupOverdue({
+    supplierPickupWindowEnd: delivery.reservation.supplierPickupWindowEnd,
+    pickupWindowEnd: delivery.reservation.pickupWindowEnd,
+    deliveryStatus: delivery.status,
+  }),
   trackingMessage: learnerTrackingMessage(delivery.status),
   latestDriverPing: mapLatestDriverPing(delivery, {
     includeTrackingCoordinates: options.includeTrackingCoordinates,
@@ -461,11 +474,24 @@ export const requestDeliveryForReservation = async (
 };
 
 export const listMyDeliveries = async (learnerId: string) => {
-  const deliveries = await prisma.delivery.findMany({
+  let deliveries = await prisma.delivery.findMany({
     where: { requestedByUserId: learnerId },
     include: deliveryInclude,
     orderBy: { createdAt: 'desc' },
   });
+
+  const reservationIds = [
+    ...new Set(deliveries.map((delivery) => delivery.reservationId)),
+  ];
+
+  if (reservationIds.length > 0) {
+    await escalateStaleAssignedDriverPickupsByIds(reservationIds);
+    deliveries = await prisma.delivery.findMany({
+      where: { requestedByUserId: learnerId },
+      include: deliveryInclude,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 
   if (deliveries.length) {
     await prisma.$transaction(async (tx) => {
@@ -484,7 +510,21 @@ export const listMyDeliveries = async (learnerId: string) => {
 };
 
 export const getMyDelivery = async (learnerId: string, deliveryId: string) => {
-  const delivery = await prisma.delivery.findFirst({
+  let delivery = await prisma.delivery.findFirst({
+    where: {
+      id: deliveryId,
+      requestedByUserId: learnerId,
+    },
+    include: deliveryInclude,
+  });
+
+  if (!delivery) {
+    throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+  }
+
+  await escalateStaleAssignedDriverPickupsByIds([delivery.reservationId]);
+
+  delivery = await prisma.delivery.findFirst({
     where: {
       id: deliveryId,
       requestedByUserId: learnerId,

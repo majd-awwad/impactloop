@@ -49,6 +49,11 @@ import {
   escalateStaleNoDriverDeliveriesByIds,
   escalateStaleNoDriverDeliveriesForRequester,
 } from './reservations.no-driver-auto-escalation.repository.js';
+import {
+  escalateStaleAssignedDriverPickupsByIds,
+  escalateStaleAssignedDriverPickupsForRequester,
+} from './reservations.stale-assigned-driver-auto-escalation.repository.js';
+import { isAssignedDriverPickupOverdue } from './reservation-assigned-driver-pickup-overdue.js';
 import { notifyReservationCreated } from '../notifications/reservation-notifications.js';
 import type {
   CreateReservationInput,
@@ -202,6 +207,9 @@ const mapLearnerReservation = (
   const incidentReviewStatus = resolveIncidentReviewStatus(
     reservation.noShowReports,
   );
+  const pendingIncidentReasonCode =
+    reservation.noShowReports.find((report) => report.status === 'PENDING_REVIEW')
+      ?.reasonCode ?? null;
   const canLearnerReportSupplier = canLearnerReportSupplierIssue({
     status: reservation.status,
     fulfillmentMethod: reservation.fulfillmentMethod,
@@ -218,6 +226,11 @@ const mapLearnerReservation = (
     assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
     hasDelivery: deliveryCount > 0,
     hasPendingReport: hasOpenIncident,
+  });
+  const assignedDriverPickupOverdue = isAssignedDriverPickupOverdue({
+    supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+    pickupWindowEnd: reservation.pickupWindowEnd,
+    deliveryStatus: latestDelivery?.status ?? null,
   });
   const canLearnerRequestDelivery =
     reservation.status === 'ACCEPTED' &&
@@ -292,10 +305,12 @@ const mapLearnerReservation = (
     canLearnerReschedule,
     canLearnerReportSupplier,
     canReportNoDriverAvailable: canReportNoDriverAvailableFlag,
+    assignedDriverPickupOverdue,
     canLearnerRequestDelivery,
     canSendMessage:
       reservationAllowsMessaging(reservation.status) && !hasOpenIncident,
     incidentReviewStatus,
+    pendingIncidentReasonCode,
     latestMessage: latestMessage ?? null,
     material: {
       id: reservation.material.id,
@@ -352,6 +367,7 @@ export const listMyReservations = async (requesterId: string) => {
 
   await expireStaleMissedPickupsForRequester(requesterId);
   await escalateStaleNoDriverDeliveriesForRequester(requesterId);
+  await escalateStaleAssignedDriverPickupsForRequester(requesterId);
   reservations =
     await reservationsRepository.findLearnerReservations(requesterId);
 
@@ -415,6 +431,7 @@ export const getMyReservationById = async (
   if (reservation.status === 'ACCEPTED') {
     await expireStaleMissedPickupsByIds([reservationId], requesterId);
     await escalateStaleNoDriverDeliveriesByIds([reservationId]);
+    await escalateStaleAssignedDriverPickupsByIds([reservationId]);
     reservation = await reservationsRepository.findLearnerReservationById(
       requesterId,
       reservationId,

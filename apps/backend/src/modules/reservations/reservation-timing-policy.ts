@@ -38,3 +38,25 @@ export const NO_DRIVER_CANCEL_REASON = 'NO_DRIVER_UNAVAILABLE';
 
 /** Stored in reservations.pending_reschedule_reason when admin asks supplier to reconfirm pickup. */
 export const NO_DRIVER_SUPPLIER_RECONFIRM_REASON = 'NO_DRIVER_ADMIN_REQUEST';
+
+/** Stored when admin asks supplier to reconfirm after stale assigned-driver pickup. */
+export const STALE_PICKUP_SUPPLIER_RECONFIRM_REASON = 'STALE_PICKUP_ADMIN_REQUEST';
+
+/** Stored in reservations.rejection_reason when admin cancels after stale pickup failure. */
+export const STALE_PICKUP_CANCEL_REASON = 'PICKUP_NOT_COMPLETED';
+
+export const ADMIN_SUPPLIER_PICKUP_RECONFIRM_REASONS = [
+  NO_DRIVER_SUPPLIER_RECONFIRM_REASON,
+  STALE_PICKUP_SUPPLIER_RECONFIRM_REASON,
+] as const;
+
+export type AdminSupplierPickupReconfirmReason =
+  (typeof ADMIN_SUPPLIER_PICKUP_RECONFIRM_REASONS)[number];
+
+export const isAdminSupplierPickupReconfirmReason = (
+  value: string | null | undefined,
+): value is AdminSupplierPickupReconfirmReason =>
+  value != null &&
+  (ADMIN_SUPPLIER_PICKUP_RECONFIRM_REASONS as readonly string[]).includes(
+    value,
+  );

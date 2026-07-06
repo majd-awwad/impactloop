@@ -35,8 +35,11 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
     if (showNoDriverOverdueWarning) {
       children.add(
         Text(
-          'No driver accepted this delivery before the supplier pickup window '
-          'ended. Report it so an admin can review next steps.',
+          canReportDriverNoShow && !canReportNoDriverAvailable
+              ? 'The assigned driver has not completed supplier pickup after '
+                  'the window ended. Report driver no-show so an admin can review.'
+              : 'No driver accepted this delivery before the supplier pickup window '
+                  'ended. Report it so an admin can review next steps.',
           style: context.supplierBody().copyWith(
             fontSize: 12,
             color: colors.textSecondary,

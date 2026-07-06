@@ -1,6 +1,9 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import { computeEarliestDeliveryStart } from './supplier-reservation-scheduling.js';
-import { NO_DRIVER_SUPPLIER_RECONFIRM_REASON } from '../reservations/reservation-timing-policy.js';
+import {
+  isAdminSupplierPickupReconfirmReason,
+  NO_DRIVER_SUPPLIER_RECONFIRM_REASON,
+} from '../reservations/reservation-timing-policy.js';
 import { assertValidPickupWindow } from '../reservations/pickup-window-validation.js';
 import { runSerializableTransaction } from '../reservations/reservations.quantity.js';
 import { reservationInclude } from './supplier-reservations.repository.js';
@@ -66,7 +69,7 @@ export const submitNoDriverPickupWindowForSupplier = async (input: {
       return { outcome: 'INVALID_RESERVATION_STATUS' as const, reservation: existing };
     }
 
-    if (existing.pendingRescheduleReason !== NO_DRIVER_SUPPLIER_RECONFIRM_REASON) {
+    if (!isAdminSupplierPickupReconfirmReason(existing.pendingRescheduleReason)) {
       return { outcome: 'NOT_ELIGIBLE' as const, reservation: existing };
     }
 

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_response.dart';
+import 'models/driver_delivery_inactive_context.dart';
 import 'models/driver_delivery_failure_request.dart';
 import 'models/driver_delivery.dart';
 import 'models/driver_deliveries_list_result.dart';
@@ -28,6 +29,15 @@ class DriverDeliveriesApi {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>('/api/driver/deliveries/active'),
       _parseDeliveriesListResult,
+    );
+  }
+
+  Future<DriverDeliveryInactiveContext> fetchInactiveContext(String deliveryId) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/driver/deliveries/$deliveryId/inactive-context',
+      ),
+      DriverDeliveryInactiveContext.fromJson,
     );
   }
 

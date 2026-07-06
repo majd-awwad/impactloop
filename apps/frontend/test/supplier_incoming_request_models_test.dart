@@ -129,6 +129,40 @@ void main() {
     expect(request.shouldShowSupplierHandoverCode, isFalse);
   });
 
+  test('SupplierIncomingRequestStatus maps EXPIRED separately from REJECTED', () {
+    expect(
+      SupplierIncomingRequestStatusLabels.fromApiValue('EXPIRED'),
+      SupplierIncomingRequestStatus.expired,
+    );
+    expect(
+      SupplierIncomingRequestStatusLabels.fromApiValue('REJECTED'),
+      SupplierIncomingRequestStatus.declined,
+    );
+    expect(
+      SupplierIncomingRequestStatus.expired.label,
+      'Expired — no response',
+    );
+    expect(
+      SupplierIncomingRequestStatus.declined.label,
+      'Declined',
+    );
+  });
+
+  test('SupplierIncomingRequest.fromJson maps EXPIRED status', () {
+    final request = SupplierIncomingRequest.fromJson({
+      'id': 'res-expired',
+      'status': 'EXPIRED',
+      'quantityRequested': 1,
+      'fulfillmentMethod': 'PICKUP',
+      'createdAt': '2026-06-17T10:30:00.000Z',
+      'material': {'title': 'Wood scraps', 'unit': 'kg'},
+      'learner': {'displayName': 'Sara'},
+    });
+
+    expect(request.status, SupplierIncomingRequestStatus.expired);
+    expect(request.status, isNot(SupplierIncomingRequestStatus.declined));
+  });
+
   test('SupplierIncomingRequestStatus maps awaiting confirmation', () {
     expect(
       SupplierIncomingRequestStatusLabels.fromApiValue(
@@ -238,5 +272,50 @@ void main() {
       conflict.awaitingConfirmationMessage,
       'Scheduling conflict — waiting for learner confirmation',
     );
+  });
+
+  test('supplierActionStatusLabel shows new pickup window after admin reconfirm', () {
+    final request = SupplierIncomingRequest.fromJson({
+      'id': 'res-stale-pickup',
+      'status': 'AWAITING_SUPPLIER_CONFIRMATION',
+      'quantityRequested': 1,
+      'fulfillmentMethod': 'DELIVERY',
+      'canSubmitNoDriverPickupWindow': true,
+      'pendingReschedule': {
+        'requestedBy': 'SUPPLIER',
+        'reason': 'STALE_PICKUP_ADMIN_REQUEST',
+      },
+      'activeDelivery': {'id': 'del-1', 'status': 'AWAITING_RESOLUTION'},
+      'createdAt': '2026-06-17T10:30:00.000Z',
+      'material': {'title': 'Panels', 'unit': 'piece'},
+      'learner': {'displayName': 'Ahmad'},
+    });
+
+    expect(
+      request.status,
+      SupplierIncomingRequestStatus.awaitingSupplierConfirmation,
+    );
+    expect(request.supplierActionStatusLabel, 'New pickup window needed');
+    expect(
+      request.status.label,
+      isNot('New pickup window needed'),
+    );
+  });
+
+  test('supplierActionStatusLabel keeps needs resolution label before admin action', () {
+    final request = SupplierIncomingRequest.fromJson({
+      'id': 'res-awaiting-resolution',
+      'status': 'AWAITING_RESOLUTION',
+      'quantityRequested': 1,
+      'fulfillmentMethod': 'DELIVERY',
+      'canSubmitNoDriverPickupWindow': false,
+      'activeDelivery': {'id': 'del-1', 'status': 'AWAITING_RESOLUTION'},
+      'createdAt': '2026-06-17T10:30:00.000Z',
+      'material': {'title': 'Panels', 'unit': 'piece'},
+      'learner': {'displayName': 'Ahmad'},
+    });
+
+    expect(request.status, SupplierIncomingRequestStatus.needsResolution);
+    expect(request.supplierActionStatusLabel, 'Pending admin review');
   });
 }

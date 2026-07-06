@@ -31,9 +31,27 @@ bool isNoDriverAvailableSystemReport(AdminNoShowReportItem report) =>
     report.targetRole == 'SYSTEM' &&
     report.reasonCode == 'NO_DRIVER_AVAILABLE';
 
+bool isStaleAssignedPickupReport(AdminNoShowReportItem report) =>
+    report.reasonCode == 'NO_RESPONSE_AFTER_PICKUP_WINDOW' ||
+    report.reasonCode == 'DRIVER_DID_NOT_ARRIVE' ||
+    report.reasonCode == 'PICKUP_FAILED';
+
+bool isDeliveryPickupRecoveryReport(AdminNoShowReportItem report) =>
+    isNoDriverAvailableSystemReport(report) ||
+    isStaleAssignedPickupReport(report);
+
 String noShowReportTitle(AdminNoShowReportItem report) {
   if (isNoDriverAvailableSystemReport(report)) {
     return 'No driver available';
+  }
+  if (report.reasonCode == 'NO_RESPONSE_AFTER_PICKUP_WINDOW') {
+    return 'Pickup not completed';
+  }
+  if (report.reasonCode == 'DRIVER_DID_NOT_ARRIVE') {
+    return 'Driver no-show';
+  }
+  if (report.reasonCode == 'PICKUP_FAILED') {
+    return 'Pickup failed';
   }
   return report.materialTitle;
 }
@@ -507,7 +525,9 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final report = widget.report;
-    final isNoDriverReport = isNoDriverAvailableSystemReport(report);
+    final isPickupRecoveryReport = isDeliveryPickupRecoveryReport(report);
+    final showDriverVerify =
+        isPickupRecoveryReport && report.targetRole == 'DRIVER';
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -523,7 +543,7 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
             noShowReportTitle(report),
             style: AdminTypography.sectionTitle(palette),
           ),
-          if (isNoDriverReport) ...[
+          if (isPickupRecoveryReport) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
               report.materialTitle,
@@ -623,7 +643,7 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
                   ),
                 ],
                 if (_detail!.targetVerifiedNoShowCount != null &&
-                    !isNoDriverReport) ...[
+                    report.targetRole != 'SYSTEM') ...[
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     'Verified strikes: ${_detail!.targetVerifiedNoShowCount}',
@@ -639,7 +659,7 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
-                if (isNoDriverReport) ...[
+                if (isPickupRecoveryReport) ...[
                   FilledButton(
                     onPressed: widget.isBusy
                         ? null
@@ -664,16 +684,17 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
                           )
                         : const Text('Cancel and release hold'),
                   ),
-                  OutlinedButton(
-                    onPressed: widget.isBusy ? null : widget.onResolve,
-                    child: widget.isBusy && widget.busyAction == 'resolve'
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Resolve no strike'),
-                  ),
+                  if (showDriverVerify)
+                    FilledButton(
+                      onPressed: widget.isBusy ? null : widget.onVerify,
+                      child: widget.isBusy && widget.busyAction == 'verify'
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Verify driver fault'),
+                    ),
                 ] else ...[
                   OutlinedButton(
                     onPressed: widget.isBusy ? null : widget.onReject,

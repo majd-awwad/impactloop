@@ -656,7 +656,8 @@ class _NotificationTile extends StatelessWidget {
         return Icons.local_shipping_outlined;
       case 'DRIVER_DELIVERY_ACCEPTED':
       case 'DRIVER_DELIVERY_NEXT_STEP':
-        return Icons.check_circle_outline_rounded;
+      case 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW':
+        return Icons.admin_panel_settings_outlined;
       case 'DRIVER_PICKUP_STARTING_SOON':
       case 'DRIVER_PICKUP_WINDOW_STARTED':
       case 'DRIVER_PICKUP_OVERDUE':

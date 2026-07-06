@@ -32,7 +32,7 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final deliveryAsync = ref.watch(activeDriverDeliveryProvider(deliveryId));
+    final deliveryAsync = ref.watch(driverDeliveryDetailProvider(deliveryId));
 
     return SingleChildScrollView(
       padding: const EdgeInsetsDirectional.fromSTEB(
@@ -55,22 +55,35 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
               title: 'Could not load delivery details.',
               subtitle: 'Please try again.',
               actionLabel: 'Retry',
-              onAction: () =>
-                  ref.invalidate(activeDriverDeliveryProvider(deliveryId)),
+              onAction: () => refreshActiveDriverDelivery(ref, deliveryId),
             ),
-            data: (delivery) {
-              if (delivery == null) {
-                return _StatePanel(
+            data: (state) {
+              return switch (state) {
+                DriverDeliveryDetailActive(:final delivery) => _DeliveryContent(
+                  delivery: delivery,
+                  onRefresh: () => refreshActiveDriverDelivery(ref, deliveryId),
+                ),
+                DriverDeliveryDetailInactive(:final context) => _StatePanel(
+                  icon: context.movedToAdminReview
+                      ? Icons.admin_panel_settings_outlined
+                      : Icons.lock_outline,
+                  title: context.movedToAdminReview
+                      ? 'Delivery moved to admin review'
+                      : 'Delivery no longer active',
+                  subtitle: context.message ??
+                      'This delivery is no longer active. It was moved to admin review.',
+                  actionLabel: 'Back to jobs',
+                  onAction: () => context.popOrGo('/driver/jobs'),
+                ),
+                DriverDeliveryDetailNotFound() => _StatePanel(
                   icon: Icons.lock_outline,
                   title: 'Delivery not active or not assigned to you',
                   subtitle:
                       'Open the jobs board to view your current assigned delivery.',
                   actionLabel: 'Back to jobs',
                   onAction: () => context.popOrGo('/driver/jobs'),
-                );
-              }
-
-              return _DeliveryContent(delivery: delivery);
+                ),
+              };
             },
           ),
         ),
@@ -80,9 +93,13 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
 }
 
 class _DeliveryContent extends StatelessWidget {
-  const _DeliveryContent({required this.delivery});
+  const _DeliveryContent({
+    required this.delivery,
+    required this.onRefresh,
+  });
 
   final DriverDelivery delivery;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +110,7 @@ class _DeliveryContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Header(delivery: delivery),
+        _Header(delivery: delivery, onRefresh: onRefresh),
         const SizedBox(height: AppSpacing.lg),
         if (wide)
           Row(
@@ -115,9 +132,13 @@ class _DeliveryContent extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.delivery});
+  const _Header({
+    required this.delivery,
+    required this.onRefresh,
+  });
 
   final DriverDelivery delivery;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -127,11 +148,23 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Active delivery',
-            style: AppTextStyles.display(
-              context,
-            ).copyWith(color: palette.textPrimary),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  'Active delivery',
+                  style: AppTextStyles.display(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                ),
+              ),
+              IconButton(
+                onPressed: onRefresh,
+                tooltip: 'Refresh',
+                icon: const Icon(Icons.refresh_rounded),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(

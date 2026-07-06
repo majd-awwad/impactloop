@@ -14,6 +14,10 @@ import {
   escalateStaleNoDriverDeliveriesForOwner,
 } from '../reservations/reservations.no-driver-auto-escalation.repository.js';
 import {
+  escalateStaleAssignedDriverPickupsForOwner,
+} from '../reservations/reservations.stale-assigned-driver-auto-escalation.repository.js';
+import { isAssignedDriverPickupOverdue } from '../reservations/reservation-assigned-driver-pickup-overdue.js';
+import {
   mapReservationMessage,
   findLatestReservationMessagesByReservationIds,
   findReservationMessages,
@@ -33,7 +37,7 @@ import {
   assertValidPickupWindow,
   validatePickupWindow,
 } from '../reservations/pickup-window-validation.js';
-import { PICKUP_WINDOW_TOO_CLOSE_MESSAGE, NO_DRIVER_SUPPLIER_RECONFIRM_REASON } from '../reservations/reservation-timing-policy.js';
+import { PICKUP_WINDOW_TOO_CLOSE_MESSAGE, isAdminSupplierPickupReconfirmReason } from '../reservations/reservation-timing-policy.js';
 import { submitNoDriverPickupWindowForSupplier } from './no-driver-supplier-pickup.repository.js';
 import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import {
@@ -376,7 +380,9 @@ export const mapSupplierReservation = (
     canSubmitNoDriverPickupWindow:
       reservation.status === 'AWAITING_SUPPLIER_CONFIRMATION' &&
       reservation.fulfillmentMethod === 'DELIVERY' &&
-      reservation.pendingRescheduleReason === NO_DRIVER_SUPPLIER_RECONFIRM_REASON &&
+      isAdminSupplierPickupReconfirmReason(
+        reservation.pendingRescheduleReason,
+      ) &&
       latestDelivery?.status === 'AWAITING_RESOLUTION',
     canSupplierMarkDeliveryPickupExpired:
       !hasOpenIncident &&
@@ -398,6 +404,11 @@ export const mapSupplierReservation = (
         deliveryStatus: latestDelivery?.status ?? null,
         assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
       }),
+    assignedDriverPickupOverdue: isAssignedDriverPickupOverdue({
+      supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+      pickupWindowEnd: reservation.pickupWindowEnd,
+      deliveryStatus: latestDelivery?.status ?? null,
+    }),
     canSendMessage:
       reservationAllowsMessaging(reservation.status) && !hasOpenIncident,
     noShowReport: mapNoShowReportSummary(reservation.noShowReports),
@@ -412,6 +423,7 @@ export const listSupplierReservations = async (
   await expireStalePendingReservationsForOwner(ownerId);
   await expireStaleMissedPickupsForOwner(ownerId);
   await escalateStaleNoDriverDeliveriesForOwner(ownerId);
+  await escalateStaleAssignedDriverPickupsForOwner(ownerId);
 
   const statuses = query.status
     ? tabToReservationStatuses(query.status)

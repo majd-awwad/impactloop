@@ -803,6 +803,8 @@ class SupplierL10n {
   String get tabNeedsLearner => t('Needs learner', 'بحاجة إلى المتعلم');
   String get tabCancelled => t('Cancelled', 'ملغى');
   String get tabDeclined => t('Declined', 'مرفوض');
+  String get tabExpired =>
+      t('Expired — no response', 'منتهٍ — لا رد');
   String get tabCompleted => filterCompleted;
   String get noRequests => t('No requests yet.', 'لا توجد طلبات بعد.');
   String get noRequestsForFilter => t(
@@ -889,6 +891,7 @@ class SupplierL10n {
         SupplierIncomingRequestStatus.awaitingSupplierConfirmation =>
           t('Waiting for supplier', 'بانتظار المورد'),
         SupplierIncomingRequestStatus.declined => tabDeclined,
+        SupplierIncomingRequestStatus.expired => tabExpired,
         SupplierIncomingRequestStatus.completed => tabCompleted,
         SupplierIncomingRequestStatus.cancelled => tabCancelled,
         SupplierIncomingRequestStatus.noShow => 'Learner no-show',
@@ -1712,6 +1715,10 @@ class SupplierL10n {
   String get noDeclineReasonProvided => t(
         'No decline reason provided.',
         'لم يُقدَّم سبب للرفض.',
+      );
+  String get expiredIncomingRequestMessage => t(
+        'This request expired because you did not accept or decline in time.',
+        'انتهت صلاحية هذا الطلب لأنك لم تقبل أو ترفض في الوقت المحدد.',
       );
   String get completedLabel => t('Completed', 'مكتمل');
   String get supplierNoteLabel => t('Supplier note', 'ملاحظة المورد');

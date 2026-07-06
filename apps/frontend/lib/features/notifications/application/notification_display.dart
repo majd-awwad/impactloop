@@ -42,6 +42,7 @@ NotificationVisualCategory categoryForNotification(AppNotification notification)
       return NotificationVisualCategory.reminder;
     case 'DRIVER_DELIVERY_ACCEPTED':
     case 'DRIVER_DELIVERY_NEXT_STEP':
+    case 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW':
     case 'DELIVERY_DRIVER_ASSIGNED':
       return NotificationVisualCategory.deliveryUpdate;
     default:

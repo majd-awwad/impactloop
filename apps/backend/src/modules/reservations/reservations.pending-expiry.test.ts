@@ -17,6 +17,7 @@ import {
 import { expireStalePendingReservationsByIds } from './reservations.pending-expiry.repository.js';
 import { PENDING_RESERVATION_FALLBACK_HOURS } from './reservation-timing-policy.js';
 import type { CreateReservationInput } from './reservations.validation.js';
+import { listSupplierReservations } from '../supplier-reservations/supplier-reservations.service.js';
 
 const TEST_MARKER = '[test-reservation-pending-expiry]';
 
@@ -303,6 +304,21 @@ describe('reservation pending expiry', () => {
 
     assert.ok(item);
     assert.equal(item?.status, 'EXPIRED');
+  });
+
+  test('listSupplierReservations returns EXPIRED not REJECTED for auto-expired pending', async () => {
+    const { reservation } = await createDuePendingReservation(ctx, 1);
+
+    await expireStalePendingReservationsByIds([reservation.id], ctx.learnerId);
+
+    const listed = await listSupplierReservations(ctx.supplierId, {
+      status: 'cancelled',
+    });
+    const item = listed.find((entry) => entry.id === reservation.id);
+
+    assert.ok(item);
+    assert.equal(item?.status, 'EXPIRED');
+    assert.notEqual(item?.status, 'REJECTED');
   });
 
   test('getMyReservationById auto-expires due pending reservation', async () => {

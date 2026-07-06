@@ -3,33 +3,31 @@ import { after, before, describe, test } from 'node:test';
 
 import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
+import { countVerifiedStrikesForUser } from '../reservations/account-suspension.js';
+import {
+  STALE_PICKUP_CANCEL_REASON,
+  STALE_PICKUP_SUPPLIER_RECONFIRM_REASON,
+} from '../reservations/reservation-timing-policy.js';
+import { listSupplierReservations } from '../supplier-reservations/supplier-reservations.service.js';
+import { submitNoDriverPickupWindow } from '../supplier-reservations/supplier-reservations.service.js';
+import { listMyReservations } from '../reservations/reservations.service.js';
+import { escalateStaleAssignedDriverPickupsByIds } from '../reservations/reservations.stale-assigned-driver-auto-escalation.repository.js';
+import { NO_DRIVER_AUTO_ESCALATION_HOURS } from '../reservations/reservation-timing-policy.js';
 import {
   cancelReleaseHoldAdminNoShowReport,
   listAdminNoShowReports,
   requestSupplierRescheduleAdminNoShowReport,
+  resolveAdminNoShowReport,
+  verifyAdminNoShowReport,
 } from './admin-no-show-reports.service.js';
-import { countVerifiedStrikesForUser } from '../reservations/account-suspension.js';
-import { NO_DRIVER_CANCEL_REASON, NO_DRIVER_SUPPLIER_RECONFIRM_REASON } from '../reservations/reservation-timing-policy.js';
-import { reportNoDriverAvailable } from '../reservations/reservations.service.js';
-import { listMyReservations } from '../reservations/reservations.service.js';
-import { submitNoDriverPickupWindow } from '../supplier-reservations/supplier-reservations.service.js';
 
-const TEST_MARKER = '[test-admin-no-driver-resolution]';
-
-const pickupWindowEndAfterGrace = () =>
-  new Date(Date.now() - (31 * 60 + 5) * 1000);
-
-const futurePickupWindow = () => {
-  const supplierPickupWindowStart = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-  const supplierPickupWindowEnd = new Date(
-    supplierPickupWindowStart.getTime() + 2 * 60 * 60 * 1000,
-  );
-  return { supplierPickupWindowStart, supplierPickupWindowEnd };
-};
+const TEST_MARKER = '[test-admin-stale-pickup-resolution]';
 
 type TestContext = {
   supplierId: string;
   learnerId: string;
+  driverId: string;
+  driverProfileId: string;
   adminId: string;
   categoryId: string;
   locationId: string;
@@ -40,10 +38,20 @@ type TestContext = {
   createdUserIds: string[];
 };
 
-async function createAwaitingResolutionNoDriverCase(ctx: TestContext) {
-  const pastSupplierPickupEnd = pickupWindowEndAfterGrace();
+const futurePickupWindow = () => {
+  const supplierPickupWindowStart = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+  const supplierPickupWindowEnd = new Date(
+    supplierPickupWindowStart.getTime() + 2 * 60 * 60 * 1000,
+  );
+  return { supplierPickupWindowStart, supplierPickupWindowEnd };
+};
+
+async function createStalePickupRecoveryCase(ctx: TestContext) {
+  const supplierPickupWindowEnd = new Date(
+    Date.now() - (NO_DRIVER_AUTO_ESCALATION_HOURS + 1) * 3_600_000,
+  );
   const supplierPickupStart = new Date(
-    pastSupplierPickupEnd.getTime() - 3_600_000,
+    supplierPickupWindowEnd.getTime() - 3_600_000,
   );
 
   const material = await prisma.material.create({
@@ -51,8 +59,8 @@ async function createAwaitingResolutionNoDriverCase(ctx: TestContext) {
       ownerId: ctx.supplierId,
       categoryId: ctx.categoryId,
       locationId: ctx.locationId,
-      title: `${TEST_MARKER} delivery ${Date.now()}`,
-      description: 'Admin no-driver resolution test',
+      title: `${TEST_MARKER} material ${Date.now()}`,
+      description: 'Stale pickup recovery test',
       materialType: 'Test',
       quantity: 2,
       unit: 'piece',
@@ -73,7 +81,7 @@ async function createAwaitingResolutionNoDriverCase(ctx: TestContext) {
       status: 'ACCEPTED',
       fulfillmentMethod: 'DELIVERY',
       supplierPickupWindowStart: supplierPickupStart,
-      supplierPickupWindowEnd: pastSupplierPickupEnd,
+      supplierPickupWindowEnd,
       acceptedAt: supplierPickupStart,
     },
   });
@@ -85,15 +93,24 @@ async function createAwaitingResolutionNoDriverCase(ctx: TestContext) {
       pickupLocationId: ctx.locationId,
       dropoffLocationId: ctx.locationId,
       requestedByUserId: ctx.learnerId,
-      status: 'WAITING_FOR_DRIVER',
+      assignedDriverProfileId: ctx.driverProfileId,
+      status: 'DRIVER_ASSIGNED',
       requestedAt: supplierPickupStart,
+      assignedAt: supplierPickupStart,
     },
   });
   ctx.createdDeliveryIds.push(delivery.id);
 
-  await reportNoDriverAvailable(ctx.learnerId, reservation.id, {
-    note: 'No driver accepted',
+  await prisma.deliveryAssignment.create({
+    data: {
+      deliveryId: delivery.id,
+      driverProfileId: ctx.driverProfileId,
+      assignedByUserId: ctx.driverId,
+      status: 'ACTIVE',
+    },
   });
+
+  await escalateStaleAssignedDriverPickupsByIds([reservation.id]);
 
   const reports = await listAdminNoShowReports({
     status: 'PENDING_REVIEW',
@@ -129,12 +146,6 @@ async function cleanup(ctx: TestContext) {
   }
 
   if (ctx.createdReservationIds.length) {
-    await prisma.reservationMessage.deleteMany({
-      where: { reservationId: { in: ctx.createdReservationIds } },
-    });
-    await prisma.noShowReport.deleteMany({
-      where: { reservationId: { in: ctx.createdReservationIds } },
-    });
     await prisma.reservationStatusHistory.deleteMany({
       where: { reservationId: { in: ctx.createdReservationIds } },
     });
@@ -150,19 +161,18 @@ async function cleanup(ctx: TestContext) {
   }
 
   if (ctx.createdUserIds.length) {
-    await prisma.authToken.deleteMany({
-      where: { userId: { in: ctx.createdUserIds } },
-    });
     await prisma.user.deleteMany({
       where: { id: { in: ctx.createdUserIds } },
     });
   }
 }
 
-describe('admin no-driver resolution', () => {
+describe('admin stale assigned-driver pickup recovery', () => {
   const ctx: TestContext = {
     supplierId: '',
     learnerId: '',
+    driverId: '',
+    driverProfileId: '',
     adminId: '',
     categoryId: '',
     locationId: '',
@@ -174,8 +184,7 @@ describe('admin no-driver resolution', () => {
   };
 
   before(async () => {
-    const passwordHash = await hashPassword('test-password');
-
+    const passwordHash = await hashPassword('TestPassword123!');
     const category = await prisma.category.findFirst();
     assert.ok(category);
     ctx.categoryId = category.id;
@@ -188,7 +197,7 @@ describe('admin no-driver resolution', () => {
       data: {
         email: `${TEST_MARKER}-supplier-${Date.now()}@test.local`,
         passwordHash,
-        displayName: 'No Driver Supplier',
+        displayName: 'Stale Pickup Supplier',
         accountStatus: 'ACTIVE',
         roles: { create: { role: 'SUPPLIER' } },
       },
@@ -200,7 +209,7 @@ describe('admin no-driver resolution', () => {
       data: {
         email: `${TEST_MARKER}-learner-${Date.now()}@test.local`,
         passwordHash,
-        displayName: 'No Driver Learner',
+        displayName: 'Stale Pickup Learner',
         accountStatus: 'ACTIVE',
         roles: { create: { role: 'LEARNER' } },
       },
@@ -208,11 +217,35 @@ describe('admin no-driver resolution', () => {
     ctx.learnerId = learner.id;
     ctx.createdUserIds.push(learner.id);
 
+    const driver = await prisma.user.create({
+      data: {
+        email: `${TEST_MARKER}-driver-${Date.now()}@test.local`,
+        passwordHash,
+        displayName: 'Stale Pickup Driver',
+        accountStatus: 'ACTIVE',
+        roles: { create: { role: 'DRIVER' } },
+        driverProfile: {
+          create: {
+            displayName: 'Driver',
+            phone: '+970591234567',
+            city: 'Ramallah',
+            area: 'Center',
+            transportationType: 'BICYCLE',
+            vehicleType: 'BICYCLE',
+          },
+        },
+      },
+      include: { driverProfile: { select: { id: true } } },
+    });
+    ctx.driverId = driver.id;
+    ctx.driverProfileId = driver.driverProfile!.id;
+    ctx.createdUserIds.push(driver.id);
+
     const admin = await prisma.user.create({
       data: {
         email: `${TEST_MARKER}-admin-${Date.now()}@test.local`,
         passwordHash,
-        displayName: 'No Driver Admin',
+        displayName: 'Stale Pickup Admin',
         accountStatus: 'ACTIVE',
         roles: { create: { role: 'ADMIN' } },
       },
@@ -225,18 +258,30 @@ describe('admin no-driver resolution', () => {
     await cleanup(ctx);
   });
 
-  test('admin asks supplier for new pickup window without changing windows', async () => {
+  test('generic resolve is blocked for stale pickup recovery reports', async () => {
+    const { report } = await createStalePickupRecoveryCase(ctx);
+
+    await assert.rejects(
+      () => resolveAdminNoShowReport(ctx.adminId, report.id, 'Closed'),
+      (error: Error & { code?: string }) => {
+        assert.equal(error.code, 'OPERATIONAL_ACTION_REQUIRED');
+        return true;
+      },
+    );
+  });
+
+  test('ask supplier moves reservation out of awaiting resolution and resolves report', async () => {
     const { material, reservation, delivery, report } =
-      await createAwaitingResolutionNoDriverCase(ctx);
+      await createStalePickupRecoveryCase(ctx);
     const qtyBefore = Number(material.quantity);
 
-    const result = await requestSupplierRescheduleAdminNoShowReport(
+    const mapped = await requestSupplierRescheduleAdminNoShowReport(
       ctx.adminId,
       report.id,
-      { adminNote: 'Please propose a new handover time' },
+      {},
     );
 
-    assert.equal(result.status, 'RESOLVED_NO_STRIKE');
+    assert.equal(mapped.status, 'RESOLVED_NO_STRIKE');
 
     const updatedReservation = await prisma.reservation.findUnique({
       where: { id: reservation.id },
@@ -244,9 +289,8 @@ describe('admin no-driver resolution', () => {
     assert.equal(updatedReservation?.status, 'AWAITING_SUPPLIER_CONFIRMATION');
     assert.equal(
       updatedReservation?.pendingRescheduleReason,
-      NO_DRIVER_SUPPLIER_RECONFIRM_REASON,
+      STALE_PICKUP_SUPPLIER_RECONFIRM_REASON,
     );
-    assert.ok(updatedReservation?.supplierPickupWindowStart);
 
     const updatedDelivery = await prisma.delivery.findUnique({
       where: { id: delivery.id },
@@ -259,12 +303,17 @@ describe('admin no-driver resolution', () => {
     assert.equal(Number(updatedMaterial?.quantity), qtyBefore);
     assert.equal(updatedMaterial?.status, 'RESERVED');
 
-    const strikes = await countVerifiedStrikesForUser(ctx.learnerId);
-    assert.equal(strikes, 0);
+    const supplierList = await listSupplierReservations(ctx.supplierId, {
+      status: 'needs_supplier',
+    });
+    const supplierItem = supplierList.find((entry) => entry.id === reservation.id);
+    assert.ok(supplierItem);
+    assert.equal(supplierItem.status, 'AWAITING_SUPPLIER_CONFIRMATION');
+    assert.equal(supplierItem.canSubmitNoDriverPickupWindow, true);
   });
 
-  test('supplier pickup window submission reopens driver search without strike', async () => {
-    const { reservation, report } = await createAwaitingResolutionNoDriverCase(ctx);
+  test('supplier submitting new window reopens driver search', async () => {
+    const { reservation, report } = await createStalePickupRecoveryCase(ctx);
     const windows = futurePickupWindow();
 
     await requestSupplierRescheduleAdminNoShowReport(ctx.adminId, report.id, {});
@@ -278,11 +327,6 @@ describe('admin no-driver resolution', () => {
     assert.equal(mapped.activeDelivery?.status, 'WAITING_FOR_DRIVER');
     assert.equal(mapped.canSubmitNoDriverPickupWindow, false);
 
-    const updatedReport = await prisma.noShowReport.findUnique({
-      where: { id: report.id },
-    });
-    assert.equal(updatedReport?.status, 'RESOLVED_NO_STRIKE');
-
     const learnerList = await listMyReservations(ctx.learnerId);
     const learnerItem = learnerList.find((entry) => entry.id === reservation.id);
     assert.ok(learnerItem);
@@ -290,24 +334,24 @@ describe('admin no-driver resolution', () => {
     assert.equal(learnerItem.activeDelivery?.status, 'WAITING_FOR_DRIVER');
   });
 
-  test('cancel and release hold expires reservation and releases material hold', async () => {
+  test('cancel and release hold expires reservation without reducing quantity', async () => {
     const { material, reservation, delivery, report } =
-      await createAwaitingResolutionNoDriverCase(ctx);
+      await createStalePickupRecoveryCase(ctx);
     const qtyBefore = Number(material.quantity);
 
-    const resolved = await cancelReleaseHoldAdminNoShowReport(
+    const mapped = await cancelReleaseHoldAdminNoShowReport(
       ctx.adminId,
       report.id,
-      { adminNote: 'Cancelled after no driver' },
+      {},
     );
 
-    assert.equal(resolved.status, 'RESOLVED_NO_STRIKE');
+    assert.equal(mapped.status, 'RESOLVED_NO_STRIKE');
 
     const updatedReservation = await prisma.reservation.findUnique({
       where: { id: reservation.id },
     });
     assert.equal(updatedReservation?.status, 'EXPIRED');
-    assert.equal(updatedReservation?.rejectionReason, NO_DRIVER_CANCEL_REASON);
+    assert.equal(updatedReservation?.rejectionReason, STALE_PICKUP_CANCEL_REASON);
 
     const updatedDelivery = await prisma.delivery.findUnique({
       where: { id: delivery.id },
@@ -319,8 +363,36 @@ describe('admin no-driver resolution', () => {
     });
     assert.equal(Number(updatedMaterial?.quantity), qtyBefore);
     assert.notEqual(updatedMaterial?.status, 'RESERVED');
+  });
 
-    const strikes = await countVerifiedStrikesForUser(ctx.learnerId);
-    assert.equal(strikes, 0);
+  test('verify driver fault increments driver strike only for DRIVER target', async () => {
+    const { report } = await createStalePickupRecoveryCase(ctx);
+
+    assert.equal(report.targetRole, 'DRIVER');
+
+    const verified = await verifyAdminNoShowReport(
+      ctx.adminId,
+      report.id,
+      'Driver did not complete pickup',
+    );
+
+    assert.equal(verified.report.status, 'VERIFIED');
+
+    const driverStrikes = await countVerifiedStrikesForUser(ctx.driverId);
+    assert.equal(driverStrikes, 1);
+
+    const learnerStrikes = await countVerifiedStrikesForUser(ctx.learnerId);
+    assert.equal(learnerStrikes, 0);
+
+    const updatedReservation = await prisma.reservation.findUnique({
+      where: { id: report.reservationId },
+    });
+    assert.equal(updatedReservation?.status, 'AWAITING_RESOLUTION');
+
+    await requestSupplierRescheduleAdminNoShowReport(ctx.adminId, report.id, {});
+    const afterRequest = await prisma.reservation.findUnique({
+      where: { id: report.reservationId },
+    });
+    assert.equal(afterRequest?.status, 'AWAITING_SUPPLIER_CONFIRMATION');
   });
 });

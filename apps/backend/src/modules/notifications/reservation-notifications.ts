@@ -178,3 +178,29 @@ export const notifyNoDriverSupplierRescheduleRequested = async (
       relatedEntityId: reservation.id,
     });
   });
+
+export const notifyStalePickupSupplierRescheduleRequested = async (
+  reservationId: string,
+  adminNote?: string,
+) =>
+  notifySafely(async () => {
+    const reservation = await loadReservationContext(reservationId);
+    if (!reservation) {
+      return;
+    }
+
+    const noteSuffix = adminNote?.trim()
+      ? ` Admin note: ${adminNote.trim()}`
+      : '';
+
+    await createNotification({
+      userId: reservation.ownerId,
+      notificationType: 'STALE_PICKUP_SUPPLIER_RESCHEDULE_REQUESTED',
+      title: 'New pickup window needed',
+      body:
+        'Pickup was not completed in time. Please choose a new pickup window if the material is still available.'
+        + noteSuffix,
+      relatedEntityType: 'RESERVATION',
+      relatedEntityId: reservation.id,
+    });
+  });
