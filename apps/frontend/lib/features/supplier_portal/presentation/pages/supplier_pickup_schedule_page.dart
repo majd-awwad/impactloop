@@ -2,38 +2,58 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/api_exception.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../../data/pickup_schedule_grouping.dart';
 import '../controllers/supplier_pickup_schedule_providers.dart';
 import '../controllers/supplier_requests_providers.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/complete_pickup_dialog.dart';
+import '../widgets/reservation_follow_up_flow.dart';
 import '../widgets/pickup_schedule_card.dart';
 import '../widgets/pickup_schedule_date_section.dart';
 import '../widgets/pickup_schedule_details_dialog.dart';
 import '../widgets/pickup_schedule_filter_chips.dart';
+import '../widgets/supplier_delivery_incident_flow.dart';
 import '../widgets/supplier_feedback.dart';
 
 const _contentMaxWidth = 960.0;
+const _deliveryHandledCompleteMessage =
+    'This reservation is handled by delivery. The driver will mark it completed.';
+
+bool _isDeliveryCompleteConflict(Object error) {
+  return error is ApiException &&
+      error.statusCode == 409 &&
+      error.message.toLowerCase().contains('self-pickup');
+}
 
 Future<void> _handleCompletePickup(
   BuildContext context,
   WidgetRef ref,
   SupplierPickupScheduleItem item,
 ) async {
-  final confirmed = await CompletePickupDialog.show(context);
-  if (confirmed != true || !context.mounted) {
+  final code = await CompletePickupDialog.show(context);
+  if (code == null || code.trim().isEmpty || !context.mounted) {
     return;
   }
 
   ref.read(completingReservationIdProvider.notifier).setCompleting(item.id);
   try {
-    await completeIncomingRequest(ref, requestId: item.id);
+    await completeIncomingRequest(
+      ref,
+      requestId: item.id,
+      confirmationCode: code.trim(),
+    );
     if (!context.mounted) return;
     showSupplierInfoSnackBar(context, context.s.pickupCompleted);
-  } catch (_) {
+  } catch (error) {
     if (!context.mounted) return;
-    showSupplierErrorSnackBar(context, context.s.pickupCompleteFailed);
+    showSupplierErrorSnackBar(
+      context,
+      _isDeliveryCompleteConflict(error)
+          ? _deliveryHandledCompleteMessage
+          : context.s.pickupCompleteFailed,
+    );
   } finally {
     ref.read(completingReservationIdProvider.notifier).setCompleting(null);
   }
@@ -94,19 +114,108 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                             item: item,
                             groupKind: groups[i].kind,
                             isCompleting: completingId == item.id,
-                            onViewDetails: () => PickupScheduleDetailsDialog.show(
-                              context,
-                              item: item,
-                              groupKind: groups[i].kind,
-                            ),
+                            onViewDetails: () =>
+                                PickupScheduleDetailsDialog.show(
+                                  context,
+                                  item: item,
+                                  groupKind: groups[i].kind,
+                                  isCompleting: completingId == item.id,
+                                  onMarkCompleted:
+                                      item.status ==
+                                              SupplierPickupScheduleStatus
+                                                  .accepted &&
+                                          item.canSupplierComplete
+                                      ? () => _handleCompletePickup(
+                                            context,
+                                            ref,
+                                            item,
+                                          )
+                                      : null,
+                                  onReschedule: item.canSupplierReschedule
+                                      ? () => handleReschedulePickup(
+                                            context,
+                                            ref,
+                                            reservationId: item.id,
+                                            materialTitle: item.materialTitle,
+                                            learnerName: item.learnerName,
+                                          )
+                                      : null,
+                                  onCloseReservation:
+                                      item.canSupplierCloseOverduePickup
+                                      ? () => handleCloseOverduePickup(
+                                            context,
+                                            ref,
+                                            reservationId: item.id,
+                                          )
+                                      : null,
+                                  onReportToAdmin:
+                                      item.canSupplierReportAndCloseOverduePickup
+                                      ? () => handleReportToAdminAndClose(
+                                            context,
+                                            ref,
+                                            reservationId: item.id,
+                                          )
+                                      : null,
+                                ),
                             onMarkCompleted:
-                                item.status == SupplierPickupScheduleStatus.accepted
-                                    ? () => _handleCompletePickup(
-                                          context,
-                                          ref,
-                                          item,
-                                        )
-                                    : null,
+                                item.status ==
+                                        SupplierPickupScheduleStatus.accepted &&
+                                    item.canSupplierComplete
+                                ? () =>
+                                      _handleCompletePickup(context, ref, item)
+                                : null,
+                            onReschedule: item.canSupplierReschedule
+                                ? () => handleReschedulePickup(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                      materialTitle: item.materialTitle,
+                                      learnerName: item.learnerName,
+                                    )
+                                : null,
+                            onCloseReservation:
+                                item.canSupplierCloseOverduePickup
+                                ? () => handleCloseOverduePickup(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                    )
+                                : null,
+                            onReportToAdmin:
+                                item.canSupplierReportAndCloseOverduePickup
+                                ? () => handleReportToAdminAndClose(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                    )
+                                : null,
+                            onReportNoDriverAvailable:
+                                item.canReportNoDriverAvailable
+                                ? () => handleReportNoDriverAvailable(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                    )
+                                : null,
+                            onMarkDeliveryPickupExpired:
+                                !item.canReportNoDriverAvailable &&
+                                        item.canSupplierMarkDeliveryPickupExpired
+                                ? () => handleMarkDeliveryPickupExpired(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                    )
+                                : null,
+                            onReportDriverNoShow:
+                                item.canSupplierReportDriverNoShow &&
+                                        item.activeDelivery?.id.isNotEmpty ==
+                                            true
+                                ? () => handleReportDriverNoShow(
+                                      context,
+                                      ref,
+                                      deliveryId: item.activeDelivery!.id,
+                                    )
+                                : null,
                           ),
                         ),
                       ],
@@ -144,9 +253,7 @@ class _EmptyState extends StatelessWidget {
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: context.supplierBody().copyWith(
-            color: colors.textMuted,
-          ),
+          style: context.supplierBody().copyWith(color: colors.textMuted),
         ),
       ),
     );
@@ -201,14 +308,9 @@ class _ErrorState extends StatelessWidget {
           Text(
             l.pickupScheduleLoadError,
             textAlign: TextAlign.center,
-            style: context.supplierBody().copyWith(
-              color: colors.textMuted,
-            ),
+            style: context.supplierBody().copyWith(color: colors.textMuted),
           ),
-          TextButton(
-            onPressed: onRetry,
-            child: Text(l.tryAgain),
-          ),
+          TextButton(onPressed: onRetry, child: Text(l.tryAgain)),
         ],
       ),
     );

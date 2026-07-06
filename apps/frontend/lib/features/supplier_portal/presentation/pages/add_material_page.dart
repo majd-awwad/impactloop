@@ -6,10 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../materials/application/material_listing_providers.dart';
-import '../../../materials/data/material_listing_repository.dart';
+import '../../../materials/data/material_listing_data_providers.dart';
 import '../../../materials/data/models/category.dart';
 import '../../../materials/data/models/create_material_request.dart';
 import '../../../materials/data/models/created_material.dart';
@@ -360,7 +361,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
             _ResumeErrorBanner(
               message: _resumeError!,
               onRetry: _retryResume,
-              onBack: () => context.go('/supplier/notifications'),
+              onBack: () => context.popOrGo('/supplier/notifications'),
             ),
           ],
           const SizedBox(height: AppSpacing.lg),
@@ -371,7 +372,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   title: l.completeProfileFirst,
                   message: l.completeProfileFirstMessage,
                   buttonLabel: l.goToProfile,
-                  onPressed: () => context.go('/supplier/profile'),
+                  onPressed: () => context.push('/supplier/profile'),
                 );
               }
 
@@ -381,7 +382,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   title: l.setPickupLocation,
                   message: l.setPickupLocationMessage,
                   buttonLabel: l.editSupplierProfile,
-                  onPressed: () => context.go('/supplier/profile'),
+                  onPressed: () => context.push('/supplier/profile'),
                 );
               }
 
@@ -398,7 +399,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                   title: l.categoriesUnavailable,
                   message: l.categoriesUnavailableMessage,
                   buttonLabel: l.backToDashboard,
-                  onPressed: () => context.go('/supplier'),
+                  onPressed: () => context.popOrGo('/supplier'),
                 ),
               );
             },
@@ -408,7 +409,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               title: l.profileLoadError,
               message: l.profileLoadErrorMessage,
               buttonLabel: l.goToProfile,
-              onPressed: () => context.go('/supplier/profile'),
+              onPressed: () => context.push('/supplier/profile'),
             ),
           ),
         ],
@@ -740,7 +741,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
                         _isCheckingPrice ||
                             _isSubmitting ||
                             _submittedSuccessfully ||
-                            paidOtherBlocked
+                            paidOtherBlocked ||
+                            !_conditions.contains(_condition)
                         ? null
                         : _verifyPrice,
                     icon: _isCheckingPrice
@@ -1536,6 +1538,14 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       showSupplierErrorSnackBar(context, context.s.enterMaterialNameFirst);
       return;
     }
+    if (!_conditions.contains(_condition)) {
+      showSupplierErrorSnackBar(
+        context,
+        context.s.selectConditionBeforePriceVerify,
+      );
+      return;
+    }
+
     final quantity = double.tryParse(_quantityController.text.trim());
     final price = double.tryParse(_priceController.text.trim());
     if (quantity == null || quantity <= 0 || price == null || price <= 0) {
@@ -1771,7 +1781,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
         _submittedSuccessfully = true;
       });
       showSupplierInfoSnackBar(context, context.s.materialListedSuccess);
-      context.go('/supplier/materials');
+      context.popOrGo('/supplier/materials');
     } on ApiException catch (error) {
       if (!mounted) return;
       showSupplierErrorSnackBar(context, _apiErrorMessage(error));

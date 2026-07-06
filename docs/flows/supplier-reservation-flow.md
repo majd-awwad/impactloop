@@ -22,7 +22,7 @@ Switch tabs: pending / accepted / declined / completed (wording per UI). See car
 
 ### Backend path
 
-`listSupplierReservations` → map tab to `ReservationStatus` (`declined` → `REJECTED`) → `findSupplierReservations(ownerId, status)`.
+`listSupplierReservations` → map tab to reservation statuses (`accepted` tab → `ACCEPTED` + `AWAITING_LEARNER_CONFIRMATION`; `declined` → `REJECTED`) → `findSupplierReservations(ownerId, statuses)`.
 
 ### Database changes
 
@@ -30,7 +30,7 @@ Read-only.
 
 ### Success state
 
-List renders `SupplierIncomingRequest` cards.
+List renders `SupplierIncomingRequest` cards. Each reservation DTO includes `fulfillmentMethod`, `fulfillmentLabel`, nullable `activeDelivery` (`id`, `status`), and `canSupplierComplete`. The supplier UI uses `canSupplierComplete` instead of guessing whether the complete action is allowed.
 
 ### Error states
 
@@ -42,11 +42,11 @@ API failure → error/empty state in page (`supplier_feedback.dart` patterns).
 
 ### Trigger
 
-Supplier taps **Accept** on pending request → dialog collects pickup window (+ optional note).
+Supplier taps **Accept** on pending request → dialog shows fulfillment method, learner preferred windows, delivery details (when applicable), and collects supplier window (+ optional note). Delivery label: **Driver pickup window from supplier**.
 
 ### User path
 
-Confirm pickup start/end → reservation accepted → moves to accepted tab / pickup schedule.
+Confirm window → reservation becomes `ACCEPTED` or `AWAITING_LEARNER_CONFIRMATION` → accepted tab shows confirmed/proposed scheduling copy.
 
 ### Frontend path
 
@@ -54,26 +54,36 @@ Confirm pickup start/end → reservation accepted → moves to accepted tab / pi
 
 ### Backend path
 
-`acceptSupplierReservation` transaction:
+`acceptSupplierReservation` transaction (fulfillment-aware):
 
-- `reservations.status`: `PENDING` → `ACCEPTED`
-- Set `pickupWindowStart`, `pickupWindowEnd`, `supplierNote`, `acceptedAt`
-- `materials.status`: `PENDING_RESERVATION` → `RESERVED`
-- Insert `reservation_status_history` (RESERVATION group)
+**PICKUP**
+
+- Selected learner preferred window → `ACCEPTED`, set `pickupWindowStart/End` when the window still has at least 30 minutes remaining, even if its start time already passed
+- Selected learner preferred window with less than 30 minutes remaining → `400` / `PICKUP_WINDOW_TOO_CLOSE_TO_ENDING`
+- Custom supplier proposal → must start at least 30 minutes in the future; matching a learner preferred window → `ACCEPTED`, non-matching proposal → `AWAITING_LEARNER_CONFIRMATION`, set `supplierProposedPickupWindowStart/End`
+- Legacy null preferred windows → `ACCEPTED` (old behavior)
+
+**DELIVERY**
+
+- Supplier window = driver pickup from supplier
+- Feasible learner delivery window (60-minute buffer after supplier pickup end) → `ACCEPTED`, store supplier pickup + confirmed delivery windows, create `Delivery` `WAITING_FOR_DRIVER`
+- Not feasible → `AWAITING_LEARNER_CONFIRMATION`, store supplier pickup + `schedulingConflictReason`, no delivery row
+
+All paths: keep quantity hold; insert `reservation_status_history`; recompute material status.
 
 ### Database changes
 
-Update `reservations`; update `materials`; insert `reservation_status_history`.
+Update `reservations`; may insert `deliveries` + locations for feasible delivery accept; update `materials`; insert `reservation_status_history`.
 
 ### Success state
 
-Returns mapped reservation DTO; providers invalidated (`incomingRequestsProvider`, supplier notifications, supplier dashboard, pickup schedule, pickup schedule summary).
+Returns mapped reservation DTO including fulfillment/scheduling fields; providers invalidated (`incomingRequestsProvider`, supplier notifications, supplier dashboard, pickup schedule, pickup schedule summary).
 
 ### Error states
 
 - 404 not found
 - 409 `CONFLICT` — not pending
-- Validation errors on pickup window — **Needs verification** of schema
+- 400 validation — selected learner pickup window has too little remaining time, custom supplier pickup starts too soon, invalid end-before-start windows, or delivery requires address/windows/material.deliveryAllowed
 
 ---
 
@@ -109,7 +119,7 @@ Decline invalidates incoming requests, supplier notifications, supplier dashboar
 
 ### Trigger
 
-Supplier marks pickup complete (incoming requests or pickup schedule UI).
+Supplier marks self-pickup complete (incoming requests or pickup schedule UI). Delivery reservations do not show the manual complete action; they show delivery status copy such as “Delivery requested”, “Driver assigned”, “On the way”, or “Delivered”.
 
 ### Frontend path
 
@@ -124,7 +134,7 @@ Transaction:
 - `material.quantity` decreases by `quantityRequested`
 - `materials.status` → `AVAILABLE` if quantity remains, else `REUSED` with `reusedAt` and `reusedByReservationId`
 
-If the reservation has an active or delivered `Delivery`, supplier complete returns `409 CONFLICT`. Delivery reservations complete only through the assigned driver `DELIVERED` transition.
+If the reservation has `fulfillmentMethod = DELIVERY` or any `Delivery` row, supplier complete returns `409 CONFLICT`. Delivery reservations complete only through the assigned driver `DELIVERED` transition. The supplier UI maps this stale/race conflict to: “This reservation is handled by delivery. The driver will mark it completed.”
 
 ### Database changes
 
@@ -154,10 +164,13 @@ Complete invalidates incoming requests, supplier notifications, supplier dashboa
 
 ## Not implemented
 
-- Learner reservation cancel
-- Flutter delivery request / driver assignment UI
-- Cancel/expiry flows in UI
-- Multi-reservation queues / partial inventory allocation
+- Automatic `PENDING` reservation expiry — **Implemented (lazy)** on learner/supplier reservation reads and material availability reads; supplier `cancelled` tab includes `EXPIRED`.
+- Supplier **`mark-delivery-pickup-expired` UI** — **Implemented** on incoming request cards.
+- Dedicated learner reservation detail route (`/learner/reservations/:id`).
+- Self-pickup map on learner reservation UI — **Implemented**.
+- Realtime delivery tracking stream / background GPS.
+- Generic persisted notifications on reservation state changes — **Implemented** (`/api/notifications` + `/notifications` Flutter page).
+- QR polish.
 
 ---
 

@@ -1,14 +1,17 @@
 import { Router } from 'express';
 
-import { authMiddleware } from '../../middlewares/auth.middleware.js';
+import { authMiddleware, optionalAuthMiddleware } from '../../middlewares/auth.middleware.js';
+import { requireRoles } from '../../middlewares/role.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
   getListingPolicyHandler,
   getMaterial,
+  likeMaterial,
   listMaterials,
   priceCheckHandler,
+  unlikeMaterial,
 } from './materials.controller.js';
 import { submitMaterialReport } from '../admin-materials/admin-materials.controller.js';
 import {
@@ -31,8 +34,25 @@ materialsRouter.post(
 
 materialsRouter.get(
   '/',
+  optionalAuthMiddleware,
   validate(materialsQuerySchema, 'query'),
   asyncHandler(listMaterials),
+);
+
+materialsRouter.post(
+  '/:id/like',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(materialIdParamSchema, 'params'),
+  asyncHandler(likeMaterial),
+);
+
+materialsRouter.delete(
+  '/:id/like',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(materialIdParamSchema, 'params'),
+  asyncHandler(unlikeMaterial),
 );
 
 materialsRouter.post(
@@ -45,6 +65,7 @@ materialsRouter.post(
 
 materialsRouter.get(
   '/:id',
+  optionalAuthMiddleware,
   validate(materialIdParamSchema, 'params'),
   asyncHandler(getMaterial),
 );

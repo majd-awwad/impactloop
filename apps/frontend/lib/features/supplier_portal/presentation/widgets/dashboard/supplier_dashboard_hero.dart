@@ -40,9 +40,7 @@ class SupplierDashboardHero extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             context.s.dashboardHeroSubtitle,
-            style: context.supplierBody().copyWith(
-              color: colors.textSecondary,
-            ),
+            style: context.supplierBody().copyWith(color: colors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.md),
           Wrap(
@@ -69,7 +67,7 @@ class SupplierDashboardHero extends StatelessWidget {
             runSpacing: AppSpacing.sm,
             children: [
               FilledButton.icon(
-                onPressed: () => context.go('/supplier/materials/new'),
+                onPressed: () => context.push('/supplier/materials/new'),
                 style: FilledButton.styleFrom(
                   backgroundColor: colors.accent,
                   foregroundColor: colors.textOnAccent,
@@ -85,7 +83,7 @@ class SupplierDashboardHero extends StatelessWidget {
                 label: Text(context.s.addMaterial),
               ),
               OutlinedButton.icon(
-                onPressed: () => context.go('/supplier/reservations'),
+                onPressed: () => context.push('/supplier/reservations'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: colors.textPrimary,
                   side: BorderSide(

@@ -3,6 +3,8 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import type { LearningProjectsQuery } from './learning-projects.validation.js';
 
+const clientOrPrisma = (client?: Prisma.TransactionClient) => client ?? prisma;
+
 const publicProjectWhere: Prisma.LearningProjectWhereInput = {
   status: 'PUBLISHED',
   category: {
@@ -227,3 +229,89 @@ export const findLearningProjectById = async (id: string) => {
     include: learningProjectDetailInclude,
   });
 };
+
+export const createLearningProjectForReview = async (input: {
+  createdBy: string;
+  categoryId: string;
+  title: string;
+  shortDescription: string;
+  description: string;
+  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  estimatedDurationMinutes?: number;
+  coverImageUrl?: string | null;
+  requiredComponents?: {
+    name: string;
+    quantity?: number;
+    unit?: string;
+    notes?: string;
+    isRequired?: boolean;
+  }[];
+  steps?: { title: string; description: string }[];
+  links?: { url: string; title?: string }[];
+  client?: Prisma.TransactionClient;
+}) => {
+  const now = new Date();
+  const client = clientOrPrisma(input.client);
+
+  return client.learningProject.create({
+    data: {
+      categoryId: input.categoryId,
+      createdBy: input.createdBy,
+      title: input.title,
+      shortDescription: input.shortDescription,
+      description: input.description,
+      difficulty: input.difficulty,
+      estimatedDurationMinutes: input.estimatedDurationMinutes,
+      coverImageUrl: input.coverImageUrl ?? null,
+      status: 'PENDING_REVIEW',
+      submittedAt: now,
+      requiredComponents: input.requiredComponents?.length
+        ? {
+            create: input.requiredComponents.map((component) => ({
+              componentName: component.name,
+              materialType: 'General',
+              quantity: component.quantity ?? 1,
+              unit: component.unit ?? 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              isRequired: component.isRequired ?? true,
+              notes: component.notes,
+            })),
+          }
+        : undefined,
+      steps: input.steps?.length
+        ? {
+            create: input.steps.map((step, index) => ({
+              stepNumber: index + 1,
+              title: step.title,
+              description: step.description,
+            })),
+          }
+        : undefined,
+      links: input.links?.length
+        ? {
+            create: input.links.map((link) => ({
+              linkType: 'OTHER',
+              url: link.url,
+              title: link.title,
+            })),
+          }
+        : undefined,
+    },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      submittedAt: true,
+    },
+  });
+};
+
+export const findProjectCategoryForSubmit = async (categoryId: string) =>
+  prisma.category.findFirst({
+    where: {
+      id: categoryId,
+      isActive: true,
+      categoryType: { in: ['PROJECT', 'BOTH'] },
+    },
+    select: { id: true },
+  });

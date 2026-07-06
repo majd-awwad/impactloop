@@ -8,10 +8,22 @@ import { asyncHandler } from '../../utils/async-handler.js';
 import {
   cancelReservationHandler,
   createReservationHandler,
+  createLearnerReservationMessageHandler,
+  getMyReservationByIdHandler,
+  listLearnerReservationMessagesHandler,
   listMyReservationsHandler,
+  reportLearnerSupplierIssueHandler,
+  reportNoDriverAvailableHandler,
+  requestLearnerPickupRescheduleHandler,
+  resolveLearnerConfirmationHandler,
 } from './reservations.controller.js';
 import {
   createReservationSchema,
+  createReservationMessageSchema,
+  learnerConfirmationSchema,
+  reportNoDriverSchema,
+  reportSupplierIssueSchema,
+  requestPickupRescheduleSchema,
   reservationIdParamsSchema,
 } from './reservations.validation.js';
 import { requestDeliveryForReservationHandler } from '../deliveries/deliveries.controller.js';
@@ -28,6 +40,14 @@ reservationsRouter.get(
   asyncHandler(listMyReservationsHandler),
 );
 
+reservationsRouter.get(
+  '/:id',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(getMyReservationByIdHandler),
+);
+
 reservationsRouter.post(
   '/',
   authMiddleware,
@@ -42,6 +62,59 @@ reservationsRouter.patch(
   requireRoles('LEARNER'),
   validate(reservationIdParamsSchema, 'params'),
   asyncHandler(cancelReservationHandler),
+);
+
+reservationsRouter.patch(
+  '/:id/learner-confirmation',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(learnerConfirmationSchema),
+  asyncHandler(resolveLearnerConfirmationHandler),
+);
+
+reservationsRouter.get(
+  '/:id/messages',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(listLearnerReservationMessagesHandler),
+);
+
+reservationsRouter.post(
+  '/:id/messages',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(createReservationMessageSchema),
+  asyncHandler(createLearnerReservationMessageHandler),
+);
+
+reservationsRouter.post(
+  '/:id/request-reschedule',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(requestPickupRescheduleSchema),
+  asyncHandler(requestLearnerPickupRescheduleHandler),
+);
+
+reservationsRouter.post(
+  '/:id/report-supplier-issue',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(reportSupplierIssueSchema),
+  asyncHandler(reportLearnerSupplierIssueHandler),
+);
+
+reservationsRouter.post(
+  '/:id/report-no-driver',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(reportNoDriverSchema),
+  asyncHandler(reportNoDriverAvailableHandler),
 );
 
 reservationsRouter.post(

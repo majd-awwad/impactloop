@@ -3,14 +3,20 @@ import '../data/models/user.dart';
 const rootRoute = '/';
 const loginRoute = '/login';
 const registerRoute = '/register';
+const forgotPasswordRoute = '/forgot-password';
+const resetPasswordRoute = '/reset-password';
 const authCheckingRoute = '/auth/checking';
 const supplierPortalRoute = '/supplier';
+const supplierOverviewRoute = '/supplier/overview';
+const learningHubRoute = '/learning';
+const becomeSupplierRoute = '/become-supplier';
+const becomeLearnerRoute = '/become-learner';
+const supplierOnboardingRoute = becomeSupplierRoute;
 const driverPortalRoute = '/driver/jobs';
 const adminPortalRoute = '/admin';
 const inviteAcceptRoute = '/invite/accept';
 const homeRoute = '/home';
 const learnerReservationsRoute = '/learner/reservations';
-const supplierOnboardingRoute = '/supplier/onboarding';
 const supplierProfileRoute = '/supplier/profile';
 
 bool userHasRole(User? user, String role) {

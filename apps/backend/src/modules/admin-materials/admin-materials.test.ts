@@ -9,6 +9,7 @@ import { getMaterials } from '../materials/materials.service.js';
 import {
   hideAdminMaterial,
   listAdminMaterials,
+  markAdminMaterialUnavailable,
   rejectAdminMaterialReport,
   resolveAdminMaterialReport,
   restoreAdminMaterial,
@@ -67,7 +68,9 @@ async function createUser(input: {
   });
 }
 
-async function createMaterial(status: 'AVAILABLE' | 'UNAVAILABLE' | 'RESERVED' | 'REUSED') {
+async function createMaterial(
+  status: 'AVAILABLE' | 'UNAVAILABLE' | 'PENDING_RESERVATION' | 'RESERVED' | 'REUSED',
+) {
   const profile = await prisma.supplierProfile.findUnique({
     where: { userId: ctx.supplierId },
     select: { id: true },
@@ -183,11 +186,21 @@ describe('admin materials management', () => {
       q: material.title,
       status: 'AVAILABLE',
       priceType: 'ANY',
+      sort: 'newest',
     });
     assert.equal(
       publicList.items.some((item) => item.id === material.id),
       false,
     );
+  });
+
+  test('admin can mark available material unavailable', async () => {
+    const material = await createMaterial('AVAILABLE');
+
+    const updated = await markAdminMaterialUnavailable(ctx.adminId, material.id, {
+      reason: 'Temporarily out of stock',
+    });
+    assert.equal(updated.status, 'UNAVAILABLE');
   });
 
   test('admin can restore unavailable material', async () => {
@@ -204,7 +217,11 @@ describe('admin materials management', () => {
       () => restoreAdminMaterial(ctx.adminId, material.id),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
-        assert.match(error.message, /Reused materials cannot be restored/i);
+        assert.equal(error.statusCode, 409);
+        assert.match(
+          error.message,
+          /cannot be restored because its lifecycle is reserved or completed/i,
+        );
         return true;
       },
     );
@@ -217,7 +234,131 @@ describe('admin materials management', () => {
       () => restoreAdminMaterial(ctx.adminId, material.id),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
-        assert.match(error.message, /Reserved materials cannot be restored/i);
+        assert.equal(error.statusCode, 409);
+        assert.match(
+          error.message,
+          /cannot be restored because its lifecycle is reserved or completed/i,
+        );
+        return true;
+      },
+    );
+  });
+
+  test('pending reservation material cannot be hidden', async () => {
+    const material = await createMaterial('PENDING_RESERVATION');
+
+    await assert.rejects(
+      () =>
+        hideAdminMaterial(ctx.adminId, material.id, {
+          reason: 'Should not hide pending reservation material',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(
+          error.message,
+          /cannot be hidden because it is reserved or already reused/i,
+        );
+        return true;
+      },
+    );
+  });
+
+  test('pending reservation material cannot be marked unavailable', async () => {
+    const material = await createMaterial('PENDING_RESERVATION');
+
+    await assert.rejects(
+      () =>
+        markAdminMaterialUnavailable(ctx.adminId, material.id, {
+          reason: 'Should not mark pending reservation unavailable',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(
+          error.message,
+          /cannot be marked unavailable because it is reserved or already reused/i,
+        );
+        return true;
+      },
+    );
+  });
+
+  test('reserved material cannot be hidden', async () => {
+    const material = await createMaterial('RESERVED');
+
+    await assert.rejects(
+      () =>
+        hideAdminMaterial(ctx.adminId, material.id, {
+          reason: 'Should not hide reserved material',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(
+          error.message,
+          /cannot be hidden because it is reserved or already reused/i,
+        );
+        return true;
+      },
+    );
+  });
+
+  test('reserved material cannot be marked unavailable', async () => {
+    const material = await createMaterial('RESERVED');
+
+    await assert.rejects(
+      () =>
+        markAdminMaterialUnavailable(ctx.adminId, material.id, {
+          reason: 'Should not mark reserved material unavailable',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(
+          error.message,
+          /cannot be marked unavailable because it is reserved or already reused/i,
+        );
+        return true;
+      },
+    );
+  });
+
+  test('reused material cannot be hidden', async () => {
+    const material = await createMaterial('REUSED');
+
+    await assert.rejects(
+      () =>
+        hideAdminMaterial(ctx.adminId, material.id, {
+          reason: 'Should not hide reused material',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(
+          error.message,
+          /cannot be hidden because it is reserved or already reused/i,
+        );
+        return true;
+      },
+    );
+  });
+
+  test('reused material cannot be marked unavailable', async () => {
+    const material = await createMaterial('REUSED');
+
+    await assert.rejects(
+      () =>
+        markAdminMaterialUnavailable(ctx.adminId, material.id, {
+          reason: 'Should not mark reused material unavailable',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(
+          error.message,
+          /cannot be marked unavailable because it is reserved or already reused/i,
+        );
         return true;
       },
     );
@@ -323,5 +464,30 @@ describe('admin materials management', () => {
       select: { status: true },
     });
     assert.equal(persistedReport?.status, 'RESOLVED');
+  });
+
+  test('report hide-material action is blocked for reserved materials', async () => {
+    const material = await createMaterial('RESERVED');
+    const report = await submitMaterialReport(ctx.learnerId, material.id, {
+      reason: 'INAPPROPRIATE',
+      note: 'Should not hide reserved material from report',
+    });
+    ctx.reportIds.push(report.id);
+
+    await assert.rejects(
+      () =>
+        hideMaterialFromAdminReport(ctx.adminId, report.id, {
+          adminNote: 'Attempted hide on reserved material',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(
+          error.message,
+          /cannot be hidden because it is reserved or already reused/i,
+        );
+        return true;
+      },
+    );
   });
 });

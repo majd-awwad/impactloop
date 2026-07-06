@@ -1,5 +1,11 @@
 import { AppError } from '../../utils/app-error.js';
 
+import {
+  ADMIN_ACTIVITY_ACTIONS,
+  logAdminActivity,
+} from '../admin/admin-activity-log.js';
+import { countVerifiedStrikesForUser } from '../reservations/account-suspension.js';
+
 import * as repository from './admin-people.repository.js';
 import {
   assertActorMayChangeUserStatus,
@@ -9,17 +15,33 @@ import type {
   AdminPeopleListQuery,
   SuspendUserInput,
 } from './admin-people.validation.js';
+import { suspendUserSchema } from './admin-people.validation.js';
 
 type UserRecord = NonNullable<
   Awaited<ReturnType<typeof repository.findUserWithRoles>>
 >;
+
+const mapModeratorSummary = (
+  user: { id: string; displayName: string; email: string } | null,
+) =>
+  user
+    ? {
+        id: user.id,
+        displayName: user.displayName,
+        email: user.email,
+      }
+    : null;
 
 const mapPrimaryRole = (user: UserRecord) => {
   const primary = user.roles.find((role) => role.isPrimary);
   return primary?.role ?? user.roles[0]?.role ?? null;
 };
 
-const mapListItem = (user: UserRecord, actorId: string) => {
+const mapListItem = (
+  user: UserRecord,
+  actorId: string,
+  verifiedStrikeCount = 0,
+) => {
   const flags = buildStatusActionFlags(user, actorId);
   const isLearnerOnly =
     user.roles.some((role) => role.role === 'LEARNER') &&
@@ -41,34 +63,42 @@ const mapListItem = (user: UserRecord, actorId: string) => {
     verificationStatus: user.supplierProfile?.verificationStatus ?? null,
     driverStatus: user.driverProfile?.status ?? null,
     isLearnerOnly,
+    suspensionReasonPreview:
+      user.accountStatus === 'SUSPENDED' ? user.suspensionReason : null,
+    verifiedStrikeCount,
     ...flags,
   };
 };
 
-const mapDetail = (user: UserRecord, actorId: string) => ({
-  ...mapListItem(user, actorId),
-  phone: user.phone,
-  emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
-  phoneVerifiedAt: user.phoneVerifiedAt?.toISOString() ?? null,
-  updatedAt: user.updatedAt.toISOString(),
-  suspendedAt:
-    user.accountStatus === 'SUSPENDED' ? user.updatedAt.toISOString() : null,
-  suspensionReason: null,
-  suspendedByName: null,
-  supplierProfile: user.supplierProfile
-    ? {
-        publicName: user.supplierProfile.publicName,
-        supplierType: user.supplierProfile.supplierType,
-        verificationStatus: user.supplierProfile.verificationStatus,
-      }
-    : null,
-  driverProfile: user.driverProfile
-    ? {
-        status: user.driverProfile.status,
-        transportationType: user.driverProfile.transportationType,
-      }
-    : null,
-});
+const mapDetail = async (user: UserRecord, actorId: string) => {
+  const verifiedStrikeCount = await countVerifiedStrikesForUser(user.id);
+
+  return {
+    ...mapListItem(user, actorId, verifiedStrikeCount),
+    phone: user.phone,
+    emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+    phoneVerifiedAt: user.phoneVerifiedAt?.toISOString() ?? null,
+    updatedAt: user.updatedAt.toISOString(),
+    suspendedAt: user.suspendedAt?.toISOString() ?? null,
+    suspensionReason: user.suspensionReason,
+    suspendedBy: mapModeratorSummary(user.suspendedBy),
+    reactivatedAt: user.reactivatedAt?.toISOString() ?? null,
+    reactivatedBy: mapModeratorSummary(user.reactivatedBy),
+    supplierProfile: user.supplierProfile
+      ? {
+          publicName: user.supplierProfile.publicName,
+          supplierType: user.supplierProfile.supplierType,
+          verificationStatus: user.supplierProfile.verificationStatus,
+        }
+      : null,
+    driverProfile: user.driverProfile
+      ? {
+          status: user.driverProfile.status,
+          transportationType: user.driverProfile.transportationType,
+        }
+      : null,
+  };
+};
 
 export const getAdminPeopleSummary = async () => repository.countPeopleSummary();
 
@@ -77,10 +107,15 @@ export const listAdminPeople = async (
   query: AdminPeopleListQuery,
 ) => {
   const result = await repository.listUsersForAdmin(query);
+  const strikeCounts = await repository.countVerifiedStrikesForUserIds(
+    result.items.map((item) => item.id),
+  );
 
   return {
     summary: await repository.countPeopleSummary(),
-    items: result.items.map((item) => mapListItem(item, actorId)),
+    items: result.items.map((item) =>
+      mapListItem(item, actorId, strikeCounts.get(item.id) ?? 0),
+    ),
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -95,14 +130,23 @@ export const getAdminPersonById = async (actorId: string, userId: string) => {
     throw new AppError('User not found.', 404, 'NOT_FOUND');
   }
 
-  return mapDetail(user, actorId);
+  return await mapDetail(user, actorId);
 };
 
 export const suspendAdminPerson = async (
   actorId: string,
   userId: string,
-  _input: SuspendUserInput,
+  input: SuspendUserInput,
 ) => {
+  const parsed = suspendUserSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new AppError(
+      parsed.error.issues[0]?.message ?? 'Suspension reason is required.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
   const target = await assertActorMayChangeUserStatus(actorId, userId);
 
   if (
@@ -117,12 +161,22 @@ export const suspendAdminPerson = async (
     );
   }
 
-  const updated = await repository.updateUserAccountStatus(
+  const updated = await repository.suspendUserAccount({
     userId,
-    'SUSPENDED',
-  );
+    actorId,
+    reason: parsed.data.reason,
+  });
 
-  return mapDetail(updated, actorId);
+  await logAdminActivity({
+    actorUserId: actorId,
+    action: ADMIN_ACTIVITY_ACTIONS.USER_SUSPENDED,
+    targetType: 'USER',
+    targetId: userId,
+    targetLabel: updated.displayName,
+    metadata: { reason: parsed.data.reason },
+  });
+
+  return await mapDetail(updated, actorId);
 };
 
 export const reactivateAdminPerson = async (actorId: string, userId: string) => {
@@ -137,7 +191,18 @@ export const reactivateAdminPerson = async (actorId: string, userId: string) => 
     );
   }
 
-  const updated = await repository.updateUserAccountStatus(userId, 'ACTIVE');
+  const updated = await repository.reactivateUserAccount({
+    userId,
+    actorId,
+  });
 
-  return mapDetail(updated, actorId);
+  await logAdminActivity({
+    actorUserId: actorId,
+    action: ADMIN_ACTIVITY_ACTIONS.USER_REACTIVATED,
+    targetType: 'USER',
+    targetId: userId,
+    targetLabel: updated.displayName,
+  });
+
+  return await mapDetail(updated, actorId);
 };

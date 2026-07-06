@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/format/nis_price_format.dart';
 import '../../data/models/supplier_action_notification.dart';
 import '../theme/supplier_locale_scope.dart';
 import '../../data/models/supplier_incoming_request.dart';
@@ -116,6 +117,38 @@ class SupplierL10n {
         'Try clearing filters or adjusting your search.',
         'جرّب مسح التصفية أو تعديل البحث.',
       );
+  String get likesLabel => t('Likes', 'الإعجابات');
+  String get engagementSectionTitle => t('Engagement', 'التفاعل');
+  String get reservationsSectionTitle =>
+      t('Reservations for this material', 'حجوزات هذه المادة');
+  String get demandSectionTitle => t('Demand indicators', 'مؤشرات الطلب');
+  String get noMaterialReservationsYet => t(
+        'No reservations for this material yet.',
+        'لا توجد حجوزات لهذه المادة بعد.',
+      );
+  String get noActiveDemandYet => t(
+        'No active demand yet.',
+        'لا يوجد طلب نشط بعد.',
+      );
+  String get activeDemandLabel => t('Active demand', 'طلب نشط');
+  String get markUnavailableAction =>
+      t('Mark unavailable', 'تعليم كغير متاحة');
+  String get restoreAvailableAction =>
+      t('Restore available', 'إعادة إلى متاحة');
+  String materialRequestsBadge(int count) => t(
+        '$count request${count == 1 ? '' : 's'}',
+        count == 1 ? 'طلب واحد' : '$count طلبات',
+      );
+  String get highDemandBadge => t('High demand', 'طلب مرتفع');
+  String get openReservationActionLabel =>
+      t('Open reservation', 'فتح الحجز');
+  String get pendingReservationsLabel =>
+      t('Pending reservations', 'حجوزات قيد الانتظار');
+  String get reservedReservationsLabel =>
+      t('Reserved reservations', 'حجوزات مقبولة');
+  String get totalActiveRequestsLabel =>
+      t('Total active requests', 'إجمالي الطلبات النشطة');
+  String get demandScoreLabel => t('Demand score', 'درجة الطلب');
   String materialsResultCount(int count) => t(
         '$count material${count == 1 ? '' : 's'} shown',
         count == 1 ? 'مادة واحدة معروضة' : '$count مواد معروضة',
@@ -300,7 +333,83 @@ class SupplierL10n {
   String get statScheduledPickups =>
       t('Scheduled pickups', 'عمليات الاستلام المجدولة');
   String get statReusedMaterials => t('Reused materials', 'المواد المعاد استخدامها');
+  String get statTotalMaterials => t('Total materials', 'إجمالي المواد');
+  String get statAvailableMaterials => t('Available materials', 'المواد المتاحة');
+  String get statReservedMaterials => t('Reserved materials', 'المواد المحجوزة');
+  String get statTotalViews => statTotalMaterialViews;
+  String get statTotalLikes => statTotalMaterialLikes;
+  String get statTotalMaterialViews =>
+      t('Total material views', 'إجمالي مشاهدات المواد');
+  String get statTotalMaterialLikes =>
+      t('Total material likes', 'إجمالي إعجابات المواد');
+  String get statFollowers => t('Followers', 'المتابعون');
+  String get recentReservationRequestsTitle =>
+      t('Recent reservation requests', 'طلبات الحجز الأخيرة');
+  String get noReservationRequestsYet =>
+      t('No reservation requests yet.', 'لا توجد طلبات حجز بعد.');
+  String get mostViewedMaterialTitle =>
+      t('Most viewed material', 'المادة الأكثر مشاهدة');
+  String get supplierEngagementTitle =>
+      t('Supplier engagement', 'تفاعل المورد');
+  String get engagementTotalsLabel =>
+      t('Account totals', 'إجماليات الحساب');
+  String get noViewedMaterialsYet =>
+      t('No viewed materials yet.', 'لا توجد مواد بمشاهدات بعد.');
+  String get highDemandMaterialsTitle =>
+      t('High demand materials', 'مواد ذات طلب مرتفع');
+  String get highDemandMaterialsSubtitle => t(
+        'Materials with active reservation interest.',
+        'مواد لديها اهتمام حجز نشط.',
+      );
+  String get noHighDemandMaterialsYet =>
+      t('No high-demand materials yet.', 'لا توجد مواد ذات طلب مرتفع بعد.');
+  String activeRequestsLabel(int count) => t(
+        '$count active request${count == 1 ? '' : 's'}',
+        '$count ${count == 1 ? 'طلب نشط' : 'طلبات نشطة'}',
+      );
+  String get viewAllRequests => t('View all requests', 'عرض كل الطلبات');
+  String get unknownRequester => t('Unknown learner', 'متعلم غير معروف');
   String get operationsSnapshot => t('Operations snapshot', 'لمحة تشغيلية');
+  String reservationRequestMeta(
+    String requester,
+    String status,
+    String date,
+    double quantity,
+  ) =>
+      t(
+        '$requester · $status · $date · qty $quantity',
+        '$requester · $status · $date · الكمية $quantity',
+      );
+  String viewsCountLabel(int count) =>
+      t('$count views', '$count مشاهدة');
+  String demandCountLabel(int demand, int views) => t(
+        '$demand reservation${demand == 1 ? '' : 's'} · $views views',
+        '$demand ${demand == 1 ? 'حجز' : 'حجوزات'} · $views مشاهدة',
+      );
+  String get selectConditionBeforePriceVerify => t(
+        'Select material condition before verifying the price.',
+        'اختر حالة المادة قبل التحقق من السعر.',
+      );
+  String conditionAdjustedMaxMessage(
+    String currencySymbol,
+    String baseMax,
+    String conditionLabel,
+    String adjustedMax,
+  ) =>
+      t(
+        'Reference max: $currencySymbol$baseMax · Condition: $conditionLabel · Adjusted max: $currencySymbol$adjustedMax',
+        'الحد الأقصى المرجعي: $currencySymbol$baseMax · الحالة: $conditionLabel · الحد المعدّل: $currencySymbol$adjustedMax',
+      );
+  String get strongDemandInsight =>
+      t('Some materials are getting strong demand.', 'بعض المواد تحظى بطلب قوي.');
+  String get improveEngagementInsight => t(
+        'Your materials are getting views. Improve titles/images to increase engagement.',
+        'موادك تحصل على مشاهدات. حسّن العناوين/الصور لزيادة التفاعل.',
+      );
+  String get addFirstMaterialInsight => t(
+        'Add your first material to start receiving requests.',
+        'أضف أول مادة لك لتبدأ في تلقي الطلبات.',
+      );
   String get reservationStatus => t('Reservation status', 'حالة الحجوزات');
   String get materialsStatus => t('Materials status', 'حالة المواد');
   String get quickActions => t('Quick actions', 'إجراءات سريعة');
@@ -468,7 +577,10 @@ class SupplierL10n {
 
   String get notificationCompleted => filterCompleted;
   String maxPriceLabel(double max, String unit) =>
-      t('Max ${max.toStringAsFixed(0)} NIS/$unit', 'الحد ${max.toStringAsFixed(0)} ₪/$unit');
+      t(
+        'Max ${formatNisAmount(max)} NIS/$unit',
+        'الحد ${formatNisAmount(max)} ₪/$unit',
+      );
 
   String get editListingAction => t('Edit listing', 'تعديل الإدراج');
   String get editPriceAction => t('Edit price', 'تعديل السعر');
@@ -685,6 +797,11 @@ class SupplierL10n {
       );
   String get tabPending => t('Pending', 'معلق');
   String get tabAccepted => t('Accepted', 'مقبول');
+  String get tabAwaitingConfirmation =>
+      t('Needs learner confirmation', 'بحاجة إلى تأكيد المتعلم');
+  String get tabAll => t('All', 'الكل');
+  String get tabNeedsLearner => t('Needs learner', 'بحاجة إلى المتعلم');
+  String get tabCancelled => t('Cancelled', 'ملغى');
   String get tabDeclined => t('Declined', 'مرفوض');
   String get tabCompleted => filterCompleted;
   String get noRequests => t('No requests yet.', 'لا توجد طلبات بعد.');
@@ -724,34 +841,59 @@ class SupplierL10n {
 
   String incomingRequestTabLabel(SupplierIncomingRequestTab tab) =>
       switch (tab) {
+        SupplierIncomingRequestTab.all => tabAll,
         SupplierIncomingRequestTab.pending => tabPending,
+        SupplierIncomingRequestTab.needsLearner => tabNeedsLearner,
         SupplierIncomingRequestTab.accepted => tabAccepted,
         SupplierIncomingRequestTab.declined => tabDeclined,
         SupplierIncomingRequestTab.completed => tabCompleted,
+        SupplierIncomingRequestTab.cancelled => tabCancelled,
       };
 
   String incomingRequestEmptyTitle(SupplierIncomingRequestTab tab) =>
       switch (tab) {
+        SupplierIncomingRequestTab.all => noRequests,
         SupplierIncomingRequestTab.pending => noPendingRequestsTitle,
+        SupplierIncomingRequestTab.needsLearner =>
+          t('No requests waiting for learner', 'لا توجد طلبات بانتظار المتعلم'),
         SupplierIncomingRequestTab.accepted => noAcceptedPickupsTitle,
         SupplierIncomingRequestTab.declined => noDeclinedRequestsTitle,
         SupplierIncomingRequestTab.completed => noCompletedPickupsTitle,
+        SupplierIncomingRequestTab.cancelled =>
+          t('No cancelled requests', 'لا توجد طلبات ملغاة'),
       };
 
   String incomingRequestEmptySubtitle(SupplierIncomingRequestTab tab) =>
       switch (tab) {
+        SupplierIncomingRequestTab.all => noPendingRequestsSubtitle,
         SupplierIncomingRequestTab.pending => noPendingRequestsSubtitle,
+        SupplierIncomingRequestTab.needsLearner => t(
+              'Reservations awaiting learner confirmation appear here.',
+              'تظهر الحجوزات التي تنتظر تأكيد المتعلم هنا.',
+            ),
         SupplierIncomingRequestTab.accepted => noAcceptedPickupsSubtitle,
         SupplierIncomingRequestTab.declined => noDeclinedRequestsSubtitle,
         SupplierIncomingRequestTab.completed => noCompletedPickupsSubtitle,
+        SupplierIncomingRequestTab.cancelled => t(
+              'Cancelled reservations will appear here.',
+              'ستظهر الحجوزات الملغاة هنا.',
+            ),
       };
 
   String incomingRequestStatusLabel(SupplierIncomingRequestStatus status) =>
       switch (status) {
         SupplierIncomingRequestStatus.pending => tabPending,
         SupplierIncomingRequestStatus.accepted => tabAccepted,
+        SupplierIncomingRequestStatus.awaitingConfirmation =>
+          tabAwaitingConfirmation,
+        SupplierIncomingRequestStatus.awaitingSupplierConfirmation =>
+          t('Waiting for supplier', 'بانتظار المورد'),
         SupplierIncomingRequestStatus.declined => tabDeclined,
         SupplierIncomingRequestStatus.completed => tabCompleted,
+        SupplierIncomingRequestStatus.cancelled => tabCancelled,
+        SupplierIncomingRequestStatus.noShow => 'Learner no-show',
+        SupplierIncomingRequestStatus.fulfillmentFailed => 'Fulfillment failed',
+        SupplierIncomingRequestStatus.needsResolution => 'Needs admin review',
       };
 
   // —— Pickup schedule ——
@@ -1285,6 +1427,53 @@ class SupplierL10n {
   String photosCount(int count, int max) =>
       t('$count/$max photos', '$count/$max صور');
   String get pickupDetails => t('Pickup details', 'تفاصيل الاستلام');
+  String get sendMessageAction => t('Send message', 'إرسال رسالة');
+  String get pickupWindowPassedWarning => t(
+        'Pickup window passed. Choose a follow-up action.',
+        'انتهت نافذة الاستلام. اختر إجراء متابعة.',
+      );
+  String get reschedulePickupAction =>
+      t('Reschedule pickup', 'إعادة جدولة الاستلام');
+  String get cancelReservationAction =>
+      t('Cancel reservation', 'إلغاء الحجز');
+  String get reportNoShowAction => t('Report no-show', 'الإبلاغ عن عدم حضور');
+  String get noShowReportSubmitted => t(
+        'No-show report already submitted for this reservation.',
+        'تم إرسال بلاغ عدم الحضور لهذا الحجز بالفعل.',
+      );
+  String get followUpMessagesTitle =>
+      t('Follow-up messages', 'رسائل المتابعة');
+  String get noFollowUpMessagesYet => t(
+        'No follow-up messages yet.',
+        'لا توجد رسائل متابعة بعد.',
+      );
+  String get followUpMessageHint => t(
+        'Write a short follow-up message…',
+        'اكتب رسالة متابعة قصيرة…',
+      );
+  String get messagesLoadFailed => t(
+        'Could not load messages.',
+        'تعذر تحميل الرسائل.',
+      );
+  String get messageSendFailed =>
+      t('Could not send message.', 'تعذر إرسال الرسالة.');
+  String get needsFollowUpBadge =>
+      t('Needs follow-up', 'يحتاج متابعة');
+  String get overdueBadge => t('Overdue', 'متأخر');
+  String get reschedulePickupTitle =>
+      t('Reschedule pickup', 'إعادة جدولة الاستلام');
+  String get cancelReservationTitle =>
+      t('Cancel reservation', 'إلغاء الحجز');
+  String get cancelReservationMessage => t(
+        'This will cancel the reservation and release the material.',
+        'سيؤدي هذا إلى إلغاء الحجز وإتاحة المادة.',
+      );
+  String get reportNoShowTitle =>
+      t('Report no-show', 'الإبلاغ عن عدم حضور');
+  String get reportNoShowMessage => t(
+        'Submit a no-show report for admin review. This does not suspend the learner automatically.',
+        'أرسل بلاغ عدم حضور لمراجعة المسؤول. هذا لا يؤدي إلى تعليق حساب المتعلم تلقائياً.',
+      );
   String get completePickupTitle =>
       t('Mark pickup as completed?', 'تحديد الاستلام كمكتمل؟');
   String get completePickupMessage => t(
@@ -1303,6 +1492,87 @@ class SupplierL10n {
       );
   String get reasonOptional => t('Reason (optional)', 'السبب (اختياري)');
   String get pickupDate => t('Pickup date', 'تاريخ الاستلام');
+  String get confirmPickupWindowLabel =>
+      t('Pickup window', 'نافذة الاستلام');
+  String get driverPickupWindowFromSupplier => t(
+        'Driver pickup window from supplier',
+        'نافذة استلام السائق من المورد',
+      );
+  String get deliveryAcceptExplanation => t(
+        'By accepting, you agree to hand the material to the driver during this pickup window. We will check this against the learner’s preferred delivery windows.',
+        'بالقبول، توافق على تسليم المادة للسائق خلال نافذة الاستلام هذه. سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.',
+      );
+  String get deliverySchedulingPreviewIntro => t(
+        'We will check this against the learner’s preferred delivery windows.',
+        'سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.',
+      );
+  String deliveryEarliestAfterPickupLabel(String time) => t(
+        'Earliest delivery after pickup: $time',
+        'أقرب توصيل بعد الاستلام: $time',
+      );
+  String deliveryConfirmedWindowLabel(String window) => t(
+        'Confirmed learner delivery window: $window',
+        'نافذة التوصيل المؤكدة للمتعلم: $window',
+      );
+  String get deliveryNoFeasibleWindowPreview => t(
+        'No feasible learner delivery window. This will wait for learner confirmation.',
+        'لا توجد نافذة توصيل مناسبة للمتعلم. سينتظر هذا تأكيد المتعلم.',
+      );
+  String get deliveryScheduleCanAcceptDirectly => t(
+        'This schedule can be accepted directly.',
+        'يمكن قبول هذا الجدول مباشرة.',
+      );
+  String get deliveryScheduleNeedsLearnerConfirmation => t(
+        'This delivery window is not feasible after supplier pickup and travel buffer. Learner confirmation will be required.',
+        'نافذة التوصيل هذه غير مناسبة بعد استلام المورد وفترة السفر. سيلزم تأكيد المتعلم.',
+      );
+  String get pickupPreferredWindowSelectedHint => t(
+        'Selected learner preferred window',
+        'تم اختيار نافذة الاستلام المفضلة للمتعلم',
+      );
+  String get pickupCustomWindowHint => t(
+        'Custom proposed window',
+        'نافذة مقترحة مخصصة',
+      );
+  String get learnerPreferredPickupWindows => t(
+        'Learner preferred pickup windows',
+        'نوافذ الاستلام المفضلة للمتعلم',
+      );
+  String get learnerPreferredDeliveryWindows => t(
+        'Learner preferred delivery windows',
+        'نوافذ التوصيل المفضلة للمتعلم',
+      );
+  String get safeDropoffAllowed =>
+      t('Safe drop-off allowed', 'الإسقاط الآمن مسموح');
+  String get safeDropoffNotAllowed =>
+      t('Safe drop-off not allowed', 'الإسقاط الآمن غير مسموح');
+  String get deliveryNoteLabel => t('Delivery note', 'ملاحظة التوصيل');
+  String get deliveryPreferredWindowSelectedHint => t(
+        'Selected learner delivery window will be used when feasible.',
+        'سيتم استخدام نافذة التوصيل المفضلة للمتعلم عندما تكون ممكنة.',
+      );
+  String get proposeCustomDeliveryWindow => t(
+        'Propose custom delivery window',
+        'اقتراح نافذة توصيل مخصصة',
+      );
+  String get customDeliveryWindowLabel => t(
+        'Proposed learner delivery window',
+        'نافذة التوصيل المقترحة للمتعلم',
+      );
+  String get chooseCustomDeliveryWindow => t(
+        'Choose the proposed delivery date and time.',
+        'اختر تاريخ ووقت التوصيل المقترح.',
+      );
+  String get awaitingProposedTimeConfirmation => t(
+        'Proposed pickup time — waiting for learner confirmation',
+        'وقت الاستلام المقترح — في انتظار تأكيد المتعلم',
+      );
+  String get awaitingSchedulingConflictConfirmation => t(
+        'Scheduling conflict — waiting for learner confirmation',
+        'تعارض في الجدولة — في انتظار تأكيد المتعلم',
+      );
+  String get requestAwaitingConfirmation =>
+      t('Request submitted — awaiting learner confirmation', 'تم إرسال الطلب — في انتظار تأكيد المتعلم');
   String get startTime => t('Start time', 'وقت البداية');
   String get endTime => t('End time', 'وقت النهاية');
   String get pickupNoteOptional =>
@@ -1427,6 +1697,22 @@ class SupplierL10n {
   String get statusLabel => t('Status', 'الحالة');
   String get dateLabel => t('Date', 'التاريخ');
   String get timeLabel => t('Time', 'الوقت');
+  String get pickupWindowSectionTitle =>
+      t('Pickup window', 'نافذة الاستلام');
+  String get materialRequestSectionTitle =>
+      t('Material & request', 'المادة والطلب');
+  String pickupWindowRangeLabel(String range) =>
+      t('Pickup window: $range', 'نافذة الاستلام: $range');
+  String get pickupInstructionsLabel =>
+      t('Instructions', 'التعليمات');
+  String get noPickupInstructions => t(
+        'No pickup instructions.',
+        'لا توجد تعليمات استلام.',
+      );
+  String get noDeclineReasonProvided => t(
+        'No decline reason provided.',
+        'لم يُقدَّم سبب للرفض.',
+      );
   String get completedLabel => t('Completed', 'مكتمل');
   String get supplierNoteLabel => t('Supplier note', 'ملاحظة المورد');
   String get learnerMessageLabel => t('Learner message', 'رسالة المتعلم');

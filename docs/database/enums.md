@@ -48,6 +48,22 @@ Used by: `RoleInvitation.status`
 
 ---
 
+## `RoleInvitationSendStatus`
+
+`PENDING`, `SENT`, `FAILED`
+
+Used by: `RoleInvitation.sendStatus`
+
+---
+
+## `TransportationType`
+
+`CAR`, `MOTORCYCLE`, `BICYCLE`, `WALKING`
+
+Used by: `DriverProfile.transportationType`
+
+---
+
 ## `MaterialCondition`
 
 `NEW`, `LIKE_NEW`, `GOOD`, `USED`, `NEEDS_REPAIR`
@@ -69,6 +85,22 @@ Used by: `Material.sourceType`
 `AVAILABLE`, `PENDING_RESERVATION`, `RESERVED`, `REUSED`, `UNAVAILABLE`
 
 Used by: `Material.status`
+
+---
+
+## `MaterialReportReason`
+
+`MISLEADING_INFORMATION`, `WRONG_CATEGORY`, `WRONG_PRICE`, `INAPPROPRIATE`, `ITEM_NOT_AVAILABLE`, `SUSPICIOUS_SUPPLIER`, `OTHER`
+
+Used by: `MaterialReport.reason`
+
+---
+
+## `MaterialReportStatus`
+
+`PENDING`, `RESOLVED`, `REJECTED`
+
+Used by: `MaterialReport.status`
 
 ---
 
@@ -98,9 +130,17 @@ Used by: `OrganizationProfile.verificationDocumentStatus`
 
 ## `ReservationStatus`
 
-`PENDING`, `ACCEPTED`, `REJECTED`, `CANCELLED`, `COMPLETED`, `EXPIRED`
+`PENDING`, `AWAITING_LEARNER_CONFIRMATION`, `ACCEPTED`, `REJECTED`, `CANCELLED`, `COMPLETED`, `EXPIRED`
 
 Used by: `Reservation.status`
+
+---
+
+## `ReservationFulfillmentMethod`
+
+`PICKUP`, `DELIVERY`
+
+Used by: `Reservation.fulfillmentMethod`
 
 ---
 
@@ -112,19 +152,11 @@ Used by: `ReservationStatusHistory.statusGroup`
 
 ---
 
-## `PickupType`
-
-`SELF_PICKUP`, `DELIVERY_ALLOWED`
-
-Used by: `Reservation.pickupType`
-
----
-
 ## `DeliveryStatus`
 
 `WAITING_FOR_DRIVER`, `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`, `DELIVERED`, `CANCELLED`, `FAILED_PICKUP`, `FAILED_DELIVERY`
 
-Used by: `Delivery.status`, `DeliveryStatusHistory.oldStatus`, `DeliveryStatusHistory.newStatus`, legacy `Reservation.deliveryStatus`
+Used by: `Delivery.status`, `DeliveryStatusHistory.oldStatus`, `DeliveryStatusHistory.newStatus`
 
 Active delivery statuses: `WAITING_FOR_DRIVER`, `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`.
 

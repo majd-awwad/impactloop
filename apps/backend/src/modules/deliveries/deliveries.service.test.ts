@@ -7,6 +7,7 @@ import { authMiddleware } from '../../middlewares/auth.middleware.js';
 import { requireRoles } from '../../middlewares/role.middleware.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
+import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import {
   acceptDelivery,
   createDeliveryLocationPing,
@@ -15,6 +16,10 @@ import {
 } from '../driver/driver.service.js';
 import { createDeliveryLocationPingSchema } from '../driver/driver.validation.js';
 import { completeSupplierReservation } from '../supplier-reservations/supplier-reservations.service.js';
+import {
+  activeConfirmedDeliveryWindowUpdate,
+  activePickupWindowReservationUpdate,
+} from '../../test-utils/handover-test-windows.js';
 
 import {
   getMyDelivery,
@@ -138,6 +143,8 @@ async function createAcceptedReservation(
   ctx.createdMaterialIds.push(material.id);
 
   const now = new Date();
+  const activePickup = activePickupWindowReservationUpdate();
+  const activeDelivery = activeConfirmedDeliveryWindowUpdate();
   const reservation = await prisma.reservation.create({
     data: {
       materialId: material.id,
@@ -146,11 +153,25 @@ async function createAcceptedReservation(
       quantityRequested: 1,
       status: input.status ?? 'ACCEPTED',
       pickupWindowStart:
-        input.status === 'PENDING' ? undefined : now,
+        input.status === 'PENDING' ? undefined : activePickup.pickupWindowStart,
       pickupWindowEnd:
+        input.status === 'PENDING' ? undefined : activePickup.pickupWindowEnd,
+      supplierPickupWindowStart:
         input.status === 'PENDING'
           ? undefined
-          : new Date(now.getTime() + 3_600_000),
+          : activePickup.supplierPickupWindowStart,
+      supplierPickupWindowEnd:
+        input.status === 'PENDING'
+          ? undefined
+          : activePickup.supplierPickupWindowEnd,
+      confirmedDeliveryWindowStart:
+        input.status === 'PENDING'
+          ? undefined
+          : activeDelivery.confirmedDeliveryWindowStart,
+      confirmedDeliveryWindowEnd:
+        input.status === 'PENDING'
+          ? undefined
+          : activeDelivery.confirmedDeliveryWindowEnd,
       acceptedAt: input.status === 'PENDING' ? undefined : now,
       completedAt: input.status === 'COMPLETED' ? now : undefined,
     },
@@ -250,6 +271,7 @@ async function progressToDelivered(driverId: string, deliveryId: string) {
   });
   await updateDriverDeliveryStatus(driverId, deliveryId, {
     status: 'PICKED_UP',
+    confirmationCode: deriveHandoverCode('supplier-handover', deliveryId),
   });
   await updateDriverDeliveryStatus(driverId, deliveryId, {
     status: 'ON_THE_WAY',
@@ -259,6 +281,7 @@ async function progressToDelivered(driverId: string, deliveryId: string) {
   });
   return updateDriverDeliveryStatus(driverId, deliveryId, {
     status: 'DELIVERED',
+    confirmationCode: deriveHandoverCode('learner-delivery', deliveryId),
   });
 }
 
@@ -361,11 +384,10 @@ describe('internal delivery backend core', () => {
     assert.equal(delivery.pickupLocation.city, 'Nablus');
     assert.equal(delivery.dropoffLocation.city, 'Ramallah');
 
-    const updatedReservation = await prisma.reservation.findUnique({
-      where: { id: reservation.id },
-      select: { deliveryRequested: true },
+    const deliveryCount = await prisma.delivery.count({
+      where: { reservationId: reservation.id },
     });
-    assert.equal(updatedReservation?.deliveryRequested, true);
+    assert.equal(deliveryCount, 1);
   });
 
   test('learner cannot request delivery before reservation is accepted', async () => {
@@ -988,7 +1010,10 @@ describe('internal delivery backend core', () => {
     await requestDeliveryForReservation(ctx.learnerId, reservation.id, deliveryInput());
 
     await assert.rejects(
-      () => completeSupplierReservation(ctx.supplierId, reservation.id),
+      () =>
+        completeSupplierReservation(ctx.supplierId, reservation.id, {
+          confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);
@@ -1002,7 +1027,9 @@ describe('internal delivery backend core', () => {
 
     const results = await Promise.allSettled([
       requestDeliveryForReservation(ctx.learnerId, reservation.id, deliveryInput()),
-      completeSupplierReservation(ctx.supplierId, reservation.id),
+      completeSupplierReservation(ctx.supplierId, reservation.id, {
+        confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+      }),
     ]);
 
     assert.equal(
@@ -1043,6 +1070,9 @@ describe('internal delivery backend core', () => {
     const completed = await completeSupplierReservation(
       ctx.supplierId,
       reservation.id,
+      {
+        confirmationCode: deriveHandoverCode('self-pickup', reservation.id),
+      },
     );
     assert.equal(completed.status, 'COMPLETED');
 

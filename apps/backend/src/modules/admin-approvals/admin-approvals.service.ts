@@ -1,9 +1,18 @@
-import type { Prisma } from '../../generated/prisma/index.js';
+import type { Prisma, MaterialCondition } from '../../generated/prisma/index.js';
 
+import {
+  applyConditionPriceMultiplier,
+  conditionPriceMultiplier,
+} from '../../constants/material-condition-factors.js';
 import { AppError } from '../../utils/app-error.js';
 import { prisma } from '../../database/prisma.js';
 import { decimalToNumber } from '../../utils/decimal.js';
 
+import {
+  ADMIN_ACTIVITY_ACTIONS,
+  ADMIN_ACTIVITY_TARGET_TYPES,
+  logAdminActivity,
+} from '../admin/admin-activity-log.js';
 import * as repository from './admin-approvals.repository.js';
 import type {
   ApprovalsListQuery,
@@ -268,6 +277,22 @@ export const approveCategoryRequest = async (
     },
   });
 
+  await logAdminActivity({
+    actorUserId: adminId,
+    action: ADMIN_ACTIVITY_ACTIONS.CATEGORY_REQUEST_APPROVED,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.CATEGORY_REQUEST,
+    targetId: existing.id,
+    targetLabel: finalName,
+    metadata: {
+      requestedName: existing.requestedName,
+      finalName,
+      parentCategoryId: input.parentCategoryId?.trim() || null,
+      adminNote,
+      approvedCategoryId: createdCategory.id,
+      supplierEmail: existing.requestedBy.email,
+    },
+  });
+
   return {
     request: {
       id: updatedRequest.id,
@@ -348,6 +373,20 @@ export const rejectCategoryRequest = async (
     },
   });
 
+  await logAdminActivity({
+    actorUserId: adminId,
+    action: ADMIN_ACTIVITY_ACTIONS.CATEGORY_REQUEST_REJECTED,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.CATEGORY_REQUEST,
+    targetId: existing.id,
+    targetLabel: existing.requestedName,
+    metadata: {
+      adminNote: input.adminNote.trim(),
+      suggestedCategoryId,
+      suggestedCategoryName,
+      supplierEmail: existing.requestedBy.email,
+    },
+  });
+
   return {
     request: {
       id: updated.id,
@@ -376,7 +415,28 @@ type PriceRequestListItemDto = {
   supplierPriceNis: number | null;
   aiSuggestedMaxUnitPriceNis: number | null;
   aiSuggestedMaxTotalPriceNis: number | null;
+  conditionMultiplier: number | null;
+  adjustedMaxUnitPriceNis: number | null;
   adminNote: string | null;
+};
+
+const resolvePriceRequestCondition = (
+  condition: string | null,
+  listingDraftJson: unknown,
+): MaterialCondition | null => {
+  const draftCondition = readDraftString(listingDraftJson, 'condition');
+  const raw = condition ?? draftCondition;
+  if (
+    raw === 'NEW' ||
+    raw === 'LIKE_NEW' ||
+    raw === 'GOOD' ||
+    raw === 'USED' ||
+    raw === 'NEEDS_REPAIR'
+  ) {
+    return raw;
+  }
+
+  return null;
 };
 
 export const listPriceRequestsForAdmin = async (query: ApprovalsListQuery) => {
@@ -404,26 +464,45 @@ export const listPriceRequestsForAdmin = async (query: ApprovalsListQuery) => {
     take: query.limit,
   });
 
-  const mapped: PriceRequestListItemDto[] = items.map((item) => ({
-    id: item.id,
-    status: item.status,
-    createdAt: item.createdAt.toISOString(),
-    materialTitle: item.publishedMaterial?.title ?? item.materialName ?? null,
-    supplierName: item.requestedBy?.displayName ?? null,
-    supplierEmail: item.requestedBy?.email ?? null,
-    supplierOrganization:
-      item.requestedBy?.supplierProfile?.organizationProfile?.organizationName ??
-      item.requestedBy?.supplierProfile?.publicName ??
-      null,
-    categoryName: item.category?.nameEn ?? null,
-    unit: item.unit ?? item.materialType?.defaultUnit ?? null,
-    condition: item.condition ?? null,
-    quantity: decimalToNumber(item.quantity),
-    supplierPriceNis: decimalToNumber(item.supplierPriceNis),
-    aiSuggestedMaxUnitPriceNis: decimalToNumber(item.aiSuggestedMaxUnitPriceNis),
-    aiSuggestedMaxTotalPriceNis: decimalToNumber(item.aiSuggestedMaxTotalPriceNis),
-    adminNote: item.moderatorNote,
-  }));
+  const mapped: PriceRequestListItemDto[] = items.map((item) => {
+    const baseMax = decimalToNumber(item.aiSuggestedMaxUnitPriceNis);
+    const selectedCondition = resolvePriceRequestCondition(
+      item.condition,
+      item.listingDraftJson,
+    );
+    const multiplier = selectedCondition
+      ? conditionPriceMultiplier(selectedCondition)
+      : null;
+    const adjustedMax =
+      baseMax != null && selectedCondition
+        ? applyConditionPriceMultiplier(baseMax, selectedCondition)
+        : null;
+
+    return {
+      id: item.id,
+      status: item.status,
+      createdAt: item.createdAt.toISOString(),
+      materialTitle: item.publishedMaterial?.title ?? item.materialName ?? null,
+      supplierName: item.requestedBy?.displayName ?? null,
+      supplierEmail: item.requestedBy?.email ?? null,
+      supplierOrganization:
+        item.requestedBy?.supplierProfile?.organizationProfile?.organizationName ??
+        item.requestedBy?.supplierProfile?.publicName ??
+        null,
+      categoryName: item.category?.nameEn ?? null,
+      unit: item.unit ?? item.materialType?.defaultUnit ?? null,
+      condition: selectedCondition,
+      quantity: decimalToNumber(item.quantity),
+      supplierPriceNis: decimalToNumber(item.supplierPriceNis),
+      aiSuggestedMaxUnitPriceNis: baseMax,
+      aiSuggestedMaxTotalPriceNis: decimalToNumber(
+        item.aiSuggestedMaxTotalPriceNis,
+      ),
+      conditionMultiplier: multiplier,
+      adjustedMaxUnitPriceNis: adjustedMax,
+      adminNote: item.moderatorNote,
+    };
+  });
 
   return {
     items: mapped,
@@ -475,6 +554,23 @@ export const approvePriceRequest = async (
     },
   });
 
+  const priceTargetLabel =
+    existing.publishedMaterial?.title ?? existing.materialName ?? 'Price request';
+
+  await logAdminActivity({
+    actorUserId: adminId,
+    action: ADMIN_ACTIVITY_ACTIONS.PRICE_REQUEST_APPROVED,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.PRICE_RULE_REQUEST,
+    targetId: existing.id,
+    targetLabel: priceTargetLabel,
+    metadata: {
+      adminNote: input.adminNote?.trim() || null,
+      supplierEmail: existing.requestedBy?.email ?? null,
+      categoryName: existing.category?.nameEn ?? null,
+      approvedMaxUnitPriceNis: approvedMax,
+    },
+  });
+
   return updated;
 };
 
@@ -503,6 +599,23 @@ export const rejectPriceRequest = async (
       body: `Your requested price was rejected. Maximum allowed price: ${maxAllowed} NIS. Reason: ${note}`,
       relatedEntityType: 'PRICE_RULE_REQUEST',
       relatedEntityId: existing.id,
+    },
+  });
+
+  const priceTargetLabel =
+    existing.publishedMaterial?.title ?? existing.materialName ?? 'Price request';
+
+  await logAdminActivity({
+    actorUserId: adminId,
+    action: ADMIN_ACTIVITY_ACTIONS.PRICE_REQUEST_REJECTED,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.PRICE_RULE_REQUEST,
+    targetId: existing.id,
+    targetLabel: priceTargetLabel,
+    metadata: {
+      adminNote: note,
+      maxAllowedPrice: maxAllowed,
+      supplierEmail: existing.requestedBy?.email ?? null,
+      materialTitle: priceTargetLabel,
     },
   });
 

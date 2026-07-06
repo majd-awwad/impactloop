@@ -180,7 +180,7 @@ class _LearningSpotlightCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.go('/learning/${project.id}'),
+        onTap: () => context.push('/learning/${project.id}'),
         borderRadius: AppRadius.lgAll,
         child: SizedBox(
           height: 326,

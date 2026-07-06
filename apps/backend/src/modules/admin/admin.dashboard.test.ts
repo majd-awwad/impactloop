@@ -225,6 +225,9 @@ describe('admin dashboard', () => {
     assert.equal(Array.isArray(dashboard.reservationStatusBreakdown), true);
     assert.equal(Array.isArray(dashboard.recentInvitations), true);
     assert.equal(typeof dashboard.impact.estimatedCo2Kg, 'number');
+    assert.equal(typeof dashboard.supplierVerificationPendingCount, 'number');
+    assert.equal(Array.isArray(dashboard.supplierVerificationPreview), true);
+    assert.equal(Array.isArray(dashboard.recentActivity), true);
     assert.equal(typeof dashboard.impact.estimatedCo2Label, 'string');
     assert.match(dashboard.impact.estimatedCo2Label, /kg CO₂e$/);
     assert.match(dashboard.impact.estimatedCo2Method, /Conservative MVP estimates/);

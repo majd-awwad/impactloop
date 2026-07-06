@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
@@ -39,12 +40,7 @@ class LearnerHomePage extends ConsumerWidget {
             const _HomeTopBar(),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsetsDirectional.fromSTEB(
-                  AppSpacing.md,
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                  AppSpacing.xl,
-                ),
+                padding: appMobileAwareScrollPadding(context),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1280),
@@ -299,6 +295,7 @@ class _QuickActionsSection extends ConsumerWidget {
     final user = ref.watch(authControllerProvider).user;
     final isAdmin = userHasAdminRole(user);
     final hasSupplierRole = userHasSupplierRole(user);
+    final showBecomeSupplier = user != null && shouldShowBecomeSupplier(user);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -308,47 +305,82 @@ class _QuickActionsSection extends ConsumerWidget {
           subtitle: 'Start with the areas that are available today.',
         ),
         const SizedBox(height: AppSpacing.md),
-        _ResponsiveGrid(
-          minItemWidth: 280,
-          itemHeight: 224,
-          children: [
-            if (isAdmin)
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final useCompactActions = constraints.maxWidth < 600;
+
+            final actions = [
+              if (isAdmin)
+                HomeActionCard(
+                  icon: Icons.admin_panel_settings_outlined,
+                  title: useCompactActions ? 'Admin' : 'Open Admin Portal',
+                  description: useCompactActions
+                      ? 'Review activity'
+                      : 'Review platform activity, pending actions, and impact metrics.',
+                  compact: useCompactActions,
+                  onPressed: () => context.push(adminPortalRoute),
+                ),
               HomeActionCard(
-                icon: Icons.admin_panel_settings_outlined,
-                title: 'Open Admin Portal',
-                description:
-                    'Review platform activity, pending actions, and impact metrics.',
-                onPressed: () => context.go(adminPortalRoute),
+                icon: Icons.inventory_2_outlined,
+                title: useCompactActions
+                    ? 'Materials'
+                    : 'Find reusable materials',
+                description: useCompactActions
+                    ? 'Browse items'
+                    : 'Search currently listed materials from suppliers.',
+                compact: useCompactActions,
+                onPressed: () => context.go('/materials'),
               ),
-            HomeActionCard(
-              icon: Icons.inventory_2_outlined,
-              title: 'Find reusable materials',
-              description: 'Search currently listed materials from suppliers.',
-              onPressed: () => context.go('/materials'),
-            ),
-            HomeActionCard(
-              icon: Icons.school_outlined,
-              title: 'Explore learning projects',
-              description: 'Open the Learning Hub project catalog.',
-              onPressed: () => context.go('/learning'),
-            ),
-            HomeActionCard(
-              icon: Icons.assignment_turned_in_outlined,
-              title: 'My Reservations',
-              description:
-                  'Track supplier responses and pickup windows for requested materials.',
-              onPressed: () => context.go(learnerReservationsRoute),
-            ),
-            HomeActionCard(
-              icon: Icons.storefront_outlined,
-              title: 'Become a supplier',
-              description: hasSupplierRole
-                  ? 'Update your supplier profile and pickup details.'
-                  : 'Start the supplier setup path for your account.',
-              badge: hasSupplierRole ? 'Profile' : null,
-              onPressed: () => context.go(supplierEntryRouteForUser(user)),
-            ),
-          ],
+              HomeActionCard(
+                icon: Icons.school_outlined,
+                title: useCompactActions
+                    ? 'Learning'
+                    : 'Explore learning projects',
+                description: useCompactActions
+                    ? 'Explore projects'
+                    : 'Open the Learning Hub project catalog.',
+                compact: useCompactActions,
+                onPressed: () => context.go('/learning'),
+              ),
+              HomeActionCard(
+                icon: Icons.assignment_turned_in_outlined,
+                title: useCompactActions ? 'Reservations' : 'My Reservations',
+                description: useCompactActions
+                    ? 'Track pickups'
+                    : 'Track supplier responses and pickup windows for requested materials.',
+                compact: useCompactActions,
+                onPressed: () => context.go(learnerReservationsRoute),
+              ),
+              if (showBecomeSupplier || hasSupplierRole)
+                HomeActionCard(
+                  icon: Icons.storefront_outlined,
+                  title: useCompactActions
+                      ? 'Supplier'
+                      : hasSupplierRole
+                      ? 'Supplier profile'
+                      : 'Become a supplier',
+                  description: useCompactActions
+                      ? 'Share materials'
+                      : hasSupplierRole
+                      ? 'Update your supplier profile and pickup details.'
+                      : 'Start the supplier setup path for your account.',
+                  badge: useCompactActions
+                      ? null
+                      : hasSupplierRole
+                      ? 'Profile'
+                      : null,
+                  compact: useCompactActions,
+                  onPressed: () => context.push(supplierEntryRouteForUser(user)),
+                ),
+            ];
+
+            return _ResponsiveGrid(
+              minItemWidth: useCompactActions ? 150 : 260,
+              maxColumns: useCompactActions ? 2 : 4,
+              itemHeight: useCompactActions ? 112 : 196,
+              children: actions,
+            );
+          },
         ),
       ],
     );
@@ -459,11 +491,13 @@ class _ResponsiveGrid extends StatelessWidget {
     required this.children,
     this.minItemWidth = 280,
     this.itemHeight,
+    this.maxColumns = 4,
   });
 
   final List<Widget> children;
   final double minItemWidth;
   final double? itemHeight;
+  final int maxColumns;
 
   @override
   Widget build(BuildContext context) {
@@ -471,7 +505,7 @@ class _ResponsiveGrid extends StatelessWidget {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final rawColumns = (width / minItemWidth).floor();
-        final columns = rawColumns.clamp(1, 4).toInt();
+        final columns = rawColumns.clamp(1, maxColumns).toInt();
         final itemWidth = (width - ((columns - 1) * AppSpacing.md)) / columns;
 
         return Wrap(

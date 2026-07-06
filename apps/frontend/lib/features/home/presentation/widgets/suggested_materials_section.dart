@@ -21,94 +21,173 @@ class SuggestedMaterialsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final materialsState = ref.watch(homeSuggestedMaterialsProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        HomeSectionHeader(
-          title: 'Suggested materials',
-          subtitle: 'A few currently listed materials to help you start.',
-          action: HomeSectionActionButton(
-            onPressed: () => context.go('/materials'),
-            icon: const Icon(Icons.arrow_forward_rounded),
-            label: 'Browse all',
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        materialsState.when(
-          loading: () => const _SuggestedMaterialsLoading(),
-          error: (error, stackTrace) => _SuggestedMaterialsError(
-            onRetry: () => ref.invalidate(homeSuggestedMaterialsProvider),
-          ),
-          data: (materials) {
-            if (materials.isEmpty) {
-              return EmptyActivityCard(
-                icon: Icons.inventory_2_outlined,
-                title: 'No materials available yet',
-                description:
-                    'When suppliers list reusable materials, a small set will appear here.',
-                actionLabel: 'Open materials',
-                onAction: () => context.go('/materials'),
-              );
-            }
+    return LayoutBuilder(
+      builder: (context, sectionConstraints) {
+        final useMobileList = sectionConstraints.maxWidth < 600;
 
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
-                var columns = 1;
-                if (width >= 1180) {
-                  columns = 4;
-                } else if (width >= 860) {
-                  columns = 3;
-                } else if (width >= 620) {
-                  columns = 2;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            HomeSectionHeader(
+              title: 'Suggested materials',
+              subtitle: 'A few currently listed materials to help you start.',
+              compactInlineAction: useMobileList,
+              action: useMobileList
+                  ? TextButton(
+                      onPressed: () => context.go('/materials'),
+                      child: const Text('Browse all'),
+                    )
+                  : HomeSectionActionButton(
+                      onPressed: () => context.go('/materials'),
+                      icon: const Icon(Icons.arrow_forward_rounded),
+                      label: 'Browse all',
+                    ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            materialsState.when(
+              loading: () => const _SuggestedMaterialsLoading(),
+              error: (error, stackTrace) => _SuggestedMaterialsError(
+                onRetry: () => ref.invalidate(homeSuggestedMaterialsProvider),
+              ),
+              data: (materials) {
+                if (materials.isEmpty) {
+                  return EmptyActivityCard(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'No materials available yet',
+                    description:
+                        'When suppliers list reusable materials, a small set will appear here.',
+                    actionLabel: 'Open materials',
+                    onAction: () => context.go('/materials'),
+                  );
                 }
 
-                final itemWidth =
-                    (width - ((columns - 1) * AppSpacing.md)) / columns;
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth;
 
-                return Wrap(
-                  spacing: AppSpacing.md,
-                  runSpacing: AppSpacing.md,
-                  children: materials.indexed.map((entry) {
-                    final index = entry.$1;
-                    final material = entry.$2;
-                    final imageUrl = _homeMaterialImageUrl(material, index);
+                    if (useMobileList) {
+                      final previewMaterials = materials.take(3).toList();
 
-                    return SizedBox(
-                      width: itemWidth,
-                      child: AppMaterialCard(
-                        title: material.title.resolve(context),
-                        description: material.description.resolve(context),
-                        category: material.category.resolve(context),
-                        conditionLabel: material.conditionLabel.resolve(
-                          context,
-                        ),
-                        conditionTone: material.conditionTone,
-                        statusLabel: material.statusLabel.resolve(context),
-                        statusTone: material.statusTone,
-                        quantityLabel: material.quantityLabel.resolve(context),
-                        priceLabel: material.priceLabel.resolve(context),
-                        locationLabel: material.locationLabel.resolve(context),
-                        availabilityLabel: material.availabilityLabel.resolve(
-                          context,
-                        ),
-                        deliveryAvailable: material.deliveryAvailable,
-                        isFree: material.isFree,
-                        gradientColors: materialGradient(material),
-                        imageUrl: imageUrl,
-                        ratingLabel: material.ratingLabel?.resolve(context),
-                        fallbackIcon: material.heroIconData,
-                        variant: AppMaterialCardVariant.compact,
-                        onTap: () => context.go('/materials/${material.id}'),
-                      ),
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: previewMaterials.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, index) {
+                          final material = previewMaterials[index];
+                          final imageUrl = _homeMaterialImageUrl(
+                            material,
+                            index,
+                          );
+
+                          return ImpactMaterialCompactCard(
+                            title: material.title.resolve(context),
+                            description: material.description.resolve(context),
+                            category: material.category.resolve(context),
+                            conditionLabel: material.conditionLabel.resolve(
+                              context,
+                            ),
+                            conditionTone: material.conditionTone,
+                            statusLabel: material.statusLabel.resolve(context),
+                            statusTone: material.statusTone,
+                            quantityLabel: material.quantityLabel.resolve(
+                              context,
+                            ),
+                            priceLabel: material.priceLabel.resolve(context),
+                            locationLabel: material.locationLabel.resolve(
+                              context,
+                            ),
+                            availabilityLabel: material.availabilityLabel
+                                .resolve(context),
+                            deliveryAvailable: material.deliveryAvailable,
+                            isFree: material.isFree,
+                            gradientColors: materialGradient(material),
+                            imageUrl: imageUrl,
+                            ratingLabel: material.ratingLabel?.resolve(context),
+                            viewsCount: material.viewsCount,
+                            likesCount: material.likesCount,
+                            isLiked: material.isLiked,
+                            fallbackIcon: material.heroIconData,
+                            onTap: () =>
+                                context.push('/materials/${material.id}'),
+                          );
+                        },
+                      );
+                    }
+
+                    var columns = 1;
+                    if (width >= 1180) {
+                      columns = 4;
+                    } else if (width >= 860) {
+                      columns = 3;
+                    } else if (width >= 620) {
+                      columns = 2;
+                    }
+
+                    final itemWidth =
+                        (width - ((columns - 1) * AppSpacing.md)) / columns;
+                    final cardHeight = ImpactMaterialGridCard.heightForWidth(
+                      itemWidth,
+                      variant: AppMaterialCardVariant.compact,
                     );
-                  }).toList(),
+
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: materials.length,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
+                        crossAxisSpacing: AppSpacing.md,
+                        mainAxisSpacing: AppSpacing.md,
+                        mainAxisExtent: cardHeight,
+                      ),
+                      itemBuilder: (context, index) {
+                        final material = materials[index];
+                        final imageUrl = _homeMaterialImageUrl(material, index);
+
+                        return ImpactMaterialGridCard(
+                          title: material.title.resolve(context),
+                          description: material.description.resolve(context),
+                          category: material.category.resolve(context),
+                          conditionLabel: material.conditionLabel.resolve(
+                            context,
+                          ),
+                          conditionTone: material.conditionTone,
+                          statusLabel: material.statusLabel.resolve(context),
+                          statusTone: material.statusTone,
+                          quantityLabel: material.quantityLabel.resolve(
+                            context,
+                          ),
+                          priceLabel: material.priceLabel.resolve(context),
+                          locationLabel: material.locationLabel.resolve(
+                            context,
+                          ),
+                          availabilityLabel: material.availabilityLabel.resolve(
+                            context,
+                          ),
+                          deliveryAvailable: material.deliveryAvailable,
+                          isFree: material.isFree,
+                          gradientColors: materialGradient(material),
+                          imageUrl: imageUrl,
+                          ratingLabel: material.ratingLabel?.resolve(context),
+                          viewsCount: material.viewsCount,
+                          likesCount: material.likesCount,
+                          isLiked: material.isLiked,
+                          fallbackIcon: material.heroIconData,
+                          variant: AppMaterialCardVariant.compact,
+                          onTap: () =>
+                              context.push('/materials/${material.id}'),
+                        );
+                      },
+                    );
+                  },
                 );
               },
-            );
-          },
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 }

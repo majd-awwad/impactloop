@@ -17,19 +17,24 @@ import { materialsRouter } from './modules/materials/materials.routes.js';
 import { priceRuleRequestsRouter } from './modules/price-rule-requests/price-rule-requests.routes.js';
 import { reservationsRouter } from './modules/reservations/reservations.routes.js';
 import { adminRouter } from './modules/admin/admin.routes.js';
+import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { supplierRouter } from './modules/supplier/supplier.routes.js';
 import { locationsRouter } from './modules/locations/locations.routes.js';
+import { savedDropoffAddressesRouter } from './modules/saved-dropoff-addresses/saved-dropoff-addresses.routes.js';
+import { profileRouter } from './modules/profile/profile.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
 import {
   ensureMaterialUploadsDir,
   MATERIAL_UPLOADS_DIR,
 } from './modules/uploads/uploads.storage.js';
+import { ensureProfileUploadsDir, PROFILE_UPLOADS_DIR } from './modules/uploads/profile-uploads.storage.js';
 import {
   ensureSupplierVerificationUploadsDir,
   SUPPLIER_VERIFICATION_UPLOADS_DIR,
 } from './modules/uploads/verification-uploads.storage.js';
 
 ensureMaterialUploadsDir();
+ensureProfileUploadsDir();
 ensureSupplierVerificationUploadsDir();
 
 export const app = express();
@@ -53,6 +58,7 @@ app.use(
 );
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.use('/uploads/materials', express.static(MATERIAL_UPLOADS_DIR));
+app.use('/uploads/profiles', express.static(PROFILE_UPLOADS_DIR));
 app.use(
   '/uploads/supplier-verification',
   express.static(SUPPLIER_VERIFICATION_UPLOADS_DIR),
@@ -61,6 +67,7 @@ app.use(express.json());
 
 app.use('/health', healthRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/profile', profileRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/material-types', materialTypesRouter);
 app.use('/api/price-rule-requests', priceRuleRequestsRouter);
@@ -72,6 +79,11 @@ app.use('/api/deliveries', deliveriesRouter);
 app.use('/api/driver', driverRouter);
 app.use('/api/uploads', uploadsRouter);
 app.use('/api/locations', locationsRouter);
+app.use(
+  '/api/learner/saved-dropoff-addresses',
+  savedDropoffAddressesRouter,
+);
+app.use('/api/notifications', notificationsRouter);
 app.use('/api/supplier', supplierRouter);
 app.use('/api/admin', adminRouter);
 

@@ -43,9 +43,13 @@ class ApiException implements Exception {
       case 'TIMEOUT':
         return 'The server took too long to respond. Please try again.';
       case 'CONFLICT':
-        return 'An account with that email or phone already exists.';
+        return message.isNotEmpty
+            ? message
+            : 'This request conflicts with the current state. Please refresh and try again.';
       case 'VALIDATION_ERROR':
-        final firstIssue = fieldIssues.isNotEmpty ? fieldIssues.first.message : null;
+        final firstIssue = fieldIssues.isNotEmpty
+            ? fieldIssues.first.message
+            : null;
         if (firstIssue != null && firstIssue.isNotEmpty) {
           return firstIssue;
         }
@@ -56,7 +60,17 @@ class ApiException implements Exception {
         return message.isNotEmpty
             ? message
             : 'You do not have permission to complete this action.';
+      case 'ACCOUNT_SUSPENDED':
+        return 'Your account has been suspended after repeated verified reports. Contact admin.';
+      case 'PICKUP_WINDOW_REQUIRED':
+        return 'Choose a new pickup start and end time before sending a reschedule request.';
       default:
+        final errorCode = code;
+        if (errorCode != null && errorCode.startsWith('PICKUP_')) {
+          return message.isNotEmpty
+              ? message
+              : 'The pickup window is not valid. Choose a different time.';
+        }
         if (statusCode != null && statusCode! >= 500) {
           return 'The server hit a problem. Please try again in a moment.';
         }

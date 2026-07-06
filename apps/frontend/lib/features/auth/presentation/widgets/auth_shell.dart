@@ -9,6 +9,8 @@ import 'auth_ui_palette.dart';
 
 enum AuthShellLayout { mobile, webSplit }
 
+enum AuthFormStageTone { framed, subtle }
+
 class AuthShell extends StatelessWidget {
   const AuthShell({
     super.key,
@@ -18,6 +20,9 @@ class AuthShell extends StatelessWidget {
     this.showSignIn = true,
     this.showCreateAccount = true,
     this.formMaxWidth = AppSpacing.authFormMaxWidth,
+    this.formStageTone = AuthFormStageTone.framed,
+    this.splitBrandingFlex = 11,
+    this.splitFormFlex = 9,
   });
 
   final AuthShellLayout? layout;
@@ -26,6 +31,9 @@ class AuthShell extends StatelessWidget {
   final bool showSignIn;
   final bool showCreateAccount;
   final double formMaxWidth;
+  final AuthFormStageTone formStageTone;
+  final int splitBrandingFlex;
+  final int splitFormFlex;
 
   static const _splitBreakpoint = 960.0;
 
@@ -78,6 +86,9 @@ class AuthShell extends StatelessWidget {
                             brandingVariant: brandingVariant,
                             formMaxWidth: formMaxWidth,
                             compactSpacing: useCompactSpacing,
+                            formStageTone: formStageTone,
+                            brandingFlex: splitBrandingFlex,
+                            formFlex: splitFormFlex,
                             child: formContent,
                           )
                         : _ScrollBody(
@@ -231,12 +242,18 @@ class _SplitBody extends StatelessWidget {
     required this.formMaxWidth,
     required this.brandingVariant,
     required this.compactSpacing,
+    required this.formStageTone,
+    required this.brandingFlex,
+    required this.formFlex,
   });
 
   final Widget child;
   final double formMaxWidth;
   final AuthEntryBrandingVariant brandingVariant;
   final bool compactSpacing;
+  final AuthFormStageTone formStageTone;
+  final int brandingFlex;
+  final int formFlex;
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +271,7 @@ class _SplitBody extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 11,
+                flex: brandingFlex,
                 child: AuthEntryBrandingPanel(
                   variant: brandingVariant,
                   compact: compactSpacing,
@@ -262,10 +279,11 @@ class _SplitBody extends StatelessWidget {
               ),
               SizedBox(width: compactSpacing ? AppSpacing.xl : AppSpacing.xxl),
               Expanded(
-                flex: 9,
+                flex: formFlex,
                 child: _FormStage(
                   formMaxWidth: formMaxWidth,
                   compact: compactSpacing,
+                  tone: formStageTone,
                   child: child,
                 ),
               ),
@@ -341,23 +359,32 @@ class _FormStage extends StatelessWidget {
     required this.formMaxWidth,
     required this.child,
     this.compact = false,
+    this.tone = AuthFormStageTone.framed,
   });
 
   final double formMaxWidth;
   final Widget child;
   final bool compact;
+  final AuthFormStageTone tone;
 
   @override
   Widget build(BuildContext context) {
     final colors = AuthUiPalette.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final subtle = tone == AuthFormStageTone.subtle;
+    final stageAlpha = subtle
+        ? (isDark ? 0.28 : 0.34)
+        : (isDark ? 0.68 : 0.86);
+
     return Container(
       padding: EdgeInsets.all(compact ? AppSpacing.md : AppSpacing.lg),
       decoration: BoxDecoration(
-        color: colors.surfaceElevated.withValues(alpha: isDark ? 0.68 : 0.86),
+        color: colors.surfaceElevated.withValues(alpha: stageAlpha),
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: colors.border),
+        border: Border.all(
+          color: colors.border.withValues(alpha: subtle ? 0.55 : 1),
+        ),
       ),
       child: Align(
         alignment: Alignment.topCenter,

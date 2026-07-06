@@ -11,10 +11,33 @@ const locationSchema = z.object({
   isApproximate: z.boolean().default(false),
 });
 
-export const requestDeliverySchema = z.object({
-  dropoffLocation: locationSchema,
-  learnerNote: z.string().trim().max(1000).optional().nullable(),
-});
+export const requestDeliverySchema = z
+  .object({
+    dropoffLocation: locationSchema.optional(),
+    savedDropoffAddressId: z.string().trim().min(1).optional(),
+    saveDropoffAddressLabel: z.string().trim().min(1).max(80).optional().nullable(),
+    learnerNote: z.string().trim().max(1000).optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    const hasInline = Boolean(data.dropoffLocation);
+    const hasSaved = Boolean(data.savedDropoffAddressId);
+
+    if (hasInline === hasSaved) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Provide either dropoffLocation or savedDropoffAddressId.',
+        path: ['dropoffLocation'],
+      });
+    }
+
+    if (data.saveDropoffAddressLabel && !data.dropoffLocation) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'saveDropoffAddressLabel requires dropoffLocation.',
+        path: ['saveDropoffAddressLabel'],
+      });
+    }
+  });
 
 export type RequestDeliveryInput = z.infer<typeof requestDeliverySchema>;
 

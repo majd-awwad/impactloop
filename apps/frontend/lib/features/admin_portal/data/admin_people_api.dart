@@ -54,6 +54,8 @@ class AdminPeopleListItem {
     this.supplierType,
     this.verificationStatus,
     this.driverStatus,
+    this.suspensionReasonPreview,
+    this.verifiedStrikeCount = 0,
   });
 
   final String userId;
@@ -68,6 +70,8 @@ class AdminPeopleListItem {
   final String? supplierType;
   final String? verificationStatus;
   final String? driverStatus;
+  final String? suspensionReasonPreview;
+  final int verifiedStrikeCount;
   final bool canSuspend;
   final bool canReactivate;
   final bool isProtectedAdmin;
@@ -89,6 +93,8 @@ class AdminPeopleListItem {
       supplierType: json['supplierType'] as String?,
       verificationStatus: json['verificationStatus'] as String?,
       driverStatus: json['driverStatus'] as String?,
+      suspensionReasonPreview: json['suspensionReasonPreview'] as String?,
+      verifiedStrikeCount: (json['verifiedStrikeCount'] as num?)?.toInt() ?? 0,
       canSuspend: json['canSuspend'] as bool? ?? false,
       canReactivate: json['canReactivate'] as bool? ?? false,
       isProtectedAdmin: json['isProtectedAdmin'] as bool? ?? false,
@@ -148,11 +154,11 @@ class AdminPeopleApi {
 
   Future<void> suspendPerson({
     required String userId,
-    String? reason,
+    required String reason,
   }) async {
     await _patch(
       '/api/admin/people/$userId/suspend',
-      {if (reason != null && reason.isNotEmpty) 'reason': reason},
+      {'reason': reason},
     );
   }
 

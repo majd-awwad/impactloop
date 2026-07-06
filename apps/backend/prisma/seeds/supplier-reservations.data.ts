@@ -1,7 +1,6 @@
 import type {
   MaterialCondition,
   MaterialSourceType,
-  PickupType,
   PrismaClient,
   ReservationStatus,
 } from '../../src/generated/prisma/client.js';
@@ -88,7 +87,6 @@ export type SeedReservationSpec = {
   status: ReservationStatus;
   quantityRequested: number;
   learnerMessage: string;
-  pickupType?: PickupType;
   supplierNote?: string;
   rejectionReason?: string;
   pickupWindow?: {

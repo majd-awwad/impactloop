@@ -11,6 +11,8 @@ import * as invitationsRepository from './invitations.repository.js';
 import {
   acceptInvitation,
   createEmailInvitation,
+  getInvitationForAdmin,
+  issueInvitationLinkForAdmin,
   resendEmailInvitation,
   revokeInvitation,
   validateInvitationToken,
@@ -19,6 +21,7 @@ import { adminCreateInvitationSchema } from './invitations.validation.js';
 import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 import { hashToken } from '../../utils/token.js';
+import { AppError } from '../../utils/app-error.js';
 
 const TEST_MARKER = '[test-invitations]';
 
@@ -136,7 +139,7 @@ describe('admin email invitations', () => {
         () =>
           createEmailInvitation(admin.id, {
             role: 'DRIVER',
-            recipientEmail: `${TEST_MARKER}-missing-base@impactloop.test`,
+            recipientEmail: `${TEST_MARKER}-missing-base-${Date.now()}@impactloop.test`,
             expiresInMinutes: 60,
           }),
         /APP_PUBLIC_BASE_URL is not configured/,
@@ -518,6 +521,200 @@ describe('admin email invitations', () => {
           confirmPassword: 'Password123!',
         }),
       /does not match/,
+    );
+  });
+});
+
+describe('admin invitation duplicate prevention', () => {
+  test('creating invite succeeds when no active pending duplicate exists', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+
+    const created = await createEmailInvitation(admin.id, {
+      role: 'MODERATOR',
+      recipientEmail: `${TEST_MARKER}-unique-${Date.now()}@impactloop.test`,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(created.id);
+
+    assert.equal(created.canCopyLink, true);
+    assert.equal(provider.lastPayload != null, true);
+  });
+
+  test('duplicate active pending invite for same email and role returns 409', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+    const email = `${TEST_MARKER}-dup-${Date.now()}@impactloop.test`;
+
+    const created = await createEmailInvitation(admin.id, {
+      role: 'DRIVER',
+      recipientEmail: email,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(created.id);
+    assert.equal(provider.lastPayload != null, true);
+    provider.lastPayload = null;
+
+    await assert.rejects(
+      () =>
+        createEmailInvitation(admin.id, {
+          role: 'DRIVER',
+          recipientEmail: email,
+          expiresInMinutes: 60,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.equal(error.code, 'DUPLICATE_PENDING_INVITATION');
+        assert.match(
+          error.message,
+          /active pending invitation already exists/i,
+        );
+        return true;
+      },
+    );
+
+    assert.equal(provider.lastPayload, null);
+    const count = await prisma.roleInvitation.count({
+      where: {
+        targetEmail: email.toLowerCase(),
+        targetRole: 'DRIVER',
+      },
+    });
+    assert.equal(count, 1);
+  });
+
+  test('duplicate check is case-insensitive and trims email', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+    const email = `${TEST_MARKER}-case-${Date.now()}@impactloop.test`;
+
+    const created = await createEmailInvitation(admin.id, {
+      role: 'ADMIN',
+      recipientEmail: `  ${email.toUpperCase()}  `,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(created.id);
+    provider.lastPayload = null;
+
+    await assert.rejects(
+      () =>
+        createEmailInvitation(admin.id, {
+          role: 'ADMIN',
+          recipientEmail: email.toLowerCase(),
+          expiresInMinutes: 60,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        return true;
+      },
+    );
+  });
+
+  test('expired invite does not block creating a new invite', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+    const email = `${TEST_MARKER}-expired-${Date.now()}@impactloop.test`;
+
+    const created = await createEmailInvitation(admin.id, {
+      role: 'DRIVER',
+      recipientEmail: email,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(created.id);
+
+    await prisma.roleInvitation.update({
+      where: { id: created.id },
+      data: { expiresAt: new Date(Date.now() - 60_000) },
+    });
+
+    const second = await createEmailInvitation(admin.id, {
+      role: 'DRIVER',
+      recipientEmail: email,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(second.id);
+    assert.notEqual(second.id, created.id);
+  });
+
+  test('revoked invite does not block creating a new invite', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+    const email = `${TEST_MARKER}-revoked-${Date.now()}@impactloop.test`;
+
+    const created = await createEmailInvitation(admin.id, {
+      role: 'MODERATOR',
+      recipientEmail: email,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(created.id);
+    await revokeInvitation(created.id);
+
+    const second = await createEmailInvitation(admin.id, {
+      role: 'MODERATOR',
+      recipientEmail: email,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(second.id);
+    assert.equal(second.canCopyLink, true);
+  });
+
+  test('different role for same email is allowed', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+    const email = `${TEST_MARKER}-multirole-${Date.now()}@impactloop.test`;
+
+    const driverInvite = await createEmailInvitation(admin.id, {
+      role: 'DRIVER',
+      recipientEmail: email,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(driverInvite.id);
+
+    const adminInvite = await createEmailInvitation(admin.id, {
+      role: 'ADMIN',
+      recipientEmail: email,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(adminInvite.id);
+
+    assert.notEqual(driverInvite.id, adminInvite.id);
+  });
+
+  test('issue link returns url only for active pending invitations', async () => {
+    const provider = new RecordingEmailProvider();
+    setEmailInvitationProviderForTests(provider);
+    const admin = await createAdminUser();
+
+    const created = await createEmailInvitation(admin.id, {
+      role: 'DRIVER',
+      recipientEmail: `${TEST_MARKER}-link-${Date.now()}@impactloop.test`,
+      expiresInMinutes: 60,
+    });
+    ids.invitations.push(created.id);
+
+    const issued = await issueInvitationLinkForAdmin(created.id);
+    assert.match(issued.invitationUrl, /\/invite\/accept\?token=/);
+
+    const detail = await getInvitationForAdmin(created.id);
+    assert.equal(detail.canCopyLink, true);
+
+    await revokeInvitation(created.id);
+
+    await assert.rejects(
+      () => issueInvitationLinkForAdmin(created.id),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.match(error.message, /no longer active/i);
+        return true;
+      },
     );
   });
 });

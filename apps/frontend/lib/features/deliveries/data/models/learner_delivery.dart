@@ -240,6 +240,7 @@ class LearnerDelivery {
     this.driver,
     this.latestDriverPing,
     this.history = const [],
+    this.learnerDeliveryCode,
   });
 
   final String id;
@@ -263,6 +264,7 @@ class LearnerDelivery {
   final LearnerDeliveryDriver? driver;
   final LearnerDeliveryDriverPing? latestDriverPing;
   final List<LearnerDeliveryHistoryItem> history;
+  final String? learnerDeliveryCode;
 
   factory LearnerDelivery.fromJson(Map<String, dynamic> json) {
     final reservationJson = json['reservation'];
@@ -325,8 +327,14 @@ class LearnerDelivery {
                 )
                 .toList(growable: false)
           : const [],
+      learnerDeliveryCode: json['learnerDeliveryCode'] as String?,
     );
   }
+
+  bool get shouldShowLearnerDeliveryCode =>
+      isActive &&
+      learnerDeliveryCode != null &&
+      learnerDeliveryCode!.trim().isNotEmpty;
 
   bool get isActive {
     return const {

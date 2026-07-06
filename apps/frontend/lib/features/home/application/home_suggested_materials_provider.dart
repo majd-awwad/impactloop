@@ -1,19 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/network/api_client.dart';
-import '../../material_discovery/data/api_material_discovery_repository.dart';
+import '../../material_discovery/application/material_discovery_providers.dart';
 import '../../material_discovery/domain/discovery_material.dart';
+import '../../material_discovery/domain/material_discovery_query.dart';
 import '../../material_discovery/domain/material_discovery_repository.dart';
 
 final homeMaterialDiscoveryRepositoryProvider =
     Provider<MaterialDiscoveryRepository>((ref) {
-      return ApiMaterialDiscoveryRepository(ref.watch(apiClientProvider));
+      return ref.watch(materialDiscoveryRepositoryProvider);
     });
 
 final homeSuggestedMaterialsProvider =
     FutureProvider.autoDispose<List<DiscoveryMaterial>>((ref) async {
       final repository = ref.watch(homeMaterialDiscoveryRepositoryProvider);
-      final materials = await repository.getMaterials();
+      final result = await repository.fetchMaterials(
+        const MaterialDiscoveryQuery(page: 1, limit: 4, sort: 'newest'),
+      );
 
-      return materials.take(4).toList(growable: false);
+      return result.items;
     });

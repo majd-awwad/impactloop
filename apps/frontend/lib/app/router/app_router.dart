@@ -4,13 +4,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/auth_navigation.dart';
-import '../../features/auth/application/registration_draft_notifier.dart';
-import '../../features/auth/presentation/models/registration_intent.dart';
+import '../widgets/app_mobile_bottom_nav_bar.dart';
+import '../../features/auth/presentation/models/registration_wizard_step.dart';
 import '../../features/auth/presentation/pages/auth_checking_page.dart';
-import '../../features/auth/presentation/pages/complete_learner_profile_page.dart';
-import '../../features/auth/presentation/pages/complete_supplier_profile_page.dart';
+import '../../features/auth/presentation/widgets/become_learner_wizard.dart';
+import '../../features/auth/presentation/widgets/become_supplier_wizard.dart';
+import '../../features/auth/presentation/pages/deprecated_onboarding_page.dart';
+import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/deliveries/presentation/pages/learner_delivery_detail_page.dart';
@@ -21,8 +24,15 @@ import '../../features/learning_hub/presentation/pages/learning_add_draft_page.d
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
+import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
+import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
+import '../../features/profile/presentation/pages/profile_edit_page.dart';
+import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/profile/presentation/pages/profile_security_page.dart';
+import '../../features/notifications/presentation/pages/user_notifications_page.dart';
+import '../../features/reservations/presentation/pages/learner_reservation_detail_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
 import '../../features/supplier_portal/application/supplier_verification_access.dart';
@@ -41,8 +51,13 @@ import '../../features/supplier_portal/presentation/shell/supplier_shell.dart';
 import '../../features/admin_portal/presentation/pages/admin_access_denied_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_invitations_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_overview_page.dart';
-import '../../features/admin_portal/presentation/pages/admin_placeholder_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_audit_logs_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_deliveries_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_learning_projects_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_no_show_reports_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_reservations_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_impact_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_materials_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_people_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_supplier_verification_page.dart';
@@ -52,7 +67,14 @@ import '../../features/invitations/presentation/pages/invite_accept_page.dart';
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
 const _adminAccessDeniedRoute = '/admin/access-denied';
 
-enum _RouteAccessLevel { public, authenticated, learner, supplier, driver, admin }
+enum _RouteAccessLevel {
+  public,
+  authenticated,
+  learner,
+  supplier,
+  driver,
+  admin,
+}
 
 String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
   final path = state.matchedLocation;
@@ -62,46 +84,19 @@ String? legacyOnboardingRedirect(Ref ref, GoRouterState state) {
     return null;
   }
 
-  final draft = ref.read(registrationDraftProvider);
-
-  if (path == '/complete-learner-profile') {
-    if (!draft.hasBasicInfo) {
-      return '/register';
-    }
-
-    if (draft.intent == null) {
-      return '/register';
-    }
-
-    if (draft.intent == RegistrationIntent.supplier) {
-      return '/complete-supplier-profile';
-    }
-  }
-
-  if (path == '/complete-supplier-profile') {
-    if (!draft.hasBasicInfo) {
-      return '/register';
-    }
-
-    if (draft.intent == null) {
-      return '/register';
-    }
-
-    if (draft.intent == RegistrationIntent.learner) {
-      return '/complete-learner-profile';
-    }
-
-    if (draft.intent == RegistrationIntent.both &&
-        draft.learnerProfile == null) {
-      return '/complete-learner-profile?intent=both';
-    }
-  }
-
-  return null;
+  return '/register';
 }
 
 bool _isSupplierPortalPath(String path) {
   if (path == _supplierAccessDeniedRoute) {
+    return false;
+  }
+
+  if (path == becomeSupplierRoute || path == '/supplier/onboarding') {
+    return false;
+  }
+
+  if (path == becomeLearnerRoute) {
     return false;
   }
 
@@ -127,9 +122,21 @@ bool _isAdminPortalPath(String path) {
 
 bool _isCheckingPath(String path) => path == authCheckingRoute;
 
-bool _isAuthPage(String path) => path == loginRoute || path == registerRoute;
+bool _isAuthPage(String path) =>
+    path == loginRoute ||
+    path == registerRoute ||
+    path == forgotPasswordRoute ||
+    path == resetPasswordRoute;
 
 _RouteAccessLevel _routeAccessForPath(String path) {
+  if (path == becomeSupplierRoute || path == '/supplier/onboarding') {
+    return _RouteAccessLevel.authenticated;
+  }
+
+  if (path == becomeLearnerRoute) {
+    return _RouteAccessLevel.authenticated;
+  }
+
   if (isSupplierVerificationStatusRoute(path) ||
       path == supplierVerificationPendingRoute) {
     return _RouteAccessLevel.supplier;
@@ -147,12 +154,18 @@ _RouteAccessLevel _routeAccessForPath(String path) {
     return _RouteAccessLevel.admin;
   }
 
-  if (path == '/learner/reservations' ||
+  if (path == '/learning/add-draft' ||
+      path == '/learner/reservations' ||
+      path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/')) {
     return _RouteAccessLevel.learner;
   }
 
-  if (path == '/home' || path == _supplierAccessDeniedRoute) {
+  if (path == '/home' ||
+      path == '/profile' ||
+      path.startsWith('/profile/') ||
+      path == '/notifications' ||
+      path == _supplierAccessDeniedRoute) {
     return _RouteAccessLevel.authenticated;
   }
 
@@ -255,10 +268,7 @@ String? _resolveAuthPageRedirect(AuthState authState, GoRouterState state) {
   return _resolveProtectedRoute(authState, accessLevel, target) ?? target;
 }
 
-String? _resolveSupplierVerificationRedirect(
-  AuthState authState,
-  String path,
-) {
+String? _resolveSupplierVerificationRedirect(AuthState authState, String path) {
   if (_isAuthPage(path) ||
       path == '/complete-supplier-profile' ||
       path == '/complete-learner-profile' ||
@@ -280,7 +290,8 @@ String? _resolveSupplierVerificationRedirect(
     verificationStatus: profile?.verificationStatus,
   );
 
-  final onVerificationPage = isSupplierVerificationStatusRoute(path) ||
+  final onVerificationPage =
+      isSupplierVerificationStatusRoute(path) ||
       path == supplierVerificationPendingRoute;
 
   if (gate != null && _isSupplierPortalPath(path) && !onVerificationPage) {
@@ -292,6 +303,98 @@ String? _resolveSupplierVerificationRedirect(
   }
 
   return null;
+}
+
+bool _isLearnerPortalHomePath(String path) {
+  return path == '/home' ||
+      path == '/learning/add-draft' ||
+      path == '/learner/reservations' ||
+      path.startsWith('/learner/reservations/') ||
+      path.startsWith('/learner/deliveries/');
+}
+
+String? _resolveActivePortalRedirect(AuthState authState, String path) {
+  if (!authState.isAuthenticated || authState.user == null) {
+    return null;
+  }
+
+  final user = authState.user!;
+
+  if (user.isSupplierMode &&
+      _isLearnerPortalHomePath(path) &&
+      user.canSwitchToSupplier) {
+    return supplierOverviewRoute;
+  }
+
+  if (user.isLearnerMode &&
+      _isSupplierPortalPath(path) &&
+      path != becomeSupplierRoute &&
+      path != '/supplier/onboarding' &&
+      user.canSwitchToSupplier) {
+    return homeRoute;
+  }
+
+  return null;
+}
+
+String? _resolveBecomeSupplierRedirect(AuthState authState, String path) {
+  if (path != becomeSupplierRoute && path != '/supplier/onboarding') {
+    return null;
+  }
+
+  if (!authState.isAuthenticated || authState.user == null) {
+    return null;
+  }
+
+  final user = authState.user!;
+
+  if (userHasSupplierRole(user) || user.supplierProfile != null) {
+    return supplierOverviewRoute;
+  }
+
+  if (userHasAdminRole(user) ||
+      userHasRole(user, 'MODERATOR') ||
+      userHasDriverRole(user)) {
+    return homeRoute;
+  }
+
+  if (!userHasRole(user, 'LEARNER')) {
+    return homeRoute;
+  }
+
+  return null;
+}
+
+String? _resolveBecomeLearnerRedirect(AuthState authState, String path) {
+  if (path != becomeLearnerRoute) {
+    return null;
+  }
+
+  if (!authState.isAuthenticated || authState.user == null) {
+    return null;
+  }
+
+  final user = authState.user!;
+
+  if (user.canBecomeLearner) {
+    return null;
+  }
+
+  if (userHasAdminRole(user) ||
+      userHasRole(user, 'MODERATOR') ||
+      userHasDriverRole(user)) {
+    return homeRoute;
+  }
+
+  if (user.canSwitchToLearner) {
+    return homeRoute;
+  }
+
+  if (user.isSupplierMode || userHasSupplierRole(user)) {
+    return supplierOverviewRoute;
+  }
+
+  return homeRoute;
 }
 
 String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
@@ -324,6 +427,24 @@ String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
     return verificationRedirect;
   }
 
+  final portalRedirect = _resolveActivePortalRedirect(authState, path);
+  if (portalRedirect != null) {
+    return portalRedirect;
+  }
+
+  final becomeSupplierRedirect = _resolveBecomeSupplierRedirect(
+    authState,
+    path,
+  );
+  if (becomeSupplierRedirect != null) {
+    return becomeSupplierRedirect;
+  }
+
+  final becomeLearnerRedirect = _resolveBecomeLearnerRedirect(authState, path);
+  if (becomeLearnerRedirect != null) {
+    return becomeLearnerRedirect;
+  }
+
   if (authState.status == AuthStatus.unknown) {
     return null;
   }
@@ -344,10 +465,56 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/', builder: (context, state) => const LandingPage()),
       GoRoute(path: '/health', builder: (context, state) => const HealthPage()),
-      GoRoute(path: '/home', builder: (context, state) => const HomePage()),
+      ShellRoute(
+        builder: (context, state, child) =>
+            AppMobileNavigationShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/home',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: HomePage()),
+          ),
+          GoRoute(
+            path: '/materials',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: MaterialsDiscoveryPage()),
+          ),
+          GoRoute(
+            path: '/learning',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: LearningHubPage()),
+          ),
+          GoRoute(
+            path: '/learner/reservations',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: LearnerReservationsPage()),
+          ),
+          GoRoute(
+            path: '/profile',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: ProfilePage()),
+          ),
+        ],
+      ),
       GoRoute(
-        path: '/learner/reservations',
-        builder: (context, state) => const LearnerReservationsPage(),
+        path: '/profile/edit',
+        builder: (context, state) => const ProfileEditPage(),
+      ),
+      GoRoute(
+        path: '/profile/learner/edit',
+        builder: (context, state) => const LearnerProfileEditPage(),
+      ),
+      GoRoute(
+        path: '/profile/security',
+        builder: (context, state) => const ProfileSecurityPage(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const UserNotificationsPage(),
+      ),
+      GoRoute(
+        path: '/profile/locations',
+        builder: (context, state) => const SavedLocationsPage(),
       ),
       GoRoute(
         path: '/learner/deliveries/:id',
@@ -355,12 +522,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             LearnerDeliveryDetailPage(deliveryId: state.pathParameters['id']!),
       ),
       GoRoute(
-        path: authCheckingRoute,
-        builder: (context, state) => const AuthCheckingPage(),
+        path: '/learner/reservations/:id',
+        builder: (context, state) => LearnerReservationDetailPage(
+          reservationId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
-        path: '/learning',
-        builder: (context, state) => const LearningHubPage(),
+        path: authCheckingRoute,
+        builder: (context, state) => const AuthCheckingPage(),
       ),
       GoRoute(
         path: '/learning/add-draft',
@@ -375,10 +544,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/materials',
-        builder: (context, state) => const MaterialsDiscoveryPage(),
-      ),
-      GoRoute(
         path: '/materials/:id',
         builder: (context, state) {
           final materialId = state.pathParameters['id']!;
@@ -391,21 +556,50 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const _AuthPageGuard(child: LoginPage()),
       ),
       GoRoute(
-        path: registerRoute,
-        builder: (context, state) =>
-            const _AuthPageGuard(child: RegisterPage()),
+        path: forgotPasswordRoute,
+        builder: (context, state) => _AuthPageGuard(
+          child: ForgotPasswordPage(
+            initialEmail: state.uri.queryParameters['email'],
+          ),
+        ),
       ),
       GoRoute(
-        path: '/complete-learner-profile',
+        path: resetPasswordRoute,
+        builder: (context, state) => _AuthPageGuard(
+          child: ResetPasswordPage(token: state.uri.queryParameters['token']),
+        ),
+      ),
+      GoRoute(
+        path: registerRoute,
         builder: (context, state) {
-          final isBothIntent = state.uri.queryParameters['intent'] == 'both';
+          final initialIntent = registrationIntentFromQuery(
+            state.uri.queryParameters['intent'],
+          );
 
-          return CompleteLearnerProfilePage(showSupplierNextHint: isBothIntent);
+          return _AuthPageGuard(
+            child: RegisterPage(initialIntent: initialIntent),
+          );
         },
       ),
       GoRoute(
+        path: '/complete-learner-profile',
+        builder: (context, state) => const DeprecatedOnboardingPage(),
+      ),
+      GoRoute(
         path: '/complete-supplier-profile',
-        builder: (context, state) => const CompleteSupplierProfilePage(),
+        builder: (context, state) => const DeprecatedOnboardingPage(),
+      ),
+      GoRoute(
+        path: becomeSupplierRoute,
+        builder: (context, state) => const BecomeSupplierPage(),
+      ),
+      GoRoute(
+        path: becomeLearnerRoute,
+        builder: (context, state) => const BecomeLearnerPage(),
+      ),
+      GoRoute(
+        path: '/supplier/onboarding',
+        redirect: (context, state) => becomeSupplierRoute,
       ),
       GoRoute(
         path: '/invite/accept',
@@ -454,6 +648,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/supplier',
+            redirect: (context, state) => supplierOverviewRoute,
+          ),
+          GoRoute(
+            path: '/supplier/overview',
             builder: (context, state) => const SupplierDashboardPage(),
           ),
           GoRoute(
@@ -521,39 +719,63 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/users',
             builder: (context, state) => AdminPeoplePage(
+              initialRole: state.uri.queryParameters['role'],
               initialTab: state.uri.queryParameters['tab'],
             ),
           ),
           GoRoute(
             path: '/admin/suppliers',
-            redirect: (context, state) => '/admin/users?tab=SUPPLIERS',
+            redirect: (context, state) => '/admin/users?role=SUPPLIER',
           ),
           GoRoute(
             path: '/admin/supplier-verification',
-            builder: (context, state) =>
-                const AdminSupplierVerificationPage(),
+            builder: (context, state) => const AdminSupplierVerificationPage(),
           ),
           GoRoute(
             path: '/admin/materials',
-            builder: (context, state) => const AdminMaterialsPage(),
+            builder: (context, state) => AdminMaterialsPage(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
           GoRoute(
             path: '/admin/approvals',
-            builder: (context, state) => const AdminApprovalsPage(),
+            builder: (context, state) => AdminApprovalsPage(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
           GoRoute(
             path: '/admin/invitations',
-            builder: (context, state) => const AdminInvitationsPage(),
+            builder: (context, state) => AdminInvitationsPage(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
           GoRoute(
             path: '/admin/impact',
-            builder: (context, state) =>
-                const AdminPlaceholderPage(title: 'Impact Analytics'),
+            builder: (context, state) => const AdminImpactPage(),
           ),
           GoRoute(
             path: '/admin/audit-logs',
-            builder: (context, state) =>
-                const AdminPlaceholderPage(title: 'Audit Logs'),
+            builder: (context, state) => const AdminAuditLogsPage(),
+          ),
+          GoRoute(
+            path: '/admin/reservations',
+            builder: (context, state) => const AdminReservationsPage(),
+          ),
+          GoRoute(
+            path: '/admin/no-show-reports',
+            builder: (context, state) => AdminNoShowReportsPage(
+              initialOpenReportId: state.uri.queryParameters['open'],
+            ),
+          ),
+          GoRoute(
+            path: '/admin/deliveries',
+            builder: (context, state) => AdminDeliveriesPage(
+              initialOpenDeliveryId: state.uri.queryParameters['open'],
+            ),
+          ),
+          GoRoute(
+            path: '/admin/learning-projects',
+            builder: (context, state) => const AdminLearningProjectsPage(),
           ),
         ],
       ),

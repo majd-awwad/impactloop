@@ -11,6 +11,10 @@ Maps each folder under `apps/backend/src/modules/` to its responsibility and key
 |---------------|------------|-------------------------|
 | `auth` | `/api/auth` | No |
 | `admin` | `/api/admin` | No |
+| `admin-approvals` | `/api/admin/approvals/*` | Via `admin` |
+| `admin-materials` | `/api/admin/materials*`, `/api/admin/material-reports*` | Via `admin` |
+| `admin-people` | `/api/admin/people*` | Via `admin` |
+| `admin-supplier-verifications` | `/api/admin/supplier-verifications*` | Via `admin` |
 | `categories` | `/api/categories` | No |
 | `category-requests` | `/api/supplier/category-requests` | Yes |
 | `deliveries` | `/api/deliveries`, `/api/reservations/:id/delivery` | Partial |
@@ -22,13 +26,25 @@ Maps each folder under `apps/backend/src/modules/` to its responsibility and key
 | `material-types` | `/api/material-types` | No |
 | `materials` | `/api/materials` | No |
 | `price-rule-requests` | `/api/price-rule-requests`, `/api/supplier/price-rule-requests` | Partial |
+| `profile` | `/api/profile` | No |
 | `reservations` | `/api/reservations` | No |
 | `supplier` | `/api/supplier` | — (parent) |
 | `supplier-notifications` | `/api/supplier/notifications` | Yes |
 | `supplier-reservations` | `/api/supplier/reservations` | Yes |
+| `supplier-verification` | `/api/supplier/verification*` | Yes |
 | `uploads` | `/api/uploads` | No |
 
 Mount order: `apps/backend/src/app.ts`
+
+---
+
+## `profile`
+
+**Purpose:** Authenticated learner/user profile updates (`displayName`, `phone`, `profileImageUrl`, learner profile fields).
+
+**Key files:** `profile.routes.ts`, `profile.controller.ts`, `profile.service.ts`, `profile.repository.ts`, `profile.validation.ts`, `profile.test.ts`
+
+**Inspected:** `profile.routes.ts` — `PATCH /`, `PATCH /learner`
 
 ---
 
@@ -107,45 +123,85 @@ Mount order: `apps/backend/src/app.ts`
 
 **Prisma:** `RoleInvitation`
 
-**Frontend:** No invitation acceptance UI found — **backend-only** for accept flow.
+**Frontend:** `features/invitations` provides `/invite/accept`.
 
 ---
 
 ## `admin`
 
-**Purpose:** Admin portal read-only dashboard aggregates (overview metrics, impact snapshot, charts data).
+**Purpose:** Admin dashboard, invitation management, supplier verification review, approvals, material moderation/report review, and people management.
 
 **Key files:** `admin.routes.ts`, `admin.controller.ts`, `admin.service.ts`, `admin.repository.ts`, `admin.dashboard.test.ts`
 
 **Auth:** `authMiddleware` + `requireRoles('ADMIN')` on all `/api/admin/*` routes.
 
-**Prisma:** Aggregates from existing tables (`users`, `user_roles`, `materials`, `reservations`, `categories`, `role_invitations`, `category_requests`, `price_rule_requests`). No new tables.
+**Prisma:** Aggregates and operations across existing tables (`users`, `user_roles`, `materials`, `material_reports`, `reservations`, `categories`, `role_invitations`, `category_requests`, `price_rule_requests`, supplier verification tables). No admin-only tables.
 
-**Frontend:** `features/admin_portal` — `/admin` overview + placeholders inside `AdminShell`.
+**Frontend:** `features/admin_portal` — `/admin` overview, users, supplier verification, materials, approvals, invitations, and placeholders for impact/audit logs inside `AdminShell`.
+
+---
+
+## `admin-approvals`
+
+**Purpose:** Admin review of supplier category requests and price rule requests.
+
+**Key files:** `admin-approvals.controller.ts`, `admin-approvals.service.ts`, `admin-approvals.repository.ts`, `admin-approvals.validation.ts`, `admin-approvals.test.ts`
+
+**Mounted through:** `admin.routes.ts`
+
+---
+
+## `admin-materials`
+
+**Purpose:** Admin material list/detail moderation, material report list/detail, report resolve/reject, and hide material from report.
+
+**Key files:** `admin-materials.controller.ts`, `admin-materials.service.ts`, `admin-materials.repository.ts`, `admin-materials.validation.ts`
+
+**Mounted through:** `admin.routes.ts`
+
+---
+
+## `admin-people`
+
+**Purpose:** Admin people summaries, user list/detail, suspend, and reactivate.
+
+**Key files:** `admin-people.controller.ts`, `admin-people.service.ts`, `admin-people.repository.ts`, `admin-people.validation.ts`
+
+**Mounted through:** `admin.routes.ts`
+
+---
+
+## `admin-supplier-verifications`
+
+**Purpose:** Admin review of organization supplier verification documents.
+
+**Key files:** `admin-supplier-verifications.controller.ts`, `admin-supplier-verifications.service.ts`, `admin-supplier-verifications.repository.ts`, `admin-supplier-verifications.validation.ts`
+
+**Mounted through:** `admin.routes.ts`
 
 ---
 
 ## `learning-projects`
 
-**Purpose:** Public read API for learning hub projects (list + detail).
+**Purpose:** Public read API for learning hub projects (list + detail) plus learner project submit-for-review.
 
 **Key files:** `learning-projects.routes.ts`, `learning-projects.controller.ts`, `learning-projects.service.ts`, `learning-projects.repository.ts`, `learning-projects.validation.ts`
 
 **Prisma:** `LearningProject` and related project tables
 
-**Frontend:** Learning hub UI still uses mock data — see [08-implementation-status.md](../08-implementation-status.md)
+**Frontend:** Learning hub list/detail, home spotlight, and add-draft submission are API-backed; admin moderation lives under `/api/admin/learning-projects*` — see [08-implementation-status.md](../08-implementation-status.md)
 
 ---
 
 ## `locations`
 
-**Purpose:** Authenticated reverse geocoding for supplier location input.
+**Purpose:** Authenticated reverse geocoding for supplier location input and private user saved-location CRUD.
 
-**Key files:** `locations.routes.ts`, `locations.controller.ts`, `locations.service.ts`, `locations.validation.ts`, `locations.test.ts`
+**Key files:** `locations.routes.ts`, `locations.controller.ts`, `locations.service.ts`, `locations.repository.ts`, `locations.validation.ts`, `locations.test.ts`
 
 **Cross-cutting:** `apps/backend/src/services/reverse-geocoding.service.ts`
 
-**Prisma:** `Location` (PostGIS `geography(Point,4326)` on column `location`)
+**Prisma:** `Location` (PostGIS `geography(Point,4326)` on column `location`), `UserSavedLocation`
 
 ---
 
@@ -161,13 +217,13 @@ Mount order: `apps/backend/src/app.ts`
 
 ## `materials`
 
-**Purpose:** Public material discovery (list/detail), listing policy, authenticated price check before listing.
+**Purpose:** Public material discovery (list/detail, nearest sort, approximate map pins), listing policy, authenticated price check before listing, and learner material engagement (views/likes).
 
 **Key files:** `materials.routes.ts`, `materials.controller.ts`, `materials.service.ts`, `materials.repository.ts`, `materials.validation.ts`, `materials.price.test.ts`
 
 **Constants:** `apps/backend/src/constants/material-listing-policy.ts`
 
-**Prisma:** `Material`, `MaterialImage`, `MaterialTag`
+**Prisma:** `Material`, `MaterialImage`, `MaterialTag`, `MaterialView`, `MaterialLike`
 
 ---
 
@@ -197,9 +253,23 @@ Mount order: `apps/backend/src/app.ts`
 
 **Prisma:** `Reservation`, `ReservationStatusHistory`, `Material`
 
-**Behavior:** `POST /api/reservations` requires a `LEARNER`, validates the material and quantity, prevents own-material reservations, enforces one active reservation per material for MVP, creates a `PENDING` reservation, and moves the material from `AVAILABLE` to `PENDING_RESERVATION` transactionally. `GET /api/reservations/my` returns the current learner's reservations newest first with safe material, supplier, status, and pickup-window summary fields.
+**Behavior:** `POST /api/reservations` requires a `LEARNER`, validates the material and requested quantity, prevents own-material reservations, enforces one open reservation per learner/material, creates a `PENDING` reservation hold, and recomputes material status from held/remaining quantity. `GET /api/reservations/my` returns the current learner's reservations newest first with safe material, supplier, status, delivery, and pickup-window summary fields. `PATCH /api/reservations/:id/cancel` supports learner cancellation while `PENDING`.
 
-**Not implemented:** Learner cancel/detail mutation, delivery request, expiry jobs, reviews, multi-reservation queues.
+**Not implemented:** Payment and reviews.
+
+---
+
+## `notifications`
+
+**Purpose:** Authenticated persisted inbox backed by the `notifications` table.
+
+**Mounted at:** `/api/notifications`
+
+**Key files:** `notifications.routes.ts`, `notifications.controller.ts`, `notifications.service.ts`, `notifications.repository.ts`, `reservation-notifications.ts`, `notifications.test.ts`
+
+**Prisma:** `Notification`
+
+**Behavior:** List with pagination/unread summary, mark one read, mark all read. Reservation lifecycle hooks write supplier/learner notification rows.
 
 ---
 
@@ -235,11 +305,21 @@ Mount order: `apps/backend/src/app.ts`
 
 **Status behavior:** Accept sets reservation `ACCEPTED` and material `RESERVED`; decline sets reservation `REJECTED` and safely returns material to `AVAILABLE`; complete sets reservation `COMPLETED` and material `REUSED`.
 
+Status behavior is quantity-aware. Accept keeps the hold; decline releases it; complete subtracts `quantityRequested`. Delivery reservations complete through driver `DELIVERED` rather than supplier manual completion.
+
+---
+
+## `supplier-verification`
+
+**Purpose:** Supplier organization verification submit/status support used by supplier portal and admin review workflows.
+
+**Key files:** `supplier-verification.routes.ts`, `supplier-verification.controller.ts`, `supplier-verification.service.ts`, `supplier-verification.repository.ts`, `supplier-verification.validation.ts`
+
 ---
 
 ## `uploads`
 
-**Purpose:** Multipart upload of material images for suppliers.
+**Purpose:** Multipart upload of material images, profile images, and supplier verification documents.
 
 **Key files:** `uploads.routes.ts`, `uploads.controller.ts`, `uploads.service.ts`, `uploads.middleware.ts`, `uploads.storage.ts`
 

@@ -8,9 +8,9 @@
 
 | Metric | Value | Source |
 |--------|-------|--------|
-| Prisma models | 34 | `schema.prisma` (`^model ` count) |
-| PostgreSQL tables | 34 | `@@map(...)` on each model |
-| Enums | 28 | [enums.md](enums.md) |
+| Prisma models | 35 | `schema.prisma` (`^model ` count) |
+| PostgreSQL tables | 35 | `@@map(...)` on each model |
+| Enums | 33 | [enums.md](enums.md) |
 | PostGIS | Yes | `Location.location` — `Unsupported("geography(Point,4326)")`; enabled in migration `20260614145408_add_auth_schema` |
 
 ## Domain groups
@@ -35,11 +35,14 @@ User ──┬── UserRoleAssignment (many roles per user, @@unique [userId, 
 Location ←── SupplierProfile.defaultPickupLocation
          ←── OrganizationProfile.businessLocation
          ←── Material.location
+         ←── UserSavedLocation.location
          ←── Reservation.dropoffLocation
          ←── Delivery.pickupLocation / dropoffLocation
+User ←── UserSavedLocation.user
 ```
 
 PostGIS column `locations.location` stores geography point; lat/long also stored as decimals.
+`user_saved_locations` stores private saved-location labels/default flags for authenticated users.
 
 ### Taxonomy and listing policy
 
@@ -63,6 +66,7 @@ MaterialType ──┬── MaterialTypeAlias
 ```
 Material ──┬── MaterialImage
            ├── MaterialTag
+           ├── MaterialReport
            ├── Reservation (many)
            ├── publishedFromCategoryRequest (CategoryRequest)
            └── publishedFromPriceRuleRequest (PriceRuleRequest)
@@ -87,7 +91,7 @@ Delivery ──┬── DeliveryAssignment
            └── assigned DriverProfile
 ```
 
-Legacy reservation delivery fields still exist for compatibility: `deliveryRequested`, `deliveryStatus`, `deliveryCost`, `dropoffLocationId`, `driverProfileId`. New delivery code uses `deliveries` as the source of truth. `driverProfileId` on `Reservation` remains a nullable string legacy field; `Delivery.assignedDriverProfileId` is the real relation.
+Delivery logistics use `deliveries` as the source of truth (`status`, `assignedDriverProfileId`, pickup/dropoff locations). Reservation rows hold booking state only (`fulfillmentMethod`, `status`, scheduling windows).
 
 ### Learning hub
 
@@ -103,6 +107,7 @@ LearningProject ──┬── ProjectImage
 
 ```
 Review → Reservation, User (reviewer, reviewedUser)
+MaterialReport → Material, User (reporter, reviewedBy)
 Notification → User (generic table; no REST module in apps/backend/src/modules/)
 ```
 
@@ -120,13 +125,13 @@ AiPriceLookupLog (standalone audit of price AI lookups)
 IdempotencyRecord → User
 ```
 
-`idempotency_records` stores per-user operation keys, request hashes, status (`IN_PROGRESS`, `SUCCEEDED`, `FAILED`), optional resource metadata, and successful response JSON. The unique `(userId, scope, key)` constraint is used by supplier material create to prevent duplicate inserts for repeated `Idempotency-Key` submissions without comparing material title/name/category.
+`idempotency_records` stores per-user operation keys, request hashes, status (`IN_PROGRESS`, `SUCCEEDED`, `FAILED`), optional resource metadata, and successful response JSON. The unique `(userId, scope, key)` constraint is used by supplier material create and Learning Hub project submit to prevent duplicate inserts for repeated `Idempotency-Key` submissions.
 
 ## Tables in schema vs older docs
 
 Tables listed in [03-database.md](../03-database.md) but **absent** from current `schema.prisma`:
 
-`student_profiles`, `admin_profiles`, `user_saved_locations`, `material_pickup_windows`, `delivery_location_updates`, `project_ai_suggestions`, `ai_requests`, `ai_material_matches`, `ai_credit_wallets`, `ai_usage_logs`, `reports`, `impact_logs`, `impact_summaries`, and removed MVP tables (delivery partners, favorites, etc.)
+`student_profiles`, `admin_profiles`, `material_pickup_windows`, `delivery_location_updates`, `project_ai_suggestions`, `ai_requests`, `ai_material_matches`, `ai_credit_wallets`, `ai_usage_logs`, `reports`, `impact_logs`, `impact_summaries`, and removed MVP tables (delivery partners, favorites, etc.)
 
 ## Migration history (chronological)
 
@@ -151,6 +156,7 @@ Tables listed in [03-database.md](../03-database.md) but **absent** from current
 | `20260625120000_add_internal_delivery_domain` | Driver profiles, deliveries, assignment/history/location pings |
 | `20260625123000_add_delivery_active_invariant_indexes` | Partial unique indexes for active delivery invariants |
 | `20260627120000_add_idempotency_records` | Generic idempotency records for safe create retries |
+| `20260704120000_add_user_saved_locations` | Private saved locations and PostGIS location index |
 
 ## Design rules (still valid from code)
 

@@ -6,12 +6,21 @@ import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
   uploadMaterialImagesHandler,
+  uploadProfileImageHandler,
   uploadSupplierVerificationDocumentHandler,
 } from './uploads.controller.js';
 import { materialImagesUpload } from './uploads.middleware.js';
+import { profileImageUpload } from './profile-uploads.middleware.js';
 import { supplierVerificationDocumentUpload } from './verification-uploads.middleware.js';
 
 export const uploadsRouter = Router();
+
+uploadsRouter.post(
+  '/profile-image',
+  authMiddleware,
+  profileImageUpload,
+  asyncHandler(uploadProfileImageHandler),
+);
 
 uploadsRouter.post(
   '/material-images',

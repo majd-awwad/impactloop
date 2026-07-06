@@ -2,6 +2,8 @@
 
 Internal delivery is now a backend domain for accepted reservations. Learners can request delivery and view delivery status in Flutter; internal drivers can accept jobs and advance assigned deliveries through the driver portal.
 
+Role-scope boundary: driver is an operational support role for basic internal delivery coordination. Full Uber-style dispatch/tracking is not an MVP requirement.
+
 ## Current Status
 
 | Layer | Status | Notes |
@@ -11,7 +13,7 @@ Internal delivery is now a backend domain for accepted reservations. Learners ca
 | Learner delivery read/tracking API | **Implemented** | `GET /api/deliveries/my`, `GET /api/deliveries/:id` |
 | Driver jobs/assignment/status API | **Implemented** | `/api/driver/deliveries/*` |
 | Driver location pings | **Partial** | Assigned active drivers can share foreground location manually or automatically every 45 seconds while the active delivery detail page is open; no background tracking |
-| Flutter learner delivery UI | **Partial** | My Reservations request dialog, `/learner/deliveries/:id` status page, safe latest driver ping summary, and polling map marker; no realtime stream |
+| Flutter learner delivery UI | **Partial** | My Reservations request dialog (saved or new dropoff + optional save), `/learner/deliveries/:id` status page, safe latest driver ping summary, and polling map marker; no realtime stream |
 | Flutter driver portal | **Partial** | `/driver/jobs` job board, `/driver/deliveries/:id` status updates, foreground auto-location sharing on the active delivery detail page, and manual location ping; no live map or background pings |
 | External partners/payment/AI | **Out of scope** | Not implemented |
 
@@ -25,7 +27,11 @@ Delivery is separate from reservation lifecycle:
 - Service checks and partial unique database indexes enforce one active delivery per reservation and one active delivery per driver.
 - `DriverProfile` is linked to a `User` with `DRIVER` role.
 
-Deprecated compatibility fields remain on `Reservation`: `deliveryRequested`, `deliveryStatus`, `deliveryCost`, `dropoffLocationId`, `driverProfileId`. `deliveryRequested` is set to `true` when the learner creates a delivery via `POST /api/reservations/:id/delivery`; other legacy fields are not the source of truth.
+Booking vs logistics:
+
+- **`fulfillmentMethod`** (`PICKUP` | `DELIVERY`) on `reservations` is the booking source of truth.
+- **`deliveries`** owns logistics status, driver assignment, pickup/dropoff locations, and delivery cost (when implemented).
+- A pickup reservation with a later delivery job is detected via `deliveries` rows and `activeDelivery` in API responses — not a reservation flag.
 
 ## Backend Behavior
 
@@ -45,8 +51,8 @@ Flutter learner delivery request:
 
 - My Reservations is the primary request surface.
 - Accepted pickup-only reservations show pickup window/supplier-note copy.
-- Accepted delivery-enabled reservations show **Request delivery** when no active delivery exists.
-- Submitted delivery requests invalidate learner reservations and learner deliveries.
+- Accepted pickup reservations on delivery-enabled materials show **Request delivery** when `canLearnerRequestDelivery` is true (no active delivery).
+- Submitted delivery requests invalidate learner reservations, learner deliveries, and saved dropoff addresses.
 - Existing deliveries show a status badge and link to `/learner/deliveries/:id`.
 
 Flutter driver portal:

@@ -142,7 +142,7 @@ Definition of Done:
 ## Phase 6 — Internal Delivery
 
 Goal:
-Delivery works through reservations.
+Internal delivery works from accepted reservations without external delivery partners.
 
 Tasks:
 
@@ -157,7 +157,7 @@ Tasks:
 Definition of Done:
 
 - No delivery_requests table.
-- Delivery fields update in reservations.
+- Delivery lifecycle is stored in the internal delivery domain; legacy reservation delivery fields are compatibility only.
 - Driver accepts delivery.
 - Delivered makes reservation COMPLETED and material REUSED.
 

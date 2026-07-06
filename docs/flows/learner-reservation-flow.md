@@ -2,7 +2,9 @@
 
 Documents the implemented MVP learner reservation request path.
 
-**Out of scope for Flutter:** background GPS streaming, WebSockets/realtime tracking, public tracking links, supplier live tracking, learner reservation cancel, expiry jobs, reviews, multi-reservation queues, partial stock allocation, and public precise pickup-location reveal.
+**Out of scope for Flutter (still):** background GPS streaming, WebSockets/realtime tracking, public tracking links, supplier live tracking, scheduled background expiry cron, reviews, multi-reservation queues, standalone location CRUD, current-location delivery request, and nearest-first sorting.
+
+**Implemented since earlier doc drafts:** learner cancel (`PENDING` / awaiting confirmation), partial-quantity holds, handover codes, reschedule/report/messages, delivery request + delivery detail tracking summary.
 
 ## Trigger
 
@@ -15,9 +17,11 @@ Authenticated **LEARNER** reserves an available material from public material de
 | Step | Status |
 |------|--------|
 | Learner reserve UI | **Implemented MVP** — detail CTA only |
-| `POST /api/reservations` | **Implemented MVP** |
-| Learner status list UI | **Implemented MVP** — `/learner/reservations` |
-| Supplier accept/decline/complete | **Partial** — accept/reject/self-pickup complete implemented |
+| `POST /api/reservations` | **Implemented MVP** — partial quantity, fulfillment method, preferred windows |
+| Learner cancel + awaiting-confirmation actions | **Implemented** — `PATCH .../cancel`, `PATCH .../learner-confirmation` |
+| Learner follow-up (reschedule, reports, messages) | **Implemented** — on `/learner/reservations` list cards |
+| Learner status list + detail UI | **Partial** — `/learner/reservations` list + `/learner/reservations/:id` detail |
+| Supplier accept/decline/complete + overdue follow-up | **Partial** — accept/reject/handover complete + incident flows implemented |
 | Delivery after accept | **Partial** — learner request/status/tracking UI and driver jobs/status/manual ping UI exist; no background GPS, WebSockets, ETA, or public tracking |
 | Test data | **Partial** — seed data still exists for supplier portal demos |
 
@@ -29,20 +33,21 @@ Authenticated **LEARNER** reserves an available material from public material de
 2. Taps **Reserve Material**.
 3. If unauthenticated, the app redirects to login with `from=/materials/:id`.
 4. If authenticated as a non-learner, the UI blocks the action.
-5. The app submits `POST /api/reservations` with the material id and full listed quantity.
-6. Success creates a `PENDING` reservation, keeps the success snackbar, shows a **View reservation status** CTA, invalidates learner reservations, and reloads material detail so the status becomes `PENDING_RESERVATION`.
-7. Learner can open `/learner/reservations` from home to see pending/accepted/rejected/completed status.
-8. Supplier handles the request through the existing incoming requests page.
-9. If the reservation is accepted and the material allows delivery, `/learner/reservations` shows **Request delivery**.
-10. Learner enters a manual dropoff location. Success creates a delivery attempt and refreshes reservations/deliveries.
-11. Existing deliveries show status badges and link to `/learner/deliveries/:id`.
+5. The learner chooses pickup or delivery when both are available. Pickup-only or delivery-only materials preselect the only valid method.
+6. The app submits `POST /api/reservations` with the material id, requested quantity, fulfillment method, and the method-specific scheduling fields. Pickup preferred windows must start at least 30 minutes from now and end at least 30 minutes from now; invalid windows are blocked before creating the reservation with specific `PICKUP_*` error codes.
+7. Success creates a `PENDING` reservation, keeps the success snackbar, shows a **View reservation status** CTA, invalidates learner reservations, and reloads material detail so the status becomes `PENDING_RESERVATION`.
+8. Learner can open `/learner/reservations` from home to see pending/accepted/rejected/completed status. Accepted self-pickup cards show the full pickup address; delivery reservations keep pickup details on the delivery status page.
+9. Supplier handles the request through the existing incoming requests page.
+10. If the reservation is accepted and the material allows delivery, `/learner/reservations` shows **Request delivery**.
+11. Learner enters a manual dropoff location. Success creates a delivery attempt and refreshes reservations/deliveries.
+12. Existing deliveries show status badges and link to `/learner/deliveries/:id`.
 
 ### Frontend Path
 
 - `material_discovery` detail CTA calls `reservationCreateControllerProvider`.
 - `material_discovery` detail reads `myReservationsProvider`; if the learner already has a reservation for the material, it shows reservation status instead of the normal reserve CTA and links to My Reservations with status-specific copy.
 - `features/reservations/data` contains the API/repository and request/response models.
-- `/learner/reservations` lists the learner's reservations with loading, empty, and error states. Accepted cards choose pickup-only copy, delivery request, or delivery status from `myReservationsProvider` plus `learnerDeliveriesProvider`.
+- `/learner/reservations` lists the learner's reservations with loading, empty, error, manual refresh, and 10-second foreground polling states. Accepted cards choose pickup-only copy, delivery request, or delivery status from `myReservationsProvider` plus `learnerDeliveriesProvider`.
 - `/learner/deliveries/:id` shows learner-owned delivery status history, material/supplier summary, pickup window, dropoff summary, and assigned driver summary when present.
 - Home links to `/learner/reservations`.
 
@@ -52,7 +57,7 @@ Authenticated **LEARNER** reserves an available material from public material de
 - `modules/reservations` mounts `GET /api/reservations/my`.
 - Create validates `LEARNER` role, material `AVAILABLE`, quantity, and self-reservation.
 - Create enforces one active reservation per material and uses `updateMany` with `status = AVAILABLE` as the race-safe guard.
-- Read returns only reservations where `requesterId` is the authenticated learner, newest first, with safe material/supplier/pickup-window summary fields.
+- Read returns only reservations where `requesterId` is the authenticated learner, newest first, with safe material/supplier/pickup-window summary fields. Approximate `material.city`/`material.area` are always included; `pickupLocationFull` is populated only for `ACCEPTED` and `COMPLETED` statuses.
 - Supplier accept sets material `RESERVED`; reject returns material `AVAILABLE`; supplier complete sets material `REUSED` only for self-pickup reservations. Delivery reservations complete through driver `DELIVERED`.
 
 ### Database Changes Per Flow
@@ -74,6 +79,8 @@ Learner sees a success snack bar, refreshed material detail, and a pending card 
 - Unauthenticated → 401
 - Non-learner → 403
 - Validation errors → 400
+  - Pickup windows with less than 30 minutes remaining → `PICKUP_WINDOW_TOO_CLOSE_TO_ENDING`
+  - Pickup start too soon → `PICKUP_START_TOO_SOON`
 
 ### Files Involved
 
@@ -83,14 +90,11 @@ Learner sees a success snack bar, refreshed material detail, and a pending card 
 
 ## Still Not Implemented
 
-- Learner reservation cancel.
-- Dedicated learner reservation detail page.
-- Driver workflow in Flutter.
-- Live tracking map, ETA, cancellation, retry delivery UI, payment, and reviews.
-- Expiry jobs.
-- Reviews.
-- Multi-reservation queues and partial stock allocation.
-- Precise pickup-location reveal.
+- Scheduled background expiry cron (lazy expiry on read paths is implemented).
+- Self-pickup map on reservation cards — **Implemented** when `pickupLocationFull` has coordinates (accepted self-pickup, no active delivery row).
+- Realtime live tracking map/stream, ETA, delivery cancellation/retry UI, payment, and reviews.
+- Generic persisted notifications (supplier-derived inbox only).
+- Standalone location CRUD, current-location delivery request, and nearest-first sorting.
 
 ---
 

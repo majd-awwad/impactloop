@@ -115,11 +115,51 @@ enum VerificationDocumentStatus {
 
 enum ReservationStatus {
   PENDING
+  AWAITING_LEARNER_CONFIRMATION
+  AWAITING_SUPPLIER_CONFIRMATION
   ACCEPTED
   REJECTED
   CANCELLED
   COMPLETED
   EXPIRED
+  NO_SHOW
+  FULFILLMENT_FAILED
+  AWAITING_RESOLUTION
+}
+
+enum RescheduleRequestedBy {
+  SUPPLIER
+  LEARNER
+}
+
+enum NoShowReportReason {
+  LEARNER_DID_NOT_ARRIVE
+  DRIVER_DID_NOT_ARRIVE
+  NO_RESPONSE_AFTER_PICKUP_WINDOW
+  REPEATED_DELAY
+  WRONG_INFORMATION
+  SAFETY_OR_TRUST_CONCERN
+  SUPPLIER_UNAVAILABLE
+  SUPPLIER_MATERIAL_NOT_READY
+  NO_DRIVER_AVAILABLE
+  PICKUP_FAILED
+  DELIVERY_FAILED
+  DRIVER_ISSUE
+  OTHER
+}
+
+enum NoShowReportStatus {
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED
+  RESOLVED_NO_STRIKE
+}
+
+enum NoShowReportTargetRole {
+  LEARNER
+  SUPPLIER
+  DRIVER
+  SYSTEM
 }
 
 enum ReservationStatusGroup {
@@ -127,9 +167,9 @@ enum ReservationStatusGroup {
   DELIVERY
 }
 
-enum PickupType {
-  SELF_PICKUP
-  DELIVERY_ALLOWED
+enum ReservationFulfillmentMethod {
+  PICKUP
+  DELIVERY
 }
 
 enum DeliveryStatus {
@@ -143,6 +183,9 @@ enum DeliveryStatus {
   CANCELLED
   FAILED_PICKUP
   FAILED_DELIVERY
+  DRIVER_NO_SHOW
+  LEARNER_NO_SHOW
+  AWAITING_RESOLUTION
 }
 
 enum DriverProfileStatus {
@@ -210,7 +253,9 @@ enum LearningProjectStatus {
   DRAFT
   PENDING_REVIEW
   PUBLISHED
+  CHANGES_REQUESTED
   REJECTED
+  HIDDEN
   ARCHIVED
 }
 
@@ -247,6 +292,12 @@ model User {
   emailVerifiedAt              DateTime?                  @map("email_verified_at")
   phoneVerifiedAt              DateTime?                  @map("phone_verified_at")
   lastLoginAt                  DateTime?                  @map("last_login_at")
+  activeRole                   UserRole?                  @map("active_role")
+  suspensionReason             String?                    @map("suspension_reason")
+  suspendedAt                  DateTime?                  @map("suspended_at")
+  suspendedById                String?                    @map("suspended_by_id")
+  reactivatedAt                DateTime?                  @map("reactivated_at")
+  reactivatedById              String?                    @map("reactivated_by_id")
   createdAt                    DateTime                   @default(now()) @map("created_at")
   updatedAt                    DateTime                   @updatedAt @map("updated_at")
   roles                        UserRoleAssignment[]
@@ -276,9 +327,40 @@ model User {
   categoryRequests             CategoryRequest[]
   materialReportsSubmitted     MaterialReport[] @relation("MaterialReportReporter")
   materialReportsReviewed      MaterialReport[] @relation("MaterialReportReviewedBy")
+  reservationMessagesSent      ReservationMessage[] @relation("ReservationMessageSender")
+  noShowReportsSubmitted       NoShowReport[] @relation("NoShowReportReporter")
+  noShowReportsTargeted        NoShowReport[] @relation("NoShowReportTarget")
+  noShowReportsReviewed        NoShowReport[] @relation("NoShowReportReviewedBy")
   moderatedMaterials           Material[]       @relation("MaterialModeratedBy")
+  supplierFollows              SupplierFollower[] @relation("SupplierFollowerUser")
+  materialLikes                MaterialLike[]     @relation("MaterialLikeUser")
+  materialViews                MaterialView[]     @relation("MaterialViewUser")
+  savedLocations               UserSavedLocation[]
+  suspendedBy                  User?            @relation("UserSuspendedBy", fields: [suspendedById], references: [id], onDelete: SetNull)
+  accountsSuspended            User[]           @relation("UserSuspendedBy")
+  reactivatedBy                User?            @relation("UserReactivatedBy", fields: [reactivatedById], references: [id], onDelete: SetNull)
+  accountsReactivated          User[]           @relation("UserReactivatedBy")
+  adminActivityLogs            AdminActivityLog[]
 
+  @@index([suspendedById])
+  @@index([reactivatedById])
   @@map("users")
+}
+
+model AdminActivityLog {
+  id          String   @id @default(cuid())
+  actorUserId String   @map("actor_user_id")
+  action      String
+  targetType  String   @map("target_type")
+  targetId    String?  @map("target_id")
+  targetLabel String   @map("target_label")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  actor       User     @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([actorUserId])
+  @@map("admin_activity_logs")
 }
 
 model UserRoleAssignment {
@@ -363,6 +445,8 @@ model SupplierProfile {
   supplierType             String?              @map("supplier_type")
   publicName               String?              @map("public_name")
   description              String?
+  coverImageUrl            String?              @map("cover_image_url")
+  avatarImageUrl           String?              @map("avatar_image_url")
   verificationStatus       String               @default("UNVERIFIED") @map("verification_status")
   verificationSubmittedAt  DateTime?            @map("verification_submitted_at")
   verificationReviewedAt   DateTime?            @map("verification_reviewed_at")
@@ -376,10 +460,25 @@ model SupplierProfile {
   defaultPickupLocation    Location?            @relation("SupplierDefaultPickupLocation", fields: [defaultPickupLocationId], references: [id], onDelete: SetNull)
   organizationProfile      OrganizationProfile?
   materials                Material[]
+  followers                SupplierFollower[]
 
   @@index([defaultPickupLocationId])
   @@index([verificationReviewedById])
   @@map("supplier_profiles")
+}
+
+model SupplierFollower {
+  id               String         @id @default(cuid())
+  supplierProfileId String        @map("supplier_profile_id")
+  followerUserId   String         @map("follower_user_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  supplierProfile  SupplierProfile @relation(fields: [supplierProfileId], references: [id], onDelete: Cascade)
+  followerUser     User           @relation("SupplierFollowerUser", fields: [followerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierProfileId, followerUserId])
+  @@index([supplierProfileId])
+  @@index([followerUserId])
+  @@map("supplier_followers")
 }
 
 model DriverProfile {
@@ -447,12 +546,29 @@ model Location {
   supplierPickupFor       SupplierProfile[]                     @relation("SupplierDefaultPickupLocation")
   organizationBusinessFor OrganizationProfile[]                 @relation("OrganizationBusinessLocation")
   materials               Material[]
-  reservationDropoffs     Reservation[]                         @relation("ReservationDropoffLocation")
   deliveryPickups         Delivery[]                            @relation("DeliveryPickupLocation")
   deliveryDropoffs        Delivery[]                            @relation("DeliveryDropoffLocation")
+  savedByUsers            UserSavedLocation[]
 
   @@index([country, city])
   @@map("locations")
+}
+
+model UserSavedLocation {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  locationId  String   @map("location_id")
+  label       String
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@index([locationId])
+  @@map("user_saved_locations")
 }
 
 model Category {
@@ -489,8 +605,18 @@ model LearningProject {
   estimatedDurationMinutes Int?                       @map("estimated_duration_minutes")
   coverImageUrl            String?                    @map("cover_image_url")
   status                   LearningProjectStatus      @default(DRAFT)
+  submittedAt              DateTime?                  @map("submitted_at")
   reviewedBy               String?                    @map("reviewed_by")
+  reviewedAt               DateTime?                  @map("reviewed_at")
   reviewNote               String?                    @map("review_note")
+  rejectionReason          String?                    @map("rejection_reason")
+  changesRequestedReason   String?                    @map("changes_requested_reason")
+  hiddenAt                 DateTime?                  @map("hidden_at")
+  hiddenBy                 String?                    @map("hidden_by")
+  hiddenReason             String?                    @map("hidden_reason")
+  archivedAt               DateTime?                  @map("archived_at")
+  archivedBy               String?                    @map("archived_by")
+  archivedReason           String?                    @map("archived_reason")
   stepsGeneratedByAi       Boolean                    @default(false) @map("steps_generated_by_ai")
   aiStepsGeneratedAt       DateTime?                  @map("ai_steps_generated_at")
   createdAt                DateTime                   @default(now()) @map("created_at")
@@ -648,6 +774,8 @@ model Material {
   publishedFromCategoryRequest  CategoryRequest?   @relation("CategoryRequestPublishedMaterial")
   publishedFromPriceRuleRequest PriceRuleRequest?  @relation("PriceRuleRequestPublishedMaterial")
   reports                       MaterialReport[]
+  likes                         MaterialLike[]
+  views                         MaterialView[]
 
   @@index([ownerId])
   @@index([moderatedById])
@@ -658,6 +786,34 @@ model Material {
   @@index([status])
   @@index([locationId])
   @@map("materials")
+}
+
+model MaterialLike {
+  id        String   @id @default(cuid())
+  materialId String  @map("material_id")
+  userId    String  @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  material  Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  user      User     @relation("MaterialLikeUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([materialId, userId])
+  @@index([materialId])
+  @@index([userId])
+  @@map("material_likes")
+}
+
+model MaterialView {
+  id           String   @id @default(cuid())
+  materialId   String   @map("material_id")
+  viewerUserId String?  @map("viewer_user_id")
+  viewSource   String?  @map("view_source")
+  createdAt    DateTime @default(now()) @map("created_at")
+  material     Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  viewerUser   User?    @relation("MaterialViewUser", fields: [viewerUserId], references: [id], onDelete: SetNull)
+
+  @@index([materialId])
+  @@index([viewerUserId])
+  @@map("material_views")
 }
 
 model MaterialReport {
@@ -716,31 +872,47 @@ model Reservation {
   ownerId           String                     @map("owner_id")
   quantityRequested Decimal                    @map("quantity_requested") @db.Decimal(12, 3)
   message           String?
+  fulfillmentMethod ReservationFulfillmentMethod @default(PICKUP) @map("fulfillment_method")
+  learnerPreferredPickupWindows Json?          @map("learner_preferred_pickup_windows")
+  learnerPreferredDeliveryWindows Json?        @map("learner_preferred_delivery_windows")
+  deliveryAddressText String?                  @map("delivery_address_text")
+  safeDropoffAllowed Boolean?                  @map("safe_dropoff_allowed")
+  deliveryNote      String?                    @map("delivery_note")
   status            ReservationStatus          @default(PENDING)
   pickupWindowStart DateTime?                  @map("pickup_window_start")
   pickupWindowEnd   DateTime?                  @map("pickup_window_end")
-  pickupType        PickupType                 @default(SELF_PICKUP) @map("pickup_type")
+  supplierProposedPickupWindowStart DateTime?    @map("supplier_proposed_pickup_window_start")
+  supplierProposedPickupWindowEnd   DateTime?    @map("supplier_proposed_pickup_window_end")
+  learnerProposedPickupWindowStart  DateTime?    @map("learner_proposed_pickup_window_start")
+  learnerProposedPickupWindowEnd    DateTime?    @map("learner_proposed_pickup_window_end")
+  pendingRescheduleRequestedBy      RescheduleRequestedBy? @map("pending_reschedule_requested_by")
+  pendingRescheduleReason           String?                  @map("pending_reschedule_reason")
+  pendingRescheduleNote             String?                  @map("pending_reschedule_note")
+  supplierPickupWindowStart DateTime?            @map("supplier_pickup_window_start")
+  supplierPickupWindowEnd   DateTime?            @map("supplier_pickup_window_end")
+  confirmedDeliveryWindowStart DateTime?         @map("confirmed_delivery_window_start")
+  confirmedDeliveryWindowEnd   DateTime?         @map("confirmed_delivery_window_end")
+  earliestDeliveryStart DateTime?                @map("earliest_delivery_start")
+  schedulingConflictReason String?               @map("scheduling_conflict_reason")
   supplierNote      String?                    @map("supplier_note")
   rejectionReason   String?                    @map("rejection_reason")
   acceptedAt        DateTime?                  @map("accepted_at")
   rejectedAt        DateTime?                  @map("rejected_at")
   cancelledAt       DateTime?                  @map("cancelled_at")
-  deliveryRequested Boolean                    @default(false) @map("delivery_requested")
-  deliveryStatus    DeliveryStatus?            @map("delivery_status")
-  deliveryCost      Decimal?                   @map("delivery_cost") @db.Decimal(12, 2)
-  dropoffLocationId String?                    @map("dropoff_location_id")
-  driverProfileId   String?                    @map("driver_profile_id")
   completedAt       DateTime?                  @map("completed_at")
+  selfPickupCodeHash String?                   @map("self_pickup_code_hash")
+  selfPickupCodeGeneratedAt DateTime?         @map("self_pickup_code_generated_at")
   createdAt         DateTime                   @default(now()) @map("created_at")
   updatedAt         DateTime                   @updatedAt @map("updated_at")
   material          Material                   @relation(fields: [materialId], references: [id], onDelete: Cascade)
   requester         User                       @relation("ReservationRequester", fields: [requesterId], references: [id], onDelete: Cascade)
   owner             User                       @relation("ReservationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  dropoffLocation   Location?                  @relation("ReservationDropoffLocation", fields: [dropoffLocationId], references: [id], onDelete: SetNull)
   reusedMaterial    Material?                  @relation("MaterialReusedByReservation")
   deliveries        Delivery[]
   reviews           Review[]
   statusHistory     ReservationStatusHistory[]
+  messages          ReservationMessage[]
+  noShowReports     NoShowReport[]
 
   @@index([ownerId])
   @@index([requesterId])
@@ -769,6 +941,10 @@ model Delivery {
   learnerNote             String?                 @map("learner_note")
   driverNote              String?                 @map("driver_note")
   failureReason           String?                 @map("failure_reason")
+  supplierHandoverCodeHash String?                @map("supplier_handover_code_hash")
+  supplierHandoverCodeGeneratedAt DateTime?       @map("supplier_handover_code_generated_at")
+  learnerDeliveryCodeHash String?                 @map("learner_delivery_code_hash")
+  learnerDeliveryCodeGeneratedAt DateTime?        @map("learner_delivery_code_generated_at")
   createdAt               DateTime                @default(now()) @map("created_at")
   updatedAt               DateTime                @updatedAt @map("updated_at")
   reservation             Reservation             @relation(fields: [reservationId], references: [id], onDelete: Cascade)
@@ -779,6 +955,7 @@ model Delivery {
   assignments             DeliveryAssignment[]
   statusHistory           DeliveryStatusHistory[]
   locationPings           DeliveryLocationPing[]
+  incidentReports         NoShowReport[]
 
   @@index([reservationId])
   @@index([status])
@@ -861,6 +1038,50 @@ model ReservationStatusHistory {
   @@index([statusGroup])
   @@index([changedBy])
   @@map("reservation_status_history")
+}
+
+model ReservationMessage {
+  id            String      @id @default(cuid())
+  reservationId String      @map("reservation_id")
+  senderUserId  String      @map("sender_user_id")
+  body          String
+  createdAt     DateTime    @default(now()) @map("created_at")
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  sender        User        @relation("ReservationMessageSender", fields: [senderUserId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId, createdAt])
+  @@index([senderUserId])
+  @@map("reservation_messages")
+}
+
+model NoShowReport {
+  id                String                 @id @default(cuid())
+  reservationId     String                 @map("reservation_id")
+  deliveryId        String?                @map("delivery_id")
+  reporterUserId    String                 @map("reporter_user_id")
+  targetUserId      String?                @map("target_user_id")
+  targetRole        NoShowReportTargetRole @map("target_role")
+  reasonCode        NoShowReportReason     @map("reason_code")
+  note              String?
+  pickupWindowStart DateTime?              @map("pickup_window_start")
+  pickupWindowEnd   DateTime?              @map("pickup_window_end")
+  status            NoShowReportStatus     @default(PENDING_REVIEW)
+  reviewedById      String?                @map("reviewed_by_id")
+  reviewedAt        DateTime?              @map("reviewed_at")
+  reviewNote        String?                @map("review_note")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  reservation       Reservation            @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  delivery          Delivery?              @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  reporter          User                   @relation("NoShowReportReporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+  target            User?                  @relation("NoShowReportTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  reviewedBy        User?                  @relation("NoShowReportReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([reservationId, targetUserId])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([targetUserId, status])
+  @@index([reporterUserId])
+  @@index([deliveryId])
+  @@map("no_show_reports")
 }
 
 model Review {
@@ -975,6 +1196,7 @@ model PriceRuleRequest {
   status                      MaterialRequestStatus @default(PENDING)
   aiSuggestedUnit             String?               @map("ai_suggested_unit")
   aiSuggestedMaxUnitPriceNis  Decimal?              @map("ai_suggested_max_unit_price_nis") @db.Decimal(10, 2)
+  adminApprovedMaxUnitPriceNis Decimal?             @map("admin_approved_max_unit_price_nis") @db.Decimal(10, 2)
   aiSuggestedMaxTotalPriceNis Decimal?              @map("ai_suggested_max_total_price_nis") @db.Decimal(10, 2)
   aiSuggestedAliasesJson      Json?                 @map("ai_suggested_aliases_json")
   aiResultJson                Json?                 @map("ai_result_json")

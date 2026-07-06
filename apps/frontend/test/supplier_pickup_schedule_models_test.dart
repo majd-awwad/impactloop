@@ -11,7 +11,8 @@ void main() {
       'status': 'ACCEPTED',
       'quantityRequested': 1,
       'message': 'I need it for a robotics project.',
-      'pickupType': 'SELF_PICKUP',
+      'fulfillmentMethod': 'PICKUP',
+      'fulfillmentLabel': 'Pickup selected',
       'pickupWindowStart': '2026-06-17T10:00:00.000Z',
       'pickupWindowEnd': '2026-06-17T12:00:00.000Z',
       'supplierNote': 'Pickup near main gate.',
@@ -20,16 +21,16 @@ void main() {
         'unit': 'piece',
         'imageUrl': '/uploads/materials/test.jpg',
       },
-      'learner': {
-        'displayName': 'Ahmad',
-      },
+      'learner': {'displayName': 'Ahmad'},
     });
 
     expect(item.id, 'res-accepted-1');
     expect(item.materialTitle, 'Arduino Uno');
     expect(item.learnerName, 'Ahmad');
     expect(item.status, SupplierPickupScheduleStatus.accepted);
-    expect(item.pickupType, 'Self pickup');
+    expect(item.pickupType, 'Pickup selected');
+    expect(item.activeDelivery, isNull);
+    expect(item.canSupplierComplete, isTrue);
     expect(item.supplierNote, 'Pickup near main gate.');
     expect(item.learnerMessage, 'I need it for a robotics project.');
     expect(item.materialImageUrl, '/uploads/materials/test.jpg');
@@ -41,20 +42,37 @@ void main() {
       'id': 'res-completed-1',
       'status': 'COMPLETED',
       'quantityRequested': 6,
-      'pickupType': 'SELF_PICKUP',
+      'fulfillmentMethod': 'PICKUP',
+      'fulfillmentLabel': 'Pickup selected',
       'pickupWindowStart': '2026-06-16T11:00:00.000Z',
       'pickupWindowEnd': '2026-06-16T13:00:00.000Z',
-      'material': {
-        'title': 'Cardboard boxes',
-        'unit': 'boxes',
-      },
-      'learner': {
-        'displayName': 'Lina',
-      },
+      'material': {'title': 'Cardboard boxes', 'unit': 'boxes'},
+      'learner': {'displayName': 'Lina'},
     });
 
     expect(item.status, SupplierPickupScheduleStatus.completed);
     expect(item.isCompleted, isTrue);
+  });
+
+  test('fromReservationJson maps delivery status copy', () {
+    final item = SupplierPickupScheduleItem.fromReservationJson({
+      'id': 'res-delivery-1',
+      'status': 'ACCEPTED',
+      'quantityRequested': 2,
+      'fulfillmentMethod': 'PICKUP',
+      'fulfillmentLabel': 'Delivery requested',
+      'activeDelivery': {'id': 'delivery-1', 'status': 'ON_THE_WAY'},
+      'canSupplierComplete': false,
+      'pickupWindowStart': '2026-06-17T10:00:00.000Z',
+      'pickupWindowEnd': '2026-06-17T12:00:00.000Z',
+      'material': {'title': 'Wood scraps', 'unit': 'kg'},
+      'learner': {'displayName': 'Sara'},
+    });
+
+    expect(item.activeDelivery?.id, 'delivery-1');
+    expect(item.deliveryStatusLabel, 'On the way');
+    expect(item.canSupplierComplete, isFalse);
+    expect(item.hasDelivery, isTrue);
   });
 
   test('filterPickupScheduleItems separates today and upcoming', () {
@@ -70,6 +88,7 @@ void main() {
         unit: 'piece',
         status: SupplierPickupScheduleStatus.accepted,
         pickupType: 'Self pickup',
+        canSupplierComplete: true,
         pickupWindow: SupplierPickupWindow(
           start: today.add(const Duration(hours: 10)),
           end: today.add(const Duration(hours: 12)),
@@ -83,6 +102,7 @@ void main() {
         unit: 'piece',
         status: SupplierPickupScheduleStatus.accepted,
         pickupType: 'Self pickup',
+        canSupplierComplete: true,
         pickupWindow: SupplierPickupWindow(
           start: tomorrow.add(const Duration(hours: 13)),
           end: tomorrow.add(const Duration(hours: 15)),

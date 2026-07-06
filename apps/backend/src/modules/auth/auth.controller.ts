@@ -20,6 +20,9 @@ import {
   requestPasswordReset,
   resetPasswordWithToken,
   changePasswordForUser,
+  becomeSupplier,
+  becomeLearner,
+  switchActiveRole,
 } from './auth.service.js';
 
 import type {
@@ -28,6 +31,9 @@ import type {
   LoginInput,
   RegisterInput,
   ResetPasswordInput,
+  BecomeSupplierInput,
+  BecomeLearnerInput,
+  SwitchRoleInput,
 } from './auth.validation.js';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -76,12 +82,7 @@ export const forgotPassword = async (
   const { email } = req.body as ForgotPasswordInput;
   const result = await requestPasswordReset(email);
 
-  res.json(
-    successResponse(
-      result.message,
-      result.resetToken ? { resetToken: result.resetToken } : null,
-    ),
-  );
+  res.json(successResponse(result.message, null));
 };
 
 export const resetPassword = async (
@@ -106,4 +107,48 @@ export const changePassword = async (
       success: true,
     }),
   );
+};
+
+export const postBecomeSupplier = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const body = req.body as BecomeSupplierInput;
+  const result = await becomeSupplier(req.auth!.sub, {
+    userId: req.auth!.sub,
+    supplierType: body.supplierType,
+    publicName: body.publicName,
+    description: body.description,
+    pickupArea: body.pickupArea,
+    workingHours: body.workingHours,
+    pickupNotes: body.pickupNotes,
+  });
+
+  sendAuthSessionResponse(req, res, 'Supplier profile ready', result);
+};
+
+export const postBecomeLearner = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const body = req.body as BecomeLearnerInput;
+  const result = await becomeLearner(req.auth!.sub, {
+    userId: req.auth!.sub,
+    learnerType: body.learnerType,
+    skillLevel: body.skillLevel,
+    interests: body.interests,
+    bio: body.bio,
+  });
+
+  sendAuthSessionResponse(req, res, 'Learner access added', result);
+};
+
+export const postSwitchRole = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { activeRole } = req.body as SwitchRoleInput;
+  const result = await switchActiveRole(req.auth!.sub, activeRole);
+
+  sendAuthSessionResponse(req, res, 'Active role updated', result);
 };

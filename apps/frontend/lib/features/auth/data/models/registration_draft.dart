@@ -63,6 +63,10 @@ class RegistrationDraft {
     this.phone,
     this.password,
     this.intent,
+    this.onboardingInterests = const [],
+    this.onboardingGoals = const [],
+    this.onboardingCity,
+    this.onboardingArea,
     this.learnerProfile,
     this.supplierProfile,
   });
@@ -72,6 +76,10 @@ class RegistrationDraft {
   final String? phone;
   final String? password;
   final RegistrationIntent? intent;
+  final List<String> onboardingInterests;
+  final List<String> onboardingGoals;
+  final String? onboardingCity;
+  final String? onboardingArea;
   final LearnerProfileDraft? learnerProfile;
   final SupplierProfileDraft? supplierProfile;
 
@@ -89,11 +97,17 @@ class RegistrationDraft {
     String? phone,
     String? password,
     RegistrationIntent? intent,
+    List<String>? onboardingInterests,
+    List<String>? onboardingGoals,
+    String? onboardingCity,
+    String? onboardingArea,
     LearnerProfileDraft? learnerProfile,
     SupplierProfileDraft? supplierProfile,
     bool clearPhone = false,
     bool clearLearnerProfile = false,
     bool clearSupplierProfile = false,
+    bool clearOnboardingCity = false,
+    bool clearOnboardingArea = false,
   }) {
     return RegistrationDraft(
       displayName: displayName ?? this.displayName,
@@ -101,6 +115,12 @@ class RegistrationDraft {
       phone: clearPhone ? null : phone ?? this.phone,
       password: password ?? this.password,
       intent: intent ?? this.intent,
+      onboardingInterests: onboardingInterests ?? this.onboardingInterests,
+      onboardingGoals: onboardingGoals ?? this.onboardingGoals,
+      onboardingCity:
+          clearOnboardingCity ? null : onboardingCity ?? this.onboardingCity,
+      onboardingArea:
+          clearOnboardingArea ? null : onboardingArea ?? this.onboardingArea,
       learnerProfile: clearLearnerProfile
           ? null
           : learnerProfile ?? this.learnerProfile,

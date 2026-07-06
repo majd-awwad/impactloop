@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_response.dart';
+import '../../materials/data/categories_api.dart';
 import '../../materials/data/models/category.dart';
 import '../domain/learning_project_repository.dart';
 import '../domain/learning_projects_result.dart';
@@ -9,9 +10,14 @@ import '../domain/models/learning_project.dart';
 import 'learning_hub_api_mapper.dart';
 
 class ApiLearningHubRepository implements LearningProjectRepository {
-  const ApiLearningHubRepository(this._client);
+  const ApiLearningHubRepository({
+    required Dio client,
+    required CategoriesApi categoriesApi,
+  }) : _client = client,
+       _categoriesApi = categoriesApi;
 
   final Dio _client;
+  final CategoriesApi _categoriesApi;
 
   static const _basePath = '/api/learning-projects';
 
@@ -87,35 +93,46 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
-  Future<List<MaterialCategory>> fetchProjectCategories() async {
-    try {
-      final response = await _client.get<Map<String, dynamic>>(
-        '/api/categories',
-        queryParameters: const {'type': 'PROJECT', 'rootOnly': true},
-      );
-      final body = response.data;
+  Future<List<MaterialCategory>> fetchProjectCategories() {
+    return _categoriesApi.fetchProjectCategories();
+  }
 
-      if (body == null || body['success'] != true) {
-        throw ApiException(
-          message: body?['message'] as String? ?? 'Request failed',
-        );
-      }
-
-      final data = body['data'];
-      if (data is! List) {
-        return const [];
-      }
-
-      return data
-          .whereType<Map>()
-          .map(
-            (item) =>
-                MaterialCategory.fromJson(Map<String, dynamic>.from(item)),
-          )
-          .toList(growable: false);
-    } on DioException catch (error) {
-      throw mapDioException(error);
+  @override
+  Future<void> submitProjectForReview({
+    required String idempotencyKey,
+    required String title,
+    required String shortDescription,
+    required String description,
+    required String categoryId,
+    required String difficulty,
+    int? estimatedDurationMinutes,
+    List<Map<String, dynamic>>? requiredComponents,
+    List<Map<String, dynamic>>? steps,
+    List<Map<String, dynamic>>? links,
+  }) async {
+    final data = <String, dynamic>{
+      'title': title,
+      'shortDescription': shortDescription,
+      'description': description,
+      'categoryId': categoryId,
+      'difficulty': difficulty,
+      if (requiredComponents != null && requiredComponents.isNotEmpty)
+        'requiredComponents': requiredComponents,
+      if (steps != null && steps.isNotEmpty) 'steps': steps,
+      if (links != null && links.isNotEmpty) 'links': links,
+    };
+    if (estimatedDurationMinutes != null) {
+      data['estimatedDurationMinutes'] = estimatedDurationMinutes;
     }
+
+    await unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/submit',
+        data: data,
+        options: Options(headers: {'Idempotency-Key': idempotencyKey}),
+      ),
+      (json) => json,
+    );
   }
 
   static int? _intFromDynamic(Object? value) {

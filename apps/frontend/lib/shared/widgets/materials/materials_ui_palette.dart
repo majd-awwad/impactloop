@@ -100,8 +100,8 @@ const materialBadgeHorizontalPadding = 12.0;
 const materialBadgeVerticalPadding = 7.0;
 const materialMetaChipHorizontalPadding = 12.0;
 const materialMetaChipVerticalPadding = 8.0;
-const materialStandardCardHeight = 530.0;
-const materialCompactCardHeight = 486.0;
+const materialStandardCardHeight = 468.0;
+const materialCompactCardHeight = 452.0;
 
 class MaterialsUiPalette {
   const MaterialsUiPalette({

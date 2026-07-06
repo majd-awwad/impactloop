@@ -4,6 +4,8 @@ import { successResponse } from '../../utils/api-response.js';
 
 import {
   createEmailInvitation,
+  getInvitationForAdmin,
+  issueInvitationLinkForAdmin,
   listInvitationsForAdmin,
   resendEmailInvitation,
   revokeInvitation,
@@ -16,6 +18,24 @@ export const listAdminInvitations = async (
 ): Promise<void> => {
   const invitations = await listInvitationsForAdmin();
   res.json(successResponse('Invitations loaded', invitations));
+};
+
+export const getAdminInvitation = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = req.params as { id: string };
+  const invitation = await getInvitationForAdmin(id);
+  res.json(successResponse('Invitation loaded', invitation));
+};
+
+export const issueAdminInvitationLink = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = req.params as { id: string };
+  const result = await issueInvitationLinkForAdmin(id);
+  res.json(successResponse('Invitation link issued', result));
 };
 
 export const createAdminInvitation = async (
@@ -35,7 +55,7 @@ export const resendAdminInvitation = async (
   res: Response,
 ): Promise<void> => {
   const { id } = req.params as { id: string };
-  const invitation = await resendEmailInvitation(id);
+  const invitation = await resendEmailInvitation(id, req.auth!.sub);
 
   res.json(successResponse('Invitation resent', invitation));
 };
@@ -45,7 +65,7 @@ export const revokeAdminInvitation = async (
   res: Response,
 ): Promise<void> => {
   const { id } = req.params as { id: string };
-  const invitation = await revokeInvitation(id);
+  const invitation = await revokeInvitation(id, req.auth!.sub);
 
   res.json(successResponse('Invitation revoked', invitation));
 };

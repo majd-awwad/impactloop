@@ -26,35 +26,35 @@ class SupplierDashboardQuickActionsPanel extends StatelessWidget {
   const SupplierDashboardQuickActionsPanel({super.key});
 
   List<_QuickActionSpec> _actions(BuildContext context) => [
-        _QuickActionSpec(
-          label: context.s.addMaterial,
-          caption: context.s.quickActionListParts,
-          icon: Icons.add_circle_outline,
-          route: '/supplier/materials/new',
-          accent: SupplierDashboardColors.available,
-        ),
-        _QuickActionSpec(
-          label: context.s.reviewRequests,
-          caption: context.s.quickActionRespondLearners,
-          icon: Icons.inbox_outlined,
-          route: '/supplier/reservations',
-          accent: SupplierDashboardColors.pending,
-        ),
-        _QuickActionSpec(
-          label: context.s.navPickupSchedule,
-          caption: context.s.quickActionPickupCaption,
-          icon: Icons.local_shipping_outlined,
-          route: '/supplier/pickup-schedule',
-          accent: SupplierDashboardColors.accepted,
-        ),
-        _QuickActionSpec(
-          label: context.s.navNotifications,
-          caption: context.s.quickActionUpdatesActions,
-          icon: Icons.notifications_none_rounded,
-          route: '/supplier/notifications',
-          accent: SupplierDashboardColors.neutral,
-        ),
-      ];
+    _QuickActionSpec(
+      label: context.s.addMaterial,
+      caption: context.s.quickActionListParts,
+      icon: Icons.add_circle_outline,
+      route: '/supplier/materials/new',
+      accent: SupplierDashboardColors.available,
+    ),
+    _QuickActionSpec(
+      label: context.s.reviewRequests,
+      caption: context.s.quickActionRespondLearners,
+      icon: Icons.inbox_outlined,
+      route: '/supplier/reservations',
+      accent: SupplierDashboardColors.pending,
+    ),
+    _QuickActionSpec(
+      label: context.s.navPickupSchedule,
+      caption: context.s.quickActionPickupCaption,
+      icon: Icons.local_shipping_outlined,
+      route: '/supplier/pickup-schedule',
+      accent: SupplierDashboardColors.accepted,
+    ),
+    _QuickActionSpec(
+      label: context.s.navNotifications,
+      caption: context.s.quickActionUpdatesActions,
+      icon: Icons.notifications_none_rounded,
+      route: '/supplier/notifications',
+      accent: SupplierDashboardColors.neutral,
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +119,7 @@ class _DashboardQuickActionTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.go(action.route),
+        onTap: () => context.push(action.route),
         borderRadius: AppRadius.lgAll,
         hoverColor: action.accent.withValues(alpha: 0.08),
         splashColor: action.accent.withValues(alpha: 0.12),
@@ -135,9 +135,7 @@ class _DashboardQuickActionTile extends StatelessWidget {
                 colors.backgroundElevated.withValues(alpha: 0.35),
               ],
             ),
-            border: Border.all(
-              color: action.accent.withValues(alpha: 0.28),
-            ),
+            border: Border.all(color: action.accent.withValues(alpha: 0.28)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

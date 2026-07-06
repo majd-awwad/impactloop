@@ -12,10 +12,15 @@ class RatingBreakdown {
 }
 
 class ProjectLinkItem {
-  const ProjectLinkItem({required this.label, required this.urlLabel});
+  const ProjectLinkItem({
+    required this.label,
+    required this.urlLabel,
+    this.url,
+  });
 
   final LocalizedText label;
   final LocalizedText urlLabel;
+  final String? url;
 }
 
 class ProjectStep {
@@ -43,6 +48,7 @@ class LearningProject {
     required this.heroIconData,
     required this.cardGradient,
     required this.isFeatured,
+    this.tags = const <String>[],
     this.longDescription,
     this.hasRatings = false,
   });
@@ -65,5 +71,6 @@ class LearningProject {
   final IconData heroIconData;
   final List<int> cardGradient;
   final bool isFeatured;
+  final List<String> tags;
   final bool hasRatings;
 }

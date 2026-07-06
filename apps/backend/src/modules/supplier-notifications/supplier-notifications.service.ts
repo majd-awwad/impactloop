@@ -3,7 +3,10 @@ import { decimalToNumber } from '../../utils/decimal.js';
 
 import * as categoriesRepository from '../categories/categories.repository.js';
 import * as categoryRequestsRepository from '../category-requests/category-requests.repository.js';
-import { resolveApprovedMaxUnitPriceNis } from '../price-rule-requests/price-rule-request-pricing.js';
+import {
+  resolveFinalAllowedMaxUnitPriceNis,
+  formatNisPrice,
+} from '../price-rule-requests/price-rule-request-pricing.js';
 import * as priceRuleRequestsRepository from '../price-rule-requests/price-rule-requests.repository.js';
 import { mapSupplierReservation } from '../supplier-reservations/supplier-reservations.service.js';
 import * as supplierReservationsRepository from '../supplier-reservations/supplier-reservations.repository.js';
@@ -56,8 +59,37 @@ export type SupplierNotificationsSummary = {
 
 const formatUnitLabel = (unit: string | null | undefined) => unit?.trim() || 'unit';
 
-const formatMaxUnitPriceBody = (unit: string | null | undefined, max: number) =>
-  `Maximum allowed price per ${formatUnitLabel(unit)} is ${max} NIS.`;
+const formatConditionLabel = (
+  condition: import('../../generated/prisma/client.js').MaterialCondition,
+) => {
+  switch (condition) {
+    case 'NEW':
+      return 'New';
+    case 'LIKE_NEW':
+      return 'Like new';
+    case 'GOOD':
+      return 'Good';
+    case 'USED':
+      return 'Used';
+    case 'NEEDS_REPAIR':
+      return 'Needs repair';
+    default:
+      return condition;
+  }
+};
+
+const formatMaxUnitPriceBody = (
+  unit: string | null | undefined,
+  max: number,
+  condition?: import('../../generated/prisma/client.js').MaterialCondition | null,
+) => {
+  const priceLabel = formatNisPrice(max);
+  if (condition != null) {
+    return `Maximum allowed price for ${formatConditionLabel(condition)} condition is ${priceLabel} NIS.`;
+  }
+
+  return `Maximum allowed price per ${formatUnitLabel(unit)} is ${priceLabel} NIS.`;
+};
 
 const extractDraftTitle = (listingDraftJson: unknown): string => {
   if (
@@ -258,13 +290,16 @@ const mapCategoryRequestNotification = (
   };
 };
 
-const mapPriceRuleRequestNotification = (
+export const mapPriceRuleRequestNotification = (
   request: Awaited<
     ReturnType<typeof priceRuleRequestsRepository.listPriceRuleRequestsForSupplier>
   >[number],
 ): SupplierActionNotification => {
   const unit = request.unit ?? request.materialType?.defaultUnit ?? null;
-  const maxAllowedUnitPriceNis = resolveApprovedMaxUnitPriceNis(request);
+  const maxAllowedUnitPriceNis = resolveFinalAllowedMaxUnitPriceNis(
+    request,
+    request.condition,
+  );
   const supplierRequestedUnitPriceNis = decimalToNumber(request.supplierPriceNis);
   const materialLabel =
     request.materialName ??
@@ -303,7 +338,7 @@ const mapPriceRuleRequestNotification = (
   if (request.status === 'APPROVED') {
     const maxBody =
       maxAllowedUnitPriceNis != null
-        ? `${formatMaxUnitPriceBody(unit, maxAllowedUnitPriceNis)} Continue your listing and set the unit price at or below this amount.`
+        ? `${formatMaxUnitPriceBody(unit, maxAllowedUnitPriceNis, request.condition)} Continue your listing and set the unit price at or below this amount.`
         : 'Continue your listing with the approved price limit.';
 
     return {
@@ -333,7 +368,7 @@ const mapPriceRuleRequestNotification = (
   if (request.status === 'REJECTED') {
     const maxBody =
       maxAllowedUnitPriceNis != null
-        ? `Your requested unit price is above the allowed limit. ${formatMaxUnitPriceBody(unit, maxAllowedUnitPriceNis)}`
+        ? `Your requested unit price is above the allowed limit. ${formatMaxUnitPriceBody(unit, maxAllowedUnitPriceNis, request.condition)}`
         : request.moderatorNote?.trim() ||
           'Your requested unit price needs adjustment before you can publish.';
 
@@ -429,14 +464,14 @@ export const listSupplierActionNotifications = async (userId: string) => {
     await Promise.all([
       categoryRequestsRepository.listCategoryRequestsWithDrafts(userId),
       priceRuleRequestsRepository.listPriceRuleRequestsForSupplier(userId),
-      supplierReservationsRepository.findSupplierReservations(userId, 'PENDING'),
+      supplierReservationsRepository.findSupplierReservations(userId, ['PENDING']),
     ]);
 
   const notifications: SupplierActionNotification[] = [
     ...categoryRequests.map(mapCategoryRequestNotification),
     ...priceRuleRequests.map(mapPriceRuleRequestNotification),
     ...pendingReservations
-      .map(mapSupplierReservation)
+      .map((reservation) => mapSupplierReservation(reservation))
       .map(mapReservationNotification),
   ];
 

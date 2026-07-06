@@ -10,6 +10,8 @@ import {
   deleteSupplierMaterial,
   getSupplierMaterial,
   getSupplierMaterials,
+  markSupplierMaterialUnavailable,
+  restoreSupplierMaterialAvailable,
   updateSupplierMaterial,
 } from "./supplier.service.js";
 import { AppError } from "../../utils/app-error.js";
@@ -981,7 +983,7 @@ describe("createSupplierMaterial", () => {
       unit: "piece",
       condition: "GOOD",
       isFree: false,
-      price: 15,
+      price: 13,
       currency: "NIS",
       pickupAllowed: true,
       deliveryAllowed: false,
@@ -991,8 +993,8 @@ describe("createSupplierMaterial", () => {
     });
     ctx.createdMaterialIds.push(material.id);
 
-    assert.equal(material.price, 15);
-    assert.equal(material.maxAllowedPriceAtCheck, 21);
+    assert.equal(material.price, 13);
+    assert.equal(material.maxAllowedPriceAtCheck, 13.65);
 
     const updatedRequest = await prisma.priceRuleRequest.findUnique({
       where: { id: priceRuleRequest.id },
@@ -1011,7 +1013,7 @@ describe("createSupplierMaterial", () => {
         materialName: `${TEST_MARKER} boundary price widget`,
         normalizedMaterialName: "boundary-price-widget",
         unit: "piece",
-        supplierPriceNis: 21,
+        supplierPriceNis: 13.65,
         categoryId: ctx.categoryId,
         requestedByUserId: ctx.supplierId,
         status: "APPROVED",
@@ -1028,7 +1030,7 @@ describe("createSupplierMaterial", () => {
       unit: "piece",
       condition: "GOOD",
       isFree: false,
-      price: 21,
+      price: 13.65,
       currency: "NIS",
       pickupAllowed: true,
       deliveryAllowed: false,
@@ -1038,8 +1040,8 @@ describe("createSupplierMaterial", () => {
     });
     ctx.createdMaterialIds.push(material.id);
 
-    assert.equal(material.price, 21);
-    assert.equal(material.maxAllowedPriceAtCheck, 21);
+    assert.equal(material.price, 13.65);
+    assert.equal(material.maxAllowedPriceAtCheck, 13.65);
 
     await prisma.priceRuleRequest.delete({
       where: { id: priceRuleRequest.id },
@@ -1084,7 +1086,7 @@ describe("createSupplierMaterial", () => {
         assert.equal(error.statusCode, 400);
         assert.match(
           error.message,
-          /Maximum allowed price is 21 NIS per piece/,
+          /Maximum allowed price is 13\.65 NIS per piece/,
         );
         assert.equal(
           (error.details as { reason?: string } | undefined)?.reason,
@@ -1917,4 +1919,138 @@ describe("deleteSupplierMaterial", () => {
       },
     );
   });
+});
+
+describe("supplier material status and detail", () => {
+  const ctx: TestContext = {
+    supplierId: "",
+    otherSupplierId: "",
+    categoryId: "",
+    locationId: "",
+    createdMaterialIds: [],
+    createdUserIds: [],
+    createdReservationIds: [],
+    learnerId: "",
+  };
+
+  before(async () => {
+    const category = await prisma.category.findFirst({
+      where: { categoryType: { in: ["MATERIAL", "BOTH"] } },
+      select: { id: true },
+    });
+    const location = await prisma.location.create({
+      data: {
+        country: "Palestine",
+        city: "Nablus",
+        area: `${TEST_MARKER}-status`,
+        visibility: "PUBLIC_APPROXIMATE",
+        isApproximate: true,
+      },
+      select: { id: true },
+    });
+    const supplier = await createSupplierUser("status");
+    const learner = await prisma.user.findFirst({
+      where: { roles: { some: { role: "LEARNER" } } },
+      select: { id: true },
+    });
+    assert.ok(learner, "Expected at least one learner user");
+    ctx.categoryId = category!.id;
+    ctx.locationId = location.id;
+    ctx.supplierId = supplier.id;
+    ctx.learnerId = learner.id;
+    ctx.createdUserIds.push(supplier.id);
+  });
+
+  after(async () => {
+    await cleanup(ctx);
+  });
+
+  test("mark unavailable and restore available for owned material", async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      "status-toggle",
+      "AVAILABLE",
+    );
+
+    const unavailable = await markSupplierMaterialUnavailable(
+      ctx.supplierId,
+      material.id,
+    );
+    assert.equal(unavailable.status, "UNAVAILABLE");
+    assert.equal(unavailable.canRestoreAvailable, true);
+    assert.equal(unavailable.canMarkUnavailable, false);
+
+    const restored = await restoreSupplierMaterialAvailable(
+      ctx.supplierId,
+      material.id,
+    );
+    assert.equal(restored.status, "AVAILABLE");
+    assert.equal(restored.canMarkUnavailable, true);
+  });
+
+  test("detail includes demand score from pending and accepted reservations", async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      "status-demand",
+      "AVAILABLE",
+    );
+
+    const pending = await prisma.reservation.create({
+      data: {
+        materialId: material.id,
+        requesterId: ctx.learnerId,
+        ownerId: ctx.supplierId,
+        quantityRequested: 1,
+        status: "PENDING",
+      },
+    });
+    const accepted = await prisma.reservation.create({
+      data: {
+        materialId: material.id,
+        requesterId: ctx.learnerId,
+        ownerId: ctx.supplierId,
+        quantityRequested: 1,
+        status: "ACCEPTED",
+      },
+    });
+    ctx.createdReservationIds.push(pending.id, accepted.id);
+
+    const detail = await getSupplierMaterial(ctx.supplierId, material.id);
+
+    assert.equal(detail.pendingReservationsCount, 1);
+    assert.equal(detail.reservedReservationsCount, 1);
+    assert.equal(detail.demandScore, 2);
+    assert.equal(detail.reservations.length, 2);
+    assert.equal(detail.canMarkUnavailable, false);
+  });
+
+  test("list uses MaterialView-based views count", async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      "status-views",
+      "AVAILABLE",
+    );
+
+    await prisma.materialView.create({
+      data: {
+        materialId: material.id,
+        viewerUserId: ctx.learnerId,
+      },
+    });
+
+    const list = await getSupplierMaterials(ctx.supplierId, {
+      page: 1,
+      limit: 50,
+      search: material.title,
+      isFree: undefined,
+    });
+    const item = list.items.find((entry) => entry.id === material.id);
+
+    assert.ok(item);
+    assert.equal(item.viewsCount, 1);
+  });
+
 });

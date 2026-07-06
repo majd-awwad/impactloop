@@ -19,9 +19,10 @@ Per-table reference from `apps/backend/prisma/schema.prisma`. Column names shown
 | accountStatus | AccountStatus | default `PENDING_VERIFICATION` |
 | profileImageUrl | String? | |
 | emailVerifiedAt, phoneVerifiedAt, lastLoginAt | DateTime? | |
+| activeRole | UserRole? | Current portal selection (`LEARNER`, `SUPPLIER`, etc.); does not remove stored roles |
 | createdAt, updatedAt | DateTime | |
 
-Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, learning projects, requests.
+Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, material reports, learning projects, requests.
 
 ---
 
@@ -63,6 +64,11 @@ Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfil
 | tokenHash | String | unique |
 | invitedBy | String? | FK → users |
 | status | RoleInvitationStatus | default `PENDING` |
+| sendStatus | RoleInvitationSendStatus | default `PENDING` |
+| sentAt | DateTime? | |
+| sendError | String? | |
+| providerMessageId | String? | |
+| revokedAt | DateTime? | |
 | expiresAt | DateTime | |
 | usedAt | DateTime? | |
 | usedByUserId | String? | FK → users |
@@ -152,6 +158,21 @@ Relations: assigned deliveries, assignments, location pings.
 | locationType | String? | |
 | visibility | String? | default `PRIVATE` |
 | isApproximate | Boolean | default true |
+
+---
+
+## `user_saved_locations` — model `UserSavedLocation`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| userId | String | FK → users; cascade delete |
+| locationId | String | FK → locations; cascade delete |
+| label | String | User-facing private label |
+| isDefault | Boolean | default false |
+| createdAt, updatedAt | DateTime | |
+
+Indexes: `userId`, `(userId, isDefault)`, `locationId`.
 
 ---
 
@@ -285,6 +306,25 @@ Child tables: project_images, project_required_components, project_steps, projec
 
 ---
 
+## `material_reports` — model `MaterialReport`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| materialId | String | FK → materials |
+| reporterId | String | FK → users |
+| reason | MaterialReportReason | |
+| note | String? | Required by API when `reason=OTHER` |
+| status | MaterialReportStatus | default `PENDING` |
+| adminNote | String? | |
+| reviewedById | String? | FK → users |
+| reviewedAt | DateTime? | |
+| createdAt, updatedAt | DateTime | |
+
+Used by authenticated material reporting and admin material report review. This is material-specific reporting, not a general `reports` module/table.
+
+---
+
 ## `material_images` — model `MaterialImage`
 
 | Field | Type | Notes |
@@ -317,15 +357,22 @@ Child tables: project_images, project_required_components, project_steps, projec
 | quantityRequested | Decimal | Held/requested amount for this reservation |
 | message | String? | |
 | status | ReservationStatus | default `PENDING` |
-| pickupWindowStart, pickupWindowEnd | DateTime? | |
-| pickupType | PickupType | default `SELF_PICKUP` |
+| fulfillmentMethod | ReservationFulfillmentMethod | default `PICKUP` |
+| learnerPreferredPickupWindows | Json? | Reserve-time pickup windows |
+| learnerPreferredDeliveryWindows | Json? | Reserve-time delivery windows |
+| deliveryAddressText | String? | Delivery drop-off text |
+| safeDropoffAllowed | Boolean | default false |
+| deliveryNote | String? | Learner delivery note |
+| pickupWindowStart, pickupWindowEnd | DateTime? | Confirmed self-pickup window |
+| supplierProposedPickupWindowStart, supplierProposedPickupWindowEnd | DateTime? | Supplier-proposed pickup awaiting learner confirmation |
+| supplierPickupWindowStart, supplierPickupWindowEnd | DateTime? | Driver pickup from supplier (delivery accept) |
+| confirmedDeliveryWindowStart, confirmedDeliveryWindowEnd | DateTime? | Feasible delivery window after supplier pickup + buffer |
+| earliestDeliveryStart | DateTime? | Computed earliest learner delivery start |
+| schedulingConflictReason | String? | Set when delivery scheduling is infeasible |
 | supplierNote, rejectionReason | String? | |
 | acceptedAt, rejectedAt, cancelledAt, completedAt | DateTime? | |
-| deliveryRequested | Boolean | default false |
-| deliveryStatus | DeliveryStatus? | legacy compatibility |
-| deliveryCost | Decimal? | |
-| dropoffLocationId | String? | legacy FK → locations |
-| driverProfileId | String? | legacy string-only field; use `deliveries.assignedDriverProfileId` |
+
+Logistics (driver, delivery status, dropoff location, cost) live on `deliveries`, not `reservations`.
 
 ---
 
@@ -435,7 +482,7 @@ No new PostGIS geography column is used for pings in Stage 1.
 | relatedEntityType, relatedEntityId | String? | |
 | isRead | Boolean | default false |
 
-**No general notifications API** — supplier uses derived notifications module.
+**No general notifications API** — **Updated:** generic authenticated API at `/api/notifications`; supplier derived inbox remains separate.
 
 ---
 
@@ -535,7 +582,7 @@ Used by price-rule AI services — not a user-facing AI agent credits system.
 
 ## `idempotency_records` — model `IdempotencyRecord`
 
-Generic operation idempotency store. Supplier material create uses scope `SUPPLIER_CREATE_MATERIAL`.
+Generic operation idempotency store. Supplier material create uses scope `SUPPLIER_CREATE_MATERIAL`; Learning Hub learner submit uses scope `LEARNING_PROJECT_SUBMIT`.
 
 | Field | Type | Notes |
 |-------|------|-------|

@@ -10,6 +10,18 @@ export type ReverseGeocodeResult = {
   provider: 'nominatim';
 };
 
+export type ForwardGeocodeInput = {
+  country?: string | null;
+  city: string;
+  area?: string | null;
+  addressLine?: string | null;
+};
+
+export type ForwardGeocodeResult = ReverseGeocodeResult & {
+  latitude: number;
+  longitude: number;
+};
+
 type NominatimAddress = Record<string, string | undefined>;
 
 type NominatimReverseResponse = {
@@ -17,8 +29,18 @@ type NominatimReverseResponse = {
   address?: NominatimAddress;
 };
 
+type NominatimSearchResponseItem = NominatimReverseResponse & {
+  lat?: string;
+  lon?: string;
+};
+
 type CacheEntry = {
   value: ReverseGeocodeResult;
+  expiresAt: number;
+};
+
+type ForwardCacheEntry = {
+  value: ForwardGeocodeResult;
   expiresAt: number;
 };
 
@@ -26,6 +48,7 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const MIN_REQUEST_INTERVAL_MS = 1000;
 
 const cache = new Map<string, CacheEntry>();
+const forwardCache = new Map<string, ForwardCacheEntry>();
 let lastExternalRequestAt = 0;
 
 export const roundCoordinate = (value: number): number =>
@@ -35,6 +58,28 @@ export const buildReverseGeocodeCacheKey = (
   latitude: number,
   longitude: number,
 ): string => `${roundCoordinate(latitude)},${roundCoordinate(longitude)}`;
+
+const normalizeText = (value: string | null | undefined): string | null => {
+  const normalized = value?.trim().replace(/\s+/g, ' ');
+  return normalized ? normalized : null;
+};
+
+export const buildForwardGeocodeQuery = (
+  input: ForwardGeocodeInput,
+): string => {
+  const parts = [
+    normalizeText(input.addressLine),
+    normalizeText(input.area),
+    normalizeText(input.city),
+    normalizeText(input.country) ?? 'Palestine',
+  ].filter((part): part is string => Boolean(part));
+
+  return parts.join(', ');
+};
+
+export const buildForwardGeocodeCacheKey = (
+  input: ForwardGeocodeInput,
+): string => buildForwardGeocodeQuery(input).toLowerCase();
 
 export const pickCity = (address: NominatimAddress): string | null => {
   for (const key of [
@@ -128,6 +173,20 @@ const readCache = (key: string): ReverseGeocodeResult | null => {
   return entry.value;
 };
 
+const readForwardCache = (key: string): ForwardGeocodeResult | null => {
+  const entry = forwardCache.get(key);
+  if (!entry) {
+    return null;
+  }
+
+  if (entry.expiresAt <= Date.now()) {
+    forwardCache.delete(key);
+    return null;
+  }
+
+  return entry.value;
+};
+
 const writeCache = (key: string, value: ReverseGeocodeResult): void => {
   cache.set(key, {
     value,
@@ -135,8 +194,19 @@ const writeCache = (key: string, value: ReverseGeocodeResult): void => {
   });
 };
 
+const writeForwardCache = (
+  key: string,
+  value: ForwardGeocodeResult,
+): void => {
+  forwardCache.set(key, {
+    value,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  });
+};
+
 export const clearReverseGeocodeCache = (): void => {
   cache.clear();
+  forwardCache.clear();
   lastExternalRequestAt = 0;
 };
 
@@ -183,17 +253,88 @@ const fetchFromNominatim = async (
   return parseNominatimResponse(payload);
 };
 
+const parseNominatimSearchItem = (
+  item: NominatimSearchResponseItem,
+): ForwardGeocodeResult | null => {
+  const latitude = Number(item.lat);
+  const longitude = Number(item.lon);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null;
+  }
+
+  return {
+    ...parseNominatimResponse(item),
+    latitude,
+    longitude,
+  };
+};
+
+const fetchForwardFromNominatim = async (
+  input: ForwardGeocodeInput,
+): Promise<ForwardGeocodeResult> => {
+  await waitForRateLimit();
+
+  const url = new URL('/search', env.nominatimBaseUrl);
+  url.searchParams.set('q', buildForwardGeocodeQuery(input));
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('addressdetails', '1');
+  url.searchParams.set('limit', '1');
+
+  lastExternalRequestAt = Date.now();
+
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': env.nominatimUserAgent,
+      Accept: 'application/json',
+      'Accept-Language': 'en',
+    },
+  });
+
+  if (!response.ok) {
+    throw new AppError(
+      'Geocoding provider request failed',
+      502,
+      'GEOCODE_PROVIDER_ERROR',
+    );
+  }
+
+  const payload = (await response.json()) as NominatimSearchResponseItem[];
+  const result = payload.length > 0 ? parseNominatimSearchItem(payload[0]!) : null;
+
+  if (!result) {
+    throw new AppError(
+      'No matching location found',
+      404,
+      'GEOCODE_NOT_FOUND',
+    );
+  }
+
+  return result;
+};
+
 export type ReverseGeocodeFetcher = (
   latitude: number,
   longitude: number,
 ) => Promise<ReverseGeocodeResult>;
 
+export type ForwardGeocodeFetcher = (
+  input: ForwardGeocodeInput,
+) => Promise<ForwardGeocodeResult>;
+
 let fetcherOverride: ReverseGeocodeFetcher | null = null;
+let forwardFetcherOverride: ForwardGeocodeFetcher | null = null;
 
 export const setReverseGeocodeFetcherForTests = (
   fetcher: ReverseGeocodeFetcher | null,
 ): void => {
   fetcherOverride = fetcher;
+};
+
+export const setForwardGeocodeFetcherForTests = (
+  fetcher: ForwardGeocodeFetcher | null,
+): void => {
+  forwardFetcherOverride = fetcher;
 };
 
 export const reverseGeocodeCoordinates = async (
@@ -211,5 +352,22 @@ export const reverseGeocodeCoordinates = async (
     : await fetchFromNominatim(latitude, longitude);
 
   writeCache(key, result);
+  return result;
+};
+
+export const forwardGeocodeLocation = async (
+  input: ForwardGeocodeInput,
+): Promise<ForwardGeocodeResult> => {
+  const key = buildForwardGeocodeCacheKey(input);
+  const cached = readForwardCache(key);
+  if (cached) {
+    return cached;
+  }
+
+  const result = forwardFetcherOverride
+    ? await forwardFetcherOverride(input)
+    : await fetchForwardFromNominatim(input);
+
+  writeForwardCache(key, result);
   return result;
 };

@@ -13,10 +13,20 @@ import {
   updateDriverDeliveryStatusHandler,
 } from './driver.controller.js';
 import {
+  markDriverDeliveryFailedHandler,
+  markDriverIssueAfterPickupHandler,
+  markDriverPickupFailedHandler,
+} from '../fulfillment-failures/fulfillment-failures.controller.js';
+import {
   createDeliveryLocationPingSchema,
   deliveryIdParamsSchema,
   updateDriverDeliveryStatusSchema,
 } from './driver.validation.js';
+import {
+  markDriverDeliveryFailedSchema,
+  markDriverIssueAfterPickupSchema,
+  markDriverPickupFailedSchema,
+} from '../fulfillment-failures/fulfillment-failures.validation.js';
 
 export const driverRouter = Router();
 
@@ -50,4 +60,25 @@ driverRouter.post(
   validate(deliveryIdParamsSchema, 'params'),
   validate(createDeliveryLocationPingSchema),
   asyncHandler(createDriverDeliveryLocationPingHandler),
+);
+
+driverRouter.post(
+  '/deliveries/:id/pickup-failed',
+  validate(deliveryIdParamsSchema, 'params'),
+  validate(markDriverPickupFailedSchema),
+  asyncHandler(markDriverPickupFailedHandler),
+);
+
+driverRouter.post(
+  '/deliveries/:id/delivery-failed',
+  validate(deliveryIdParamsSchema, 'params'),
+  validate(markDriverDeliveryFailedSchema),
+  asyncHandler(markDriverDeliveryFailedHandler),
+);
+
+driverRouter.post(
+  '/deliveries/:id/driver-issue',
+  validate(deliveryIdParamsSchema, 'params'),
+  validate(markDriverIssueAfterPickupSchema),
+  asyncHandler(markDriverIssueAfterPickupHandler),
 );

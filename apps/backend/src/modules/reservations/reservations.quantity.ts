@@ -4,39 +4,27 @@ import {
   type ReservationStatus,
 } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 export const ACTIVE_HOLD_STATUSES = [
   'PENDING',
+  'AWAITING_LEARNER_CONFIRMATION',
+  'AWAITING_SUPPLIER_CONFIRMATION',
   'ACCEPTED',
 ] as const satisfies readonly ReservationStatus[];
 
-const isPrismaCode = (error: unknown, code: string) =>
-  typeof error === 'object' &&
-  error !== null &&
-  'code' in error &&
-  (error as { code?: unknown }).code === code;
+/** Delivery states where material may still be with the driver after admin review is needed. */
+export const MATERIAL_IN_CUSTODY_DELIVERY_STATUSES = [
+  'PICKED_UP',
+  'ON_THE_WAY',
+  'ARRIVED_DROPOFF',
+  'LEARNER_NO_SHOW',
+  'FAILED_DELIVERY',
+] as const;
 
-export const runSerializableTransaction = async <T>(
-  operation: (tx: Prisma.TransactionClient) => Promise<T>,
-) => {
-  const maxAttempts = 3;
+/** Reservation statuses that reduce public availableQuantity. COMPLETED consumes stock instead. */
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      return await prisma.$transaction(operation, {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      });
-    } catch (error) {
-      if (attempt < maxAttempts && isPrismaCode(error, 'P2034')) {
-        continue;
-      }
-
-      throw error;
-    }
-  }
-
-  throw new Error('Unable to complete transaction.');
-};
+export { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 export const toDecimal = (
   value: Prisma.Decimal | number | null | undefined,
@@ -77,7 +65,32 @@ export const sumHeldQuantityForMaterial = async (
     },
   });
 
-  return toDecimal(aggregate._sum.quantityRequested);
+  let held = toDecimal(aggregate._sum.quantityRequested);
+
+  const usesDefaultHoldStatuses =
+    statuses.length === ACTIVE_HOLD_STATUSES.length &&
+    ACTIVE_HOLD_STATUSES.every((status) => statuses.includes(status));
+
+  if (usesDefaultHoldStatuses) {
+    const awaitingResolutionAggregate = await tx.reservation.aggregate({
+      where: {
+        materialId,
+        status: 'AWAITING_RESOLUTION',
+        deliveries: {
+          some: {
+            status: { in: [...MATERIAL_IN_CUSTODY_DELIVERY_STATUSES] },
+          },
+        },
+      },
+      _sum: {
+        quantityRequested: true,
+      },
+    });
+
+    held = held.plus(toDecimal(awaitingResolutionAggregate._sum.quantityRequested));
+  }
+
+  return held;
 };
 
 export const sumHeldQuantityByStatus = async (

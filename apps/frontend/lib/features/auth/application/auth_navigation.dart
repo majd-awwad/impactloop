@@ -1,15 +1,21 @@
 import '../data/models/user.dart';
 import '../../supplier_portal/application/supplier_verification_gate.dart';
 import 'auth_route_helpers.dart';
+import 'portal_navigation.dart';
 
 export 'auth_route_helpers.dart';
+export 'portal_navigation.dart';
 
 String postAuthRouteForUser(User user) {
-  if (userHasAdminRole(user)) {
+  if (userHasAdminRole(user) && user.activeRole.trim().toUpperCase() == 'ADMIN') {
     return adminPortalRoute;
   }
 
-  if (userHasSupplierRole(user)) {
+  if (userHasDriverRole(user) && user.activeRole.trim().toUpperCase() == 'DRIVER') {
+    return driverPortalRoute;
+  }
+
+  if (user.isSupplierMode && userHasSupplierRole(user)) {
     final gate = supplierVerificationGateRoute(
       supplierType: user.supplierProfile?.supplierType,
       verificationStatus: user.supplierProfile?.verificationStatus,
@@ -17,18 +23,14 @@ String postAuthRouteForUser(User user) {
     if (gate != null) {
       return gate;
     }
-    return supplierPortalRoute;
-  }
-
-  if (userHasDriverRole(user)) {
-    return driverPortalRoute;
+    return supplierOverviewRoute;
   }
 
   if (userHasRole(user, 'MODERATOR')) {
     return homeRoute;
   }
 
-  return homeRoute;
+  return portalRouteForActiveRole(user);
 }
 
 String sanitizeRedirectTarget(String? from, {String fallback = rootRoute}) {
@@ -53,7 +55,9 @@ String sanitizeRedirectTarget(String? from, {String fallback = rootRoute}) {
 
   if (path == authCheckingRoute ||
       path == loginRoute ||
-      path == registerRoute) {
+      path == registerRoute ||
+      path == forgotPasswordRoute ||
+      path == resetPasswordRoute) {
     return fallback;
   }
 

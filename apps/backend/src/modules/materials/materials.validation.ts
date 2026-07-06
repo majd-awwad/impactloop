@@ -18,6 +18,8 @@ const MATERIAL_STATUSES = [
 
 const PRICE_TYPES = ['FREE', 'PAID', 'ANY'] as const;
 
+const MATERIAL_SORT_OPTIONS = ['newest', 'popular', 'nearest'] as const;
+
 const parseOptionalBoolean = (value: unknown): boolean | undefined => {
   if (value === undefined || value === null || value === '') {
     return undefined;
@@ -42,29 +44,81 @@ const parseOptionalBoolean = (value: unknown): boolean | undefined => {
   return undefined;
 };
 
-export const materialsQuerySchema = paginationQuerySchema.extend({
-  q: z.string().trim().min(1).max(120).optional(),
-  categoryId: z.string().trim().min(1).optional(),
-  condition: materialConditionSchema.optional(),
-  status: z.enum(MATERIAL_STATUSES, {
-    error:
-      'Status must be one of AVAILABLE, PENDING_RESERVATION, or RESERVED for public discovery',
-  }).default('AVAILABLE'),
-  priceType: z.enum(PRICE_TYPES, {
-    error: 'priceType must be FREE, PAID, or ANY',
-  }).default('ANY'),
-  deliveryAvailable: z.preprocess(
-    (value) => {
-      const parsed = parseOptionalBoolean(value);
+export const materialsQuerySchema = paginationQuerySchema
+  .extend({
+    q: z.string().trim().min(1).max(120).optional(),
+    categoryId: z.string().trim().min(1).optional(),
+    condition: materialConditionSchema.optional(),
+    status: z.enum(MATERIAL_STATUSES, {
+      error:
+        'Status must be one of AVAILABLE, PENDING_RESERVATION, or RESERVED for public discovery',
+    }).default('AVAILABLE'),
+    priceType: z.enum(PRICE_TYPES, {
+      error: 'priceType must be FREE, PAID, or ANY',
+    }).default('ANY'),
+    deliveryAvailable: z.preprocess(
+      (value) => {
+        const parsed = parseOptionalBoolean(value);
 
-      return parsed === undefined ? value : parsed;
-    },
-    z.boolean({
-      error: 'deliveryAvailable must be true or false',
-    }).optional(),
-  ),
-  city: z.string().trim().min(1).max(120).optional(),
-});
+        return parsed === undefined ? value : parsed;
+      },
+      z.boolean({
+        error: 'deliveryAvailable must be true or false',
+      }).optional(),
+    ),
+    city: z.string().trim().min(1).max(120).optional(),
+    area: z.string().trim().min(1).max(120).optional(),
+    pickupAllowed: z.preprocess(
+      (value) => {
+        const parsed = parseOptionalBoolean(value);
+
+        return parsed === undefined ? value : parsed;
+      },
+      z.boolean({
+        error: 'pickupAllowed must be true or false',
+      }).optional(),
+    ),
+    sort: z.enum(MATERIAL_SORT_OPTIONS, {
+      error: 'sort must be newest, popular, or nearest',
+    }).default('newest'),
+    latitude: z.coerce.number().min(-90).max(90).optional(),
+    longitude: z.coerce.number().min(-180).max(180).optional(),
+    savedLocationId: z.string().trim().min(1).optional(),
+  })
+  .superRefine((query, ctx) => {
+    const hasLatitude = query.latitude !== undefined;
+    const hasLongitude = query.longitude !== undefined;
+    const hasCoordinates = hasLatitude || hasLongitude;
+
+    if (hasLatitude !== hasLongitude) {
+      ctx.addIssue({
+        code: 'custom',
+        path: hasLatitude ? ['longitude'] : ['latitude'],
+        message: 'latitude and longitude must be provided together',
+      });
+    }
+
+    if (query.savedLocationId && hasCoordinates) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['savedLocationId'],
+        message: 'Use either savedLocationId or latitude/longitude, not both',
+      });
+    }
+
+    if (
+      query.sort === 'nearest' &&
+      !query.savedLocationId &&
+      !(hasLatitude && hasLongitude)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['sort'],
+        message:
+          'sort=nearest requires latitude/longitude or an authenticated savedLocationId',
+      });
+    }
+  });
 
 export const materialIdParamSchema = z.object({
   id: z.string().trim().min(1),

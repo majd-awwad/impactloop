@@ -6,6 +6,7 @@ import { hashPassword } from '../../utils/password.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
+  getAdminPersonById,
   listAdminPeople,
   reactivateAdminPerson,
   suspendAdminPerson,
@@ -74,6 +75,14 @@ describe('admin people management', () => {
 
   after(async () => {
     if (ctx.userIds.length > 0) {
+      await prisma.adminActivityLog.deleteMany({
+        where: {
+          OR: [
+            { actorUserId: { in: ctx.userIds } },
+            { targetId: { in: ctx.userIds } },
+          ],
+        },
+      });
       await prisma.user.deleteMany({ where: { id: { in: ctx.userIds } } });
     }
   });
@@ -102,9 +111,26 @@ describe('admin people management', () => {
     assert.equal(actor!.canSuspend, false);
   });
 
+  test('suspend user requires reason', async () => {
+    await assert.rejects(
+      () =>
+        suspendAdminPerson(ctx.actorAdminId, ctx.learnerId, {
+          reason: '',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        return true;
+      },
+    );
+  });
+
   test('admin cannot suspend themselves', async () => {
     await assert.rejects(
-      () => suspendAdminPerson(ctx.actorAdminId, ctx.actorAdminId, {}),
+      () =>
+        suspendAdminPerson(ctx.actorAdminId, ctx.actorAdminId, {
+          reason: 'Attempted self suspension.',
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 403);
@@ -116,7 +142,10 @@ describe('admin people management', () => {
 
   test('admin cannot suspend another admin account', async () => {
     await assert.rejects(
-      () => suspendAdminPerson(ctx.actorAdminId, ctx.otherAdminId, {}),
+      () =>
+        suspendAdminPerson(ctx.actorAdminId, ctx.otherAdminId, {
+          reason: 'Attempted admin suspension.',
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 403);
@@ -126,16 +155,35 @@ describe('admin people management', () => {
     );
   });
 
-  test('admin can suspend and reactivate a supplier', async () => {
+  test('admin can suspend and reactivate a supplier with audit context', async () => {
+    const reason = 'Policy violation during test.';
     const suspended = await suspendAdminPerson(ctx.actorAdminId, ctx.supplierId, {
-      reason: 'Policy violation during test.',
+      reason,
     });
     assert.equal(suspended.accountStatus, 'SUSPENDED');
+    assert.equal(suspended.suspensionReason, reason);
+    assert.ok(suspended.suspendedAt);
+    assert.ok(suspended.suspendedBy);
+    assert.equal(suspended.suspendedBy!.id, ctx.actorAdminId);
     assert.equal(suspended.canReactivate, true);
+
+    const stored = await prisma.user.findUnique({
+      where: { id: ctx.supplierId },
+      select: { suspendedById: true, suspensionReason: true },
+    });
+    assert.equal(stored?.suspendedById, ctx.actorAdminId);
+    assert.equal(stored?.suspensionReason, reason);
+
+    const detail = await getAdminPersonById(ctx.actorAdminId, ctx.supplierId);
+    assert.equal(detail.suspensionReason, reason);
+    assert.equal(detail.suspendedBy?.id, ctx.actorAdminId);
 
     const reactivated = await reactivateAdminPerson(ctx.actorAdminId, ctx.supplierId);
     assert.equal(reactivated.accountStatus, 'ACTIVE');
     assert.equal(reactivated.canSuspend, true);
+    assert.ok(reactivated.reactivatedAt);
+    assert.equal(reactivated.reactivatedBy?.id, ctx.actorAdminId);
+    assert.equal(reactivated.suspensionReason, reason);
   });
 
   test('admin targets are flagged as protected in list responses', async () => {

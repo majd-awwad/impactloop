@@ -1,7 +1,18 @@
 import { AppError } from '../../utils/app-error.js';
 import { decimalToNumber } from '../../utils/decimal.js';
 
+import {
+  ADMIN_ACTIVITY_ACTIONS,
+  ADMIN_ACTIVITY_TARGET_TYPES,
+  logAdminActivity,
+} from '../admin/admin-activity-log.js';
 import * as repository from './admin-materials.repository.js';
+import {
+  assertCanHideMaterial,
+  assertCanMarkMaterialUnavailable,
+  assertCanRestoreMaterial,
+  getMaterialModerationPolicy,
+} from './admin-materials.moderation-policy.js';
 import type {
   AdminMaterialReportsListQuery,
   AdminMaterialsListQuery,
@@ -12,32 +23,6 @@ import type {
   ResolveMaterialReportInput,
   SubmitMaterialReportInput,
 } from './admin-materials.validation.js';
-
-const ACTIVE_MATERIAL_STATUSES = new Set([
-  'PENDING_RESERVATION',
-  'RESERVED',
-]);
-
-const assertNoActiveReservation = async (materialId: string, materialStatus: string) => {
-  if (ACTIVE_MATERIAL_STATUSES.has(materialStatus)) {
-    throw new AppError(
-      'This material has an active reservation and cannot be hidden now.',
-      409,
-      'CONFLICT',
-      { reason: 'ACTIVE_RESERVATION' },
-    );
-  }
-
-  const activeCount = await repository.countActiveReservations(materialId);
-  if (activeCount > 0) {
-    throw new AppError(
-      'This material has an active reservation and cannot be hidden now.',
-      409,
-      'CONFLICT',
-      { reason: 'ACTIVE_RESERVATION' },
-    );
-  }
-};
 
 const mapSupplierName = (
   material: Awaited<ReturnType<typeof repository.listMaterialsForAdmin>>['items'][number],
@@ -75,6 +60,7 @@ const mapListItem = (
   pendingReportCount: pendingByMaterial.get(material.id) ?? 0,
   createdAt: material.createdAt.toISOString(),
   updatedAt: material.updatedAt.toISOString(),
+  allowedActions: getMaterialModerationPolicy(material.status),
 });
 
 export const getAdminMaterialsSummary = async () => {
@@ -104,6 +90,7 @@ export const getAdminMaterialById = async (id: string) => {
   const pendingReportCount = material.reports.filter(
     (report) => report.status === 'PENDING',
   ).length;
+  const moderationPolicy = getMaterialModerationPolicy(material.status);
 
   return {
     id: material.id,
@@ -188,6 +175,7 @@ export const getAdminMaterialById = async (id: string) => {
       reviewedAt: report.reviewedAt?.toISOString() ?? null,
       createdAt: report.createdAt.toISOString(),
     })),
+    allowedActions: moderationPolicy,
   };
 };
 
@@ -201,7 +189,7 @@ export const hideAdminMaterial = async (
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
 
-  await assertNoActiveReservation(materialId, material.status);
+  await assertCanHideMaterial(materialId, material.status);
 
   const updated = await repository.hideMaterial({
     materialId,
@@ -214,6 +202,19 @@ export const hideAdminMaterial = async (
     title: 'Material hidden by admin',
     body: `Your material '${material.title}' was hidden by admin. Reason: ${input.reason.trim()}.`,
     materialId,
+  });
+
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_HIDDEN,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL,
+    targetId: materialId,
+    targetLabel: material.title,
+    metadata: {
+      reason: input.reason.trim(),
+      previousStatus: material.status,
+      newStatus: updated.status,
+    },
   });
 
   return {
@@ -233,7 +234,7 @@ export const markAdminMaterialUnavailable = async (
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
 
-  await assertNoActiveReservation(materialId, material.status);
+  await assertCanMarkMaterialUnavailable(materialId, material.status);
 
   const updated = await repository.markMaterialUnavailable({
     materialId,
@@ -249,6 +250,19 @@ export const markAdminMaterialUnavailable = async (
       materialId,
     });
   }
+
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_MARKED_UNAVAILABLE,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL,
+    targetId: materialId,
+    targetLabel: material.title,
+    metadata: {
+      reason: input.reason?.trim() ?? null,
+      previousStatus: material.status,
+      newStatus: updated.status,
+    },
+  });
 
   return {
     id: updated.id,
@@ -266,25 +280,7 @@ export const restoreAdminMaterial = async (
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
 
-  if (material.status === 'REUSED') {
-    throw new AppError('Reused materials cannot be restored.', 409, 'CONFLICT', {
-      reason: 'REUSED_MATERIAL',
-    });
-  }
-
-  if (material.status === 'RESERVED' || material.status === 'PENDING_RESERVATION') {
-    throw new AppError('Reserved materials cannot be restored.', 409, 'CONFLICT', {
-      reason: 'RESERVED_MATERIAL',
-    });
-  }
-
-  if (material.status !== 'UNAVAILABLE') {
-    throw new AppError(
-      'Only unavailable materials can be restored.',
-      400,
-      'VALIDATION_ERROR',
-    );
-  }
+  assertCanRestoreMaterial(material.status);
 
   const updated = await repository.restoreMaterial(materialId);
 
@@ -293,6 +289,18 @@ export const restoreAdminMaterial = async (
     title: 'Material restored',
     body: `Your material '${material.title}' was restored and is visible again.`,
     materialId,
+  });
+
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_RESTORED,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL,
+    targetId: materialId,
+    targetLabel: material.title,
+    metadata: {
+      previousStatus: material.status,
+      newStatus: updated.status,
+    },
   });
 
   return {
@@ -318,6 +326,7 @@ export const listAdminMaterialReports = async (
       materialTitle: report.material.title,
       materialId: report.material.id,
       materialStatus: report.material.status,
+      canHideMaterial: getMaterialModerationPolicy(report.material.status).canHide,
       supplierName:
         report.material.owner.supplierProfile?.publicName ??
         report.material.owner.displayName,
@@ -412,6 +421,19 @@ export const resolveAdminMaterialReport = async (
     adminNote: input.adminNote?.trim(),
   });
 
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_REPORT_RESOLVED,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL_REPORT,
+    targetId: reportId,
+    targetLabel: report.material.title,
+    metadata: {
+      materialId: report.materialId,
+      reportReason: report.reason,
+      adminNote: input.adminNote?.trim() ?? null,
+    },
+  });
+
   return {
     id: updated.id,
     status: updated.status,
@@ -444,6 +466,19 @@ export const rejectAdminMaterialReport = async (
     materialId: report.materialId,
   });
 
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_REPORT_REJECTED,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL_REPORT,
+    targetId: reportId,
+    targetLabel: report.material.title,
+    metadata: {
+      materialId: report.materialId,
+      reportReason: report.reason,
+      adminNote: input.adminNote.trim(),
+    },
+  });
+
   return {
     id: updated.id,
     status: updated.status,
@@ -462,7 +497,7 @@ export const hideMaterialFromAdminReport = async (
   }
 
   assertPendingReport(report);
-  await assertNoActiveReservation(report.materialId, report.material.status);
+  await assertCanHideMaterial(report.materialId, report.material.status);
 
   const ownerId = report.material.owner.id;
 
@@ -478,6 +513,20 @@ export const hideMaterialFromAdminReport = async (
     title: 'Material hidden after report review',
     body: `Your material '${material.title}' was hidden after admin review. Reason: ${input.adminNote.trim()}.`,
     materialId: report.materialId,
+  });
+
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.MATERIAL_REPORT_HIDE_MATERIAL,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.MATERIAL,
+    targetId: report.materialId,
+    targetLabel: material.title,
+    metadata: {
+      reportId,
+      reportReason: report.reason,
+      adminNote: input.adminNote.trim(),
+      materialStatus: material.status,
+    },
   });
 
   return {

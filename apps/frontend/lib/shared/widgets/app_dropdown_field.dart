@@ -15,7 +15,7 @@ class AppDropdownField<T> extends StatelessWidget {
   final String label;
   final T? value;
   final List<DropdownMenuItem<T>> items;
-  final ValueChanged<T?> onChanged;
+  final ValueChanged<T?>? onChanged;
   final String? Function(T?)? validator;
   final String? hint;
   final String? errorText;

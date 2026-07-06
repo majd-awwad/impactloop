@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config/api_config.dart';
 import '../../../shared/models/localized_text.dart';
 import '../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../shared/widgets/materials/material_status_badge.dart';
 import '../domain/discovery_material.dart';
+import '../domain/discovery_material_image.dart';
+import '../presentation/discovery_material_display.dart';
 
 class MaterialDiscoveryApiMapper {
   const MaterialDiscoveryApiMapper._();
@@ -32,23 +35,51 @@ class MaterialDiscoveryApiMapper {
     final price = _numberFromDynamic(json['price']);
     final city = _nullableString(json['city']);
     final area = _nullableString(json['area']);
+    final approximateLatitude = _numberFromDynamic(json['approximateLatitude']);
+    final approximateLongitude = _numberFromDynamic(
+      json['approximateLongitude'],
+    );
+    final approximateDistanceKm = _numberFromDynamic(
+      json['approximateDistanceKm'],
+    );
     final deliveryAvailable = json['deliveryAvailable'] == true;
+    final pickupAllowed = json['pickupAllowed'] != false;
+    final suggestedUses = _nullableString(json['suggestedUses']);
+    final sourceType = _nullableString(json['sourceType']);
+    final supplierType = _nullableString(json['supplierType']);
+    final supplierVerified = json['supplierVerified'] == true;
+    final isOwnMaterial = json['isOwnMaterial'] == true ? true : null;
+    final canReserve = json['canReserve'] is bool
+        ? json['canReserve'] as bool
+        : null;
+    final reserveBlockReason = _nullableString(json['reserveBlockReason']);
     final ratingSummary = _numberFromDynamic(json['ratingSummary']);
+    final viewsCount = _intFromDynamic(json['viewsCount']) ?? 0;
+    final likesCount = _intFromDynamic(json['likesCount']) ?? 0;
+    final isLiked = json['isLiked'] == true;
 
     final conditionMeta = _conditionMeta(condition);
     final statusMeta = _statusMeta(
       status,
       availableQuantity: availableQuantity ?? 0,
     );
-    final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
+    final categoryId = _nullableString(categoryJson?['id']);
     final title = _stringOrFallback(
       json['title'],
       fallback: 'Untitled material',
     );
-    final description = _stringOrFallback(
-      json['description'],
-      fallback: 'No description available.',
+    final description = DiscoveryMaterialDisplay.sanitizedDescriptionOrFallback(
+      _stringOrFallback(json['description'], fallback: ''),
     );
+
+    final categoryLabel = LocalizedText(en: categoryNameEn, ar: categoryNameAr);
+    final supplierTypeLabel = DiscoveryMaterial.supplierTypeLabelFor(
+      supplierType,
+    );
+    final galleryImages = _mapGalleryImages(json);
+    final imageUrl = galleryImages.isNotEmpty
+        ? galleryImages.first.url
+        : _resolveImageUrl(json);
 
     return DiscoveryMaterial(
       id: _stringOrFallback(json['id'], fallback: ''),
@@ -60,6 +91,12 @@ class MaterialDiscoveryApiMapper {
       title: LocalizedText(en: title, ar: title),
       description: LocalizedText(en: description, ar: description),
       category: categoryLabel,
+      categoryId: categoryId,
+      city: city,
+      area: area,
+      approximateLatitude: approximateLatitude,
+      approximateLongitude: approximateLongitude,
+      approximateDistanceKm: approximateDistanceKm,
       conditionLabel: conditionMeta.label,
       conditionTone: conditionMeta.tone,
       statusLabel: statusMeta.label,
@@ -70,25 +107,61 @@ class MaterialDiscoveryApiMapper {
         unit: unit,
       ),
       priceLabel: _priceLabel(isFree: isFree, price: price),
-      locationLabel: _locationLabel(city: city, area: area),
-      availabilityLabel: LocalizedText(
-        en: deliveryAvailable ? 'Delivery available' : 'Pickup only',
-        ar: deliveryAvailable ? 'التوصيل متاح' : 'استلام فقط',
+      locationLabel: _locationLabel(
+        city: city,
+        area: area,
+        approximateDistanceKm: approximateDistanceKm,
+      ),
+      availabilityLabel: _availabilityLabel(
+        deliveryAvailable: deliveryAvailable,
+        pickupAllowed: pickupAllowed,
       ),
       deliveryAvailable: deliveryAvailable,
+      pickupAllowed: pickupAllowed,
       isFree: isFree,
       supplierName: LocalizedText(en: supplierName, ar: supplierName),
-      supplierSubtitle: LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
+      supplierSubtitle:
+          supplierTypeLabel ??
+          const LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
+      supplierType: supplierType,
+      supplierVerified: supplierVerified,
       heroIconData: _heroIconForCategory(categoryNameEn),
       cardGradient: _gradientForCategory(categoryNameEn),
-      imageUrl: _imageUrl(json, categoryNameEn),
+      imageUrl: imageUrl,
+      galleryImages: galleryImages,
       ratingLabel: ratingSummary == null
           ? null
           : LocalizedText(
               en: _formatCompactNumber(ratingSummary),
               ar: _formatCompactNumber(ratingSummary),
             ),
+      viewsCount: viewsCount,
+      likesCount: likesCount,
+      isLiked: isLiked,
+      postedAt: _dateTimeFromDynamic(json['createdAt']),
+      suggestedUses: suggestedUses,
+      sourceType: sourceType,
+      isOwnMaterial: isOwnMaterial,
+      canReserve: canReserve,
+      reserveBlockReason: reserveBlockReason,
     );
+  }
+
+  static DateTime? _dateTimeFromDynamic(Object? value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is DateTime) {
+      return value;
+    }
+
+    final normalized = value.toString().trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    return DateTime.tryParse(normalized);
   }
 
   static Map<String, dynamic>? _asMap(Object? value) {
@@ -117,10 +190,82 @@ class MaterialDiscoveryApiMapper {
     return normalized.isEmpty ? null : normalized;
   }
 
-  static String _imageUrl(Map<String, dynamic> json, String categoryNameEn) {
-    final directImage = _nullableString(json['imageUrl']);
+  static List<DiscoveryMaterialImage> _mapGalleryImages(
+    Map<String, dynamic> json,
+  ) {
+    final images = json['images'];
+    if (images is! List) {
+      return const [];
+    }
+
+    final mapped = <DiscoveryMaterialImage>[];
+
+    for (final image in images) {
+      if (image is! Map) {
+        continue;
+      }
+
+      final imageMap = Map<String, dynamic>.from(image);
+      final url = _nullableString(imageMap['url'] ?? imageMap['imageUrl']);
+      if (url == null) {
+        continue;
+      }
+
+      mapped.add(
+        DiscoveryMaterialImage(
+          id: _stringOrFallback(imageMap['id'], fallback: url),
+          url: ApiConfig.resolveMediaUrl(url),
+          isCover: imageMap['isCover'] == true,
+          isPrimary:
+              imageMap['isPrimary'] == true || imageMap['isCover'] == true,
+          sortOrder: _intFromDynamic(imageMap['sortOrder']) ?? mapped.length,
+        ),
+      );
+    }
+
+    if (mapped.isEmpty) {
+      return const [];
+    }
+
+    mapped.sort((left, right) {
+      if (left.isCover != right.isCover) {
+        return left.isCover ? -1 : 1;
+      }
+
+      final sortCompare = left.sortOrder.compareTo(right.sortOrder);
+      if (sortCompare != 0) {
+        return sortCompare;
+      }
+
+      return left.id.compareTo(right.id);
+    });
+
+    return mapped;
+  }
+
+  static String? _resolveImageUrl(Map<String, dynamic> json) {
+    final directImage =
+        _nullableString(json['primaryImageUrl']) ??
+        _nullableString(json['imageUrl']);
     if (directImage != null) {
-      return directImage;
+      return ApiConfig.resolveMediaUrl(directImage);
+    }
+
+    final images = json['images'];
+    if (images is List) {
+      for (final image in images) {
+        if (image is Map) {
+          final url = _nullableString(image['url'] ?? image['imageUrl']);
+          if (url != null) {
+            return ApiConfig.resolveMediaUrl(url);
+          }
+        } else {
+          final url = _nullableString(image);
+          if (url != null) {
+            return ApiConfig.resolveMediaUrl(url);
+          }
+        }
+      }
     }
 
     final imageUrls = json['imageUrls'];
@@ -129,48 +274,34 @@ class MaterialDiscoveryApiMapper {
         if (image is Map) {
           final url = _nullableString(image['url'] ?? image['imageUrl']);
           if (url != null) {
-            return url;
+            return ApiConfig.resolveMediaUrl(url);
           }
         } else {
           final url = _nullableString(image);
           if (url != null) {
-            return url;
+            return ApiConfig.resolveMediaUrl(url);
           }
         }
       }
     }
 
-    return _fallbackImageForCategory(categoryNameEn);
+    return null;
   }
 
-  static String _fallbackImageForCategory(String categoryNameEn) {
-    final normalized = categoryNameEn.toLowerCase();
-
-    if (normalized.contains('wood')) {
-      return 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80';
+  static int? _intFromDynamic(Object? value) {
+    if (value == null) {
+      return null;
     }
 
-    if (normalized.contains('electronic') ||
-        normalized.contains('sensor') ||
-        normalized.contains('circuit')) {
-      return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
+    if (value is int) {
+      return value;
     }
 
-    if (normalized.contains('metal') || normalized.contains('steel')) {
-      return 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80';
+    if (value is num) {
+      return value.toInt();
     }
 
-    if (normalized.contains('plastic') || normalized.contains('acrylic')) {
-      return 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=1200&q=80';
-    }
-
-    if (normalized.contains('fabric') ||
-        normalized.contains('textile') ||
-        normalized.contains('denim')) {
-      return 'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=1200&q=80';
-    }
-
-    return 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80';
+    return int.tryParse(value.toString());
   }
 
   static double? _numberFromDynamic(Object? value) {
@@ -193,10 +324,7 @@ class MaterialDiscoveryApiMapper {
     final totalText = quantity == null ? '--' : _formatCompactNumber(quantity);
     final available = availableQuantity ?? quantity;
 
-    if (available != null &&
-        quantity != null &&
-        available < quantity &&
-        available > 0) {
+    if (available != null && quantity != null && available < quantity) {
       final availableText = _formatCompactNumber(available);
       return LocalizedText(
         en: 'Available: $availableText of $totalText $unit',
@@ -223,11 +351,47 @@ class MaterialDiscoveryApiMapper {
     return LocalizedText(en: 'NIS $priceText', ar: '$priceText شيكل');
   }
 
+  static LocalizedText _availabilityLabel({
+    required bool deliveryAvailable,
+    required bool pickupAllowed,
+  }) {
+    if (pickupAllowed && deliveryAvailable) {
+      return const LocalizedText(
+        en: 'Pickup and delivery available',
+        ar: 'الاستلام والتوصيل متاحان',
+      );
+    }
+
+    if (deliveryAvailable) {
+      return const LocalizedText(en: 'Delivery available', ar: 'التوصيل متاح');
+    }
+
+    if (pickupAllowed) {
+      return const LocalizedText(en: 'Pickup only', ar: 'استلام فقط');
+    }
+
+    return const LocalizedText(
+      en: 'Contact supplier for pickup options',
+      ar: 'تواصل مع المورد لخيارات الاستلام',
+    );
+  }
+
   static LocalizedText _locationLabel({
     required String? city,
     required String? area,
+    required double? approximateDistanceKm,
   }) {
+    final distanceText = approximateDistanceKm == null
+        ? null
+        : approximateDistanceKm < 10
+        ? '~${approximateDistanceKm.toStringAsFixed(1)} km'
+        : '~${approximateDistanceKm.toStringAsFixed(0)} km';
+
     if (city == null && area == null) {
+      if (distanceText != null) {
+        return LocalizedText(en: distanceText, ar: distanceText);
+      }
+
       return const LocalizedText(
         en: 'Location shared on request',
         ar: 'يتم مشاركة الموقع عند الطلب',
@@ -235,11 +399,23 @@ class MaterialDiscoveryApiMapper {
     }
 
     if (city != null && area != null) {
-      return LocalizedText(en: '$city, $area', ar: '$city، $area');
+      final label = '$city, $area';
+      final arLabel = '$city، $area';
+      return distanceText == null
+          ? LocalizedText(en: label, ar: arLabel)
+          : LocalizedText(
+              en: '$label - $distanceText',
+              ar: '$arLabel - $distanceText',
+            );
     }
 
     final label = city ?? area!;
-    return LocalizedText(en: label, ar: label);
+    return distanceText == null
+        ? LocalizedText(en: label, ar: label)
+        : LocalizedText(
+            en: '$label - $distanceText',
+            ar: '$label - $distanceText',
+          );
   }
 
   static ({LocalizedText label, MaterialConditionBadgeTone tone})
@@ -278,9 +454,7 @@ class MaterialDiscoveryApiMapper {
     String value, {
     required double availableQuantity,
   }) {
-    if (availableQuantity > 0 &&
-        value != 'REUSED' &&
-        value != 'UNAVAILABLE') {
+    if (availableQuantity > 0 && value != 'REUSED' && value != 'UNAVAILABLE') {
       return (
         label: const LocalizedText(en: 'Available', ar: 'متاح'),
         tone: MaterialStatusBadgeTone.available,

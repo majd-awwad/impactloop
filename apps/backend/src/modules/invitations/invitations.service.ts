@@ -10,7 +10,13 @@ import * as authRepository from '../auth/auth.repository.js';
 import { getEmailInvitationProvider } from './email/index.js';
 import * as invitationsRepository from './invitations.repository.js';
 import {
+  ADMIN_ACTIVITY_ACTIONS,
+  ADMIN_ACTIVITY_TARGET_TYPES,
+  logAdminActivity,
+} from '../admin/admin-activity-log.js';
+import {
   computeInvitationDisplayStatus,
+  isActivePendingInvitation,
   isInvitationActionable,
   type InvitationDisplayStatus,
 } from './invitations.status.js';
@@ -27,6 +33,8 @@ export type InvitationAdminDto = {
   expiresAt: string;
   sentAt: string | null;
   usedAt: string | null;
+  acceptedAt: string | null;
+  revokedAt: string | null;
   sendError: string | null;
   createdAt: string;
   createdBy: {
@@ -34,6 +42,7 @@ export type InvitationAdminDto = {
     displayName: string;
     email: string;
   } | null;
+  canCopyLink: boolean;
 };
 
 export type InvitationCreateResult = InvitationAdminDto & {
@@ -67,6 +76,8 @@ const buildInviteLink = (rawToken: string): string => {
   return `${base}/invite/accept?token=${encodeURIComponent(rawToken)}`;
 };
 
+const invitationTargetLabel = (email: string, role: string) => `${email} (${role})`;
+
 const toAdminDto = (
   invitation: invitationsRepository.InvitationRecord,
 ): InvitationAdminDto => ({
@@ -77,9 +88,12 @@ const toAdminDto = (
   expiresAt: invitation.expiresAt.toISOString(),
   sentAt: invitation.sentAt?.toISOString() ?? null,
   usedAt: invitation.usedAt?.toISOString() ?? null,
+  acceptedAt: invitation.usedAt?.toISOString() ?? null,
+  revokedAt: invitation.revokedAt?.toISOString() ?? null,
   sendError: invitation.sendError,
   createdAt: invitation.createdAt.toISOString(),
   createdBy: invitation.invitedByUser,
+  canCopyLink: isActivePendingInvitation(invitation),
 });
 
 const sendInvitationEmail = async (input: {
@@ -116,15 +130,78 @@ export const listInvitationsForAdmin = async (): Promise<InvitationAdminDto[]> =
   return invitations.map(toAdminDto);
 };
 
+export const getInvitationForAdmin = async (
+  invitationId: string,
+): Promise<InvitationAdminDto> => {
+  const invitation =
+    await invitationsRepository.findInvitationRecordById(invitationId);
+
+  if (!invitation) {
+    throw new AppError('Invitation not found', 404, 'NOT_FOUND');
+  }
+
+  return toAdminDto(invitation);
+};
+
+export const issueInvitationLinkForAdmin = async (
+  invitationId: string,
+): Promise<{ invitationUrl: string }> => {
+  const invitation =
+    await invitationsRepository.findInvitationRecordById(invitationId);
+
+  if (!invitation) {
+    throw new AppError('Invitation not found', 404, 'NOT_FOUND');
+  }
+
+  if (!isActivePendingInvitation(invitation)) {
+    throw new AppError(
+      'This invitation is no longer active.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const rawToken = generateOpaqueToken();
+  await invitationsRepository.rotateInvitationTokenHashOnly({
+    id: invitation.id,
+    tokenHash: hashToken(rawToken),
+  });
+
+  return {
+    invitationUrl: buildInviteLink(rawToken),
+  };
+};
+
 export const createEmailInvitation = async (
   adminUserId: string,
   input: AdminCreateInvitationInput,
 ): Promise<InvitationCreateResult> => {
+  assertInviteLinkConfiguration();
+
+  const recipientEmail = input.recipientEmail.trim().toLowerCase();
+
+  const existing =
+    await invitationsRepository.findActivePendingInvitationByEmailAndRole(
+      recipientEmail,
+      input.role,
+    );
+
+  if (existing) {
+    throw new AppError(
+      'An active pending invitation already exists for this email and role.',
+      409,
+      'DUPLICATE_PENDING_INVITATION',
+      {
+        existingInvitation: toAdminDto(existing),
+      },
+    );
+  }
+
   const rawToken = generateOpaqueToken();
   const expiresAt = new Date(Date.now() + input.expiresInMinutes * 60 * 1000);
 
   const invitation = await invitationsRepository.createInvitationRecord({
-    targetEmail: input.recipientEmail,
+    targetEmail: recipientEmail,
     targetRole: input.role,
     tokenHash: hashToken(rawToken),
     invitedBy: adminUserId,
@@ -135,10 +212,24 @@ export const createEmailInvitation = async (
   const inviteLink = buildInviteLink(rawToken);
   const sent = await sendInvitationEmail({
     invitationId: invitation.id,
-    recipientEmail: input.recipientEmail,
+    recipientEmail,
     role: input.role,
     inviteLink,
     expiresAt,
+  });
+
+  await logAdminActivity({
+    actorUserId: adminUserId,
+    action: ADMIN_ACTIVITY_ACTIONS.INVITATION_CREATED,
+    targetType: ADMIN_ACTIVITY_TARGET_TYPES.INVITATION,
+    targetId: invitation.id,
+    targetLabel: invitationTargetLabel(recipientEmail, input.role),
+    metadata: {
+      email: recipientEmail,
+      role: input.role,
+      expiresAt: expiresAt.toISOString(),
+      sendStatus: sent.sendStatus,
+    },
   });
 
   return {
@@ -150,6 +241,7 @@ export const createEmailInvitation = async (
 
 export const resendEmailInvitation = async (
   invitationId: string,
+  adminUserId?: string,
 ): Promise<InvitationCreateResult> => {
   const invitation = await invitationsRepository.findInvitationRecordById(invitationId);
 
@@ -183,6 +275,23 @@ export const resendEmailInvitation = async (
     expiresAt,
   });
 
+  if (adminUserId) {
+    await logAdminActivity({
+      actorUserId: adminUserId,
+      action: ADMIN_ACTIVITY_ACTIONS.INVITATION_RESENT,
+      targetType: ADMIN_ACTIVITY_TARGET_TYPES.INVITATION,
+      targetId: rotated.id,
+      targetLabel: invitationTargetLabel(
+        invitation.targetEmail,
+        invitation.targetRole,
+      ),
+      metadata: {
+        role: invitation.targetRole,
+        sendStatus: sent.sendStatus,
+      },
+    });
+  }
+
   return {
     ...sent,
     inviteLink,
@@ -190,7 +299,10 @@ export const resendEmailInvitation = async (
   };
 };
 
-export const revokeInvitation = async (invitationId: string): Promise<InvitationAdminDto> => {
+export const revokeInvitation = async (
+  invitationId: string,
+  adminUserId?: string,
+): Promise<InvitationAdminDto> => {
   const invitation = await invitationsRepository.findInvitationRecordById(invitationId);
 
   if (!invitation) {
@@ -206,7 +318,23 @@ export const revokeInvitation = async (invitationId: string): Promise<Invitation
   }
 
   const revoked = await invitationsRepository.revokeInvitationRecord(invitationId);
-  return toAdminDto(revoked);
+  const dto = toAdminDto(revoked);
+
+  if (adminUserId) {
+    await logAdminActivity({
+      actorUserId: adminUserId,
+      action: ADMIN_ACTIVITY_ACTIONS.INVITATION_REVOKED,
+      targetType: ADMIN_ACTIVITY_TARGET_TYPES.INVITATION,
+      targetId: dto.id,
+      targetLabel: invitationTargetLabel(dto.recipientEmail, dto.role),
+      metadata: {
+        role: dto.role,
+        status: dto.status,
+      },
+    });
+  }
+
+  return dto;
 };
 
 const assertInvitationUsable = async (token: string) => {

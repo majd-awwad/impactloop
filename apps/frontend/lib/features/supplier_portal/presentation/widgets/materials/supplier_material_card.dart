@@ -6,11 +6,12 @@ import '../../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../theme/supplier_theme_extension.dart';
+import '../material_engagement_chip.dart';
 import 'supplier_my_materials_colors.dart';
 
 const supplierMaterialCardHeight = 440.0;
 
-class SupplierMaterialCard extends StatelessWidget {
+class SupplierMaterialCard extends StatefulWidget {
   const SupplierMaterialCard({
     super.key,
     required this.title,
@@ -28,6 +29,8 @@ class SupplierMaterialCard extends StatelessWidget {
     required this.isFree,
     this.imageUrl,
     this.viewsCount,
+    this.likesCount,
+    this.compactBadgeLabels = const [],
     this.createdAtLabel,
     this.onTap,
     this.actions,
@@ -48,155 +51,259 @@ class SupplierMaterialCard extends StatelessWidget {
   final bool isFree;
   final String? imageUrl;
   final int? viewsCount;
+  final int? likesCount;
+  final List<String> compactBadgeLabels;
   final String? createdAtLabel;
   final VoidCallback? onTap;
   final List<Widget>? actions;
 
   @override
+  State<SupplierMaterialCard> createState() => _SupplierMaterialCardState();
+}
+
+class _SupplierMaterialCardState extends State<SupplierMaterialCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
-    final hasImage = imageUrl != null && imageUrl!.trim().isNotEmpty;
+    final hasImage = widget.imageUrl != null && widget.imageUrl!.trim().isNotEmpty;
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
-    final actionCount = actions?.length ?? 0;
+    final actionCount = widget.actions?.length ?? 0;
     final cardHeight = compact && actionCount > 2
         ? supplierMaterialCardHeight + 100
         : supplierMaterialCardHeight;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppRadius.xlAll,
-        child: Ink(
-          height: cardHeight,
-          decoration: BoxDecoration(
-            color: colors.surfaceSolid.withValues(
-              alpha: colors.isDark ? 0.78 : 1,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.translationValues(0, _hovered ? -2 : 0, 0),
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.xlAll,
+          boxShadow: [
+            BoxShadow(
+              color: colors.cardShadow.withValues(
+                alpha: _hovered ? 0.16 : 0.07,
+              ),
+              blurRadius: _hovered ? 18 : 10,
+              offset: Offset(0, _hovered ? 8 : 3),
             ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onTap,
             borderRadius: AppRadius.xlAll,
-            border: Border.all(
-              color: colors.isDark
-                  ? colors.border.withValues(alpha: 0.45)
-                  : colors.border,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
+            child: Ink(
+              height: cardHeight,
+              decoration: BoxDecoration(
+                color: colors.surfaceSolid.withValues(
+                  alpha: colors.isDark ? 0.78 : 1,
                 ),
-                child: SizedBox(
-                  height: 160,
-                  child: hasImage
-                      ? Image.network(
-                          imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => _Placeholder(colors: colors),
-                        )
-                      : _Placeholder(colors: colors),
+                borderRadius: AppRadius.xlAll,
+                border: Border.all(
+                  color: colors.isDark
+                      ? colors.border.withValues(alpha: 0.45)
+                      : colors.border,
                 ),
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        categoryLabel,
-                        style: context.supplierChip().copyWith(
-                          color: SupplierMyMaterialsColors.lightTeal,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        title,
-                        style: context.supplierSectionTitle().copyWith(
-                          color: colors.textPrimary,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          height: 1.2,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Wrap(
-                        spacing: AppSpacing.xs,
-                        runSpacing: AppSpacing.xs,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    child: SizedBox(
+                      height: 160,
+                      child: Stack(
+                        fit: StackFit.expand,
                         children: [
-                          MaterialStatusBadge(
-                            label: statusLabel,
-                            tone: statusTone,
+                          AnimatedScale(
+                            scale: _hovered ? 1.04 : 1,
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            child: hasImage
+                                ? Image.network(
+                                    widget.imageUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) =>
+                                        _Placeholder(colors: colors),
+                                  )
+                                : _Placeholder(colors: colors),
                           ),
-                          MaterialConditionBadge(
-                            label: conditionLabel,
-                            tone: conditionTone,
+                          Positioned(
+                            left: 8,
+                            bottom: 8,
+                            child: Row(
+                              children: [
+                                MaterialEngagementChip(
+                                  icon: Icons.visibility_outlined,
+                                  count: widget.viewsCount ?? 0,
+                                  tone: MaterialEngagementChipTone.views,
+                                ),
+                                const SizedBox(width: 6),
+                                MaterialEngagementChip(
+                                  icon: Icons.favorite_border,
+                                  count: widget.likesCount ?? 0,
+                                  tone: MaterialEngagementChipTone.likes,
+                                ),
+                              ],
+                            ),
                           ),
-                          MaterialPriceBadge(
-                            label: priceLabel,
-                            isFree: isFree,
-                          ),
+                          if (widget.compactBadgeLabels.isNotEmpty)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  for (final label in widget.compactBadgeLabels)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: _CompactBadge(label: label),
+                                    ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        quantityLabel,
-                        style: context.supplierBody().copyWith(
-                          color: colors.textSecondary,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        locationLabel,
-                        style: context.supplierBody().copyWith(
-                          color: colors.textMuted,
-                          fontSize: 12.5,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        availabilityLabel,
-                        style: context.supplierBody().copyWith(
-                          color: colors.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (createdAtLabel != null || (viewsCount ?? 0) > 0)
-                        Text(
-                          [
-                            if (createdAtLabel != null) createdAtLabel,
-                            if ((viewsCount ?? 0) > 0) '$viewsCount views',
-                          ].join(' · '),
-                          style: context.supplierBody().copyWith(
-                            color: colors.textMuted,
-                            fontSize: 11.5,
-                          ),
-                        ),
-                      if (actions != null && actions!.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        _CardActions(
-                          actions: actions!,
-                          compact: compact,
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.categoryLabel,
+                            style: context.supplierChip().copyWith(
+                              color: SupplierMyMaterialsColors.lightTeal,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            widget.title,
+                            style: context.supplierSectionTitle().copyWith(
+                              color: colors.textPrimary,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              height: 1.2,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.xs,
+                            runSpacing: AppSpacing.xs,
+                            children: [
+                              MaterialStatusBadge(
+                                label: widget.statusLabel,
+                                tone: widget.statusTone,
+                              ),
+                              MaterialConditionBadge(
+                                label: widget.conditionLabel,
+                                tone: widget.conditionTone,
+                              ),
+                              MaterialPriceBadge(
+                                label: widget.priceLabel,
+                                isFree: widget.isFree,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            widget.quantityLabel,
+                            style: context.supplierBody().copyWith(
+                              color: colors.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.locationLabel,
+                            style: context.supplierBody().copyWith(
+                              color: colors.textMuted,
+                              fontSize: 12.5,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.availabilityLabel,
+                            style: context.supplierBody().copyWith(
+                              color: colors.textMuted,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (widget.createdAtLabel != null ||
+                              (widget.viewsCount ?? 0) > 0)
+                            Text(
+                              [
+                                if (widget.createdAtLabel != null)
+                                  widget.createdAtLabel,
+                                if ((widget.viewsCount ?? 0) > 0)
+                                  '${widget.viewsCount} views',
+                              ].join(' · '),
+                              style: context.supplierBody().copyWith(
+                                color: colors.textMuted,
+                                fontSize: 11.5,
+                              ),
+                            ),
+                          if (widget.actions != null &&
+                              widget.actions!.isNotEmpty) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            _CardActions(
+                              actions: widget.actions!,
+                              compact: compact,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactBadge extends StatelessWidget {
+  const _CompactBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.62),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

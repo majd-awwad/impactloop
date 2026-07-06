@@ -118,6 +118,13 @@ class DriverDelivery {
     this.deliveredAt,
     this.learnerNote,
     this.driverNote,
+    this.supplierPickupWindowStart,
+    this.supplierPickupWindowEnd,
+    this.confirmedDeliveryWindowStart,
+    this.confirmedDeliveryWindowEnd,
+    this.canDriverReportPickupFailed = false,
+    this.canDriverReportDeliveryFailed = false,
+    this.canDriverReportDriverIssue = false,
   });
 
   final String id;
@@ -139,6 +146,13 @@ class DriverDelivery {
   final DateTime? deliveredAt;
   final String? learnerNote;
   final String? driverNote;
+  final DateTime? supplierPickupWindowStart;
+  final DateTime? supplierPickupWindowEnd;
+  final DateTime? confirmedDeliveryWindowStart;
+  final DateTime? confirmedDeliveryWindowEnd;
+  final bool canDriverReportPickupFailed;
+  final bool canDriverReportDeliveryFailed;
+  final bool canDriverReportDriverIssue;
 
   factory DriverDelivery.fromJson(Map<String, dynamic> json) {
     return DriverDelivery(
@@ -173,6 +187,19 @@ class DriverDelivery {
       deliveredAt: _dateFromJson(json['deliveredAt']),
       learnerNote: json['learnerNote'] as String?,
       driverNote: json['driverNote'] as String?,
+      supplierPickupWindowStart:
+          _dateFromJson(json['supplierPickupWindowStart']),
+      supplierPickupWindowEnd: _dateFromJson(json['supplierPickupWindowEnd']),
+      confirmedDeliveryWindowStart:
+          _dateFromJson(json['confirmedDeliveryWindowStart']),
+      confirmedDeliveryWindowEnd:
+          _dateFromJson(json['confirmedDeliveryWindowEnd']),
+      canDriverReportPickupFailed:
+          json['canDriverReportPickupFailed'] == true,
+      canDriverReportDeliveryFailed:
+          json['canDriverReportDeliveryFailed'] == true,
+      canDriverReportDriverIssue:
+          json['canDriverReportDriverIssue'] == true,
     );
   }
 

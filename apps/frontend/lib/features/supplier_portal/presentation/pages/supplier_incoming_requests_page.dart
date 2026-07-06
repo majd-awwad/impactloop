@@ -3,17 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/api_exception.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/accept_incoming_request_dialog.dart';
 import '../widgets/complete_pickup_dialog.dart';
 import '../widgets/decline_incoming_request_dialog.dart';
+import '../widgets/reservation_follow_up_flow.dart';
+import '../widgets/supplier_delivery_incident_flow.dart';
 import '../widgets/incoming_request_card.dart';
 import '../widgets/incoming_request_filter_chips.dart';
 import '../widgets/supplier_feedback.dart';
 
 const _contentMaxWidth = 960.0;
+const _deliveryHandledCompleteMessage =
+    'This reservation is handled by delivery. The driver will mark it completed.';
+
+bool _isDeliveryCompleteConflict(Object error) {
+  return error is ApiException &&
+      error.statusCode == 409 &&
+      error.message.toLowerCase().contains('self-pickup');
+}
 
 class SupplierIncomingRequestsPage extends ConsumerStatefulWidget {
   const SupplierIncomingRequestsPage({
@@ -60,9 +71,12 @@ class _SupplierIncomingRequestsPageState
     }
 
     final tab = switch (tabName) {
+      'all' => SupplierIncomingRequestTab.all,
       'accepted' => SupplierIncomingRequestTab.accepted,
+      'needs_learner' || 'needslearner' => SupplierIncomingRequestTab.needsLearner,
       'declined' => SupplierIncomingRequestTab.declined,
       'completed' => SupplierIncomingRequestTab.completed,
+      'cancelled' => SupplierIncomingRequestTab.cancelled,
       _ => SupplierIncomingRequestTab.pending,
     };
 
@@ -135,18 +149,95 @@ class _SupplierIncomingRequestsPageState
             child: IncomingRequestCard(
               request: request,
               isCompleting: completingId == request.id,
-              onAccept:
-                  request.status == SupplierIncomingRequestStatus.pending
-                      ? () => _handleAccept(context, ref, request)
-                      : null,
-              onDecline:
-                  request.status == SupplierIncomingRequestStatus.pending
-                      ? () => _handleDecline(context, ref, request)
-                      : null,
+              onAccept: request.status == SupplierIncomingRequestStatus.pending
+                  ? () => _handleAccept(context, ref, request)
+                  : null,
+              onDecline: request.status == SupplierIncomingRequestStatus.pending
+                  ? () => _handleDecline(context, ref, request)
+                  : null,
               onMarkCompleted:
-                  request.status == SupplierIncomingRequestStatus.accepted
-                      ? () => _handleComplete(context, ref, request)
-                      : null,
+                  request.status == SupplierIncomingRequestStatus.accepted &&
+                      request.canSupplierComplete
+                  ? () => _handleComplete(context, ref, request)
+                  : null,
+              onReschedule: request.canSupplierReschedule
+                  ? () => handleRequestReschedulePickup(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                        materialTitle: request.materialTitle,
+                        learnerName: request.learnerName,
+                      )
+                  : null,
+              onCloseReservation:
+                  request.canSupplierCloseOverduePickup ||
+                      request.canSupplierCloseAwaitingLearnerRequest
+                  ? () => handleCloseOverduePickup(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
+              onReportToAdmin:
+                  request.canSupplierReportAndCloseOverduePickup ||
+                      request.canSupplierReportAwaitingLearnerRequest
+                  ? () => handleReportToAdminAndClose(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
+              onAcceptLearnerReschedule:
+                  request.canSupplierAcceptLearnerReschedule
+                  ? () => handleAcceptLearnerReschedule(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
+              onProposeDifferentTime: request.canSupplierProposeDifferentTime
+                  ? () => handleRequestReschedulePickup(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                        materialTitle: request.materialTitle,
+                        learnerName: request.learnerName,
+                      )
+                  : null,
+              onReportNoDriverAvailable: request.canReportNoDriverAvailable
+                  ? () => handleReportNoDriverAvailable(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
+              onMarkDeliveryPickupExpired:
+                  !request.canReportNoDriverAvailable &&
+                          request.canSupplierMarkDeliveryPickupExpired
+                  ? () => handleMarkDeliveryPickupExpired(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                      )
+                  : null,
+              onReportDriverNoShow:
+                  request.canSupplierReportDriverNoShow &&
+                          request.activeDelivery?.id != null
+                  ? () => handleReportDriverNoShow(
+                        context,
+                        ref,
+                        deliveryId: request.activeDelivery!.id,
+                      )
+                  : null,
+              onSubmitNoDriverPickupWindow: request.canSubmitNoDriverPickupWindow
+                  ? () => handleSubmitNoDriverPickupWindow(
+                        context,
+                        ref,
+                        reservationId: request.id,
+                        materialTitle: request.materialTitle,
+                        learnerName: request.learnerName,
+                      )
+                  : null,
             ),
           ),
         )
@@ -160,27 +251,35 @@ class _SupplierIncomingRequestsPageState
   ) async {
     final pickupWindow = await AcceptIncomingRequestDialog.show(
       context,
-      materialTitle: request.materialTitle,
-      learnerName: request.learnerName,
+      request: request,
     );
     if (pickupWindow == null || !context.mounted) {
       return;
     }
 
     try {
-      await acceptIncomingRequest(
+      final updated = await acceptIncomingRequest(
         ref,
         requestId: request.id,
         pickupWindow: pickupWindow,
       );
       if (!context.mounted) return;
-      showSupplierInfoSnackBar(context, context.s.requestAccepted);
-      ref.read(incomingRequestTabProvider.notifier).selectTab(
-            SupplierIncomingRequestTab.accepted,
-          );
-    } catch (_) {
+      final message =
+          updated.status == SupplierIncomingRequestStatus.awaitingConfirmation
+          ? context.s.requestAwaitingConfirmation
+          : context.s.requestAccepted;
+      showSupplierInfoSnackBar(context, message);
+      ref
+          .read(incomingRequestTabProvider.notifier)
+          .selectTab(SupplierIncomingRequestTab.accepted);
+    } catch (error) {
       if (!context.mounted) return;
-      showSupplierErrorSnackBar(context, context.s.requestAcceptFailed);
+      showSupplierErrorSnackBar(
+        context,
+        error is ApiException
+            ? error.displayMessage
+            : context.s.requestAcceptFailed,
+      );
     }
   }
 
@@ -208,12 +307,17 @@ class _SupplierIncomingRequestsPageState
       );
       if (!context.mounted) return;
       showSupplierInfoSnackBar(context, context.s.requestDeclined);
-      ref.read(incomingRequestTabProvider.notifier).selectTab(
-            SupplierIncomingRequestTab.declined,
-          );
-    } catch (_) {
+      ref
+          .read(incomingRequestTabProvider.notifier)
+          .selectTab(SupplierIncomingRequestTab.declined);
+    } catch (error) {
       if (!context.mounted) return;
-      showSupplierErrorSnackBar(context, context.s.requestDeclineFailed);
+      showSupplierErrorSnackBar(
+        context,
+        error is ApiException
+            ? error.displayMessage
+            : context.s.requestDeclineFailed,
+      );
     }
   }
 
@@ -223,21 +327,32 @@ class _SupplierIncomingRequestsPageState
     SupplierIncomingRequest request,
   ) async {
     final confirmed = await CompletePickupDialog.show(context);
-    if (confirmed != true || !context.mounted) {
+    if (confirmed == null || confirmed.trim().isEmpty || !context.mounted) {
       return;
     }
 
-    ref.read(completingReservationIdProvider.notifier).setCompleting(request.id);
+    ref
+        .read(completingReservationIdProvider.notifier)
+        .setCompleting(request.id);
     try {
-      await completeIncomingRequest(ref, requestId: request.id);
+      await completeIncomingRequest(
+        ref,
+        requestId: request.id,
+        confirmationCode: confirmed.trim(),
+      );
       if (!context.mounted) return;
       showSupplierInfoSnackBar(context, context.s.pickupCompleted);
-      ref.read(incomingRequestTabProvider.notifier).selectTab(
-            SupplierIncomingRequestTab.completed,
-          );
-    } catch (_) {
+      ref
+          .read(incomingRequestTabProvider.notifier)
+          .selectTab(SupplierIncomingRequestTab.completed);
+    } catch (error) {
       if (!context.mounted) return;
-      showSupplierErrorSnackBar(context, context.s.pickupCompleteFailed);
+      showSupplierErrorSnackBar(
+        context,
+        _isDeliveryCompleteConflict(error)
+            ? _deliveryHandledCompleteMessage
+            : context.s.pickupCompleteFailed,
+      );
     } finally {
       ref.read(completingReservationIdProvider.notifier).setCompleting(null);
     }
@@ -303,10 +418,7 @@ class _PageHeader extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({
-    required this.title,
-    required this.subtitle,
-  });
+  const _EmptyState({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
@@ -331,11 +443,7 @@ class _EmptyState extends StatelessWidget {
               color: colors.accentSoft.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.inbox_outlined,
-              color: colors.accent,
-              size: 28,
-            ),
+            child: Icon(Icons.inbox_outlined, color: colors.accent, size: 28),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
@@ -347,9 +455,7 @@ class _EmptyState extends StatelessWidget {
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: context.supplierBody().copyWith(
-              color: colors.textSecondary,
-            ),
+            style: context.supplierBody().copyWith(color: colors.textSecondary),
           ),
         ],
       ),
@@ -383,9 +489,7 @@ class _LoadingState extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           Text(
             context.s.loadingRequests,
-            style: context.supplierBody().copyWith(
-              color: colors.textPrimary,
-            ),
+            style: context.supplierBody().copyWith(color: colors.textPrimary),
           ),
         ],
       ),
@@ -410,11 +514,7 @@ class _ErrorState extends StatelessWidget {
       decoration: decorations.dashboardCard,
       child: Column(
         children: [
-          Icon(
-            Icons.cloud_off_outlined,
-            color: colors.textSecondary,
-            size: 28,
-          ),
+          Icon(Icons.cloud_off_outlined, color: colors.textSecondary, size: 28),
           const SizedBox(height: AppSpacing.md),
           Text(
             l.requestsLoadError,

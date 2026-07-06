@@ -14,6 +14,7 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
 import '../../application/registration_draft_notifier.dart';
+import '../../data/models/become_supplier_request.dart';
 import '../../data/models/registration_draft.dart';
 import '../../../supplier_portal/application/supplier_verification_access.dart';
 import '../../../supplier_portal/data/supplier_verification_api.dart';
@@ -190,37 +191,54 @@ class _CompleteSupplierProfileFormState
 
     setState(() => _isSubmitting = true);
 
-    final draftNotifier = ref.read(registrationDraftProvider.notifier);
-
-    draftNotifier.setSupplierProfile(
-      SupplierProfileDraft(
-        supplierType: _supplierType!,
-        publicName: _publicNameController.text.trim(),
-        description: _descriptionController.text.trim().isEmpty
-            ? null
-            : _descriptionController.text.trim(),
-        pickupArea: _pickupAreaController.text.trim(),
-      ),
-    );
-
-    final request = draftNotifier.toRegisterRequest();
-
-    if (request == null) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() => _isSubmitting = false);
-      setState(() {
-        _formError = 'Registration details are incomplete. Please start again.';
-      });
-      context.go('/register');
-      return;
-    }
+    final authState = ref.read(authControllerProvider);
+    final isAuthenticated = authState.isAuthenticated;
 
     try {
-      await ref.read(authControllerProvider.notifier).register(request);
-      draftNotifier.clear();
+      if (isAuthenticated) {
+        await ref.read(authControllerProvider.notifier).becomeSupplier(
+              BecomeSupplierRequest(
+                supplierType: _supplierType!,
+                publicName: _publicNameController.text.trim(),
+                description: _descriptionController.text.trim().isEmpty
+                    ? null
+                    : _descriptionController.text.trim(),
+                pickupArea: _pickupAreaController.text.trim(),
+              ),
+            );
+      } else {
+        final draftNotifier = ref.read(registrationDraftProvider.notifier);
+
+        draftNotifier.setSupplierProfile(
+          SupplierProfileDraft(
+            supplierType: _supplierType!,
+            publicName: _publicNameController.text.trim(),
+            description: _descriptionController.text.trim().isEmpty
+                ? null
+                : _descriptionController.text.trim(),
+            pickupArea: _pickupAreaController.text.trim(),
+          ),
+        );
+
+        final request = draftNotifier.toRegisterRequest();
+
+        if (request == null) {
+          if (!mounted) {
+            return;
+          }
+
+          setState(() => _isSubmitting = false);
+          setState(() {
+            _formError =
+                'Registration details are incomplete. Please start again.';
+          });
+          context.go('/register');
+          return;
+        }
+
+        await ref.read(authControllerProvider.notifier).register(request);
+        draftNotifier.clear();
+      }
 
       if (_isOrganizationSupplier) {
         final api = ref.read(supplierVerificationApiProvider);
@@ -314,6 +332,15 @@ class _CompleteSupplierProfileFormState
               return null;
             },
           ),
+          if (_supplierType != null) ...[
+            const AppFieldGap(),
+            Text(
+              isOrganizationSupplierInput(_supplierType)
+                  ? 'Organization suppliers are treated as supplier organizations and may need verification before listing materials.'
+                  : 'Student and individual suppliers can still switch back to learner mode after setup.',
+              style: AppTextStyles.subtitle(context),
+            ),
+          ],
           const AppFieldGap(),
           AppTextField(
             controller: _publicNameController,

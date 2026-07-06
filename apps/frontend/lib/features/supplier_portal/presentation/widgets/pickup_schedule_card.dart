@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
+import '../../data/pickup_schedule_grouping.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'pickup_schedule_status_style.dart';
+import 'reservation_follow_up_actions.dart';
+import 'supplier_delivery_incident_actions.dart';
 
 class PickupScheduleCard extends StatelessWidget {
   const PickupScheduleCard({
@@ -14,6 +18,12 @@ class PickupScheduleCard extends StatelessWidget {
     required this.groupKind,
     this.onViewDetails,
     this.onMarkCompleted,
+    this.onReschedule,
+    this.onCloseReservation,
+    this.onReportToAdmin,
+    this.onMarkDeliveryPickupExpired,
+    this.onReportNoDriverAvailable,
+    this.onReportDriverNoShow,
     this.isCompleting = false,
   });
 
@@ -21,6 +31,12 @@ class PickupScheduleCard extends StatelessWidget {
   final PickupScheduleGroupKind groupKind;
   final VoidCallback? onViewDetails;
   final VoidCallback? onMarkCompleted;
+  final VoidCallback? onReschedule;
+  final VoidCallback? onCloseReservation;
+  final VoidCallback? onReportToAdmin;
+  final VoidCallback? onMarkDeliveryPickupExpired;
+  final VoidCallback? onReportNoDriverAvailable;
+  final VoidCallback? onReportDriverNoShow;
   final bool isCompleting;
 
   @override
@@ -30,11 +46,20 @@ class PickupScheduleCard extends StatelessWidget {
     final style = PickupScheduleStatusStyle.forItem(item, groupKind);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
-    final times = _timeParts(item, l.scheduleDone);
+    final windowLabel = item.pickupWindow != null
+        ? formatPickupScheduleCardWindow(item.pickupWindow!)
+        : item.isCompleted
+        ? l.scheduleDone
+        : '—';
     final note = _displayNote(item);
-    final showMarkCompleted =
+    final showFollowUp =
+        !item.isCompleted &&
         item.status == SupplierPickupScheduleStatus.accepted &&
-            onMarkCompleted != null;
+        item.pickupHandoverPhase != null;
+    final showDeliveryStatus =
+        item.status == SupplierPickupScheduleStatus.accepted &&
+        item.hasDelivery &&
+        !item.canSupplierComplete;
 
     return Material(
       color: Colors.transparent,
@@ -46,9 +71,7 @@ class PickupScheduleCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: colors.surfaceSolid.withValues(alpha: 0.55),
           borderRadius: AppRadius.mdAll,
-          border: Border.all(
-            color: colors.border.withValues(alpha: 0.22),
-          ),
+          border: Border.all(color: colors.border.withValues(alpha: 0.22)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -60,35 +83,25 @@ class PickupScheduleCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
-                    width: compact ? 52 : 60,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          times.$1,
-                          style: context.supplierTitle().copyWith(
-                            fontSize: compact ? 15 : 16,
-                            fontWeight: FontWeight.w700,
-                            color: style.foreground,
-                            height: 1.1,
-                          ),
-                        ),
-                        Text(
-                          times.$2,
-                          style: context.supplierLabel().copyWith(
-                            fontSize: compact ? 13 : 14,
-                            color: colors.textMuted,
-                            height: 1.1,
-                          ),
-                        ),
-                      ],
+                    width: compact ? 92 : 108,
+                    child: Text(
+                      windowLabel,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.supplierTitle().copyWith(
+                        fontSize: compact ? 13 : 14,
+                        fontWeight: FontWeight.w700,
+                        color: style.foreground,
+                        height: 1.25,
+                      ),
                     ),
                   ),
                   Container(
                     width: 1,
                     height: compact ? 48 : 52,
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
                     color: colors.border.withValues(alpha: 0.28),
                   ),
                   Expanded(
@@ -110,6 +123,10 @@ class PickupScheduleCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: AppSpacing.xs),
+                            if (item.isOverdue) ...[
+                              _FollowUpBadge(label: l.overdueBadge),
+                              const SizedBox(width: AppSpacing.xs),
+                            ],
                             _StatusBadge(status: item.status, style: style),
                           ],
                         ),
@@ -137,6 +154,18 @@ class PickupScheduleCard extends StatelessWidget {
                             ),
                           ),
                         ],
+                        if (item.latestMessage != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '${item.latestMessage!.sender.displayName}: ${item.latestMessage!.body}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.supplierBody().copyWith(
+                              fontSize: 12,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -148,62 +177,42 @@ class PickupScheduleCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (showMarkCompleted) ...[
+            if (showDeliveryStatus) ...[
               const SizedBox(height: AppSpacing.sm),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.tonal(
-                  onPressed: isCompleting ? null : onMarkCompleted,
-                  style: FilledButton.styleFrom(
-                    backgroundColor:
-                        colors.accentSoft.withValues(alpha: 0.22),
-                    foregroundColor: colors.textPrimary,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 12 : 14,
-                      vertical: compact ? 8 : 10,
-                    ),
-                    minimumSize: Size(compact ? 0 : 120, compact ? 36 : 40),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.mdAll,
-                    ),
-                  ),
-                  child: isCompleting
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: colors.textPrimary.withValues(alpha: 0.8),
-                          ),
-                        )
-                      : Text(
-                          l.markCompleted,
-                          style: context.supplierLabel().copyWith(
-                            fontSize: compact ? 12 : 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                ),
+              _DeliveryStatusPanel(
+                statusLabel: item.deliveryStatusLabel,
+                supplierHandoverCode: item.shouldShowSupplierHandoverCode
+                    ? item.supplierHandoverCode
+                    : null,
+                canReportNoDriverAvailable: item.canReportNoDriverAvailable,
+                canMarkDeliveryPickupExpired:
+                    item.canSupplierMarkDeliveryPickupExpired,
+                canReportDriverNoShow: item.canSupplierReportDriverNoShow,
+                showNoDriverOverdueWarning: item.showNoDriverOverdueWarning,
+                onReportNoDriverAvailable: onReportNoDriverAvailable,
+                onMarkDeliveryPickupExpired: onMarkDeliveryPickupExpired,
+                onReportDriverNoShow: onReportDriverNoShow,
+              ),
+            ],
+            if (showFollowUp) ...[
+              const SizedBox(height: AppSpacing.sm),
+              ReservationFollowUpActions(
+                pickupHandoverPhase: item.pickupHandoverPhase,
+                canMarkCompleted: item.canSupplierComplete,
+                canRequestReschedule: item.canSupplierReschedule,
+                canCloseReservation: item.canSupplierCloseOverduePickup,
+                canReportToAdmin: item.canSupplierReportAndCloseOverduePickup,
+                hasAdminReport: item.noShowReport != null,
+                isBusy: isCompleting,
+                onMarkCompleted: onMarkCompleted,
+                onRequestReschedule: onReschedule,
+                onCloseReservation: onCloseReservation,
+                onReportToAdmin: onReportToAdmin,
               ),
             ],
           ],
         ),
       ),
-    );
-  }
-
-  (String, String) _timeParts(SupplierPickupScheduleItem item, String doneLabel) {
-    final window = item.pickupWindow;
-    if (window == null) {
-      return item.isCompleted ? (doneLabel, '') : ('—', '');
-    }
-
-    final start = window.start.toLocal();
-    final end = window.end.toLocal();
-    return (
-      _formatClock(start),
-      _formatClock(end),
     );
   }
 
@@ -218,17 +227,124 @@ class PickupScheduleCard extends StatelessWidget {
     }
     return null;
   }
+}
 
-  String _formatClock(DateTime value) {
-    return '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+class _DeliveryStatusPanel extends StatelessWidget {
+  const _DeliveryStatusPanel({
+    required this.statusLabel,
+    this.supplierHandoverCode,
+    this.canReportNoDriverAvailable = false,
+    this.canMarkDeliveryPickupExpired = false,
+    this.canReportDriverNoShow = false,
+    this.showNoDriverOverdueWarning = false,
+    this.onReportNoDriverAvailable,
+    this.onMarkDeliveryPickupExpired,
+    this.onReportDriverNoShow,
+  });
+
+  final String statusLabel;
+  final String? supplierHandoverCode;
+  final bool canReportNoDriverAvailable;
+  final bool canMarkDeliveryPickupExpired;
+  final bool canReportDriverNoShow;
+  final bool showNoDriverOverdueWarning;
+  final VoidCallback? onReportNoDriverAvailable;
+  final VoidCallback? onMarkDeliveryPickupExpired;
+  final VoidCallback? onReportDriverNoShow;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.accentSoft.withValues(alpha: 0.16),
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: colors.border.withValues(alpha: 0.24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.sm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.local_shipping_outlined,
+                  size: 18,
+                  color: colors.accent,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    statusLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.supplierLabel().copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (supplierHandoverCode != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              HandoverConfirmationCodePanel(
+                code: supplierHandoverCode!,
+                instructions:
+                    'Give this code to the driver after handing over the material.',
+              ),
+            ],
+            SupplierDeliveryIncidentActions(
+              canReportNoDriverAvailable: canReportNoDriverAvailable,
+              canMarkDeliveryPickupExpired: canMarkDeliveryPickupExpired,
+              canReportDriverNoShow: canReportDriverNoShow,
+              showNoDriverOverdueWarning: showNoDriverOverdueWarning,
+              onReportNoDriverAvailable: onReportNoDriverAvailable,
+              onMarkDeliveryPickupExpired: onMarkDeliveryPickupExpired,
+              onReportDriverNoShow: onReportDriverNoShow,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FollowUpBadge extends StatelessWidget {
+  const _FollowUpBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: colors.amberAccent.withValues(alpha: 0.18),
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: colors.amberAccent.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        label,
+        style: context.supplierChip().copyWith(
+          fontSize: 10,
+          color: colors.textPrimary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({
-    required this.status,
-    required this.style,
-  });
+  const _StatusBadge({required this.status, required this.style});
 
   final SupplierPickupScheduleStatus status;
   final PickupScheduleStatusStyle style;
@@ -255,10 +371,7 @@ class _StatusBadge extends StatelessWidget {
 }
 
 class _MaterialThumbnail extends StatelessWidget {
-  const _MaterialThumbnail({
-    required this.imageUrl,
-    required this.size,
-  });
+  const _MaterialThumbnail({required this.imageUrl, required this.size});
 
   final String? imageUrl;
   final double size;
