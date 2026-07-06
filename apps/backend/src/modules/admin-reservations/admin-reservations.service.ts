@@ -88,6 +88,23 @@ const mapDetailDelivery = (
   };
 };
 
+const mapLinkedReport = (
+  reports: repository.AdminReservationDetailRecord['noShowReports'],
+) => {
+  if (!reports.length) return null;
+
+  const pending = reports.find((report) => report.status === 'PENDING_REVIEW');
+  const report = pending ?? reports[0];
+
+  return {
+    id: report.id,
+    status: report.status,
+    reasonCode: report.reasonCode,
+    targetRole: report.targetRole,
+    createdAt: report.createdAt.toISOString(),
+  };
+};
+
 const mapDetail = (reservation: repository.AdminReservationDetailRecord) => ({
   id: reservation.id,
   status: reservation.status,
@@ -102,11 +119,9 @@ const mapDetail = (reservation: repository.AdminReservationDetailRecord) => ({
   completedAt: reservation.completedAt?.toISOString() ?? null,
   pickupWindowStart: reservation.pickupWindowStart?.toISOString() ?? null,
   pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
-  pickupType: reservation.pickupType,
+  fulfillmentMethod: reservation.fulfillmentMethod,
   supplierNote: reservation.supplierNote,
   rejectionReason: reservation.rejectionReason,
-  deliveryRequested: reservation.deliveryRequested,
-  deliveryStatus: reservation.deliveryStatus,
   learner: {
     id: reservation.requester.id,
     displayName: reservation.requester.displayName,
@@ -137,6 +152,7 @@ const mapDetail = (reservation: repository.AdminReservationDetailRecord) => ({
     imageUrl: pickMaterialImageUrl(reservation.material.images),
   },
   delivery: mapDetailDelivery(reservation.deliveries[0] ?? null),
+  linkedReport: mapLinkedReport(reservation.noShowReports),
   statusHistory: reservation.statusHistory.map((entry) => ({
     id: entry.id,
     statusGroup: entry.statusGroup,

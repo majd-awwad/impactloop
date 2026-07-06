@@ -22,6 +22,7 @@ class PickupScheduleCard extends StatelessWidget {
     this.onCloseReservation,
     this.onReportToAdmin,
     this.onMarkDeliveryPickupExpired,
+    this.onReportNoDriverAvailable,
     this.onReportDriverNoShow,
     this.isCompleting = false,
   });
@@ -34,6 +35,7 @@ class PickupScheduleCard extends StatelessWidget {
   final VoidCallback? onCloseReservation;
   final VoidCallback? onReportToAdmin;
   final VoidCallback? onMarkDeliveryPickupExpired;
+  final VoidCallback? onReportNoDriverAvailable;
   final VoidCallback? onReportDriverNoShow;
   final bool isCompleting;
 
@@ -182,10 +184,12 @@ class PickupScheduleCard extends StatelessWidget {
                 supplierHandoverCode: item.shouldShowSupplierHandoverCode
                     ? item.supplierHandoverCode
                     : null,
+                canReportNoDriverAvailable: item.canReportNoDriverAvailable,
                 canMarkDeliveryPickupExpired:
-                    item.canMarkOrReportNoDriverAvailable,
+                    item.canSupplierMarkDeliveryPickupExpired,
                 canReportDriverNoShow: item.canSupplierReportDriverNoShow,
-                showMarkExpiredHint: item.showDeliveryPickupExpiredHint,
+                showNoDriverOverdueWarning: item.showNoDriverOverdueWarning,
+                onReportNoDriverAvailable: onReportNoDriverAvailable,
                 onMarkDeliveryPickupExpired: onMarkDeliveryPickupExpired,
                 onReportDriverNoShow: onReportDriverNoShow,
               ),
@@ -229,18 +233,22 @@ class _DeliveryStatusPanel extends StatelessWidget {
   const _DeliveryStatusPanel({
     required this.statusLabel,
     this.supplierHandoverCode,
+    this.canReportNoDriverAvailable = false,
     this.canMarkDeliveryPickupExpired = false,
     this.canReportDriverNoShow = false,
-    this.showMarkExpiredHint = false,
+    this.showNoDriverOverdueWarning = false,
+    this.onReportNoDriverAvailable,
     this.onMarkDeliveryPickupExpired,
     this.onReportDriverNoShow,
   });
 
   final String statusLabel;
   final String? supplierHandoverCode;
+  final bool canReportNoDriverAvailable;
   final bool canMarkDeliveryPickupExpired;
   final bool canReportDriverNoShow;
-  final bool showMarkExpiredHint;
+  final bool showNoDriverOverdueWarning;
+  final VoidCallback? onReportNoDriverAvailable;
   final VoidCallback? onMarkDeliveryPickupExpired;
   final VoidCallback? onReportDriverNoShow;
 
@@ -293,9 +301,11 @@ class _DeliveryStatusPanel extends StatelessWidget {
               ),
             ],
             SupplierDeliveryIncidentActions(
+              canReportNoDriverAvailable: canReportNoDriverAvailable,
               canMarkDeliveryPickupExpired: canMarkDeliveryPickupExpired,
               canReportDriverNoShow: canReportDriverNoShow,
-              showMarkExpiredHint: showMarkExpiredHint,
+              showNoDriverOverdueWarning: showNoDriverOverdueWarning,
+              onReportNoDriverAvailable: onReportNoDriverAvailable,
               onMarkDeliveryPickupExpired: onMarkDeliveryPickupExpired,
               onReportDriverNoShow: onReportDriverNoShow,
             ),

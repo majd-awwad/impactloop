@@ -11,6 +11,7 @@ import {
   toDecimal,
 } from './reservations.quantity.js';
 import { expireStalePendingReservationsForLearnerMaterial } from './reservations.pending-expiry.repository.js';
+import { expireStaleMissedPickupsForMaterialIdsInTransaction } from './reservations.missed-pickup-expiry.repository.js';
 
 const reservationInclude = {
   material: {
@@ -217,6 +218,12 @@ export const createLearnerReservation = async (input: {
       requesterId: input.requesterId,
       materialId: material.id,
     });
+
+    await expireStaleMissedPickupsForMaterialIdsInTransaction(
+      tx,
+      [material.id],
+      input.requesterId,
+    );
 
     const openLearnerReservationCount = await tx.reservation.count({
       where: {

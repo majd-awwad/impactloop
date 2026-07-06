@@ -135,6 +135,24 @@ class SupplierRequestsApi {
     }
   }
 
+  Future<SupplierIncomingRequest> submitNoDriverPickupWindow(
+    String requestId,
+    SupplierPickupWindow pickupWindow,
+  ) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        '/api/supplier/reservations/$requestId/submit-no-driver-pickup-window',
+        data: pickupWindow.toJson(),
+      );
+
+      return _parseReservationResponse(response);
+    } on ApiException {
+      rethrow;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
   Future<SupplierIncomingRequest> acceptLearnerReschedule(
     String requestId,
   ) async {

@@ -5,7 +5,16 @@ import { mapPendingRescheduleSummary } from '../reservations/reservation-resched
 import { getMaterialQuantityState } from '../reservations/reservations.quantity.js';
 import { prisma } from '../../database/prisma.js';
 import * as repository from './admin-no-show-reports.repository.js';
-import type { AdminNoShowReportsListQuery } from './admin-no-show-reports.validation.js';
+import {
+  cancelAndReleaseHoldForNoDriverReport,
+  requestSupplierRescheduleForNoDriverReport,
+} from './admin-no-driver-resolution.repository.js';
+import type {
+  AdminNoShowReportsListQuery,
+  CancelReleaseHoldInput,
+  RequestSupplierRescheduleInput,
+} from './admin-no-show-reports.validation.js';
+import { notifyNoDriverSupplierRescheduleRequested } from '../notifications/reservation-notifications.js';
 
 const mapReport = (report: repository.AdminNoShowReportRecord) => ({
   id: report.id,
@@ -121,7 +130,7 @@ export const getAdminNoShowReportById = async (id: string) => {
           availableQuantity: Number(quantityState.availableQuantity),
         }
       : null,
-    targetVerifiedStrikeCount: report.targetUserId
+    targetVerifiedNoShowCount: report.targetUserId
       ? await repository.countVerifiedNoShowReportsForTarget(report.targetUserId)
       : 0,
   };
@@ -184,6 +193,88 @@ export const resolveAdminNoShowReport = async (
       409,
       'CONFLICT',
     );
+  }
+
+  return mapReport(result.report);
+};
+
+const mapNoDriverResolutionError = (
+  result: Exclude<
+    Awaited<ReturnType<typeof requestSupplierRescheduleForNoDriverReport>>,
+    { outcome: 'REQUESTED' }
+  >,
+) => {
+  if (result.outcome === 'NOT_FOUND') {
+    throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
+  }
+
+  if (result.outcome === 'NOT_ELIGIBLE') {
+    throw new AppError(
+      'This action is only available for system no-driver reports.',
+      409,
+      'NOT_ELIGIBLE',
+    );
+  }
+
+  if (result.outcome === 'REPORT_NOT_PENDING') {
+    throw new AppError(
+      'Only pending reports can be resolved with this action.',
+      409,
+      'CONFLICT',
+    );
+  }
+
+  if (result.outcome === 'DRIVER_ASSIGNED') {
+    throw new AppError(
+      'Cannot reopen driver search while a driver is still assigned.',
+      409,
+      'DRIVER_ASSIGNED',
+    );
+  }
+
+  throw new AppError(
+    'Reservation or delivery is not in the expected awaiting-resolution state.',
+    409,
+    'INVALID_STATE',
+  );
+};
+
+export const requestSupplierRescheduleAdminNoShowReport = async (
+  adminUserId: string,
+  reportId: string,
+  input: RequestSupplierRescheduleInput,
+) => {
+  const result = await requestSupplierRescheduleForNoDriverReport({
+    reportId,
+    adminUserId,
+    adminNote: input.adminNote,
+  });
+
+  if (result.outcome !== 'REQUESTED') {
+    mapNoDriverResolutionError(result);
+  }
+
+  await notifyNoDriverSupplierRescheduleRequested(
+    result.reservationId,
+    input.adminNote,
+  );
+
+  return mapReport(result.report);
+};
+
+export const cancelReleaseHoldAdminNoShowReport = async (
+  adminUserId: string,
+  reportId: string,
+  input: CancelReleaseHoldInput,
+) => {
+  const result = await cancelAndReleaseHoldForNoDriverReport({
+    reportId,
+    adminUserId,
+    adminNote: input.adminNote,
+  });
+
+  if (result.outcome !== 'CANCELLED') {
+    mapNoDriverResolutionError(result);
   }
 
   return mapReport(result.report);

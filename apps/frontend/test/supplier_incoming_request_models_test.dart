@@ -9,8 +9,8 @@ void main() {
       'status': 'PENDING',
       'quantityRequested': 2,
       'message': 'Need this for class.',
-      'pickupType': 'SELF_PICKUP',
-      'deliveryRequested': false,
+      'fulfillmentMethod': 'PICKUP',
+      'fulfillmentLabel': 'Pickup selected',
       'createdAt': '2026-06-17T10:30:00.000Z',
       'material': {
         'title': 'Arduino Uno',
@@ -28,8 +28,7 @@ void main() {
     expect(request.materialTitle, 'Arduino Uno');
     expect(request.learnerName, 'Ahmad');
     expect(request.status, SupplierIncomingRequestStatus.pending);
-    expect(request.pickupPreference, 'Self pickup');
-    expect(request.deliveryRequested, isFalse);
+    expect(request.fulfillmentSummary, 'Pickup selected');
     expect(request.activeDelivery, isNull);
     expect(request.canSupplierComplete, isFalse);
     expect(request.learnerNote, 'Need this for class.');
@@ -42,7 +41,8 @@ void main() {
       'id': 'res-2',
       'status': 'ACCEPTED',
       'quantityRequested': 1,
-      'deliveryRequested': true,
+      'fulfillmentMethod': 'PICKUP',
+      'fulfillmentLabel': 'Delivery requested',
       'activeDelivery': {'id': 'del-1', 'status': 'DRIVER_ASSIGNED'},
       'canSupplierComplete': false,
       'createdAt': '2026-06-17T10:30:00.000Z',
@@ -50,12 +50,11 @@ void main() {
       'learner': {'displayName': 'Sara'},
     });
 
-    expect(request.deliveryRequested, isTrue);
+    expect(request.hasDelivery, isTrue);
     expect(request.activeDelivery?.id, 'del-1');
     expect(request.activeDelivery?.status, 'DRIVER_ASSIGNED');
     expect(request.deliveryStatusLabel, 'Driver assigned');
     expect(request.canSupplierComplete, isFalse);
-    expect(request.hasDelivery, isTrue);
   });
 
   test(
@@ -85,12 +84,13 @@ void main() {
         'id': 'res-3',
         'status': 'ACCEPTED',
         'quantityRequested': 1,
+        'fulfillmentMethod': 'PICKUP',
         'createdAt': '2026-06-17T10:30:00.000Z',
         'material': {'title': 'Cardboard', 'unit': 'box'},
         'learner': {'displayName': 'Omar'},
       });
 
-      expect(request.deliveryRequested, isFalse);
+      expect(request.hasDelivery, isFalse);
       expect(request.activeDelivery, isNull);
       expect(request.canSupplierComplete, isTrue);
     },
@@ -102,7 +102,6 @@ void main() {
       'status': 'ACCEPTED',
       'fulfillmentMethod': 'DELIVERY',
       'quantityRequested': 1,
-      'deliveryRequested': true,
       'supplierHandoverCode': '654321',
       'activeDelivery': {'id': 'del-1', 'status': 'WAITING_FOR_DRIVER'},
       'createdAt': '2026-06-17T10:30:00.000Z',
@@ -120,7 +119,6 @@ void main() {
       'status': 'ACCEPTED',
       'fulfillmentMethod': 'DELIVERY',
       'quantityRequested': 1,
-      'deliveryRequested': true,
       'supplierHandoverCode': '654321',
       'activeDelivery': {'id': 'del-1', 'status': 'DELIVERED'},
       'createdAt': '2026-06-17T10:30:00.000Z',
@@ -177,6 +175,32 @@ void main() {
     );
 
     expect(window.toJson()['selectedPreferredWindowIndex'], 0);
+  });
+
+  test('SupplierIncomingRequest.fromJson parses learner reschedule proposal', () {
+    final request = SupplierIncomingRequest.fromJson({
+      'id': 'res-reschedule',
+      'status': 'AWAITING_SUPPLIER_CONFIRMATION',
+      'quantityRequested': 1,
+      'createdAt': '2026-06-17T10:30:00.000Z',
+      'material': {'title': 'Wood panels', 'unit': 'piece'},
+      'learner': {'displayName': 'Ahmad'},
+      'learnerProposedPickupWindowStart': '2026-07-12T08:00:00.000Z',
+      'learnerProposedPickupWindowEnd': '2026-07-12T10:00:00.000Z',
+      'pendingReschedule': {
+        'requestedBy': 'LEARNER',
+        'reason': 'Cannot make original time',
+        'note': 'Can only come in the morning',
+        'proposedPickupWindowStart': '2026-07-12T08:00:00.000Z',
+        'proposedPickupWindowEnd': '2026-07-12T10:00:00.000Z',
+      },
+      'canSupplierAcceptLearnerReschedule': true,
+    });
+
+    expect(request.learnerProposedPickupWindow, isNotNull);
+    expect(request.pendingRescheduleReason, 'Cannot make original time');
+    expect(request.pendingRescheduleNote, 'Can only come in the morning');
+    expect(request.canSupplierAcceptLearnerReschedule, isTrue);
   });
 
   test('SupplierIncomingRequest awaiting confirmation message variants', () {

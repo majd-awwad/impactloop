@@ -62,7 +62,15 @@ class ApiException implements Exception {
             : 'You do not have permission to complete this action.';
       case 'ACCOUNT_SUSPENDED':
         return 'Your account has been suspended after repeated verified reports. Contact admin.';
+      case 'PICKUP_WINDOW_REQUIRED':
+        return 'Choose a new pickup start and end time before sending a reschedule request.';
       default:
+        final errorCode = code;
+        if (errorCode != null && errorCode.startsWith('PICKUP_')) {
+          return message.isNotEmpty
+              ? message
+              : 'The pickup window is not valid. Choose a different time.';
+        }
         if (statusCode != null && statusCode! >= 500) {
           return 'The server hit a problem. Please try again in a moment.';
         }

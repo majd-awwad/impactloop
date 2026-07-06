@@ -27,7 +27,6 @@ describe('reservation reschedule rules', () => {
       canRequestPickupReschedule({
         status: 'ACCEPTED',
         fulfillmentMethod: 'PICKUP',
-        deliveryRequested: false,
         deliveryCount: 0,
         pickupWindowStart: start,
         pickupWindowEnd: end,
@@ -48,7 +47,6 @@ describe('reservation reschedule rules', () => {
       canRequestPickupReschedule({
         status: 'ACCEPTED',
         fulfillmentMethod: 'PICKUP',
-        deliveryRequested: false,
         deliveryCount: 0,
         pickupWindowStart: start,
         pickupWindowEnd: end,
@@ -80,7 +78,6 @@ describe('reservation reschedule rules', () => {
       canRequestPickupReschedule({
         status: 'ACCEPTED',
         fulfillmentMethod: 'PICKUP',
-        deliveryRequested: false,
         deliveryCount: 0,
         pickupWindowStart: start,
         pickupWindowEnd: end,

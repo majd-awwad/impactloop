@@ -96,6 +96,17 @@ String humanizeEnum(String value) {
   }
 }
 
+String adminIncidentReportStatusLabel(String status) {
+  switch (status.toUpperCase()) {
+    case 'PENDING_REVIEW':
+      return 'Pending admin review';
+    case 'RESOLVED_NO_STRIKE':
+      return 'Resolved without strike';
+    default:
+      return monitoringStatusLabel(status);
+  }
+}
+
 String monitoringStatusLabel(String status) {
   switch (status.toUpperCase()) {
     case 'PENDING':

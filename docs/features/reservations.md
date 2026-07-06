@@ -7,10 +7,10 @@ Current MVP status for material reservations.
 ## Intended Purpose
 
 - Learner creates reservation → `PENDING` with `quantityRequested` and reserve-time `fulfillmentMethod` (`PICKUP` or `DELIVERY`). When both methods are available, the learner must explicitly choose one in the reservation dialog; the UI auto-selects only when the material supports exactly one receive method.
-- Pickup reservations store learner preferred pickup windows; each pickup window must have at least 60 minutes remaining when created. Delivery reservations store preferred delivery windows, delivery address text, safe drop-off preference, and optional delivery note. No `Delivery` row is created at reservation time.
-- Supplier accepts or rejects pending reservations. Accept does **not** complete the reservation; it confirms or proposes scheduling and keeps the quantity hold.
-- Pickup accept: supplier supplies pickup window. Selecting a learner preferred window → `ACCEPTED` with confirmed `pickupWindowStart/End` when at least 60 minutes remain, even if the window already started. Custom supplier proposals must start at least 30 minutes in the future; matching a learner preferred window → `ACCEPTED`, non-matching proposal → `AWAITING_LEARNER_CONFIRMATION` with `supplierProposedPickupWindowStart/End`.
-- Delivery accept: supplier supplies driver pickup window from supplier only. Backend trims/confirms a delivery window using a 60-minute buffer after supplier pickup end. Feasible → `ACCEPTED`, stores supplier pickup + confirmed delivery windows, sets `deliveryRequested`, creates `Delivery` `WAITING_FOR_DRIVER`. Infeasible → `AWAITING_LEARNER_CONFIRMATION` with `schedulingConflictReason` (no delivery row).
+- Pickup reservations store learner preferred pickup windows; centralized pickup validation requires start/end in the future, end after start, start at least 30 minutes away (`MIN_PICKUP_LEAD_TIME_MINUTES`), and end at least 30 minutes away (`MIN_REMAINING_PICKUP_WINDOW_MINUTES`). Invalid windows fail before reservation creation with specific API error codes (`PICKUP_*`). Delivery reservations store preferred delivery windows, delivery address text, safe drop-off preference, and optional delivery note. No `Delivery` row is created at reservation time.
+- Supplier accepts or rejects pending reservations. Accept does **not** complete the reservation; it confirms or proposes scheduling and keeps the quantity hold. Only `PENDING` reservations can be accepted or declined.
+- Pickup accept: supplier supplies pickup window. Selecting a learner preferred window → `ACCEPTED` with confirmed `pickupWindowStart/End` when at least 30 minutes remain, even if the window already started. Custom supplier proposals must pass the same pickup validation at accept time. Matching a learner preferred window → `ACCEPTED`, non-matching proposal → `AWAITING_LEARNER_CONFIRMATION` with `supplierProposedPickupWindowStart/End`.
+- Delivery accept: supplier supplies driver pickup window from supplier only. Backend trims/confirms a delivery window using a 60-minute buffer after supplier pickup end. Feasible → `ACCEPTED`, stores supplier pickup + confirmed delivery windows, creates `Delivery` `WAITING_FOR_DRIVER`. Infeasible → `AWAITING_LEARNER_CONFIRMATION` with `schedulingConflictReason` (no delivery row).
 - Multiple learners may hold different quantities from the same listing while stock remains.
 - Same learner may hold only one open (`PENDING` or `ACCEPTED`) reservation per material.
 - `material.quantity` is remaining physical stock; active holds are summed from open reservations.
@@ -18,7 +18,8 @@ Current MVP status for material reservations.
 - Material stays publicly `AVAILABLE` while `availableQuantity > 0`.
 - Material becomes `REUSED` only when remaining quantity reaches `0` after completion/delivery.
 - Learner may cancel while reservation is `PENDING` or `AWAITING_LEARNER_CONFIRMATION` (via cancel route or learner-confirmation `CANCEL` action).
-- `PENDING` reservations expire automatically when the last preferred pickup/delivery window ends without supplier response. Legacy rows without stored windows expire after 72 hours (`PENDING_RESERVATION_FALLBACK_HOURS`). Expiry releases the quantity hold and sets status `EXPIRED` (lazy on learner/supplier reads and material availability reads; no background cron in MVP).
+- `PENDING` reservations expire automatically when the supplier does not respond within `PENDING_SUPPLIER_RESPONSE_HOURS` (48 hours) or when the last preferred pickup/delivery window ends, whichever comes first. Legacy rows without stored windows use the 48-hour response timeout only. Expiry releases the quantity hold and sets status `EXPIRED` (lazy on learner/supplier reads and material availability reads; no background cron in MVP).
+- `ACCEPTED` self-pickup reservations whose confirmed `pickupWindowEnd` passes enter overdue follow-up (`isOverdue`, `needsFollowUp`). If neither learner nor supplier acts within `MISSED_PICKUP_AUTO_CLOSE_GRACE_HOURS` (72 hours) after `pickupWindowEnd`, the reservation lazy-expires to `EXPIRED` with `rejectionReason = PICKUP_WINDOW_MISSED`, releases the hold, and does **not** create strikes automatically.
 - Learner resolves `AWAITING_LEARNER_CONFIRMATION` via `PATCH /api/reservations/:id/learner-confirmation`: accept proposed pickup, submit a new delivery window, or cancel.
 
 Reservation is the booking layer. Future build-checklist states such as `Available`, `Missing`, `Alternative`, `Already owned`, and `Reserved` should integrate with reservations, but the checklist itself belongs to future Learning Hub / AI matching work.
@@ -77,7 +78,7 @@ Reservation is the booking layer. Future build-checklist states such as `Availab
 ### Database
 
 - `reservations`, `reservation_status_history`
-- Enums: `ReservationStatus`, `ReservationStatusGroup`, `PickupType`
+- Enums: `ReservationStatus`, `ReservationStatusGroup`, `ReservationFulfillmentMethod`
 - Related: `materials.status`, `materials.reused_at`, `materials.reused_by_reservation_id`
 - Delivery domain: `deliveries`, `driver_profiles`, `delivery_assignments`, `delivery_status_history`, `delivery_location_pings`
 - Legacy reservation delivery fields still exist for compatibility, but new code uses `deliveries`.
@@ -122,8 +123,8 @@ Verified against code (2026-07-04):
 
 - Public material discovery (`GET /api/materials`, `GET /api/materials/:id`) exposes only approximate `city` and `area`.
 - `GET /api/reservations/my` keeps the same approximate material fields for all statuses.
-- `deliveryRequested` is included on learner reservation list items so the UI can hide self-pickup instructions when delivery is in progress, even if the deliveries list has not loaded yet.
-- `pickupLocationFull` (country, city, area, address line, coordinates, `isApproximate`) is returned only for learner-owned reservations in `ACCEPTED` or `COMPLETED` status; it is `null` for `PENDING`, `AWAITING_LEARNER_CONFIRMATION`, `REJECTED`, `CANCELLED`, and `EXPIRED`. The My Reservations UI shows the pickup address + map panel for accepted self-pickup reservations without `deliveryRequested` and without a loaded delivery row when coordinates are present.
+- `activeDelivery` is included on learner reservation list items so the UI can hide self-pickup instructions when delivery is in progress.
+- `pickupLocationFull` (country, city, area, address line, coordinates, `isApproximate`) is returned only for learner-owned reservations in `ACCEPTED` or `COMPLETED` status; it is `null` for `PENDING`, `AWAITING_LEARNER_CONFIRMATION`, `REJECTED`, `CANCELLED`, and `EXPIRED`. The My Reservations UI shows the pickup address + map panel for accepted self-pickup reservations without `activeDelivery` when coordinates are present.
 - Delivery route exact pickup/dropoff locations remain on learner-owned or assigned-driver delivery APIs only.
 
 ## Legacy data and dev DB cleanup

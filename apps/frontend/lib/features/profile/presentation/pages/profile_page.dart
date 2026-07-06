@@ -311,7 +311,7 @@ class _ProfileContent extends ConsumerWidget {
           icon: Icons.receipt_long_outlined,
           title: 'My reservations',
           subtitle: 'Track pickups and material requests.',
-          onTap: () => context.push(learnerReservationsRoute),
+          onTap: () => context.go(learnerReservationsRoute),
         ),
         if (shouldShowBecomeSupplier(user) || _hasSupplierAccess) ...[
           _ProfileDivider(),

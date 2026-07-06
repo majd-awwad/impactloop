@@ -31,6 +31,11 @@ abstract class SupplierRequestsRepository {
   });
   Future<SupplierIncomingRequest> acceptLearnerReschedule(String requestId);
 
+  Future<SupplierIncomingRequest> submitNoDriverPickupWindow(
+    String requestId,
+    SupplierPickupWindow pickupWindow,
+  );
+
   Future<SupplierIncomingRequest> cancelAcceptedRequest(
     String requestId, {
     String? reason,

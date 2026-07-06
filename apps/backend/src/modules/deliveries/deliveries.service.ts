@@ -302,11 +302,6 @@ export const requestDeliveryForReservation = async (
         },
       });
 
-      await tx.reservation.update({
-        where: { id: reservation.id },
-        data: { deliveryRequested: true },
-      });
-
       const deliveryId = createDeliveryId();
       const handoverCodes = await buildDeliveryHandoverCodeData(deliveryId);
 

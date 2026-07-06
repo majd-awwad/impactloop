@@ -546,7 +546,7 @@ class _ReservationTile extends StatelessWidget {
             style: context.supplierBody().copyWith(color: colors.textSecondary),
           ),
           Text(
-            reservation.pickupPreference,
+            reservation.fulfillmentLabel,
             style: context.supplierBody().copyWith(color: colors.textMuted),
           ),
           const SizedBox(height: AppSpacing.sm),

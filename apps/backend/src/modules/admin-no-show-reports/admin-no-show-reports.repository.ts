@@ -7,11 +7,12 @@ import {
   SUSPENSION_VERIFIED_THRESHOLD,
 } from '../reservations/account-suspension.js';
 
-const reportInclude = {
+export const reportInclude = {
   reservation: {
     select: {
       id: true,
       status: true,
+      fulfillmentMethod: true,
       pickupWindowStart: true,
       pickupWindowEnd: true,
       supplierProposedPickupWindowStart: true,

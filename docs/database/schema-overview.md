@@ -91,7 +91,7 @@ Delivery ──┬── DeliveryAssignment
            └── assigned DriverProfile
 ```
 
-Legacy reservation delivery fields still exist for compatibility: `deliveryRequested`, `deliveryStatus`, `deliveryCost`, `dropoffLocationId`, `driverProfileId`. New delivery code uses `deliveries` as the source of truth. `driverProfileId` on `Reservation` remains a nullable string legacy field; `Delivery.assignedDriverProfileId` is the real relation.
+Delivery logistics use `deliveries` as the source of truth (`status`, `assignedDriverProfileId`, pickup/dropoff locations). Reservation rows hold booking state only (`fulfillmentMethod`, `status`, scheduling windows).
 
 ### Learning hub
 

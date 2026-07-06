@@ -14,6 +14,7 @@ import {
   listSupplierReservations,
   rescheduleSupplierReservation,
   reportSupplierNoDriverAvailable,
+  submitNoDriverPickupWindow,
   submitSupplierNoShowReport,
 } from './supplier-reservations.service.js';
 import type {
@@ -26,6 +27,7 @@ import type {
   ReportSupplierNoDriverInput,
   RescheduleSupplierReservationInput,
   ReservationIdParams,
+  SubmitNoDriverPickupWindowInput,
   SubmitNoShowReportInput,
 } from './supplier-reservations.validation.js';
 
@@ -147,6 +149,20 @@ export const reportSupplierNoDriverHandler = async (
   );
 
   res.json(successResponse('No-driver report submitted.', reservation));
+};
+
+export const submitNoDriverPickupWindowHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<ReservationIdParams>(req);
+  const reservation = await submitNoDriverPickupWindow(
+    req.auth!.sub,
+    id,
+    req.body as SubmitNoDriverPickupWindowInput,
+  );
+
+  res.json(successResponse('New pickup window submitted.', reservation));
 };
 
 export const listSupplierReservationMessagesHandler = async (

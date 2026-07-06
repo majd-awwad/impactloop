@@ -189,8 +189,17 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                                       reservationId: item.id,
                                     )
                                 : null,
+                            onReportNoDriverAvailable:
+                                item.canReportNoDriverAvailable
+                                ? () => handleReportNoDriverAvailable(
+                                      context,
+                                      ref,
+                                      reservationId: item.id,
+                                    )
+                                : null,
                             onMarkDeliveryPickupExpired:
-                                item.canMarkOrReportNoDriverAvailable
+                                !item.canReportNoDriverAvailable &&
+                                        item.canSupplierMarkDeliveryPickupExpired
                                 ? () => handleMarkDeliveryPickupExpired(
                                       context,
                                       ref,

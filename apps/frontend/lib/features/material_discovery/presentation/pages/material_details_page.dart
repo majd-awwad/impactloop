@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -68,12 +70,15 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
 }
 
 class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
+  static const _reservationRefreshInterval = Duration(seconds: 10);
+
   late final MaterialDiscoveryRepository _defaultRepository;
   late MaterialDiscoveryRepository _activeRepository;
   late Future<DiscoveryMaterial?> _materialFuture;
   DiscoveryMaterial? _materialOverride;
   bool _showReservationStatusCta = false;
   bool _isLikeUpdating = false;
+  Timer? _reservationRefreshTimer;
 
   @override
   void initState() {
@@ -81,6 +86,33 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
     _defaultRepository = ref.read(materialDiscoveryRepositoryProvider);
     _activeRepository = widget.repository ?? _defaultRepository;
     _materialFuture = _activeRepository.getMaterialById(widget.materialId);
+    _startReservationPolling();
+  }
+
+  void _startReservationPolling() {
+    _reservationRefreshTimer?.cancel();
+    _reservationRefreshTimer = Timer.periodic(
+      _reservationRefreshInterval,
+      (_) {
+        if (!mounted) {
+          return;
+        }
+
+        final authState = ref.read(authControllerProvider);
+        if (authState.status != AuthStatus.authenticated ||
+            authState.user?.hasRole('LEARNER') != true) {
+          return;
+        }
+
+        ref.invalidate(myReservationsProvider);
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _reservationRefreshTimer?.cancel();
+    super.dispose();
   }
 
   void _retryLoadMaterial() {
@@ -317,8 +349,9 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
     final shouldLoadReservationDetails =
         authState.status == AuthStatus.authenticated &&
         authState.user?.hasRole('LEARNER') == true &&
-        material.reserveBlockReason == 'OPEN_RESERVATION_EXISTS' &&
-        !showReservationStatusCta;
+        (showReservationStatusCta ||
+            material.reserveBlockReason == 'OPEN_RESERVATION_EXISTS' ||
+            material.canReserve == false);
     final myReservationsState = shouldLoadReservationDetails
         ? ref.watch(myReservationsProvider)
         : null;
@@ -1670,7 +1703,7 @@ class _PostReservationStatusCta extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           TextButton.icon(
-            onPressed: () => context.push('/learner/reservations'),
+            onPressed: () => context.go('/learner/reservations'),
             icon: const Icon(Icons.assignment_turned_in_outlined),
             label: const Text('View all reservations'),
           ),
@@ -2429,6 +2462,8 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     List<PreferredWindowDraft> drafts, {
     Duration? minimumRemainingTime,
     String? minimumRemainingTimeMessage,
+    Duration? minimumLeadTime,
+    String? minimumLeadTimeMessage,
   }) {
     final now = DateTime.now();
     final windows = <ReservationPreferredWindow>[];
@@ -2438,6 +2473,8 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
         now: now,
         minimumRemainingTime: minimumRemainingTime,
         minimumRemainingTimeMessage: minimumRemainingTimeMessage,
+        minimumLeadTime: minimumLeadTime,
+        minimumLeadTimeMessage: minimumLeadTimeMessage,
       );
       if (error != null) {
         setState(() => _errorMessage = error);
@@ -2554,8 +2591,9 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     if (_isPickup) {
       final windows = _validatedPreferredWindows(
         _pickupWindows,
-        minimumRemainingTime: minPickupNotice,
+        minimumRemainingTime: minRemainingPickupWindow,
         minimumRemainingTimeMessage: learnerPickupWindowTooCloseMessage,
+        minimumLeadTime: minPickupLeadTime,
       );
       if (windows == null) {
         return;

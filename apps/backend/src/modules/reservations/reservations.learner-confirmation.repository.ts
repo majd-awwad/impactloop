@@ -255,7 +255,6 @@ export const resolveLearnerConfirmation = async (input: {
         confirmedDeliveryWindowEnd: feasible.confirmed.end,
         earliestDeliveryStart: feasible.earliestDeliveryStart,
         schedulingConflictReason: null,
-        deliveryRequested: true,
       },
       include: learnerConfirmationInclude,
     });

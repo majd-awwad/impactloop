@@ -167,11 +167,6 @@ enum ReservationStatusGroup {
   DELIVERY
 }
 
-enum PickupType {
-  SELF_PICKUP
-  DELIVERY_ALLOWED
-}
-
 enum ReservationFulfillmentMethod {
   PICKUP
   DELIVERY
@@ -551,7 +546,6 @@ model Location {
   supplierPickupFor       SupplierProfile[]                     @relation("SupplierDefaultPickupLocation")
   organizationBusinessFor OrganizationProfile[]                 @relation("OrganizationBusinessLocation")
   materials               Material[]
-  reservationDropoffs     Reservation[]                         @relation("ReservationDropoffLocation")
   deliveryPickups         Delivery[]                            @relation("DeliveryPickupLocation")
   deliveryDropoffs        Delivery[]                            @relation("DeliveryDropoffLocation")
   savedByUsers            UserSavedLocation[]
@@ -900,17 +894,11 @@ model Reservation {
   confirmedDeliveryWindowEnd   DateTime?         @map("confirmed_delivery_window_end")
   earliestDeliveryStart DateTime?                @map("earliest_delivery_start")
   schedulingConflictReason String?               @map("scheduling_conflict_reason")
-  pickupType        PickupType                 @default(SELF_PICKUP) @map("pickup_type")
   supplierNote      String?                    @map("supplier_note")
   rejectionReason   String?                    @map("rejection_reason")
   acceptedAt        DateTime?                  @map("accepted_at")
   rejectedAt        DateTime?                  @map("rejected_at")
   cancelledAt       DateTime?                  @map("cancelled_at")
-  deliveryRequested Boolean                    @default(false) @map("delivery_requested")
-  deliveryStatus    DeliveryStatus?            @map("delivery_status")
-  deliveryCost      Decimal?                   @map("delivery_cost") @db.Decimal(12, 2)
-  dropoffLocationId String?                    @map("dropoff_location_id")
-  driverProfileId   String?                    @map("driver_profile_id")
   completedAt       DateTime?                  @map("completed_at")
   selfPickupCodeHash String?                   @map("self_pickup_code_hash")
   selfPickupCodeGeneratedAt DateTime?         @map("self_pickup_code_generated_at")
@@ -919,7 +907,6 @@ model Reservation {
   material          Material                   @relation(fields: [materialId], references: [id], onDelete: Cascade)
   requester         User                       @relation("ReservationRequester", fields: [requesterId], references: [id], onDelete: Cascade)
   owner             User                       @relation("ReservationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  dropoffLocation   Location?                  @relation("ReservationDropoffLocation", fields: [dropoffLocationId], references: [id], onDelete: SetNull)
   reusedMaterial    Material?                  @relation("MaterialReusedByReservation")
   deliveries        Delivery[]
   reviews           Review[]

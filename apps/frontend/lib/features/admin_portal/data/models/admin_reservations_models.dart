@@ -64,6 +64,32 @@ class AdminReservationMaterialSummary {
   }
 }
 
+class AdminReservationLinkedReport {
+  const AdminReservationLinkedReport({
+    required this.id,
+    required this.status,
+    required this.reasonCode,
+    required this.targetRole,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String status;
+  final String reasonCode;
+  final String targetRole;
+  final String createdAt;
+
+  factory AdminReservationLinkedReport.fromJson(Map<String, dynamic> json) {
+    return AdminReservationLinkedReport(
+      id: json['id'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      reasonCode: json['reasonCode'] as String? ?? '',
+      targetRole: json['targetRole'] as String? ?? '',
+      createdAt: json['createdAt'] as String? ?? '',
+    );
+  }
+}
+
 class AdminReservationDeliverySummary {
   const AdminReservationDeliverySummary({
     required this.id,
@@ -174,7 +200,7 @@ class AdminReservationDetail {
     required this.learner,
     required this.supplier,
     required this.material,
-    required this.deliveryRequested,
+    this.fulfillmentMethod = 'PICKUP',
     this.message,
     this.acceptedAt,
     this.rejectedAt,
@@ -182,11 +208,10 @@ class AdminReservationDetail {
     this.completedAt,
     this.pickupWindowStart,
     this.pickupWindowEnd,
-    this.pickupType,
     this.supplierNote,
     this.rejectionReason,
-    this.deliveryStatus,
     this.delivery,
+    this.linkedReport,
     this.statusHistory = const [],
   });
 
@@ -203,15 +228,14 @@ class AdminReservationDetail {
   final String? completedAt;
   final String? pickupWindowStart;
   final String? pickupWindowEnd;
-  final String? pickupType;
+  final String fulfillmentMethod;
   final String? supplierNote;
   final String? rejectionReason;
-  final bool deliveryRequested;
-  final String? deliveryStatus;
   final AdminReservationPerson learner;
   final AdminReservationSupplierDetail supplier;
   final AdminReservationMaterialDetail material;
   final AdminReservationDeliverySummary? delivery;
+  final AdminReservationLinkedReport? linkedReport;
   final List<AdminReservationStatusHistoryItem> statusHistory;
 
   factory AdminReservationDetail.fromJson(Map<String, dynamic> json) {
@@ -230,11 +254,9 @@ class AdminReservationDetail {
       completedAt: json['completedAt'] as String?,
       pickupWindowStart: json['pickupWindowStart'] as String?,
       pickupWindowEnd: json['pickupWindowEnd'] as String?,
-      pickupType: json['pickupType'] as String?,
+      fulfillmentMethod: json['fulfillmentMethod'] as String? ?? 'PICKUP',
       supplierNote: json['supplierNote'] as String?,
       rejectionReason: json['rejectionReason'] as String?,
-      deliveryRequested: json['deliveryRequested'] as bool? ?? false,
-      deliveryStatus: json['deliveryStatus'] as String?,
       learner: AdminReservationPerson.fromJson(
         json['learner'] as Map<String, dynamic>? ?? const {},
       ),
@@ -246,6 +268,11 @@ class AdminReservationDetail {
       ),
       delivery: deliveryJson is Map<String, dynamic>
           ? AdminReservationDeliverySummary.fromJson(deliveryJson)
+          : null,
+      linkedReport: json['linkedReport'] is Map<String, dynamic>
+          ? AdminReservationLinkedReport.fromJson(
+              json['linkedReport'] as Map<String, dynamic>,
+            )
           : null,
       statusHistory: (json['statusHistory'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()

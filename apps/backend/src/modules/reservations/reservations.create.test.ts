@@ -286,8 +286,8 @@ describe('createReservation', () => {
   });
 
   test('validation rejects pickup preferred window that is too close to ending', () => {
-    const start = new Date(Date.now());
-    const end = new Date(Date.now() + 30 * 60_000);
+    const start = new Date(Date.now() + 10 * 60_000);
+    const end = new Date(Date.now() + 20 * 60_000);
 
     const result = createReservationSchema.safeParse({
       materialId: 'material-id',
@@ -307,6 +307,56 @@ describe('createReservation', () => {
       assert.equal(
         lastIssue?.message,
         LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+      );
+    }
+  });
+
+  test('validation rejects pickup preferred window starting in the past', () => {
+    const start = new Date(Date.now() - 30 * 60_000);
+    const end = new Date(Date.now() + 120 * 60_000);
+
+    const result = createReservationSchema.safeParse({
+      materialId: 'material-id',
+      quantityRequested: 1,
+      fulfillmentMethod: 'PICKUP',
+      learnerPreferredPickupWindows: [
+        {
+          start: start.toISOString(),
+          end: end.toISOString(),
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+    if (!result.success) {
+      assert.match(
+        result.error.issues[0]?.message ?? '',
+        /start must be in the future/i,
+      );
+    }
+  });
+
+  test('validation rejects pickup preferred window starting too soon', () => {
+    const start = new Date(Date.now() + 10 * 60_000);
+    const end = new Date(Date.now() + 120 * 60_000);
+
+    const result = createReservationSchema.safeParse({
+      materialId: 'material-id',
+      quantityRequested: 1,
+      fulfillmentMethod: 'PICKUP',
+      learnerPreferredPickupWindows: [
+        {
+          start: start.toISOString(),
+          end: end.toISOString(),
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+    if (!result.success) {
+      assert.match(
+        result.error.issues[0]?.message ?? '',
+        /30 minutes from now/i,
       );
     }
   });
@@ -674,7 +724,7 @@ describe('createReservation', () => {
 
   test('supplier accept keeps hold and complete consumes physical quantity once', async () => {
     const material = await createMaterial(ctx, 'AVAILABLE', 10);
-    const pickupWindow = futurePreferredWindow(0.1, 2);
+    const pickupWindow = futurePreferredWindow(1, 2);
     const reservation = await createReservation(
       ctx.learnerId,
       pickupReservationPayload(material.id, 5, {
@@ -688,6 +738,14 @@ describe('createReservation', () => {
     await acceptWithLearnerPreferredWindow(ctx.supplierId, reservation);
 
     assert.equal((await getMaterialById(material.id)).availableQuantity, 5);
+
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        pickupWindowStart: new Date(Date.now() - 15 * 60_000),
+        pickupWindowEnd: new Date(Date.now() + 60 * 60_000),
+      },
+    });
 
     await completeSupplierReservation(ctx.supplierId, reservation.id, {
       confirmationCode: deriveHandoverCode('self-pickup', reservation.id),

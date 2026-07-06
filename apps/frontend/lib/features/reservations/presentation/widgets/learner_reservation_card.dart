@@ -320,9 +320,19 @@ class _ReservationStatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final deliveryStyle = delivery == null
-        ? null
-        : _deliveryStatusStyle(context, delivery!.status);
+    final chipLabels = learnerReservationStatusChipLabels(
+      reservation,
+      linkedDeliveryStatus: delivery?.status,
+    );
+    final deliveryStyle = chipLabels.secondary != null && delivery != null
+        ? _deliveryStatusStyle(context, delivery!.status)
+        : chipLabels.secondary != null &&
+                reservation.activeDelivery?.status != null
+            ? _deliveryStatusStyle(
+                context,
+                reservation.activeDelivery!.status,
+              )
+        : null;
 
     return Wrap(
       spacing: AppSpacing.sm,
@@ -330,40 +340,17 @@ class _ReservationStatusRow extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _ReservationStatusChip(
-          label:
-              learnerDeliveryPrimaryStatusLabel(
-                reservationStatus: reservation.status,
-                fulfillmentMethod: reservation.fulfillmentMethod,
-                deliveryStatus: delivery?.status,
-              ) ??
-              reservationStatusLabel(
-                reservation.status,
-                fulfillmentMethod: reservation.fulfillmentMethod,
-                deliveryStatus: delivery?.status,
-                pickupWindowEnd: reservation.pickupWindowEnd,
-              ),
+          label: chipLabels.primary,
           background: statusStyle.chipBackground,
           foreground: statusStyle.chipForeground,
           border: statusStyle.chipBorder,
         ),
-        if (learnerDeliverySecondaryStatusLabel(
-              reservationStatus: reservation.status,
-              fulfillmentMethod: reservation.fulfillmentMethod,
-              deliveryStatus: delivery?.status,
-            )
-            case final secondaryLabel?)
+        if (chipLabels.secondary case final secondaryLabel?)
           _ReservationStatusChip(
             label: secondaryLabel,
             background: deliveryStyle?.background ?? statusStyle.chipBackground,
             foreground: deliveryStyle?.foreground ?? statusStyle.chipForeground,
             border: deliveryStyle?.border ?? statusStyle.chipBorder,
-          )
-        else if (deliveryStyle != null)
-          _ReservationStatusChip(
-            label: deliveryStatusLabel(delivery!.status),
-            background: deliveryStyle.background,
-            foreground: deliveryStyle.foreground,
-            border: deliveryStyle.border,
           ),
         Text(
           formatReservationDate(reservation.createdAt),
@@ -1363,7 +1350,7 @@ class _LearnerRequestRescheduleButtonState
                       return;
                     }
 
-                    if (end!.isBefore(DateTime.now().add(minPickupNotice))) {
+                    if (end!.isBefore(DateTime.now().add(minRemainingPickupWindow))) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
                         const SnackBar(
                           content: Text(learnerPickupWindowTooCloseMessage),

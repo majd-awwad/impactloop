@@ -1,6 +1,17 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
+/// Top-level learner tabs rendered inside [AppMobileNavigationShell].
+/// Navigate between these with [GoRouter.go], not [GoRouter.push], so Flutter
+/// web keeps the browser URL aligned with the visible shell page.
+const learnerShellTabRoutes = {
+  '/home',
+  '/materials',
+  '/learning',
+  '/learner/reservations',
+  '/profile',
+};
+
 extension AppNavigationExtensions on BuildContext {
   void popOrGo(String fallbackLocation) {
     if (canPop()) {

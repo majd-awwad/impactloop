@@ -69,6 +69,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/health` | `HealthPage` | public | Backend health diagnostic |
 | `/home` | `HomePage` → `LearnerHomePage` | authenticated | |
 | `/profile` | `ProfilePage` | authenticated | Account summary hub; mobile bottom Profile tab and avatar menu target this route |
+
+**Learner shell tabs:** `/home`, `/materials`, `/learning`, `/learner/reservations`, and `/profile` are siblings inside `AppMobileNavigationShell`. Switch between them with `context.go(...)`, not `context.push(...)`, so Flutter web keeps the browser URL in sync. Detail routes outside the shell (for example `/materials/:id`, `/learner/reservations/:id`) should continue to use `push`.
 | `/profile/edit` | `ProfileEditPage` | authenticated | Edit display name, phone, and profile photo |
 | `/profile/learner/edit` | `LearnerProfileEditPage` | authenticated | Edit learner type, skill level, interests, and bio (`LEARNER` role required) |
 | `/profile/security` | `ProfileSecurityPage` | authenticated | Change password via `/api/auth/change-password` |

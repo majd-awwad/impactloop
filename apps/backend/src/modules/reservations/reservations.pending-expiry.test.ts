@@ -233,7 +233,7 @@ describe('reservation pending expiry', () => {
     await prisma.$disconnect();
   });
 
-  test('uses latest preferred window end as expiry deadline', () => {
+  test('uses earliest of supplier response timeout and latest preferred window end', () => {
     const createdAt = new Date('2026-01-01T10:00:00.000Z');
     const deadline = resolvePendingReservationDeadline({
       status: 'PENDING',
@@ -246,7 +246,7 @@ describe('reservation pending expiry', () => {
       createdAt,
     });
 
-    assert.equal(deadline.toISOString(), '2026-01-03T12:00:00.000Z');
+    assert.equal(deadline.toISOString(), '2026-01-03T10:00:00.000Z');
     assert.equal(
       isPendingReservationExpired(
         {
@@ -259,13 +259,13 @@ describe('reservation pending expiry', () => {
           learnerPreferredDeliveryWindows: null,
           createdAt,
         },
-        new Date('2026-01-03T12:00:01.000Z'),
+        new Date('2026-01-03T10:00:01.000Z'),
       ),
       true,
     );
   });
 
-  test('falls back to createdAt plus 72 hours when windows are missing', () => {
+  test('falls back to createdAt plus supplier response hours when windows are missing', () => {
     const createdAt = new Date('2026-01-01T10:00:00.000Z');
     const deadline = resolvePendingReservationDeadline({
       status: 'PENDING',

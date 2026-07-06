@@ -231,7 +231,7 @@ describe('listMyReservations pickupLocationFull privacy', () => {
     assert.equal(listed?.pickupLocationFull?.isApproximate, false);
   });
 
-  test('ACCEPTED reservation with deliveryRequested still returns pickupLocationFull and deliveryRequested flag', async () => {
+  test('ACCEPTED reservation with active delivery still returns pickupLocationFull', async () => {
     const reservation = await createPendingReservation(ctx);
 
     await prisma.reservation.update({
@@ -239,7 +239,16 @@ describe('listMyReservations pickupLocationFull privacy', () => {
       data: {
         status: 'ACCEPTED',
         acceptedAt: new Date(),
-        deliveryRequested: true,
+      },
+    });
+
+    await prisma.delivery.create({
+      data: {
+        reservationId: reservation.id,
+        pickupLocationId: ctx.locationId,
+        dropoffLocationId: ctx.locationId,
+        requestedByUserId: ctx.learnerId,
+        status: 'WAITING_FOR_DRIVER',
       },
     });
 
@@ -249,7 +258,7 @@ describe('listMyReservations pickupLocationFull privacy', () => {
 
     assert.ok(listed);
     assert.equal(listed?.status, 'ACCEPTED');
-    assert.equal(listed?.deliveryRequested, true);
+    assert.ok(listed?.activeDelivery);
     assert.ok(listed?.pickupLocationFull);
     assert.equal(
       listed?.pickupLocationFull?.addressLine,

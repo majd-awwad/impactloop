@@ -27,7 +27,11 @@ Delivery is separate from reservation lifecycle:
 - Service checks and partial unique database indexes enforce one active delivery per reservation and one active delivery per driver.
 - `DriverProfile` is linked to a `User` with `DRIVER` role.
 
-Deprecated compatibility fields remain on `Reservation`: `deliveryRequested`, `deliveryStatus`, `deliveryCost`, `dropoffLocationId`, `driverProfileId`. `deliveryRequested` is set to `true` when the learner creates a delivery via `POST /api/reservations/:id/delivery`; other legacy fields are not the source of truth.
+Booking vs logistics:
+
+- **`fulfillmentMethod`** (`PICKUP` | `DELIVERY`) on `reservations` is the booking source of truth.
+- **`deliveries`** owns logistics status, driver assignment, pickup/dropoff locations, and delivery cost (when implemented).
+- A pickup reservation with a later delivery job is detected via `deliveries` rows and `activeDelivery` in API responses — not a reservation flag.
 
 ## Backend Behavior
 

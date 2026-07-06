@@ -675,7 +675,6 @@ describe('handover confirmation codes', () => {
         quantityRequested: 1,
         status: 'ACCEPTED',
         fulfillmentMethod: 'DELIVERY',
-        deliveryRequested: true,
         acceptedAt: new Date(),
       },
     });

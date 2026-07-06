@@ -100,7 +100,7 @@ class _WelcomeHero extends StatelessWidget {
         compact: compact,
         maxWidth: 352,
         child: FilledButton.icon(
-          onPressed: () => context.push('/materials'),
+          onPressed: () => context.go('/materials'),
           style: FilledButton.styleFrom(
             backgroundColor: palette.mint,
             foregroundColor: palette.ctaForeground,
@@ -119,7 +119,7 @@ class _WelcomeHero extends StatelessWidget {
         compact: compact,
         maxWidth: 300,
         child: OutlinedButton.icon(
-          onPressed: () => context.push('/learning'),
+          onPressed: () => context.go('/learning'),
           style: OutlinedButton.styleFrom(
             foregroundColor: palette.textPrimary,
             backgroundColor: palette.cardSurface.withValues(alpha: 0.7),
@@ -329,7 +329,7 @@ class _QuickActionsSection extends ConsumerWidget {
                     ? 'Browse items'
                     : 'Search currently listed materials from suppliers.',
                 compact: useCompactActions,
-                onPressed: () => context.push('/materials'),
+                onPressed: () => context.go('/materials'),
               ),
               HomeActionCard(
                 icon: Icons.school_outlined,
@@ -340,7 +340,7 @@ class _QuickActionsSection extends ConsumerWidget {
                     ? 'Explore projects'
                     : 'Open the Learning Hub project catalog.',
                 compact: useCompactActions,
-                onPressed: () => context.push('/learning'),
+                onPressed: () => context.go('/learning'),
               ),
               HomeActionCard(
                 icon: Icons.assignment_turned_in_outlined,
@@ -349,7 +349,7 @@ class _QuickActionsSection extends ConsumerWidget {
                     ? 'Track pickups'
                     : 'Track supplier responses and pickup windows for requested materials.',
                 compact: useCompactActions,
-                onPressed: () => context.push(learnerReservationsRoute),
+                onPressed: () => context.go(learnerReservationsRoute),
               ),
               if (showBecomeSupplier || hasSupplierRole)
                 HomeActionCard(
@@ -409,7 +409,7 @@ class _FutureActivitySection extends StatelessWidget {
               description:
                   'View pickup, delivery, and reservation updates from My Reservations.',
               badge: 'Open My Reservations',
-              onPressed: () => context.push(learnerReservationsRoute),
+              onPressed: () => context.go(learnerReservationsRoute),
             ),
             ComingSoonCard(
               icon: Icons.bookmark_border_rounded,

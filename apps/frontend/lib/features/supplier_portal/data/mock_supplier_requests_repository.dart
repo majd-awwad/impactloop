@@ -136,6 +136,21 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
   }
 
   @override
+  Future<SupplierIncomingRequest> submitNoDriverPickupWindow(
+    String requestId,
+    SupplierPickupWindow pickupWindow,
+  ) async {
+    final index = _requests.indexWhere((request) => request.id == requestId);
+    if (index == -1) throw StateError('Request not found');
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.accepted,
+      pickupWindow: pickupWindow,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
   Future<SupplierIncomingRequest> cancelAcceptedRequest(
     String requestId, {
     String? reason,
