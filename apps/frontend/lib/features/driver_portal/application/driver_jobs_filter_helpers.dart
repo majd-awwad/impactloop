@@ -101,7 +101,7 @@ String searchRadiusLabel({
 
 String distanceFromYouLabel(double? distanceKm) {
   if (distanceKm == null || !distanceKm.isFinite) {
-    return 'Distance unavailable';
+    return 'Pickup distance unavailable';
   }
 
   final rounded = distanceKm < 10
@@ -112,7 +112,7 @@ String distanceFromYouLabel(double? distanceKm) {
       ? rounded.toInt().toString()
       : rounded.toStringAsFixed(1);
 
-  return '$formatted km from you';
+  return '$formatted km to pickup';
 }
 
 class AvailableJobsEmptyStateCopy {

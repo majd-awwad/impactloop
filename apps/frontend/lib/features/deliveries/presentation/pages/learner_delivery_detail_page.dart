@@ -1,9 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
@@ -14,7 +11,6 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/learner_deliveries_provider.dart';
-import '../../data/deliveries_repository.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/learner_delivery.dart';
 import '../delivery_status_presentation.dart';
@@ -66,8 +62,7 @@ class LearnerDeliveryDetailPage extends ConsumerWidget {
                         onAction: () =>
                             ref.invalidate(learnerDeliveryProvider(deliveryId)),
                       ),
-                      data: (delivery) => _DeliveryDetailWithPolling(
-                        deliveryId: deliveryId,
+                      data: (delivery) => _DeliveryDetailContent(
                         delivery: delivery,
                         onRefresh: () =>
                             ref.invalidate(learnerDeliveryProvider(deliveryId)),
@@ -80,135 +75,6 @@ class LearnerDeliveryDetailPage extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _DeliveryDetailWithPolling extends ConsumerStatefulWidget {
-  const _DeliveryDetailWithPolling({
-    required this.deliveryId,
-    required this.delivery,
-    required this.onRefresh,
-  });
-
-  final String deliveryId;
-  final LearnerDelivery delivery;
-  final VoidCallback onRefresh;
-
-  @override
-  ConsumerState<_DeliveryDetailWithPolling> createState() =>
-      _DeliveryDetailWithPollingState();
-}
-
-class _DeliveryDetailWithPollingState
-    extends ConsumerState<_DeliveryDetailWithPolling> {
-  Timer? _trackingTimer;
-  late LearnerDelivery _delivery;
-  bool _refreshing = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _delivery = widget.delivery;
-    _syncTrackingTimer();
-  }
-
-  @override
-  void didUpdateWidget(covariant _DeliveryDetailWithPolling oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.delivery.id != widget.delivery.id ||
-        oldWidget.delivery.status != widget.delivery.status ||
-        oldWidget.delivery.canTrack != widget.delivery.canTrack ||
-        oldWidget.delivery.latestDriverPing?.capturedAt !=
-            widget.delivery.latestDriverPing?.capturedAt) {
-      _delivery = widget.delivery;
-      _syncTrackingTimer();
-    }
-  }
-
-  @override
-  void dispose() {
-    _trackingTimer?.cancel();
-    super.dispose();
-  }
-
-  void _syncTrackingTimer() {
-    _trackingTimer?.cancel();
-    if (_delivery.canTrack && !_delivery.isTerminal) {
-      _trackingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-        unawaited(_refreshTrackingSilently());
-      });
-    }
-  }
-
-  Future<void> _refreshTrackingSilently() async {
-    if (_refreshing || !mounted || !_delivery.canTrack) {
-      return;
-    }
-
-    _refreshing = true;
-    try {
-      final tracking = await ref
-          .read(deliveriesRepositoryProvider)
-          .fetchDeliveryTracking(widget.deliveryId);
-      if (!mounted) {
-        return;
-      }
-
-      final location = tracking.latestDriverLocation;
-      setState(() {
-        _delivery = LearnerDelivery(
-          id: _delivery.id,
-          reservationId: _delivery.reservationId,
-          status: tracking.status,
-          requestedAt: _delivery.requestedAt,
-          assignedAt: _delivery.assignedAt,
-          arrivedPickupAt: _delivery.arrivedPickupAt,
-          pickedUpAt: _delivery.pickedUpAt,
-          onTheWayAt: _delivery.onTheWayAt,
-          arrivedDropoffAt: _delivery.arrivedDropoffAt,
-          deliveredAt: _delivery.deliveredAt,
-          cancelledAt: _delivery.cancelledAt,
-          failedAt: _delivery.failedAt,
-          learnerNote: _delivery.learnerNote,
-          driverNote: _delivery.driverNote,
-          failureReason: _delivery.failureReason,
-          reservation: _delivery.reservation,
-          pickupLocation: _delivery.pickupLocation,
-          dropoffLocation: _delivery.dropoffLocation,
-          driver: _delivery.driver,
-          latestDriverPing: location == null
-              ? null
-              : LearnerDeliveryDriverPing(
-                  capturedAt: location.capturedAt,
-                  latitude: location.latitude,
-                  longitude: location.longitude,
-                  accuracyMeters: location.accuracyMeters,
-                  coordinatesVisible: true,
-                ),
-          history: _delivery.history,
-          learnerDeliveryCode: _delivery.learnerDeliveryCode,
-          canTrack: tracking.canTrack,
-          trackingMessage: tracking.trackingMessage,
-        );
-      });
-    } catch (_) {
-      // Keep the last known delivery visible during background polling errors.
-    } finally {
-      _refreshing = false;
-    }
-  }
-
-  Future<void> _handleManualRefresh() async {
-    widget.onRefresh();
-    await _refreshTrackingSilently();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _DeliveryDetailContent(
-      delivery: _delivery,
-      onRefresh: () => unawaited(_handleManualRefresh()),
     );
   }
 }
@@ -371,11 +237,6 @@ class _DeliverySummaryPanel extends StatelessWidget {
           ],
           const SizedBox(height: AppSpacing.md),
           _TrackingStatusCard(delivery: delivery, onRefresh: onRefresh),
-          if (delivery.latestDriverPing?.hasCoordinates == true &&
-              delivery.canTrack) ...[
-            const SizedBox(height: AppSpacing.md),
-            _TrackingMapCard(ping: delivery.latestDriverPing!),
-          ],
           if (delivery.driverNote?.trim().isNotEmpty == true)
             _InfoRow(label: 'Driver note', value: delivery.driverNote!),
           if (delivery.shouldShowLearnerDeliveryCode) ...[
@@ -425,10 +286,18 @@ class _TrackingStatusCard extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         if (delivery.canTrack)
+          FilledButton.icon(
+            onPressed: () =>
+                context.push('/learner/deliveries/${delivery.id}/track'),
+            icon: const Icon(Icons.map_outlined),
+            label: const Text('Track delivery'),
+          ),
+        if (delivery.canTrack) const SizedBox(height: AppSpacing.sm),
+        if (delivery.canTrack)
           TextButton.icon(
             onPressed: onRefresh,
             icon: const Icon(Icons.refresh_outlined, size: 18),
-            label: const Text('Refresh tracking'),
+            label: const Text('Refresh status'),
           )
         else
           TextButton.icon(
@@ -438,74 +307,6 @@ class _TrackingStatusCard extends StatelessWidget {
           ),
       ],
     );
-  }
-}
-
-class _TrackingMapCard extends StatelessWidget {
-  const _TrackingMapCard({required this.ping});
-
-  final LearnerDeliveryDriverPing ping;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final point = LatLng(ping.latitude!, ping.longitude!);
-
-    return ClipRRect(
-      borderRadius: AppRadius.lgAll,
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).width >= 700 ? 280 : 230,
-        width: double.infinity,
-        child: FlutterMap(
-          options: MapOptions(
-            initialCenter: point,
-            initialZoom: 15,
-            minZoom: 5,
-            maxZoom: 18,
-            interactionOptions: const InteractionOptions(
-              flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-            ),
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.impactloop.frontend',
-            ),
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: point,
-                  width: 48,
-                  height: 48,
-                  alignment: Alignment.topCenter,
-                  child: _DriverMapMarker(color: palette.mint),
-                ),
-              ],
-            ),
-            RichAttributionWidget(
-              alignment: AttributionAlignment.bottomRight,
-              attributions: [
-                TextSourceAttribution(
-                  'OpenStreetMap contributors',
-                  onTap: () {},
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DriverMapMarker extends StatelessWidget {
-  const _DriverMapMarker({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Icon(Icons.location_pin, color: color, size: 42);
   }
 }
 

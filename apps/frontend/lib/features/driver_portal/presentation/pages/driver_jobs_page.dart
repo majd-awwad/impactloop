@@ -556,7 +556,7 @@ class _AvailableJobsFilters extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Jobs are matched by pickup location.',
+                'Distance is calculated to the pickup location.',
                 style: AppTextStyles.body(context).copyWith(
                   color: palette.textSecondary,
                   fontSize: 12,
@@ -580,7 +580,7 @@ class _AvailableJobsFilters extends ConsumerWidget {
                   label: anyDistance
                       ? 'Any distance'
                       : 'Within ${radiusKm.round()} km',
-                  onChanged: !radiusEnabled || anyDistance
+                  onChanged: !radiusEnabled
                       ? null
                       : (value) {
                           notifier.setRadiusKm(
@@ -680,7 +680,7 @@ class _AvailableJobsFilters extends ConsumerWidget {
               ),
               if (!radiusEnabled)
                 Text(
-                  'Radius needs a recent location ping.',
+                  'Location needed for distance filter.',
                   style: AppTextStyles.body(context).copyWith(
                     color: palette.textSecondary,
                     fontSize: 12,
@@ -693,6 +693,11 @@ class _AvailableJobsFilters extends ConsumerWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Text(
+                  'Find nearby jobs',
+                  style: AppTextStyles.title(context),
+                ),
+                const SizedBox(height: AppSpacing.md),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -751,6 +756,11 @@ class _AvailableJobsFilters extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Text(
+                'Find nearby jobs',
+                style: AppTextStyles.title(context),
+              ),
+              const SizedBox(height: AppSpacing.md),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -918,6 +928,7 @@ class _AvailableJobCard extends ConsumerWidget {
       fallback: delivery.dropoffLocation.safeSummary,
     );
     final distanceText = distanceFromYouLabel(delivery.distanceKm);
+    final routeLabel = 'Pickup: $pickupSummary → Drop-off: $dropoffSummary';
 
     return _Panel(
       child: Column(
@@ -943,6 +954,13 @@ class _AvailableJobCard extends ConsumerWidget {
                         context,
                       ).copyWith(color: palette.textSecondary),
                     ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      routeLabel,
+                      style: AppTextStyles.label(
+                        context,
+                      ).copyWith(color: palette.textMuted),
+                    ),
                   ],
                 ),
               ),
@@ -958,7 +976,7 @@ class _AvailableJobCard extends ConsumerWidget {
               _InfoItem('Pickup window', driverPickupWindowSummary(delivery)),
               _InfoItem('Pickup', pickupSummary),
               _InfoItem('Drop-off', dropoffSummary),
-              _InfoItem('Distance', distanceText),
+              _InfoItem('Distance to pickup', distanceText),
             ],
           ),
           const SizedBox(height: AppSpacing.md),

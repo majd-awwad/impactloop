@@ -18,12 +18,9 @@ import '../../../deliveries/presentation/pickup_window_presentation.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../application/driver_deliveries_provider.dart';
 import '../../application/driver_delivery_action_controller.dart';
-import '../../application/driver_demo_tracking_controller.dart';
 import '../../application/driver_location_auto_ping_controller.dart';
 import '../../data/models/driver_delivery.dart';
-import '../../data/models/driver_location_ping_request.dart';
 import '../driver_delivery_timing_presentation.dart';
-import '../widgets/driver_demo_route_preview.dart';
 
 class DriverDeliveryDetailPage extends ConsumerWidget {
   const DriverDeliveryDetailPage({super.key, required this.deliveryId});
@@ -63,14 +60,15 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
                   delivery: delivery,
                   onRefresh: () => refreshActiveDriverDelivery(ref, deliveryId),
                 ),
-                DriverDeliveryDetailInactive(:final context) => _StatePanel(
-                  icon: context.movedToAdminReview
+                DriverDeliveryDetailInactive(context: final inactiveContext) =>
+                  _StatePanel(
+                  icon: inactiveContext.movedToAdminReview
                       ? Icons.admin_panel_settings_outlined
                       : Icons.lock_outline,
-                  title: context.movedToAdminReview
+                  title: inactiveContext.movedToAdminReview
                       ? 'Delivery moved to admin review'
                       : 'Delivery no longer active',
-                  subtitle: context.message ??
+                  subtitle: inactiveContext.message ??
                       'This delivery is no longer active. It was moved to admin review.',
                   actionLabel: 'Back to jobs',
                   onAction: () => context.popOrGo('/driver/jobs'),
@@ -390,10 +388,6 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           ],
           const SizedBox(height: AppSpacing.md),
           _LocationSharingSection(delivery: widget.delivery),
-          if (isDemoTrackingAllowed) ...[
-            const SizedBox(height: AppSpacing.md),
-            _DemoTrackingSection(delivery: widget.delivery),
-          ],
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
             onPressed: () => context.popOrGo('/driver/jobs'),
@@ -839,196 +833,6 @@ class _LocationSharingSectionState
         setState(() => _isManualPinging = false);
       }
     }
-  }
-}
-
-class _DemoTrackingSection extends ConsumerStatefulWidget {
-  const _DemoTrackingSection({required this.delivery});
-
-  final DriverDelivery delivery;
-
-  @override
-  ConsumerState<_DemoTrackingSection> createState() =>
-      _DemoTrackingSectionState();
-}
-
-class _DemoTrackingSectionState extends ConsumerState<_DemoTrackingSection> {
-  DriverDemoTrackingController? _controller;
-  bool _active = false;
-  bool _demoFallbackSelected = false;
-  DemoRouteCoordinates? _selectedRoute;
-  DemoTrackingProgress? _progress;
-
-  @override
-  void initState() {
-    super.initState();
-    _bindController();
-    _syncSelectedRoute();
-  }
-
-  @override
-  void didUpdateWidget(covariant _DemoTrackingSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.delivery.id != widget.delivery.id) {
-      _controller?.dispose();
-      _demoFallbackSelected = false;
-      _selectedRoute = null;
-      _progress = null;
-      _bindController();
-      _syncSelectedRoute();
-    } else if (!DriverDemoTrackingController.isStatusEligible(widget.delivery)) {
-      _controller?.stop();
-      _progress = null;
-    } else {
-      _syncSelectedRoute();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  void _bindController() {
-    _controller = DriverDemoTrackingController(
-      sendPing: (latitude, longitude) => ref
-          .read(driverDeliveryActionControllerProvider.notifier)
-          .sendLocationPing(
-            deliveryId: widget.delivery.id,
-            request: DriverLocationPingRequest(
-              latitude: latitude,
-              longitude: longitude,
-              capturedAt: DateTime.now(),
-            ),
-          ),
-      onActiveChanged: (active) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _active = active;
-          if (!active) {
-            _progress = null;
-          }
-        });
-      },
-      onProgressChanged: (progress) {
-        if (!mounted) {
-          return;
-        }
-        setState(() => _progress = progress);
-      },
-    );
-  }
-
-  void _syncSelectedRoute() {
-    final realRoute = resolveRealDemoRouteCoordinates(widget.delivery);
-    if (realRoute != null) {
-      _selectedRoute = realRoute;
-      _demoFallbackSelected = false;
-      return;
-    }
-
-    if (_demoFallbackSelected) {
-      _selectedRoute = nablusDemoRouteCoordinates();
-    } else {
-      _selectedRoute = null;
-    }
-  }
-
-  void _useDemoRouteCoordinates() {
-    setState(() {
-      _demoFallbackSelected = true;
-      _selectedRoute = nablusDemoRouteCoordinates();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final disabledReason = DriverDemoTrackingController.disabledReason(
-      widget.delivery,
-      demoFallbackSelected: _demoFallbackSelected,
-    );
-    final canStart = DriverDemoTrackingController.canStart(
-      widget.delivery,
-      route: _selectedRoute,
-    );
-    final route = _selectedRoute;
-
-    return _InlineNotice(
-      icon: Icons.science_outlined,
-      title: 'Demo tracking',
-      body: disabledReason ??
-          'Simulates driver movement for presentation. Uses the real location ping endpoint.',
-      action: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (route != null) ...[
-            DriverDemoRoutePreview(
-              route: route,
-              currentLatitude: _progress?.latitude,
-              currentLongitude: _progress?.longitude,
-              usesFallbackCoordinates: route.usesFallbackCoordinates,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            if (route.usesFallbackCoordinates)
-              Text(
-                'Demo route — not real delivery coordinates',
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textMuted,
-                ),
-              ),
-          ],
-          if (_active) ...[
-            Text(
-              'Demo tracking active',
-              style: AppTextStyles.label(context).copyWith(color: palette.mint),
-            ),
-            if (_progress != null)
-              Text(
-                '${_progress!.label} · Simulating movement…',
-                style: AppTextStyles.body(context).copyWith(
-                  color: palette.textSecondary,
-                ),
-              ),
-            const SizedBox(height: AppSpacing.sm),
-          ],
-          if (_selectedRoute == null &&
-              resolveRealDemoRouteCoordinates(widget.delivery) == null) ...[
-            OutlinedButton.icon(
-              onPressed: DriverDemoTrackingController.isStatusEligible(
-                widget.delivery,
-              )
-                  ? _useDemoRouteCoordinates
-                  : null,
-              icon: const Icon(Icons.map_outlined),
-              label: const Text('Use demo route coordinates'),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-          ],
-          FilledButton.icon(
-            onPressed: canStart && !_active
-                ? () => _controller?.start(
-                    widget.delivery,
-                    route: _selectedRoute,
-                  )
-                : null,
-            icon: const Icon(Icons.play_arrow_rounded),
-            label: const Text('Start demo tracking'),
-          ),
-          if (_active) ...[
-            const SizedBox(height: AppSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: _controller?.stop,
-              icon: const Icon(Icons.stop_rounded),
-              label: const Text('Stop demo tracking'),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 }
 

@@ -13,6 +13,11 @@ void main() {
       }
     });
 
+    test('returns false for DRIVER_ASSIGNED and ARRIVED_PICKUP', () {
+      expect(isDriverAutoPingEligibleStatus('DRIVER_ASSIGNED'), isFalse);
+      expect(isDriverAutoPingEligibleStatus('ARRIVED_PICKUP'), isFalse);
+    });
+
     test('returns false for WAITING_FOR_DRIVER and terminal statuses', () {
       expect(isDriverAutoPingEligibleStatus('WAITING_FOR_DRIVER'), isFalse);
       expect(isDriverAutoPingEligibleStatus('DELIVERED'), isFalse);
@@ -23,7 +28,7 @@ void main() {
   });
 
   group('DriverLocationAutoPingController', () {
-    test('starts sharing for active status and pings immediately', () async {
+    test('starts sharing for PICKED_UP and pings immediately', () async {
       final pingTimes = <DateTime>[];
       late DriverLocationAutoPingController controller;
 
@@ -32,12 +37,44 @@ void main() {
           pingTimes.add(DateTime.now());
         },
         onStateChanged: (_) {},
-      )..updateDeliveryStatus('DRIVER_ASSIGNED');
+      )..updateDeliveryStatus('PICKED_UP');
 
       await pumpEventQueue();
 
       expect(controller.state.isSharing, isTrue);
       expect(pingTimes, hasLength(1));
+
+      controller.dispose();
+    });
+
+    test('does not start for DRIVER_ASSIGNED', () async {
+      final pingTimes = <int>[];
+      final controller = DriverLocationAutoPingController(
+        sendPing: () async {
+          pingTimes.add(1);
+        },
+      )..updateDeliveryStatus('DRIVER_ASSIGNED');
+
+      await pumpEventQueue();
+
+      expect(controller.state.isSharing, isFalse);
+      expect(pingTimes, isEmpty);
+
+      controller.dispose();
+    });
+
+    test('does not start for ARRIVED_PICKUP', () async {
+      final pingTimes = <int>[];
+      final controller = DriverLocationAutoPingController(
+        sendPing: () async {
+          pingTimes.add(1);
+        },
+      )..updateDeliveryStatus('ARRIVED_PICKUP');
+
+      await pumpEventQueue();
+
+      expect(controller.state.isSharing, isFalse);
+      expect(pingTimes, isEmpty);
 
       controller.dispose();
     });
@@ -141,7 +178,7 @@ void main() {
           return Timer.periodic(const Duration(milliseconds: 20), callback);
         },
         interval: const Duration(milliseconds: 20),
-      )..updateDeliveryStatus('ARRIVED_PICKUP');
+      )..updateDeliveryStatus('PICKED_UP');
 
       await pumpEventQueue();
       expect(pingCount, 1);
@@ -167,7 +204,7 @@ void main() {
           timers.add(timer);
           return timer;
         },
-      )..updateDeliveryStatus('DRIVER_ASSIGNED');
+      )..updateDeliveryStatus('PICKED_UP');
 
       await pumpEventQueue();
 

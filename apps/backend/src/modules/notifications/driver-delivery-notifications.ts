@@ -1,6 +1,10 @@
 import type { DeliveryStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 
+import {
+  DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
+  MAX_ACTIVE_DRIVER_DELIVERIES,
+} from '../deliveries/deliveries.service.js';
 import { DRIVER_DELIVERY_NOTIFICATION_TYPES } from './driver-delivery-notification-types.js';
 import { createNotificationIfMissing } from './notifications.repository.js';
 
@@ -69,13 +73,6 @@ const inTransitStatuses = new Set<DeliveryStatus>([
   'ARRIVED_DROPOFF',
 ]);
 
-const pickedUpOrLaterStatuses = new Set<DeliveryStatus>([
-  'PICKED_UP',
-  'ON_THE_WAY',
-  'ARRIVED_DROPOFF',
-  'DELIVERED',
-]);
-
 const SYNC_THROTTLE_MS = 60_000;
 
 const lastReminderSyncAtByUser = new Map<string, number>();
@@ -127,13 +124,27 @@ const loadDeliveryContext = async (deliveryId: string) =>
     select: deliveryContextSelect,
   });
 
-const listActiveDriverUserIds = async () => {
+const listEligibleDriverUserIdsForNewJobs = async () => {
   const profiles = await prisma.driverProfile.findMany({
     where: { status: 'ACTIVE' },
-    select: { userId: true },
+    select: { id: true, userId: true },
   });
 
-  return profiles.map((profile) => profile.userId);
+  const eligible: string[] = [];
+  for (const profile of profiles) {
+    const activeCount = await prisma.delivery.count({
+      where: {
+        assignedDriverProfileId: profile.id,
+        status: { in: [...DRIVER_IN_PROGRESS_ASSIGNED_STATUSES] },
+      },
+    });
+
+    if (activeCount < MAX_ACTIVE_DRIVER_DELIVERIES) {
+      eligible.push(profile.userId);
+    }
+  }
+
+  return eligible;
 };
 
 export const notifyNewDeliveryJobAvailable = async (deliveryId: string) =>
@@ -143,7 +154,7 @@ export const notifyNewDeliveryJobAvailable = async (deliveryId: string) =>
       return;
     }
 
-    const driverUserIds = await listActiveDriverUserIds();
+    const driverUserIds = await listEligibleDriverUserIdsForNewJobs();
     const material = materialLabel(delivery);
     const area = safeAreaLabel(delivery);
 
@@ -261,46 +272,20 @@ const syncPickupReminders = async (
   }
 
   const windowStart = delivery.reservation.supplierPickupWindowStart;
-  const windowEnd = delivery.reservation.supplierPickupWindowEnd;
   const material = materialLabel(delivery);
 
-  if (windowStart) {
-    const startsSoonAt = new Date(windowStart.getTime() - REMINDER_LOOKAHEAD_MS);
-    if (now >= startsSoonAt && now < windowStart) {
-      await createNotificationIfMissing({
-        userId: driverUserId,
-        notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_PICKUP_STARTING_SOON,
-        title: 'Pickup starts soon',
-        body: `Pickup for ${material} starts at ${formatNotificationTime(windowStart)}.`,
-        relatedEntityType: 'DELIVERY',
-        relatedEntityId: delivery.id,
-      });
-    }
-
-    if (now >= windowStart && !pickedUpOrLaterStatuses.has(delivery.status)) {
-      await createNotificationIfMissing({
-        userId: driverUserId,
-        notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_PICKUP_WINDOW_STARTED,
-        title: 'Pickup window started',
-        body: `Pickup window for ${material} is now open.`,
-        relatedEntityType: 'DELIVERY',
-        relatedEntityId: delivery.id,
-      });
-    }
+  if (!windowStart) {
+    return;
   }
 
-  if (
-    windowEnd &&
-    now > windowEnd &&
-    !pickedUpOrLaterStatuses.has(delivery.status)
-  ) {
+  const startsSoonAt = new Date(windowStart.getTime() - REMINDER_LOOKAHEAD_MS);
+  if (now >= startsSoonAt && now < windowStart) {
     await createNotificationIfMissing({
       userId: driverUserId,
-      notificationType: DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_PICKUP_OVERDUE,
-      title: 'Pickup overdue',
-      body: `Pickup window for ${material} has passed. Please update the delivery status or report an issue.`,
+      notificationType:
+        DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_PICKUP_STARTING_SOON,
+      title: 'Pickup starts soon',
+      body: `Pickup for ${material} starts at ${formatNotificationTime(windowStart)}.`,
       relatedEntityType: 'DELIVERY',
       relatedEntityId: delivery.id,
     });
@@ -317,8 +302,7 @@ const syncDropoffReminders = async (
   }
 
   const windowStart = delivery.reservation.confirmedDeliveryWindowStart;
-  const windowEnd = delivery.reservation.confirmedDeliveryWindowEnd;
-  if (!windowStart || !windowEnd) {
+  if (!windowStart) {
     return;
   }
 
@@ -332,29 +316,6 @@ const syncDropoffReminders = async (
         DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DROPOFF_STARTING_SOON,
       title: 'Drop-off starts soon',
       body: `Drop-off for ${material} starts at ${formatNotificationTime(windowStart)}.`,
-      relatedEntityType: 'DELIVERY',
-      relatedEntityId: delivery.id,
-    });
-  }
-
-  if (now >= windowStart && delivery.status !== 'DELIVERED') {
-    await createNotificationIfMissing({
-      userId: driverUserId,
-      notificationType:
-        DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DROPOFF_WINDOW_STARTED,
-      title: 'Drop-off window started',
-      body: `Drop-off window for ${material} is now open.`,
-      relatedEntityType: 'DELIVERY',
-      relatedEntityId: delivery.id,
-    });
-  }
-
-  if (now > windowEnd && delivery.status !== 'DELIVERED') {
-    await createNotificationIfMissing({
-      userId: driverUserId,
-      notificationType: DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DROPOFF_OVERDUE,
-      title: 'Drop-off overdue',
-      body: `Drop-off window for ${material} has passed. Please update the delivery status.`,
       relatedEntityType: 'DELIVERY',
       relatedEntityId: delivery.id,
     });

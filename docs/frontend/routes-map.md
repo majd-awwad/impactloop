@@ -78,7 +78,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/profile/locations` | `SavedLocationsPage` | authenticated | Manage private saved locations via `/api/locations/saved`; exact address and coordinates are visible only to the owner |
 | `/learner/reservations` | `LearnerReservationsPage` | learner | Learner reservation status list |
 | `/learner/reservations/:id` | `LearnerReservationDetailPage` | learner | Single reservation detail with refresh + shared reservation card |
-| `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline, latest driver ping summary, and page-scoped polling map marker when tracking coordinates are allowed |
+| `/learner/deliveries/:id/track` | `LearnerDeliveryTrackingPage` | learner | Live driver map (after pickup), polls `GET /api/deliveries/:id/tracking` every 45s |
+| `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline; **Track delivery** opens `/track` when `canTrack` |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
 | `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, category filters, saved/followed learner tabs, and server-side page navigation; optional `q` query pre-fills search; add-draft submits for review; AI material matching is not implemented |
 | `/learning/add-draft` | `LearningAddDraftPage` | learner | Learner project submission form; posts to `/api/learning-projects/submit` |

@@ -17,6 +17,7 @@ import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/deliveries/presentation/pages/learner_delivery_detail_page.dart';
+import '../../features/deliveries/presentation/pages/learner_delivery_tracking_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_delivery_detail_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_jobs_page.dart';
 import '../../features/driver_portal/presentation/shell/driver_portal_shell.dart';
@@ -543,6 +544,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile/locations',
         builder: (context, state) => const SavedLocationsPage(),
+      ),
+      GoRoute(
+        path: '/learner/deliveries/:id/track',
+        builder: (context, state) => LearnerDeliveryTrackingPage(
+          deliveryId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: '/learner/deliveries/:id',

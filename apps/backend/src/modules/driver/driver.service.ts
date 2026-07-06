@@ -6,7 +6,7 @@ import { applyReservationCompletionToMaterial } from '../reservations/reservatio
 import {
   DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
   MAX_ACTIVE_DRIVER_DELIVERIES,
-  TRACKING_ELIGIBLE_DELIVERY_STATUSES,
+  LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES,
 } from '../deliveries/deliveries.service.js';
 import {
   escalateStaleAssignedDriverPickupsByIds,
@@ -28,11 +28,7 @@ import {
   supplierPickupWindowNotStartedMessage,
   supplierPickupWindowPassedMessage,
 } from '../../utils/handover-timing.js';
-import {
-  notifyDriverDeliveryAccepted,
-  notifyDriverDeliveryNextStep,
-  syncDriverDeliveryRemindersForUser,
-} from '../notifications/driver-delivery-notifications.js';
+import { syncDriverDeliveryRemindersForUser } from '../notifications/driver-delivery-notifications.js';
 
 import type {
   CreateDeliveryLocationPingInput,
@@ -631,7 +627,6 @@ export const acceptDelivery = async (
     return mapAssignedDelivery(delivery);
   });
 
-  await notifyDriverDeliveryAccepted(deliveryId);
   void syncDriverDeliveryRemindersForUser(driverUserId);
 
   return delivery;
@@ -809,7 +804,6 @@ export const updateDriverDeliveryStatus = async (
 
   switch (result.outcome) {
     case 'UPDATED':
-      void notifyDriverDeliveryNextStep(deliveryId, input.status);
       void syncDriverDeliveryRemindersForUser(driverUserId);
       return mapAssignedDelivery(result.delivery);
     case 'NOT_FOUND':
@@ -860,7 +854,7 @@ export const createDeliveryLocationPing = async (
     where: {
       id: deliveryId,
       assignedDriverProfileId: profile.id,
-      status: { in: [...TRACKING_ELIGIBLE_DELIVERY_STATUSES] },
+      status: { in: [...LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES] },
     },
     select: { id: true },
   });

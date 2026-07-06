@@ -244,8 +244,6 @@ class DriverDelivery {
 }
 
 const driverAutoPingEligibleStatuses = {
-  'DRIVER_ASSIGNED',
-  'ARRIVED_PICKUP',
   'PICKED_UP',
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
