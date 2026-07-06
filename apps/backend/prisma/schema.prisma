@@ -335,6 +335,10 @@ model User {
   supplierFollows              SupplierFollower[] @relation("SupplierFollowerUser")
   materialLikes                MaterialLike[]     @relation("MaterialLikeUser")
   materialViews                MaterialView[]     @relation("MaterialViewUser")
+  projectLikes                 ProjectLike[]      @relation("ProjectLikeUser")
+  projectSaves                 ProjectSave[]      @relation("ProjectSaveUser")
+  projectFollows               ProjectFollow[]    @relation("ProjectFollowUser")
+  projectReviews               ProjectUserReview[] @relation("ProjectUserReviewUser")
   savedLocations               UserSavedLocation[]
   suspendedBy                  User?            @relation("UserSuspendedBy", fields: [suspendedById], references: [id], onDelete: SetNull)
   accountsSuspended            User[]           @relation("UserSuspendedBy")
@@ -629,6 +633,10 @@ model LearningProject {
   steps                    ProjectStep[]
   links                    ProjectLink[]
   tags                     ProjectTag[]
+  likes                    ProjectLike[]
+  saves                    ProjectSave[]
+  follows                  ProjectFollow[]
+  userReviews              ProjectUserReview[]
 
   @@index([categoryId])
   @@index([createdBy])
@@ -724,6 +732,66 @@ model ProjectTag {
   @@index([projectId])
   @@index([tag])
   @@map("project_tags")
+}
+
+model ProjectLike {
+  id        String          @id @default(cuid())
+  projectId String          @map("project_id")
+  userId    String          @map("user_id")
+  createdAt DateTime        @default(now()) @map("created_at")
+  project   LearningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User            @relation("ProjectLikeUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+  @@map("project_likes")
+}
+
+model ProjectSave {
+  id        String          @id @default(cuid())
+  projectId String          @map("project_id")
+  userId    String          @map("user_id")
+  createdAt DateTime        @default(now()) @map("created_at")
+  project   LearningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User            @relation("ProjectSaveUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+  @@map("project_saves")
+}
+
+model ProjectFollow {
+  id        String          @id @default(cuid())
+  projectId String          @map("project_id")
+  userId    String          @map("user_id")
+  createdAt DateTime        @default(now()) @map("created_at")
+  project   LearningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User            @relation("ProjectFollowUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+  @@map("project_follows")
+}
+
+model ProjectUserReview {
+  id        String          @id @default(cuid())
+  projectId String          @map("project_id")
+  userId    String          @map("user_id")
+  rating    Int
+  comment   String?
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  project   LearningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User            @relation("ProjectUserReviewUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@map("project_user_reviews")
 }
 
 model Material {

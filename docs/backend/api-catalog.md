@@ -230,13 +230,23 @@ Available jobs support query filters `city`, `area`, `maxDistanceKm`, and `sortB
 
 ## Learning projects — `/api/learning-projects`
 
-| Method | Path | Auth | Source file |
-|--------|------|------|-------------|
-| GET | `/api/learning-projects` | Public | `learning-projects/learning-projects.routes.ts` |
-| GET | `/api/learning-projects/:id` | Public (`PUBLISHED` only) | `learning-projects/learning-projects.routes.ts` |
+| Method | Path | Auth | Role | Source file |
+|--------|------|------|------|-------------|
+| GET | `/api/learning-projects` | Public, optional Bearer JWT | — | `learning-projects/learning-projects.routes.ts` |
+| GET | `/api/learning-projects/me/saved` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| GET | `/api/learning-projects/me/followed` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| GET | `/api/learning-projects/:id` | Public, optional Bearer JWT (`PUBLISHED` only) | — | `learning-projects/learning-projects.routes.ts` |
+| POST | `/api/learning-projects/:id/like` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| DELETE | `/api/learning-projects/:id/like` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| POST | `/api/learning-projects/:id/save` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| DELETE | `/api/learning-projects/:id/save` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| POST | `/api/learning-projects/:id/follow` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| DELETE | `/api/learning-projects/:id/follow` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| PUT | `/api/learning-projects/:id/review` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
+| DELETE | `/api/learning-projects/:id/review` | Bearer JWT | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
 | POST | `/api/learning-projects/submit` | Bearer JWT + `Idempotency-Key` | `LEARNER` | `learning-projects/learning-projects.routes.ts` |
 
-Public list/detail return only `PUBLISHED` projects. Learner submit creates `PENDING_REVIEW` with `submittedAt`. `POST /api/learning-projects/submit` requires an `Idempotency-Key` header and uses scope `LEARNING_PROJECT_SUBMIT`; same learner + same key + identical body returns the stored response without creating another project.
+Public list/detail return only `PUBLISHED` projects and include `likesCount`, `followersCount`, nullable `ratingSummary` (`{ average, count }`), plus viewer-specific `isLiked`, `isSaved`, and `isFollowing` (`false` without authenticated viewer). Learner saved/followed list endpoints accept the same `page`, `limit`, `q`, `categoryId`, `difficulty`, and `tag` query params as the public list and return the same `{ items, pagination }` shape filtered to the viewer's saved or followed projects. Detail additionally includes `recentReviews[]` and nullable `viewerReview` when the authenticated learner has reviewed the project. Learner like/unlike is idempotent and returns `{ projectId, likesCount, isLiked }`. Learner save/unsave is idempotent and returns `{ projectId, isSaved }`; save counts are not exposed publicly. Learner follow/unfollow is idempotent and returns `{ projectId, followersCount, isFollowing }`. Learner review upsert body: `{ rating: 1..5, comment?: string }`; response includes `{ projectId, review, ratingSummary }`. Deleting the viewer's review is idempotent and returns `{ projectId, viewerReview: null, ratingSummary }`. Learner submit creates `PENDING_REVIEW` with `submittedAt`. `POST /api/learning-projects/submit` requires an `Idempotency-Key` header and uses scope `LEARNING_PROJECT_SUBMIT`; same learner + same key + identical body returns the stored response without creating another project.
 
 ## Locations — `/api/locations`
 

@@ -46,7 +46,18 @@ class LearningHubApiMapper {
     final durationMinutes = _intFromDynamic(json['estimatedDurationMinutes']);
     final coverImageUrl = _nullableString(json['coverImageUrl']);
     final rating = _parseRatingSummary(json['ratingSummary']);
+    final likesCount = _intFromDynamic(json['likesCount']) ?? 0;
+    final isLiked = json['isLiked'] == true;
+    final isSaved = json['isSaved'] == true;
+    final followersCount = _intFromDynamic(json['followersCount']) ?? 0;
+    final isFollowing = json['isFollowing'] == true;
     final tags = _mapTags(json['tags']);
+    final recentReviews = includeDetailFields
+        ? _mapProjectReviews(json['recentReviews'])
+        : const <ProjectReviewItem>[];
+    final viewerReview = includeDetailFields
+        ? _mapProjectReview(json['viewerReview'])
+        : null;
 
     final components = includeDetailFields
         ? _mapComponents(json['requiredComponents'])
@@ -95,6 +106,13 @@ class LearningHubApiMapper {
       heroIconData: heroIconForCategory(categoryNameEn, id: id),
       cardGradient: gradientForCategory(categoryNameEn, id: id),
       isFeatured: false,
+      likesCount: likesCount,
+      isLiked: isLiked,
+      isSaved: isSaved,
+      followersCount: followersCount,
+      isFollowing: isFollowing,
+      recentReviews: recentReviews,
+      viewerReview: viewerReview,
       tags: tags,
     );
   }
@@ -229,6 +247,47 @@ class LearningHubApiMapper {
     return (hasRatings: true, value: average, count: count);
   }
 
+  static List<ProjectReviewItem> _mapProjectReviews(Object? raw) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    return raw
+        .whereType<Map>()
+        .map(_mapProjectReview)
+        .whereType<ProjectReviewItem>()
+        .toList(growable: false);
+  }
+
+  static ProjectReviewItem? _mapProjectReview(Object? raw) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+
+    final id = _stringOrFallback(json['id'], fallback: '');
+    final projectId = _stringOrFallback(json['projectId'], fallback: '');
+    final rating = _intFromDynamic(json['rating']) ?? 0;
+
+    if (id.isEmpty || projectId.isEmpty || rating <= 0) {
+      return null;
+    }
+
+    return ProjectReviewItem(
+      id: id,
+      projectId: projectId,
+      reviewerName: _stringOrFallback(
+        json['reviewerName'],
+        fallback: 'Learner',
+      ),
+      rating: rating,
+      comment: _nullableString(json['comment']),
+      isViewerReview: json['isViewerReview'] == true,
+      createdAt: _dateTimeFromDynamic(json['createdAt']),
+      updatedAt: _dateTimeFromDynamic(json['updatedAt']),
+    );
+  }
+
   static String? _firstImageUrl(Object? raw) {
     if (raw is! List || raw.isEmpty) {
       return null;
@@ -348,6 +407,14 @@ class LearningHubApiMapper {
 
     if (value is String) {
       return double.tryParse(value);
+    }
+
+    return null;
+  }
+
+  static DateTime? _dateTimeFromDynamic(Object? value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value.trim());
     }
 
     return null;

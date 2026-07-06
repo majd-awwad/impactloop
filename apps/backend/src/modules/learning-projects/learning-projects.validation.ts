@@ -22,6 +22,23 @@ export const learningProjectIdParamSchema = z.object({
   id: z.string().trim().uuid(),
 });
 
+export const projectReviewSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  comment: z
+    .string()
+    .trim()
+    .max(1200)
+    .optional()
+    .nullable()
+    .transform((value) => {
+      if (!value) {
+        return null;
+      }
+
+      return value.length === 0 ? null : value;
+    }),
+});
+
 const submitComponentSchema = z.object({
   name: z.string().trim().min(1).max(200),
   quantity: z.number().positive().max(99999).optional(),
@@ -54,6 +71,7 @@ export const submitLearningProjectSchema = z.object({
 });
 
 export type LearningProjectsQuery = z.infer<typeof learningProjectsQuerySchema>;
+export type ProjectReviewInput = z.infer<typeof projectReviewSchema>;
 export type SubmitLearningProjectInput = z.infer<
   typeof submitLearningProjectSchema
 >;

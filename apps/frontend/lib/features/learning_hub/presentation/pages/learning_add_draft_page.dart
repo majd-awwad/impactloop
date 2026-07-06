@@ -21,7 +21,6 @@ import '../../application/learning_hub_providers.dart';
 import '../../data/learning_project_draft_storage.dart';
 import '../../domain/models/learning_project.dart';
 import '../theme/learning_ui_palette.dart';
-import '../widgets/disabled_ai_panel.dart';
 
 class LearningAddDraftPage extends ConsumerStatefulWidget {
   const LearningAddDraftPage({super.key});
@@ -775,7 +774,7 @@ class _SupportColumn extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        const DisabledAiPanel(compact: true),
+        const _DraftReviewScopePanel(),
         const SizedBox(height: AppSpacing.lg),
         OutlinedButton.icon(
           onPressed: onBack,
@@ -788,6 +787,35 @@ class _SupportColumn extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DraftReviewScopePanel extends StatelessWidget {
+  const _DraftReviewScopePanel();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return _LearningPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.fact_check_outlined, color: palette.lime),
+          const SizedBox(height: AppSpacing.md),
+          _SectionHeading(
+            title: const LocalizedText(
+              en: 'What happens after submit?',
+              ar: 'ماذا يحدث بعد الإرسال؟',
+            ),
+            subtitle: const LocalizedText(
+              en: 'Your draft enters the project review queue. Once approved, it becomes visible in Learning Hub for browsing, ratings, likes, saves, and future build workflows.',
+              ar: 'تدخل مسودتك في قائمة مراجعة المشاريع. بعد الموافقة، تظهر في مركز التعلم للتصفح والتقييمات والإعجابات والحفظ ومسارات البناء القادمة.',
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
