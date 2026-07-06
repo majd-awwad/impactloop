@@ -11,8 +11,10 @@ import type {
 
 import {
   emptyDashboardStats,
+  emptyProjectSupportStats,
   normalizeVerificationStatus,
 } from "./dto/supplier-dashboard.dto.js";
+import { getSupplierProjectSupportSummary } from "./supplier-project-impact.js";
 
 import { AppError } from "../../utils/app-error.js";
 import { env } from "../../config/env.js";
@@ -331,6 +333,7 @@ export const getSupplierDashboard = async (
     scheduledPickups,
     mostViewedMaterial,
     highDemandMaterials,
+    projectSupport,
   ] = await Promise.all([
     supplierRepository.countMaterialsByStatus(scope),
     supplierRepository.countReservationsByStatus(userId),
@@ -349,6 +352,7 @@ export const getSupplierDashboard = async (
     supplierRepository.countScheduledPickups(userId),
     supplierRepository.findMostViewedMaterial(scope),
     supplierRepository.findHighDemandMaterials(scope),
+    getSupplierProjectSupportSummary(userId),
   ]);
 
   if (env.nodeEnv !== "production") {
@@ -475,6 +479,7 @@ export const getSupplierDashboard = async (
       hasSupplierProfile: false,
       message: MISSING_PROFILE_MESSAGE,
       stats,
+      projectSupport,
       recentMaterials: recentMaterialsDto,
       upcomingPickups: upcomingPickupsDto,
       recentActivity,
@@ -516,6 +521,7 @@ export const getSupplierDashboard = async (
       organization,
     },
     stats,
+    projectSupport,
     recentMaterials: recentMaterialsDto,
     upcomingPickups: upcomingPickupsDto,
     recentActivity,
@@ -829,6 +835,7 @@ export const getEmptySupplierDashboard = (): SupplierDashboardDto => ({
   hasSupplierProfile: false,
   message: MISSING_PROFILE_MESSAGE,
   stats: emptyDashboardStats(),
+  projectSupport: emptyProjectSupportStats(),
   recentMaterials: [],
   upcomingPickups: [],
   recentActivity: [],
