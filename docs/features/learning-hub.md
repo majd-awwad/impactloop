@@ -11,7 +11,7 @@ Browse educational project ideas (components, steps, links) for inspiration. The
 | Layer | Status | Notes |
 |-------|--------|-------|
 | Backend `learning-projects` | **Implemented** | Public read list + detail (`PUBLISHED` only in repository), learner likes/saves/follows, and learner submit |
-| Flutter list/detail pages | **Partial** | `/learning` and `/learning/:id` use `ApiLearningHubRepository` + Riverpod providers; browse exposes category, search, optional `q` route search prefill, difficulty, tag filters, server-side page navigation, saved/followed tabs for learners, in-card engagement controls, rating summaries, and viewer saved/followed state |
+| Flutter list/detail pages | **Partial** | `/learning` and `/learning/:id` use `ApiLearningHubRepository` + Riverpod providers; browse exposes category, search, optional `q` route search prefill, difficulty, sanitized tag filters, server-side page navigation, saved/followed tabs for learners, in-card engagement controls, rating summaries, and viewer saved/followed state |
 | Home learning spotlight | **Implemented** | Reuses `learningProjectsProvider` with `limit: 2` on `/home` |
 | Project likes | **Implemented** | List/home/detail surfaces have optimistic learner-only like/unlike controls backed by `POST`/`DELETE /api/learning-projects/:id/like` |
 | Project saves | **Implemented** | List/home/detail surfaces have optimistic learner-only save/unsave controls backed by `POST`/`DELETE /api/learning-projects/:id/save` |
@@ -33,7 +33,7 @@ Product intent from role planning: the learning hub should support persisted pro
 2. Page loads published projects from `GET /api/learning-projects` via `learningProjectsProvider`; optional `/learning?q=<search>` pre-fills the search box and initial query.
 3. Category chips filter by `categoryId` using `GET /api/categories?type=PROJECT`; search, difficulty, and tag filters use the existing learning projects query params.
 4. Optional: switch between **All projects**, **Saved**, and **Following** tabs. Saved/followed tabs require an authenticated learner and call `GET /api/learning-projects/me/saved` or `GET /api/learning-projects/me/followed` with the same filters.
-5. First list item on page 1 is shown as featured only in **All projects**; remaining items render in the grid. Later pages and saved/followed tabs render as paginated grids.
+5. **Project of the week** is hidden unless a project DTO explicitly carries a featured/spotlight flag. It is not inferred from latest/newest ordering. Later pages and saved/followed tabs render as paginated grids.
 6. Next/previous pagination changes the `page` query sent to the active list endpoint while preserving active filters.
 7. Tap project → `/learning/:id` → `learningProjectProvider(id)` loads detail from `GET /api/learning-projects/:id`; existing project links can be opened when they contain valid `http`/`https` URLs.
 8. Authenticated learners can like/unlike, save/unsave, and follow/unfollow from list, Home spotlight, and detail cards; they can review the project from detail. Guests are sent to login and non-learner roles get an info snackbar.
@@ -81,7 +81,7 @@ Repository filter: `status: 'PUBLISHED'` (`learning-projects.repository.ts`).
 | POST | `/api/learning-projects/submit` | JWT + LEARNER + `Idempotency-Key` | **Yes** — add-draft submit |
 | GET/PATCH | `/api/admin/learning-projects*` | JWT + ADMIN | **Yes** — admin moderation portal |
 
-Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. Saved/followed learner list endpoints support the same filters and return the same list response shape. List/detail DTOs include `likesCount`, `followersCount`, nullable `ratingSummary`, viewer-specific `isLiked`, viewer-specific `isSaved`, and viewer-specific `isFollowing`; detail also includes `recentReviews` and nullable `viewerReview`. Unauthenticated reads receive false engagement state and `viewerReview: null`. Flutter `/learning` exposes `page`, `q`, `categoryId`, `difficulty`, and tag chips derived from tags returned in the project list response.
+Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. Saved/followed learner list endpoints support the same filters and return the same list response shape. List/detail DTOs include `likesCount`, `followersCount`, nullable `ratingSummary`, viewer-specific `isLiked`, viewer-specific `isSaved`, and viewer-specific `isFollowing`; detail also includes `recentReviews` and nullable `viewerReview`. Unauthenticated reads receive false engagement state and `viewerReview: null`. Flutter `/learning` exposes `page`, `q`, `categoryId`, `difficulty`, and tag chips derived from tags returned in the project list response. Tag chips are UI-sanitized to hide internal/mock tags such as `mock`, `pagination`, `test`, and `project-01`, and are capped to a small visible set.
 
 ## Database tables
 
@@ -109,3 +109,4 @@ Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. 
 - Project moderation is admin-backed; a separate moderator portal/workspace is still **not implemented**.
 - AI material matching — **not implemented**.
 - Follow category, stored build progress, automatic material coverage, and in-hub booking from project components — **not implemented**.
+- Project of the week should return later as an explicit admin/moderator-selected spotlight feature; it is not currently selected from newest/latest project ordering.

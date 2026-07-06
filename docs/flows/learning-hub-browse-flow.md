@@ -14,7 +14,7 @@ Public API returns **PUBLISHED** projects only (`learning-projects.repository.ts
 
 ### User path
 
-1. Land on Learning Hub hero + category chips + search/difficulty/tag filters + list-mode tabs + featured card + project grid. Optional `/learning?q=<search>` opens with the search box pre-filled.
+1. Land on Learning Hub hero + category chips + search/difficulty/tag filters + list-mode tabs + project grid. Optional `/learning?q=<search>` opens with the search box pre-filled.
 2. Optional: tap a category chip → list refetches with `categoryId`.
 3. Optional: type a search term → list refetches with `q` after a short debounce.
 4. Optional: choose difficulty → list refetches with `difficulty`.
@@ -29,9 +29,9 @@ Public API returns **PUBLISHED** projects only (`learning-projects.repository.ts
 
 Category chips → `projectCategoriesProvider` → `GET /api/categories?type=PROJECT`.
 
-Tag chips are derived from the `tags` array already returned by the project list response. There is no separate tags endpoint.
+Tag chips are derived from the `tags` array already returned by the project list response. There is no separate tags endpoint. The UI hides internal/mock tags such as `mock`, `pagination`, `test`, and `project-01`, and caps the visible chip list.
 
-Featured project = first item on page 1 of **All projects** (not a backend field). Later pages and saved/followed tabs render as regular project grids.
+Project of the week renders only when a project DTO explicitly has a featured/spotlight flag. It is not inferred from the first/latest API result. Later pages and saved/followed tabs render as regular project grids.
 
 **No mock fallback** on API failure — error panel with retry (`ref.invalidate`).
 
@@ -210,6 +210,7 @@ Hub page controls fetch server pages beyond `page=1` while preserving active fil
 - Followed categories
 - Persisted build checklist / stored component coverage
 - Moderator project review UI / moderator workspace
+- Admin/moderator-selected Project of the week spotlight workflow
 
 ---
 

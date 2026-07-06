@@ -915,7 +915,7 @@ class _ProjectDetailDialog extends ConsumerStatefulWidget {
 }
 
 class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
-  late final Future<AdminLearningProjectDetail> _detailFuture;
+  late Future<AdminLearningProjectDetail> _detailFuture;
 
   @override
   void initState() {

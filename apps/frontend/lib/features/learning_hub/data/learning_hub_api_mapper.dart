@@ -51,6 +51,8 @@ class LearningHubApiMapper {
     final isSaved = json['isSaved'] == true;
     final followersCount = _intFromDynamic(json['followersCount']) ?? 0;
     final isFollowing = json['isFollowing'] == true;
+    final isFeatured =
+        json['isFeatured'] == true || json['isSpotlight'] == true;
     final tags = _mapTags(json['tags']);
     final recentReviews = includeDetailFields
         ? _mapProjectReviews(json['recentReviews'])
@@ -105,7 +107,7 @@ class LearningHubApiMapper {
       imageUrl: imageUrl,
       heroIconData: heroIconForCategory(categoryNameEn, id: id),
       cardGradient: gradientForCategory(categoryNameEn, id: id),
-      isFeatured: false,
+      isFeatured: isFeatured,
       likesCount: likesCount,
       isLiked: isLiked,
       isSaved: isSaved,
