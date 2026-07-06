@@ -355,9 +355,12 @@ Child tables: project_images, project_required_components, project_steps, projec
 | requiredComponentId | String | FK → project_required_components; cascade delete |
 | status | ProjectBuildItemStatus | default `MISSING` |
 | learnerNote | String? | Optional learner checklist note |
+| linkedMaterialId | String? | FK → materials; nullable learner-selected platform material |
+| linkedReservationId | String? | FK → reservations; reserved for future reservation-aware readiness |
+| linkedMaterialAt | DateTime? | When the learner linked the material |
 | createdAt, updatedAt | DateTime | |
 
-**Unique:** `(buildId, requiredComponentId)`. Stores manual checklist status per required component. Status is not automatically linked to materials, reservations, or AI matching.
+**Unique:** `(buildId, requiredComponentId)`. Stores manual checklist status per required component plus optional per-learner material link. Linking a material does not automatically mark the item ready.
 
 ---
 

@@ -13,6 +13,7 @@ import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project.dart';
 import '../../domain/models/project_build.dart';
 import '../theme/learning_ui_palette.dart';
+import '../widgets/project_build_material_linking.dart';
 
 class LearningProjectBuildPage extends ConsumerStatefulWidget {
   const LearningProjectBuildPage({super.key, required this.projectId});
@@ -139,6 +140,57 @@ class _LearningProjectBuildPageState
     );
   }
 
+  Future<void> _showMaterialCandidates(ProjectBuildItem item) async {
+    final repository = ref.read(learningHubRepositoryProvider);
+    final build = await ProjectBuildMaterialCandidatesSheet.show(
+      context,
+      projectId: widget.projectId,
+      item: item,
+      onLoadCandidates: () =>
+          repository.fetchMaterialCandidates(widget.projectId, item.id),
+      onLinkMaterial: (materialId) => repository.linkMaterial(
+        widget.projectId,
+        item.id,
+        materialId: materialId,
+      ),
+    );
+
+    if (!mounted || build == null) {
+      return;
+    }
+
+    setState(() => _buildOverride = build);
+    ref.invalidate(projectBuildProvider(widget.projectId));
+  }
+
+  Future<void> _unlinkMaterial(ProjectBuildItem item) async {
+    setState(() => _updatingItemIds.add(item.id));
+    try {
+      final build = await ref
+          .read(learningHubRepositoryProvider)
+          .unlinkMaterial(widget.projectId, item.id);
+      setState(() => _buildOverride = build);
+      ref.invalidate(projectBuildProvider(widget.projectId));
+    } catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _updatingItemIds.remove(item.id));
+      }
+    }
+  }
+
+  void _viewLinkedMaterial(ProjectBuildItem item) {
+    final materialId = item.linkedMaterial?.id;
+    if (materialId == null) {
+      return;
+    }
+
+    context.go('/materials/$materialId');
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
@@ -156,11 +208,15 @@ class _LearningProjectBuildPageState
                 loading: () => _buildOverride == null
                     ? const Center(child: CircularProgressIndicator())
                     : _BuildContent(
+                        projectId: widget.projectId,
                         buildRecord: _buildOverride!,
                         updatingItemIds: _updatingItemIds,
                         onStatusChanged: _updateItem,
                         onEditNote: _editNote,
                         onFindMaterials: _findMaterials,
+                        onShowMaterialCandidates: _showMaterialCandidates,
+                        onUnlinkMaterial: _unlinkMaterial,
+                        onViewLinkedMaterial: _viewLinkedMaterial,
                       ),
                 error: (error, stackTrace) => _BuildStatePanel(
                   icon: Icons.cloud_off_outlined,
@@ -185,11 +241,15 @@ class _LearningProjectBuildPageState
                   }
 
                   return _BuildContent(
+                    projectId: widget.projectId,
                     buildRecord: build,
                     updatingItemIds: _updatingItemIds,
                     onStatusChanged: _updateItem,
                     onEditNote: _editNote,
                     onFindMaterials: _findMaterials,
+                    onShowMaterialCandidates: _showMaterialCandidates,
+                    onUnlinkMaterial: _unlinkMaterial,
+                    onViewLinkedMaterial: _viewLinkedMaterial,
                   );
                 },
               ),
@@ -203,13 +263,18 @@ class _LearningProjectBuildPageState
 
 class _BuildContent extends StatelessWidget {
   const _BuildContent({
+    required this.projectId,
     required this.buildRecord,
     required this.updatingItemIds,
     required this.onStatusChanged,
     required this.onEditNote,
     required this.onFindMaterials,
+    required this.onShowMaterialCandidates,
+    required this.onUnlinkMaterial,
+    required this.onViewLinkedMaterial,
   });
 
+  final String projectId;
   final ProjectBuild buildRecord;
   final Set<String> updatingItemIds;
   final Future<void> Function(
@@ -220,6 +285,9 @@ class _BuildContent extends StatelessWidget {
   onStatusChanged;
   final ValueChanged<ProjectBuildItem> onEditNote;
   final ValueChanged<ProjectBuildItem> onFindMaterials;
+  final ValueChanged<ProjectBuildItem> onShowMaterialCandidates;
+  final ValueChanged<ProjectBuildItem> onUnlinkMaterial;
+  final ValueChanged<ProjectBuildItem> onViewLinkedMaterial;
 
   @override
   Widget build(BuildContext context) {
@@ -254,6 +322,10 @@ class _BuildContent extends StatelessWidget {
                           onStatusChanged(item, status: status),
                       onEditNote: () => onEditNote(item),
                       onFindMaterials: () => onFindMaterials(item),
+                      onShowMaterialCandidates: () =>
+                          onShowMaterialCandidates(item),
+                      onUnlinkMaterial: () => onUnlinkMaterial(item),
+                      onViewLinkedMaterial: () => onViewLinkedMaterial(item),
                     ),
                   );
                 }),
@@ -338,6 +410,9 @@ class _BuildItemCard extends StatelessWidget {
     required this.onStatusChanged,
     required this.onEditNote,
     required this.onFindMaterials,
+    required this.onShowMaterialCandidates,
+    required this.onUnlinkMaterial,
+    required this.onViewLinkedMaterial,
   });
 
   final int index;
@@ -346,6 +421,9 @@ class _BuildItemCard extends StatelessWidget {
   final ValueChanged<ProjectBuildItemStatus> onStatusChanged;
   final VoidCallback onEditNote;
   final VoidCallback onFindMaterials;
+  final VoidCallback onShowMaterialCandidates;
+  final VoidCallback onUnlinkMaterial;
+  final VoidCallback onViewLinkedMaterial;
 
   @override
   Widget build(BuildContext context) {
@@ -414,6 +492,15 @@ class _BuildItemCard extends StatelessWidget {
                 _BuildStatusChip(status: item.status),
             ],
           ),
+          if (!item.isReadyForBuild) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              item.readinessLabel,
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary, height: 1.35),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           Wrap(
             spacing: AppSpacing.sm,
@@ -470,15 +557,36 @@ class _BuildItemCard extends StatelessWidget {
               ),
             ),
           ],
+          if (item.linkedMaterial != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            ProjectBuildLinkedMaterialPanel(
+              material: item.linkedMaterial!,
+              linkedReservation: item.linkedReservation,
+              isReadyForBuild: item.isReadyForBuild,
+              readinessLabel: item.readinessLabel,
+              isBusy: isUpdating,
+              onViewMaterial: onViewLinkedMaterial,
+              onUnlink: onUnlinkMaterial,
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
+              FilledButton.tonalIcon(
+                onPressed: isUpdating ? null : onShowMaterialCandidates,
+                icon: const Icon(Icons.playlist_add_check_circle_outlined),
+                label: Text(
+                  item.linkedMaterial == null
+                      ? 'Browse matching materials'
+                      : 'Change material option',
+                ),
+              ),
               OutlinedButton.icon(
                 onPressed: isUpdating ? null : onFindMaterials,
-                icon: const Icon(Icons.search_rounded),
-                label: const Text('Find materials'),
+                icon: const Icon(Icons.travel_explore_rounded),
+                label: const Text('Browse all materials'),
               ),
               TextButton.icon(
                 onPressed: isUpdating ? null : onEditNote,

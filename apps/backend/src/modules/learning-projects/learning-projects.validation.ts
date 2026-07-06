@@ -102,6 +102,10 @@ export const updateProjectBuildItemSchema = z.object({
     }),
 });
 
+export const linkBuildItemMaterialSchema = z.object({
+  materialId: z.string().trim().min(1),
+});
+
 export type LearningProjectsQuery = z.infer<typeof learningProjectsQuerySchema>;
 export type ProjectReviewInput = z.infer<typeof projectReviewSchema>;
 export type SubmitLearningProjectInput = z.infer<

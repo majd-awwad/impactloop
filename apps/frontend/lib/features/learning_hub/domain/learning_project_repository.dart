@@ -30,6 +30,19 @@ abstract class LearningProjectRepository {
     String? learnerNote,
   });
 
+  Future<BuildMaterialCandidatesResult> fetchMaterialCandidates(
+    String projectId,
+    String itemId,
+  );
+
+  Future<ProjectBuild> linkMaterial(
+    String projectId,
+    String itemId, {
+    required String materialId,
+  });
+
+  Future<ProjectBuild> unlinkMaterial(String projectId, String itemId);
+
   Future<List<MaterialCategory>> fetchProjectCategories();
 
   Future<ProjectEngagement> likeProject(String id);

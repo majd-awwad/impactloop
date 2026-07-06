@@ -10,18 +10,21 @@ import { validateIdempotencyKey } from '../../services/idempotency.service.js';
 import {
   deleteLearningProjectReviewById,
   followLearningProjectById,
+  getBuildItemMaterialCandidatesById,
   getFollowedLearningProjects,
   getLearningProjectById,
   getLearningProjects,
   getMyProjectBuildById,
   getSavedLearningProjects,
   likeLearningProjectById,
+  linkBuildItemMaterialById,
   reviewLearningProjectById,
   saveLearningProjectById,
   startProjectBuildById,
   submitLearningProjectForReview,
   unlikeLearningProjectById,
   unfollowLearningProjectById,
+  unlinkBuildItemMaterialById,
   unsaveLearningProjectById,
   updateProjectBuildItemById,
 } from './learning-projects.service.js';
@@ -117,6 +120,54 @@ export const updateProjectBuildItem = async (
   );
 
   res.json(successResponse('Project build item updated successfully', build));
+};
+
+export const getBuildItemMaterialCandidates = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, itemId } = readValidatedParams<{ id: string; itemId: string }>(
+    req,
+  );
+  const result = await getBuildItemMaterialCandidatesById(
+    id,
+    req.auth!.sub,
+    itemId,
+  );
+
+  res.json(
+    successResponse('Material candidates fetched successfully', result),
+  );
+};
+
+export const linkBuildItemMaterial = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, itemId } = readValidatedParams<{ id: string; itemId: string }>(
+    req,
+  );
+  const { materialId } = req.body as { materialId: string };
+  const build = await linkBuildItemMaterialById(
+    id,
+    req.auth!.sub,
+    itemId,
+    materialId,
+  );
+
+  res.json(successResponse('Material linked successfully', build));
+};
+
+export const unlinkBuildItemMaterial = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, itemId } = readValidatedParams<{ id: string; itemId: string }>(
+    req,
+  );
+  const build = await unlinkBuildItemMaterialById(id, req.auth!.sub, itemId);
+
+  res.json(successResponse('Material unlinked successfully', build));
 };
 
 export const likeLearningProject = async (

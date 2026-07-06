@@ -293,6 +293,13 @@ class LearningHubApiMapper {
       ),
       status: _mapBuildItemStatus(json['status']),
       learnerNote: _nullableString(json['learnerNote']),
+      linkedMaterial: _mapLinkedMaterial(json['linkedMaterial']),
+      linkedReservation: _mapLinkedReservation(json['linkedReservation']),
+      isReadyForBuild: json['isReadyForBuild'] == true,
+      readinessLabel: _stringOrFallback(
+        json['readinessLabel'],
+        fallback: 'Still missing',
+      ),
       component: ProjectRequiredComponentItem(
         id: _stringOrFallback(componentJson['id'], fallback: ''),
         name: LocalizedText(en: name, ar: name),
@@ -307,6 +314,121 @@ class LearningHubApiMapper {
         categoryId: _nullableString(componentJson['categoryId']),
         notes: _nullableString(componentJson['notes']),
       ),
+    );
+  }
+
+  static LinkedMaterialSummary? _mapLinkedMaterial(Object? raw) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+
+    final id = _stringOrFallback(json['id'], fallback: '');
+    if (id.isEmpty) {
+      return null;
+    }
+
+    final category = _asMap(json['category']);
+    return LinkedMaterialSummary(
+      id: id,
+      title: _stringOrFallback(json['title'], fallback: 'Material'),
+      imageUrl: _nullableString(json['imageUrl']),
+      categoryNameEn: _stringOrFallback(
+        category?['nameEn'],
+        fallback: 'Material',
+      ),
+      condition: _stringOrFallback(json['condition'], fallback: 'GOOD'),
+      status: _stringOrFallback(json['status'], fallback: 'AVAILABLE'),
+      isPubliclyAvailable: json['isPubliclyAvailable'] != false,
+      availabilityWarning: _nullableString(json['availabilityWarning']),
+      isFree: json['isFree'] == true,
+      price: _numberFromDynamic(json['price']),
+      currency: _stringOrFallback(json['currency'], fallback: 'NIS'),
+      supplierName: _stringOrFallback(
+        json['supplierName'],
+        fallback: 'Supplier',
+      ),
+      supplierType: _nullableString(json['supplierType']),
+      supplierVerified: json['supplierVerified'] == true,
+      city: _stringOrFallback(json['city'], fallback: ''),
+      area: _nullableString(json['area']),
+      pickupAllowed: json['pickupAllowed'] != false,
+      deliveryAllowed: json['deliveryAllowed'] == true,
+    );
+  }
+
+  static LinkedReservationSummary? _mapLinkedReservation(Object? raw) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+
+    final id = _stringOrFallback(json['id'], fallback: '');
+    if (id.isEmpty) {
+      return null;
+    }
+
+    return LinkedReservationSummary(
+      id: id,
+      status: _stringOrFallback(json['status'], fallback: ''),
+      materialId: _stringOrFallback(json['materialId'], fallback: ''),
+      needsAction: json['needsAction'] == true,
+      statusLabel: _stringOrFallback(json['statusLabel'], fallback: ''),
+    );
+  }
+
+  static BuildMaterialCandidatesResult fromMaterialCandidatesJson(
+    Map<String, dynamic> json,
+  ) {
+    final itemsJson = json['items'];
+    final items = itemsJson is List
+        ? itemsJson
+              .whereType<Map>()
+              .map(
+                (item) =>
+                    _mapMaterialCandidate(Map<String, dynamic>.from(item)),
+              )
+              .toList(growable: false)
+        : const <BuildMaterialCandidate>[];
+
+    return BuildMaterialCandidatesResult(
+      itemId: _stringOrFallback(json['itemId'], fallback: ''),
+      componentId: _stringOrFallback(json['componentId'], fallback: ''),
+      searchTerm: _stringOrFallback(json['searchTerm'], fallback: ''),
+      items: items,
+    );
+  }
+
+  static BuildMaterialCandidate _mapMaterialCandidate(
+    Map<String, dynamic> json,
+  ) {
+    final hintsJson = json['matchHints'];
+    final hints = hintsJson is List
+        ? hintsJson.whereType<String>().toList(growable: false)
+        : const <String>[];
+
+    return BuildMaterialCandidate(
+      id: _stringOrFallback(json['id'], fallback: ''),
+      title: _stringOrFallback(json['title'], fallback: 'Material'),
+      imageUrl: _nullableString(json['imageUrl']),
+      categoryNameEn: _stringOrFallback(
+        _asMap(json['category'])?['nameEn'],
+        fallback: 'Material',
+      ),
+      condition: _stringOrFallback(json['condition'], fallback: 'GOOD'),
+      status: _stringOrFallback(json['status'], fallback: 'AVAILABLE'),
+      isFree: json['isFree'] == true,
+      price: _numberFromDynamic(json['price']),
+      currency: _stringOrFallback(json['currency'], fallback: 'NIS'),
+      supplierName: _stringOrFallback(
+        json['supplierName'],
+        fallback: 'Supplier',
+      ),
+      city: _stringOrFallback(json['city'], fallback: ''),
+      area: _nullableString(json['area']),
+      pickupAllowed: json['pickupAllowed'] != false,
+      deliveryAllowed: json['deliveryAllowed'] == true,
+      matchHints: hints,
     );
   }
 

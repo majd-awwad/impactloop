@@ -1,4 +1,7 @@
 import 'learning_project.dart';
+import 'project_build_material_link.dart';
+
+export 'project_build_material_link.dart';
 
 enum ProjectBuildStatus { inProgress, completed, archived }
 
@@ -54,7 +57,11 @@ class ProjectBuildItem {
     required this.requiredComponentId,
     required this.status,
     required this.component,
+    required this.isReadyForBuild,
+    required this.readinessLabel,
     this.learnerNote,
+    this.linkedMaterial,
+    this.linkedReservation,
   });
 
   final String id;
@@ -62,6 +69,10 @@ class ProjectBuildItem {
   final ProjectBuildItemStatus status;
   final ProjectRequiredComponentItem component;
   final String? learnerNote;
+  final LinkedMaterialSummary? linkedMaterial;
+  final LinkedReservationSummary? linkedReservation;
+  final bool isReadyForBuild;
+  final String readinessLabel;
 }
 
 class ProjectBuild {

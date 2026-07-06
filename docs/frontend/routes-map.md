@@ -83,8 +83,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
 | `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, category filters, saved/followed learner tabs, and server-side page navigation; optional `q` query pre-fills search; add-draft submits for review; manual build checklist is persisted; AI material matching is not implemented |
 | `/learning/add-draft` | `LearningAddDraftPage` | learner | Learner project submission form; posts to `/api/learning-projects/submit` |
-| `/learning/:id/build` | `LearningProjectBuildPage` | learner | Persisted manual project build checklist; status/note updates use `/api/learning-projects/:id/builds/me/items/:itemId`; no AI/material matching |
-| `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail with start/continue build action and material-search handoff |
+| `/learning/:id/build` | `LearningProjectBuildPage` | learner | Persisted manual project build checklist with per-item material candidates, link/unlink, and linked-material panel; no AI matching or auto-reservation |
+| `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail with start/continue build action |
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default; optional `q` query pre-fills search |
 | `/materials/:id` | `MaterialDetailsPage` | public | API-backed default |
 | `/login` | `LoginPage` | public | `_AuthPageGuard` |

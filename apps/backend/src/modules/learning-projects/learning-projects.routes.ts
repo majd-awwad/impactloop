@@ -11,9 +11,11 @@ import { asyncHandler } from '../../utils/async-handler.js';
 import {
   deleteLearningProjectReview,
   followLearningProject,
+  getBuildItemMaterialCandidates,
   getLearningProject,
   getMyProjectBuild,
   likeLearningProject,
+  linkBuildItemMaterial,
   listFollowedLearningProjects,
   listLearningProjects,
   listSavedLearningProjects,
@@ -23,12 +25,14 @@ import {
   submitLearningProject,
   unlikeLearningProject,
   unfollowLearningProject,
+  unlinkBuildItemMaterial,
   unsaveLearningProject,
   updateProjectBuildItem,
 } from './learning-projects.controller.js';
 import {
   learningProjectIdParamSchema,
   learningProjectsQuerySchema,
+  linkBuildItemMaterialSchema,
   projectBuildItemParamSchema,
   projectReviewSchema,
   submitLearningProjectSchema,
@@ -91,6 +95,31 @@ learningProjectsRouter.patch(
   validate(projectBuildItemParamSchema, 'params'),
   validate(updateProjectBuildItemSchema),
   asyncHandler(updateProjectBuildItem),
+);
+
+learningProjectsRouter.get(
+  '/:id/builds/me/items/:itemId/material-candidates',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectBuildItemParamSchema, 'params'),
+  asyncHandler(getBuildItemMaterialCandidates),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/items/:itemId/link-material',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectBuildItemParamSchema, 'params'),
+  validate(linkBuildItemMaterialSchema),
+  asyncHandler(linkBuildItemMaterial),
+);
+
+learningProjectsRouter.delete(
+  '/:id/builds/me/items/:itemId/link-material',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectBuildItemParamSchema, 'params'),
+  asyncHandler(unlinkBuildItemMaterial),
 );
 
 learningProjectsRouter.post(

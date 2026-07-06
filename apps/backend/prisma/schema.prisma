@@ -837,15 +837,22 @@ model ProjectBuildItem {
   requiredComponentId String                   @map("required_component_id")
   status              ProjectBuildItemStatus   @default(MISSING)
   learnerNote         String?                  @map("learner_note")
+  linkedMaterialId    String?                  @map("linked_material_id")
+  linkedReservationId String?                  @map("linked_reservation_id")
+  linkedMaterialAt    DateTime?                @map("linked_material_at")
   createdAt           DateTime                 @default(now()) @map("created_at")
   updatedAt           DateTime                 @updatedAt @map("updated_at")
   build               ProjectBuild             @relation(fields: [buildId], references: [id], onDelete: Cascade)
   requiredComponent   ProjectRequiredComponent @relation(fields: [requiredComponentId], references: [id], onDelete: Cascade)
+  linkedMaterial      Material?                @relation("ProjectBuildLinkedMaterial", fields: [linkedMaterialId], references: [id], onDelete: SetNull)
+  linkedReservation   Reservation?             @relation("ProjectBuildLinkedReservation", fields: [linkedReservationId], references: [id], onDelete: SetNull)
 
   @@unique([buildId, requiredComponentId])
   @@index([buildId])
   @@index([requiredComponentId])
   @@index([status])
+  @@index([linkedMaterialId])
+  @@index([linkedReservationId])
   @@map("project_build_items")
 }
 
@@ -899,6 +906,7 @@ model Material {
   reports                       MaterialReport[]
   likes                         MaterialLike[]
   views                         MaterialView[]
+  linkedFromProjectBuildItems   ProjectBuildItem[] @relation("ProjectBuildLinkedMaterial")
 
   @@index([ownerId])
   @@index([moderatedById])
@@ -1036,6 +1044,7 @@ model Reservation {
   statusHistory                     ReservationStatusHistory[]
   messages                          ReservationMessage[]
   noShowReports                     NoShowReport[]
+  linkedFromProjectBuildItems       ProjectBuildItem[]           @relation("ProjectBuildLinkedReservation")
 
   @@index([ownerId])
   @@index([requesterId])

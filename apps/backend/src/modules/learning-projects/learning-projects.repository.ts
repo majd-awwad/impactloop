@@ -214,6 +214,66 @@ const projectBuildInclude = {
   },
   items: {
     include: {
+      linkedMaterial: {
+        select: {
+          id: true,
+          title: true,
+          condition: true,
+          status: true,
+          isFree: true,
+          price: true,
+          currency: true,
+          pickupAllowed: true,
+          deliveryAllowed: true,
+          ownerId: true,
+          materialType: true,
+          category: {
+            select: {
+              id: true,
+              nameEn: true,
+              nameAr: true,
+            },
+          },
+          location: {
+            select: {
+              city: true,
+              area: true,
+            },
+          },
+          images: {
+            orderBy: [{ isCover: 'desc' as const }, { sortOrder: 'asc' as const }],
+            take: 1,
+            select: {
+              imageUrl: true,
+              isCover: true,
+            },
+          },
+          supplierProfile: {
+            select: {
+              publicName: true,
+              supplierType: true,
+              verificationStatus: true,
+              user: {
+                select: {
+                  displayName: true,
+                },
+              },
+            },
+          },
+          owner: {
+            select: {
+              displayName: true,
+            },
+          },
+        },
+      },
+      linkedReservation: {
+        select: {
+          id: true,
+          status: true,
+          materialId: true,
+        },
+      },
       requiredComponent: {
         select: {
           id: true,
@@ -226,6 +286,7 @@ const projectBuildInclude = {
           isRequired: true,
           canBeSubstituted: true,
           notes: true,
+          searchKeywords: true,
           category: {
             select: {
               id: true,
@@ -475,6 +536,131 @@ export const updateProjectBuildItem = async (input: {
       where: {
         id: item.buildId,
       },
+      include: projectBuildInclude,
+    });
+  });
+};
+
+export const findLearnerBuildItem = async (input: {
+  projectId: string;
+  learnerId: string;
+  itemId: string;
+}) =>
+  prisma.projectBuildItem.findFirst({
+    where: {
+      id: input.itemId,
+      build: {
+        projectId: input.projectId,
+        learnerId: input.learnerId,
+        project: {
+          is: publicProjectWhere,
+        },
+      },
+    },
+    include: {
+      requiredComponent: {
+        select: {
+          id: true,
+          categoryId: true,
+          componentName: true,
+          materialType: true,
+          searchKeywords: true,
+        },
+      },
+      linkedReservation: {
+        select: {
+          id: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+export const linkBuildItemMaterial = async (input: {
+  projectId: string;
+  learnerId: string;
+  itemId: string;
+  materialId: string;
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const item = await tx.projectBuildItem.findFirst({
+      where: {
+        id: input.itemId,
+        build: {
+          projectId: input.projectId,
+          learnerId: input.learnerId,
+          project: {
+            is: publicProjectWhere,
+          },
+        },
+      },
+      select: {
+        id: true,
+        buildId: true,
+        linkedMaterialId: true,
+      },
+    });
+
+    if (!item) {
+      return null;
+    }
+
+    await tx.projectBuildItem.update({
+      where: { id: item.id },
+      data: {
+        linkedMaterialId: input.materialId,
+        linkedMaterialAt: new Date(),
+      },
+    });
+
+    return tx.projectBuild.findUnique({
+      where: { id: item.buildId },
+      include: projectBuildInclude,
+    });
+  });
+};
+
+export const unlinkBuildItemMaterial = async (input: {
+  projectId: string;
+  learnerId: string;
+  itemId: string;
+  clearReservationLink: boolean;
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const item = await tx.projectBuildItem.findFirst({
+      where: {
+        id: input.itemId,
+        build: {
+          projectId: input.projectId,
+          learnerId: input.learnerId,
+          project: {
+            is: publicProjectWhere,
+          },
+        },
+      },
+      select: {
+        id: true,
+        buildId: true,
+      },
+    });
+
+    if (!item) {
+      return null;
+    }
+
+    await tx.projectBuildItem.update({
+      where: { id: item.id },
+      data: {
+        linkedMaterialId: null,
+        linkedMaterialAt: null,
+        ...(input.clearReservationLink
+          ? { linkedReservationId: null }
+          : {}),
+      },
+    });
+
+    return tx.projectBuild.findUnique({
+      where: { id: item.buildId },
       include: projectBuildInclude,
     });
   });

@@ -69,7 +69,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
   }
 
   Future<void> _restoreLocalDraft() async {
-    final draft = await ref.read(learningProjectDraftStorageProvider).readDraft();
+    final draft = await ref
+        .read(learningProjectDraftStorageProvider)
+        .readDraft();
     if (!mounted || draft == null) return;
 
     setState(() {
@@ -103,8 +105,8 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
   }
 
   LearningProjectDraftData _currentDraftData() {
-    final categories = ref.read(projectCategoriesProvider).value ??
-        const <MaterialCategory>[];
+    final categories =
+        ref.read(projectCategoriesProvider).value ?? const <MaterialCategory>[];
 
     return LearningProjectDraftData(
       title: _titleController.text,
@@ -128,8 +130,8 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
       return;
     }
 
-    final categories = ref.read(projectCategoriesProvider).value ??
-        const <MaterialCategory>[];
+    final categories =
+        ref.read(projectCategoriesProvider).value ?? const <MaterialCategory>[];
     final category = _selectedProjectCategory(categories);
     if (category == null) {
       showInfoSnackBar(
@@ -201,7 +203,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     return 'learning-submit-$suffix';
   }
 
-  MaterialCategory? _selectedProjectCategory(List<MaterialCategory> categories) {
+  MaterialCategory? _selectedProjectCategory(
+    List<MaterialCategory> categories,
+  ) {
     final selected = _selectedCategoryId?.trim();
     if (selected == null || selected.isEmpty) return null;
 
@@ -240,9 +244,10 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
   }
 
   List<Map<String, dynamic>> _parseSteps(String raw) {
-    final lines = raw.split('\n').map((line) => line.trim()).where(
-      (line) => line.isNotEmpty,
-    );
+    final lines = raw
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty);
     final steps = <Map<String, dynamic>>[];
     var index = 0;
     for (final line in lines) {
@@ -369,13 +374,15 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
                             categories: categories,
                             selectedCategoryId: selectedCategoryId,
                           );
-                          final side = _SupportColumn(onBack: () {
-                            if (context.canPop()) {
-                              context.pop();
-                            } else {
-                              context.go('/learning');
-                            }
-                          });
+                          final side = _SupportColumn(
+                            onBack: () {
+                              if (context.canPop()) {
+                                context.pop();
+                              } else {
+                                context.go('/learning');
+                              }
+                            },
+                          );
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -431,7 +438,10 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _SectionHeading(
-            title: const LocalizedText(en: 'Project basics', ar: '╪ث╪│╪د╪│┘è╪د╪ز ╪د┘┘à╪┤╪▒┘ê╪╣'),
+            title: const LocalizedText(
+              en: 'Project basics',
+              ar: '╪ث╪│╪د╪│┘è╪د╪ز ╪د┘┘à╪┤╪▒┘ê╪╣',
+            ),
             subtitle: const LocalizedText(
               en: 'Share enough detail for admin review and future learners.',
               ar: '╪ث╪╢┘ ╪ز┘╪د╪╡┘è┘ ┘â╪د┘┘è╪ر ┘┘à╪▒╪د╪ش╪╣╪ر ╪د┘╪ح╪»╪د╪▒╪ر ┘ê┘┘┘à╪ز╪╣┘┘à┘è┘ ┘╪د╪ص┘é╪د┘ï.',

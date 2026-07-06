@@ -135,10 +135,45 @@ class ApiLearningHubRepository implements LearningProjectRepository {
     return unwrapApiResponse(
       _client.patch<Map<String, dynamic>>(
         '$_basePath/$projectId/builds/me/items/$itemId',
-        data: {
-          'status': status.apiValue,
-          'learnerNote': learnerNote?.trim(),
-        },
+        data: {'status': status.apiValue, 'learnerNote': learnerNote?.trim()},
+      ),
+      LearningHubApiMapper.fromBuildJson,
+    );
+  }
+
+  @override
+  Future<BuildMaterialCandidatesResult> fetchMaterialCandidates(
+    String projectId,
+    String itemId,
+  ) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/items/$itemId/material-candidates',
+      ),
+      LearningHubApiMapper.fromMaterialCandidatesJson,
+    );
+  }
+
+  @override
+  Future<ProjectBuild> linkMaterial(
+    String projectId,
+    String itemId, {
+    required String materialId,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/items/$itemId/link-material',
+        data: {'materialId': materialId},
+      ),
+      LearningHubApiMapper.fromBuildJson,
+    );
+  }
+
+  @override
+  Future<ProjectBuild> unlinkMaterial(String projectId, String itemId) {
+    return unwrapApiResponse(
+      _client.delete<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/items/$itemId/link-material',
       ),
       LearningHubApiMapper.fromBuildJson,
     );

@@ -6,6 +6,14 @@ import {
 } from '../../services/idempotency.service.js';
 
 import * as learningProjectsRepository from './learning-projects.repository.js';
+import {
+  getBuildItemMaterialCandidates,
+  linkBuildItemMaterial,
+  mapLinkedMaterialSummary,
+  mapLinkedReservationSummary,
+  resolveBuildItemReadiness,
+  unlinkBuildItemMaterial,
+} from './learning-projects.build-material-linking.js';
 import type {
   LearningProjectsQuery,
   ProjectReviewInput,
@@ -190,17 +198,48 @@ const mapLearningProjectDetail = (
   createdAt: project.createdAt.toISOString(),
 });
 
-const BUILD_ITEM_READY_STATUSES = new Set([
-  'ALREADY_OWNED',
-  'AVAILABLE',
-  'ALTERNATIVE',
-]);
+const mapProjectBuildItem = (
+  item: ProjectBuildRecord['items'][number],
+) => {
+  const readiness = resolveBuildItemReadiness({
+    status: item.status,
+    linkedReservation: item.linkedReservation,
+    linkedMaterial: item.linkedMaterial,
+  });
 
-const isBuildItemReadyForBuild = (status: string) => BUILD_ITEM_READY_STATUSES.has(status);
+  return {
+    id: item.id,
+    requiredComponentId: item.requiredComponentId,
+    status: item.status,
+    learnerNote: item.learnerNote,
+    linkedMaterial: mapLinkedMaterialSummary(item.linkedMaterial),
+    linkedReservation: mapLinkedReservationSummary(item.linkedReservation),
+    isReadyForBuild: readiness.isReadyForBuild,
+    readinessLabel: readiness.readinessLabel,
+    component: {
+      id: item.requiredComponent.id,
+      categoryId: item.requiredComponent.categoryId,
+      category: item.requiredComponent.category
+        ? mapCategory(item.requiredComponent.category)
+        : null,
+      componentName: item.requiredComponent.componentName,
+      materialType: item.requiredComponent.materialType,
+      quantity: decimalToSerializable(item.requiredComponent.quantity),
+      unit: item.requiredComponent.unit,
+      componentRole: item.requiredComponent.componentRole,
+      isRequired: item.requiredComponent.isRequired,
+      canBeSubstituted: item.requiredComponent.canBeSubstituted,
+      notes: item.requiredComponent.notes,
+    },
+    createdAt: item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+  };
+};
 
 const mapProjectBuild = (build: ProjectBuildRecord) => {
-  const readyItems = build.items.filter((item) => isBuildItemReadyForBuild(item.status));
-  const totalItems = build.items.length;
+  const mappedItems = build.items.map((item) => mapProjectBuildItem(item));
+  const readyItems = mappedItems.filter((item) => item.isReadyForBuild);
+  const totalItems = mappedItems.length;
 
   return {
     id: build.id,
@@ -223,29 +262,7 @@ const mapProjectBuild = (build: ProjectBuildRecord) => {
       percent:
         totalItems === 0 ? 0 : Math.round((readyItems.length / totalItems) * 100),
     },
-    items: build.items.map((item) => ({
-      id: item.id,
-      requiredComponentId: item.requiredComponentId,
-      status: item.status,
-      learnerNote: item.learnerNote,
-      component: {
-        id: item.requiredComponent.id,
-        categoryId: item.requiredComponent.categoryId,
-        category: item.requiredComponent.category
-          ? mapCategory(item.requiredComponent.category)
-          : null,
-        componentName: item.requiredComponent.componentName,
-        materialType: item.requiredComponent.materialType,
-        quantity: decimalToSerializable(item.requiredComponent.quantity),
-        unit: item.requiredComponent.unit,
-        componentRole: item.requiredComponent.componentRole,
-        isRequired: item.requiredComponent.isRequired,
-        canBeSubstituted: item.requiredComponent.canBeSubstituted,
-        notes: item.requiredComponent.notes,
-      },
-      createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString(),
-    })),
+    items: mappedItems,
   };
 };
 
@@ -417,6 +434,72 @@ export const updateProjectBuildItemById = async (
   if (!build) {
     throw new AppError('Project build item not found', 404, 'NOT_FOUND');
   }
+
+  return mapProjectBuild(build);
+};
+
+export const getBuildItemMaterialCandidatesById = async (
+  projectId: string,
+  userId: string,
+  itemId: string,
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    projectId,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  return getBuildItemMaterialCandidates({
+    projectId,
+    learnerId: userId,
+    itemId,
+  });
+};
+
+export const linkBuildItemMaterialById = async (
+  projectId: string,
+  userId: string,
+  itemId: string,
+  materialId: string,
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    projectId,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  const build = await linkBuildItemMaterial({
+    projectId,
+    learnerId: userId,
+    itemId,
+    materialId,
+  });
+
+  return mapProjectBuild(build);
+};
+
+export const unlinkBuildItemMaterialById = async (
+  projectId: string,
+  userId: string,
+  itemId: string,
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    projectId,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  const build = await unlinkBuildItemMaterial({
+    projectId,
+    learnerId: userId,
+    itemId,
+  });
 
   return mapProjectBuild(build);
 };
