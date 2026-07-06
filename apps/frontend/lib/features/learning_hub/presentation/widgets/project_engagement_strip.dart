@@ -111,7 +111,7 @@ class _ProjectEngagementStripState
         return;
       }
 
-      ref.invalidate(learningProjectProvider(widget.project.id));
+      invalidateLearningHubEngagement(ref, widget.project.id);
       setState(() {
         _likesCount = result.likesCount;
         _isLiked = result.isLiked;
@@ -161,7 +161,7 @@ class _ProjectEngagementStripState
         return;
       }
 
-      ref.invalidate(learningProjectProvider(widget.project.id));
+      invalidateLearningHubEngagement(ref, widget.project.id);
       setState(() {
         _isSaved = result.isSaved;
       });
@@ -213,7 +213,7 @@ class _ProjectEngagementStripState
         return;
       }
 
-      ref.invalidate(learningProjectProvider(widget.project.id));
+      invalidateLearningHubEngagement(ref, widget.project.id);
       setState(() {
         _followersCount = result.followersCount;
         _isFollowing = result.isFollowing;

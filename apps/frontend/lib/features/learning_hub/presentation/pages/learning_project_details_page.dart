@@ -493,7 +493,7 @@ class _ProjectLikeButtonState extends ConsumerState<_ProjectLikeButton> {
         return;
       }
 
-      ref.invalidate(learningProjectProvider(widget.project.id));
+      invalidateLearningHubEngagement(ref, widget.project.id);
       setState(() {
         _likesCount = engagement.likesCount;
         _isLiked = engagement.isLiked;
@@ -649,7 +649,7 @@ class _ProjectSaveButtonState extends ConsumerState<_ProjectSaveButton> {
         return;
       }
 
-      ref.invalidate(learningProjectProvider(widget.project.id));
+      invalidateLearningHubEngagement(ref, widget.project.id);
       setState(() {
         _isSaved = saveStatus.isSaved;
       });
@@ -811,7 +811,7 @@ class _ProjectFollowButtonState extends ConsumerState<_ProjectFollowButton> {
         return;
       }
 
-      ref.invalidate(learningProjectProvider(widget.project.id));
+      invalidateLearningHubEngagement(ref, widget.project.id);
       setState(() {
         _followersCount = followStatus.followersCount;
         _isFollowing = followStatus.isFollowing;

@@ -44,3 +44,10 @@ final learningProjectProvider = FutureProvider.autoDispose
     .family<LearningProject?, String>((ref, id) async {
       return ref.watch(learningHubRepositoryProvider).fetchProjectById(id);
     });
+
+void invalidateLearningHubEngagement(WidgetRef ref, String projectId) {
+  ref.invalidate(learningProjectProvider(projectId));
+  ref.invalidate(learningProjectsProvider);
+  ref.invalidate(savedLearningProjectsProvider);
+  ref.invalidate(followedLearningProjectsProvider);
+}

@@ -82,7 +82,7 @@ Ratings are hidden when `ratingSummary` is null. When learner reviews exist, lis
 
 `LearningProjectDetailsPage` → `learningProjectProvider(id)` → `GET /api/learning-projects/:id` → mapper.
 
-The like, save, and follow pills use widget-local optimistic state on list, Home spotlight, and detail surfaces. Guests are routed to `/login?from=/learning/<id>`, non-learner authenticated users receive an info snackbar, and learners call repository `likeProject` / `unlikeProject` / `saveProject` / `unsaveProject` / `followProject` / `unfollowProject` methods. The reviews section uses repository `reviewProject` and `deleteProjectReview`, then invalidates `learningProjectProvider(id)`.
+The like, save, and follow pills use widget-local optimistic state on list, Home spotlight, and detail surfaces. Guests are routed to `/login?from=/learning/<id>`, non-learner authenticated users receive an info snackbar, and learners call repository `likeProject` / `unlikeProject` / `saveProject` / `unsaveProject` / `followProject` / `unfollowProject` methods. Successful engagement mutations invalidate `learningProjectProvider(id)`, `learningProjectsProvider`, `savedLearningProjectsProvider`, and `followedLearningProjectsProvider` so saved/followed tabs refetch after unsave/unfollow. The reviews section uses repository `reviewProject` and `deleteProjectReview`, then invalidates `learningProjectProvider(id)`.
 
 404 / missing published project → “Project not found” (not mock slug lookup).
 
