@@ -12,22 +12,27 @@ import {
   deleteLearningProjectReview,
   followLearningProject,
   getLearningProject,
+  getMyProjectBuild,
   likeLearningProject,
   listFollowedLearningProjects,
   listLearningProjects,
   listSavedLearningProjects,
   reviewLearningProject,
   saveLearningProject,
+  startProjectBuild,
   submitLearningProject,
   unlikeLearningProject,
   unfollowLearningProject,
   unsaveLearningProject,
+  updateProjectBuildItem,
 } from './learning-projects.controller.js';
 import {
   learningProjectIdParamSchema,
   learningProjectsQuerySchema,
+  projectBuildItemParamSchema,
   projectReviewSchema,
   submitLearningProjectSchema,
+  updateProjectBuildItemSchema,
 } from './learning-projects.validation.js';
 
 export const learningProjectsRouter = Router();
@@ -61,6 +66,31 @@ learningProjectsRouter.get(
   requireRoles('LEARNER'),
   validate(learningProjectsQuerySchema, 'query'),
   asyncHandler(listFollowedLearningProjects),
+);
+
+learningProjectsRouter.get(
+  '/:id/builds/me',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  asyncHandler(getMyProjectBuild),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/start',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  asyncHandler(startProjectBuild),
+);
+
+learningProjectsRouter.patch(
+  '/:id/builds/me/items/:itemId',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectBuildItemParamSchema, 'params'),
+  validate(updateProjectBuildItemSchema),
+  asyncHandler(updateProjectBuildItem),
 );
 
 learningProjectsRouter.post(

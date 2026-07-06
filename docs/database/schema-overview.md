@@ -166,6 +166,7 @@ Tables listed in [03-database.md](../03-database.md) but **absent** from current
 | `20260705130000_add_project_saves` | Private learner saves for published learning projects |
 | `20260705140000_add_project_follows` | Learner follows for published learning projects |
 | `20260706100000_add_project_user_reviews` | Learner ratings/reviews for published learning projects |
+| `20260707100000_add_project_build_checklists` | Learner manual build checklists for learning projects |
 
 ## Design rules (still valid from code)
 

@@ -88,7 +88,9 @@ The like, save, and follow pills use widget-local optimistic state on list, Home
 
 Invalid UUID → validation error panel with retry (not crash).
 
-The build checklist panel is frontend-local. Learners can start a checklist from project components and manually mark each component as `Available`, `Missing`, `Alternative`, `Already owned`, or `Reserved`. Each row has **Find materials**, which opens `/materials?q=<component name>` and lets the existing Materials Discovery search handle results. No project-build table, automatic coverage scoring, or AI matching is used.
+The build checklist panel reads learner build state only for authenticated learner sessions. **Start build** calls `POST /api/learning-projects/:id/builds/start`, then opens `/learning/:id/build`. Existing builds show **Continue checklist**. Guests are sent to `/login?from=/learning/<id>/build`; non-learner authenticated users receive an info snackbar.
+
+The build page fetches `GET /api/learning-projects/:id/builds/me`. If no build exists, the learner can start one. Checklist rows are initialized from required components and manually updated with `PATCH /api/learning-projects/:id/builds/me/items/:itemId`, body `{ status, learnerNote? }`. Supported statuses are `MISSING`, `ALREADY_OWNED`, `AVAILABLE`, `RESERVED`, and `ALTERNATIVE`; progress shows `ready/total` and counts only `ALREADY_OWNED`, `AVAILABLE`, and `ALTERNATIVE` as build-ready (`MISSING` and `RESERVED` are not ready). Each row has **Find materials**, which opens `/materials?q=<component name>` and lets the existing Materials Discovery search handle results. No AI matching, automatic coverage scoring, material linking, or reservation linking is used.
 
 **No mock fallback** on API failure.
 
@@ -104,13 +106,19 @@ The build checklist panel is frontend-local. Learners can start a checklist from
 
 `PUT /api/learning-projects/:id/review` / `DELETE /api/learning-projects/:id/review` — learner-only project review upsert/delete. Upsert body is `{ rating: 1..5, comment? }`; responses include the updated `ratingSummary`.
 
+`GET /api/learning-projects/:id/builds/me` — learner-only current build checklist; returns `data: null` when the learner has not started the build yet.
+
+`POST /api/learning-projects/:id/builds/start` — learner-only idempotent start; creates one build per learner/project and initializes checklist items from required components.
+
+`PATCH /api/learning-projects/:id/builds/me/items/:itemId` — learner-only manual status/note update; returns the refreshed build checklist.
+
 ### Database changes
 
-Like/unlike writes `project_likes`; save/unsave writes `project_saves`; follow/unfollow writes `project_follows`; review upsert/delete writes `project_user_reviews`.
+Like/unlike writes `project_likes`; save/unsave writes `project_saves`; follow/unfollow writes `project_follows`; review upsert/delete writes `project_user_reviews`; build start/update writes `project_builds` and `project_build_items`.
 
 ### Success state
 
-Detail sections render from API DTOs (components, steps, links, images, review summary/recent reviews). Project links use `url_launcher` for valid `http`/`https` URLs; invalid or missing URLs render disabled. Like count, save state, and follow count/state update optimistically on card/detail controls and then reconcile to the server response. Review create/update/delete refreshes the detail provider after success. Checklist state stays in the mounted detail page and resets on navigation/refresh.
+Detail sections render from API DTOs (components, steps, links, images, review summary/recent reviews). Project links use `url_launcher` for valid `http`/`https` URLs; invalid or missing URLs render disabled. Like count, save state, and follow count/state update optimistically on card/detail controls and then reconcile to the server response. Review create/update/delete refreshes the detail provider after success. Checklist state persists across refresh because it is backend-backed per learner/project.
 
 ### Error states
 
@@ -122,7 +130,7 @@ Detail sections render from API DTOs (components, steps, links, images, review s
 
 ### Files involved
 
-`learning_project_details_page.dart`, `learning_hub_providers.dart`, `api_learning_hub_repository.dart`, `project_components_section.dart`, `project_build_actions_panel.dart`, `project_reviews_section.dart`, `project_steps_timeline.dart`, `project_link_list.dart`
+`learning_project_details_page.dart`, `learning_project_build_page.dart`, `learning_hub_providers.dart`, `api_learning_hub_repository.dart`, `project_components_section.dart`, `project_build_actions_panel.dart`, `project_reviews_section.dart`, `project_steps_timeline.dart`, `project_link_list.dart`
 
 **Not used on detail:** `learning_hub_mock_data.dart`, `mock_rating_summary_card.dart`
 
@@ -208,7 +216,7 @@ Hub page controls fetch server pages beyond `page=1` while preserving active fil
 - Learner booking materials directly from project components
 - AI material matching (`ai-agent` module)
 - Followed categories
-- Persisted build checklist / stored component coverage
+- Automatic material coverage and project-to-material linking
 - Moderator project review UI / moderator workspace
 - Admin/moderator-selected Project of the week spotlight workflow
 

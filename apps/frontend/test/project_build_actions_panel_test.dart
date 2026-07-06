@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:frontend/features/learning_hub/application/learning_hub_providers.dart';
+import 'package:frontend/features/auth/application/auth_controller.dart';
+import 'package:frontend/features/auth/data/models/user.dart';
+import 'package:frontend/features/learning_hub/domain/learning_project_repository.dart';
+import 'package:frontend/features/learning_hub/domain/learning_projects_result.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project.dart';
+import 'package:frontend/features/learning_hub/domain/models/project_build.dart';
+import 'package:frontend/features/learning_hub/domain/project_engagement.dart';
+import 'package:frontend/features/learning_hub/domain/project_follow_status.dart';
+import 'package:frontend/features/learning_hub/domain/project_save_status.dart';
 import 'package:frontend/features/learning_hub/presentation/widgets/project_build_actions_panel.dart';
+import 'package:frontend/features/materials/data/models/category.dart';
 
 void main() {
-  testWidgets('starts build checklist and searches materials by component', (
-    tester,
-  ) async {
+  testWidgets('continues an existing project build checklist', (tester) async {
     final router = GoRouter(
       initialLocation: '/learning/test-project',
       routes: [
@@ -21,41 +30,40 @@ void main() {
           ),
         ),
         GoRoute(
+          path: '/learning/:id/build',
+          builder: (context, state) =>
+              const Scaffold(body: Text('build checklist page')),
+        ),
+        GoRoute(
           path: '/materials',
           builder: (context, state) {
-            return Scaffold(
-              body: Text('materials:${state.uri.queryParameters['q'] ?? ''}'),
-            );
+            return const Scaffold(body: Text('materials page'));
           },
         ),
       ],
     );
 
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Plan this build'), findsOneWidget);
-    expect(find.text('Start build'), findsOneWidget);
-
-    await tester.tap(find.text('Start build'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Build checklist'), findsOneWidget);
-    expect(find.text('Required component checklist'), findsOneWidget);
-    expect(find.text('Arduino board'), findsOneWidget);
-    expect(find.text('Missing'), findsWidgets);
-
-    await tester.tap(find.text('Already owned').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('1/2 ready'), findsOneWidget);
-
-    await tester.tap(
-      find.widgetWithText(OutlinedButton, 'Find materials').first,
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_TestAuthController.new),
+          learningHubRepositoryProvider.overrideWithValue(
+            _BuildPanelRepository(),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('materials:Arduino board'), findsOneWidget);
+    expect(find.text('Build checklist'), findsOneWidget);
+    expect(find.text('Continue checklist'), findsOneWidget);
+    expect(find.text('1/2 ready for build'), findsOneWidget);
+
+    await tester.tap(find.text('Continue checklist'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('build checklist page'), findsOneWidget);
   });
 }
 
@@ -75,6 +83,26 @@ LearningProject _project() {
       LocalizedText(en: 'Arduino board', ar: 'Arduino board'),
       LocalizedText(en: 'Jumper wires', ar: 'Jumper wires'),
     ],
+    requiredComponents: [
+      ProjectRequiredComponentItem(
+        id: 'component-1',
+        name: LocalizedText(en: 'Arduino board', ar: 'Arduino board'),
+        materialType: 'Electronics',
+        quantity: 1,
+        unit: 'piece',
+        isRequired: true,
+        canBeSubstituted: false,
+      ),
+      ProjectRequiredComponentItem(
+        id: 'component-2',
+        name: LocalizedText(en: 'Jumper wires', ar: 'Jumper wires'),
+        materialType: 'Electronics',
+        quantity: 10,
+        unit: 'pieces',
+        isRequired: true,
+        canBeSubstituted: false,
+      ),
+    ],
     steps: [
       ProjectStep(
         title: LocalizedText(en: 'Connect parts', ar: 'Connect parts'),
@@ -87,4 +115,145 @@ LearningProject _project() {
     isFeatured: false,
     hasRatings: false,
   );
+}
+
+class _TestAuthController extends AuthController {
+  @override
+  AuthState build() {
+    return AuthState(
+      user: User(
+        id: 'learner-1',
+        displayName: 'Learner',
+        email: 'learner@example.com',
+        accountStatus: 'ACTIVE',
+        roles: const ['LEARNER'],
+        activeRole: 'LEARNER',
+        createdAt: DateTime(2026),
+      ),
+      accessToken: 'token',
+      hasBootstrapped: true,
+    );
+  }
+}
+
+class _BuildPanelRepository implements LearningProjectRepository {
+  @override
+  Future<ProjectBuild?> fetchMyBuild(String projectId) async {
+    return ProjectBuild(
+      id: 'build-1',
+      projectId: projectId,
+      status: ProjectBuildStatus.inProgress,
+      project: const ProjectBuildProject(
+        id: 'test-project',
+        title: 'Sensor station',
+        shortDescription: 'Build a station',
+      ),
+      progress: const ProjectBuildProgress(total: 2, ready: 1, percent: 50),
+      items: const [],
+    );
+  }
+
+  @override
+  Future<ProjectBuild> startBuild(String projectId) async {
+    return (await fetchMyBuild(projectId))!;
+  }
+
+  @override
+  Future<ProjectBuild> updateBuildItem(
+    String projectId,
+    String itemId, {
+    required ProjectBuildItemStatus status,
+    String? learnerNote,
+  }) async {
+    return startBuild(projectId);
+  }
+
+  @override
+  Future<LearningProjectsResult> fetchProjects(LearningProjectsQuery query) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LearningProjectsResult> fetchSavedProjects(
+    LearningProjectsQuery query,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LearningProjectsResult> fetchFollowedProjects(
+    LearningProjectsQuery query,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LearningProject?> fetchProjectById(String id) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<MaterialCategory>> fetchProjectCategories() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ProjectEngagement> likeProject(String id) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ProjectEngagement> unlikeProject(String id) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ProjectSaveStatus> saveProject(String id) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ProjectSaveStatus> unsaveProject(String id) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ProjectFollowStatus> followProject(String id) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ProjectFollowStatus> unfollowProject(String id) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> reviewProject(
+    String id, {
+    required int rating,
+    String? comment,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> deleteProjectReview(String id) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> submitProjectForReview({
+    required String idempotencyKey,
+    required String title,
+    required String shortDescription,
+    required String description,
+    required String categoryId,
+    required String difficulty,
+    int? estimatedDurationMinutes,
+    List<Map<String, dynamic>>? requiredComponents,
+    List<Map<String, dynamic>>? steps,
+    List<Map<String, dynamic>>? links,
+  }) {
+    throw UnimplementedError();
+  }
 }

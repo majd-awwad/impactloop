@@ -10,6 +10,7 @@ import type {
   LearningProjectsQuery,
   ProjectReviewInput,
   SubmitLearningProjectInput,
+  UpdateProjectBuildItemInput,
 } from './learning-projects.validation.js';
 
 type SubmitLearningProjectResponse = {
@@ -29,6 +30,10 @@ type ProjectReviewRecord =
   Awaited<
     ReturnType<typeof learningProjectsRepository.findRecentReviewsForProject>
   >[number];
+
+type ProjectBuildRecord = NonNullable<
+  Awaited<ReturnType<typeof learningProjectsRepository.findProjectBuild>>
+>;
 
 const decimalToSerializable = (value: { toNumber(): number } | number): number => {
   if (typeof value === 'number') {
@@ -185,6 +190,65 @@ const mapLearningProjectDetail = (
   createdAt: project.createdAt.toISOString(),
 });
 
+const BUILD_ITEM_READY_STATUSES = new Set([
+  'ALREADY_OWNED',
+  'AVAILABLE',
+  'ALTERNATIVE',
+]);
+
+const isBuildItemReadyForBuild = (status: string) => BUILD_ITEM_READY_STATUSES.has(status);
+
+const mapProjectBuild = (build: ProjectBuildRecord) => {
+  const readyItems = build.items.filter((item) => isBuildItemReadyForBuild(item.status));
+  const totalItems = build.items.length;
+
+  return {
+    id: build.id,
+    projectId: build.projectId,
+    learnerId: build.learnerId,
+    status: build.status,
+    startedAt: build.startedAt.toISOString(),
+    completedAt: build.completedAt?.toISOString() ?? null,
+    createdAt: build.createdAt.toISOString(),
+    updatedAt: build.updatedAt.toISOString(),
+    project: {
+      id: build.project.id,
+      title: build.project.title,
+      shortDescription: build.project.shortDescription,
+      coverImageUrl: build.project.coverImageUrl,
+    },
+    progress: {
+      total: totalItems,
+      ready: readyItems.length,
+      percent:
+        totalItems === 0 ? 0 : Math.round((readyItems.length / totalItems) * 100),
+    },
+    items: build.items.map((item) => ({
+      id: item.id,
+      requiredComponentId: item.requiredComponentId,
+      status: item.status,
+      learnerNote: item.learnerNote,
+      component: {
+        id: item.requiredComponent.id,
+        categoryId: item.requiredComponent.categoryId,
+        category: item.requiredComponent.category
+          ? mapCategory(item.requiredComponent.category)
+          : null,
+        componentName: item.requiredComponent.componentName,
+        materialType: item.requiredComponent.materialType,
+        quantity: decimalToSerializable(item.requiredComponent.quantity),
+        unit: item.requiredComponent.unit,
+        componentRole: item.requiredComponent.componentRole,
+        isRequired: item.requiredComponent.isRequired,
+        canBeSubstituted: item.requiredComponent.canBeSubstituted,
+        notes: item.requiredComponent.notes,
+      },
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+    })),
+  };
+};
+
 export const getLearningProjects = async (
   query: LearningProjectsQuery,
   viewer?: AccessTokenPayload,
@@ -304,6 +368,57 @@ export const getLearningProjectById = async (
     recentReviews,
     viewerReview,
   });
+};
+
+export const getMyProjectBuildById = async (
+  id: string,
+  userId: string,
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    id,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  const build = await learningProjectsRepository.findProjectBuild(id, userId);
+
+  return build ? mapProjectBuild(build) : null;
+};
+
+export const startProjectBuildById = async (
+  id: string,
+  userId: string,
+) => {
+  const build = await learningProjectsRepository.startProjectBuild(id, userId);
+
+  if (!build) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  return mapProjectBuild(build);
+};
+
+export const updateProjectBuildItemById = async (
+  id: string,
+  userId: string,
+  itemId: string,
+  input: UpdateProjectBuildItemInput,
+) => {
+  const build = await learningProjectsRepository.updateProjectBuildItem({
+    projectId: id,
+    learnerId: userId,
+    itemId,
+    status: input.status,
+    learnerNote: input.learnerNote ?? null,
+  });
+
+  if (!build) {
+    throw new AppError('Project build item not found', 404, 'NOT_FOUND');
+  }
+
+  return mapProjectBuild(build);
 };
 
 export const likeLearningProjectById = async (id: string, userId: string) => {

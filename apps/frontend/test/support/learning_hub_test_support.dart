@@ -1,6 +1,7 @@
 import 'package:frontend/features/learning_hub/domain/learning_project_repository.dart';
 import 'package:frontend/features/learning_hub/domain/learning_projects_result.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project.dart';
+import 'package:frontend/features/learning_hub/domain/models/project_build.dart';
 import 'package:frontend/features/learning_hub/domain/project_engagement.dart';
 import 'package:frontend/features/learning_hub/domain/project_follow_status.dart';
 import 'package:frontend/features/learning_hub/domain/project_save_status.dart';
@@ -46,6 +47,35 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
 
   @override
   Future<LearningProject?> fetchProjectById(String id) async => null;
+
+  @override
+  Future<ProjectBuild?> fetchMyBuild(String projectId) async => null;
+
+  @override
+  Future<ProjectBuild> startBuild(String projectId) async {
+    return ProjectBuild(
+      id: 'test-build',
+      projectId: projectId,
+      status: ProjectBuildStatus.inProgress,
+      project: const ProjectBuildProject(
+        id: 'test-project',
+        title: 'Test project',
+        shortDescription: '',
+      ),
+      progress: const ProjectBuildProgress(total: 0, ready: 0, percent: 0),
+      items: const [],
+    );
+  }
+
+  @override
+  Future<ProjectBuild> updateBuildItem(
+    String projectId,
+    String itemId, {
+    required ProjectBuildItemStatus status,
+    String? learnerNote,
+  }) async {
+    return startBuild(projectId);
+  }
 
   @override
   Future<ProjectEngagement> likeProject(String id) async {

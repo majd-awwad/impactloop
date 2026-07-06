@@ -5,6 +5,7 @@ import '../data/learning_project_draft_storage.dart';
 import '../domain/learning_project_repository.dart';
 import '../domain/learning_projects_result.dart';
 import '../domain/models/learning_project.dart';
+import '../domain/models/project_build.dart';
 
 final learningHubRepositoryProvider = Provider<LearningProjectRepository>(
   (ref) => throw StateError(
@@ -43,6 +44,11 @@ final followedLearningProjectsProvider = FutureProvider.autoDispose
 final learningProjectProvider = FutureProvider.autoDispose
     .family<LearningProject?, String>((ref, id) async {
       return ref.watch(learningHubRepositoryProvider).fetchProjectById(id);
+    });
+
+final projectBuildProvider = FutureProvider.autoDispose
+    .family<ProjectBuild?, String>((ref, projectId) async {
+      return ref.watch(learningHubRepositoryProvider).fetchMyBuild(projectId);
     });
 
 void invalidateLearningHubEngagement(WidgetRef ref, String projectId) {

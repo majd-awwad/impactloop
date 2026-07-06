@@ -4,13 +4,13 @@
 
 ## Purpose
 
-Browse educational project ideas (components, steps, links) for inspiration. The current UI supports browsing, saved/followed project tabs, detail, learner draft submission, admin review, project likes/saves/follows, project ratings/reviews, a frontend-local build checklist, and material browsing handoff. Persisted build checklists, in-hub booking, and AI material matching are not shipped yet.
+Browse educational project ideas (components, steps, links) for inspiration. The current UI supports browsing, saved/followed project tabs, detail, learner draft submission, admin review, project likes/saves/follows, project ratings/reviews, a persisted manual build checklist, and material browsing handoff. In-hub booking and AI material matching are not shipped yet.
 
 ## Current status
 
 | Layer | Status | Notes |
 |-------|--------|-------|
-| Backend `learning-projects` | **Implemented** | Public read list + detail (`PUBLISHED` only in repository), learner likes/saves/follows, and learner submit |
+| Backend `learning-projects` | **Implemented** | Public read list + detail (`PUBLISHED` only in repository), learner likes/saves/follows/reviews, learner build checklists, and learner submit |
 | Flutter list/detail pages | **Partial** | `/learning` and `/learning/:id` use `ApiLearningHubRepository` + Riverpod providers; browse exposes category, search, optional `q` route search prefill, difficulty, sanitized tag filters, server-side page navigation, saved/followed tabs for learners, in-card engagement controls, rating summaries, and viewer saved/followed state |
 | Home learning spotlight | **Implemented** | Reuses `learningProjectsProvider` with `limit: 2` on `/home` |
 | Project likes | **Implemented** | List/home/detail surfaces have optimistic learner-only like/unlike controls backed by `POST`/`DELETE /api/learning-projects/:id/like` |
@@ -18,12 +18,12 @@ Browse educational project ideas (components, steps, links) for inspiration. The
 | Project follows | **Implemented** | List/home/detail surfaces have optimistic learner-only follow/unfollow controls backed by `POST`/`DELETE /api/learning-projects/:id/follow` |
 | Add draft page | **Implemented for learner submit** | `LearningAddDraftPage` is reachable from Learning Hub, can save a local device draft, and posts to `POST /api/learning-projects/submit` with `Idempotency-Key`; submitted projects enter `PENDING_REVIEW` |
 | Admin project moderation | **Implemented** | `/admin/learning-projects` lists, filters, reviews, approves/rejects/request-changes, hides/restores, and archives projects |
-| Project build checklist | **Frontend-only** | Detail can start a local checklist from required components, manually mark `Available`, `Missing`, `Alternative`, `Already owned`, or `Reserved`, and deep-link each component to Materials search |
+| Project build checklist | **Implemented** | Learners can start/continue a persisted manual checklist at `/learning/:id/build`, initialized from required components, manually mark `Available`, `Missing`, `Alternative`, `Already owned`, or `Reserved`, add optional notes, and deep-link each component to Materials search |
 | Ratings/reviews | **Implemented** | List/home cards show real `ratingSummary` when reviews exist; detail shows recent reviews and a learner-only review form backed by `PUT`/`DELETE /api/learning-projects/:id/review` |
 | Project links | **Implemented** | Detail links open safe `http`/`https` URLs through `url_launcher`; invalid/missing URLs are disabled |
 | AI material agent | **Not implemented** | No `ai-agent` module |
 
-Product intent from role planning: the learning hub should support persisted project-to-material linking, automatic material coverage, and durable start-build/checklist flows. Saved/followed project listing is now API-backed in the Learning Hub page; the current checklist is local UI state only and does not yet store project build progress.
+Product intent from role planning: the learning hub should support project-to-material linking and automatic material coverage later. Saved/followed project listing is API-backed in the Learning Hub page; build checklist progress is now stored per learner/project but does not link to materials or reservations.
 
 **Critical:** Learning Hub list/detail, Home spotlight, learner project submission, and admin project moderation are API-backed. The legacy mock catalog is not a production read path.
 
@@ -37,8 +37,9 @@ Product intent from role planning: the learning hub should support persisted pro
 6. Next/previous pagination changes the `page` query sent to the active list endpoint while preserving active filters.
 7. Tap project → `/learning/:id` → `learningProjectProvider(id)` loads detail from `GET /api/learning-projects/:id`; existing project links can be opened when they contain valid `http`/`https` URLs.
 8. Authenticated learners can like/unlike, save/unsave, and follow/unfollow from list, Home spotlight, and detail cards; they can review the project from detail. Guests are sent to login and non-learner roles get an info snackbar.
-9. Optional: `/learning/add-draft` — authenticated learner submits a draft to `POST /api/learning-projects/submit` with an `Idempotency-Key`; backend stores it as `PENDING_REVIEW` and replays duplicate same-key submissions without creating another project.
-10. Home `/home` learning spotlight loads up to 2 published projects via `learningProjectsProvider`.
+9. Optional: detail **Start build** calls `POST /api/learning-projects/:id/builds/start` and opens `/learning/:id/build`; existing builds show **Continue checklist**. The checklist uses `GET /api/learning-projects/:id/builds/me` and `PATCH /api/learning-projects/:id/builds/me/items/:itemId`.
+10. Optional: `/learning/add-draft` — authenticated learner submits a draft to `POST /api/learning-projects/submit` with an `Idempotency-Key`; backend stores it as `PENDING_REVIEW` and replays duplicate same-key submissions without creating another project.
+11. Home `/home` learning spotlight loads up to 2 published projects via `learningProjectsProvider`.
 
 ## Frontend files
 
@@ -48,8 +49,8 @@ Product intent from role planning: the learning hub should support persisted pro
 | Providers | `application/learning_hub_providers.dart` |
 | Legacy mock data | `data/learning_hub_mock_data.dart` (unused sample catalog only) |
 | Theme | `presentation/theme/learning_ui_palette.dart`, `learning_project_visuals.dart` |
-| Domain | `domain/models/learning_project.dart`, `domain/learning_projects_result.dart` |
-| Pages | `presentation/pages/learning_hub_page.dart`, `learning_project_details_page.dart`, `learning_add_draft_page.dart` |
+| Domain | `domain/models/learning_project.dart`, `domain/models/project_build.dart`, `domain/learning_projects_result.dart` |
+| Pages | `presentation/pages/learning_hub_page.dart`, `learning_project_details_page.dart`, `learning_project_build_page.dart`, `learning_add_draft_page.dart` |
 | Widgets | `learning_project_card.dart`, `featured_project_card.dart`, `learning_hub_hero.dart`, `learning_category_chips.dart`, `project_components_section.dart`, `project_build_actions_panel.dart`, `project_steps_timeline.dart`, `project_link_list.dart`, `project_reviews_section.dart`, `project_engagement_strip.dart` |
 
 ## Backend files
@@ -76,6 +77,9 @@ Repository filter: `status: 'PUBLISHED'` (`learning-projects.repository.ts`).
 | DELETE | `/api/learning-projects/:id/follow` | JWT + LEARNER | **Yes** — list/Home/detail unfollow |
 | PUT | `/api/learning-projects/:id/review` | JWT + LEARNER | **Yes** — detail review create/update |
 | DELETE | `/api/learning-projects/:id/review` | JWT + LEARNER | **Yes** — detail review delete |
+| GET | `/api/learning-projects/:id/builds/me` | JWT + LEARNER | **Yes** — build checklist page |
+| POST | `/api/learning-projects/:id/builds/start` | JWT + LEARNER | **Yes** — detail start/continue build |
+| PATCH | `/api/learning-projects/:id/builds/me/items/:itemId` | JWT + LEARNER | **Yes** — manual checklist status/note |
 | POST | `/api/learning-projects/submit` | Learner auth | **Yes** — add-draft submit for admin review |
 | GET | `/api/categories?type=PROJECT` | Public | **Yes** — category chips |
 | POST | `/api/learning-projects/submit` | JWT + LEARNER + `Idempotency-Key` | **Yes** — add-draft submit |
@@ -97,6 +101,8 @@ Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. 
 | `project_saves` | Private learner saved project state |
 | `project_follows` | Learner project follow state and follower count source |
 | `project_user_reviews` | Learner project rating/review state and rating summary source |
+| `project_builds` | One saved build checklist per learner/project |
+| `project_build_items` | Manual checklist item status/note per required component |
 | `categories` | Project category (PROJECT or BOTH type) |
 
 ## Reusable components
@@ -108,5 +114,5 @@ Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. 
 
 - Project moderation is admin-backed; a separate moderator portal/workspace is still **not implemented**.
 - AI material matching — **not implemented**.
-- Follow category, stored build progress, automatic material coverage, and in-hub booking from project components — **not implemented**.
+- Follow category, project-to-material linking, automatic material coverage, and in-hub booking from project components — **not implemented**.
 - Project of the week should return later as an explicit admin/moderator-selected spotlight feature; it is not currently selected from newest/latest project ordering.

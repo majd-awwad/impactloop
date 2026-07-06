@@ -1,7 +1,10 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
-import type { LearningProjectsQuery } from './learning-projects.validation.js';
+import type {
+  LearningProjectsQuery,
+  UpdateProjectBuildItemInput,
+} from './learning-projects.validation.js';
 
 const clientOrPrisma = (client?: Prisma.TransactionClient) => client ?? prisma;
 
@@ -200,6 +203,48 @@ const learningProjectDetailInclude = {
   },
 } satisfies Prisma.LearningProjectInclude;
 
+const projectBuildInclude = {
+  project: {
+    select: {
+      id: true,
+      title: true,
+      shortDescription: true,
+      coverImageUrl: true,
+    },
+  },
+  items: {
+    include: {
+      requiredComponent: {
+        select: {
+          id: true,
+          categoryId: true,
+          componentName: true,
+          materialType: true,
+          quantity: true,
+          unit: true,
+          componentRole: true,
+          isRequired: true,
+          canBeSubstituted: true,
+          notes: true,
+          category: {
+            select: {
+              id: true,
+              nameEn: true,
+              nameAr: true,
+            },
+          },
+          createdAt: true,
+        },
+      },
+    },
+    orderBy: {
+      requiredComponent: {
+        createdAt: 'asc' as const,
+      },
+    },
+  },
+} satisfies Prisma.ProjectBuildInclude;
+
 export const findLearningProjects = async (query: LearningProjectsQuery) => {
   const where = buildLearningProjectsWhere(query);
   const skip = (query.page - 1) * query.limit;
@@ -299,6 +344,139 @@ export const findPublicLearningProjectById = async (id: string) => {
     select: {
       id: true,
     },
+  });
+};
+
+export const findProjectBuild = async (
+  projectId: string,
+  learnerId: string,
+) => {
+  return prisma.projectBuild.findUnique({
+    where: {
+      projectId_learnerId: {
+        projectId,
+        learnerId,
+      },
+    },
+    include: projectBuildInclude,
+  });
+};
+
+export const startProjectBuild = async (
+  projectId: string,
+  learnerId: string,
+) => {
+  return prisma.$transaction(async (tx) => {
+    const project = await tx.learningProject.findFirst({
+      where: {
+        id: projectId,
+        ...publicProjectWhere,
+      },
+      select: {
+        id: true,
+        requiredComponents: {
+          select: {
+            id: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!project) {
+      return null;
+    }
+
+    const build = await tx.projectBuild.upsert({
+      where: {
+        projectId_learnerId: {
+          projectId,
+          learnerId,
+        },
+      },
+      create: {
+        projectId,
+        learnerId,
+        items: project.requiredComponents.length
+          ? {
+              create: project.requiredComponents.map((component) => ({
+                requiredComponentId: component.id,
+              })),
+            }
+          : undefined,
+      },
+      update: {},
+      select: {
+        id: true,
+      },
+    });
+
+    if (project.requiredComponents.length > 0) {
+      await tx.projectBuildItem.createMany({
+        data: project.requiredComponents.map((component) => ({
+          buildId: build.id,
+          requiredComponentId: component.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    return tx.projectBuild.findUnique({
+      where: {
+        id: build.id,
+      },
+      include: projectBuildInclude,
+    });
+  });
+};
+
+export const updateProjectBuildItem = async (input: {
+  projectId: string;
+  learnerId: string;
+  itemId: string;
+  status: UpdateProjectBuildItemInput['status'];
+  learnerNote?: string | null;
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const item = await tx.projectBuildItem.findFirst({
+      where: {
+        id: input.itemId,
+        build: {
+          projectId: input.projectId,
+          learnerId: input.learnerId,
+          project: {
+            is: publicProjectWhere,
+          },
+        },
+      },
+      select: {
+        id: true,
+        buildId: true,
+      },
+    });
+
+    if (!item) {
+      return null;
+    }
+
+    await tx.projectBuildItem.update({
+      where: {
+        id: item.id,
+      },
+      data: {
+        status: input.status,
+        learnerNote: input.learnerNote,
+      },
+    });
+
+    return tx.projectBuild.findUnique({
+      where: {
+        id: item.buildId,
+      },
+      include: projectBuildInclude,
+    });
   });
 };
 

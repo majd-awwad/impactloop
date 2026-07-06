@@ -23,6 +23,7 @@ import '../../features/driver_portal/presentation/pages/driver_jobs_page.dart';
 import '../../features/driver_portal/presentation/shell/driver_portal_shell.dart';
 import '../../features/learning_hub/presentation/pages/learning_add_draft_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
+import '../../features/learning_hub/presentation/pages/learning_project_build_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/locations/presentation/pages/saved_locations_page.dart';
@@ -158,6 +159,7 @@ _RouteAccessLevel _routeAccessForPath(String path) {
   }
 
   if (path == '/learning/add-draft' ||
+      (path.startsWith('/learning/') && path.endsWith('/build')) ||
       path == '/learner/reservations' ||
       path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/')) {
@@ -569,6 +571,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/learning/add-draft',
         builder: (context, state) => const LearningAddDraftPage(),
+      ),
+      GoRoute(
+        path: '/learning/:id/build',
+        builder: (context, state) {
+          final projectId = state.pathParameters['id']!;
+
+          return LearningProjectBuildPage(projectId: projectId);
+        },
       ),
       GoRoute(
         path: '/learning/:id',

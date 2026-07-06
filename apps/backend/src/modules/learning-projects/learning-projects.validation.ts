@@ -8,6 +8,14 @@ const PROJECT_DIFFICULTIES = [
   'ADVANCED',
 ] as const;
 
+const PROJECT_BUILD_ITEM_STATUSES = [
+  'MISSING',
+  'ALREADY_OWNED',
+  'AVAILABLE',
+  'RESERVED',
+  'ALTERNATIVE',
+] as const;
+
 export const learningProjectsQuerySchema = paginationQuerySchema.extend({
   q: z.string().trim().min(1).max(120).optional(),
   categoryId: z.string().trim().min(1).optional(),
@@ -20,6 +28,10 @@ export const learningProjectsQuerySchema = paginationQuerySchema.extend({
 
 export const learningProjectIdParamSchema = z.object({
   id: z.string().trim().uuid(),
+});
+
+export const projectBuildItemParamSchema = learningProjectIdParamSchema.extend({
+  itemId: z.string().trim().min(1),
 });
 
 export const projectReviewSchema = z.object({
@@ -70,8 +82,31 @@ export const submitLearningProjectSchema = z.object({
   links: z.array(submitLinkSchema).max(20).optional(),
 });
 
+export const updateProjectBuildItemSchema = z.object({
+  status: z.enum(PROJECT_BUILD_ITEM_STATUSES, {
+    error:
+      'status must be one of MISSING, ALREADY_OWNED, AVAILABLE, RESERVED, or ALTERNATIVE',
+  }),
+  learnerNote: z
+    .string()
+    .trim()
+    .max(1000)
+    .optional()
+    .nullable()
+    .transform((value) => {
+      if (!value) {
+        return null;
+      }
+
+      return value.length === 0 ? null : value;
+    }),
+});
+
 export type LearningProjectsQuery = z.infer<typeof learningProjectsQuerySchema>;
 export type ProjectReviewInput = z.infer<typeof projectReviewSchema>;
 export type SubmitLearningProjectInput = z.infer<
   typeof submitLearningProjectSchema
+>;
+export type UpdateProjectBuildItemInput = z.infer<
+  typeof updateProjectBuildItemSchema
 >;
