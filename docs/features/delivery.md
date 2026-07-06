@@ -13,7 +13,7 @@ Role-scope boundary: driver is an operational support role for basic internal de
 | Learner delivery read/tracking API | **Implemented** | `GET /api/deliveries/my`, `GET /api/deliveries/:id` |
 | Driver jobs/assignment/status API | **Implemented** | `/api/driver/deliveries/*` |
 | Driver location pings | **Partial** | Assigned active drivers can share foreground location manually or automatically every 45 seconds while the active delivery detail page is open; no background tracking |
-| Flutter learner delivery UI | **Partial** | My Reservations request dialog (saved or new dropoff + optional save), `/learner/deliveries/:id` status page, safe latest driver ping summary, and polling map marker; no realtime stream |
+| Flutter learner delivery UI | **Partial** | My Reservations request dialog (saved or new dropoff with optional current-location coordinates + optional save), `/learner/deliveries/:id` status page, locked tracking before pickup, live map after `PICKED_UP`, and driver-portal debug demo tracking; no realtime stream |
 | Flutter driver portal | **Partial** | `/driver/jobs` job board, `/driver/deliveries/:id` status updates, foreground auto-location sharing on the active delivery detail page, and manual location ping; no live map or background pings |
 | External partners/payment/AI | **Out of scope** | Not implemented |
 
@@ -107,8 +107,9 @@ Driver:
 - Learners see their own delivery pickup/dropoff and assigned driver summary.
 - Location pings are stored for assigned active drivers only.
 - Learner delivery responses include only the latest driver ping, never the full ping history.
-- Live driver ping coordinates are included only for learner-owned deliveries in `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, and `ARRIVED_DROPOFF`.
-- `WAITING_FOR_DRIVER` and terminal statuses do not expose live driver coordinates.
+- Live driver ping coordinates are included only for learner-owned deliveries in `PICKED_UP`, `ON_THE_WAY`, and `ARRIVED_DROPOFF`.
+- Before pickup (`DRIVER_ASSIGNED`, `ARRIVED_PICKUP`), learners see status text and optional ping summary without coordinates (`trackingLockedReason: TRACKING_STARTS_AFTER_PICKUP`).
+- `WAITING_FOR_DRIVER`, pre-pickup assigned statuses, and terminal statuses do not expose live driver coordinates to learners.
 - The learner Flutter UI may render a map marker from allowed coordinates, but does not display raw driver latitude/longitude text.
 
 ## Not Implemented Yet

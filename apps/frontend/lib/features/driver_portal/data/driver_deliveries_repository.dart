@@ -3,17 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import 'driver_deliveries_api.dart';
 import 'models/driver_delivery_failure_request.dart';
+import 'models/driver_deliveries_list_result.dart';
 import 'models/driver_delivery.dart';
 import 'models/driver_location_ping_request.dart';
 import 'models/update_driver_delivery_status_request.dart';
 
 final driverDeliveriesApiProvider = Provider<DriverDeliveriesApi>((ref) {
-  return DriverDeliveriesApi(ref.watch(apiClientProvider));
+  return DriverDeliveriesApi(ref.read(apiClientProvider));
 });
 
 final driverDeliveriesRepositoryProvider = Provider<DriverDeliveriesRepository>(
   (ref) {
-    return DriverDeliveriesRepository(ref.watch(driverDeliveriesApiProvider));
+    return DriverDeliveriesRepository(ref.read(driverDeliveriesApiProvider));
   },
 );
 
@@ -22,11 +23,13 @@ class DriverDeliveriesRepository {
 
   final DriverDeliveriesApi _api;
 
-  Future<List<DriverDelivery>> fetchAvailableDeliveries() {
-    return _api.fetchAvailableDeliveries();
+  Future<DriverDeliveriesListResult> fetchAvailableDeliveries({
+    DriverAvailableJobsFilter? filter,
+  }) {
+    return _api.fetchAvailableDeliveries(filter: filter);
   }
 
-  Future<List<DriverDelivery>> fetchActiveDeliveries() {
+  Future<DriverDeliveriesListResult> fetchActiveDeliveries() {
     return _api.fetchActiveDeliveries();
   }
 

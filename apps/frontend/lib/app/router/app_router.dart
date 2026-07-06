@@ -32,6 +32,7 @@ import '../../features/profile/presentation/pages/profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_security_page.dart';
 import '../../features/notifications/presentation/pages/user_notifications_page.dart';
+import '../../features/notifications/application/notifications_routes.dart';
 import '../../features/reservations/presentation/pages/learner_reservation_detail_page.dart';
 import '../../features/reservations/presentation/pages/learner_reservations_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_access_denied_page.dart';
@@ -510,6 +511,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/notifications',
+        redirect: (context, state) {
+          final authState = ref.read(authControllerProvider);
+          final user = authState.user;
+          if (user != null &&
+              user.isDriverMode &&
+              user.hasRole('DRIVER')) {
+            return driverNotificationsRoute;
+          }
+          return null;
+        },
         builder: (context, state) => const UserNotificationsPage(),
       ),
       GoRoute(
@@ -640,6 +651,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => DriverDeliveryDetailPage(
               deliveryId: state.pathParameters['id']!,
             ),
+          ),
+          GoRoute(
+            path: '/driver/notifications',
+            builder: (context, state) =>
+                const UserNotificationsPage(embeddedInShell: true),
           ),
         ],
       ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,11 +14,16 @@ import '../../../../shared/location/current_location_service.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
+import '../../../deliveries/presentation/pickup_window_presentation.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../application/driver_deliveries_provider.dart';
 import '../../application/driver_delivery_action_controller.dart';
+import '../../application/driver_demo_tracking_controller.dart';
 import '../../application/driver_location_auto_ping_controller.dart';
 import '../../data/models/driver_delivery.dart';
+import '../../data/models/driver_location_ping_request.dart';
+import '../driver_delivery_timing_presentation.dart';
+import '../widgets/driver_demo_route_preview.dart';
 
 class DriverDeliveryDetailPage extends ConsumerWidget {
   const DriverDeliveryDetailPage({super.key, required this.deliveryId});
@@ -45,7 +52,7 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
             ),
             error: (_, _) => _StatePanel(
               icon: Icons.cloud_off_outlined,
-              title: 'Could not load delivery',
+              title: 'Could not load delivery details.',
               subtitle: 'Please try again.',
               actionLabel: 'Retry',
               onAction: () =>
@@ -168,11 +175,11 @@ class _SummaryPanel extends StatelessWidget {
                 '${delivery.material.title} - ${delivery.material.quantityLabel}',
           ),
           const SizedBox(height: AppSpacing.lg),
-          _InfoRow(label: 'Pickup window', value: _pickupWindowText(delivery)),
+          _InfoRow(label: 'Pickup window', value: driverPickupWindowDetail(delivery)),
           _InfoRow(label: 'Supplier', value: _partySummary(delivery.supplier)),
           _InfoRow(
             label: 'Pickup',
-            value: _locationSummary(delivery.pickupLocation),
+            value: _locationDetail(delivery.pickupLocation),
           ),
           const Divider(height: AppSpacing.xl),
           _InfoRow(
@@ -182,9 +189,15 @@ class _SummaryPanel extends StatelessWidget {
                 : _partySummary(delivery.learner!),
           ),
           _InfoRow(
-            label: 'Dropoff',
-            value: _locationSummary(delivery.dropoffLocation),
+            label: 'Drop-off',
+            value: _locationDetail(delivery.dropoffLocation),
           ),
+          if (delivery.confirmedDeliveryWindowStart != null ||
+              delivery.confirmedDeliveryWindowEnd != null)
+            _InfoRow(
+              label: 'Delivery window',
+              value: _deliveryWindowDetail(delivery),
+            ),
           if (delivery.learnerNote?.trim().isNotEmpty == true)
             _InfoRow(label: 'Learner note', value: delivery.learnerNote!),
           if (delivery.driverNote?.trim().isNotEmpty == true)
@@ -206,27 +219,56 @@ class _StatusActionPanel extends ConsumerStatefulWidget {
 
 class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
   final _noteController = TextEditingController();
+  Timer? _countdownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startCountdownTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _StatusActionPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.delivery.id != widget.delivery.id ||
+        oldWidget.delivery.status != widget.delivery.status) {
+      _startCountdownTimer();
+    }
+  }
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _noteController.dispose();
     super.dispose();
+  }
+
+  void _startCountdownTimer() {
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {});
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final actionState = ref.watch(driverDeliveryActionControllerProvider);
+    final guidance = buildDriverNextActionGuidance(widget.delivery);
     final nextStatus = widget.delivery.nextStatus;
     final isSubmitting = actionState.isLoading;
+    final canPressAction =
+        nextStatus != null && guidance.isActionEnabled && !isSubmitting;
 
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelTitle(
-            icon: Icons.timeline_outlined,
-            title: 'Status update',
-            body: 'Move this delivery through the backend order.',
+          _StatusGuidanceCard(
+            delivery: widget.delivery,
+            guidance: guidance,
           ),
           const SizedBox(height: AppSpacing.lg),
           _StepList(currentStatus: widget.delivery.status),
@@ -238,6 +280,27 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
               body: 'This delivery cannot be advanced from its current status.',
             )
           else ...[
+            if (guidance.timingGate != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: _InlineNotice(
+                  icon: guidance.isBlockedByTiming
+                      ? Icons.schedule_outlined
+                      : Icons.info_outline,
+                  title: guidance.timingGate!.title ?? 'Timing note',
+                  body: [
+                    if (guidance.timingGate!.body != null)
+                      guidance.timingGate!.body!,
+                    if (guidance.timingGate!.remainingLabel != null)
+                      guidance.timingGate!.remainingLabel!,
+                  ].join('\n'),
+                ),
+              ),
+            for (final requirement in guidance.requirements) ...[
+              _RequirementRow(text: requirement),
+              const SizedBox(height: AppSpacing.xs),
+            ],
+            const SizedBox(height: AppSpacing.sm),
             AppTextArea(
               controller: _noteController,
               label: 'Optional driver note',
@@ -247,7 +310,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             ),
             const SizedBox(height: AppSpacing.md),
             FilledButton.icon(
-              onPressed: isSubmitting ? null : () => _advance(nextStatus),
+              onPressed: canPressAction ? () => _advance(nextStatus) : null,
               icon: isSubmitting
                   ? const SizedBox(
                       width: 18,
@@ -256,9 +319,18 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                     )
                   : const Icon(Icons.arrow_forward_rounded),
               label: Text(
-                isSubmitting ? 'Updating...' : _nextActionLabel(nextStatus),
+                isSubmitting ? 'Updating...' : guidance.actionLabel,
               ),
             ),
+            if (!guidance.isActionEnabled) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                _disabledActionReason(widget.delivery, nextStatus),
+                style: AppTextStyles.body(context).copyWith(
+                  color: MaterialsUiPalette.of(context).textMuted,
+                ),
+              ),
+            ],
           ],
           const SizedBox(height: AppSpacing.md),
           if (widget.delivery.canDriverReportPickupFailed)
@@ -285,6 +357,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           ],
           const SizedBox(height: AppSpacing.md),
           _LocationSharingSection(delivery: widget.delivery),
+          if (isDemoTrackingAllowed) ...[
+            const SizedBox(height: AppSpacing.md),
+            _DemoTrackingSection(delivery: widget.delivery),
+          ],
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
             onPressed: () => context.popOrGo('/driver/jobs'),
@@ -344,15 +420,16 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
 
       showInfoSnackBar(context, 'Delivery status updated.');
       _noteController.clear();
+      ref.invalidate(activeDriverDeliveryProvider(widget.delivery.id));
     } on ApiException catch (error) {
       if (!mounted) {
         return;
       }
 
+      ref.invalidate(activeDriverDeliveryProvider(widget.delivery.id));
+
       final message = error.statusCode == 409
           ? 'Delivery status changed. Refresh and try the next valid action.'
-          : error.statusCode == 400
-          ? error.displayMessage
           : error.displayMessage;
       showInfoSnackBar(context, message);
     } catch (error) {
@@ -615,7 +692,7 @@ class _LocationSharingSectionState
       icon: Icons.my_location_outlined,
       title: 'Location sharing',
       body:
-          'Share your location while this delivery is active so the learner can track progress.',
+          'Share your location while this delivery is active. The learner can track you only after the material is picked up.',
       action: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -732,6 +809,270 @@ class _LocationSharingSectionState
   }
 }
 
+class _DemoTrackingSection extends ConsumerStatefulWidget {
+  const _DemoTrackingSection({required this.delivery});
+
+  final DriverDelivery delivery;
+
+  @override
+  ConsumerState<_DemoTrackingSection> createState() =>
+      _DemoTrackingSectionState();
+}
+
+class _DemoTrackingSectionState extends ConsumerState<_DemoTrackingSection> {
+  DriverDemoTrackingController? _controller;
+  bool _active = false;
+  bool _demoFallbackSelected = false;
+  DemoRouteCoordinates? _selectedRoute;
+  DemoTrackingProgress? _progress;
+
+  @override
+  void initState() {
+    super.initState();
+    _bindController();
+    _syncSelectedRoute();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DemoTrackingSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.delivery.id != widget.delivery.id) {
+      _controller?.dispose();
+      _demoFallbackSelected = false;
+      _selectedRoute = null;
+      _progress = null;
+      _bindController();
+      _syncSelectedRoute();
+    } else if (!DriverDemoTrackingController.isStatusEligible(widget.delivery)) {
+      _controller?.stop();
+      _progress = null;
+    } else {
+      _syncSelectedRoute();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  void _bindController() {
+    _controller = DriverDemoTrackingController(
+      sendPing: (latitude, longitude) => ref
+          .read(driverDeliveryActionControllerProvider.notifier)
+          .sendLocationPing(
+            deliveryId: widget.delivery.id,
+            request: DriverLocationPingRequest(
+              latitude: latitude,
+              longitude: longitude,
+              capturedAt: DateTime.now(),
+            ),
+          ),
+      onActiveChanged: (active) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _active = active;
+          if (!active) {
+            _progress = null;
+          }
+        });
+      },
+      onProgressChanged: (progress) {
+        if (!mounted) {
+          return;
+        }
+        setState(() => _progress = progress);
+      },
+    );
+  }
+
+  void _syncSelectedRoute() {
+    final realRoute = resolveRealDemoRouteCoordinates(widget.delivery);
+    if (realRoute != null) {
+      _selectedRoute = realRoute;
+      _demoFallbackSelected = false;
+      return;
+    }
+
+    if (_demoFallbackSelected) {
+      _selectedRoute = nablusDemoRouteCoordinates();
+    } else {
+      _selectedRoute = null;
+    }
+  }
+
+  void _useDemoRouteCoordinates() {
+    setState(() {
+      _demoFallbackSelected = true;
+      _selectedRoute = nablusDemoRouteCoordinates();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final disabledReason = DriverDemoTrackingController.disabledReason(
+      widget.delivery,
+      demoFallbackSelected: _demoFallbackSelected,
+    );
+    final canStart = DriverDemoTrackingController.canStart(
+      widget.delivery,
+      route: _selectedRoute,
+    );
+    final route = _selectedRoute;
+
+    return _InlineNotice(
+      icon: Icons.science_outlined,
+      title: 'Demo tracking',
+      body: disabledReason ??
+          'Simulates driver movement for presentation. Uses the real location ping endpoint.',
+      action: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (route != null) ...[
+            DriverDemoRoutePreview(
+              route: route,
+              currentLatitude: _progress?.latitude,
+              currentLongitude: _progress?.longitude,
+              usesFallbackCoordinates: route.usesFallbackCoordinates,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            if (route.usesFallbackCoordinates)
+              Text(
+                'Demo route — not real delivery coordinates',
+                style: AppTextStyles.label(context).copyWith(
+                  color: palette.textMuted,
+                ),
+              ),
+          ],
+          if (_active) ...[
+            Text(
+              'Demo tracking active',
+              style: AppTextStyles.label(context).copyWith(color: palette.mint),
+            ),
+            if (_progress != null)
+              Text(
+                '${_progress!.label} · Simulating movement…',
+                style: AppTextStyles.body(context).copyWith(
+                  color: palette.textSecondary,
+                ),
+              ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          if (_selectedRoute == null &&
+              resolveRealDemoRouteCoordinates(widget.delivery) == null) ...[
+            OutlinedButton.icon(
+              onPressed: DriverDemoTrackingController.isStatusEligible(
+                widget.delivery,
+              )
+                  ? _useDemoRouteCoordinates
+                  : null,
+              icon: const Icon(Icons.map_outlined),
+              label: const Text('Use demo route coordinates'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          FilledButton.icon(
+            onPressed: canStart && !_active
+                ? () => _controller?.start(
+                    widget.delivery,
+                    route: _selectedRoute,
+                  )
+                : null,
+            icon: const Icon(Icons.play_arrow_rounded),
+            label: const Text('Start demo tracking'),
+          ),
+          if (_active) ...[
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: _controller?.stop,
+              icon: const Icon(Icons.stop_rounded),
+              label: const Text('Stop demo tracking'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusGuidanceCard extends StatelessWidget {
+  const _StatusGuidanceCard({
+    required this.delivery,
+    required this.guidance,
+  });
+
+  final DriverDelivery delivery;
+  final DriverNextActionGuidance guidance;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return _InlineNotice(
+      icon: Icons.timeline_outlined,
+      title: 'Current stage: ${deliveryStatusLabel(delivery.status)}',
+      body: delivery.nextStatus == null
+          ? 'No further steps for this delivery.'
+          : 'Advance to: ${guidance.actionLabel}',
+      action: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Next: ${guidance.actionLabel}',
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.textPrimary,
+            ),
+          ),
+          if (delivery.status == 'ARRIVED_PICKUP' ||
+              delivery.nextStatus == 'PICKED_UP') ...[
+            const SizedBox(height: AppSpacing.sm),
+            const Text(
+              'Supplier handover code is required when marking picked up.',
+            ),
+          ],
+          if (delivery.nextStatus == 'DELIVERED') ...[
+            const SizedBox(height: AppSpacing.sm),
+            const Text(
+              'Learner delivery code is required when marking delivered.',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RequirementRow extends StatelessWidget {
+  const _RequirementRow({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.check_circle_outline, size: 16, color: palette.textMuted),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTextStyles.body(context).copyWith(
+              color: palette.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _StepList extends StatelessWidget {
   const _StepList({required this.currentStatus});
 
@@ -749,14 +1090,15 @@ class _StepList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentIndex = _steps.indexOf(currentStatus);
+    final safeIndex = currentIndex < 0 ? 0 : currentIndex;
 
     return Column(
       children: [
         for (var index = 0; index < _steps.length; index++)
           _StatusStep(
             label: deliveryStatusLabel(_steps[index]),
-            complete: currentIndex >= index,
-            current: currentIndex == index,
+            complete: currentIndex >= 0 && safeIndex >= index,
+            current: currentIndex >= 0 && safeIndex == index,
           ),
       ],
     );
@@ -1001,21 +1343,35 @@ class _StatePanel extends StatelessWidget {
   }
 }
 
-String _nextActionLabel(String status) {
-  switch (status) {
-    case 'ARRIVED_PICKUP':
-      return 'Arrived at pickup';
-    case 'PICKED_UP':
-      return 'Picked up';
-    case 'ON_THE_WAY':
-      return 'On the way';
-    case 'ARRIVED_DROPOFF':
-      return 'Arrived at dropoff';
-    case 'DELIVERED':
-      return 'Mark delivered';
-    default:
-      return deliveryStatusLabel(status);
+String _disabledActionReason(DriverDelivery delivery, String nextStatus) {
+  final guidance = buildDriverNextActionGuidance(delivery);
+  if (guidance.timingGate?.isBlocked == true) {
+    final gate = guidance.timingGate!;
+    return [
+      if (gate.body != null) gate.body!,
+      if (gate.remainingLabel != null) gate.remainingLabel!,
+    ].join('\n');
   }
+
+  return switch (nextStatus) {
+    'PICKED_UP' => 'Complete "Arrive at pickup" before marking picked up.',
+    'ON_THE_WAY' => 'Mark picked up before starting delivery.',
+    'ARRIVED_DROPOFF' => 'Start delivery before arriving at drop-off.',
+    'DELIVERED' => 'Arrive at drop-off before marking delivered.',
+    _ => 'This action is not available yet.',
+  };
+}
+
+String _deliveryWindowDetail(DriverDelivery delivery) {
+  final start = delivery.confirmedDeliveryWindowStart;
+  final end = delivery.confirmedDeliveryWindowEnd;
+  if (start == null && end == null) {
+    return 'Not set';
+  }
+  if (start != null && end != null) {
+    return '${formatDriverDateTime(start)} – ${formatDriverDateTime(end)}';
+  }
+  return formatDriverDateTime(start ?? end!);
 }
 
 String _partySummary(DriverDeliveryParty party) {
@@ -1026,28 +1382,23 @@ String _partySummary(DriverDeliveryParty party) {
   return details.join(' - ');
 }
 
-String _locationSummary(DriverSafeLocation location) {
+String _locationDetail(DriverSafeLocation location) {
   final summary = location.exactSummary;
-  if (location.hasExactCoordinates) {
-    return '$summary (${location.latitude!.toStringAsFixed(5)}, ${location.longitude!.toStringAsFixed(5)})';
+  final lines = <String>[summary];
+
+  if (location.isApproximate == true) {
+    lines.add('Approximate address — confirm with learner if needed.');
+  }
+  if (!location.hasExactCoordinates) {
+    lines.add('Exact coordinates are missing.');
+  } else {
+    lines.add(
+      '${location.latitude!.toStringAsFixed(5)}, '
+      '${location.longitude!.toStringAsFixed(5)}',
+    );
   }
 
-  return summary;
-}
-
-String _pickupWindowText(DriverDelivery delivery) {
-  final start = delivery.pickupWindowStart;
-  final end = delivery.pickupWindowEnd;
-
-  if (start == null && end == null) {
-    return 'Not set';
-  }
-
-  if (start != null && end != null) {
-    return '${_formatDateTime(start)} - ${_formatDateTime(end)}';
-  }
-
-  return _formatDateTime(start ?? end!);
+  return lines.join('\n');
 }
 
 String _formatDateTime(DateTime dateTime) {

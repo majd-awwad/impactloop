@@ -20,6 +20,7 @@ import {
 import {
   createDeliveryLocationPingSchema,
   deliveryIdParamsSchema,
+  listAvailableDeliveriesQuerySchema,
   updateDriverDeliveryStatusSchema,
 } from './driver.validation.js';
 import {
@@ -34,6 +35,7 @@ driverRouter.use(authMiddleware, requireRoles('DRIVER'));
 
 driverRouter.get(
   '/deliveries/available',
+  validate(listAvailableDeliveriesQuerySchema, 'query'),
   asyncHandler(listAvailableDriverDeliveriesHandler),
 );
 

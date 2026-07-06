@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import 'deliveries_api.dart';
 import 'models/learner_delivery.dart';
+import 'models/learner_delivery_tracking.dart';
 import 'models/request_delivery_request.dart';
 
 final deliveriesApiProvider = Provider<DeliveriesApi>((ref) {
@@ -31,5 +32,9 @@ class DeliveriesRepository {
 
   Future<LearnerDelivery> fetchDelivery(String deliveryId) {
     return _api.fetchDelivery(deliveryId);
+  }
+
+  Future<LearnerDeliveryTracking> fetchDeliveryTracking(String deliveryId) {
+    return _api.fetchDeliveryTracking(deliveryId);
   }
 }

@@ -891,7 +891,7 @@ _ReservationActionButton? _resolveDeliveryAction({
   }
 
   return _ReservationActionButton(
-    label: 'View delivery',
+    label: delivery?.canTrack == true ? 'Track delivery' : 'View delivery',
     onPressed: () => onNavigate(deliveryId),
     desktopRail: desktopColumn,
   );

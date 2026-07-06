@@ -31,7 +31,7 @@ Learner requests internal delivery after a supplier accepts a reservation.
    - `ARRIVED_DROPOFF -> DELIVERED`
 13. Driver may turn on **Share automatically** on `/driver/deliveries/:id` while assigned to an active delivery. Flutter captures foreground location every 45 seconds while that page stays open and posts it through `POST /api/driver/deliveries/:id/location-pings`. Drivers can still tap **Send my location** for a one-off update. This is not background GPS.
 14. `DELIVERED` completes the reservation, subtracts `quantityRequested`, and marks material `REUSED` only when remaining quantity reaches `0`.
-15. Learner delivery detail polls `GET /api/deliveries/:id` while the page is open and the delivery is tracking-eligible. When the latest ping includes coordinates, Flutter renders a simple driver marker map plus last update time and accuracy. Raw driver coordinates are not printed as text. Learner tracking uses polling, not WebSocket/SSE.
+15. Learner delivery detail polls `GET /api/deliveries/:id/tracking` only after pickup (`PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`). Before pickup and after terminal states, the backend returns `canTrack: false` and `latestDriverLocation: null`; Flutter shows status text only and does not render a driver map marker. When `canTrack` is true and a ping exists, Flutter renders a simple driver marker map plus last update time and accuracy. Raw driver coordinates are not printed as text. Learner tracking uses polling, not WebSocket/SSE.
 
 ## Active Delivery Rule
 
@@ -76,12 +76,11 @@ Only one active delivery is allowed per reservation. The database allows many de
 
 ## Learner Tracking Summary
 
-- `GET /api/deliveries/:id` remains learner-owned.
-- The response includes `latestDriverPing` with `capturedAt` and optional `accuracyMeters` when an assigned driver has shared a location.
-- `latitude`/`longitude` are included only for `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, and `ARRIVED_DROPOFF`.
-- `WAITING_FOR_DRIVER`, `DELIVERED`, `CANCELLED`, `FAILED_PICKUP`, and `FAILED_DELIVERY` do not expose live coordinates.
-- Flutter learner detail renders a map marker only when coordinates are present, and never prints raw latitude/longitude as text.
-- Polling is page-scoped to `/learner/deliveries/:id`, uses a 20-second foreground refresh, and stops when the provider is no longer watched or the delivery leaves tracking-eligible status.
+- `GET /api/deliveries/:id` and `GET /api/deliveries/:id/tracking` remain learner-owned.
+- `canTrack` is true only for `PICKED_UP`, `ON_THE_WAY`, and `ARRIVED_DROPOFF`.
+- Before pickup (`WAITING_FOR_DRIVER`, `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`) and after terminal states, the backend returns `latestDriverLocation: null` and never exposes driver coordinates.
+- Flutter learner detail renders a map marker only when `canTrack` is true and coordinates are present, and never prints raw latitude/longitude as text.
+- Polling uses `GET /api/deliveries/:id/tracking` only while `canTrack` is true, stops on terminal status, and does not poll before pickup.
 
 ## Still Missing
 

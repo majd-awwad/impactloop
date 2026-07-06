@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -11,6 +13,7 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/learner_deliveries_provider.dart';
+import '../../data/deliveries_repository.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/learner_delivery.dart';
 import '../delivery_status_presentation.dart';
@@ -61,7 +64,8 @@ class LearnerDeliveryDetailPage extends ConsumerWidget {
                         onAction: () =>
                             ref.invalidate(learnerDeliveryProvider(deliveryId)),
                       ),
-                      data: (delivery) => _DeliveryDetailContent(
+                      data: (delivery) => _DeliveryDetailWithPolling(
+                        deliveryId: deliveryId,
                         delivery: delivery,
                         onRefresh: () =>
                             ref.invalidate(learnerDeliveryProvider(deliveryId)),
@@ -74,6 +78,135 @@ class LearnerDeliveryDetailPage extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DeliveryDetailWithPolling extends ConsumerStatefulWidget {
+  const _DeliveryDetailWithPolling({
+    required this.deliveryId,
+    required this.delivery,
+    required this.onRefresh,
+  });
+
+  final String deliveryId;
+  final LearnerDelivery delivery;
+  final VoidCallback onRefresh;
+
+  @override
+  ConsumerState<_DeliveryDetailWithPolling> createState() =>
+      _DeliveryDetailWithPollingState();
+}
+
+class _DeliveryDetailWithPollingState
+    extends ConsumerState<_DeliveryDetailWithPolling> {
+  Timer? _trackingTimer;
+  late LearnerDelivery _delivery;
+  bool _refreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _delivery = widget.delivery;
+    _syncTrackingTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DeliveryDetailWithPolling oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.delivery.id != widget.delivery.id ||
+        oldWidget.delivery.status != widget.delivery.status ||
+        oldWidget.delivery.canTrack != widget.delivery.canTrack ||
+        oldWidget.delivery.latestDriverPing?.capturedAt !=
+            widget.delivery.latestDriverPing?.capturedAt) {
+      _delivery = widget.delivery;
+      _syncTrackingTimer();
+    }
+  }
+
+  @override
+  void dispose() {
+    _trackingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _syncTrackingTimer() {
+    _trackingTimer?.cancel();
+    if (_delivery.canTrack && !_delivery.isTerminal) {
+      _trackingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+        unawaited(_refreshTrackingSilently());
+      });
+    }
+  }
+
+  Future<void> _refreshTrackingSilently() async {
+    if (_refreshing || !mounted || !_delivery.canTrack) {
+      return;
+    }
+
+    _refreshing = true;
+    try {
+      final tracking = await ref
+          .read(deliveriesRepositoryProvider)
+          .fetchDeliveryTracking(widget.deliveryId);
+      if (!mounted) {
+        return;
+      }
+
+      final location = tracking.latestDriverLocation;
+      setState(() {
+        _delivery = LearnerDelivery(
+          id: _delivery.id,
+          reservationId: _delivery.reservationId,
+          status: tracking.status,
+          requestedAt: _delivery.requestedAt,
+          assignedAt: _delivery.assignedAt,
+          arrivedPickupAt: _delivery.arrivedPickupAt,
+          pickedUpAt: _delivery.pickedUpAt,
+          onTheWayAt: _delivery.onTheWayAt,
+          arrivedDropoffAt: _delivery.arrivedDropoffAt,
+          deliveredAt: _delivery.deliveredAt,
+          cancelledAt: _delivery.cancelledAt,
+          failedAt: _delivery.failedAt,
+          learnerNote: _delivery.learnerNote,
+          driverNote: _delivery.driverNote,
+          failureReason: _delivery.failureReason,
+          reservation: _delivery.reservation,
+          pickupLocation: _delivery.pickupLocation,
+          dropoffLocation: _delivery.dropoffLocation,
+          driver: _delivery.driver,
+          latestDriverPing: location == null
+              ? null
+              : LearnerDeliveryDriverPing(
+                  capturedAt: location.capturedAt,
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                  accuracyMeters: location.accuracyMeters,
+                  coordinatesVisible: true,
+                ),
+          history: _delivery.history,
+          learnerDeliveryCode: _delivery.learnerDeliveryCode,
+          canTrack: tracking.canTrack,
+          trackingMessage: tracking.trackingMessage,
+        );
+      });
+    } catch (_) {
+      // Keep the last known delivery visible during background polling errors.
+    } finally {
+      _refreshing = false;
+    }
+  }
+
+  Future<void> _handleManualRefresh() async {
+    widget.onRefresh();
+    await _refreshTrackingSilently();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _DeliveryDetailContent(
+      delivery: _delivery,
+      onRefresh: () => unawaited(_handleManualRefresh()),
     );
   }
 }
@@ -221,7 +354,8 @@ class _DeliverySummaryPanel extends StatelessWidget {
           ],
           const SizedBox(height: AppSpacing.md),
           _TrackingStatusCard(delivery: delivery, onRefresh: onRefresh),
-          if (delivery.latestDriverPing?.hasCoordinates == true) ...[
+          if (delivery.latestDriverPing?.hasCoordinates == true &&
+              delivery.canTrack) ...[
             const SizedBox(height: AppSpacing.md),
             _TrackingMapCard(ping: delivery.latestDriverPing!),
           ],
@@ -265,17 +399,26 @@ class _TrackingStatusCard extends StatelessWidget {
       children: [
         _PanelTitle(
           icon: Icons.my_location_outlined,
-          title: ping?.hasCoordinates == true
-              ? 'Driver location updated recently'
-              : 'Tracking status',
+          title: delivery.canTrack
+              ? (ping?.hasCoordinates == true
+                    ? 'Driver location updated recently'
+                    : 'Live tracking')
+              : 'Delivery status',
           body: body,
         ),
         const SizedBox(height: AppSpacing.sm),
-        TextButton.icon(
-          onPressed: onRefresh,
-          icon: const Icon(Icons.refresh_outlined, size: 18),
-          label: const Text('Refresh tracking'),
-        ),
+        if (delivery.canTrack)
+          TextButton.icon(
+            onPressed: onRefresh,
+            icon: const Icon(Icons.refresh_outlined, size: 18),
+            label: const Text('Refresh tracking'),
+          )
+        else
+          TextButton.icon(
+            onPressed: onRefresh,
+            icon: const Icon(Icons.refresh_outlined, size: 18),
+            label: const Text('Refresh status'),
+          ),
       ],
     );
   }
@@ -632,13 +775,19 @@ String _driverSummary(LearnerDeliveryDriver driver) {
 }
 
 String _trackingStatusBody(LearnerDelivery delivery) {
-  if (delivery.status == 'WAITING_FOR_DRIVER') {
-    return 'Waiting for a driver to be assigned.\n'
-        'Location updates appear when the driver shares their position.';
-  }
+  if (!delivery.canTrack) {
+    final message = delivery.trackingMessage?.trim();
+    if (message != null && message.isNotEmpty) {
+      return message;
+    }
 
-  if (delivery.isTerminal) {
-    return 'Tracking is complete for this delivery.';
+    return switch (delivery.status) {
+      'WAITING_FOR_DRIVER' => 'Waiting for driver.',
+      'DRIVER_ASSIGNED' => 'Driver assigned.',
+      'ARRIVED_PICKUP' => 'Driver is heading to supplier pickup.',
+      _ when delivery.isTerminal => 'Tracking is complete for this delivery.',
+      _ => 'Driver location is available after pickup.',
+    };
   }
 
   final ping = delivery.latestDriverPing;
@@ -647,9 +796,14 @@ String _trackingStatusBody(LearnerDelivery delivery) {
         'Location updates appear when the driver shares their position.';
   }
 
+  final secondsAgo = DateTime.now().difference(ping.capturedAt).inSeconds;
+  final freshness = secondsAgo < 60
+      ? 'Last updated $secondsAgo seconds ago.'
+      : 'Last updated ${_formatDateTime(ping.capturedAt)}.';
+
   return [
-    'Location updates appear when the driver shares their position.',
-    'Last update: ${_formatDateTime(ping.capturedAt)}',
+    deliveryStatusLabel(delivery.status),
+    freshness,
     if (ping.accuracyMeters != null)
       'Accuracy: about ${ping.accuracyMeters!.round()} m',
   ].join('\n');
