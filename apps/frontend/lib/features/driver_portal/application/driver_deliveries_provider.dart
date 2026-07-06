@@ -166,8 +166,9 @@ final driverDeliveryDetailProvider =
             .fetchInactiveContext(deliveryId);
 
         if (context.isActive) {
-          ref.invalidate(activeDriverDeliveriesProvider);
-          final refreshed = await ref.read(activeDriverDeliveriesProvider.future);
+          final refreshed = await ref
+              .read(driverDeliveriesRepositoryProvider)
+              .fetchActiveDeliveries();
           for (final delivery in refreshed.deliveries) {
             if (delivery.id == deliveryId) {
               return DriverDeliveryDetailActive(delivery);

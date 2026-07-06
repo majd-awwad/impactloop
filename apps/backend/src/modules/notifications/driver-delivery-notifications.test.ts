@@ -15,6 +15,7 @@ import { DRIVER_DELIVERY_NOTIFICATION_TYPES } from './driver-delivery-notificati
 import {
   notifyNewDeliveryJobAvailable,
   resetDriverDeliveryReminderSyncThrottleForTests,
+  setDriverDeliveryNotificationsEnabledForTests,
   syncDriverDeliveryRemindersForUser,
 } from './driver-delivery-notifications.js';
 
@@ -231,6 +232,8 @@ describe('driver delivery notifications', () => {
   };
 
   before(async () => {
+    setDriverDeliveryNotificationsEnabledForTests(true);
+
     const category = await prisma.category.findFirst({
       where: { categoryType: { in: ['MATERIAL', 'BOTH'] } },
       select: { id: true },
@@ -271,6 +274,7 @@ describe('driver delivery notifications', () => {
   });
 
   after(async () => {
+    setDriverDeliveryNotificationsEnabledForTests(false);
     await cleanup(ctx);
   });
 
@@ -279,6 +283,33 @@ describe('driver delivery notifications', () => {
     await cleanupTestData(ctx);
     ctx.createdMaterialIds = [];
     ctx.createdReservationIds = [];
+  });
+
+  test('driver notification generation is disabled by default', async () => {
+    setDriverDeliveryNotificationsEnabledForTests(false);
+
+    const { reservation } = await createAcceptedReservation(ctx, 'Disabled Pack');
+    const delivery = await requestDelivery(ctx, reservation.id);
+
+    await notifyNewDeliveryJobAvailable(delivery.id);
+    await syncDriverDeliveryRemindersForUser(ctx.driverId, { force: true });
+    await listActiveDriverDeliveries(ctx.driverId);
+    await listMyNotifications(ctx.driverId, {
+      page: 1,
+      limit: 20,
+      isRead: undefined,
+    });
+
+    const count = await prisma.notification.count({
+      where: {
+        userId: ctx.driverId,
+        relatedEntityId: delivery.id,
+      },
+    });
+
+    assert.equal(count, 0);
+
+    setDriverDeliveryNotificationsEnabledForTests(true);
   });
 
   test('WAITING_FOR_DRIVER creates one new job notification per active driver', async () => {

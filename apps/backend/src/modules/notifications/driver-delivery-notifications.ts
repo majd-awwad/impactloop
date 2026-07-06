@@ -8,6 +8,13 @@ import {
 import { DRIVER_DELIVERY_NOTIFICATION_TYPES } from './driver-delivery-notification-types.js';
 import { createNotificationIfMissing } from './notifications.repository.js';
 
+/** Disabled until a real driver notification workflow is product-ready. */
+export let driverDeliveryNotificationsEnabled = false;
+
+export const setDriverDeliveryNotificationsEnabledForTests = (enabled: boolean) => {
+  driverDeliveryNotificationsEnabled = enabled;
+};
+
 const REMINDER_LOOKAHEAD_MS = 30 * 60 * 1000;
 
 const deliveryContextSelect = {
@@ -149,6 +156,10 @@ const listEligibleDriverUserIdsForNewJobs = async () => {
 
 export const notifyNewDeliveryJobAvailable = async (deliveryId: string) =>
   notifySafely(async () => {
+    if (!driverDeliveryNotificationsEnabled) {
+      return;
+    }
+
     const delivery = await loadDeliveryContext(deliveryId);
     if (!delivery || delivery.status !== 'WAITING_FOR_DRIVER') {
       return;
@@ -340,6 +351,10 @@ export const syncDriverDeliveryRemindersForUser = async (
   options: { force?: boolean } = {},
 ) =>
   notifySafely(async () => {
+    if (!driverDeliveryNotificationsEnabled) {
+      return;
+    }
+
     const syncStartedAt = Date.now();
     const lastSyncAt = lastReminderSyncAtByUser.get(userId) ?? 0;
     if (!options.force && syncStartedAt - lastSyncAt < SYNC_THROTTLE_MS) {

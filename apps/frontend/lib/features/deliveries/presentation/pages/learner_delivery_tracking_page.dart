@@ -20,13 +20,6 @@ import '../delivery_status_presentation.dart';
 
 const _trackingPollInterval = Duration(seconds: 45);
 
-final learnerDeliveryTrackingProvider = FutureProvider.autoDispose
-    .family<LearnerDeliveryTracking, String>((ref, deliveryId) {
-      return ref
-          .read(deliveriesRepositoryProvider)
-          .fetchDeliveryTracking(deliveryId);
-    });
-
 class LearnerDeliveryTrackingPage extends ConsumerStatefulWidget {
   const LearnerDeliveryTrackingPage({super.key, required this.deliveryId});
 
@@ -41,7 +34,17 @@ class _LearnerDeliveryTrackingPageState
     extends ConsumerState<LearnerDeliveryTrackingPage> {
   Timer? _pollTimer;
   LearnerDeliveryTracking? _tracking;
+  bool _loading = true;
+  Object? _error;
   bool _refreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_fetchTracking(initial: true));
+    });
+  }
 
   @override
   void dispose() {
@@ -51,24 +54,28 @@ class _LearnerDeliveryTrackingPageState
 
   void _syncPollTimer(LearnerDeliveryTracking tracking) {
     _pollTimer?.cancel();
+    _pollTimer = null;
+
     if (tracking.canTrack && !tracking.isTerminal) {
       _pollTimer = Timer.periodic(_trackingPollInterval, (_) {
-        unawaited(_refreshSilently());
+        unawaited(_fetchTracking());
       });
     }
   }
 
-  Future<void> _refreshSilently() async {
+  Future<void> _fetchTracking({bool initial = false}) async {
     if (_refreshing || !mounted) {
       return;
     }
 
-    final current = _tracking;
-    if (current == null || !current.canTrack || current.isTerminal) {
-      return;
+    _refreshing = true;
+    if (initial) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
     }
 
-    _refreshing = true;
     try {
       final tracking = await ref
           .read(deliveriesRepositoryProvider)
@@ -79,25 +86,29 @@ class _LearnerDeliveryTrackingPageState
 
       setState(() {
         _tracking = tracking;
+        _loading = false;
+        _error = null;
       });
       _syncPollTimer(tracking);
     } catch (error) {
-      // Keep last known tracking visible during background polling errors.
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _loading = initial;
+        _error = error;
+      });
+      _pollTimer?.cancel();
+      _pollTimer = null;
     } finally {
       _refreshing = false;
     }
   }
 
-  Future<void> _retry() async {
-    ref.invalidate(learnerDeliveryTrackingProvider(widget.deliveryId));
-  }
-
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final trackingAsync = ref.watch(
-      learnerDeliveryTrackingProvider(widget.deliveryId),
-    );
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -111,48 +122,44 @@ class _LearnerDeliveryTrackingPageState
               homeRoute: '/home',
             ),
             Expanded(
-              child: trackingAsync.when(
-                loading: () => const Center(
-                  child: _StatePanel(
-                    icon: Icons.hourglass_empty_rounded,
-                    title: 'Loading tracking',
-                    subtitle: 'Fetching the latest delivery location.',
-                  ),
-                ),
-                error: (error, _) => Center(
-                  child: _StatePanel(
-                    icon: Icons.cloud_off_outlined,
-                    title: 'Could not load tracking',
-                    subtitle: 'Please try again.',
-                    actionLabel: 'Retry',
-                    onAction: _retry,
-                  ),
-                ),
-                data: (tracking) {
-                  _tracking ??= tracking;
-                  if (_tracking!.deliveryId != tracking.deliveryId) {
-                    _tracking = tracking;
-                  } else if (_tracking != tracking) {
-                    _tracking = tracking;
-                  }
-                  _syncPollTimer(_tracking!);
-
-                  return SingleChildScrollView(
-                    padding: const EdgeInsetsDirectional.fromSTEB(
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.xl,
-                    ),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1040),
-                        child: _TrackingContent(tracking: _tracking!),
+              child: _loading
+                  ? const Center(
+                      child: _StatePanel(
+                        icon: Icons.hourglass_empty_rounded,
+                        title: 'Loading tracking',
+                        subtitle: 'Fetching the latest delivery location.',
+                      ),
+                    )
+                  : _error != null
+                  ? Center(
+                      child: _StatePanel(
+                        icon: Icons.cloud_off_outlined,
+                        title: 'Could not load tracking',
+                        subtitle: 'Please try again.',
+                        actionLabel: 'Retry',
+                        onAction: () => unawaited(_fetchTracking(initial: true)),
+                      ),
+                    )
+                  : _tracking == null
+                  ? const SizedBox.shrink()
+                  : SingleChildScrollView(
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        AppSpacing.md,
+                        AppSpacing.lg,
+                        AppSpacing.md,
+                        AppSpacing.xl,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1040),
+                          child: _TrackingContent(
+                            tracking: _tracking!,
+                            refreshing: _refreshing,
+                            onRefresh: () => unawaited(_fetchTracking()),
+                          ),
+                        ),
                       ),
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),
@@ -162,9 +169,15 @@ class _LearnerDeliveryTrackingPageState
 }
 
 class _TrackingContent extends StatelessWidget {
-  const _TrackingContent({required this.tracking});
+  const _TrackingContent({
+    required this.tracking,
+    required this.refreshing,
+    required this.onRefresh,
+  });
 
   final LearnerDeliveryTracking tracking;
+  final bool refreshing;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -269,6 +282,9 @@ class _TrackingContent extends StatelessWidget {
               ),
             ),
           _TrackingMap(
+            key: ValueKey(
+              '${location.latitude}_${location.longitude}_${location.capturedAt.millisecondsSinceEpoch}',
+            ),
             driverLocation: location,
             dropoffLatitude: tracking.dropoffLatitude,
             dropoffLongitude: tracking.dropoffLongitude,
@@ -281,9 +297,24 @@ class _TrackingContent extends StatelessWidget {
             ).copyWith(color: palette.textMuted),
           ),
         ],
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.md),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            onPressed: refreshing ? null : onRefresh,
+            icon: refreshing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_outlined, size: 18),
+            label: Text(refreshing ? 'Refreshing…' : 'Refresh tracking'),
+          ),
+        ),
         TextButton.icon(
-          onPressed: () => context.go('/learner/deliveries/${tracking.deliveryId}'),
+          onPressed: () =>
+              context.go('/learner/deliveries/${tracking.deliveryId}'),
           icon: const Icon(Icons.assignment_outlined),
           label: const Text('View delivery details'),
         ),
@@ -292,8 +323,9 @@ class _TrackingContent extends StatelessWidget {
   }
 }
 
-class _TrackingMap extends StatelessWidget {
+class _TrackingMap extends StatefulWidget {
   const _TrackingMap({
+    super.key,
     required this.driverLocation,
     this.dropoffLatitude,
     this.dropoffLongitude,
@@ -304,43 +336,67 @@ class _TrackingMap extends StatelessWidget {
   final double? dropoffLongitude;
 
   @override
+  State<_TrackingMap> createState() => _TrackingMapState();
+}
+
+class _TrackingMapState extends State<_TrackingMap> {
+  late final MapController _mapController;
+  late LatLng _driverPoint;
+
+  @override
+  void initState() {
+    super.initState();
+    _mapController = MapController();
+    _driverPoint = LatLng(
+      widget.driverLocation.latitude,
+      widget.driverLocation.longitude,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _TrackingMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextPoint = LatLng(
+      widget.driverLocation.latitude,
+      widget.driverLocation.longitude,
+    );
+    if (nextPoint != _driverPoint) {
+      _driverPoint = nextPoint;
+      _mapController.move(nextPoint, _mapController.camera.zoom);
+    }
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final driverPoint = LatLng(
-      driverLocation.latitude,
-      driverLocation.longitude,
-    );
-    final dropoffPoint = dropoffLatitude != null && dropoffLongitude != null
-        ? LatLng(dropoffLatitude!, dropoffLongitude!)
+    final dropoffPoint = widget.dropoffLatitude != null &&
+            widget.dropoffLongitude != null
+        ? LatLng(widget.dropoffLatitude!, widget.dropoffLongitude!)
         : null;
 
     final markers = <Marker>[
       Marker(
-        point: driverPoint,
-        width: 48,
-        height: 48,
-        alignment: Alignment.topCenter,
-        child: _MapMarker(
-          color: palette.mint,
-          icon: Icons.local_shipping_outlined,
-          label: 'Driver',
-        ),
+        point: _driverPoint,
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        child: Icon(Icons.local_shipping_outlined, color: palette.mint, size: 28),
       ),
       if (dropoffPoint != null)
         Marker(
           point: dropoffPoint,
-          width: 48,
-          height: 48,
-          alignment: Alignment.topCenter,
-          child: _MapMarker(
-            color: palette.textSecondary,
-            icon: Icons.home_outlined,
-            label: 'Drop-off',
-          ),
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
+          child: Icon(Icons.home_outlined, color: palette.textSecondary, size: 28),
         ),
     ];
-
-    final center = dropoffPoint ?? driverPoint;
 
     return ClipRRect(
       borderRadius: AppRadius.lgAll,
@@ -348,8 +404,9 @@ class _TrackingMap extends StatelessWidget {
         height: MediaQuery.sizeOf(context).width >= 700 ? 320 : 260,
         width: double.infinity,
         child: FlutterMap(
+          mapController: _mapController,
           options: MapOptions(
-            initialCenter: center,
+            initialCenter: _driverPoint,
             initialZoom: 13,
             minZoom: 5,
             maxZoom: 18,
@@ -375,46 +432,6 @@ class _TrackingMap extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _MapMarker extends StatelessWidget {
-  const _MapMarker({
-    required this.color,
-    required this.icon,
-    required this.label,
-  });
-
-  final Color color;
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.xs,
-            vertical: 2,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: AppRadius.pillAll,
-            border: Border.all(color: color),
-          ),
-          child: Text(
-            label,
-            style: AppTextStyles.label(context).copyWith(
-              color: color,
-              fontSize: 10,
-            ),
-          ),
-        ),
-        Icon(icon, color: color, size: 32),
-      ],
     );
   }
 }
@@ -450,7 +467,11 @@ class _StatePanel extends StatelessWidget {
         children: [
           Icon(icon, size: 36, color: palette.textMuted),
           const SizedBox(height: AppSpacing.md),
-          Text(title, style: AppTextStyles.title(context), textAlign: TextAlign.center),
+          Text(
+            title,
+            style: AppTextStyles.title(context),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             subtitle,
