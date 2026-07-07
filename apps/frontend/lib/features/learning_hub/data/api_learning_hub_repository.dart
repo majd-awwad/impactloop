@@ -7,6 +7,7 @@ import '../../materials/data/models/category.dart';
 import '../domain/learning_project_repository.dart';
 import '../domain/learning_projects_result.dart';
 import '../domain/models/learning_project.dart';
+import '../domain/models/project_build.dart';
 import '../domain/project_engagement.dart';
 import '../domain/project_follow_status.dart';
 import '../domain/project_save_status.dart';
@@ -80,8 +81,112 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild?> fetchMyBuild(String projectId) async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me',
+      );
+      final body = response.data;
+
+      if (body == null) {
+        throw const ApiException(message: 'Empty response from server');
+      }
+
+      if (body['success'] != true) {
+        throw const ApiException(message: 'Request failed');
+      }
+
+      final data = body['data'];
+      if (data == null) {
+        return null;
+      }
+
+      if (data is! Map) {
+        throw const ApiException(message: 'Unexpected response data format');
+      }
+
+      return LearningHubApiMapper.fromBuildJson(
+        Map<String, dynamic>.from(data),
+      );
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) {
+        return null;
+      }
+
+      throw mapDioException(error);
+    }
+  }
+
+  @override
+  Future<ProjectBuild> startBuild(String projectId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>('$_basePath/$projectId/builds/start'),
+      LearningHubApiMapper.fromBuildJson,
+    );
+  }
+
+  @override
+  Future<ProjectBuild> updateBuildItem(
+    String projectId,
+    String itemId, {
+    required ProjectBuildItemStatus status,
+    String? learnerNote,
+  }) {
+    return unwrapApiResponse(
+      _client.patch<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/items/$itemId',
+        data: {'status': status.apiValue, 'learnerNote': learnerNote?.trim()},
+      ),
+      LearningHubApiMapper.fromBuildJson,
+    );
+  }
+
+  @override
+  Future<BuildMaterialCandidatesResult> fetchMaterialCandidates(
+    String projectId,
+    String itemId,
+  ) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/items/$itemId/material-candidates',
+      ),
+      LearningHubApiMapper.fromMaterialCandidatesJson,
+    );
+  }
+
+  @override
+  Future<ProjectBuild> linkMaterial(
+    String projectId,
+    String itemId, {
+    required String materialId,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/items/$itemId/link-material',
+        data: {'materialId': materialId},
+      ),
+      LearningHubApiMapper.fromBuildJson,
+    );
+  }
+
+  @override
+  Future<ProjectBuild> unlinkMaterial(String projectId, String itemId) {
+    return unwrapApiResponse(
+      _client.delete<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/items/$itemId/link-material',
+      ),
+      LearningHubApiMapper.fromBuildJson,
+    );
+  }
+
+  @override
   Future<List<MaterialCategory>> fetchProjectCategories() {
     return _categoriesApi.fetchProjectCategories();
+  }
+
+  @override
+  Future<List<MaterialCategory>> fetchMaterialCategories() {
+    return _categoriesApi.fetchMaterialCategories();
   }
 
   @override

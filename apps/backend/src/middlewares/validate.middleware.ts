@@ -5,6 +5,22 @@ import { AppError } from '../utils/app-error.js';
 
 type RequestSource = 'body' | 'query' | 'params';
 
+const mapValidationIssueCode = (path: string) => {
+  switch (path) {
+    case 'categoryId':
+      return 'INVALID_COMPONENT_CATEGORY';
+    case 'componentRole':
+      return 'INVALID_COMPONENT_ROLE';
+    case 'quantity':
+      return 'INVALID_QUANTITY';
+    case 'searchKeywords':
+    case 'alternativeKeywords':
+      return 'INVALID_KEYWORDS';
+    default:
+      return 'VALIDATION_ERROR';
+  }
+};
+
 /**
  * Validates req.body, req.query, or req.params.
  * For query/params, prefer z.coerce.* in schemas because Express values are strings.
@@ -23,6 +39,7 @@ export const validate =
           issues: result.error.issues.map((issue) => ({
             path: issue.path.join('.'),
             message: issue.message,
+            code: mapValidationIssueCode(issue.path.join('.')),
           })),
         }),
       );

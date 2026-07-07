@@ -52,6 +52,13 @@ void main() {
         'recentReservationRequests': [],
         'mostViewedMaterial': null,
         'highDemandMaterials': [],
+        'projectSupport': {
+          'projectsSupported': 0,
+          'projectComponentsSupported': 0,
+          'learnerBuildsHelped': 0,
+          'completedLinkedReservations': 0,
+          'latestSupportedProjects': [],
+        },
       });
 
       expect(dashboard.hasSupplierProfile, isFalse);
@@ -59,6 +66,8 @@ void main() {
       expect(dashboard.supplier, isNull);
       expect(dashboard.stats.materials.total, 0);
       expect(dashboard.recentMaterials, isEmpty);
+      expect(dashboard.projectSupport.projectsSupported, 0);
+      expect(dashboard.projectSupport.hasImpact, isFalse);
     });
 
     test('parses populated dashboard response', () {
@@ -135,14 +144,35 @@ void main() {
         'recentReservationRequests': [],
         'mostViewedMaterial': null,
         'highDemandMaterials': [],
+        'projectSupport': {
+          'projectsSupported': 2,
+          'projectComponentsSupported': 3,
+          'learnerBuildsHelped': 2,
+          'completedLinkedReservations': 3,
+          'latestSupportedProjects': [
+            {
+              'projectId': 'proj-1',
+              'title': 'Solar charger',
+              'categoryName': 'Electronics',
+              'completedAt': '2026-07-01T10:00:00.000Z',
+            },
+            {
+              'projectId': 'proj-2',
+              'title': 'Line follower',
+              'categoryName': 'Robotics',
+              'completedAt': '2026-06-20T10:00:00.000Z',
+            },
+          ],
+        },
       });
-
-      expect(dashboard.hasSupplierProfile, isTrue);
       expect(dashboard.supplier?.publicName, 'ImpactLoop Supplier');
       expect(dashboard.stats.materials.total, 2);
       expect(dashboard.stats.engagement.totalViews, 20);
       expect(dashboard.stats.reviews.averageRating, 4.5);
       expect(dashboard.recentMaterials, hasLength(1));
+      expect(dashboard.projectSupport.projectsSupported, 2);
+      expect(dashboard.projectSupport.projectComponentsSupported, 3);
+      expect(dashboard.projectSupport.latestSupportedProjects, hasLength(2));
     });
   });
 }

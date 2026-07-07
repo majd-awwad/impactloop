@@ -118,6 +118,20 @@ class AdminLearningProjectsApi {
       AdminLearningProjectDetail.fromJson,
     );
   }
+
+  Future<AdminLearningProjectDetail> updateProjectComponent({
+    required String projectId,
+    required String componentId,
+    required Map<String, dynamic> body,
+  }) {
+    return unwrapApiResponse(
+      _client.patch<Map<String, dynamic>>(
+        '/api/admin/learning-projects/$projectId/components/$componentId',
+        data: body,
+      ),
+      AdminLearningProjectDetail.fromJson,
+    );
+  }
 }
 
 final adminLearningProjectsApiProvider = Provider<AdminLearningProjectsApi>(

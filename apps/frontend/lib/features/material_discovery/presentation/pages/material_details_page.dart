@@ -24,6 +24,7 @@ import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../deliveries/data/models/learner_delivery.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
+import '../../../learning_hub/application/learning_hub_providers.dart';
 import '../../../reservations/application/my_reservations_provider.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/application/reservation_timing_policy.dart';
@@ -59,10 +60,18 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
     super.key,
     required this.materialId,
     this.repository,
+    this.projectId,
+    this.buildItemId,
+    this.returnTo,
+    this.componentName,
   });
 
   final String materialId;
   final MaterialDiscoveryRepository? repository;
+  final String? projectId;
+  final String? buildItemId;
+  final String? returnTo;
+  final String? componentName;
 
   @override
   ConsumerState<MaterialDetailsPage> createState() =>
@@ -207,6 +216,8 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 
         return _MaterialDetailsLoadedContent(
           material: material,
+          buildItemId: widget.buildItemId,
+          componentName: widget.componentName,
           showReservationStatusCta: _showReservationStatusCta,
           isLikeUpdating: _isLikeUpdating,
           onReserve: () => _handleReserve(material),
@@ -310,9 +321,27 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
   Future<void> _submitReservationRequest(
     CreateReservationRequest request,
   ) async {
+    final buildItemId = widget.buildItemId?.trim();
+    final enrichedRequest = buildItemId != null && buildItemId.isNotEmpty
+        ? CreateReservationRequest(
+            materialId: request.materialId,
+            quantityRequested: request.quantityRequested,
+            fulfillmentMethod: request.fulfillmentMethod,
+            message: request.message,
+            buildItemId: buildItemId,
+            learnerPreferredPickupWindows:
+                request.learnerPreferredPickupWindows,
+            learnerPreferredDeliveryWindows:
+                request.learnerPreferredDeliveryWindows,
+            deliveryAddressText: request.deliveryAddressText,
+            safeDropoffAllowed: request.safeDropoffAllowed,
+            deliveryNote: request.deliveryNote,
+          )
+        : request;
+
     await ref
         .read(reservationCreateControllerProvider.notifier)
-        .create(request);
+        .create(enrichedRequest);
 
     if (!mounted) {
       return;
@@ -320,6 +349,22 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 
     ref.invalidate(myReservationsProvider);
     ref.invalidate(homeSuggestedMaterialsProvider);
+
+    final projectId = widget.projectId?.trim();
+    if (projectId != null && projectId.isNotEmpty) {
+      ref.invalidate(projectBuildProvider(projectId));
+    }
+
+    final returnTo = widget.returnTo?.trim();
+    if (returnTo != null && returnTo.isNotEmpty) {
+      showInfoSnackBar(
+        context,
+        'Reservation linked to your build checklist.',
+      );
+      context.go(Uri.decodeComponent(returnTo));
+      return;
+    }
+
     setState(() {
       _showReservationStatusCta = true;
     });
@@ -330,6 +375,8 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 class _MaterialDetailsLoadedContent extends ConsumerWidget {
   const _MaterialDetailsLoadedContent({
     required this.material,
+    this.buildItemId,
+    this.componentName,
     required this.showReservationStatusCta,
     required this.isLikeUpdating,
     required this.onReserve,
@@ -337,6 +384,8 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
   });
 
   final DiscoveryMaterial material;
+  final String? buildItemId;
+  final String? componentName;
   final bool showReservationStatusCta;
   final bool isLikeUpdating;
   final VoidCallback onReserve;
@@ -409,6 +458,18 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
               showCreateAccount: true,
               homeRoute: '/',
             ),
+            if (buildItemId != null && buildItemId!.trim().isNotEmpty)
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.md,
+                  0,
+                ),
+                child: _BuildChecklistContextBanner(
+                  componentName: componentName,
+                ),
+              ),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsetsDirectional.fromSTEB(
@@ -3420,6 +3481,58 @@ class _QuantityStepButton extends StatelessWidget {
         foregroundColor: palette.textPrimary,
       ),
       icon: Icon(icon, size: compact ? 18 : 20),
+    );
+  }
+}
+
+class _BuildChecklistContextBanner extends StatelessWidget {
+  const _BuildChecklistContextBanner({this.componentName});
+
+  final String? componentName;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final componentLabel = componentName?.trim();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.mint.withValues(alpha: 0.12),
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: palette.mint.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.playlist_add_check_rounded, color: palette.mint, size: 20),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Reserving for your build checklist',
+                  style: AppTextStyles.label(context).copyWith(
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (componentLabel != null && componentLabel.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    componentLabel,
+                    style: AppTextStyles.body(context).copyWith(
+                      color: palette.textSecondary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

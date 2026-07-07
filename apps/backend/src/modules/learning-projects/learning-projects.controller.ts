@@ -10,22 +10,30 @@ import { validateIdempotencyKey } from '../../services/idempotency.service.js';
 import {
   deleteLearningProjectReviewById,
   followLearningProjectById,
+  getBuildItemMaterialCandidatesById,
   getFollowedLearningProjects,
   getLearningProjectById,
   getLearningProjects,
+  getMyProjectBuildById,
   getSavedLearningProjects,
   likeLearningProjectById,
+  linkBuildItemMaterialById,
+  linkBuildItemReservationById,
   reviewLearningProjectById,
   saveLearningProjectById,
+  startProjectBuildById,
   submitLearningProjectForReview,
   unlikeLearningProjectById,
   unfollowLearningProjectById,
+  unlinkBuildItemMaterialById,
   unsaveLearningProjectById,
+  updateProjectBuildItemById,
 } from './learning-projects.service.js';
 import type {
   LearningProjectsQuery,
   ProjectReviewInput,
   SubmitLearningProjectInput,
+  UpdateProjectBuildItemInput,
 } from './learning-projects.validation.js';
 
 export const listLearningProjects = async (
@@ -76,6 +84,109 @@ export const getLearningProject = async (
   const project = await getLearningProjectById(id, req.auth);
 
   res.json(successResponse('Learning project fetched successfully', project));
+};
+
+export const getMyProjectBuild = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const build = await getMyProjectBuildById(id, req.auth!.sub);
+
+  res.json(successResponse('Project build fetched successfully', build));
+};
+
+export const startProjectBuild = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const build = await startProjectBuildById(id, req.auth!.sub);
+
+  res.json(successResponse('Project build ready', build));
+};
+
+export const updateProjectBuildItem = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, itemId } = readValidatedParams<{ id: string; itemId: string }>(
+    req,
+  );
+  const build = await updateProjectBuildItemById(
+    id,
+    req.auth!.sub,
+    itemId,
+    req.body as UpdateProjectBuildItemInput,
+  );
+
+  res.json(successResponse('Project build item updated successfully', build));
+};
+
+export const getBuildItemMaterialCandidates = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, itemId } = readValidatedParams<{ id: string; itemId: string }>(
+    req,
+  );
+  const result = await getBuildItemMaterialCandidatesById(
+    id,
+    req.auth!.sub,
+    itemId,
+  );
+
+  res.json(
+    successResponse('Material candidates fetched successfully', result),
+  );
+};
+
+export const linkBuildItemMaterial = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, itemId } = readValidatedParams<{ id: string; itemId: string }>(
+    req,
+  );
+  const { materialId } = req.body as { materialId: string };
+  const build = await linkBuildItemMaterialById(
+    id,
+    req.auth!.sub,
+    itemId,
+    materialId,
+  );
+
+  res.json(successResponse('Material linked successfully', build));
+};
+
+export const unlinkBuildItemMaterial = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, itemId } = readValidatedParams<{ id: string; itemId: string }>(
+    req,
+  );
+  const build = await unlinkBuildItemMaterialById(id, req.auth!.sub, itemId);
+
+  res.json(successResponse('Material unlinked successfully', build));
+};
+
+export const linkBuildItemReservation = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, itemId } = readValidatedParams<{ id: string; itemId: string }>(
+    req,
+  );
+  const { reservationId } = req.body as { reservationId: string };
+  const build = await linkBuildItemReservationById(
+    id,
+    req.auth!.sub,
+    itemId,
+    reservationId,
+  );
+
+  res.json(successResponse('Reservation linked successfully', build));
 };
 
 export const likeLearningProject = async (

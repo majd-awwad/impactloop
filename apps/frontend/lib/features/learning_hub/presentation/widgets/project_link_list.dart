@@ -209,10 +209,6 @@ class _LinkTile extends StatelessWidget {
 
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(failureMessage),
-        ),
-      );
+      ..showSnackBar(SnackBar(content: Text(failureMessage)));
   }
 }

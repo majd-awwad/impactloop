@@ -12,6 +12,7 @@ import { seedSupplierNotifications } from './seeds/seed-supplier-notifications.j
 import { seedAdmin } from './seeds/seed-admin.js';
 import { seedAdminDashboard } from './seeds/seed-admin-dashboard.js';
 import { seedSupplierVerifications } from './seeds/seed-supplier-verifications.js';
+import { MOCK_LEARNING_PROJECTS_FOR_PAGINATION } from './seeds/mock-learning-projects.data.js';
 
 type SeedCategoryInput = {
   key: string;
@@ -1782,7 +1783,10 @@ const main = async () => {
   }
 
   const seededProjects: { title: string; status: string }[] = [];
-  for (const project of learningProjects) {
+  for (const project of [
+    ...learningProjects,
+    ...MOCK_LEARNING_PROJECTS_FOR_PAGINATION,
+  ]) {
     const record = await ensureLearningProject(author, categoryMap, project);
     seededProjects.push({ title: record.title, status: record.status });
   }

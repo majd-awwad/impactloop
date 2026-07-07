@@ -104,12 +104,13 @@ Static images: `GET /uploads/materials/*`
 ## Reusable components
 
 - Shared: `AppMaterialCard` (where discovery-shaped data shown), material badges — see [reusable-widgets](../frontend/reusable-widgets.md)
-- Supplier-specific: `SupplierMaterialCard`, dashboard charts, shell widgets — **not** for cross-feature reuse
+- Supplier-specific: `SupplierMaterialCard`, `SupplierProjectImpactPanel`, dashboard charts, shell widgets — **not** for cross-feature reuse
 
 ## Known gaps / Needs verification
 
 - **Learner** cannot create reservations via API — test data from `prisma/seeds/seed-supplier-reservations.ts`.
 - Accept reservation recomputes material status from holds; material may stay `AVAILABLE` when partial stock remains.
 - Admin impact metrics still count whole `REUSED` materials; partial depletion may need reservation-level impact later.
+- Supplier dashboard `GET /dashboard` includes reuse stats (`stats.impact.reusedMaterials`) and **project-linked impact** (`projectSupport`) derived from completed build-linked reservations. Counts only `Reservation.status = COMPLETED` on linked `project_build_items`; does not expose learner identity.
 - `POST /api/price-rule-requests` has auth but no `SUPPLIER` role guard in route file.
 - Supplier followers, follower impact, saves/likes analytics, category demand insights, and "related projects for this material" are planned/future.

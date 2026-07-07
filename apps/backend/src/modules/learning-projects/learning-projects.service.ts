@@ -6,11 +6,24 @@ import {
 } from '../../services/idempotency.service.js';
 
 import * as learningProjectsRepository from './learning-projects.repository.js';
+import {
+  getBuildItemMaterialCandidates,
+  linkBuildItemMaterial,
+  mapLinkedMaterialSummary,
+  mapLinkedReservationSummary,
+  resolveBuildItemReadiness,
+  unlinkBuildItemMaterial,
+} from './learning-projects.build-material-linking.js';
 import type {
   LearningProjectsQuery,
   ProjectReviewInput,
   SubmitLearningProjectInput,
+  UpdateProjectBuildItemInput,
 } from './learning-projects.validation.js';
+import {
+  assertUniqueSubmitComponentNames,
+  normalizeSubmitComponent,
+} from './learning-projects.submit-components.js';
 
 type SubmitLearningProjectResponse = {
   id: string;
@@ -29,6 +42,10 @@ type ProjectReviewRecord =
   Awaited<
     ReturnType<typeof learningProjectsRepository.findRecentReviewsForProject>
   >[number];
+
+type ProjectBuildRecord = NonNullable<
+  Awaited<ReturnType<typeof learningProjectsRepository.findProjectBuild>>
+>;
 
 const decimalToSerializable = (value: { toNumber(): number } | number): number => {
   if (typeof value === 'number') {
@@ -185,6 +202,74 @@ const mapLearningProjectDetail = (
   createdAt: project.createdAt.toISOString(),
 });
 
+const mapProjectBuildItem = (
+  item: ProjectBuildRecord['items'][number],
+) => {
+  const readiness = resolveBuildItemReadiness({
+    status: item.status,
+    linkedReservation: item.linkedReservation,
+    linkedMaterial: item.linkedMaterial,
+  });
+
+  return {
+    id: item.id,
+    requiredComponentId: item.requiredComponentId,
+    status: item.status,
+    learnerNote: item.learnerNote,
+    linkedMaterial: mapLinkedMaterialSummary(item.linkedMaterial),
+    linkedReservation: mapLinkedReservationSummary(item.linkedReservation),
+    isReadyForBuild: readiness.isReadyForBuild,
+    readinessLabel: readiness.readinessLabel,
+    component: {
+      id: item.requiredComponent.id,
+      categoryId: item.requiredComponent.categoryId,
+      category: item.requiredComponent.category
+        ? mapCategory(item.requiredComponent.category)
+        : null,
+      componentName: item.requiredComponent.componentName,
+      materialType: item.requiredComponent.materialType,
+      quantity: decimalToSerializable(item.requiredComponent.quantity),
+      unit: item.requiredComponent.unit,
+      componentRole: item.requiredComponent.componentRole,
+      isRequired: item.requiredComponent.isRequired,
+      canBeSubstituted: item.requiredComponent.canBeSubstituted,
+      notes: item.requiredComponent.notes,
+    },
+    createdAt: item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+  };
+};
+
+const mapProjectBuild = (build: ProjectBuildRecord) => {
+  const mappedItems = build.items.map((item) => mapProjectBuildItem(item));
+  const readyItems = mappedItems.filter((item) => item.isReadyForBuild);
+  const totalItems = mappedItems.length;
+
+  return {
+    id: build.id,
+    projectId: build.projectId,
+    learnerId: build.learnerId,
+    status: build.status,
+    startedAt: build.startedAt.toISOString(),
+    completedAt: build.completedAt?.toISOString() ?? null,
+    createdAt: build.createdAt.toISOString(),
+    updatedAt: build.updatedAt.toISOString(),
+    project: {
+      id: build.project.id,
+      title: build.project.title,
+      shortDescription: build.project.shortDescription,
+      coverImageUrl: build.project.coverImageUrl,
+    },
+    progress: {
+      total: totalItems,
+      ready: readyItems.length,
+      percent:
+        totalItems === 0 ? 0 : Math.round((readyItems.length / totalItems) * 100),
+    },
+    items: mappedItems,
+  };
+};
+
 export const getLearningProjects = async (
   query: LearningProjectsQuery,
   viewer?: AccessTokenPayload,
@@ -304,6 +389,151 @@ export const getLearningProjectById = async (
     recentReviews,
     viewerReview,
   });
+};
+
+export const getMyProjectBuildById = async (
+  id: string,
+  userId: string,
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    id,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  const build = await learningProjectsRepository.findProjectBuild(id, userId);
+
+  return build ? mapProjectBuild(build) : null;
+};
+
+export const startProjectBuildById = async (
+  id: string,
+  userId: string,
+) => {
+  const build = await learningProjectsRepository.startProjectBuild(id, userId);
+
+  if (!build) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  return mapProjectBuild(build);
+};
+
+export const updateProjectBuildItemById = async (
+  id: string,
+  userId: string,
+  itemId: string,
+  input: UpdateProjectBuildItemInput,
+) => {
+  const build = await learningProjectsRepository.updateProjectBuildItem({
+    projectId: id,
+    learnerId: userId,
+    itemId,
+    status: input.status,
+    learnerNote: input.learnerNote ?? null,
+  });
+
+  if (!build) {
+    throw new AppError('Project build item not found', 404, 'NOT_FOUND');
+  }
+
+  return mapProjectBuild(build);
+};
+
+export const getBuildItemMaterialCandidatesById = async (
+  projectId: string,
+  userId: string,
+  itemId: string,
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    projectId,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  return getBuildItemMaterialCandidates({
+    projectId,
+    learnerId: userId,
+    itemId,
+  });
+};
+
+export const linkBuildItemMaterialById = async (
+  projectId: string,
+  userId: string,
+  itemId: string,
+  materialId: string,
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    projectId,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  const build = await linkBuildItemMaterial({
+    projectId,
+    learnerId: userId,
+    itemId,
+    materialId,
+  });
+
+  return mapProjectBuild(build);
+};
+
+export const unlinkBuildItemMaterialById = async (
+  projectId: string,
+  userId: string,
+  itemId: string,
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    projectId,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  const build = await unlinkBuildItemMaterial({
+    projectId,
+    learnerId: userId,
+    itemId,
+  });
+
+  return mapProjectBuild(build);
+};
+
+export const linkBuildItemReservationById = async (
+  projectId: string,
+  userId: string,
+  itemId: string,
+  reservationId: string,
+) => {
+  const project = await learningProjectsRepository.findPublicLearningProjectById(
+    projectId,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  const build = await learningProjectsRepository.linkBuildItemReservation({
+    projectId,
+    learnerId: userId,
+    itemId,
+    reservationId,
+  });
+
+  if (!build) {
+    throw new AppError('Project build not found', 404, 'NOT_FOUND');
+  }
+
+  return mapProjectBuild(build);
 };
 
 export const likeLearningProjectById = async (id: string, userId: string) => {
@@ -495,6 +725,40 @@ export const submitLearningProjectForReview = async (
     );
   }
 
+  if (input.requiredComponents?.length) {
+    assertUniqueSubmitComponentNames(input.requiredComponents);
+  }
+
+  const normalizedComponents = (input.requiredComponents ?? []).map((component) =>
+    normalizeSubmitComponent(component),
+  );
+  const componentCategoryIds = [
+    ...new Set(
+      normalizedComponents
+        .map((component) => component.categoryId)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+
+  if (componentCategoryIds.length > 0) {
+    const validCategories =
+      await learningProjectsRepository.findMaterialCategoriesForSubmit(
+        componentCategoryIds,
+      );
+    const validCategoryIds = new Set(validCategories.map((entry) => entry.id));
+    const invalidCategoryId = componentCategoryIds.find(
+      (categoryId) => !validCategoryIds.has(categoryId),
+    );
+
+    if (invalidCategoryId) {
+      throw new AppError(
+        'Component material category must be an active MATERIAL or BOTH category.',
+        400,
+        'INVALID_COMPONENT_CATEGORY',
+      );
+    }
+  }
+
   return runIdempotentOperation<SubmitLearningProjectResponse>({
     userId,
     scope: LEARNING_PROJECT_SUBMIT_SCOPE,
@@ -513,7 +777,7 @@ export const submitLearningProjectForReview = async (
           difficulty: input.difficulty,
           estimatedDurationMinutes: input.estimatedDurationMinutes,
           coverImageUrl: input.coverImageUrl,
-          requiredComponents: input.requiredComponents,
+          requiredComponents: normalizedComponents,
           steps: input.steps,
           links: input.links,
           client: tx,

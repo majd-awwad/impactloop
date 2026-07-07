@@ -22,14 +22,14 @@ Current MVP status for material reservations.
 - `ACCEPTED` self-pickup reservations whose confirmed `pickupWindowEnd` passes enter overdue follow-up (`isOverdue`, `needsFollowUp`). If neither learner nor supplier acts within `MISSED_PICKUP_AUTO_CLOSE_GRACE_HOURS` (72 hours) after `pickupWindowEnd`, the reservation lazy-expires to `EXPIRED` with `rejectionReason = PICKUP_WINDOW_MISSED`, releases the hold, and does **not** create strikes automatically.
 - Learner resolves `AWAITING_LEARNER_CONFIRMATION` via `PATCH /api/reservations/:id/learner-confirmation`: accept proposed pickup, submit a new delivery window, or cancel.
 
-Reservation is the booking layer. Future build-checklist states such as `Available`, `Missing`, `Alternative`, `Already owned`, and `Reserved` should integrate with reservations, but the checklist itself belongs to future Learning Hub / AI matching work.
+Reservation is the booking layer. Learning Hub build checklist items can link reservations via optional `buildItemId` on `POST /api/reservations` (primary path) or `POST /api/learning-projects/:id/builds/me/items/:itemId/link-reservation` (repair path). Checklist readiness uses linked reservation `COMPLETED` status; manual checklist statuses remain separate.
 
 ## Current Code Status
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
 | Database `reservations` + `reservation_status_history` | **Implemented** | Schema incl. `quantityRequested`, reschedule/incident fields, `AWAITING_SUPPLIER_CONFIRMATION`, `AWAITING_RESOLUTION` |
-| Learner `POST /api/reservations` | **Implemented** | Partial-quantity holds, fulfillment choice, preferred windows, per-learner open-reservation guard |
+| Learner `POST /api/reservations` | **Implemented** | Partial-quantity holds, fulfillment choice, preferred windows, per-learner open-reservation guard, optional `buildItemId` build-checklist linking |
 | Learner `PATCH /api/reservations/:id/cancel` | **Implemented** | `PENDING` or `AWAITING_LEARNER_CONFIRMATION` cancel releases hold |
 | Learner `PATCH /api/reservations/:id/learner-confirmation` | **Implemented** | Accept proposed pickup, submit delivery window, or cancel while awaiting confirmation |
 | Learner follow-up APIs | **Implemented** | `request-reschedule`, `report-supplier-issue`, `report-no-driver`, reservation-scoped `messages` |

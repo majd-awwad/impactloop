@@ -51,6 +51,30 @@ class ProjectReviewItem {
   final DateTime? updatedAt;
 }
 
+class ProjectRequiredComponentItem {
+  const ProjectRequiredComponentItem({
+    required this.id,
+    required this.name,
+    required this.materialType,
+    required this.quantity,
+    required this.unit,
+    required this.isRequired,
+    required this.canBeSubstituted,
+    this.categoryId,
+    this.notes,
+  });
+
+  final String id;
+  final LocalizedText name;
+  final String materialType;
+  final double quantity;
+  final String unit;
+  final bool isRequired;
+  final bool canBeSubstituted;
+  final String? categoryId;
+  final String? notes;
+}
+
 class LearningProject {
   const LearningProject({
     required this.id,
@@ -78,6 +102,7 @@ class LearningProject {
     this.recentReviews = const <ProjectReviewItem>[],
     this.viewerReview,
     this.tags = const <String>[],
+    this.requiredComponents = const <ProjectRequiredComponentItem>[],
     this.longDescription,
     this.hasRatings = false,
   });
@@ -94,6 +119,7 @@ class LearningProject {
   final int ratingCount;
   final LocalizedText componentCountLabel;
   final List<LocalizedText> components;
+  final List<ProjectRequiredComponentItem> requiredComponents;
   final List<ProjectStep> steps;
   final List<ProjectLinkItem> links;
   final String? imageUrl;
@@ -133,6 +159,7 @@ class LearningProject {
       hasRatings: hasRatings,
       componentCountLabel: componentCountLabel,
       components: components,
+      requiredComponents: requiredComponents,
       steps: steps,
       links: links,
       imageUrl: imageUrl,

@@ -20,7 +20,9 @@ import '../../../materials/data/models/category.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../data/learning_project_draft_storage.dart';
 import '../../domain/models/learning_project.dart';
+import '../../domain/models/learning_project_draft_component.dart';
 import '../theme/learning_ui_palette.dart';
+import '../widgets/learning_project_component_editor.dart';
 
 class LearningAddDraftPage extends ConsumerStatefulWidget {
   const LearningAddDraftPage({super.key});
@@ -35,9 +37,13 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
 
   late final TextEditingController _titleController;
   late final TextEditingController _summaryController;
-  late final TextEditingController _componentsController;
   late final TextEditingController _stepsController;
   late final TextEditingController _linksController;
+
+  List<LearningProjectDraftComponent> _componentEntries = [
+    LearningProjectDraftComponent.empty(),
+  ];
+  String? _componentValidationMessage;
 
   String? _selectedCategoryId;
   String _selectedDifficulty = 'medium';
@@ -51,7 +57,6 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     super.initState();
     _titleController = TextEditingController();
     _summaryController = TextEditingController();
-    _componentsController = TextEditingController();
     _stepsController = TextEditingController();
     _linksController = TextEditingController();
     _submitIdempotencyKey = _newIdempotencyKey();
@@ -62,25 +67,29 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
   void dispose() {
     _titleController.dispose();
     _summaryController.dispose();
-    _componentsController.dispose();
     _stepsController.dispose();
     _linksController.dispose();
     super.dispose();
   }
 
   Future<void> _restoreLocalDraft() async {
-    final draft = await ref.read(learningProjectDraftStorageProvider).readDraft();
+    final draft = await ref
+        .read(learningProjectDraftStorageProvider)
+        .readDraft();
     if (!mounted || draft == null) return;
 
-    setState(() {
-      _titleController.text = draft.title;
-      _summaryController.text = draft.summary;
-      _componentsController.text = draft.components;
-      _stepsController.text = draft.steps;
-      _linksController.text = draft.links;
-      _selectedCategoryId = draft.categoryId;
-      _selectedDifficulty = draft.difficulty;
-      _selectedDuration = draft.duration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _titleController.text = draft.title;
+        _summaryController.text = draft.summary;
+        _componentEntries = draft.components;
+        _stepsController.text = draft.steps;
+        _linksController.text = draft.links;
+        _selectedCategoryId = draft.categoryId;
+        _selectedDifficulty = draft.difficulty;
+        _selectedDuration = draft.duration;
+      });
     });
   }
 
@@ -103,13 +112,13 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
   }
 
   LearningProjectDraftData _currentDraftData() {
-    final categories = ref.read(projectCategoriesProvider).value ??
-        const <MaterialCategory>[];
+    final categories =
+        ref.read(projectCategoriesProvider).value ?? const <MaterialCategory>[];
 
     return LearningProjectDraftData(
       title: _titleController.text,
       summary: _summaryController.text,
-      components: _componentsController.text,
+      components: _componentEntries,
       steps: _stepsController.text,
       links: _linksController.text,
       categoryId: _selectedProjectCategory(categories)?.id,
@@ -128,8 +137,14 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
       return;
     }
 
-    final categories = ref.read(projectCategoriesProvider).value ??
-        const <MaterialCategory>[];
+    final componentError = _validateComponentEntries(requireNamedComponents: true);
+    if (componentError != null) {
+      setState(() => _componentValidationMessage = componentError);
+      return;
+    }
+
+    final categories =
+        ref.read(projectCategoriesProvider).value ?? const <MaterialCategory>[];
     final category = _selectedProjectCategory(categories);
     if (category == null) {
       showInfoSnackBar(
@@ -153,7 +168,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         categoryId: category.id,
         difficulty: _mapDifficulty(_selectedDifficulty),
         estimatedDurationMinutes: _mapDurationMinutes(_selectedDuration),
-        requiredComponents: _parseComponents(_componentsController.text),
+        requiredComponents: _buildSubmitComponents(),
         steps: _parseSteps(_stepsController.text),
         links: _parseLinks(_linksController.text),
       );
@@ -181,7 +196,8 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     _formKey.currentState?.reset();
     _titleController.clear();
     _summaryController.clear();
-    _componentsController.clear();
+    _componentEntries = [LearningProjectDraftComponent.empty()];
+    _componentValidationMessage = null;
     _stepsController.clear();
     _linksController.clear();
     _selectedCategoryId = null;
@@ -201,7 +217,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     return 'learning-submit-$suffix';
   }
 
-  MaterialCategory? _selectedProjectCategory(List<MaterialCategory> categories) {
+  MaterialCategory? _selectedProjectCategory(
+    List<MaterialCategory> categories,
+  ) {
     final selected = _selectedCategoryId?.trim();
     if (selected == null || selected.isEmpty) return null;
 
@@ -230,19 +248,71 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     };
   }
 
-  List<Map<String, dynamic>> _parseComponents(String raw) {
-    return raw
-        .split(',')
-        .map((part) => part.trim())
-        .where((part) => part.isNotEmpty)
-        .map((name) => {'name': name})
-        .toList();
+  List<Map<String, dynamic>> _buildSubmitComponents() {
+    return _componentEntries
+        .where((component) => component.name.trim().isNotEmpty)
+        .map((component) => component.toSubmitPayload())
+        .toList(growable: false);
+  }
+
+  LearningProjectSubmitSummary _submitSummary() {
+    final namedComponents = _componentEntries
+        .where((component) => component.name.trim().isNotEmpty)
+        .toList(growable: false);
+
+    return LearningProjectSubmitSummary(
+      componentCount: namedComponents.length,
+      toolCount: namedComponents
+          .where((component) => component.role == LearningProjectComponentRole.tool)
+          .length,
+      stepCount: _nonEmptyLines(_stepsController.text).length,
+    );
+  }
+
+  String? _validateComponentEntries({required bool requireNamedComponents}) {
+    final namedComponents = _componentEntries
+        .where((component) => component.name.trim().isNotEmpty)
+        .toList(growable: false);
+
+    if (requireNamedComponents && namedComponents.isEmpty) {
+      return 'Add at least one component with a name.';
+    }
+
+    if (_componentEntries.length > 50) {
+      return 'Use 50 components or fewer.';
+    }
+
+    final seen = <String>{};
+    for (final component in _componentEntries) {
+      final trimmedName = component.name.trim();
+      if (trimmedName.isEmpty) {
+        continue;
+      }
+
+      final error = component.validate(requireName: true);
+      if (error != null) {
+        return error;
+      }
+
+      final key = trimmedName.toLowerCase();
+      if (seen.contains(key)) {
+        return 'Each component must have a unique name.';
+      }
+      seen.add(key);
+    }
+
+    return null;
+  }
+
+  String? _validateComponentsField() {
+    return _validateComponentEntries(requireNamedComponents: false);
   }
 
   List<Map<String, dynamic>> _parseSteps(String raw) {
-    final lines = raw.split('\n').map((line) => line.trim()).where(
-      (line) => line.isNotEmpty,
-    );
+    final lines = raw
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty);
     final steps = <Map<String, dynamic>>[];
     var index = 0;
     for (final line in lines) {
@@ -296,18 +366,6 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     return exists ? null : 'Select an available category.';
   }
 
-  String? _validateComponents(String? value) {
-    final components = _parseComponents(value ?? '');
-    if (components.length > 50) return 'Use 50 components or fewer.';
-    for (final component in components) {
-      final name = component['name'] as String;
-      if (name.length > 200) {
-        return 'Keep each component under 200 characters.';
-      }
-    }
-    return null;
-  }
-
   String? _validateSteps(String? value) {
     final steps = _nonEmptyLines(value ?? '');
     if (steps.length > 100) return 'Use 100 steps or fewer.';
@@ -339,7 +397,10 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final categoriesAsync = ref.watch(projectCategoriesProvider);
+    final materialCategoriesAsync = ref.watch(materialCategoriesProvider);
     final categories = categoriesAsync.value ?? const <MaterialCategory>[];
+    final materialCategories =
+        materialCategoriesAsync.value ?? const <MaterialCategory>[];
     final selectedCategoryId = _selectedProjectCategory(categories)?.id;
 
     return Scaffold(
@@ -367,15 +428,18 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
                             context,
                             categoriesAsync: categoriesAsync,
                             categories: categories,
+                            materialCategories: materialCategories,
                             selectedCategoryId: selectedCategoryId,
                           );
-                          final side = _SupportColumn(onBack: () {
-                            if (context.canPop()) {
-                              context.pop();
-                            } else {
-                              context.go('/learning');
-                            }
-                          });
+                          final side = _SupportColumn(
+                            onBack: () {
+                              if (context.canPop()) {
+                                context.pop();
+                              } else {
+                                context.go('/learning');
+                              }
+                            },
+                          );
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -417,9 +481,11 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     BuildContext context, {
     required AsyncValue<List<MaterialCategory>> categoriesAsync,
     required List<MaterialCategory> categories,
+    required List<MaterialCategory> materialCategories,
     required String? selectedCategoryId,
   }) {
     final palette = LearningUiPalette.of(context);
+    final summary = _submitSummary();
     final categoryHint = categoriesAsync.hasError
         ? 'Could not load categories'
         : categoriesAsync.isLoading && categories.isEmpty
@@ -431,7 +497,10 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _SectionHeading(
-            title: const LocalizedText(en: 'Project basics', ar: '╪ث╪│╪د╪│┘è╪د╪ز ╪د┘┘à╪┤╪▒┘ê╪╣'),
+            title: const LocalizedText(
+              en: 'Project basics',
+              ar: '╪ث╪│╪د╪│┘è╪د╪ز ╪د┘┘à╪┤╪▒┘ê╪╣',
+            ),
             subtitle: const LocalizedText(
               en: 'Share enough detail for admin review and future learners.',
               ar: '╪ث╪╢┘ ╪ز┘╪د╪╡┘è┘ ┘â╪د┘┘è╪ر ┘┘à╪▒╪د╪ش╪╣╪ر ╪د┘╪ح╪»╪د╪▒╪ر ┘ê┘┘┘à╪ز╪╣┘┘à┘è┘ ┘╪د╪ص┘é╪د┘ï.',
@@ -552,14 +621,42 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
             validator: _validateSummary,
           ),
           const SizedBox(height: AppSpacing.md),
-          AppTextArea(
-            controller: _componentsController,
-            label: 'Required components',
-            hint: 'Arduino Uno, ultrasonic sensor, jumper wires',
-            minLines: 3,
-            maxLines: 5,
-            validator: _validateComponents,
+          LearningProjectComponentEditor(
+            components: _componentEntries,
+            materialCategories: materialCategories,
+            validator: (_) => _validateComponentsField(),
+            onChanged: (components) {
+              setState(() {
+                _componentEntries = components;
+                _componentValidationMessage = null;
+              });
+            },
+            onAdd: () {
+              setState(() {
+                _componentEntries = [
+                  ..._componentEntries,
+                  LearningProjectDraftComponent.empty(),
+                ];
+              });
+            },
+            onRemove: (index) {
+              setState(() {
+                final next = [..._componentEntries]..removeAt(index);
+                _componentEntries = next.isEmpty
+                    ? [LearningProjectDraftComponent.empty()]
+                    : next;
+              });
+            },
           ),
+          if (_componentValidationMessage != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _componentValidationMessage!,
+              style: AppTextStyles.body(context).copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           AppTextArea(
             controller: _stepsController,
@@ -580,6 +677,17 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
             validator: _validateLinks,
           ),
           const SizedBox(height: AppSpacing.xl),
+          Text(
+            LocalizedText(
+              en: summary.resolveEn(),
+              ar: summary.resolveAr(),
+            ).resolve(context),
+            style: AppTextStyles.body(context).copyWith(
+              color: palette.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
           LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 560;
