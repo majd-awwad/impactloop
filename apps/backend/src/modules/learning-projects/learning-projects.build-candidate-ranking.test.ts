@@ -118,6 +118,83 @@ describe('learning project build candidate ranking', () => {
     assert.equal(ranked[0]?.material.id, 'nearby');
   });
 
+  test('better condition ranks higher when relevance location and price match', () => {
+    const likeNew = buildMaterial({
+      id: 'like-new',
+      condition: 'LIKE_NEW',
+      isFree: false,
+      price: 40,
+    });
+    const needsRepair = buildMaterial({
+      id: 'needs-repair',
+      condition: 'NEEDS_REPAIR',
+      isFree: false,
+      price: 40,
+    });
+
+    const ranked = rankBuildMaterialCandidates(
+      [needsRepair, likeNew],
+      baseComponent,
+      learnerRamallah,
+      2,
+    );
+
+    assert.equal(ranked[0]?.material.id, 'like-new');
+  });
+
+  test('createdAt is tie-breaker only when score buckets are equal', () => {
+    const older = buildMaterial({
+      id: 'older',
+      createdAt: new Date('2025-01-01T00:00:00.000Z'),
+    });
+    const newer = buildMaterial({
+      id: 'newer',
+      createdAt: new Date('2026-07-01T00:00:00.000Z'),
+    });
+
+    const ranked = rankBuildMaterialCandidates(
+      [older, newer],
+      baseComponent,
+      learnerRamallah,
+      2,
+    );
+
+    assert.equal(ranked[0]?.material.id, 'newer');
+    assert.equal(ranked[1]?.material.id, 'older');
+  });
+
+  test('pluralized listing titles still tie on relevance so free ranks above paid', () => {
+    const freeBoard = buildMaterial({
+      id: 'free-board',
+      title: 'Free Arduino Uno Board',
+      isFree: true,
+      city: 'Nablus',
+      area: 'Old City',
+      createdAt: new Date('2025-01-01T00:00:00.000Z'),
+    });
+    const paidBoards = buildMaterial({
+      id: 'paid-boards',
+      title: 'Paid Arduino Uno Boards',
+      isFree: false,
+      price: 45,
+      city: 'Nablus',
+      area: 'Old City',
+      createdAt: new Date('2026-07-01T00:00:00.000Z'),
+    });
+
+    const ranked = rankBuildMaterialCandidates(
+      [paidBoards, freeBoard],
+      {
+        ...baseComponent,
+        componentName: 'Arduino Uno Boards',
+      },
+      { city: 'Nablus', area: 'Old City' },
+      2,
+    );
+
+    assert.equal(ranked[0]?.material.id, 'free-board');
+  });
+
   test('supplier trust does not overpower weak relevance', () => {
     const trustedWeak = buildMaterial({
       id: 'trusted-weak',

@@ -61,6 +61,36 @@ const haystackForMaterial = (material: BuildCandidateMaterialInput) =>
     ].join(' '),
   );
 
+const normalizeToken = (token: string) => {
+  if (token.length > 4 && token.endsWith('s')) {
+    return token.slice(0, -1);
+  }
+
+  return token;
+};
+
+const tokenize = (value: string) =>
+  normalizeText(value)
+    .split(/\s+/)
+    .filter((token) => token.length >= 3)
+    .map(normalizeToken);
+
+const hasStrongTokenOverlap = (left: string, right: string) => {
+  const leftTokens = tokenize(left);
+  const rightTokens = tokenize(right);
+
+  if (leftTokens.length === 0 || rightTokens.length === 0) {
+    return false;
+  }
+
+  const [shorter, longer] =
+    leftTokens.length <= rightTokens.length
+      ? [leftTokens, rightTokens]
+      : [rightTokens, leftTokens];
+
+  return shorter.every((token) => longer.includes(token));
+};
+
 const scoreRelevance = (
   material: BuildCandidateMaterialInput,
   component: BuildCandidateComponentInput,
@@ -74,6 +104,8 @@ const scoreRelevance = (
     if (normalizedTitle === normalizedName) {
       score += 400;
     } else if (normalizedTitle.includes(normalizedName)) {
+      score += 280;
+    } else if (hasStrongTokenOverlap(normalizedName, normalizedTitle)) {
       score += 280;
     }
   }
@@ -270,10 +302,17 @@ export const buildCandidateMatchHints = (input: {
 
   if (
     normalizedName.length > 0 &&
-    (normalizedTitle === normalizedName || normalizedTitle.includes(normalizedName))
+    (normalizedTitle === normalizedName ||
+      normalizedTitle.includes(normalizedName) ||
+      hasStrongTokenOverlap(normalizedName, normalizedTitle))
   ) {
     hints.add(
-      normalizedTitle === normalizedName ? 'Strong match' : 'Name match',
+      normalizedTitle === normalizedName ||
+        normalizedTitle.includes(normalizedName)
+        ? normalizedTitle === normalizedName
+          ? 'Strong match'
+          : 'Name match'
+        : 'Strong match',
     );
   } else if (input.score.relevance >= 280) {
     hints.add('Strong match');
