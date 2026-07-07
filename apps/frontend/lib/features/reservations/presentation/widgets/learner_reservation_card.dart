@@ -637,6 +637,16 @@ class _ReservationCardSummaryLines extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
+        if (reservation.groupedDelivery) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            combinedDeliverySummary(reservation),
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
         if (formatPreferredWindowsSummary(reservation)
             case final preferredWindows?) ...[
           const SizedBox(height: AppSpacing.xs),

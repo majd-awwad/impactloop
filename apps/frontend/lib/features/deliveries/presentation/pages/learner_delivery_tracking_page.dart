@@ -18,14 +18,7 @@ import '../../data/deliveries_repository.dart';
 import '../../data/models/learner_delivery_tracking.dart';
 import '../delivery_status_presentation.dart';
 
-const _trackingPollInterval = Duration(seconds: 45);
-
-final learnerDeliveryTrackingProvider = FutureProvider.autoDispose
-    .family<LearnerDeliveryTracking, String>((ref, deliveryId) {
-      return ref
-          .read(deliveriesRepositoryProvider)
-          .fetchDeliveryTracking(deliveryId);
-    });
+const _trackingPollInterval = Duration(seconds: 20);
 
 class LearnerDeliveryTrackingPage extends ConsumerStatefulWidget {
   const LearnerDeliveryTrackingPage({super.key, required this.deliveryId});
@@ -41,34 +34,113 @@ class _LearnerDeliveryTrackingPageState
     extends ConsumerState<LearnerDeliveryTrackingPage> {
   Timer? _pollTimer;
   LearnerDeliveryTracking? _tracking;
-  bool _refreshing = false;
+  bool _initialLoading = true;
+  bool _pollInFlight = false;
+  bool _manualRefreshing = false;
+  Object? _error;
+  String? _backgroundWarning;
+  bool _pollTimerActive = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_fetchTracking(initial: true));
+    });
+  }
 
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _pollTimer = null;
     super.dispose();
   }
 
-  void _syncPollTimer(LearnerDeliveryTracking tracking) {
-    _pollTimer?.cancel();
-    if (tracking.canTrack && !tracking.isTerminal) {
-      _pollTimer = Timer.periodic(_trackingPollInterval, (_) {
-        unawaited(_refreshSilently());
-      });
+  bool _trackingDataChanged(
+    LearnerDeliveryTracking? previous,
+    LearnerDeliveryTracking next,
+  ) {
+    if (previous == null) {
+      return true;
     }
+
+    if (previous.status != next.status ||
+        previous.canTrack != next.canTrack ||
+        previous.isTerminal != next.isTerminal ||
+        previous.isLocationStale != next.isLocationStale ||
+        previous.trackingMessage != next.trackingMessage) {
+      return true;
+    }
+
+    final prevLocation = previous.latestDriverLocation;
+    final nextLocation = next.latestDriverLocation;
+
+    if (prevLocation == null && nextLocation == null) {
+      return false;
+    }
+
+    if (prevLocation == null || nextLocation == null) {
+      return true;
+    }
+
+    return prevLocation.latitude != nextLocation.latitude ||
+        prevLocation.longitude != nextLocation.longitude ||
+        prevLocation.capturedAt != nextLocation.capturedAt;
   }
 
-  Future<void> _refreshSilently() async {
-    if (_refreshing || !mounted) {
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+    _pollTimerActive = false;
+  }
+
+  void _ensurePollTimer(LearnerDeliveryTracking tracking) {
+    final shouldPoll = tracking.canTrack && !tracking.isTerminal;
+
+    if (!shouldPoll) {
+      _stopPolling();
       return;
     }
 
-    final current = _tracking;
-    if (current == null || !current.canTrack || current.isTerminal) {
+    if (_pollTimerActive) {
       return;
     }
 
-    _refreshing = true;
+    _pollTimer = Timer.periodic(_trackingPollInterval, (_) {
+      unawaited(_fetchTracking(silent: true));
+    });
+    _pollTimerActive = true;
+  }
+
+  Future<void> _fetchTracking({
+    bool initial = false,
+    bool silent = false,
+    bool manual = false,
+  }) async {
+    if (!mounted) {
+      return;
+    }
+
+    if (_pollInFlight) {
+      if (silent) {
+        return;
+      }
+    }
+
+    _pollInFlight = true;
+    if (initial) {
+      setState(() {
+        _initialLoading = true;
+        _error = null;
+        _backgroundWarning = null;
+      });
+    } else if (manual) {
+      setState(() {
+        _manualRefreshing = true;
+        _backgroundWarning = null;
+      });
+    }
+
     try {
       final tracking = await ref
           .read(deliveriesRepositoryProvider)
@@ -77,27 +149,55 @@ class _LearnerDeliveryTrackingPageState
         return;
       }
 
-      setState(() {
-        _tracking = tracking;
-      });
-      _syncPollTimer(tracking);
-    } catch (error) {
-      // Keep last known tracking visible during background polling errors.
-    } finally {
-      _refreshing = false;
-    }
-  }
+      final changed = _trackingDataChanged(_tracking, tracking);
+      if (changed || initial) {
+        setState(() {
+          _tracking = tracking;
+          _initialLoading = false;
+          _error = null;
+          _backgroundWarning = null;
+        });
+      } else if (_initialLoading) {
+        setState(() => _initialLoading = false);
+      } else if (silent) {
+        setState(() => _backgroundWarning = null);
+      }
 
-  Future<void> _retry() async {
-    ref.invalidate(learnerDeliveryTrackingProvider(widget.deliveryId));
+      if (tracking.isTerminal || !tracking.canTrack) {
+        _stopPolling();
+      } else {
+        _ensurePollTimer(tracking);
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      if (initial || _tracking == null) {
+        setState(() {
+          _initialLoading = false;
+          _error = error;
+        });
+        _stopPolling();
+      } else if (silent || manual) {
+        setState(
+          () => _backgroundWarning =
+              'Could not refresh tracking. Showing the last known location.',
+        );
+      }
+    } finally {
+      if (mounted) {
+        if (manual || !silent) {
+          setState(() => _manualRefreshing = false);
+        }
+      }
+      _pollInFlight = false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final trackingAsync = ref.watch(
-      learnerDeliveryTrackingProvider(widget.deliveryId),
-    );
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -111,48 +211,49 @@ class _LearnerDeliveryTrackingPageState
               homeRoute: '/home',
             ),
             Expanded(
-              child: trackingAsync.when(
-                loading: () => const Center(
-                  child: _StatePanel(
-                    icon: Icons.hourglass_empty_rounded,
-                    title: 'Loading tracking',
-                    subtitle: 'Fetching the latest delivery location.',
-                  ),
-                ),
-                error: (error, _) => Center(
-                  child: _StatePanel(
-                    icon: Icons.cloud_off_outlined,
-                    title: 'Could not load tracking',
-                    subtitle: 'Please try again.',
-                    actionLabel: 'Retry',
-                    onAction: _retry,
-                  ),
-                ),
-                data: (tracking) {
-                  _tracking ??= tracking;
-                  if (_tracking!.deliveryId != tracking.deliveryId) {
-                    _tracking = tracking;
-                  } else if (_tracking != tracking) {
-                    _tracking = tracking;
-                  }
-                  _syncPollTimer(_tracking!);
-
-                  return SingleChildScrollView(
-                    padding: const EdgeInsetsDirectional.fromSTEB(
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.xl,
-                    ),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1040),
-                        child: _TrackingContent(tracking: _tracking!),
+              child: _initialLoading
+                  ? const Center(
+                      child: _StatePanel(
+                        icon: Icons.hourglass_empty_rounded,
+                        title: 'Loading delivery tracking…',
+                        subtitle: 'Fetching the latest delivery location.',
+                      ),
+                    )
+                  : _error != null
+                  ? Center(
+                      child: _StatePanel(
+                        icon: Icons.cloud_off_outlined,
+                        title: 'Could not load tracking.',
+                        subtitle: 'Please try again.',
+                        actionLabel: 'Retry',
+                        onAction: () => unawaited(_fetchTracking(initial: true)),
+                      ),
+                    )
+                  : _tracking == null
+                  ? const SizedBox.shrink()
+                  : SingleChildScrollView(
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        AppSpacing.md,
+                        AppSpacing.lg,
+                        AppSpacing.md,
+                        AppSpacing.xl,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1040),
+                          child: _TrackingContent(
+                            tracking: _tracking!,
+                            refreshing: _manualRefreshing,
+                            backgroundWarning: _backgroundWarning,
+                            showAutoUpdateHint:
+                                _tracking!.canTrack && !_tracking!.isTerminal,
+                            onRefresh: () => unawaited(
+                              _fetchTracking(manual: true),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),
@@ -162,9 +263,19 @@ class _LearnerDeliveryTrackingPageState
 }
 
 class _TrackingContent extends StatelessWidget {
-  const _TrackingContent({required this.tracking});
+  const _TrackingContent({
+    required this.tracking,
+    required this.refreshing,
+    required this.showAutoUpdateHint,
+    required this.onRefresh,
+    this.backgroundWarning,
+  });
 
   final LearnerDeliveryTracking tracking;
+  final bool refreshing;
+  final bool showAutoUpdateHint;
+  final String? backgroundWarning;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -234,11 +345,40 @@ class _TrackingContent extends StatelessWidget {
         else if (location == null)
           _StatePanel(
             icon: Icons.location_searching,
-            title: 'Waiting for driver location',
+            title: 'Waiting for driver location.',
             subtitle:
                 'The driver has picked up your material. Location will appear here once shared.',
           )
         else ...[
+          if (backgroundWarning != null)
+            Container(
+              margin: const EdgeInsetsDirectional.only(bottom: AppSpacing.md),
+              padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppThemeColors.of(context).warningSoft,
+                borderRadius: AppRadius.lgAll,
+                border: Border.all(
+                  color: AppThemeColors.of(context).warningBorder.withValues(
+                    alpha: 0.35,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.cloud_off_outlined,
+                    color: AppThemeColors.of(context).warning,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      backgroundWarning!,
+                      style: AppTextStyles.body(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (tracking.isLocationStale)
             Container(
               margin: const EdgeInsetsDirectional.only(bottom: AppSpacing.md),
@@ -261,7 +401,7 @@ class _TrackingContent extends StatelessWidget {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      'Driver location may be outdated. Last update was more than 90 seconds ago.',
+                      'Driver location has not updated recently.',
                       style: AppTextStyles.body(context),
                     ),
                   ),
@@ -281,9 +421,33 @@ class _TrackingContent extends StatelessWidget {
             ).copyWith(color: palette.textMuted),
           ),
         ],
-        const SizedBox(height: AppSpacing.lg),
+        if (showAutoUpdateHint) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Auto-updates while this page is open.',
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textMuted),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            onPressed: refreshing ? null : onRefresh,
+            icon: refreshing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_outlined, size: 18),
+            label: Text(refreshing ? 'Refreshing…' : 'Refresh tracking'),
+          ),
+        ),
         TextButton.icon(
-          onPressed: () => context.go('/learner/deliveries/${tracking.deliveryId}'),
+          onPressed: () =>
+              context.go('/learner/deliveries/${tracking.deliveryId}'),
           icon: const Icon(Icons.assignment_outlined),
           label: const Text('View delivery details'),
         ),
@@ -292,7 +456,7 @@ class _TrackingContent extends StatelessWidget {
   }
 }
 
-class _TrackingMap extends StatelessWidget {
+class _TrackingMap extends StatefulWidget {
   const _TrackingMap({
     required this.driverLocation,
     this.dropoffLatitude,
@@ -304,43 +468,93 @@ class _TrackingMap extends StatelessWidget {
   final double? dropoffLongitude;
 
   @override
+  State<_TrackingMap> createState() => _TrackingMapState();
+}
+
+class _TrackingMapState extends State<_TrackingMap> {
+  late final MapController _mapController;
+  bool _mapReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _mapController = MapController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() => _mapReady = true);
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _TrackingMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldPoint = LatLng(
+      oldWidget.driverLocation.latitude,
+      oldWidget.driverLocation.longitude,
+    );
+    final nextPoint = LatLng(
+      widget.driverLocation.latitude,
+      widget.driverLocation.longitude,
+    );
+
+    if (oldPoint.latitude == nextPoint.latitude &&
+        oldPoint.longitude == nextPoint.longitude) {
+      return;
+    }
+
+    if (!_mapReady) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      try {
+        _mapController.move(nextPoint, _mapController.camera.zoom);
+      } catch (_) {
+        // Map may not be ready yet; marker layer still updates.
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final driverPoint = LatLng(
-      driverLocation.latitude,
-      driverLocation.longitude,
+      widget.driverLocation.latitude,
+      widget.driverLocation.longitude,
     );
-    final dropoffPoint = dropoffLatitude != null && dropoffLongitude != null
-        ? LatLng(dropoffLatitude!, dropoffLongitude!)
+    final dropoffPoint = widget.dropoffLatitude != null &&
+            widget.dropoffLongitude != null
+        ? LatLng(widget.dropoffLatitude!, widget.dropoffLongitude!)
         : null;
 
     final markers = <Marker>[
       Marker(
         point: driverPoint,
-        width: 48,
-        height: 48,
-        alignment: Alignment.topCenter,
-        child: _MapMarker(
-          color: palette.mint,
-          icon: Icons.local_shipping_outlined,
-          label: 'Driver',
-        ),
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        child: Icon(Icons.local_shipping_outlined, color: palette.mint, size: 28),
       ),
       if (dropoffPoint != null)
         Marker(
           point: dropoffPoint,
-          width: 48,
-          height: 48,
-          alignment: Alignment.topCenter,
-          child: _MapMarker(
-            color: palette.textSecondary,
-            icon: Icons.home_outlined,
-            label: 'Drop-off',
-          ),
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
+          child: Icon(Icons.home_outlined, color: palette.textSecondary, size: 28),
         ),
     ];
-
-    final center = dropoffPoint ?? driverPoint;
 
     return ClipRRect(
       borderRadius: AppRadius.lgAll,
@@ -348,8 +562,9 @@ class _TrackingMap extends StatelessWidget {
         height: MediaQuery.sizeOf(context).width >= 700 ? 320 : 260,
         width: double.infinity,
         child: FlutterMap(
+          mapController: _mapController,
           options: MapOptions(
-            initialCenter: center,
+            initialCenter: driverPoint,
             initialZoom: 13,
             minZoom: 5,
             maxZoom: 18,
@@ -375,46 +590,6 @@ class _TrackingMap extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _MapMarker extends StatelessWidget {
-  const _MapMarker({
-    required this.color,
-    required this.icon,
-    required this.label,
-  });
-
-  final Color color;
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.xs,
-            vertical: 2,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: AppRadius.pillAll,
-            border: Border.all(color: color),
-          ),
-          child: Text(
-            label,
-            style: AppTextStyles.label(context).copyWith(
-              color: color,
-              fontSize: 10,
-            ),
-          ),
-        ),
-        Icon(icon, color: color, size: 32),
-      ],
     );
   }
 }
@@ -450,7 +625,11 @@ class _StatePanel extends StatelessWidget {
         children: [
           Icon(icon, size: 36, color: palette.textMuted),
           const SizedBox(height: AppSpacing.md),
-          Text(title, style: AppTextStyles.title(context), textAlign: TextAlign.center),
+          Text(
+            title,
+            style: AppTextStyles.title(context),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             subtitle,

@@ -189,6 +189,17 @@ class LearnerReservation {
     this.canLearnerRequestDelivery = false,
     this.incidentReviewStatus,
     this.pendingIncidentReasonCode,
+    this.unitPriceAtReservation,
+    this.materialSubtotal,
+    this.deliveryFee,
+    this.totalAmount,
+    this.currency,
+    this.deliveryZone,
+    this.deliveryGroupId,
+    this.groupedDelivery = false,
+    this.groupItemCount,
+    this.groupDeliveryFee,
+    this.groupTotal,
   });
 
   final String id;
@@ -234,6 +245,17 @@ class LearnerReservation {
   final bool canLearnerRequestDelivery;
   final String? incidentReviewStatus;
   final String? pendingIncidentReasonCode;
+  final double? unitPriceAtReservation;
+  final double? materialSubtotal;
+  final double? deliveryFee;
+  final double? totalAmount;
+  final String? currency;
+  final String? deliveryZone;
+  final String? deliveryGroupId;
+  final bool groupedDelivery;
+  final int? groupItemCount;
+  final double? groupDeliveryFee;
+  final double? groupTotal;
 
   factory LearnerReservation.fromJson(Map<String, dynamic> json) {
     final materialJson = json['material'];
@@ -334,6 +356,18 @@ class LearnerReservation {
       canLearnerRequestDelivery: json['canLearnerRequestDelivery'] == true,
       incidentReviewStatus: json['incidentReviewStatus'] as String?,
       pendingIncidentReasonCode: json['pendingIncidentReasonCode'] as String?,
+      unitPriceAtReservation:
+          (json['unitPriceAtReservation'] as num?)?.toDouble(),
+      materialSubtotal: (json['materialSubtotal'] as num?)?.toDouble(),
+      deliveryFee: (json['deliveryFee'] as num?)?.toDouble(),
+      totalAmount: (json['totalAmount'] as num?)?.toDouble(),
+      currency: json['currency'] as String?,
+      deliveryZone: json['deliveryZone'] as String?,
+      deliveryGroupId: json['deliveryGroupId'] as String?,
+      groupedDelivery: json['groupedDelivery'] == true,
+      groupItemCount: (json['groupItemCount'] as num?)?.toInt(),
+      groupDeliveryFee: (json['groupDeliveryFee'] as num?)?.toDouble(),
+      groupTotal: (json['groupTotal'] as num?)?.toDouble(),
     );
   }
 

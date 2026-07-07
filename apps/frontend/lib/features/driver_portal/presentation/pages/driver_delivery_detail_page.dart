@@ -42,6 +42,7 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1040),
           child: deliveryAsync.when(
+            skipLoadingOnReload: true,
             loading: () => const _StatePanel(
               icon: Icons.route_outlined,
               title: 'Loading delivery',
@@ -201,9 +202,10 @@ class _SummaryPanel extends StatelessWidget {
         children: [
           _PanelTitle(
             icon: Icons.inventory_2_outlined,
-            title: 'Material',
-            body:
-                '${delivery.material.title} - ${delivery.material.quantityLabel}',
+            title: delivery.hasGroupedItems ? 'Materials' : 'Material',
+            body: delivery.hasGroupedItems
+                ? delivery.groupedItemLines.join('\n')
+                : '${delivery.material.title} - ${delivery.material.quantityLabel}',
           ),
           const SizedBox(height: AppSpacing.lg),
           _InfoRow(label: 'Pickup window', value: driverPickupWindowDetail(delivery)),
@@ -440,14 +442,20 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       }
 
       if (nextStatus == 'DELIVERED') {
-        showInfoSnackBar(context, 'Delivery marked delivered.');
+        if (!mounted) {
+          return;
+        }
         context.popOrGo('/driver/jobs');
+        leaveDriverDeliveryDetail(ref);
+        showInfoSnackBar(context, 'Delivery marked delivered.');
         return;
       }
 
       showInfoSnackBar(context, 'Delivery status updated.');
       _noteController.clear();
-      ref.invalidate(activeDriverDeliveryProvider(widget.delivery.id));
+      ref
+          .read(driverDeliveryActionControllerProvider.notifier)
+          .refreshActiveDelivery(widget.delivery.id);
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -492,6 +500,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       if (!mounted) return;
       showInfoSnackBar(context, 'Pickup failure reported.');
       context.popOrGo('/driver/jobs');
+      leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, error.displayMessage);
@@ -522,6 +531,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       if (!mounted) return;
       showInfoSnackBar(context, 'Delivery failure reported.');
       context.popOrGo('/driver/jobs');
+      leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, error.displayMessage);
@@ -570,6 +580,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       if (!mounted) return;
       showInfoSnackBar(context, 'Driver issue reported.');
       context.popOrGo('/driver/jobs');
+      leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, error.displayMessage);

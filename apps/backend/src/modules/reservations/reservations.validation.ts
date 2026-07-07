@@ -33,9 +33,12 @@ export const createReservationSchema = z
     learnerPreferredPickupWindows: z.array(preferredWindowSchema).optional(),
     learnerPreferredDeliveryWindows: z.array(preferredWindowSchema).optional(),
     deliveryAddressText: z.string().trim().min(1).max(500).optional(),
+    dropoffCity: z.string().trim().min(1).max(120).optional(),
+    dropoffArea: z.string().trim().max(120).optional(),
     safeDropoffAllowed: z.boolean().optional(),
     deliveryNote: z.string().trim().max(1000).optional(),
     buildItemId: z.string().trim().min(1).optional(),
+    combineWithDeliveryGroupId: z.string().trim().min(1).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.fulfillmentMethod === 'PICKUP') {
@@ -65,6 +68,14 @@ export const createReservationSchema = z
       });
     }
 
+    if (!value.dropoffCity?.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Drop-off city is required for delivery.',
+        path: ['dropoffCity'],
+      });
+    }
+
     if (value.safeDropoffAllowed === undefined) {
       ctx.addIssue({
         code: 'custom',
@@ -75,6 +86,38 @@ export const createReservationSchema = z
   });
 
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;
+
+export const reservationQuoteSchema = z
+  .object({
+    materialId: z.string().trim().min(1),
+    quantity: z.number().positive(),
+    fulfillmentMethod: z.enum(['PICKUP', 'DELIVERY']),
+    dropoffCity: z.string().trim().min(1).max(120).optional(),
+    dropoffArea: z.string().trim().max(120).optional(),
+    learnerPreferredDeliveryWindows: z.array(preferredWindowSchema).optional(),
+    combineWithDeliveryGroupId: z.string().trim().min(1).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.fulfillmentMethod === 'DELIVERY') {
+      if (!value.dropoffCity?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Drop-off city is required for delivery pricing.',
+          path: ['dropoffCity'],
+        });
+      }
+
+      if (!value.learnerPreferredDeliveryWindows?.length) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'At least one preferred delivery window is required.',
+          path: ['learnerPreferredDeliveryWindows'],
+        });
+      }
+    }
+  });
+
+export type ReservationQuoteInput = z.infer<typeof reservationQuoteSchema>;
 
 export const reservationIdParamsSchema = z.object({
   id: z.string().trim().min(1),

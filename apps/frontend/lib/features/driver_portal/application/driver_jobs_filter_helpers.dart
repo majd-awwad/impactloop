@@ -42,21 +42,20 @@ bool hasProfileLocation(DriverDeliveriesListMeta? meta) {
 }
 
 DriverAvailableJobsFilter profileDefaultFilter(DriverDeliveriesListMeta meta) {
-  final city = normalizeProfileField(meta.driverProfileCity);
-  final area = distinctProfileArea(meta.driverProfileArea, city);
   final hasCoordinates = meta.driverHasRecentLocation;
-  final hasLocationContext = hasCoordinates || hasProfileLocation(meta);
 
+  // Default load shows all eligible jobs; only seed sort preference.
   return DriverAvailableJobsFilter(
-    city: city,
-    area: area,
-    maxDistanceKm: hasCoordinates
-        ? DriverJobsFilterConstants.defaultRadiusKm
-        : hasLocationContext
-        ? null
-        : null,
     sortBy: hasCoordinates ? 'nearest' : 'newest',
   );
+}
+
+DriverAvailableJobsFilter openJobsFilter(DriverDeliveriesListMeta? meta) {
+  if (meta?.driverHasRecentLocation == true) {
+    return const DriverAvailableJobsFilter(sortBy: 'nearest');
+  }
+
+  return const DriverAvailableJobsFilter();
 }
 
 bool hasUsableRadiusReference(DriverDeliveriesListMeta? meta) {

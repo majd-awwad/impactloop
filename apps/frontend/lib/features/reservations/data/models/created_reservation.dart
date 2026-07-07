@@ -32,6 +32,14 @@ class CreatedReservation {
     required this.quantityRequested,
     this.message,
     required this.createdAt,
+    this.unitPriceAtReservation,
+    this.materialSubtotal,
+    this.deliveryFee,
+    this.totalAmount,
+    this.currency,
+    this.deliveryZone,
+    this.deliveryGroupId,
+    this.groupedDelivery = false,
   });
 
   final String id;
@@ -40,6 +48,14 @@ class CreatedReservation {
   final double quantityRequested;
   final String? message;
   final DateTime createdAt;
+  final double? unitPriceAtReservation;
+  final double? materialSubtotal;
+  final double? deliveryFee;
+  final double? totalAmount;
+  final String? currency;
+  final String? deliveryZone;
+  final String? deliveryGroupId;
+  final bool groupedDelivery;
 
   factory CreatedReservation.fromJson(Map<String, dynamic> json) {
     final materialJson = json['material'];
@@ -57,6 +73,15 @@ class CreatedReservation {
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
+      unitPriceAtReservation:
+          (json['unitPriceAtReservation'] as num?)?.toDouble(),
+      materialSubtotal: (json['materialSubtotal'] as num?)?.toDouble(),
+      deliveryFee: (json['deliveryFee'] as num?)?.toDouble(),
+      totalAmount: (json['totalAmount'] as num?)?.toDouble(),
+      currency: json['currency'] as String?,
+      deliveryZone: json['deliveryZone'] as String?,
+      deliveryGroupId: json['deliveryGroupId'] as String?,
+      groupedDelivery: json['groupedDelivery'] == true,
     );
   }
 }

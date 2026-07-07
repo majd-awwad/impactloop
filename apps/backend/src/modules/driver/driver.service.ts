@@ -2,7 +2,6 @@ import type { DeliveryStatus, Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { formatDistanceLabel, haversineDistanceKm } from '../../utils/haversine.js';
-import { applyReservationCompletionToMaterial } from '../reservations/reservations.quantity.js';
 import {
   DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
   MAX_ACTIVE_DRIVER_DELIVERIES,
@@ -28,7 +27,12 @@ import {
   supplierPickupWindowNotStartedMessage,
   supplierPickupWindowPassedMessage,
 } from '../../utils/handover-timing.js';
-import { syncDriverDeliveryRemindersForUser } from '../notifications/driver-delivery-notifications.js';
+import {
+  clearUnreadNewJobNotificationsForDelivery,
+  notifyDriverDropoffTime,
+  notifyDriverPickupTime,
+  syncDueDriverTimeRemindersForUser,
+} from '../notifications/driver-notification-events.service.js';
 
 import type {
   CreateDeliveryLocationPingInput,
@@ -36,6 +40,10 @@ import type {
   UpdateDriverDeliveryStatusInput,
 } from './driver.validation.js';
 import { resolveDriverReferencePoint } from './driver-location.js';
+import {
+  completeReservationsForDeliveredDelivery,
+  syncDeliveryGroupOnDriverAssign,
+} from '../delivery-groups/delivery-group-operations.service.js';
 
 const terminalStatuses = [
   'DELIVERED',
@@ -56,6 +64,33 @@ const allowedTransitions: Partial<Record<DeliveryStatus, DeliveryStatus>> = {
 };
 
 export const driverDeliveryInclude = {
+  deliveryGroup: {
+    select: {
+      id: true,
+      deliveryFee: true,
+      currency: true,
+      reservations: {
+        where: {
+          status: 'ACCEPTED',
+          fulfillmentMethod: 'DELIVERY',
+        },
+        select: {
+          id: true,
+          quantityRequested: true,
+          materialSubtotal: true,
+          material: {
+            select: {
+              id: true,
+              title: true,
+              unit: true,
+              condition: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' as const },
+      },
+    },
+  },
   reservation: {
     select: {
       id: true,
@@ -166,15 +201,55 @@ const mapExactLocation = (location: DriverDeliveryRecord['pickupLocation']) => (
   isApproximate: location.isApproximate,
 });
 
+const buildDriverDeliveryItems = (delivery: DriverDeliveryRecord) => {
+  if (delivery.deliveryGroup?.reservations.length) {
+    return delivery.deliveryGroup.reservations.map((reservation) => ({
+      reservationId: reservation.id,
+      materialId: reservation.material.id,
+      title: reservation.material.title,
+      quantity: Number(reservation.quantityRequested),
+      unit: reservation.material.unit,
+      condition: reservation.material.condition,
+      materialSubtotal:
+        reservation.materialSubtotal != null
+          ? Number(reservation.materialSubtotal)
+          : null,
+    }));
+  }
+
+  return [
+    {
+      reservationId: delivery.reservation.id,
+      materialId: delivery.reservation.material.id,
+      title: delivery.reservation.material.title,
+      quantity: Number(delivery.reservation.quantityRequested),
+      unit: delivery.reservation.material.unit,
+      condition: null as string | null,
+      materialSubtotal: null as number | null,
+    },
+  ];
+};
+
 const mapAvailableDelivery = (
   delivery: DriverDeliveryRecord,
   options?: { distanceKm?: number | null },
 ) => {
   const distanceKm = options?.distanceKm ?? null;
+  const items = buildDriverDeliveryItems(delivery);
+  const groupedDelivery = delivery.deliveryGroupId != null;
 
   return {
     id: delivery.id,
     reservationId: delivery.reservationId,
+    deliveryGroupId: delivery.deliveryGroupId,
+    groupedDelivery,
+    itemCount: items.length,
+    items,
+    groupDeliveryFee:
+      delivery.deliveryGroup != null
+        ? Number(delivery.deliveryGroup.deliveryFee)
+        : null,
+    groupCurrency: delivery.deliveryGroup?.currency ?? null,
     status: delivery.status,
     requestedAt: delivery.requestedAt.toISOString(),
     pickupWindowStart:
@@ -188,7 +263,9 @@ const mapAvailableDelivery = (
     learnerNote: delivery.learnerNote,
     material: {
       id: delivery.reservation.material.id,
-      title: delivery.reservation.material.title,
+      title: groupedDelivery
+        ? `${items.length} items from this supplier`
+        : delivery.reservation.material.title,
       quantityRequested: Number(delivery.reservation.quantityRequested),
       unit: delivery.reservation.material.unit,
     },
@@ -307,7 +384,8 @@ export const listAvailableDeliveries = async (
   driverUserId: string,
   query: ListAvailableDeliveriesQuery = {},
 ) => {
-  void syncDriverDeliveryRemindersForUser(driverUserId);
+  await syncDueDriverTimeRemindersForUser(driverUserId);
+
   const profile = await findActiveDriverProfile(driverUserId);
   const referencePoint = await resolveDriverReferencePoint(profile.id);
   const activeDeliveryCount = await countActiveAssignedDeliveries(profile.id);
@@ -374,7 +452,8 @@ export const listAvailableDeliveries = async (
   if (effectiveMaxDistanceKm != null && hasDriverCoordinates) {
     filtered = filtered.filter(
       (item) =>
-        item.distanceKm != null && item.distanceKm <= effectiveMaxDistanceKm,
+        item.distanceKm == null ||
+        item.distanceKm <= effectiveMaxDistanceKm,
     );
   }
 
@@ -417,7 +496,8 @@ export const listAvailableDeliveries = async (
 };
 
 export const listActiveDriverDeliveries = async (driverUserId: string) => {
-  void syncDriverDeliveryRemindersForUser(driverUserId);
+  await syncDueDriverTimeRemindersForUser(driverUserId);
+
   const profile = await findActiveDriverProfile(driverUserId);
   const referencePoint = await resolveDriverReferencePoint(profile.id);
   const activeDeliveryCount = await countActiveAssignedDeliveries(profile.id);
@@ -619,6 +699,16 @@ export const acceptDelivery = async (
       },
     });
 
+    const assignedDelivery = await tx.delivery.findUniqueOrThrow({
+      where: { id: deliveryId },
+      select: { deliveryGroupId: true },
+    });
+
+    await syncDeliveryGroupOnDriverAssign(tx, {
+      deliveryGroupId: assignedDelivery.deliveryGroupId,
+      driverProfileId: profile.id,
+    });
+
     const delivery = await tx.delivery.findUniqueOrThrow({
       where: { id: deliveryId },
       include: driverDeliveryInclude,
@@ -627,7 +717,8 @@ export const acceptDelivery = async (
     return mapAssignedDelivery(delivery);
   });
 
-  void syncDriverDeliveryRemindersForUser(driverUserId);
+  await notifyDriverPickupTime(deliveryId);
+  await clearUnreadNewJobNotificationsForDelivery(deliveryId);
 
   return delivery;
 };
@@ -647,6 +738,7 @@ export const updateDriverDeliveryStatus = async (
       include: {
         reservation: true,
       },
+      // deliveryGroupId is on delivery row
     });
 
     if (!delivery) {
@@ -745,18 +837,14 @@ export const updateDriverDeliveryStatus = async (
     });
 
     if (input.status === 'DELIVERED') {
-      await tx.reservation.update({
-        where: { id: delivery.reservationId },
-        data: {
-          status: 'COMPLETED',
-          completedAt: now,
+      await completeReservationsForDeliveredDelivery(tx, {
+        delivery: {
+          id: delivery.id,
+          reservationId: delivery.reservationId,
+          deliveryGroupId: delivery.deliveryGroupId,
+          reservation: delivery.reservation,
         },
-      });
-
-      await applyReservationCompletionToMaterial(tx, {
-        materialId: delivery.reservation.materialId,
-        reservationId: delivery.reservationId,
-        quantityRequested: delivery.reservation.quantityRequested,
+        driverUserId,
         completedAt: now,
       });
 
@@ -771,17 +859,6 @@ export const updateDriverDeliveryStatus = async (
           data: { availability: 'AVAILABLE' },
         });
       }
-
-      await tx.reservationStatusHistory.create({
-        data: {
-          reservationId: delivery.reservationId,
-          statusGroup: 'RESERVATION',
-          oldStatus: delivery.reservation.status,
-          newStatus: 'COMPLETED',
-          changedBy: driverUserId,
-          note: 'Delivery completed by driver',
-        },
-      });
     }
 
     await tx.deliveryStatusHistory.create({
@@ -804,7 +881,9 @@ export const updateDriverDeliveryStatus = async (
 
   switch (result.outcome) {
     case 'UPDATED':
-      void syncDriverDeliveryRemindersForUser(driverUserId);
+      if (input.status === 'PICKED_UP') {
+        await notifyDriverDropoffTime(deliveryId);
+      }
       return mapAssignedDelivery(result.delivery);
     case 'NOT_FOUND':
       throw new AppError('Delivery not found.', 404, 'NOT_FOUND');

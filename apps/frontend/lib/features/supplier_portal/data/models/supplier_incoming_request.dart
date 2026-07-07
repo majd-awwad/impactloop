@@ -331,6 +331,10 @@ class SupplierIncomingRequest {
     this.noShowReport,
     this.latestMessage,
     this.supplierHandoverCode,
+    this.deliveryGroupId,
+    this.groupedDelivery = false,
+    this.groupItemCount,
+    this.combinedDeliveryLabel,
   });
 
   final String id;
@@ -380,6 +384,10 @@ class SupplierIncomingRequest {
   final Map<String, dynamic>? noShowReport;
   final ReservationMessage? latestMessage;
   final String? supplierHandoverCode;
+  final String? deliveryGroupId;
+  final bool groupedDelivery;
+  final int? groupItemCount;
+  final String? combinedDeliveryLabel;
 
   bool get hasDelivery =>
       isDeliveryFulfillment || activeDelivery != null;
@@ -520,6 +528,11 @@ class SupplierIncomingRequest {
       canSendMessage: canSendMessage ?? this.canSendMessage,
       noShowReport: noShowReport ?? this.noShowReport,
       latestMessage: latestMessage ?? this.latestMessage,
+      deliveryGroupId: deliveryGroupId,
+      groupedDelivery: groupedDelivery,
+      groupItemCount: groupItemCount,
+      combinedDeliveryLabel: combinedDeliveryLabel,
+      supplierHandoverCode: supplierHandoverCode,
     );
   }
 
@@ -724,6 +737,10 @@ class SupplierIncomingRequest {
             )
           : null,
       supplierHandoverCode: json['supplierHandoverCode'] as String?,
+      deliveryGroupId: json['deliveryGroupId'] as String?,
+      groupedDelivery: json['groupedDelivery'] == true,
+      groupItemCount: (json['groupItemCount'] as num?)?.toInt(),
+      combinedDeliveryLabel: json['combinedDeliveryLabel'] as String?,
     );
   }
 }

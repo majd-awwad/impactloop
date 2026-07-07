@@ -1,5 +1,18 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
+import { ALLOWED_DRIVER_NOTIFICATION_TYPES } from './driver-delivery-notification-types.js';
+
+const visibleNotificationWhere = (
+  userId: string,
+): Prisma.NotificationWhereInput => ({
+  userId,
+  OR: [
+    { notificationType: { not: { startsWith: 'DRIVER_' } } },
+    {
+      notificationType: { in: [...ALLOWED_DRIVER_NOTIFICATION_TYPES] },
+    },
+  ],
+});
 
 export type CreateNotificationInput = {  userId: string;
   notificationType: string;
@@ -78,7 +91,7 @@ export const findNotificationsForUser = async (input: {
     : 20;
 
   const where: Prisma.NotificationWhereInput = {
-    userId: input.userId,
+    ...visibleNotificationWhere(input.userId),
     ...(input.isRead === undefined ? {} : { isRead: input.isRead }),
   };
 
@@ -91,7 +104,7 @@ export const findNotificationsForUser = async (input: {
     }),
     prisma.notification.count({ where }),
     prisma.notification.count({
-      where: { userId: input.userId, isRead: false },
+      where: { ...visibleNotificationWhere(input.userId), isRead: false },
     }),
   ]);
 
@@ -100,7 +113,7 @@ export const findNotificationsForUser = async (input: {
 
 export const countUnreadNotificationsForUser = async (userId: string) =>
   prisma.notification.count({
-    where: { userId, isRead: false },
+    where: { ...visibleNotificationWhere(userId), isRead: false },
   });
 
 export const markNotificationReadForUser = async (input: {

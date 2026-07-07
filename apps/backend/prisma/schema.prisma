@@ -172,6 +172,21 @@ enum ReservationFulfillmentMethod {
   DELIVERY
 }
 
+enum DeliveryZone {
+  SAME_CITY
+  WEST_BANK
+  JERUSALEM
+  INSIDE_48
+  UNKNOWN
+}
+
+enum DeliveryGroupStatus {
+  OPEN
+  ASSIGNED
+  COMPLETED
+  CANCELLED
+}
+
 enum DeliveryStatus {
   WAITING_FOR_DRIVER
   DRIVER_ASSIGNED
@@ -325,6 +340,7 @@ model User {
   ownedMaterials                Material[]                 @relation("MaterialOwner")
   ownedReservationsAsOwner      Reservation[]              @relation("ReservationOwner")
   ownedReservationsAsRequester  Reservation[]              @relation("ReservationRequester")
+  deliveryGroupsAsLearner       DeliveryGroup[]            @relation("DeliveryGroupLearner")
   reservationStatusChanges      ReservationStatusHistory[] @relation("ReservationStatusChangedBy")
   requestedDeliveries           Delivery[]                 @relation("DeliveryRequestedBy")
   deliveryAssignmentsMade       DeliveryAssignment[]       @relation("DeliveryAssignedBy")
@@ -480,6 +496,7 @@ model SupplierProfile {
   organizationProfile      OrganizationProfile?
   materials                Material[]
   followers                SupplierFollower[]
+  deliveryGroups           DeliveryGroup[]
 
   @@index([defaultPickupLocationId])
   @@index([verificationReviewedById])
@@ -520,6 +537,7 @@ model DriverProfile {
   updatedAt          DateTime                 @updatedAt @map("updated_at")
   user               User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries         Delivery[]               @relation("AssignedDriverDeliveries")
+  assignedDeliveryGroups DeliveryGroup[]      @relation("AssignedDriverDeliveryGroups")
   assignments        DeliveryAssignment[]
   locationPings      DeliveryLocationPing[]
 
@@ -1045,17 +1063,57 @@ model Reservation {
   messages                          ReservationMessage[]
   noShowReports                     NoShowReport[]
   linkedFromProjectBuildItems       ProjectBuildItem[]           @relation("ProjectBuildLinkedReservation")
+  unitPriceAtReservation            Decimal?                     @map("unit_price_at_reservation") @db.Decimal(12, 2)
+  materialSubtotal                  Decimal?                     @map("material_subtotal") @db.Decimal(12, 2)
+  deliveryFee                       Decimal?                     @map("delivery_fee") @db.Decimal(12, 2)
+  totalAmount                       Decimal?                     @map("total_amount") @db.Decimal(12, 2)
+  pricingCurrency                   String?                      @default("NIS") @map("pricing_currency")
+  deliveryZone                      DeliveryZone?                @map("delivery_zone")
+  dropoffCity                       String?                      @map("dropoff_city")
+  dropoffArea                       String?                      @map("dropoff_area")
+  deliveryGroupId                   String?                      @map("delivery_group_id")
+  deliveryGroup                     DeliveryGroup?               @relation(fields: [deliveryGroupId], references: [id], onDelete: SetNull)
 
   @@index([ownerId])
   @@index([requesterId])
   @@index([materialId])
   @@index([status])
+  @@index([deliveryGroupId])
   @@map("reservations")
+}
+
+model DeliveryGroup {
+  id                      String              @id @default(cuid())
+  learnerId               String              @map("learner_id")
+  supplierProfileId       String              @map("supplier_profile_id")
+  dropoffCity             String              @map("dropoff_city")
+  dropoffArea             String?             @map("dropoff_area")
+  deliveryAddressText     String?             @map("delivery_address_text")
+  deliveryFee             Decimal             @map("delivery_fee") @db.Decimal(12, 2)
+  currency                String              @default("NIS")
+  deliveryZone            DeliveryZone        @map("delivery_zone")
+  status                  DeliveryGroupStatus @default(OPEN)
+  windowStart             DateTime            @map("window_start")
+  windowEnd               DateTime            @map("window_end")
+  assignedDriverProfileId String?             @map("assigned_driver_profile_id")
+  createdAt               DateTime            @default(now()) @map("created_at")
+  updatedAt               DateTime            @updatedAt @map("updated_at")
+  learner                 User                @relation("DeliveryGroupLearner", fields: [learnerId], references: [id], onDelete: Cascade)
+  supplierProfile         SupplierProfile     @relation(fields: [supplierProfileId], references: [id], onDelete: Cascade)
+  assignedDriverProfile   DriverProfile?      @relation("AssignedDriverDeliveryGroups", fields: [assignedDriverProfileId], references: [id], onDelete: SetNull)
+  reservations            Reservation[]
+  delivery                Delivery?
+
+  @@index([learnerId, supplierProfileId, status])
+  @@index([supplierProfileId])
+  @@index([assignedDriverProfileId])
+  @@map("delivery_groups")
 }
 
 model Delivery {
   id                              String                  @id @default(cuid())
   reservationId                   String                  @map("reservation_id")
+  deliveryGroupId                 String?                 @unique @map("delivery_group_id")
   pickupLocationId                String                  @map("pickup_location_id")
   dropoffLocationId               String                  @map("dropoff_location_id")
   assignedDriverProfileId         String?                 @map("assigned_driver_profile_id")
@@ -1080,6 +1138,7 @@ model Delivery {
   createdAt                       DateTime                @default(now()) @map("created_at")
   updatedAt                       DateTime                @updatedAt @map("updated_at")
   reservation                     Reservation             @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  deliveryGroup                   DeliveryGroup?          @relation(fields: [deliveryGroupId], references: [id], onDelete: SetNull)
   pickupLocation                  Location                @relation("DeliveryPickupLocation", fields: [pickupLocationId], references: [id], onDelete: Restrict)
   dropoffLocation                 Location                @relation("DeliveryDropoffLocation", fields: [dropoffLocationId], references: [id], onDelete: Restrict)
   assignedDriverProfile           DriverProfile?          @relation("AssignedDriverDeliveries", fields: [assignedDriverProfileId], references: [id], onDelete: SetNull)

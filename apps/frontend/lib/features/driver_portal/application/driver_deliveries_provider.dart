@@ -71,7 +71,7 @@ class DriverAvailableJobsFilterNotifier
   void resetToProfileDefaults(DriverDeliveriesListMeta meta) {
     _userModified = false;
     _defaultsSeeded = true;
-    _apply(profileDefaultFilter(meta), userInitiated: false);
+    _apply(openJobsFilter(meta), userInitiated: false);
   }
 
   void setRadiusKm(double? radiusKm) {
@@ -166,8 +166,9 @@ final driverDeliveryDetailProvider =
             .fetchInactiveContext(deliveryId);
 
         if (context.isActive) {
-          ref.invalidate(activeDriverDeliveriesProvider);
-          final refreshed = await ref.read(activeDriverDeliveriesProvider.future);
+          final refreshed = await ref
+              .read(driverDeliveriesRepositoryProvider)
+              .fetchActiveDeliveries();
           for (final delivery in refreshed.deliveries) {
             if (delivery.id == deliveryId) {
               return DriverDeliveryDetailActive(delivery);

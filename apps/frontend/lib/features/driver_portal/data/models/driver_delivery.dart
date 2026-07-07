@@ -1,3 +1,42 @@
+class DriverDeliveryItem {
+  const DriverDeliveryItem({
+    required this.reservationId,
+    required this.materialId,
+    required this.title,
+    required this.quantity,
+    required this.unit,
+    this.condition,
+    this.materialSubtotal,
+  });
+
+  final String reservationId;
+  final String materialId;
+  final String title;
+  final double quantity;
+  final String unit;
+  final String? condition;
+  final double? materialSubtotal;
+
+  factory DriverDeliveryItem.fromJson(Map<String, dynamic> json) {
+    return DriverDeliveryItem(
+      reservationId: json['reservationId'] as String? ?? '',
+      materialId: json['materialId'] as String? ?? '',
+      title: json['title'] as String? ?? 'Material',
+      quantity: _doubleFromJson(json['quantity']) ?? 0,
+      unit: json['unit'] as String? ?? '',
+      condition: json['condition'] as String?,
+      materialSubtotal: _doubleFromJson(json['materialSubtotal']),
+    );
+  }
+
+  String get quantityLabel {
+    final value = quantity % 1 == 0
+        ? quantity.toInt().toString()
+        : quantity.toStringAsFixed(2);
+    return unit.trim().isEmpty ? value : '$value $unit';
+  }
+}
+
 class DriverDeliveryMaterial {
   const DriverDeliveryMaterial({
     required this.id,
@@ -110,6 +149,12 @@ class DriverDelivery {
     this.learner,
     required this.pickupLocation,
     required this.dropoffLocation,
+    this.deliveryGroupId,
+    this.groupedDelivery = false,
+    this.itemCount = 1,
+    this.items = const [],
+    this.groupDeliveryFee,
+    this.groupCurrency,
     this.assignedAt,
     this.arrivedPickupAt,
     this.pickedUpAt,
@@ -137,6 +182,12 @@ class DriverDelivery {
   final String reservationId;
   final String status;
   final DateTime requestedAt;
+  final String? deliveryGroupId;
+  final bool groupedDelivery;
+  final int itemCount;
+  final List<DriverDeliveryItem> items;
+  final double? groupDeliveryFee;
+  final String? groupCurrency;
   final DateTime? pickupWindowStart;
   final DateTime? pickupWindowEnd;
   final DriverDeliveryMaterial material;
@@ -167,9 +218,27 @@ class DriverDelivery {
   final String? distanceLabel;
 
   factory DriverDelivery.fromJson(Map<String, dynamic> json) {
+    final itemsJson = json['items'];
+    final items = itemsJson is List
+        ? itemsJson
+              .whereType<Map>()
+              .map(
+                (item) => DriverDeliveryItem.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList(growable: false)
+        : const <DriverDeliveryItem>[];
+
     return DriverDelivery(
       id: json['id'] as String? ?? '',
       reservationId: json['reservationId'] as String? ?? '',
+      deliveryGroupId: json['deliveryGroupId'] as String?,
+      groupedDelivery: json['groupedDelivery'] == true,
+      itemCount: (json['itemCount'] as num?)?.toInt() ?? items.length,
+      items: items,
+      groupDeliveryFee: _doubleFromJson(json['groupDeliveryFee']),
+      groupCurrency: json['groupCurrency'] as String?,
       status: json['status'] as String? ?? 'WAITING_FOR_DRIVER',
       requestedAt: _dateFromJson(json['requestedAt']) ?? DateTime.now(),
       pickupWindowStart: _dateFromJson(json['pickupWindowStart']),
@@ -241,6 +310,15 @@ class DriverDelivery {
   }
 
   bool get isAutoPingEligible => isDriverAutoPingEligibleStatus(status);
+
+  bool get hasGroupedItems => groupedDelivery && items.isNotEmpty;
+
+  String get primarySubtitle =>
+      hasGroupedItems ? '$itemCount items' : material.quantityLabel;
+
+  List<String> get groupedItemLines => items
+      .map((item) => '${item.title} × ${item.quantityLabel}')
+      .toList(growable: false);
 }
 
 const driverAutoPingEligibleStatuses = {

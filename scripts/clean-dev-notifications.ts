@@ -15,6 +15,7 @@
 import { prisma } from '../apps/backend/src/database/prisma.js';
 import { env } from '../apps/backend/src/config/env.js';
 import { DRIVER_DELIVERY_NOTIFICATION_TYPES } from '../apps/backend/src/modules/notifications/driver-delivery-notification-types.js';
+import { DISALLOWED_DRIVER_NOTIFICATION_TYPES } from '../apps/backend/src/modules/notifications/driver-notification-validity.js';
 
 const TEST_MARKERS = [
   'test-driver-delivery-notifications',
@@ -170,6 +171,13 @@ async function main() {
   }
 
   if (runDefaultMaintenance || process.argv.length <= 2) {
+    const disallowed = await prisma.notification.deleteMany({
+      where: {
+        notificationType: { in: [...DISALLOWED_DRIVER_NOTIFICATION_TYPES] },
+      },
+    });
+    console.log(`Deleted disallowed driver notification types: ${disallowed.count}`);
+
     const testTagged = await prisma.notification.deleteMany({
       where: buildTestTagWhere(),
     });

@@ -12,6 +12,7 @@ import {
   getMyReservationByIdHandler,
   listLearnerReservationMessagesHandler,
   listMyReservationsHandler,
+  quoteReservationHandler,
   reportLearnerSupplierIssueHandler,
   reportNoDriverAvailableHandler,
   requestLearnerPickupRescheduleHandler,
@@ -25,6 +26,7 @@ import {
   reportSupplierIssueSchema,
   requestPickupRescheduleSchema,
   reservationIdParamsSchema,
+  reservationQuoteSchema,
 } from './reservations.validation.js';
 import { requestDeliveryForReservationHandler } from '../deliveries/deliveries.controller.js';
 import {
@@ -46,6 +48,14 @@ reservationsRouter.get(
   requireRoles('LEARNER'),
   validate(reservationIdParamsSchema, 'params'),
   asyncHandler(getMyReservationByIdHandler),
+);
+
+reservationsRouter.post(
+  '/quote',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(reservationQuoteSchema),
+  asyncHandler(quoteReservationHandler),
 );
 
 reservationsRouter.post(

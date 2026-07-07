@@ -8,10 +8,30 @@ import '../data/models/driver_location_ping_request.dart';
 import '../data/models/update_driver_delivery_status_request.dart';
 import 'driver_deliveries_provider.dart';
 
+const _leaveDeliveryPageStatuses = {
+  'DELIVERED',
+  'FAILED_PICKUP',
+  'FAILED_DELIVERY',
+  'CANCELLED',
+  'DRIVER_NO_SHOW',
+  'AWAITING_RESOLUTION',
+};
+
 class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
   @override
   AsyncValue<void> build() {
     return const AsyncData(null);
+  }
+
+  void refreshAfterLeavingDeliveryPage() {
+    ref.invalidate(activeDriverDeliveriesProvider);
+    ref.invalidate(availableDriverDeliveriesProvider);
+  }
+
+  void refreshActiveDelivery(String deliveryId) {
+    ref.invalidate(activeDriverDeliveriesProvider);
+    ref.invalidate(activeDriverDeliveryProvider(deliveryId));
+    ref.invalidate(driverDeliveryDetailProvider(deliveryId));
   }
 
   Future<DriverDelivery> acceptDelivery(String deliveryId) async {
@@ -22,8 +42,7 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
           .read(driverDeliveriesRepositoryProvider)
           .acceptDelivery(deliveryId);
       ref.invalidate(availableDriverDeliveriesProvider);
-      ref.invalidate(activeDriverDeliveriesProvider);
-      ref.invalidate(activeDriverDeliveryProvider(delivery.id));
+      refreshActiveDelivery(delivery.id);
       state = const AsyncData(null);
       return delivery;
     } catch (error, stackTrace) {
@@ -51,12 +70,10 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
               confirmationCode: confirmationCode,
             ),
           );
-      ref.invalidate(activeDriverDeliveriesProvider);
-      ref.invalidate(activeDriverDeliveryProvider(delivery.id));
-      if (status == 'DELIVERED') {
-        ref.invalidate(availableDriverDeliveriesProvider);
-      }
       state = const AsyncData(null);
+      if (!_leaveDeliveryPageStatuses.contains(status)) {
+        refreshActiveDelivery(delivery.id);
+      }
       return delivery;
     } catch (error, stackTrace) {
       state = AsyncError(error, stackTrace);
@@ -78,9 +95,6 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
             deliveryId,
             DriverDeliveryFailureRequest(reason: reason, note: note),
           );
-      ref.invalidate(activeDriverDeliveriesProvider);
-      ref.invalidate(activeDriverDeliveryProvider(deliveryId));
-      ref.invalidate(availableDriverDeliveriesProvider);
       state = const AsyncData(null);
       return delivery;
     } catch (error, stackTrace) {
@@ -103,9 +117,6 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
             deliveryId,
             DriverDeliveryFailureRequest(reason: reason, note: note),
           );
-      ref.invalidate(activeDriverDeliveriesProvider);
-      ref.invalidate(activeDriverDeliveryProvider(deliveryId));
-      ref.invalidate(availableDriverDeliveriesProvider);
       state = const AsyncData(null);
       return delivery;
     } catch (error, stackTrace) {
@@ -124,9 +135,6 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
       final delivery = await ref
           .read(driverDeliveriesRepositoryProvider)
           .reportDriverIssue(deliveryId, note: note);
-      ref.invalidate(activeDriverDeliveriesProvider);
-      ref.invalidate(activeDriverDeliveryProvider(deliveryId));
-      ref.invalidate(availableDriverDeliveriesProvider);
       state = const AsyncData(null);
       return delivery;
     } catch (error, stackTrace) {
@@ -142,8 +150,6 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
     await ref
         .read(driverDeliveriesRepositoryProvider)
         .createLocationPing(deliveryId, request);
-    // Do not invalidate delivery providers here — frequent pings were
-    // remounting the detail page and disposing auto/demo tracking timers.
   }
 
   Future<void> captureAndSendLocationPing(String deliveryId) async {
@@ -169,3 +175,9 @@ final driverDeliveryActionControllerProvider =
     NotifierProvider<DriverDeliveryActionController, AsyncValue<void>>(
       DriverDeliveryActionController.new,
     );
+
+void leaveDriverDeliveryDetail(WidgetRef ref) {
+  ref
+      .read(driverDeliveryActionControllerProvider.notifier)
+      .refreshAfterLeavingDeliveryPage();
+}

@@ -1,5 +1,7 @@
 import { AppError } from '../../utils/app-error.js';
 
+import { filterNotificationsForDisplay } from './driver-notification-validity.js';
+import { syncDueDriverTimeRemindersForUser } from './driver-notification-events.service.js';
 import * as notificationsRepository from './notifications.repository.js';
 import type { ListNotificationsQuery } from './notifications.validation.js';
 
@@ -77,6 +79,8 @@ export const listMyNotifications = async (
   userId: string,
   query: ListNotificationsQuery,
 ) => {
+  await syncDueDriverTimeRemindersForUser(userId);
+
   const page = normalizePage(query.page);
   const limit = normalizeLimit(query.limit);
 
@@ -87,10 +91,14 @@ export const listMyNotifications = async (
     limit,
   });
 
+  const visibleItems = filterNotificationsForDisplay(result.items).map(
+    mapNotification,
+  );
+
   const totalPages = Math.ceil(result.total / limit) || 0;
 
   return {
-    items: result.items.map(mapNotification),
+    items: visibleItems,
     unreadCount: result.unreadCount,
     pagination: {
       page,
@@ -101,11 +109,15 @@ export const listMyNotifications = async (
   };
 };
 
-export const getMyNotificationUnreadCount = async (userId: string) => ({
-  unreadCount: await notificationsRepository.countUnreadNotificationsForUser(
-    userId,
-  ),
-});
+export const getMyNotificationUnreadCount = async (userId: string) => {
+  await syncDueDriverTimeRemindersForUser(userId);
+
+  return {
+    unreadCount: await notificationsRepository.countUnreadNotificationsForUser(
+      userId,
+    ),
+  };
+};
 
 export const markMyNotificationRead = async (
   userId: string,

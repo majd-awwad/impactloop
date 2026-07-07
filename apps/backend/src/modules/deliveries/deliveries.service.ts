@@ -14,7 +14,7 @@ import {
   maybeSaveDropoffAddressAfterDeliveryRequest,
   resolveSavedDropoffAddressForDelivery,
 } from '../saved-dropoff-addresses/saved-dropoff-addresses.service.js';
-import { notifyNewDeliveryJobAvailable } from '../notifications/driver-delivery-notifications.js';
+import { notifyNewDriverJob } from '../notifications/driver-notification-events.service.js';
 import { escalateStaleAssignedDriverPickupsByIds } from '../reservations/reservations.stale-assigned-driver-auto-escalation.repository.js';
 import { isAssignedDriverPickupOverdue } from '../reservations/reservation-assigned-driver-pickup-overdue.js';
 
@@ -449,7 +449,7 @@ export const requestDeliveryForReservation = async (
         });
       }
 
-      await notifyNewDeliveryJobAvailable(result.delivery!.id);
+      await notifyNewDriverJob(result.delivery!.id);
 
       return mapLearnerDelivery(result.delivery!);
     }

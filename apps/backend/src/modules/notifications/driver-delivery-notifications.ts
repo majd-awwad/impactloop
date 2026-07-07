@@ -1,398 +1,49 @@
-import type { DeliveryStatus } from '../../generated/prisma/client.js';
-import { prisma } from '../../database/prisma.js';
+/**
+ * @deprecated Import from driver-notification-events.service.js instead.
+ * Re-exports kept for backward compatibility during migration.
+ */
+export {
+  notifyNewDriverJob,
+  notifyNewJobForReservationWaitingDelivery,
+  notifyDriverPickupTime,
+  notifyDriverDropoffTime,
+  syncDueDriverTimeRemindersForUser,
+  clearUnreadNewJobNotificationsForDelivery,
+  notifyDriverDeliveryMovedToAdminReview,
+  resetDriverDeliveryReminderSyncThrottleForTests,
+} from './driver-notification-events.service.js';
 
-import {
-  DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
-  MAX_ACTIVE_DRIVER_DELIVERIES,
-} from '../deliveries/deliveries.service.js';
-import { DRIVER_DELIVERY_NOTIFICATION_TYPES } from './driver-delivery-notification-types.js';
-import { createNotificationIfMissing } from './notifications.repository.js';
+export {
+  isAllowedDriverNotificationType,
+  isDriverDeliveryNotificationType,
+} from './driver-delivery-notification-types.js';
 
-const REMINDER_LOOKAHEAD_MS = 30 * 60 * 1000;
+/** @deprecated Use notifyNewDriverJob */
+export { notifyNewDriverJob as notifyNewDeliveryJobAvailable } from './driver-notification-events.service.js';
 
-const deliveryContextSelect = {
-  id: true,
-  status: true,
-  reservationId: true,
-  assignedDriverProfileId: true,
-  reservation: {
-    select: {
-      id: true,
-      requesterId: true,
-      ownerId: true,
-      supplierPickupWindowStart: true,
-      supplierPickupWindowEnd: true,
-      confirmedDeliveryWindowStart: true,
-      confirmedDeliveryWindowEnd: true,
-      material: { select: { title: true } },
-    },
-  },
-  pickupLocation: {
-    select: {
-      city: true,
-      area: true,
-      addressLine: true,
-    },
-  },
-  assignedDriverProfile: {
-    select: { userId: true },
-  },
-} as const;
+/** @deprecated Use notifyNewDriverJob */
+export { notifyNewDriverJob as notifyDriverDeliveryRequestCreated } from './driver-notification-events.service.js';
 
-type DeliveryNotificationContext = {
-  id: string;
-  status: DeliveryStatus;
-  reservationId: string;
-  assignedDriverProfileId: string | null;
-  reservation: {
-    id: string;
-    requesterId: string;
-    ownerId: string;
-    supplierPickupWindowStart: Date | null;
-    supplierPickupWindowEnd: Date | null;
-    confirmedDeliveryWindowStart: Date | null;
-    confirmedDeliveryWindowEnd: Date | null;
-    material: { title: string };
-  };
-  pickupLocation: {
-    city: string | null;
-    area: string | null;
-    addressLine: string | null;
-  };
-  assignedDriverProfile: { userId: string } | null;
-};
+/** @deprecated Use clearUnreadNewJobNotificationsForDelivery */
+export { clearUnreadNewJobNotificationsForDelivery as removeJobAvailableNotificationsForDelivery } from './driver-notification-events.service.js';
 
-const beforePickupStatuses = new Set<DeliveryStatus>([
-  'DRIVER_ASSIGNED',
-  'ARRIVED_PICKUP',
-]);
+/** @deprecated Use notifyDriverPickupTime */
+export { notifyDriverPickupTime as syncPickupReminderForDelivery } from './driver-notification-events.service.js';
 
-const inTransitStatuses = new Set<DeliveryStatus>([
-  'PICKED_UP',
-  'ON_THE_WAY',
-  'ARRIVED_DROPOFF',
-]);
+/** @deprecated Use notifyDriverDropoffTime */
+export { notifyDriverDropoffTime as syncDropoffReminderForDelivery } from './driver-notification-events.service.js';
 
-const SYNC_THROTTLE_MS = 60_000;
+/** @deprecated Use syncDueDriverTimeRemindersForUser */
+export { syncDueDriverTimeRemindersForUser as syncDueDriverDeliveryRemindersForUser } from './driver-notification-events.service.js';
 
-const lastReminderSyncAtByUser = new Map<string, number>();
+/** @deprecated Disabled */
+export const ensureDriverJobAvailableNotifications = async (
+  _driverUserId: string,
+  _waitingDeliveryIds: string[],
+) => {};
 
-const notifySafely = async (task: () => Promise<unknown>) => {
-  try {
-    await task();
-  } catch (error) {
-    console.error('[notifications] driver delivery notification failed', error);
-  }
-};
-
-const isInternalTestLabel = (value: string) =>
-  /\[test[^\]]*\]/i.test(value) || value.includes('@impactloop.test');
-
-const materialLabel = (delivery: DeliveryNotificationContext) => {
-  const raw = delivery.reservation.material.title.trim() || 'the material';
-  if (isInternalTestLabel(raw)) {
-    return 'the material';
-  }
-
-  const cleaned = raw.replace(/\[test[^\]]*\]/gi, '').trim();
-  return cleaned || 'the material';
-};
-
-const safeAreaLabel = (delivery: DeliveryNotificationContext) => {
-  const parts = [delivery.pickupLocation.city, delivery.pickupLocation.area]
-    .map((value) => value?.trim())
-    .filter((value): value is string => {
-      if (!value) {
-        return false;
-      }
-
-      return !isInternalTestLabel(value);
-    });
-
-  return parts.length > 0 ? parts.join(', ') : 'your area';
-};
-
-const formatNotificationTime = (value: Date) => {
-  const hour = value.getHours().toString().padStart(2, '0');
-  const minute = value.getMinutes().toString().padStart(2, '0');
-  return `${hour}:${minute}`;
-};
-
-const loadDeliveryContext = async (deliveryId: string) =>
-  prisma.delivery.findUnique({
-    where: { id: deliveryId },
-    select: deliveryContextSelect,
-  });
-
-const listEligibleDriverUserIdsForNewJobs = async () => {
-  const profiles = await prisma.driverProfile.findMany({
-    where: { status: 'ACTIVE' },
-    select: { id: true, userId: true },
-  });
-
-  const eligible: string[] = [];
-  for (const profile of profiles) {
-    const activeCount = await prisma.delivery.count({
-      where: {
-        assignedDriverProfileId: profile.id,
-        status: { in: [...DRIVER_IN_PROGRESS_ASSIGNED_STATUSES] },
-      },
-    });
-
-    if (activeCount < MAX_ACTIVE_DRIVER_DELIVERIES) {
-      eligible.push(profile.userId);
-    }
-  }
-
-  return eligible;
-};
-
-export const notifyNewDeliveryJobAvailable = async (deliveryId: string) =>
-  notifySafely(async () => {
-    const delivery = await loadDeliveryContext(deliveryId);
-    if (!delivery || delivery.status !== 'WAITING_FOR_DRIVER') {
-      return;
-    }
-
-    const driverUserIds = await listEligibleDriverUserIdsForNewJobs();
-    const material = materialLabel(delivery);
-    const area = safeAreaLabel(delivery);
-
-    await Promise.all(
-      driverUserIds.map((userId) =>
-        createNotificationIfMissing({
-          userId,
-          notificationType:
-            DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_AVAILABLE,
-          title: 'New delivery job available',
-          body: `${material} is ready for delivery in ${area}.`,
-          relatedEntityType: 'DELIVERY',
-          relatedEntityId: delivery.id,
-        }),
-      ),
-    );
-  });
-
-export const notifyDriverDeliveryAccepted = async (deliveryId: string) =>
-  notifySafely(async () => {
-    const delivery = await loadDeliveryContext(deliveryId);
-    if (!delivery?.assignedDriverProfile?.userId) {
-      return;
-    }
-
-    const material = materialLabel(delivery);
-    const driverUserId = delivery.assignedDriverProfile.userId;
-
-    await createNotificationIfMissing({
-      userId: driverUserId,
-      notificationType: DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_ACCEPTED,
-      title: 'Delivery accepted',
-      body: `You accepted delivery for ${material}. Check pickup details and timing.`,
-      relatedEntityType: 'DELIVERY',
-      relatedEntityId: delivery.id,
-    });
-
-    await createNotificationIfMissing({
-      userId: delivery.reservation.requesterId,
-      notificationType: 'DELIVERY_DRIVER_ASSIGNED',
-      title: 'Driver assigned',
-      body: 'A driver accepted your delivery request.',
-      relatedEntityType: 'RESERVATION',
-      relatedEntityId: delivery.reservation.id,
-    });
-
-    await createNotificationIfMissing({
-      userId: delivery.reservation.ownerId,
-      notificationType: 'DELIVERY_DRIVER_ASSIGNED',
-      title: 'Driver assigned',
-      body: `A driver accepted delivery for ${material}.`,
-      relatedEntityType: 'RESERVATION',
-      relatedEntityId: delivery.reservation.id,
-    });
-  });
-
-const nextStepMessage = (
-  status: DeliveryStatus,
-  material: string,
-): { title: string; body: string } | null => {
-  switch (status) {
-    case 'PICKED_UP':
-      return {
-        title: 'Material picked up',
-        body: `Head to the learner drop-off location for ${material}.`,
-      };
-    case 'ON_THE_WAY':
-      return {
-        title: 'Delivery in progress',
-        body: 'Continue to the learner drop-off location.',
-      };
-    case 'ARRIVED_DROPOFF':
-      return {
-        title: 'Confirm delivery',
-        body: 'Confirm delivery with the learner handover code.',
-      };
-    default:
-      return null;
-  }
-};
-
-export const notifyDriverDeliveryNextStep = async (
-  deliveryId: string,
-  newStatus: DeliveryStatus,
-) =>
-  notifySafely(async () => {
-    const delivery = await loadDeliveryContext(deliveryId);
-    if (!delivery?.assignedDriverProfile?.userId) {
-      return;
-    }
-
-    const message = nextStepMessage(newStatus, materialLabel(delivery));
-    if (!message) {
-      return;
-    }
-
-    await createNotificationIfMissing({
-      userId: delivery.assignedDriverProfile.userId,
-      notificationType:
-        DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_NEXT_STEP,
-      title: message.title,
-      body: message.body,
-      relatedEntityType: 'DELIVERY',
-      relatedEntityId: `${delivery.id}:${newStatus}`,
-    });
-  });
-
-const syncPickupReminders = async (
-  delivery: DeliveryNotificationContext,
-  driverUserId: string,
-  now: Date,
-) => {
-  if (!beforePickupStatuses.has(delivery.status)) {
-    return;
-  }
-
-  const windowStart = delivery.reservation.supplierPickupWindowStart;
-  const material = materialLabel(delivery);
-
-  if (!windowStart) {
-    return;
-  }
-
-  const startsSoonAt = new Date(windowStart.getTime() - REMINDER_LOOKAHEAD_MS);
-  if (now >= startsSoonAt && now < windowStart) {
-    await createNotificationIfMissing({
-      userId: driverUserId,
-      notificationType:
-        DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_PICKUP_STARTING_SOON,
-      title: 'Pickup starts soon',
-      body: `Pickup for ${material} starts at ${formatNotificationTime(windowStart)}.`,
-      relatedEntityType: 'DELIVERY',
-      relatedEntityId: delivery.id,
-    });
-  }
-};
-
-const syncDropoffReminders = async (
-  delivery: DeliveryNotificationContext,
-  driverUserId: string,
-  now: Date,
-) => {
-  if (!inTransitStatuses.has(delivery.status)) {
-    return;
-  }
-
-  const windowStart = delivery.reservation.confirmedDeliveryWindowStart;
-  if (!windowStart) {
-    return;
-  }
-
-  const material = materialLabel(delivery);
-  const startsSoonAt = new Date(windowStart.getTime() - REMINDER_LOOKAHEAD_MS);
-
-  if (now >= startsSoonAt && now < windowStart) {
-    await createNotificationIfMissing({
-      userId: driverUserId,
-      notificationType:
-        DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DROPOFF_STARTING_SOON,
-      title: 'Drop-off starts soon',
-      body: `Drop-off for ${material} starts at ${formatNotificationTime(windowStart)}.`,
-      relatedEntityType: 'DELIVERY',
-      relatedEntityId: delivery.id,
-    });
-  }
-};
-
-const syncDeliveryReminders = async (
-  delivery: DeliveryNotificationContext,
-  driverUserId: string,
-  now: Date,
-) => {
-  await syncPickupReminders(delivery, driverUserId, now);
-  await syncDropoffReminders(delivery, driverUserId, now);
-};
-
-export const resetDriverDeliveryReminderSyncThrottleForTests = () => {
-  lastReminderSyncAtByUser.clear();
-};
-
+/** @deprecated Disabled */
 export const syncDriverDeliveryRemindersForUser = async (
-  userId: string,
-  options: { force?: boolean } = {},
-) =>
-  notifySafely(async () => {
-    const syncStartedAt = Date.now();
-    const lastSyncAt = lastReminderSyncAtByUser.get(userId) ?? 0;
-    if (!options.force && syncStartedAt - lastSyncAt < SYNC_THROTTLE_MS) {
-      return;
-    }
-    lastReminderSyncAtByUser.set(userId, syncStartedAt);
-
-    const profile = await prisma.driverProfile.findFirst({
-      where: { userId, status: 'ACTIVE' },
-      select: { id: true },
-    });
-
-    if (!profile) {
-      return;
-    }
-
-    const referenceTime = new Date();
-    const deliveries = await prisma.delivery.findMany({
-      where: {
-        assignedDriverProfileId: profile.id,
-        status: {
-          in: [
-            'DRIVER_ASSIGNED',
-            'ARRIVED_PICKUP',
-            'PICKED_UP',
-            'ON_THE_WAY',
-            'ARRIVED_DROPOFF',
-          ],
-        },
-      },
-      select: deliveryContextSelect,
-    });
-
-    await Promise.all(
-      deliveries.map((delivery) =>
-        syncDeliveryReminders(delivery, userId, referenceTime),
-      ),
-    );
-  });
-
-export const notifyDriverDeliveryMovedToAdminReview = async (input: {
-  deliveryId: string;
-  driverUserId: string;
-}) =>
-  notifySafely(async () => {
-    await createNotificationIfMissing({
-      userId: input.driverUserId,
-      notificationType:
-        DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW,
-      title: 'Delivery moved to admin review',
-      body:
-        'Delivery moved to admin review because pickup was not completed within the pickup window.',
-      relatedEntityType: 'DELIVERY',
-      relatedEntityId: input.deliveryId,
-    });
-  });
+  _userId: string,
+  _options: { force?: boolean } = {},
+) => {};

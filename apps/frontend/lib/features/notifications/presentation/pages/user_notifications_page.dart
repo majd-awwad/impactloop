@@ -249,7 +249,7 @@ class _NotificationsBody extends ConsumerWidget {
 
       if (currentUser?.isDriverMode == true &&
           currentUser?.hasRole('DRIVER') == true) {
-        if (notification.notificationType == 'DRIVER_DELIVERY_AVAILABLE') {
+        if (notification.notificationType == 'DRIVER_NEW_JOB') {
           context.go('/driver/jobs');
         } else {
           context.go('/driver/deliveries/$deliveryId');
@@ -645,16 +645,22 @@ class _NotificationTile extends StatelessWidget {
 
   IconData _iconForNotification(AppNotification notification) {
     switch (notification.notificationType) {
-      case 'DRIVER_DELIVERY_AVAILABLE':
+      case 'DRIVER_NEW_JOB':
+        return Icons.local_shipping_outlined;
+      case 'DRIVER_DELIVERY_REQUEST_CREATED':
         return Icons.local_shipping_outlined;
       case 'DRIVER_DELIVERY_ACCEPTED':
       case 'DRIVER_DELIVERY_NEXT_STEP':
       case 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW':
         return Icons.admin_panel_settings_outlined;
+      case 'DRIVER_PICKUP_TIME':
+      case 'DRIVER_PICKUP_REMINDER':
       case 'DRIVER_PICKUP_STARTING_SOON':
       case 'DRIVER_PICKUP_WINDOW_STARTED':
       case 'DRIVER_PICKUP_OVERDUE':
         return Icons.schedule_outlined;
+      case 'DRIVER_DROPOFF_TIME':
+      case 'DRIVER_DROPOFF_REMINDER':
       case 'DRIVER_DROPOFF_STARTING_SOON':
       case 'DRIVER_DROPOFF_WINDOW_STARTED':
       case 'DRIVER_DROPOFF_OVERDUE':

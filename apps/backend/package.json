@@ -13,7 +13,10 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
     "test": "node --import tsx --test src/modules/**/*.test.ts",
-    "clean-dev-notifications": "tsx ../../scripts/clean-dev-notifications.ts"
+    "clean-dev-notifications": "tsx ../../scripts/clean-dev-notifications.ts",
+    "clean-driver-notifications": "tsx ../../scripts/clean-driver-notifications.ts",
+    "backfill-driver-new-job-notifications": "tsx ../../scripts/backfill-driver-new-job-notifications.ts",
+    "verify-driver-notifications": "tsx ../../scripts/verify-driver-notifications.ts"
   },
   "keywords": [],
   "author": "",

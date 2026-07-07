@@ -33,15 +33,21 @@ NotificationVisualCategory categoryForNotification(
   AppNotification notification,
 ) {
   switch (notification.notificationType) {
-    case 'DRIVER_DELIVERY_AVAILABLE':
+    case 'DRIVER_NEW_JOB':
       return NotificationVisualCategory.job;
+    case 'DRIVER_PICKUP_TIME':
+    case 'DRIVER_PICKUP_REMINDER':
     case 'DRIVER_PICKUP_STARTING_SOON':
     case 'DRIVER_PICKUP_WINDOW_STARTED':
     case 'DRIVER_PICKUP_OVERDUE':
+    case 'DRIVER_DROPOFF_TIME':
+    case 'DRIVER_DROPOFF_REMINDER':
     case 'DRIVER_DROPOFF_STARTING_SOON':
     case 'DRIVER_DROPOFF_WINDOW_STARTED':
     case 'DRIVER_DROPOFF_OVERDUE':
       return NotificationVisualCategory.reminder;
+    case 'DRIVER_DELIVERY_REQUEST_CREATED':
+      return NotificationVisualCategory.deliveryUpdate;
     case 'DRIVER_DELIVERY_ACCEPTED':
     case 'DRIVER_DELIVERY_NEXT_STEP':
     case 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW':
@@ -73,7 +79,7 @@ String notificationTypeChipLabel(NotificationVisualCategory category) {
 
 String notificationActionLabel(AppNotification notification) {
   if (notification.relatedEntityType == 'DELIVERY') {
-    if (notification.notificationType == 'DRIVER_DELIVERY_AVAILABLE') {
+    if (notification.notificationType == 'DRIVER_NEW_JOB') {
       return 'View jobs';
     }
     return 'View delivery';

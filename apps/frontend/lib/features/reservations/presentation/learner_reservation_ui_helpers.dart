@@ -838,6 +838,20 @@ String formatDeliveryAvailability(
 bool shouldShowAcceptedPickupInfo(LearnerReservation reservation) =>
     reservation.isAccepted;
 
+String combinedDeliverySummary(LearnerReservation reservation) {
+  final parts = <String>[
+    'Combined delivery',
+    if (reservation.groupItemCount != null && reservation.groupItemCount! > 0)
+      '${reservation.groupItemCount} items in this group',
+    if (reservation.groupTotal != null)
+      'Group total ${reservation.currency ?? 'NIS'} ${reservation.groupTotal!.toStringAsFixed(2)}',
+    if (reservation.deliveryFee == 0)
+      'Delivery fee charged once for the group',
+  ];
+
+  return parts.join(' · ');
+}
+
 bool shouldShowSelfPickupMap(
   LearnerReservation reservation, {
   required bool hasDeliveryRecord,

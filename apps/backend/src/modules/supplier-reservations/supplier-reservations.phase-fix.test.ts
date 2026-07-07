@@ -498,6 +498,7 @@ describe('supplier reservations phase fix', () => {
         },
       ],
       deliveryAddressText: '12 Learner Street',
+      dropoffCity: 'Nablus',
       safeDropoffAllowed: false,
     } satisfies CreateReservationInput);
     ctx.createdReservationIds.push(reservation.id);
@@ -529,6 +530,7 @@ describe('supplier reservations phase fix', () => {
       fulfillmentMethod: 'DELIVERY',
       learnerPreferredDeliveryWindows: [futurePreferredWindow(48)],
       deliveryAddressText: '12 Learner Street',
+      dropoffCity: 'Nablus',
       safeDropoffAllowed: false,
     } satisfies CreateReservationInput);
     ctx.createdReservationIds.push(reservation.id);
@@ -599,6 +601,7 @@ describe('supplier reservations phase fix', () => {
         },
       ],
       deliveryAddressText: '12 Learner Street',
+      dropoffCity: 'Nablus',
       safeDropoffAllowed: false,
     } satisfies CreateReservationInput);
     ctx.createdReservationIds.push(reservation.id);
@@ -680,6 +683,7 @@ describe('supplier reservations phase fix', () => {
         },
       ],
       deliveryAddressText: '12 Learner Street',
+      dropoffCity: 'Nablus',
       safeDropoffAllowed: false,
     } satisfies CreateReservationInput);
     ctx.createdReservationIds.push(reservation.id);

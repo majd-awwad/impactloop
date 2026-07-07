@@ -7,16 +7,18 @@ import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import {
   acceptDelivery,
   listActiveDriverDeliveries,
+  listAvailableDeliveries,
   updateDriverDeliveryStatus,
 } from '../driver/driver.service.js';
 import { requestDeliveryForReservation } from '../deliveries/deliveries.service.js';
 import { listMyNotifications } from './notifications.service.js';
-import { DRIVER_DELIVERY_NOTIFICATION_TYPES } from './driver-delivery-notification-types.js';
+import { DRIVER_NOTIFICATION_TYPES } from './driver-delivery-notification-types.js';
 import {
-  notifyNewDeliveryJobAvailable,
+  notifyDriverDropoffTime,
+  notifyDriverPickupTime,
+  notifyNewDriverJob,
   resetDriverDeliveryReminderSyncThrottleForTests,
-  syncDriverDeliveryRemindersForUser,
-} from './driver-delivery-notifications.js';
+} from './driver-notification-events.service.js';
 
 const TEST_MARKER = '[test-driver-delivery-notifications]';
 
@@ -217,7 +219,7 @@ async function cleanup(ctx: TestContext) {
   }
 }
 
-describe('driver delivery notifications', () => {
+describe('driver notification events', () => {
   const ctx: TestContext = {
     learnerId: '',
     supplierId: '',
@@ -281,20 +283,49 @@ describe('driver delivery notifications', () => {
     ctx.createdReservationIds = [];
   });
 
-  test('WAITING_FOR_DRIVER creates one new job notification per active driver', async () => {
+  test('GET available and active jobs do not create new job notifications', async () => {
+    const { reservation } = await createAcceptedReservation(ctx, 'GET Jobs Pack');
+    const delivery = await requestDelivery(ctx, reservation.id);
+
+    const beforeNewJob = await prisma.notification.count({
+      where: {
+        userId: ctx.driverId,
+        notificationType: DRIVER_NOTIFICATION_TYPES.DRIVER_NEW_JOB,
+        relatedEntityId: delivery.id,
+      },
+    });
+    assert.ok(beforeNewJob >= 1);
+
+    await listAvailableDeliveries(ctx.driverId);
+    await listAvailableDeliveries(ctx.driverId);
+    await listActiveDriverDeliveries(ctx.driverId);
+    await listActiveDriverDeliveries(ctx.driverId);
+
+    const afterNewJob = await prisma.notification.count({
+      where: {
+        userId: ctx.driverId,
+        notificationType: DRIVER_NOTIFICATION_TYPES.DRIVER_NEW_JOB,
+        relatedEntityId: delivery.id,
+      },
+    });
+    assert.equal(afterNewJob, beforeNewJob);
+  });
+
+  test('delivery request creates one new job notification per eligible driver', async () => {
     const { reservation } = await createAcceptedReservation(ctx, 'LED Pack');
     const delivery = await requestDelivery(ctx, reservation.id);
 
     for (const userId of [ctx.driverId, ctx.secondDriverId]) {
-      const count = await prisma.notification.count({
+      const row = await prisma.notification.findFirst({
         where: {
           userId,
-          notificationType:
-            DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_AVAILABLE,
+          notificationType: DRIVER_NOTIFICATION_TYPES.DRIVER_NEW_JOB,
           relatedEntityId: delivery.id,
         },
       });
-      assert.equal(count, 1);
+      assert.ok(row);
+      assert.equal(row.title, 'New delivery job');
+      assert.ok(!row.title.includes('available'));
     }
 
     const sample = await prisma.notification.findFirst({
@@ -308,23 +339,72 @@ describe('driver delivery notifications', () => {
     assert.ok(!sample?.body.includes('Secret exact pickup street 99'));
   });
 
-  test('re-running new job notification check does not duplicate notifications', async () => {
+  test('re-running new job notification does not duplicate', async () => {
     const { reservation } = await createAcceptedReservation(ctx, 'Dup Pack');
     const delivery = await requestDelivery(ctx, reservation.id);
 
-    await notifyNewDeliveryJobAvailable(delivery.id);
+    await notifyNewDriverJob(delivery.id);
+    await notifyNewDriverJob(delivery.id);
 
     for (const userId of [ctx.driverId, ctx.secondDriverId]) {
       const count = await prisma.notification.count({
         where: {
           userId,
-          notificationType:
-            DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_AVAILABLE,
+          notificationType: DRIVER_NOTIFICATION_TYPES.DRIVER_NEW_JOB,
           relatedEntityId: delivery.id,
         },
       });
       assert.equal(count, 1);
     }
+  });
+
+  test('accepting delivery removes unread new job notifications only', async () => {
+    const { reservation } = await createAcceptedReservation(ctx, 'Accept Prune Pack');
+    const delivery = await requestDelivery(ctx, reservation.id);
+
+    const unread = await prisma.notification.findFirst({
+      where: {
+        userId: ctx.driverId,
+        notificationType: DRIVER_NOTIFICATION_TYPES.DRIVER_NEW_JOB,
+        relatedEntityId: delivery.id,
+        isRead: false,
+      },
+    });
+    assert.ok(unread);
+
+    await prisma.notification.update({
+      where: { id: unread.id },
+      data: { isRead: true },
+    });
+
+    await acceptDelivery(ctx.driverId, delivery.id);
+
+    const readHistory = await prisma.notification.count({
+      where: { id: unread.id },
+    });
+    assert.equal(readHistory, 1);
+
+    const unreadRemaining = await prisma.notification.count({
+      where: {
+        notificationType: DRIVER_NOTIFICATION_TYPES.DRIVER_NEW_JOB,
+        relatedEntityId: delivery.id,
+        isRead: false,
+      },
+    });
+    assert.equal(unreadRemaining, 0);
+  });
+
+  test('delivery request does not create legacy job-available notifications', async () => {
+    const { reservation } = await createAcceptedReservation(ctx, 'Legacy Pack');
+    const delivery = await requestDelivery(ctx, reservation.id);
+
+    const legacy = await prisma.notification.count({
+      where: {
+        notificationType: 'DRIVER_DELIVERY_AVAILABLE',
+        relatedEntityId: delivery.id,
+      },
+    });
+    assert.equal(legacy, 0);
   });
 
   test('driver accept does not create delivery accepted notification', async () => {
@@ -336,8 +416,7 @@ describe('driver delivery notifications', () => {
     const accepted = await prisma.notification.findMany({
       where: {
         userId: ctx.driverId,
-        notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_ACCEPTED,
+        notificationType: 'DRIVER_DELIVERY_ACCEPTED',
         relatedEntityId: delivery.id,
       },
     });
@@ -345,7 +424,7 @@ describe('driver delivery notifications', () => {
     assert.equal(accepted.length, 0);
   });
 
-  test('pickup starts soon notification created within 30 minutes before pickup', async () => {
+  test('pickup time notification created within 15 minutes before pickup', async () => {
     const { reservation } = await createAcceptedReservation(
       ctx,
       'Soon Pickup Pack',
@@ -353,7 +432,7 @@ describe('driver delivery notifications', () => {
     const delivery = await requestDelivery(ctx, reservation.id);
     const accepted = await acceptDelivery(ctx.driverId, delivery.id);
 
-    const pickupStart = new Date(Date.now() + 20 * 60_000);
+    const pickupStart = new Date(Date.now() + 10 * 60_000);
     const pickupEnd = new Date(pickupStart.getTime() + 60 * 60_000);
     await prisma.reservation.update({
       where: { id: reservation.id },
@@ -363,19 +442,103 @@ describe('driver delivery notifications', () => {
       },
     });
 
-    await syncDriverDeliveryRemindersForUser(ctx.driverId, { force: true });
+    await notifyDriverPickupTime(accepted.id);
 
     const reminder = await prisma.notification.findFirst({
       where: {
         userId: ctx.driverId,
         notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_PICKUP_STARTING_SOON,
+          DRIVER_NOTIFICATION_TYPES.DRIVER_PICKUP_TIME,
         relatedEntityId: accepted.id,
       },
     });
 
     assert.ok(reminder);
-    assert.match(reminder.body, /Soon Pickup Pack/);
+    assert.equal(reminder.title, 'Pickup time');
+    assert.match(reminder.body, /Pickup for Soon Pickup Pack starts soon/);
+  });
+
+  test('GET notifications list syncs due pickup reminders idempotently', async () => {
+    const { reservation } = await createAcceptedReservation(
+      ctx,
+      'List Fetch Reminder Pack',
+    );
+    const delivery = await requestDelivery(ctx, reservation.id);
+    const accepted = await acceptDelivery(ctx.driverId, delivery.id);
+
+    const pickupStart = new Date(Date.now() + 10 * 60_000);
+    const pickupEnd = new Date(pickupStart.getTime() + 60 * 60_000);
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        supplierPickupWindowStart: pickupStart,
+        supplierPickupWindowEnd: pickupEnd,
+      },
+    });
+
+    const before = await prisma.notification.count({
+      where: {
+        userId: ctx.driverId,
+        notificationType: DRIVER_NOTIFICATION_TYPES.DRIVER_PICKUP_TIME,
+        relatedEntityId: accepted.id,
+      },
+    });
+
+    await listMyNotifications(ctx.driverId, {
+      page: 1,
+      limit: 20,
+      isRead: undefined,
+    });
+    await listMyNotifications(ctx.driverId, {
+      page: 1,
+      limit: 20,
+      isRead: undefined,
+    });
+
+    const after = await prisma.notification.count({
+      where: {
+        userId: ctx.driverId,
+        notificationType: DRIVER_NOTIFICATION_TYPES.DRIVER_PICKUP_TIME,
+        relatedEntityId: accepted.id,
+      },
+    });
+    assert.equal(after, 1);
+    assert.equal(before <= after, true);
+  });
+
+  test('GET notifications list does not create new job notifications', async () => {
+    const { reservation } = await createAcceptedReservation(
+      ctx,
+      'List Fetch Job Pack',
+    );
+    await requestDelivery(ctx, reservation.id);
+
+    const before = await prisma.notification.count({
+      where: {
+        userId: ctx.driverId,
+        notificationType: DRIVER_NOTIFICATION_TYPES.DRIVER_NEW_JOB,
+      },
+    });
+    assert.ok(before >= 1);
+
+    await listMyNotifications(ctx.driverId, {
+      page: 1,
+      limit: 20,
+      isRead: undefined,
+    });
+    await listMyNotifications(ctx.driverId, {
+      page: 1,
+      limit: 20,
+      isRead: undefined,
+    });
+
+    const after = await prisma.notification.count({
+      where: {
+        userId: ctx.driverId,
+        notificationType: DRIVER_NOTIFICATION_TYPES.DRIVER_NEW_JOB,
+      },
+    });
+    assert.equal(after, before);
   });
 
   test('pickup window started notification is not created', async () => {
@@ -396,13 +559,12 @@ describe('driver delivery notifications', () => {
       },
     });
 
-    await syncDriverDeliveryRemindersForUser(ctx.driverId, { force: true });
+    await notifyDriverPickupTime(accepted.id);
 
     const reminder = await prisma.notification.findFirst({
       where: {
         userId: ctx.driverId,
-        notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_PICKUP_WINDOW_STARTED,
+        notificationType: 'DRIVER_PICKUP_WINDOW_STARTED',
         relatedEntityId: accepted.id,
       },
     });
@@ -428,12 +590,12 @@ describe('driver delivery notifications', () => {
       },
     });
 
-    await syncDriverDeliveryRemindersForUser(ctx.driverId, { force: true });
+    await notifyDriverPickupTime(accepted.id);
 
     const reminder = await prisma.notification.findFirst({
       where: {
         userId: ctx.driverId,
-        notificationType: DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_PICKUP_OVERDUE,
+        notificationType: 'DRIVER_PICKUP_OVERDUE',
         relatedEntityId: accepted.id,
       },
     });
@@ -475,12 +637,12 @@ describe('driver delivery notifications', () => {
       },
     });
 
-    await syncDriverDeliveryRemindersForUser(ctx.driverId, { force: true });
+    await notifyDriverPickupTime(accepted.id);
 
     const overdue = await prisma.notification.findFirst({
       where: {
         userId: ctx.driverId,
-        notificationType: DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_PICKUP_OVERDUE,
+        notificationType: 'DRIVER_PICKUP_OVERDUE',
         relatedEntityId: accepted.id,
       },
     });
@@ -522,13 +684,13 @@ describe('driver delivery notifications', () => {
       confirmationCode: deriveHandoverCode('supplier-handover', accepted.id),
     });
 
-    await syncDriverDeliveryRemindersForUser(ctx.driverId, { force: true });
+    await notifyDriverDropoffTime(accepted.id);
 
     const dropoffReminder = await prisma.notification.findFirst({
       where: {
         userId: ctx.driverId,
         notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DROPOFF_STARTING_SOON,
+          DRIVER_NOTIFICATION_TYPES.DRIVER_DROPOFF_TIME,
         relatedEntityId: accepted.id,
       },
     });
@@ -544,7 +706,7 @@ describe('driver delivery notifications', () => {
     const delivery = await requestDelivery(ctx, reservation.id);
     const accepted = await acceptDelivery(ctx.driverId, delivery.id);
 
-    const deliveryStart = new Date(Date.now() + 20 * 60_000);
+    const deliveryStart = new Date(Date.now() + 10 * 60_000);
     const deliveryEnd = new Date(deliveryStart.getTime() + 60 * 60_000);
     const activePickupStart = new Date(Date.now() - 15 * 60_000);
     const activePickupEnd = new Date(Date.now() + 45 * 60_000);
@@ -566,13 +728,11 @@ describe('driver delivery notifications', () => {
       confirmationCode: deriveHandoverCode('supplier-handover', accepted.id),
     });
 
-    await syncDriverDeliveryRemindersForUser(ctx.driverId, { force: true });
-
     const soon = await prisma.notification.findFirst({
       where: {
         userId: ctx.driverId,
         notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DROPOFF_STARTING_SOON,
+          DRIVER_NOTIFICATION_TYPES.DRIVER_DROPOFF_TIME,
         relatedEntityId: accepted.id,
       },
     });
@@ -627,13 +787,12 @@ describe('driver delivery notifications', () => {
       },
     });
 
-    await syncDriverDeliveryRemindersForUser(ctx.driverId, { force: true });
+    await notifyDriverDropoffTime(accepted.id);
 
     const overdue = await prisma.notification.findFirst({
       where: {
         userId: ctx.driverId,
-        notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DROPOFF_OVERDUE,
+          notificationType: 'DRIVER_DROPOFF_OVERDUE',
         relatedEntityId: accepted.id,
       },
     });
@@ -667,8 +826,7 @@ describe('driver delivery notifications', () => {
     const count = await prisma.notification.count({
       where: {
         userId: ctx.driverId,
-        notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_NEXT_STEP,
+          notificationType: 'DRIVER_DELIVERY_NEXT_STEP',
         relatedEntityId: { startsWith: `${accepted.id}:` },
       },
     });
@@ -699,8 +857,7 @@ describe('driver delivery notifications', () => {
     const reminder = await prisma.notification.findFirst({
       where: {
         userId: ctx.driverId,
-        notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_PICKUP_WINDOW_STARTED,
+        notificationType: 'DRIVER_PICKUP_WINDOW_STARTED',
         relatedEntityId: accepted.id,
       },
     });
@@ -708,9 +865,21 @@ describe('driver delivery notifications', () => {
     assert.equal(reminder, null);
   });
 
-  test('DRIVER role can read their notifications', async () => {
+  test('DRIVER role can read their notifications without job-available spam', async () => {
     const { reservation } = await createAcceptedReservation(ctx, 'Read Pack');
     const delivery = await requestDelivery(ctx, reservation.id);
+    const accepted = await acceptDelivery(ctx.driverId, delivery.id);
+
+    const pickupStart = new Date(Date.now() + 10 * 60_000);
+    const pickupEnd = new Date(pickupStart.getTime() + 60 * 60_000);
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        supplierPickupWindowStart: pickupStart,
+        supplierPickupWindowEnd: pickupEnd,
+      },
+    });
+    await notifyDriverPickupTime(accepted.id);
 
     const page = await listMyNotifications(ctx.driverId, {
       page: 1,
@@ -719,28 +888,29 @@ describe('driver delivery notifications', () => {
     });
 
     assert.ok(
+      !page.items.some(
+        (item) =>
+          item.notificationType === 'DRIVER_DELIVERY_AVAILABLE' ||
+          item.title === 'New delivery job available',
+      ),
+    );
+    assert.ok(
       page.items.some(
         (item) =>
           item.notificationType ===
-            DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_AVAILABLE &&
-          item.relatedEntityId === delivery.id,
+            DRIVER_NOTIFICATION_TYPES.DRIVER_PICKUP_TIME &&
+          item.relatedEntityId === accepted.id,
       ),
     );
     assert.ok(page.unreadCount >= 1);
   });
 
-  test('repeated notifications list fetch does not create duplicate job notifications', async () => {
+  test('repeated notifications list fetch does not create notifications', async () => {
     const { reservation } = await createAcceptedReservation(ctx, 'List Fetch Pack');
-    const delivery = await requestDelivery(ctx, reservation.id);
-    await acceptDelivery(ctx.driverId, delivery.id);
+    await requestDelivery(ctx, reservation.id);
 
     const beforeCount = await prisma.notification.count({
-      where: {
-        userId: ctx.driverId,
-        notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_AVAILABLE,
-        relatedEntityId: delivery.id,
-      },
+      where: { userId: ctx.driverId },
     });
 
     await listMyNotifications(ctx.driverId, {
@@ -755,23 +925,18 @@ describe('driver delivery notifications', () => {
     });
 
     const afterCount = await prisma.notification.count({
-      where: {
-        userId: ctx.driverId,
-        notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_AVAILABLE,
-        relatedEntityId: delivery.id,
-      },
+      where: { userId: ctx.driverId },
     });
 
     assert.equal(afterCount, beforeCount);
   });
 
-  test('repeated reminder sync within throttle does not duplicate', async () => {
+  test('repeated pickup reminder sync does not duplicate', async () => {
     const { reservation } = await createAcceptedReservation(ctx, 'Throttle Pack');
     const delivery = await requestDelivery(ctx, reservation.id);
     const accepted = await acceptDelivery(ctx.driverId, delivery.id);
 
-    const pickupStart = new Date(Date.now() + 20 * 60_000);
+    const pickupStart = new Date(Date.now() + 10 * 60_000);
     const pickupEnd = new Date(pickupStart.getTime() + 60 * 60_000);
     await prisma.reservation.update({
       where: { id: reservation.id },
@@ -783,30 +948,31 @@ describe('driver delivery notifications', () => {
 
     resetDriverDeliveryReminderSyncThrottleForTests();
 
-    await syncDriverDeliveryRemindersForUser(ctx.driverId, { force: true });
+    await notifyDriverPickupTime(accepted.id);
 
     const afterFirstSync = await prisma.notification.count({
       where: {
         userId: ctx.driverId,
         notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_PICKUP_STARTING_SOON,
+          DRIVER_NOTIFICATION_TYPES.DRIVER_PICKUP_TIME,
         relatedEntityId: accepted.id,
       },
     });
 
-    await syncDriverDeliveryRemindersForUser(ctx.driverId);
-    await syncDriverDeliveryRemindersForUser(ctx.driverId);
+    await notifyDriverPickupTime(accepted.id);
+    await notifyDriverPickupTime(accepted.id);
+    await notifyDriverPickupTime(accepted.id);
 
-    const afterThrottledSync = await prisma.notification.count({
+    const afterRepeatedSync = await prisma.notification.count({
       where: {
         userId: ctx.driverId,
         notificationType:
-          DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_PICKUP_STARTING_SOON,
+          DRIVER_NOTIFICATION_TYPES.DRIVER_PICKUP_TIME,
         relatedEntityId: accepted.id,
       },
     });
 
-    assert.equal(afterThrottledSync, afterFirstSync);
+    assert.equal(afterRepeatedSync, afterFirstSync);
     assert.ok(afterFirstSync >= 1);
   });
 });

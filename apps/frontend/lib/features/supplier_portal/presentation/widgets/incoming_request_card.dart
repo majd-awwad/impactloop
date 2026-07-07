@@ -152,6 +152,13 @@ class IncomingRequestCard extends StatelessWidget {
                             _FollowUpBadge(label: l.overdueBadge),
                             const SizedBox(width: AppSpacing.xs),
                           ],
+                          if (request.groupedDelivery) ...[
+                            _FollowUpBadge(
+                              label: request.combinedDeliveryLabel ??
+                                  'Combined delivery',
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                          ],
                           _StatusBadge(
                             label: request.supplierActionStatusLabel,
                             status: request.status,
