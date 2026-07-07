@@ -7,6 +7,7 @@ import '../../materials/data/models/category.dart';
 import '../domain/learning_project_repository.dart';
 import '../domain/learning_projects_result.dart';
 import '../domain/models/learning_project.dart';
+import '../domain/models/learning_project_submission.dart';
 import '../domain/models/project_build.dart';
 import '../domain/project_engagement.dart';
 import '../domain/project_follow_status.dart';
@@ -78,6 +79,50 @@ class ApiLearningHubRepository implements LearningProjectRepository {
 
       rethrow;
     }
+  }
+
+  @override
+  Future<LearningProjectSubmissionsResult> fetchMyLearningProjectSubmissions(
+    LearningProjectSubmissionsQuery query,
+  ) async {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/mine',
+        queryParameters: _submissionQueryParameters(query),
+      ),
+      (json) => _mapSubmissionsResult(json, query),
+    );
+  }
+
+  @override
+  Future<LearningProjectSubmission> fetchMyLearningProjectSubmission(
+    String id,
+  ) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>('$_basePath/mine/$id'),
+      LearningHubApiMapper.submissionFromJson,
+    );
+  }
+
+  @override
+  Future<LearningProjectSubmission> updateMyLearningProjectSubmission(
+    String id,
+    Map<String, dynamic> payload,
+  ) {
+    return unwrapApiResponse(
+      _client.patch<Map<String, dynamic>>('$_basePath/mine/$id', data: payload),
+      LearningHubApiMapper.submissionFromJson,
+    );
+  }
+
+  @override
+  Future<LearningProjectSubmission> resubmitMyLearningProjectSubmission(
+    String id,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>('$_basePath/mine/$id/resubmit'),
+      LearningHubApiMapper.submissionFromJson,
+    );
   }
 
   @override
@@ -331,6 +376,16 @@ class ApiLearningHubRepository implements LearningProjectRepository {
     };
   }
 
+  Map<String, dynamic> _submissionQueryParameters(
+    LearningProjectSubmissionsQuery query,
+  ) {
+    return {
+      'page': query.page,
+      'limit': query.limit,
+      if (query.status != null) 'status': query.status!.apiValue,
+    };
+  }
+
   LearningProjectsResult _mapProjectsResult(
     Map<String, dynamic> json,
     LearningProjectsQuery query,
@@ -360,6 +415,43 @@ class ApiLearningHubRepository implements LearningProjectRepository {
         (total == 0 ? 0 : ((total + limit - 1) / limit).ceil());
 
     return LearningProjectsResult(
+      items: items,
+      page: page,
+      limit: limit,
+      total: total,
+      totalPages: totalPages,
+    );
+  }
+
+  LearningProjectSubmissionsResult _mapSubmissionsResult(
+    Map<String, dynamic> json,
+    LearningProjectSubmissionsQuery query,
+  ) {
+    final itemsJson = json['items'];
+    final paginationJson = json['pagination'];
+    final items = itemsJson is List
+        ? itemsJson
+              .whereType<Map>()
+              .map(
+                (item) => LearningHubApiMapper.submissionFromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList(growable: false)
+        : const <LearningProjectSubmission>[];
+
+    final pagination = paginationJson is Map
+        ? Map<String, dynamic>.from(paginationJson)
+        : const <String, dynamic>{};
+
+    final page = _intFromDynamic(pagination['page']) ?? query.page;
+    final limit = _intFromDynamic(pagination['limit']) ?? query.limit;
+    final total = _intFromDynamic(pagination['total']) ?? items.length;
+    final totalPages =
+        _intFromDynamic(pagination['totalPages']) ??
+        (total == 0 ? 0 : ((total + limit - 1) / limit).ceil());
+
+    return LearningProjectSubmissionsResult(
       items: items,
       page: page,
       limit: limit,

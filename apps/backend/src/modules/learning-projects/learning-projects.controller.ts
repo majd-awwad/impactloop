@@ -14,12 +14,15 @@ import {
   getFollowedLearningProjects,
   getLearningProjectById,
   getLearningProjects,
+  getMyLearningProjectSubmissionById,
+  getMyLearningProjectSubmissions,
   getMyProjectBuildById,
   getSavedLearningProjects,
   likeLearningProjectById,
   linkBuildItemMaterialById,
   linkBuildItemReservationById,
   reviewLearningProjectById,
+  resubmitMyLearningProjectSubmissionById,
   saveLearningProjectById,
   startProjectBuildById,
   submitLearningProjectForReview,
@@ -27,12 +30,15 @@ import {
   unfollowLearningProjectById,
   unlinkBuildItemMaterialById,
   unsaveLearningProjectById,
+  updateMyLearningProjectSubmissionById,
   updateProjectBuildItemById,
 } from './learning-projects.service.js';
 import type {
   LearningProjectsQuery,
+  MyLearningProjectsQuery,
   ProjectReviewInput,
   SubmitLearningProjectInput,
+  UpdateMyLearningProjectSubmissionInput,
   UpdateProjectBuildItemInput,
 } from './learning-projects.validation.js';
 
@@ -73,6 +79,63 @@ export const listFollowedLearningProjects = async (
 
   res.json(
     successResponse('Followed learning projects fetched successfully', projects),
+  );
+};
+
+export const listMyLearningProjectSubmissions = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const projects = await getMyLearningProjectSubmissions(
+    readValidatedQuery<MyLearningProjectsQuery>(req),
+    req.auth!.sub,
+  );
+
+  res.json(
+    successResponse('Learning project submissions fetched successfully', projects),
+  );
+};
+
+export const getMyLearningProjectSubmission = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const project = await getMyLearningProjectSubmissionById(id, req.auth!.sub);
+
+  res.json(
+    successResponse('Learning project submission fetched successfully', project),
+  );
+};
+
+export const updateMyLearningProjectSubmission = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const project = await updateMyLearningProjectSubmissionById(
+    id,
+    req.auth!.sub,
+    req.body as UpdateMyLearningProjectSubmissionInput,
+  );
+
+  res.json(
+    successResponse('Learning project submission updated successfully', project),
+  );
+};
+
+export const resubmitMyLearningProjectSubmission = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const project = await resubmitMyLearningProjectSubmissionById(
+    id,
+    req.auth!.sub,
+  );
+
+  res.json(
+    successResponse('Learning project submission resubmitted successfully', project),
   );
 };
 

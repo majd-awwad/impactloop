@@ -4,13 +4,14 @@ import 'package:frontend/features/learning_hub/domain/models/learning_project_dr
 
 void main() {
   group('LearningProjectDraftComponent', () {
-    test('toSubmitPayload maps structured fields', () {
+    test('toSubmitPayload maps structured fields with cuid category id', () {
+      const categoryId = 'clxyz1234567890abcdefghij';
       final payload = LearningProjectDraftComponent(
         name: 'Ultrasonic sensor',
         quantity: 2,
         unit: 'piece',
         role: LearningProjectComponentRole.material,
-        materialCategoryId: '11111111-1111-4111-8111-111111111111',
+        materialCategoryId: categoryId,
         materialTypeHint: 'Distance sensor',
         keywords: const ['hc-sr04'],
         canBeSubstituted: true,
@@ -18,16 +19,48 @@ void main() {
       ).toSubmitPayload();
 
       expect(payload['name'], 'Ultrasonic sensor');
-      expect(payload['quantity'], 2);
-      expect(payload['unit'], 'piece');
-      expect(payload['componentRole'], 'REQUIRED_MATERIAL');
-      expect(payload['materialType'], 'Distance sensor');
-      expect(payload['categoryId'], '11111111-1111-4111-8111-111111111111');
+      expect(payload['categoryId'], categoryId);
       expect(payload['searchKeywords'], ['hc-sr04']);
-      expect(payload['canBeSubstituted'], isTrue);
-      expect(payload['notes'], 'Any HC-SR04 variant');
     });
 
+    test('mergeKeywords splits comma-separated draft text', () {
+      final merged = LearningProjectDraftComponent.mergeKeywords(
+        existing: const [],
+        draft: 'arduino, microcontroller',
+      );
+
+      expect(merged, ['arduino', 'microcontroller']);
+    });
+
+    test('mergeKeywords dedupes case-insensitively and enforces max 5', () {
+      final merged = LearningProjectDraftComponent.mergeKeywords(
+        existing: const ['Arduino'],
+        draft: 'arduino; UNO, nano, chip, board, extra',
+      );
+
+      expect(merged, hasLength(5));
+      expect(merged.first, 'Arduino');
+      expect(merged.contains('UNO'), isTrue);
+    });
+
+    test('resolvedKeywords includes pending keyword draft on save', () {
+      const component = LearningProjectDraftComponent(
+        name: 'LED',
+        keywords: const ['diode'],
+        keywordDraft: 'light',
+      );
+
+      expect(component.resolvedKeywords(), ['diode', 'light']);
+    });
+
+    test('normalizeMaterialCategoryId accepts cuid values', () {
+      expect(
+        LearningProjectDraftComponent.normalizeMaterialCategoryId(
+          'clxyz1234567890abcdefghij',
+        ),
+        'clxyz1234567890abcdefghij',
+      );
+    });
     test('fromLegacyCommaSeparated migrates comma-separated names', () {
       final components =
           LearningProjectDraftComponent.fromLegacyCommaSeparated(

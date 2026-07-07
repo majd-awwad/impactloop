@@ -29,6 +29,13 @@ Core MVP decisions:
 
 ## Development Rules
 
+Cost-control rule:
+Do not read broad docs unless needed.
+For small bug fixes, read only AGENTS.md, docs/00-ai-docs-router.md, and the exact feature docs required.
+Never scan the full repo.
+Before editing, list max 8 files you intend to inspect.
+If more files are needed, ask first.
+
 Before coding:
 1. Read the relevant files inside `/docs`.
 2. Explain the implementation plan.

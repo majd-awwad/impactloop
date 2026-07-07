@@ -21,6 +21,7 @@ import '../../application/learning_hub_providers.dart';
 import '../../data/learning_project_draft_storage.dart';
 import '../../domain/models/learning_project.dart';
 import '../../domain/models/learning_project_draft_component.dart';
+import '../../domain/models/learning_project_step_text.dart';
 import '../theme/learning_ui_palette.dart';
 import '../widgets/learning_project_component_editor.dart';
 
@@ -37,6 +38,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
 
   late final TextEditingController _titleController;
   late final TextEditingController _summaryController;
+  late final TextEditingController _descriptionController;
   late final TextEditingController _stepsController;
   late final TextEditingController _linksController;
 
@@ -57,6 +59,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     super.initState();
     _titleController = TextEditingController();
     _summaryController = TextEditingController();
+    _descriptionController = TextEditingController();
     _stepsController = TextEditingController();
     _linksController = TextEditingController();
     _submitIdempotencyKey = _newIdempotencyKey();
@@ -67,6 +70,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
   void dispose() {
     _titleController.dispose();
     _summaryController.dispose();
+    _descriptionController.dispose();
     _stepsController.dispose();
     _linksController.dispose();
     super.dispose();
@@ -83,6 +87,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
       setState(() {
         _titleController.text = draft.title;
         _summaryController.text = draft.summary;
+        _descriptionController.text = draft.fullDescription;
         _componentEntries = draft.components;
         _stepsController.text = draft.steps;
         _linksController.text = draft.links;
@@ -118,6 +123,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     return LearningProjectDraftData(
       title: _titleController.text,
       summary: _summaryController.text,
+      fullDescription: _descriptionController.text,
       components: _componentEntries,
       steps: _stepsController.text,
       links: _linksController.text,
@@ -137,7 +143,12 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
       return;
     }
 
-    final componentError = _validateComponentEntries(requireNamedComponents: true);
+    final componentError = _validateComponentEntries(
+      requireNamedComponents: true,
+      materialCategories: materialSelectableCategories(
+        ref.read(materialCategoriesProvider).value ?? const <MaterialCategory>[],
+      ),
+    );
     if (componentError != null) {
       setState(() => _componentValidationMessage = componentError);
       return;
@@ -164,12 +175,12 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         idempotencyKey: _submitIdempotencyKey,
         title: _titleController.text.trim(),
         shortDescription: _summaryController.text.trim(),
-        description: _summaryController.text.trim(),
+        description: _resolvedFullDescription(),
         categoryId: category.id,
         difficulty: _mapDifficulty(_selectedDifficulty),
         estimatedDurationMinutes: _mapDurationMinutes(_selectedDuration),
         requiredComponents: _buildSubmitComponents(),
-        steps: _parseSteps(_stepsController.text),
+        steps: LearningProjectStepText.parseStepsFromText(_stepsController.text),
         links: _parseLinks(_linksController.text),
       );
       await ref.read(learningProjectDraftStorageProvider).clearDraft();
@@ -196,6 +207,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     _formKey.currentState?.reset();
     _titleController.clear();
     _summaryController.clear();
+    _descriptionController.clear();
     _componentEntries = [LearningProjectDraftComponent.empty()];
     _componentValidationMessage = null;
     _stepsController.clear();
@@ -269,7 +281,10 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     );
   }
 
-  String? _validateComponentEntries({required bool requireNamedComponents}) {
+  String? _validateComponentEntries({
+    required bool requireNamedComponents,
+    List<MaterialCategory> materialCategories = const [],
+  }) {
     final namedComponents = _componentEntries
         .where((component) => component.name.trim().isNotEmpty)
         .toList(growable: false);
@@ -289,7 +304,10 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         continue;
       }
 
-      final error = component.validate(requireName: true);
+      final error = component.validate(
+        requireName: true,
+        materialCategories: materialCategories,
+      );
       if (error != null) {
         return error;
       }
@@ -305,25 +323,38 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
   }
 
   String? _validateComponentsField() {
-    return _validateComponentEntries(requireNamedComponents: false);
+    return _validateComponentEntries(
+      requireNamedComponents: false,
+      materialCategories: materialSelectableCategories(
+        ref.read(materialCategoriesProvider).value ?? const <MaterialCategory>[],
+      ),
+    );
+  }
+
+  String _resolvedFullDescription() {
+    final full = _descriptionController.text.trim();
+    if (full.isNotEmpty) {
+      return full;
+    }
+    return _summaryController.text.trim();
+  }
+
+  String? _validateDescription(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    if (trimmed.length < 10) {
+      return 'Use at least 10 characters when adding a full description.';
+    }
+    if (trimmed.length > 10000) {
+      return 'Keep the full description under 10000 characters.';
+    }
+    return null;
   }
 
   List<Map<String, dynamic>> _parseSteps(String raw) {
-    final lines = raw
-        .split('\n')
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty);
-    final steps = <Map<String, dynamic>>[];
-    var index = 0;
-    for (final line in lines) {
-      index += 1;
-      final cleaned = line.replaceFirst(RegExp(r'^\d+[\).\s-]+'), '').trim();
-      steps.add({
-        'title': 'Step $index',
-        'description': cleaned.isEmpty ? line : cleaned,
-      });
-    }
-    return steps;
+    return LearningProjectStepText.parseStepsFromText(raw);
   }
 
   List<Map<String, dynamic>> _parseLinks(String raw) {
@@ -348,9 +379,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
 
   String? _validateSummary(String? value) {
     final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return 'Summary is required.';
+    if (trimmed.isEmpty) return 'Short description is required.';
     if (trimmed.length < 10) return 'Use at least 10 characters.';
-    if (trimmed.length > 500) return 'Keep the summary under 500 characters.';
+    if (trimmed.length > 500) return 'Keep the short description under 500 characters.';
     return null;
   }
 
@@ -399,8 +430,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     final categoriesAsync = ref.watch(projectCategoriesProvider);
     final materialCategoriesAsync = ref.watch(materialCategoriesProvider);
     final categories = categoriesAsync.value ?? const <MaterialCategory>[];
-    final materialCategories =
-        materialCategoriesAsync.value ?? const <MaterialCategory>[];
+    final materialCategories = materialSelectableCategories(
+      materialCategoriesAsync.value ?? const <MaterialCategory>[],
+    );
     final selectedCategoryId = _selectedProjectCategory(categories)?.id;
 
     return Scaffold(
@@ -614,11 +646,20 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
           const SizedBox(height: AppSpacing.lg),
           AppTextArea(
             controller: _summaryController,
-            label: 'Summary / description',
-            hint: 'Explain what learners will build and why it matters.',
-            minLines: 4,
-            maxLines: 6,
+            label: 'Short description',
+            hint: 'Summarize what the learner will build.',
+            minLines: 2,
+            maxLines: 4,
             validator: _validateSummary,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppTextArea(
+            controller: _descriptionController,
+            label: 'Full description (optional)',
+            hint: 'Explain the project goal and expected outcome.',
+            minLines: 4,
+            maxLines: 8,
+            validator: _validateDescription,
           ),
           const SizedBox(height: AppSpacing.md),
           LearningProjectComponentEditor(
@@ -662,7 +703,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
             controller: _stepsController,
             label: 'Implementation steps',
             hint:
-                '1. Connect the sensor to the board.\n2. Mount the components.\n3. Test readings.',
+                'One step per line. No need to write Step 1.\nConnect the sensor to the board.\nMount the components.\nTest readings.',
             minLines: 5,
             maxLines: 8,
             validator: _validateSteps,

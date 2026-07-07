@@ -1,8 +1,8 @@
 import 'package:frontend/features/learning_hub/domain/learning_project_repository.dart';
 import 'package:frontend/features/learning_hub/domain/learning_projects_result.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project.dart';
+import 'package:frontend/features/learning_hub/domain/models/learning_project_submission.dart';
 import 'package:frontend/features/learning_hub/domain/models/project_build.dart';
-import 'package:frontend/features/learning_hub/domain/models/project_build_material_link.dart';
 import 'package:frontend/features/learning_hub/domain/project_engagement.dart';
 import 'package:frontend/features/learning_hub/domain/project_follow_status.dart';
 import 'package:frontend/features/learning_hub/domain/project_save_status.dart';
@@ -48,6 +48,41 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
 
   @override
   Future<LearningProject?> fetchProjectById(String id) async => null;
+
+  @override
+  Future<LearningProjectSubmissionsResult> fetchMyLearningProjectSubmissions(
+    LearningProjectSubmissionsQuery query,
+  ) async {
+    return const LearningProjectSubmissionsResult(
+      items: [],
+      page: 1,
+      limit: 20,
+      total: 0,
+      totalPages: 0,
+    );
+  }
+
+  @override
+  Future<LearningProjectSubmission> fetchMyLearningProjectSubmission(
+    String id,
+  ) async {
+    throw StateError('No test learning project submission configured.');
+  }
+
+  @override
+  Future<LearningProjectSubmission> updateMyLearningProjectSubmission(
+    String id,
+    Map<String, dynamic> payload,
+  ) async {
+    return fetchMyLearningProjectSubmission(id);
+  }
+
+  @override
+  Future<LearningProjectSubmission> resubmitMyLearningProjectSubmission(
+    String id,
+  ) async {
+    return fetchMyLearningProjectSubmission(id);
+  }
 
   @override
   Future<ProjectBuild?> fetchMyBuild(String projectId) async => null;

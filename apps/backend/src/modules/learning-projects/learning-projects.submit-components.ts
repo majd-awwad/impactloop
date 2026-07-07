@@ -50,15 +50,22 @@ const normalizeKeywordList = (
 ) => {
   const normalized = new Set<string>();
   const trimmedName = componentName.trim();
+  const splitParts = (value: string) =>
+    value
+      .split(/[,;\n]+/)
+      .map((part) => part.trim().slice(0, MAX_KEYWORD_LENGTH))
+      .filter((part) => part.length > 0);
 
   if (trimmedName.length > 0) {
     normalized.add(trimmedName);
   }
 
   for (const keyword of keywords ?? []) {
-    const cleaned = keyword.trim().slice(0, MAX_KEYWORD_LENGTH);
-    if (cleaned.length > 0) {
+    for (const cleaned of splitParts(keyword)) {
       normalized.add(cleaned);
+      if (normalized.size >= MAX_COMPONENT_KEYWORDS) {
+        break;
+      }
     }
     if (normalized.size >= MAX_COMPONENT_KEYWORDS) {
       break;
@@ -141,7 +148,9 @@ export const mapNormalizedComponentToCreateData = (
   componentRole: component.componentRole,
   isRequired: component.isRequired,
   canBeSubstituted: component.canBeSubstituted,
-  categoryId: component.categoryId,
+  category: component.categoryId
+    ? { connect: { id: component.categoryId } }
+    : undefined,
   searchKeywords: component.searchKeywords,
   notes: component.notes,
   providedByUser: true,
