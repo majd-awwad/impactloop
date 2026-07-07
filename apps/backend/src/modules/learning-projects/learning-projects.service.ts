@@ -16,8 +16,10 @@ import {
 } from './learning-projects.build-material-linking.js';
 import type {
   LearningProjectsQuery,
+  MyLearningProjectsQuery,
   ProjectReviewInput,
   SubmitLearningProjectInput,
+  UpdateMyLearningProjectSubmissionInput,
   UpdateProjectBuildItemInput,
 } from './learning-projects.validation.js';
 import {
@@ -46,6 +48,12 @@ type ProjectReviewRecord =
 type ProjectBuildRecord = NonNullable<
   Awaited<ReturnType<typeof learningProjectsRepository.findProjectBuild>>
 >;
+
+const EDITABLE_SUBMISSION_STATUSES = new Set([
+  'DRAFT',
+  'CHANGES_REQUESTED',
+  'PENDING_REVIEW',
+]);
 
 const decimalToSerializable = (value: { toNumber(): number } | number): number => {
   if (typeof value === 'number') {
@@ -125,6 +133,101 @@ const mapLearningProjectListItem = (
   followersCount: engagement.followersCount ?? 0,
   isFollowing: engagement.isFollowing ?? false,
   createdAt: project.createdAt.toISOString(),
+});
+
+const mapSubmissionActions = (status: string) => ({
+  canView: true,
+  canEdit: EDITABLE_SUBMISSION_STATUSES.has(status),
+  canResubmit: status === 'CHANGES_REQUESTED',
+  canViewPublic: status === 'PUBLISHED',
+});
+
+const mapMyLearningProjectSubmissionCard = (
+  project: Awaited<
+    ReturnType<typeof learningProjectsRepository.findMyLearningProjectSubmissions>
+  >['items'][number],
+) => ({
+  id: project.id,
+  title: project.title,
+  shortDescription: project.shortDescription,
+  status: project.status,
+  category: mapCategory(project.category),
+  difficulty: project.difficulty,
+  estimatedDurationMinutes: project.estimatedDurationMinutes,
+  estimatedTimeMinutes: project.estimatedDurationMinutes,
+  submittedAt: project.submittedAt?.toISOString() ?? null,
+  reviewedAt: project.reviewedAt?.toISOString() ?? null,
+  createdAt: project.createdAt.toISOString(),
+  updatedAt: project.updatedAt.toISOString(),
+  changesRequestedReason:
+    project.status === 'CHANGES_REQUESTED'
+      ? project.changesRequestedReason
+      : null,
+  rejectionReason:
+    project.status === 'REJECTED' ? project.rejectionReason : null,
+  publicProjectPath:
+    project.status === 'PUBLISHED' ? `/learning/${project.id}` : null,
+  canViewPublic: project.status === 'PUBLISHED',
+  availableActions: mapSubmissionActions(project.status),
+});
+
+const jsonStringList = (value: unknown) => {
+  if (!Array.isArray(value)) {
+    return [] as string[];
+  }
+
+  return value
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+};
+
+const mapMyLearningProjectSubmissionDetail = (
+  project: NonNullable<
+    Awaited<
+      ReturnType<typeof learningProjectsRepository.findMyLearningProjectSubmissionById>
+    >
+  >,
+) => ({
+  ...mapMyLearningProjectSubmissionCard(project),
+  description: project.description,
+  coverImageUrl: project.coverImageUrl,
+  reviewNote: project.reviewNote,
+  changesRequestedReason: project.changesRequestedReason,
+  rejectionReason: project.rejectionReason,
+  requiredComponents: project.requiredComponents.map((component) => ({
+    id: component.id,
+    categoryId: component.categoryId,
+    componentName: component.componentName,
+    name: component.componentName,
+    materialType: component.materialType,
+    quantity: decimalToSerializable(component.quantity),
+    unit: component.unit,
+    componentRole: component.componentRole,
+    isRequired: component.isRequired,
+    canBeSubstituted: component.canBeSubstituted,
+    searchKeywords: jsonStringList(component.searchKeywords),
+    alternativeKeywords: jsonStringList(component.alternativeKeywords),
+    providedByUser: component.providedByUser,
+    confirmedByUser: component.confirmedByUser,
+    generatedOrSuggestedByAi: component.generatedOrSuggestedByAi,
+    reviewStatus: component.reviewStatus,
+    notes: component.notes,
+  })),
+  steps: project.steps.map((step) => ({
+    id: step.id,
+    stepNumber: step.stepNumber,
+    title: step.title,
+    description: step.description,
+    imageUrl: step.imageUrl,
+  })),
+  links: project.links.map((link) => ({
+    id: link.id,
+    linkType: link.linkType,
+    url: link.url,
+    title: link.title,
+    sourceName: link.sourceName,
+  })),
 });
 
 const mapLearningProjectDetail = (
@@ -301,6 +404,252 @@ export const getFollowedLearningProjects = async (
   );
 
   return mapLearningProjectListResult(result, query, viewer);
+};
+
+export const getMyLearningProjectSubmissions = async (
+  query: MyLearningProjectsQuery,
+  userId: string,
+) => {
+  const result =
+    await learningProjectsRepository.findMyLearningProjectSubmissions(
+      query,
+      userId,
+    );
+
+  return {
+    items: result.items.map(mapMyLearningProjectSubmissionCard),
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+      totalPages: result.total === 0 ? 0 : Math.ceil(result.total / query.limit),
+    },
+  };
+};
+
+export const getMyLearningProjectSubmissionById = async (
+  id: string,
+  userId: string,
+) => {
+  const project =
+    await learningProjectsRepository.findMyLearningProjectSubmissionById(
+      id,
+      userId,
+    );
+
+  if (!project) {
+    throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
+  }
+
+  return mapMyLearningProjectSubmissionDetail(project);
+};
+
+const validateLearningProjectSubmissionInput = async (
+  input: SubmitLearningProjectInput | UpdateMyLearningProjectSubmissionInput,
+) => {
+  const category = await learningProjectsRepository.findProjectCategoryForSubmit(
+    input.categoryId,
+  );
+
+  if (!category) {
+    throw new AppError(
+      'Project category not found or inactive.',
+      400,
+      'INVALID_CATEGORY',
+    );
+  }
+
+  if (input.requiredComponents?.length) {
+    assertUniqueSubmitComponentNames(input.requiredComponents);
+  }
+
+  const normalizedComponents = (input.requiredComponents ?? []).map(
+    (component) => ({
+      id:
+        'id' in component && typeof component.id === 'string'
+          ? component.id
+          : undefined,
+      component: normalizeSubmitComponent(component),
+    }),
+  );
+  const componentCategoryIds = [
+    ...new Set(
+      normalizedComponents
+        .map((entry) => entry.component.categoryId)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+
+  if (componentCategoryIds.length > 0) {
+    const validCategories =
+      await learningProjectsRepository.findMaterialCategoriesForSubmit(
+        componentCategoryIds,
+      );
+    const validCategoryIds = new Set(validCategories.map((entry) => entry.id));
+    const invalidCategoryId = componentCategoryIds.find(
+      (categoryId) => !validCategoryIds.has(categoryId),
+    );
+
+    if (invalidCategoryId) {
+      throw new AppError(
+        'Component material category must be an active MATERIAL or BOTH category.',
+        400,
+        'INVALID_COMPONENT_CATEGORY',
+      );
+    }
+  }
+
+  return normalizedComponents;
+};
+
+export const updateMyLearningProjectSubmissionById = async (
+  id: string,
+  userId: string,
+  input: UpdateMyLearningProjectSubmissionInput,
+) => {
+  const project =
+    await learningProjectsRepository.findMyLearningProjectSubmissionById(
+      id,
+      userId,
+    );
+
+  if (!project) {
+    throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
+  }
+
+  if (!EDITABLE_SUBMISSION_STATUSES.has(project.status)) {
+    throw new AppError(
+      'This project submission cannot be edited in its current status.',
+      409,
+      'PROJECT_NOT_EDITABLE',
+      { status: project.status },
+    );
+  }
+
+  const normalizedComponents =
+    await validateLearningProjectSubmissionInput(input);
+
+  const updated = await learningProjectsRepository.updateMyLearningProjectSubmission({
+    id,
+    userId,
+    categoryId: input.categoryId,
+    title: input.title,
+    shortDescription: input.shortDescription,
+    description: input.description,
+    difficulty: input.difficulty,
+    estimatedDurationMinutes: input.estimatedDurationMinutes,
+    coverImageUrl: input.coverImageUrl,
+    requiredComponents:
+      input.requiredComponents === undefined ? undefined : normalizedComponents,
+    steps: input.steps,
+    links: input.links,
+  });
+
+  if (!updated) {
+    const latest =
+      await learningProjectsRepository.findMyLearningProjectSubmissionById(
+        id,
+        userId,
+      );
+
+    if (!latest) {
+      throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
+    }
+
+    if (!EDITABLE_SUBMISSION_STATUSES.has(latest.status)) {
+      throw new AppError(
+        'This project submission cannot be edited in its current status.',
+        409,
+        'PROJECT_NOT_EDITABLE',
+        { status: latest.status },
+      );
+    }
+
+    throw new AppError(
+      'This project submission changed while you were editing. Refresh and try again.',
+      409,
+      'PROJECT_NOT_EDITABLE',
+      { status: latest.status },
+    );
+  }
+
+  return mapMyLearningProjectSubmissionDetail(updated);
+};
+
+export const resubmitMyLearningProjectSubmissionById = async (
+  id: string,
+  userId: string,
+) => {
+  const project =
+    await learningProjectsRepository.findMyLearningProjectSubmissionById(
+      id,
+      userId,
+    );
+
+  if (!project) {
+    throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
+  }
+
+  if (project.status !== 'CHANGES_REQUESTED') {
+    throw new AppError(
+      'Only submissions with requested changes can be resubmitted.',
+      409,
+      'PROJECT_NOT_RESUBMITTABLE',
+      { status: project.status },
+    );
+  }
+
+  await validateLearningProjectSubmissionInput({
+    title: project.title,
+    shortDescription: project.shortDescription,
+    description: project.description,
+    categoryId: project.categoryId,
+    difficulty: project.difficulty,
+    estimatedDurationMinutes: project.estimatedDurationMinutes ?? undefined,
+    coverImageUrl: project.coverImageUrl,
+    requiredComponents: project.requiredComponents.map((component) => ({
+      id: component.id,
+      name: component.componentName,
+      quantity: decimalToSerializable(component.quantity),
+      unit: component.unit,
+      notes: component.notes ?? undefined,
+      isRequired: component.isRequired,
+      componentRole:
+        component.componentRole === 'OPTIONAL_MATERIAL' ||
+        component.componentRole === 'ALTERNATIVE'
+          ? 'REQUIRED_MATERIAL'
+          : component.componentRole,
+      materialType: component.materialType,
+      categoryId: component.categoryId ?? undefined,
+      searchKeywords: jsonStringList(component.searchKeywords),
+      canBeSubstituted: component.canBeSubstituted,
+    })),
+    steps: project.steps.map((step) => ({
+      title: step.title,
+      description: step.description,
+    })),
+    links: project.links.map((link) => ({
+      url: link.url,
+      title: link.title ?? undefined,
+    })),
+  });
+
+  const result =
+    await learningProjectsRepository.resubmitMyLearningProjectSubmission(
+      id,
+      userId,
+    );
+
+  if (result.count === 0) {
+    throw new AppError(
+      'Only submissions with requested changes can be resubmitted.',
+      409,
+      'PROJECT_NOT_RESUBMITTABLE',
+      { status: project.status },
+    );
+  }
+
+  return getMyLearningProjectSubmissionById(id, userId);
 };
 
 const mapLearningProjectListResult = async (

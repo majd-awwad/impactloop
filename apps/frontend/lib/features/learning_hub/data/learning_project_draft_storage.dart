@@ -16,10 +16,12 @@ class LearningProjectDraftData {
     this.categoryId,
     required this.difficulty,
     required this.duration,
+    this.fullDescription = '',
   });
 
   final String title;
   final String summary;
+  final String fullDescription;
   final List<LearningProjectDraftComponent> components;
   final String steps;
   final String links;
@@ -30,6 +32,7 @@ class LearningProjectDraftData {
   Map<String, dynamic> toJson() => {
     'title': title,
     'summary': summary,
+    'fullDescription': fullDescription,
     'componentEntries': components.map((component) => component.toJson()).toList(),
     'steps': steps,
     'links': links,
@@ -67,6 +70,7 @@ class LearningProjectDraftData {
     return LearningProjectDraftData(
       title: json['title'] as String? ?? '',
       summary: json['summary'] as String? ?? '',
+      fullDescription: json['fullDescription'] as String? ?? '',
       components: components,
       steps: json['steps'] as String? ?? '',
       links: json['links'] as String? ?? '',

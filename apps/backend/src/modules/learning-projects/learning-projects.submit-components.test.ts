@@ -149,6 +149,36 @@ describe('learning project structured submit components', () => {
     assert.equal(resolveSubmitMaterialType('', ''), 'Unspecified');
   });
 
+  test('normalizeSubmitComponent splits comma-separated keywords', () => {
+    const normalized = normalizeSubmitComponent({
+      name: 'Arduino Uno',
+      searchKeywords: ['arduino, microcontroller', 'uno'],
+    });
+
+    assert.ok(normalized.searchKeywords.includes('arduino'));
+    assert.ok(normalized.searchKeywords.includes('microcontroller'));
+    assert.ok(normalized.searchKeywords.includes('uno'));
+  });
+
+  test('submit schema accepts cuid component categoryId values', () => {
+    const categoryId = 'clxyz1234567890abcdefghij';
+    const parsed = submitLearningProjectSchema.parse({
+      title: `${TEST_MARKER} schema cuid category`,
+      shortDescription: `${TEST_MARKER} short description for cuid category.`,
+      description: `${TEST_MARKER} full description for cuid category test.`,
+      categoryId: 'project-category-id',
+      difficulty: 'BEGINNER',
+      requiredComponents: [
+        {
+          name: 'LED',
+          categoryId,
+        },
+      ],
+    });
+
+    assert.equal(parsed.requiredComponents?.[0]?.categoryId, categoryId);
+  });
+
   test('submit schema ignores sentinel component categoryId values', () => {
     const parsed = submitLearningProjectSchema.parse({
       title: `${TEST_MARKER} schema sentinel`,
@@ -212,20 +242,29 @@ describe('learning project structured submit components', () => {
     const stored = project!.requiredComponents;
 
     assert.equal(stored.length, 2);
-    assert.equal(stored[0]?.materialType, 'Distance sensor');
-    assert.notEqual(stored[0]?.materialType, 'General');
-    assert.equal(stored[0]?.componentRole, 'REQUIRED_MATERIAL');
-    assert.equal(stored[0]?.categoryId, materialCategory.id);
-    assert.equal(stored[0]?.providedByUser, true);
-    assert.equal(stored[0]?.confirmedByUser, false);
-    assert.equal(stored[0]?.canBeSubstituted, true);
+    const sensor = stored.find(
+      (component) => component.componentName === 'Ultrasonic sensor',
+    );
+    const tool = stored.find(
+      (component) => component.componentName === 'Soldering iron',
+    );
 
-    const keywords = stored[0]?.searchKeywords;
+    assert.ok(sensor);
+    assert.equal(sensor.materialType, 'Distance sensor');
+    assert.notEqual(sensor.materialType, 'General');
+    assert.equal(sensor.componentRole, 'REQUIRED_MATERIAL');
+    assert.equal(sensor.categoryId, materialCategory.id);
+    assert.equal(sensor.providedByUser, true);
+    assert.equal(sensor.confirmedByUser, false);
+    assert.equal(sensor.canBeSubstituted, true);
+
+    const keywords = sensor.searchKeywords;
     assert.ok(Array.isArray(keywords));
     assert.ok((keywords as string[]).includes('Ultrasonic sensor'));
 
-    assert.equal(stored[1]?.componentRole, 'TOOL');
-    assert.equal(stored[1]?.materialType, 'Soldering iron');
+    assert.ok(tool);
+    assert.equal(tool.componentRole, 'TOOL');
+    assert.equal(tool.materialType, 'Soldering iron');
   });
 
   test('submit rejects duplicate component names', async () => {

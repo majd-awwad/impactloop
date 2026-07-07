@@ -72,10 +72,7 @@ class UserNotificationsPage extends ConsumerWidget {
 }
 
 class _NotificationsBody extends ConsumerWidget {
-  const _NotificationsBody({
-    required this.user,
-    required this.embeddedInShell,
-  });
+  const _NotificationsBody({required this.user, required this.embeddedInShell});
 
   final User? user;
   final bool embeddedInShell;
@@ -134,17 +131,17 @@ class _NotificationsBody extends ConsumerWidget {
                 subtitle: 'Fetching your latest updates.',
               ),
             ),
-                error: (error, _) {
-                  if (isAuthPendingNotificationError(error) ||
-                      isCancelledNotificationError(error)) {
-                    return const Center(
-                      child: _NotificationsStateCard(
-                        icon: Icons.hourglass_top_outlined,
-                        title: 'Loading notifications…',
-                        subtitle: 'Fetching your latest updates.',
-                      ),
-                    );
-                  }
+            error: (error, _) {
+              if (isAuthPendingNotificationError(error) ||
+                  isCancelledNotificationError(error)) {
+                return const Center(
+                  child: _NotificationsStateCard(
+                    icon: Icons.hourglass_top_outlined,
+                    title: 'Loading notifications…',
+                    subtitle: 'Fetching your latest updates.',
+                  ),
+                );
+              }
 
               return Center(
                 child: _NotificationsStateCard(
@@ -174,14 +171,10 @@ class _NotificationsBody extends ConsumerWidget {
                   child: _NotificationsListView(
                     state: state,
                     bottomPadding: bottomPadding,
-                    onOpen: (notification) => _handleOpen(
-                      context,
-                      ref,
-                      notification,
-                    ),
-                    onLoadMore: () => ref
-                        .read(notificationsListProvider.notifier)
-                        .loadMore(),
+                    onOpen: (notification) =>
+                        _handleOpen(context, ref, notification),
+                    onLoadMore: () =>
+                        ref.read(notificationsListProvider.notifier).loadMore(),
                   ),
                 ),
               );
@@ -209,8 +202,7 @@ class _NotificationsBody extends ConsumerWidget {
       case NotificationReadFilter.all:
         return (
           title: 'No notifications yet.',
-          subtitle:
-              'Delivery reminders and job updates will appear here.',
+          subtitle: 'Delivery reminders and job updates will appear here.',
         );
     }
   }
@@ -262,7 +254,14 @@ class _NotificationsBody extends ConsumerWidget {
         } else {
           context.go('/driver/deliveries/$deliveryId');
         }
+        return;
       }
+    }
+
+    if (notification.relatedEntityType == 'LEARNING_PROJECT' &&
+        notification.relatedEntityId != null &&
+        notification.relatedEntityId!.isNotEmpty) {
+      context.push('/learning/submissions/${notification.relatedEntityId}');
     }
   }
 }
@@ -334,9 +333,9 @@ class _NotificationsListView extends StatelessWidget {
         return Text(
           'Showing ${state.items.length} of ${state.total} notifications.',
           textAlign: TextAlign.center,
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textMuted,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textMuted),
         );
       },
     );
@@ -356,18 +355,12 @@ class _NotificationFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SegmentedButton<NotificationReadFilter>(
       segments: const [
-        ButtonSegment(
-          value: NotificationReadFilter.all,
-          label: Text('All'),
-        ),
+        ButtonSegment(value: NotificationReadFilter.all, label: Text('All')),
         ButtonSegment(
           value: NotificationReadFilter.unread,
           label: Text('Unread'),
         ),
-        ButtonSegment(
-          value: NotificationReadFilter.read,
-          label: Text('Read'),
-        ),
+        ButtonSegment(value: NotificationReadFilter.read, label: Text('Read')),
       ],
       selected: {selected},
       onSelectionChanged: (selection) => onSelected(selection.first),
@@ -410,16 +403,16 @@ class _NotificationsHeaderCard extends StatelessWidget {
               children: [
                 Text(
                   'Notifications',
-                  style: AppTextStyles.display(context).copyWith(
-                    color: palette.textPrimary,
-                  ),
+                  style: AppTextStyles.display(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Delivery reminders, job updates, and account alerts.',
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textSecondary,
-                  ),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary),
                 ),
               ],
             ),
@@ -474,17 +467,17 @@ class _NotificationsStateCard extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: AppTextStyles.title(context).copyWith(
-              color: palette.textPrimary,
-            ),
+            style: AppTextStyles.title(
+              context,
+            ).copyWith(color: palette.textPrimary),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.md),
@@ -596,9 +589,9 @@ class _NotificationTile extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       notification.body,
-                      style: AppTextStyles.body(context).copyWith(
-                        color: palette.textSecondary,
-                      ),
+                      style: AppTextStyles.body(
+                        context,
+                      ).copyWith(color: palette.textSecondary),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Wrap(
@@ -608,9 +601,9 @@ class _NotificationTile extends StatelessWidget {
                       children: [
                         Text(
                           _formatTimestamp(notification.createdAt),
-                          style: AppTextStyles.label(context).copyWith(
-                            color: palette.textMuted,
-                          ),
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: palette.textMuted),
                         ),
                         if (hasTarget)
                           Text(

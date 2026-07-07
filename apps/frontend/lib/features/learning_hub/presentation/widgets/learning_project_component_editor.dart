@@ -168,13 +168,17 @@ class _ComponentCardState extends State<_ComponentCard> {
 
   void _commitKeywordDraft() {
     final component = widget.component;
-    final pending = _keywordController.text.trim();
-    if (pending.isEmpty) {
+    final pending = _keywordController.text;
+    if (pending.trim().isEmpty) {
       return;
     }
 
-    final merged = component.copyWith(keywordDraft: pending).resolvedKeywords();
-    if (merged.length <= component.keywords.length) {
+    final merged = LearningProjectDraftComponent.mergeKeywords(
+      existing: component.keywords,
+      draft: pending,
+    );
+    if (merged.length <= component.keywords.length &&
+        pending.trim() == component.keywordDraft.trim()) {
       return;
     }
 
@@ -479,9 +483,20 @@ class _ComponentCardState extends State<_ComponentCard> {
                   contentPadding: EdgeInsets.zero,
                   title: Text(
                     const LocalizedText(
-                      en: 'Allow alternatives',
-                      ar: 'السماح بالبدائل',
+                      en: 'Alternatives are acceptable',
+                      ar: 'البدائل مقبولة',
                     ).resolve(context),
+                  ),
+                  subtitle: Text(
+                    const LocalizedText(
+                      en:
+                          'Use this when builders can use similar materials instead of the exact component.',
+                      ar:
+                          'استخدم هذا عندما يمكن للبنّاءين استخدام مواد مشابهة بدلاً من المكوّن نفسه.',
+                    ).resolve(context),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textSecondary, fontSize: 12),
                   ),
                   value: component.canBeSubstituted,
                   onChanged: (value) =>

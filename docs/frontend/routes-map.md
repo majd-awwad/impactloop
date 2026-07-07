@@ -38,7 +38,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 |-------|-------|----------------|
 | **public** | Most routes (landing, materials, learning, auth pages, register deprecated fallbacks) | No login required |
 | **authenticated** | `/home`, `/profile`, `/profile/*`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
-| **learner** | `/learning/add-draft`, `/learning/:id/build`, `/learner/reservations`, `/learner/reservations/:id`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
+| **learner** | `/learning/add-draft`, `/learning/submissions`, `/learning/submissions/:id`, `/learning/submissions/:id/edit`, `/learning/:id/build`, `/learner/reservations`, `/learner/reservations/:id`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
 | **driver** | `/driver`, `/driver/*` | Requires login + `DRIVER` role; non-drivers redirect to `/home` |
 | **admin** | `/admin`, `/admin/*` (except access-denied) | Requires login + `ADMIN` role |
@@ -83,6 +83,9 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
 | `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, category filters, saved/followed learner tabs, and server-side page navigation; optional `q` query pre-fills search; add-draft submits for review; manual build checklist is persisted; AI material matching is not implemented |
 | `/learning/add-draft` | `LearningAddDraftPage` | learner | Learner project submission form; posts to `/api/learning-projects/submit` |
+| `/learning/submissions` | `LearningProjectSubmissionsPage` | learner | Learner-owned submission dashboard backed by `/api/learning-projects/mine`; shows review status, admin feedback preview, and status CTAs |
+| `/learning/submissions/:id` | `LearningProjectSubmissionDetailPage` | learner | Owner-only unpublished/published submission detail; shows moderation feedback and status-specific actions |
+| `/learning/submissions/:id/edit` | `LearningProjectSubmissionEditPage` | learner | Edit `DRAFT` / `CHANGES_REQUESTED` owner submissions; save changes or save and resubmit |
 | `/learning/:id/build` | `LearningProjectBuildPage` | learner | Persisted manual project build checklist with per-item material candidates, link/unlink, and linked-material panel; no AI matching or auto-reservation |
 | `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail with start/continue build action |
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default; optional `q` query pre-fills search |

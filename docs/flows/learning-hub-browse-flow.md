@@ -1,6 +1,6 @@
 # Learning Hub Browse Flow
 
-**Sources inspected:** `learning_hub_page.dart`, `learning_project_details_page.dart`, `learning_spotlight_section.dart`, `learning_hub_providers.dart`, `api_learning_hub_repository.dart`, `learning-projects.service.ts`, `learning-projects.repository.ts`, `learning_add_draft_page.dart`
+**Sources inspected:** `learning_hub_page.dart`, `learning_project_details_page.dart`, `learning_project_submissions_page.dart`, `learning_spotlight_section.dart`, `learning_hub_providers.dart`, `api_learning_hub_repository.dart`, `learning-projects.service.ts`, `learning-projects.repository.ts`, `learning_add_draft_page.dart`
 
 ## Trigger
 
@@ -197,6 +197,60 @@ Creates a `learning_projects` row with `status = PENDING_REVIEW`, `submittedAt`,
 ### Files involved
 
 `learning_add_draft_page.dart`, `learning_hub_providers.dart`, `api_learning_hub_repository.dart`, `learning-projects.routes.ts`, `learning-projects.service.ts`, `learning-projects.repository.ts`
+
+---
+
+## Flow — Learner submissions and resubmit (`/learning/submissions`)
+
+### Trigger
+
+Authenticated learner opens **My submissions** from `/learning`, a direct URL, or a `LEARNING_PROJECT_MODERATION` notification.
+
+### User path
+
+1. `/learning/submissions` loads the learner's own submitted projects.
+2. Cards show status chips for `PENDING_REVIEW`, `CHANGES_REQUESTED`, `REJECTED`, and `PUBLISHED`, submitted/reviewed dates, and admin feedback preview when relevant.
+3. `PENDING_REVIEW` is view-only.
+4. `CHANGES_REQUESTED` opens `/learning/submissions/:id/edit`; the edit form loads server data, including component ids, and does not touch the local `/learning/add-draft` draft storage.
+5. **Save changes** calls PATCH and keeps the project in `CHANGES_REQUESTED`.
+6. **Save and resubmit** calls PATCH, then POST `/resubmit`; backend moves the project back to `PENDING_REVIEW`.
+7. `REJECTED` is view-only in this slice. Duplicate-as-new-draft is not implemented.
+8. `PUBLISHED` shows a CTA to `/learning/:id`.
+
+### Frontend path
+
+`LearningProjectSubmissionsPage` → `myLearningProjectSubmissionsProvider` → `GET /api/learning-projects/mine`.
+
+`LearningProjectSubmissionDetailPage` and `LearningProjectSubmissionEditPage` → `myLearningProjectSubmissionProvider(id)` → `GET /api/learning-projects/mine/:id`.
+
+Edit actions use `learningHubRepositoryProvider.updateMyLearningProjectSubmission(id, payload)` and optionally `resubmitMyLearningProjectSubmission(id)`, then invalidate `myLearningProjectSubmissionProvider(id)` and `myLearningProjectSubmissionsProvider`.
+
+Learning Project notifications route to `/learning/submissions/:id`; they do not route to public `/learning/:id` because unpublished submissions are intentionally not public.
+
+### Backend path
+
+`GET /api/learning-projects/mine` — learner-only, owner-scoped list; supports `page`, `limit`, and optional `status`.
+
+`GET /api/learning-projects/mine/:id` — learner-only owner detail; includes moderation fields visible to the submitter.
+
+`PATCH /api/learning-projects/mine/:id` — learner-only owner edit; allowed only when status is `DRAFT` or `CHANGES_REQUESTED`. Existing component ids are updated in place, new components are created, removed components are deleted only for editable unpublished submissions, and admin enrichment fields are preserved where they are not part of the learner edit payload.
+
+`POST /api/learning-projects/mine/:id/resubmit` — learner-only owner resubmit; allowed only from `CHANGES_REQUESTED`; sets `status = PENDING_REVIEW`, updates `submittedAt`, clears current review fields, and preserves project content.
+
+Public `GET /api/learning-projects/:id` still returns only `PUBLISHED` projects.
+
+### Error states
+
+| Condition | UI/API behavior |
+|-----------|-----------------|
+| Non-owner id | 404-style not found detail |
+| PENDING_REVIEW edit attempt | Locked/view-only UI; backend returns conflict |
+| PUBLISHED/REJECTED/HIDDEN/ARCHIVED edit attempt | Locked/view-only UI; backend returns conflict |
+| Validation failure | Form/snackbar error from API |
+
+### Files involved
+
+`learning_project_submissions_page.dart`, `learning_hub_providers.dart`, `api_learning_hub_repository.dart`, `learning_hub_api_mapper.dart`, `learning-projects.routes.ts`, `learning-projects.controller.ts`, `learning-projects.service.ts`, `learning-projects.repository.ts`
 
 ---
 

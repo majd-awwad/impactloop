@@ -10,6 +10,7 @@ import 'package:frontend/features/learning_hub/application/learning_hub_provider
 import 'package:frontend/features/learning_hub/domain/learning_project_repository.dart';
 import 'package:frontend/features/learning_hub/domain/learning_projects_result.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project.dart';
+import 'package:frontend/features/learning_hub/domain/models/learning_project_submission.dart';
 import 'package:frontend/features/learning_hub/domain/models/project_build.dart';
 import 'package:frontend/features/learning_hub/domain/project_engagement.dart';
 import 'package:frontend/features/learning_hub/domain/project_follow_status.dart';
@@ -274,6 +275,41 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
   Future<LearningProject?> fetchProjectById(String id) async => null;
 
   @override
+  Future<LearningProjectSubmissionsResult> fetchMyLearningProjectSubmissions(
+    LearningProjectSubmissionsQuery query,
+  ) async {
+    return const LearningProjectSubmissionsResult(
+      items: [],
+      page: 1,
+      limit: 20,
+      total: 0,
+      totalPages: 0,
+    );
+  }
+
+  @override
+  Future<LearningProjectSubmission> fetchMyLearningProjectSubmission(
+    String id,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LearningProjectSubmission> updateMyLearningProjectSubmission(
+    String id,
+    Map<String, dynamic> payload,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LearningProjectSubmission> resubmitMyLearningProjectSubmission(
+    String id,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<ProjectBuild?> fetchMyBuild(String projectId) async => null;
 
   @override
@@ -299,6 +335,33 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
     required ProjectBuildItemStatus status,
     String? learnerNote,
   }) async {
+    return startBuild(projectId);
+  }
+
+  @override
+  Future<BuildMaterialCandidatesResult> fetchMaterialCandidates(
+    String projectId,
+    String itemId,
+  ) async {
+    return BuildMaterialCandidatesResult(
+      itemId: itemId,
+      componentId: 'component',
+      searchTerm: '',
+      items: const [],
+    );
+  }
+
+  @override
+  Future<ProjectBuild> linkMaterial(
+    String projectId,
+    String itemId, {
+    required String materialId,
+  }) async {
+    return startBuild(projectId);
+  }
+
+  @override
+  Future<ProjectBuild> unlinkMaterial(String projectId, String itemId) async {
     return startBuild(projectId);
   }
 

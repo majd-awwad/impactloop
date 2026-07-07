@@ -25,6 +25,7 @@ import '../../features/learning_hub/presentation/pages/learning_add_draft_page.d
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_build_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
+import '../../features/learning_hub/presentation/pages/learning_project_submissions_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/domain/material_discovery_query.dart';
@@ -159,6 +160,8 @@ _RouteAccessLevel _routeAccessForPath(String path) {
   }
 
   if (path == '/learning/add-draft' ||
+      path == '/learning/submissions' ||
+      path.startsWith('/learning/submissions/') ||
       (path.startsWith('/learning/') && path.endsWith('/build')) ||
       path == '/learner/reservations' ||
       path.startsWith('/learner/reservations/') ||
@@ -534,9 +537,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         redirect: (context, state) {
           final authState = ref.read(authControllerProvider);
           final user = authState.user;
-          if (user != null &&
-              user.isDriverMode &&
-              user.hasRole('DRIVER')) {
+          if (user != null && user.isDriverMode && user.hasRole('DRIVER')) {
             return driverNotificationsRoute;
           }
           return null;
@@ -571,6 +572,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/learning/add-draft',
         builder: (context, state) => const LearningAddDraftPage(),
+      ),
+      GoRoute(
+        path: '/learning/submissions',
+        builder: (context, state) => const LearningProjectSubmissionsPage(),
+      ),
+      GoRoute(
+        path: '/learning/submissions/:id/edit',
+        builder: (context, state) => LearningProjectSubmissionEditPage(
+          submissionId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/learning/submissions/:id',
+        builder: (context, state) => LearningProjectSubmissionDetailPage(
+          submissionId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: '/learning/:id/build',

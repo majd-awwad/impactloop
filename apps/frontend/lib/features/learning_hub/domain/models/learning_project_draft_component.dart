@@ -1,6 +1,19 @@
+import '../../../materials/data/models/category.dart';
+
+List<MaterialCategory> materialSelectableCategories(
+  List<MaterialCategory> categories,
+) {
+  return categories
+      .where(
+        (category) =>
+            category.categoryType == 'MATERIAL' ||
+            category.categoryType == 'BOTH',
+      )
+      .toList(growable: false);
+}
+
 class LearningProjectDraftComponent {
-  const LearningProjectDraftComponent({
-    this.name = '',
+  const LearningProjectDraftComponent({    this.name = '',
     this.quantity = 1,
     this.unit = 'piece',
     this.role = LearningProjectComponentRole.material,
@@ -27,10 +40,7 @@ class LearningProjectDraftComponent {
 
   static const String noMaterialCategoryValue = '';
 
-  static final RegExp _uuidPattern = RegExp(
-    r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
-    caseSensitive: false,
-  );
+  static final RegExp _keywordDelimiterPattern = RegExp(r'[,;\n]+');
 
   static String? normalizeMaterialCategoryId(String? value) {
     final trimmed = value?.trim();
@@ -43,13 +53,22 @@ class LearningProjectDraftComponent {
       return null;
     }
 
-    if (!_uuidPattern.hasMatch(trimmed)) {
-      return null;
-    }
-
     return trimmed;
   }
 
+  static bool isSelectableMaterialCategoryId(
+    String? value,
+    List<MaterialCategory> categories,
+  ) {
+    final normalized = normalizeMaterialCategoryId(value);
+    if (normalized == null) {
+      return value == null || value.trim().isEmpty;
+    }
+
+    return materialSelectableCategories(categories).any(
+      (category) => category.id == normalized,
+    );
+  }
   static String materialCategoryDropdownValue(String? categoryId) {
     return normalizeMaterialCategoryId(categoryId) ?? noMaterialCategoryValue;
   }
@@ -157,33 +176,42 @@ class LearningProjectDraftComponent {
         .toList(growable: false);
   }
 
-  List<String> resolvedKeywords() {
+  static List<String> mergeKeywords({
+    required List<String> existing,
+    String draft = '',
+    int max = 5,
+  }) {
     final merged = <String>[];
     final seen = <String>{};
 
-    void addKeyword(String value) {
-      final trimmed = value.trim();
-      if (trimmed.isEmpty || merged.length >= 5) {
-        return;
-      }
+    void addParts(String value) {
+      for (final part in value.split(_keywordDelimiterPattern)) {
+        final trimmed = part.trim();
+        if (trimmed.isEmpty || merged.length >= max) {
+          continue;
+        }
 
-      final key = trimmed.toLowerCase();
-      if (seen.contains(key)) {
-        return;
-      }
+        final key = trimmed.toLowerCase();
+        if (seen.contains(key)) {
+          continue;
+        }
 
-      seen.add(key);
-      merged.add(trimmed);
+        seen.add(key);
+        merged.add(trimmed);
+      }
     }
 
-    for (final keyword in keywords) {
-      addKeyword(keyword);
+    for (final keyword in existing) {
+      addParts(keyword);
     }
-    addKeyword(keywordDraft);
+    addParts(draft);
 
     return merged;
   }
 
+  List<String> resolvedKeywords() {
+    return mergeKeywords(existing: keywords, draft: keywordDraft);
+  }
   Map<String, dynamic> toSubmitPayload() {
     final payload = <String, dynamic>{
       'name': name.trim(),
@@ -217,7 +245,10 @@ class LearningProjectDraftComponent {
     return payload;
   }
 
-  String? validate({required bool requireName}) {
+  String? validate({
+    required bool requireName,
+    List<MaterialCategory> materialCategories = const [],
+  }) {
     final trimmedName = name.trim();
     if (requireName && trimmedName.isEmpty) {
       return 'Component name is required.';
@@ -242,9 +273,18 @@ class LearningProjectDraftComponent {
         return 'Keep each keyword under 80 characters.';
       }
     }
+    final normalizedCategoryId = normalizeMaterialCategoryId(materialCategoryId);
     if (materialCategoryId != null &&
         materialCategoryId!.trim().isNotEmpty &&
-        normalizeMaterialCategoryId(materialCategoryId) == null) {
+        normalizedCategoryId == null) {
+      return 'Choose a valid material category or leave it as None.';
+    }
+    if (normalizedCategoryId != null &&
+        materialCategories.isNotEmpty &&
+        !isSelectableMaterialCategoryId(
+          normalizedCategoryId,
+          materialCategories,
+        )) {
       return 'Choose a valid material category or leave it as None.';
     }
     return null;
