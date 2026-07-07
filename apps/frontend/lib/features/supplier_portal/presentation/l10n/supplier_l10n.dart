@@ -514,6 +514,23 @@ class SupplierL10n {
         'Impact is calculated from completed reuse data.',
         'يُحسب الأثر من بيانات إعادة الاستخدام المكتملة.',
       );
+  String get projectImpactTitle => t('Project impact', 'أثر المشاريع');
+  String get projectImpactDescription => t(
+        'Your materials helped learners complete real project components.',
+        'ساعدت موادك المتعلمين على إكمال مكوّنات مشاريع حقيقية.',
+      );
+  String get projectImpactEmptyDescription => t(
+        'Your completed project impact will appear here when learners finish components using your materials.',
+        'سيظهر أثر مشاريعك المكتمل هنا عندما ينهي المتعلمون المكوّنات باستخدام موادك.',
+      );
+  String get projectImpactProjectsSupported =>
+      t('Projects supported', 'مشاريع مدعومة');
+  String get projectImpactComponentsCompleted =>
+      t('Components completed', 'مكوّنات مكتملة');
+  String get projectImpactLearnerBuildsHelped =>
+      t('Learner builds helped', 'بناءات متعلمين مساندة');
+  String get projectImpactRecentProjects =>
+      t('Recent supported projects', 'مشاريع مدعومة حديثاً');
   String get noReviewsYet => t('No reviews yet', 'لا توجد مراجعات بعد');
   String get ratingLabel => t('Rating', 'التقييم');
   String reviewsCount(int count) =>

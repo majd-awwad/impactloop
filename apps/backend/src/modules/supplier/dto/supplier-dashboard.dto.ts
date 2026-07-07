@@ -126,11 +126,35 @@ export type DashboardMaterialInsightDto = {
   demandCount: number;
 };
 
+export type LatestSupportedProjectDto = {
+  projectId: string;
+  title: string;
+  categoryName: string | null;
+  completedAt: string;
+};
+
+export type ProjectSupportStatsDto = {
+  projectsSupported: number;
+  projectComponentsSupported: number;
+  learnerBuildsHelped: number;
+  completedLinkedReservations: number;
+  latestSupportedProjects: LatestSupportedProjectDto[];
+};
+
+export const emptyProjectSupportStats = (): ProjectSupportStatsDto => ({
+  projectsSupported: 0,
+  projectComponentsSupported: 0,
+  learnerBuildsHelped: 0,
+  completedLinkedReservations: 0,
+  latestSupportedProjects: [],
+});
+
 export type SupplierDashboardDto = {
   hasSupplierProfile: boolean;
   message?: string;
   supplier?: SupplierSummaryDto;
   stats: DashboardStatsDto;
+  projectSupport: ProjectSupportStatsDto;
   recentMaterials: RecentMaterialDto[];
   upcomingPickups: UpcomingPickupDto[];
   recentActivity: RecentActivityDto[];

@@ -206,7 +206,7 @@ Indexes: `userId`, `(userId, isDefault)`, `locationId`.
 | stepsGeneratedByAi | Boolean | default false |
 | aiStepsGeneratedAt | DateTime? | |
 
-Child tables: project_images, project_required_components, project_steps, project_links, project_tags, project_likes, project_saves, project_follows, project_user_reviews.
+Child tables: project_images, project_required_components, project_steps, project_links, project_tags, project_likes, project_saves, project_follows, project_user_reviews, project_builds.
 
 ---
 
@@ -327,6 +327,40 @@ Child tables: project_images, project_required_components, project_steps, projec
 | createdAt, updatedAt | DateTime | |
 
 **Unique:** `(projectId, userId)`. Used by learner project rating/review upsert/delete, public `ratingSummary`, detail `recentReviews`, and viewer-specific `viewerReview`.
+
+---
+
+## `project_builds` — model `ProjectBuild`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| projectId | String | FK → learning_projects; cascade delete |
+| learnerId | String | FK → users; cascade delete |
+| status | ProjectBuildStatus | default `IN_PROGRESS` |
+| startedAt | DateTime | default now |
+| completedAt | DateTime? | Reserved for later completion flow |
+| createdAt, updatedAt | DateTime | |
+
+**Unique:** `(projectId, learnerId)`. Stores one manual build checklist per learner/project.
+
+---
+
+## `project_build_items` — model `ProjectBuildItem`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| buildId | String | FK → project_builds; cascade delete |
+| requiredComponentId | String | FK → project_required_components; cascade delete |
+| status | ProjectBuildItemStatus | default `MISSING` |
+| learnerNote | String? | Optional learner checklist note |
+| linkedMaterialId | String? | FK → materials; nullable learner-selected platform material |
+| linkedReservationId | String? | FK → reservations; reserved for future reservation-aware readiness |
+| linkedMaterialAt | DateTime? | When the learner linked the material |
+| createdAt, updatedAt | DateTime | |
+
+**Unique:** `(buildId, requiredComponentId)`. Stores manual checklist status per required component plus optional per-learner material link. Linking a material does not automatically mark the item ready.
 
 ---
 

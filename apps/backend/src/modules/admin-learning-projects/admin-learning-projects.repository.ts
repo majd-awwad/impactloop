@@ -108,7 +108,23 @@ export const adminLearningProjectDetailInclude = {
       unit: true,
       componentRole: true,
       isRequired: true,
+      canBeSubstituted: true,
+      categoryId: true,
+      searchKeywords: true,
+      alternativeKeywords: true,
       notes: true,
+      providedByUser: true,
+      confirmedByUser: true,
+      reviewStatus: true,
+      category: {
+        select: {
+          id: true,
+          nameEn: true,
+          nameAr: true,
+          isActive: true,
+          categoryType: true,
+        },
+      },
     },
   },
   steps: {
@@ -294,3 +310,40 @@ export const listProjectCategoriesForAdmin = async () =>
     },
     orderBy: { nameEn: 'asc' },
   });
+
+export const listMaterialCategoriesForAdmin = async () =>
+  prisma.category.findMany({
+    where: {
+      isActive: true,
+      categoryType: { in: ['MATERIAL', 'BOTH'] },
+    },
+    select: {
+      id: true,
+      nameEn: true,
+      nameAr: true,
+    },
+    orderBy: { nameEn: 'asc' },
+  });
+
+export const updateAdminLearningProjectComponent = async (input: {
+  projectId: string;
+  componentId: string;
+  data: Prisma.ProjectRequiredComponentUpdateInput;
+}) => {
+  const existing = await prisma.projectRequiredComponent.findFirst({
+    where: {
+      id: input.componentId,
+      projectId: input.projectId,
+    },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  return prisma.projectRequiredComponent.update({
+    where: { id: input.componentId },
+    data: input.data,
+  });
+};

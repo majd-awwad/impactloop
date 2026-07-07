@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -110,7 +111,7 @@ class _ProjectEngagementStripState
         return;
       }
 
-      ref.invalidate(learningProjectProvider(widget.project.id));
+      invalidateLearningHubEngagement(ref, widget.project.id);
       setState(() {
         _likesCount = result.likesCount;
         _isLiked = result.isLiked;
@@ -160,7 +161,7 @@ class _ProjectEngagementStripState
         return;
       }
 
-      ref.invalidate(learningProjectProvider(widget.project.id));
+      invalidateLearningHubEngagement(ref, widget.project.id);
       setState(() {
         _isSaved = result.isSaved;
       });
@@ -212,7 +213,7 @@ class _ProjectEngagementStripState
         return;
       }
 
-      ref.invalidate(learningProjectProvider(widget.project.id));
+      invalidateLearningHubEngagement(ref, widget.project.id);
       setState(() {
         _followersCount = result.followersCount;
         _isFollowing = result.isFollowing;
@@ -239,43 +240,58 @@ class _ProjectEngagementStripState
   @override
   Widget build(BuildContext context) {
     final compact = widget.density == ProjectEngagementDensity.compact;
+    final pills = [
+      _EngagementPill(
+        icon: _isLiked ? Icons.favorite_rounded : Icons.favorite_border,
+        label: _likesCount == 1 ? '1 like' : '$_likesCount likes',
+        selected: _isLiked,
+        isLoading: _updatingAction == _EngagementAction.like,
+        compact: compact,
+        tooltip: _isLiked ? 'Unlike project' : 'Like project',
+        onTap: _toggleLike,
+      ),
+      _EngagementPill(
+        icon: _isSaved ? Icons.bookmark_rounded : Icons.bookmark_border,
+        label: _isSaved ? 'Saved' : 'Save',
+        selected: _isSaved,
+        isLoading: _updatingAction == _EngagementAction.save,
+        compact: compact,
+        tooltip: _isSaved ? 'Remove saved project' : 'Save project',
+        onTap: _toggleSave,
+      ),
+      _EngagementPill(
+        icon: _isFollowing
+            ? Icons.notifications_active_rounded
+            : Icons.notifications_none_rounded,
+        label: _followersCount == 1
+            ? '1 follower'
+            : '$_followersCount followers',
+        selected: _isFollowing,
+        isLoading: _updatingAction == _EngagementAction.follow,
+        compact: compact,
+        tooltip: _isFollowing ? 'Unfollow project' : 'Follow project',
+        onTap: _toggleFollow,
+      ),
+    ];
+
+    if (compact) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var index = 0; index < pills.length; index++) ...[
+              if (index > 0) const SizedBox(width: AppSpacing.sm),
+              pills[index],
+            ],
+          ],
+        ),
+      );
+    }
 
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
-      children: [
-        _EngagementPill(
-          icon: _isLiked ? Icons.favorite_rounded : Icons.favorite_border,
-          label: _likesCount == 1 ? '1 like' : '$_likesCount likes',
-          selected: _isLiked,
-          isLoading: _updatingAction == _EngagementAction.like,
-          compact: compact,
-          tooltip: _isLiked ? 'Unlike project' : 'Like project',
-          onTap: _toggleLike,
-        ),
-        _EngagementPill(
-          icon: _isSaved ? Icons.bookmark_rounded : Icons.bookmark_border,
-          label: _isSaved ? 'Saved' : 'Save',
-          selected: _isSaved,
-          isLoading: _updatingAction == _EngagementAction.save,
-          compact: compact,
-          tooltip: _isSaved ? 'Remove saved project' : 'Save project',
-          onTap: _toggleSave,
-        ),
-        _EngagementPill(
-          icon: _isFollowing
-              ? Icons.notifications_active_rounded
-              : Icons.notifications_none_rounded,
-          label: _followersCount == 1
-              ? '1 follower'
-              : '$_followersCount followers',
-          selected: _isFollowing,
-          isLoading: _updatingAction == _EngagementAction.follow,
-          compact: compact,
-          tooltip: _isFollowing ? 'Unfollow project' : 'Follow project',
-          onTap: _toggleFollow,
-        ),
-      ],
+      children: pills,
     );
   }
 }
@@ -304,10 +320,15 @@ class _EngagementPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final background = selected
-        ? palette.lime.withValues(alpha: 0.18)
+        ? AppColorTokens.emerald.withValues(alpha: isDark ? 0.24 : 0.10)
         : palette.mutedChip;
-    final foreground = selected ? palette.limeSoft : palette.textSecondary;
+    final foreground = selected
+        ? isDark
+              ? Colors.white
+              : AppColorTokens.emerald
+        : palette.textSecondary;
 
     return Tooltip(
       message: tooltip,
@@ -324,7 +345,7 @@ class _EngagementPill extends StatelessWidget {
             color: background,
             borderRadius: AppRadius.pillAll,
             border: Border.all(
-              color: selected ? palette.lime : palette.borderSubtle,
+              color: selected ? AppColorTokens.emerald : palette.borderSubtle,
             ),
           ),
           child: Row(

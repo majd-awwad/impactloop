@@ -38,7 +38,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 |-------|-------|----------------|
 | **public** | Most routes (landing, materials, learning, auth pages, register deprecated fallbacks) | No login required |
 | **authenticated** | `/home`, `/profile`, `/profile/*`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
-| **learner** | `/learning/add-draft`, `/learner/reservations`, `/learner/reservations/:id`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
+| **learner** | `/learning/add-draft`, `/learning/:id/build`, `/learner/reservations`, `/learner/reservations/:id`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
 | **driver** | `/driver`, `/driver/*` | Requires login + `DRIVER` role; non-drivers redirect to `/home` |
 | **admin** | `/admin`, `/admin/*` (except access-denied) | Requires login + `ADMIN` role |
@@ -81,11 +81,12 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/learner/deliveries/:id/track` | `LearnerDeliveryTrackingPage` | learner | Live driver map (after pickup), polls `GET /api/deliveries/:id/tracking` every 45s |
 | `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline; **Track delivery** opens `/track` when `canTrack` |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
-| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, category filters, saved/followed learner tabs, and server-side page navigation; optional `q` query pre-fills search; add-draft submits for review; AI material matching is not implemented |
+| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, category filters, saved/followed learner tabs, and server-side page navigation; optional `q` query pre-fills search; add-draft submits for review; manual build checklist is persisted; AI material matching is not implemented |
 | `/learning/add-draft` | `LearningAddDraftPage` | learner | Learner project submission form; posts to `/api/learning-projects/submit` |
-| `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail with local build checklist and material-search handoff |
+| `/learning/:id/build` | `LearningProjectBuildPage` | learner | Persisted manual project build checklist with per-item material candidates, link/unlink, and linked-material panel; no AI matching or auto-reservation |
+| `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail with start/continue build action |
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default; optional `q` query pre-fills search |
-| `/materials/:id` | `MaterialDetailsPage` | public | API-backed default |
+| `/materials/:id` | `MaterialDetailsPage` | public | API-backed default; optional query `projectId`, `buildItemId`, `returnTo`, `componentName` for Learning Hub build-context reserve flow |
 | `/login` | `LoginPage` | public | `_AuthPageGuard` |
 | `/forgot-password` | `ForgotPasswordPage` | public | `_AuthPageGuard`; optional `email` query pre-fills the form |
 | `/reset-password` | `ResetPasswordPage` | public | `_AuthPageGuard`; reads reset `token` query |

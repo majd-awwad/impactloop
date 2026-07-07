@@ -20,7 +20,7 @@ class LearningProjectCard extends StatelessWidget {
     final palette = LearningUiPalette.of(context);
 
     return SizedBox(
-      height: 430,
+      height: 468,
       child: InkWell(
         borderRadius: AppRadius.xlAll,
         onTap: () => context.push('/learning/${project.id}'),
@@ -48,25 +48,22 @@ class LearningProjectCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(
-                        height: 58,
+                        height: 54,
                         child: _ProjectTitleRow(project: project),
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      SizedBox(
-                        height: 56,
-                        child: Text(
-                          project.summary.resolve(context),
-                          style: AppTextStyles.subtitle(
-                            context,
-                          ).copyWith(color: palette.textSecondary),
-                          textAlign: TextAlign.start,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      Text(
+                        project.summary.resolve(context),
+                        style: AppTextStyles.subtitle(
+                          context,
+                        ).copyWith(color: palette.textSecondary),
+                        textAlign: TextAlign.start,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const Spacer(),
+                      const SizedBox(height: AppSpacing.sm),
                       SizedBox(
-                        height: 40,
+                        height: 36,
                         child: Align(
                           alignment: AlignmentDirectional.centerStart,
                           child: SingleChildScrollView(
@@ -95,10 +92,13 @@ class LearningProjectCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      ProjectEngagementStrip(
-                        project: project,
-                        density: ProjectEngagementDensity.compact,
+                      const Spacer(),
+                      SizedBox(
+                        height: 36,
+                        child: ProjectEngagementStrip(
+                          project: project,
+                          density: ProjectEngagementDensity.compact,
+                        ),
                       ),
                     ],
                   ),
@@ -151,15 +151,26 @@ class _ProjectCardHeader extends StatelessWidget {
                       const SizedBox.shrink(),
                 ),
               ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadiusDirectional.only(
-                  topStart: Radius.circular(AppRadius.xl),
-                  topEnd: Radius.circular(AppRadius.xl),
+            if (project.imageUrl != null)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadiusDirectional.only(
+                    topStart: Radius.circular(AppRadius.xl),
+                    topEnd: Radius.circular(AppRadius.xl),
+                  ),
+                  color: palette.overlayDark.withValues(alpha: 0.26),
                 ),
-                color: palette.overlayDark.withValues(alpha: 0.42),
+              )
+            else
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadiusDirectional.only(
+                    topStart: Radius.circular(AppRadius.xl),
+                    topEnd: Radius.circular(AppRadius.xl),
+                  ),
+                  color: palette.overlayDark.withValues(alpha: 0.42),
+                ),
               ),
-            ),
             Padding(
               padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
               child: Column(
@@ -185,11 +196,12 @@ class _ProjectCardHeader extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  Icon(
-                    project.heroIconData,
-                    size: 54,
-                    color: palette.textPrimary,
-                  ),
+                  if (project.imageUrl == null)
+                    Icon(
+                      project.heroIconData,
+                      size: 54,
+                      color: palette.textPrimary,
+                    ),
                 ],
               ),
             ),
@@ -307,11 +319,16 @@ class _ProjectMetaChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: palette.textSecondary),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 190),
+            child: Text(
+              label,
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),

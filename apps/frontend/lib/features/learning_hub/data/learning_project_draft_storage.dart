@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../domain/models/learning_project_draft_component.dart';
+
 class LearningProjectDraftData {
   const LearningProjectDraftData({
     required this.title,
@@ -18,7 +20,7 @@ class LearningProjectDraftData {
 
   final String title;
   final String summary;
-  final String components;
+  final List<LearningProjectDraftComponent> components;
   final String steps;
   final String links;
   final String? categoryId;
@@ -28,7 +30,7 @@ class LearningProjectDraftData {
   Map<String, dynamic> toJson() => {
     'title': title,
     'summary': summary,
-    'components': components,
+    'componentEntries': components.map((component) => component.toJson()).toList(),
     'steps': steps,
     'links': links,
     'categoryId': categoryId,
@@ -37,10 +39,35 @@ class LearningProjectDraftData {
   };
 
   factory LearningProjectDraftData.fromJson(Map<String, dynamic> json) {
+    final componentEntries = json['componentEntries'];
+    final legacyComponents = json['components'];
+
+    List<LearningProjectDraftComponent> components;
+    if (componentEntries is List) {
+      components = componentEntries
+          .whereType<Map>()
+          .map(
+            (entry) => LearningProjectDraftComponent.fromJson(
+              Map<String, dynamic>.from(entry),
+            ),
+          )
+          .toList(growable: false);
+    } else if (legacyComponents is String) {
+      components = LearningProjectDraftComponent.fromLegacyCommaSeparated(
+        legacyComponents,
+      );
+    } else {
+      components = [LearningProjectDraftComponent.empty()];
+    }
+
+    if (components.isEmpty) {
+      components = [LearningProjectDraftComponent.empty()];
+    }
+
     return LearningProjectDraftData(
       title: json['title'] as String? ?? '',
       summary: json['summary'] as String? ?? '',
-      components: json['components'] as String? ?? '',
+      components: components,
       steps: json['steps'] as String? ?? '',
       links: json['links'] as String? ?? '',
       categoryId: json['categoryId'] as String?,

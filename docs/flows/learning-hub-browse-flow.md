@@ -14,7 +14,7 @@ Public API returns **PUBLISHED** projects only (`learning-projects.repository.ts
 
 ### User path
 
-1. Land on Learning Hub hero + category chips + search/difficulty/tag filters + list-mode tabs + featured card + project grid. Optional `/learning?q=<search>` opens with the search box pre-filled.
+1. Land on Learning Hub hero + category chips + search/difficulty/tag filters + list-mode tabs + project grid. Optional `/learning?q=<search>` opens with the search box pre-filled.
 2. Optional: tap a category chip → list refetches with `categoryId`.
 3. Optional: type a search term → list refetches with `q` after a short debounce.
 4. Optional: choose difficulty → list refetches with `difficulty`.
@@ -29,9 +29,9 @@ Public API returns **PUBLISHED** projects only (`learning-projects.repository.ts
 
 Category chips → `projectCategoriesProvider` → `GET /api/categories?type=PROJECT`.
 
-Tag chips are derived from the `tags` array already returned by the project list response. There is no separate tags endpoint.
+Tag chips are derived from the `tags` array already returned by the project list response. There is no separate tags endpoint. The UI hides internal/mock tags such as `mock`, `pagination`, `test`, and `project-01`, and caps the visible chip list.
 
-Featured project = first item on page 1 of **All projects** (not a backend field). Later pages and saved/followed tabs render as regular project grids.
+Project of the week renders only when a project DTO explicitly has a featured/spotlight flag. It is not inferred from the first/latest API result. Later pages and saved/followed tabs render as regular project grids.
 
 **No mock fallback** on API failure — error panel with retry (`ref.invalidate`).
 
@@ -82,13 +82,15 @@ Ratings are hidden when `ratingSummary` is null. When learner reviews exist, lis
 
 `LearningProjectDetailsPage` → `learningProjectProvider(id)` → `GET /api/learning-projects/:id` → mapper.
 
-The like, save, and follow pills use widget-local optimistic state on list, Home spotlight, and detail surfaces. Guests are routed to `/login?from=/learning/<id>`, non-learner authenticated users receive an info snackbar, and learners call repository `likeProject` / `unlikeProject` / `saveProject` / `unsaveProject` / `followProject` / `unfollowProject` methods. The reviews section uses repository `reviewProject` and `deleteProjectReview`, then invalidates `learningProjectProvider(id)`.
+The like, save, and follow pills use widget-local optimistic state on list, Home spotlight, and detail surfaces. Guests are routed to `/login?from=/learning/<id>`, non-learner authenticated users receive an info snackbar, and learners call repository `likeProject` / `unlikeProject` / `saveProject` / `unsaveProject` / `followProject` / `unfollowProject` methods. Successful engagement mutations invalidate `learningProjectProvider(id)`, `learningProjectsProvider`, `savedLearningProjectsProvider`, and `followedLearningProjectsProvider` so saved/followed tabs refetch after unsave/unfollow. The reviews section uses repository `reviewProject` and `deleteProjectReview`, then invalidates `learningProjectProvider(id)`.
 
 404 / missing published project → “Project not found” (not mock slug lookup).
 
 Invalid UUID → validation error panel with retry (not crash).
 
-The build checklist panel is frontend-local. Learners can start a checklist from project components and manually mark each component as `Available`, `Missing`, `Alternative`, `Already owned`, or `Reserved`. Each row has **Find materials**, which opens `/materials?q=<component name>` and lets the existing Materials Discovery search handle results. No project-build table, automatic coverage scoring, or AI matching is used.
+The build checklist panel reads learner build state only for authenticated learner sessions. **Start build** calls `POST /api/learning-projects/:id/builds/start`, then opens `/learning/:id/build`. Existing builds show **Continue checklist**. Guests are sent to `/login?from=/learning/<id>/build`; non-learner authenticated users receive an info snackbar.
+
+The build page fetches `GET /api/learning-projects/:id/builds/me`. If no build exists, the learner can start one. Checklist rows are initialized from required components and manually updated with `PATCH /api/learning-projects/:id/builds/me/items/:itemId`, body `{ status, learnerNote? }`. Supported statuses are `MISSING`, `ALREADY_OWNED`, `AVAILABLE`, `RESERVED`, and `ALTERNATIVE`. Each row exposes **Browse matching materials**, which loads `GET .../material-candidates`, lets the learner link/unlink a platform material, and shows a linked-material panel with reservation status when linked. **Reserve this material** opens `/materials/:id` with build context query params; reservation create may include `buildItemId` to set `linkedReservationId` in the same transaction. Linking alone does **not** auto-mark the item ready; progress uses `isReadyForBuild` (`ALREADY_OWNED` / `AVAILABLE` / `ALTERNATIVE`, or linked reservation `COMPLETED`). **Browse all materials** still opens `/materials?q=<component name>`. No AI matching or related-projects API is used.
 
 **No mock fallback** on API failure.
 
@@ -104,13 +106,29 @@ The build checklist panel is frontend-local. Learners can start a checklist from
 
 `PUT /api/learning-projects/:id/review` / `DELETE /api/learning-projects/:id/review` — learner-only project review upsert/delete. Upsert body is `{ rating: 1..5, comment? }`; responses include the updated `ratingSummary`.
 
+`GET /api/learning-projects/:id/builds/me` — learner-only current build checklist; returns `data: null` when the learner has not started the build yet.
+
+`POST /api/learning-projects/:id/builds/start` — learner-only idempotent start; creates one build per learner/project and initializes checklist items from required components.
+
+`PATCH /api/learning-projects/:id/builds/me/items/:itemId` — learner-only manual status/note update; returns the refreshed build checklist.
+
+`GET /api/learning-projects/:id/builds/me/items/:itemId/material-candidates` — learner-only deterministic available-material suggestions (max 10), ranked by match quality/convenience/cost rather than listing freshness alone; includes `matchHints[]`.
+
+`POST /api/learning-projects/:id/builds/me/items/:itemId/link-material` — learner-only link a platform material to the checklist item; body `{ materialId }`.
+
+`DELETE /api/learning-projects/:id/builds/me/items/:itemId/link-material` — learner-only unlink; blocked while an active linked reservation exists.
+
+`POST /api/learning-projects/:id/builds/me/items/:itemId/link-reservation` — learner-only repair link for an existing owned reservation; body `{ reservationId }`.
+
+`POST /api/reservations` — optional `buildItemId` links the created reservation to the checklist item when `linkedMaterialId` matches.
+
 ### Database changes
 
-Like/unlike writes `project_likes`; save/unsave writes `project_saves`; follow/unfollow writes `project_follows`; review upsert/delete writes `project_user_reviews`.
+Like/unlike writes `project_likes`; save/unsave writes `project_saves`; follow/unfollow writes `project_follows`; review upsert/delete writes `project_user_reviews`; build start/update writes `project_builds` and `project_build_items`.
 
 ### Success state
 
-Detail sections render from API DTOs (components, steps, links, images, review summary/recent reviews). Project links use `url_launcher` for valid `http`/`https` URLs; invalid or missing URLs render disabled. Like count, save state, and follow count/state update optimistically on card/detail controls and then reconcile to the server response. Review create/update/delete refreshes the detail provider after success. Checklist state stays in the mounted detail page and resets on navigation/refresh.
+Detail sections render from API DTOs (components, steps, links, images, review summary/recent reviews). Project links use `url_launcher` for valid `http`/`https` URLs; invalid or missing URLs render disabled. Like count, save state, and follow count/state update optimistically on card/detail controls and then reconcile to the server response. Review create/update/delete refreshes the detail provider after success. Checklist state persists across refresh because it is backend-backed per learner/project.
 
 ### Error states
 
@@ -122,7 +140,7 @@ Detail sections render from API DTOs (components, steps, links, images, review s
 
 ### Files involved
 
-`learning_project_details_page.dart`, `learning_hub_providers.dart`, `api_learning_hub_repository.dart`, `project_components_section.dart`, `project_build_actions_panel.dart`, `project_reviews_section.dart`, `project_steps_timeline.dart`, `project_link_list.dart`
+`learning_project_details_page.dart`, `learning_project_build_page.dart`, `learning_hub_providers.dart`, `api_learning_hub_repository.dart`, `project_components_section.dart`, `project_build_actions_panel.dart`, `project_build_material_linking.dart`, `project_reviews_section.dart`, `project_steps_timeline.dart`, `project_link_list.dart`
 
 **Not used on detail:** `learning_hub_mock_data.dart`, `mock_rating_summary_card.dart`
 
@@ -208,8 +226,10 @@ Hub page controls fetch server pages beyond `page=1` while preserving active fil
 - Learner booking materials directly from project components
 - AI material matching (`ai-agent` module)
 - Followed categories
-- Persisted build checklist / stored component coverage
+- Automatic reservation without learner action from checklist links
+- Related projects API on material detail
 - Moderator project review UI / moderator workspace
+- Admin/moderator-selected Project of the week spotlight workflow
 
 ---
 

@@ -40,9 +40,13 @@ class FeaturedProjectCard extends StatelessWidget {
 
             return compact
                 ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _FeaturedMedia(project: project, compact: true),
+                      _FeaturedMedia(
+                        project: project,
+                        compact: true,
+                        width: constraints.maxWidth,
+                      ),
                       const SizedBox(height: AppSpacing.md),
                       _FeaturedContent(project: project, compact: true),
                     ],
@@ -50,7 +54,11 @@ class FeaturedProjectCard extends StatelessWidget {
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _FeaturedMedia(project: project, compact: false),
+                      _FeaturedMedia(
+                        project: project,
+                        compact: false,
+                        width: 228,
+                      ),
                       const SizedBox(width: AppSpacing.lg),
                       Expanded(
                         child: _FeaturedContent(
@@ -93,7 +101,9 @@ class _FeaturedContent extends StatelessWidget {
     );
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: compact
+          ? CrossAxisAlignment.stretch
+          : CrossAxisAlignment.start,
       children: [
         Align(
           alignment: AlignmentDirectional.centerStart,
@@ -125,6 +135,8 @@ class _FeaturedContent extends StatelessWidget {
             context,
           ).copyWith(color: palette.textPrimary),
           textAlign: TextAlign.start,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
@@ -133,6 +145,8 @@ class _FeaturedContent extends StatelessWidget {
             context,
           ).copyWith(color: palette.textSecondary),
           textAlign: TextAlign.start,
+          maxLines: compact ? 3 : 2,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: AppSpacing.md),
         Wrap(
@@ -154,26 +168,29 @@ class _FeaturedContent extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         ProjectEngagementStrip(project: project),
         const SizedBox(height: AppSpacing.lg),
-        compact
-            ? SizedBox(width: double.infinity, child: buttonChild)
-            : SizedBox(width: 176, child: buttonChild),
+        compact ? buttonChild : SizedBox(width: 176, child: buttonChild),
       ],
     );
   }
 }
 
 class _FeaturedMedia extends StatelessWidget {
-  const _FeaturedMedia({required this.project, required this.compact});
+  const _FeaturedMedia({
+    required this.project,
+    required this.compact,
+    required this.width,
+  });
 
   final LearningProject project;
   final bool compact;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
 
     return SizedBox(
-      width: compact ? double.infinity : 228,
+      width: width,
       height: compact ? 180 : 228,
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -197,20 +214,29 @@ class _FeaturedMedia extends StatelessWidget {
                       const SizedBox.shrink(),
                 ),
               ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: AppRadius.lgAll,
-                color: palette.overlayDark,
+            if (project.imageUrl != null)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: AppRadius.lgAll,
+                  color: palette.overlayDark.withValues(alpha: 0.22),
+                ),
+              )
+            else ...[
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: AppRadius.lgAll,
+                  color: palette.overlayDark,
+                ),
               ),
-            ),
-            Align(
-              alignment: AlignmentDirectional.center,
-              child: Icon(
-                project.heroIconData,
-                size: compact ? 48 : 58,
-                color: palette.textPrimary,
+              Align(
+                alignment: AlignmentDirectional.center,
+                child: Icon(
+                  project.heroIconData,
+                  size: compact ? 48 : 58,
+                  color: palette.textPrimary,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

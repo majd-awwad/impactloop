@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -52,6 +53,7 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
   String? _selectedDifficulty;
   String? _selectedTag;
   _LearningProjectListMode _listMode = _LearningProjectListMode.all;
+  LearningProjectsResult? _lastResult;
 
   LearningProjectsQuery get _query => LearningProjectsQuery(
     page: _currentPage,
@@ -237,60 +239,93 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const EntryNavBar(homeRoute: '/home'),
-            Expanded(
-              child: projectsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stackTrace) => _HubStatePanel(
-                  icon: Icons.cloud_off_outlined,
-                  title: const LocalizedText(
-                    en: 'Unable to load learning projects',
-                    ar: 'تعذر تحميل مشاريع التعلم',
-                  ),
-                  subtitle: const LocalizedText(
-                    en: 'Check that the backend is running, then try again.',
-                    ar: 'تحقق من تشغيل الخادم ثم حاول مرة أخرى.',
-                  ),
-                  actionLabel: const LocalizedText(
-                    en: 'Try again',
-                    ar: 'حاول مرة أخرى',
-                  ),
-                  onAction: () => _invalidateCurrentProjects(query),
-                ),
-                data: (result) {
-                  return _HubContent(
-                    result: result,
-                    categoriesAsync: categoriesAsync,
-                    selectedCategoryIndex: _selectedCategoryIndex,
-                    searchController: _searchController,
-                    searchFocusNode: _searchFocusNode,
-                    searchDraft: _searchDraft,
-                    selectedDifficulty: _selectedDifficulty,
-                    selectedTag: _selectedTag,
-                    listMode: _listMode,
-                    hasActiveFilters: _hasActiveFilters,
-                    onSearchChanged: _onSearchChanged,
-                    onSearchSubmitted: _applySearch,
-                    onDifficultySelected: _setDifficulty,
-                    onTagSelected: _setTag,
-                    onListModeSelected: _setListMode,
-                    onClearFilters: _clearFilters,
-                    onSubmitProject: () => context.go('/learning/add-draft'),
-                    onFocusSearch: () => _searchFocusNode.requestFocus(),
-                    onCategorySelected: (index, categoryId) {
-                      setState(() {
-                        _selectedCategoryIndex = index;
-                        _selectedCategoryId = categoryId;
-                        _currentPage = 1;
-                      });
-                    },
-                    onPageChanged: _setPage,
-                  );
-                },
-              ),
-            ),
+            Expanded(child: _buildProjectsBody(projectsAsync, categoriesAsync)),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProjectsBody(
+    AsyncValue<LearningProjectsResult> projectsAsync,
+    AsyncValue<List<MaterialCategory>> categoriesAsync,
+  ) {
+    final query = _query;
+
+    Widget contentFor(
+      LearningProjectsResult result, {
+      required bool isRefreshing,
+      Object? refreshError,
+    }) {
+      return _HubContent(
+        result: result,
+        categoriesAsync: categoriesAsync,
+        selectedCategoryIndex: _selectedCategoryIndex,
+        searchController: _searchController,
+        searchFocusNode: _searchFocusNode,
+        searchDraft: _searchDraft,
+        selectedDifficulty: _selectedDifficulty,
+        selectedTag: _selectedTag,
+        listMode: _listMode,
+        hasActiveFilters: _hasActiveFilters,
+        isRefreshing: isRefreshing,
+        refreshError: refreshError,
+        onSearchChanged: _onSearchChanged,
+        onSearchSubmitted: _applySearch,
+        onDifficultySelected: _setDifficulty,
+        onTagSelected: _setTag,
+        onListModeSelected: _setListMode,
+        onClearFilters: _clearFilters,
+        onRetry: () => _invalidateCurrentProjects(query),
+        onSubmitProject: () => context.go('/learning/add-draft'),
+        onFocusSearch: () => _searchFocusNode.requestFocus(),
+        onCategorySelected: (index, categoryId) {
+          setState(() {
+            _selectedCategoryIndex = index;
+            _selectedCategoryId = categoryId;
+            _currentPage = 1;
+          });
+        },
+        onPageChanged: _setPage,
+      );
+    }
+
+    return projectsAsync.when(
+      loading: () {
+        final cached = _lastResult;
+        if (cached != null) {
+          return contentFor(cached, isRefreshing: true);
+        }
+
+        return const Center(child: CircularProgressIndicator());
+      },
+      error: (error, stackTrace) {
+        final cached = _lastResult;
+        if (cached != null) {
+          return contentFor(cached, isRefreshing: false, refreshError: error);
+        }
+
+        return _HubStatePanel(
+          icon: Icons.cloud_off_outlined,
+          title: const LocalizedText(
+            en: 'Unable to load learning projects',
+            ar: 'تعذر تحميل مشاريع التعلم',
+          ),
+          subtitle: const LocalizedText(
+            en: 'Check that the backend is running, then try again.',
+            ar: 'تحقق من تشغيل الخادم ثم حاول مرة أخرى.',
+          ),
+          actionLabel: const LocalizedText(
+            en: 'Try again',
+            ar: 'حاول مرة أخرى',
+          ),
+          onAction: () => _invalidateCurrentProjects(query),
+        );
+      },
+      data: (result) {
+        _lastResult = result;
+        return contentFor(result, isRefreshing: false);
+      },
     );
   }
 }
@@ -307,12 +342,15 @@ class _HubContent extends StatelessWidget {
     required this.selectedTag,
     required this.listMode,
     required this.hasActiveFilters,
+    required this.isRefreshing,
+    required this.refreshError,
     required this.onSearchChanged,
     required this.onSearchSubmitted,
     required this.onDifficultySelected,
     required this.onTagSelected,
     required this.onListModeSelected,
     required this.onClearFilters,
+    required this.onRetry,
     required this.onSubmitProject,
     required this.onFocusSearch,
     required this.onCategorySelected,
@@ -329,12 +367,15 @@ class _HubContent extends StatelessWidget {
   final String? selectedTag;
   final _LearningProjectListMode listMode;
   final bool hasActiveFilters;
+  final bool isRefreshing;
+  final Object? refreshError;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onSearchSubmitted;
   final ValueChanged<String?> onDifficultySelected;
   final ValueChanged<String?> onTagSelected;
   final ValueChanged<_LearningProjectListMode> onListModeSelected;
   final VoidCallback onClearFilters;
+  final VoidCallback onRetry;
   final VoidCallback onSubmitProject;
   final VoidCallback onFocusSearch;
   final void Function(int index, String? categoryId) onCategorySelected;
@@ -346,12 +387,16 @@ class _HubContent extends StatelessWidget {
     final isFirstPage = result.page <= 1;
     final canShowFeatured =
         listMode == _LearningProjectListMode.all && isFirstPage;
-    final featuredProject = canShowFeatured && result.items.isNotEmpty
-        ? result.items.first
+    // TODO: Restore "Project of the week" when admins/moderators can select an
+    // explicit spotlight project in the backend. Do not infer it from newest.
+    final featuredProject = canShowFeatured
+        ? _explicitFeaturedProject(result.items)
         : null;
-    final gridProjects = featuredProject != null && result.items.length > 1
-        ? result.items.sublist(1)
-        : result.items;
+    final gridProjects = featuredProject == null
+        ? result.items
+        : result.items
+              .where((project) => project.id != featuredProject.id)
+              .toList(growable: false);
     final pageStart = result.total == 0
         ? 0
         : ((result.page - 1) * result.limit) + 1;
@@ -369,7 +414,7 @@ class _HubContent extends StatelessWidget {
     };
 
     return SingleChildScrollView(
-      padding: appMobileAwareScrollPadding(context, top: AppSpacing.md),
+      padding: appMobileAwareScrollPadding(context, top: AppSpacing.xl),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1400),
@@ -424,6 +469,29 @@ class _HubContent extends StatelessWidget {
                 selectedMode: listMode,
                 onModeSelected: onListModeSelected,
               ),
+              const SizedBox(height: AppSpacing.md),
+              if (isRefreshing)
+                const _HubInlineStatusBanner(
+                  icon: Icons.sync_rounded,
+                  message: LocalizedText(
+                    en: 'Updating results...',
+                    ar: 'جار تحديث النتائج...',
+                  ),
+                  showProgress: true,
+                )
+              else if (refreshError != null)
+                _HubInlineStatusBanner(
+                  icon: Icons.cloud_off_outlined,
+                  message: const LocalizedText(
+                    en: 'Could not refresh results. Showing the previous list.',
+                    ar: 'تعذر تحديث النتائج. يتم عرض القائمة السابقة.',
+                  ),
+                  actionLabel: const LocalizedText(
+                    en: 'Retry',
+                    ar: 'إعادة المحاولة',
+                  ),
+                  onAction: onRetry,
+                ),
               const SizedBox(height: AppSpacing.xl),
               if (result.items.isEmpty)
                 _HubStatePanel(
@@ -612,23 +680,57 @@ class _HubContent extends StatelessWidget {
     List<LearningProject> projects,
     String? selectedTag,
   ) {
+    const visibleTagLimit = 12;
     final tags = <String>{};
-    if (selectedTag != null && selectedTag.trim().isNotEmpty) {
-      tags.add(selectedTag.trim());
+    final selected = _userFacingTag(selectedTag);
+    if (selected != null) {
+      tags.add(selected);
     }
 
     for (final project in projects) {
       for (final tag in project.tags) {
-        final trimmed = tag.trim();
-        if (trimmed.isNotEmpty) {
-          tags.add(trimmed);
+        final visibleTag = _userFacingTag(tag);
+        if (visibleTag != null) {
+          tags.add(visibleTag);
         }
       }
     }
 
-    return tags.toList(
+    final sorted = tags.toList(
       growable: false,
     )..sort((left, right) => left.toLowerCase().compareTo(right.toLowerCase()));
+
+    return sorted.take(visibleTagLimit).toList(growable: false);
+  }
+
+  LearningProject? _explicitFeaturedProject(List<LearningProject> projects) {
+    for (final project in projects) {
+      if (project.isFeatured) {
+        return project;
+      }
+    }
+
+    return null;
+  }
+
+  String? _userFacingTag(String? tag) {
+    final trimmed = tag?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+
+    final normalized = trimmed.toLowerCase();
+    if (normalized == 'mock' ||
+        normalized == 'pagination' ||
+        normalized == 'test') {
+      return null;
+    }
+
+    if (RegExp(r'^project[-_]\d+$').hasMatch(normalized)) {
+      return null;
+    }
+
+    return trimmed;
   }
 
   String _pageSummary(
@@ -759,17 +861,25 @@ class _LearningListModeTabs extends StatelessWidget {
                 avatar: Icon(
                   icon,
                   size: 18,
-                  color: selected ? palette.limeSoft : palette.textSecondary,
+                  color: selected
+                      ? AppColorTokens.emerald
+                      : palette.textSecondary,
                 ),
                 label: Text(label.resolve(context)),
                 onSelected: (_) => onModeSelected(mode),
-                selectedColor: palette.lime.withValues(alpha: 0.18),
+                selectedColor: AppColorTokens.emerald.withValues(alpha: 0.10),
                 backgroundColor: palette.mutedChip,
                 side: BorderSide(
-                  color: selected ? palette.lime : palette.borderSubtle,
+                  color: selected
+                      ? AppColorTokens.emerald
+                      : palette.borderSubtle,
                 ),
                 labelStyle: AppTextStyles.label(context).copyWith(
-                  color: selected ? palette.limeSoft : palette.textSecondary,
+                  color: selected
+                      ? (Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : AppColorTokens.emeraldDeep)
+                      : palette.textSecondary,
                 ),
               );
             })
@@ -796,70 +906,113 @@ class _LearningPaginationControls extends StatelessWidget {
     final canGoBack = page > 1;
     final canGoForward = page < totalPages;
 
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.cardSurface,
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(color: palette.borderSubtle),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 560;
-          final pageLabel = Text(
-            LocalizedText(
-              en: 'Page $page of $totalPages',
-              ar: 'صفحة $page من $totalPages',
-            ).resolve(context),
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.textPrimary),
-            textAlign: TextAlign.center,
-          );
-          final previous = OutlinedButton.icon(
-            onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-            icon: const Icon(Icons.chevron_left_rounded),
-            label: Text(
-              const LocalizedText(
-                en: 'Previous',
-                ar: 'السابق',
+    return Align(
+      alignment: AlignmentDirectional.center,
+      child: Container(
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: palette.hintSurface,
+          borderRadius: AppRadius.lgAll,
+          border: Border.all(color: palette.borderSubtle),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 560;
+            final pageLabel = Text(
+              LocalizedText(
+                en: 'Page $page of $totalPages',
+                ar: 'صفحة $page من $totalPages',
               ).resolve(context),
-            ),
-          );
-          final next = FilledButton.icon(
-            onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-            icon: const Icon(Icons.chevron_right_rounded),
-            label: Text(
-              const LocalizedText(en: 'Next', ar: 'التالي').resolve(context),
-            ),
-          );
-
-          if (compact) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                pageLabel,
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(child: previous),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(child: next),
-                  ],
-                ),
-              ],
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textPrimary),
+              textAlign: TextAlign.center,
             );
-          }
+            final previous = _PaginationButton(
+              label: const LocalizedText(en: 'Previous', ar: 'السابق'),
+              icon: Icons.chevron_left_rounded,
+              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
+            );
+            final next = _PaginationButton(
+              label: const LocalizedText(en: 'Next', ar: 'التالي'),
+              icon: Icons.chevron_right_rounded,
+              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
+            );
 
-          return Row(
-            children: [
-              previous,
-              Expanded(child: pageLabel),
-              next,
-            ],
-          );
-        },
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  pageLabel,
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      Expanded(child: previous),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(child: next),
+                    ],
+                  ),
+                ],
+              );
+            }
+
+            return ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(width: 126, child: previous),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(child: pageLabel),
+                  const SizedBox(width: AppSpacing.md),
+                  SizedBox(width: 126, child: next),
+                ],
+              ),
+            );
+          },
+        ),
       ),
+    );
+  }
+}
+
+class _PaginationButton extends StatelessWidget {
+  const _PaginationButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final LocalizedText label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColorTokens.emerald,
+        disabledForegroundColor: palette.textSecondary.withValues(alpha: 0.58),
+        side: BorderSide(
+          color: onPressed == null
+              ? palette.borderSubtle.withValues(alpha: 0.7)
+              : palette.borderSubtle,
+        ),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        minimumSize: const Size(0, 36),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      icon: Icon(icon, size: 18),
+      label: Text(label.resolve(context)),
     );
   }
 }
@@ -1262,14 +1415,81 @@ class _LearningFilterChip extends StatelessWidget {
       label: Text(label),
       selected: selected,
       onSelected: (_) => onSelected(),
-      selectedColor: palette.lime,
-      checkmarkColor: palette.textPrimary,
+      selectedColor: AppColorTokens.emerald,
+      checkmarkColor: Colors.white,
       labelStyle: AppTextStyles.label(context).copyWith(
-        color: palette.textPrimary,
+        color: selected ? Colors.white : palette.textSecondary,
         fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
       ),
       backgroundColor: palette.cardSurfaceAlt,
-      side: BorderSide(color: selected ? palette.lime : palette.borderSubtle),
+      side: BorderSide(
+        color: selected ? AppColorTokens.emerald : palette.borderSubtle,
+      ),
+    );
+  }
+}
+
+class _HubInlineStatusBanner extends StatelessWidget {
+  const _HubInlineStatusBanner({
+    required this.icon,
+    required this.message,
+    this.showProgress = false,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final LocalizedText message;
+  final bool showProgress;
+  final LocalizedText? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.hintSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.hintBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: AppColorTokens.emerald),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  message.resolve(context),
+                  style: AppTextStyles.label(
+                    context,
+                  ).copyWith(color: palette.textSecondary),
+                ),
+              ),
+              if (actionLabel != null && onAction != null)
+                TextButton(
+                  onPressed: onAction,
+                  child: Text(actionLabel!.resolve(context)),
+                ),
+            ],
+          ),
+          if (showProgress) ...[
+            const SizedBox(height: AppSpacing.sm),
+            ClipRRect(
+              borderRadius: AppRadius.pillAll,
+              child: LinearProgressIndicator(
+                minHeight: 3,
+                color: AppColorTokens.emerald,
+                backgroundColor: palette.borderSubtle,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

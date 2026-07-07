@@ -507,6 +507,7 @@ export const createReservation = async (
     deliveryAddressText: input.deliveryAddressText,
     safeDropoffAllowed: input.safeDropoffAllowed,
     deliveryNote: input.deliveryNote,
+    buildItemId: input.buildItemId,
   });
 
   switch (result.outcome) {
@@ -551,6 +552,20 @@ export const createReservation = async (
         'Delivery is not available for this material.',
         400,
         'VALIDATION_ERROR',
+      );
+    case 'BUILD_ITEM_NOT_FOUND':
+      throw new AppError('Project build item not found', 404, 'NOT_FOUND');
+    case 'BUILD_ITEM_MATERIAL_MISMATCH':
+      throw new AppError(
+        'Reservation material does not match the linked build item material',
+        400,
+        'BUILD_ITEM_MATERIAL_MISMATCH',
+      );
+    case 'ACTIVE_BUILD_ITEM_RESERVATION':
+      throw new AppError(
+        'This build checklist item already has an active linked reservation',
+        409,
+        'ACTIVE_BUILD_ITEM_RESERVATION',
       );
     default:
       throw new AppError('Unable to create reservation.', 500, 'INTERNAL_ERROR');
