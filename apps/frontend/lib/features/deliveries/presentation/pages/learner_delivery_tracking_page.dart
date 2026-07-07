@@ -18,7 +18,7 @@ import '../../data/deliveries_repository.dart';
 import '../../data/models/learner_delivery_tracking.dart';
 import '../delivery_status_presentation.dart';
 
-const _trackingPollInterval = Duration(seconds: 45);
+const _trackingPollInterval = Duration(seconds: 20);
 
 class LearnerDeliveryTrackingPage extends ConsumerStatefulWidget {
   const LearnerDeliveryTrackingPage({super.key, required this.deliveryId});
@@ -34,9 +34,12 @@ class _LearnerDeliveryTrackingPageState
     extends ConsumerState<LearnerDeliveryTrackingPage> {
   Timer? _pollTimer;
   LearnerDeliveryTracking? _tracking;
-  bool _loading = true;
+  bool _initialLoading = true;
+  bool _pollInFlight = false;
+  bool _manualRefreshing = false;
   Object? _error;
-  bool _refreshing = false;
+  String? _backgroundWarning;
+  bool _pollTimerActive = false;
 
   @override
   void initState() {
@@ -49,30 +52,92 @@ class _LearnerDeliveryTrackingPageState
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _pollTimer = null;
     super.dispose();
   }
 
-  void _syncPollTimer(LearnerDeliveryTracking tracking) {
-    _pollTimer?.cancel();
-    _pollTimer = null;
-
-    if (tracking.canTrack && !tracking.isTerminal) {
-      _pollTimer = Timer.periodic(_trackingPollInterval, (_) {
-        unawaited(_fetchTracking());
-      });
+  bool _trackingDataChanged(
+    LearnerDeliveryTracking? previous,
+    LearnerDeliveryTracking next,
+  ) {
+    if (previous == null) {
+      return true;
     }
+
+    if (previous.status != next.status ||
+        previous.canTrack != next.canTrack ||
+        previous.isTerminal != next.isTerminal ||
+        previous.isLocationStale != next.isLocationStale ||
+        previous.trackingMessage != next.trackingMessage) {
+      return true;
+    }
+
+    final prevLocation = previous.latestDriverLocation;
+    final nextLocation = next.latestDriverLocation;
+
+    if (prevLocation == null && nextLocation == null) {
+      return false;
+    }
+
+    if (prevLocation == null || nextLocation == null) {
+      return true;
+    }
+
+    return prevLocation.latitude != nextLocation.latitude ||
+        prevLocation.longitude != nextLocation.longitude ||
+        prevLocation.capturedAt != nextLocation.capturedAt;
   }
 
-  Future<void> _fetchTracking({bool initial = false}) async {
-    if (_refreshing || !mounted) {
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+    _pollTimerActive = false;
+  }
+
+  void _ensurePollTimer(LearnerDeliveryTracking tracking) {
+    final shouldPoll = tracking.canTrack && !tracking.isTerminal;
+
+    if (!shouldPoll) {
+      _stopPolling();
       return;
     }
 
-    _refreshing = true;
+    if (_pollTimerActive) {
+      return;
+    }
+
+    _pollTimer = Timer.periodic(_trackingPollInterval, (_) {
+      unawaited(_fetchTracking(silent: true));
+    });
+    _pollTimerActive = true;
+  }
+
+  Future<void> _fetchTracking({
+    bool initial = false,
+    bool silent = false,
+    bool manual = false,
+  }) async {
+    if (!mounted) {
+      return;
+    }
+
+    if (_pollInFlight) {
+      if (silent) {
+        return;
+      }
+    }
+
+    _pollInFlight = true;
     if (initial) {
       setState(() {
-        _loading = true;
+        _initialLoading = true;
         _error = null;
+        _backgroundWarning = null;
+      });
+    } else if (manual) {
+      setState(() {
+        _manualRefreshing = true;
+        _backgroundWarning = null;
       });
     }
 
@@ -84,25 +149,49 @@ class _LearnerDeliveryTrackingPageState
         return;
       }
 
-      setState(() {
-        _tracking = tracking;
-        _loading = false;
-        _error = null;
-      });
-      _syncPollTimer(tracking);
+      final changed = _trackingDataChanged(_tracking, tracking);
+      if (changed || initial) {
+        setState(() {
+          _tracking = tracking;
+          _initialLoading = false;
+          _error = null;
+          _backgroundWarning = null;
+        });
+      } else if (_initialLoading) {
+        setState(() => _initialLoading = false);
+      } else if (silent) {
+        setState(() => _backgroundWarning = null);
+      }
+
+      if (tracking.isTerminal || !tracking.canTrack) {
+        _stopPolling();
+      } else {
+        _ensurePollTimer(tracking);
+      }
     } catch (error) {
       if (!mounted) {
         return;
       }
 
-      setState(() {
-        _loading = initial;
-        _error = error;
-      });
-      _pollTimer?.cancel();
-      _pollTimer = null;
+      if (initial || _tracking == null) {
+        setState(() {
+          _initialLoading = false;
+          _error = error;
+        });
+        _stopPolling();
+      } else if (silent || manual) {
+        setState(
+          () => _backgroundWarning =
+              'Could not refresh tracking. Showing the last known location.',
+        );
+      }
     } finally {
-      _refreshing = false;
+      if (mounted) {
+        if (manual || !silent) {
+          setState(() => _manualRefreshing = false);
+        }
+      }
+      _pollInFlight = false;
     }
   }
 
@@ -122,11 +211,11 @@ class _LearnerDeliveryTrackingPageState
               homeRoute: '/home',
             ),
             Expanded(
-              child: _loading
+              child: _initialLoading
                   ? const Center(
                       child: _StatePanel(
                         icon: Icons.hourglass_empty_rounded,
-                        title: 'Loading tracking',
+                        title: 'Loading delivery tracking…',
                         subtitle: 'Fetching the latest delivery location.',
                       ),
                     )
@@ -134,7 +223,7 @@ class _LearnerDeliveryTrackingPageState
                   ? Center(
                       child: _StatePanel(
                         icon: Icons.cloud_off_outlined,
-                        title: 'Could not load tracking',
+                        title: 'Could not load tracking.',
                         subtitle: 'Please try again.',
                         actionLabel: 'Retry',
                         onAction: () => unawaited(_fetchTracking(initial: true)),
@@ -154,8 +243,13 @@ class _LearnerDeliveryTrackingPageState
                           constraints: const BoxConstraints(maxWidth: 1040),
                           child: _TrackingContent(
                             tracking: _tracking!,
-                            refreshing: _refreshing,
-                            onRefresh: () => unawaited(_fetchTracking()),
+                            refreshing: _manualRefreshing,
+                            backgroundWarning: _backgroundWarning,
+                            showAutoUpdateHint:
+                                _tracking!.canTrack && !_tracking!.isTerminal,
+                            onRefresh: () => unawaited(
+                              _fetchTracking(manual: true),
+                            ),
                           ),
                         ),
                       ),
@@ -172,11 +266,15 @@ class _TrackingContent extends StatelessWidget {
   const _TrackingContent({
     required this.tracking,
     required this.refreshing,
+    required this.showAutoUpdateHint,
     required this.onRefresh,
+    this.backgroundWarning,
   });
 
   final LearnerDeliveryTracking tracking;
   final bool refreshing;
+  final bool showAutoUpdateHint;
+  final String? backgroundWarning;
   final VoidCallback onRefresh;
 
   @override
@@ -247,11 +345,40 @@ class _TrackingContent extends StatelessWidget {
         else if (location == null)
           _StatePanel(
             icon: Icons.location_searching,
-            title: 'Waiting for driver location',
+            title: 'Waiting for driver location.',
             subtitle:
                 'The driver has picked up your material. Location will appear here once shared.',
           )
         else ...[
+          if (backgroundWarning != null)
+            Container(
+              margin: const EdgeInsetsDirectional.only(bottom: AppSpacing.md),
+              padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppThemeColors.of(context).warningSoft,
+                borderRadius: AppRadius.lgAll,
+                border: Border.all(
+                  color: AppThemeColors.of(context).warningBorder.withValues(
+                    alpha: 0.35,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.cloud_off_outlined,
+                    color: AppThemeColors.of(context).warning,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      backgroundWarning!,
+                      style: AppTextStyles.body(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (tracking.isLocationStale)
             Container(
               margin: const EdgeInsetsDirectional.only(bottom: AppSpacing.md),
@@ -274,7 +401,7 @@ class _TrackingContent extends StatelessWidget {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      'Driver location may be outdated. Last update was more than 90 seconds ago.',
+                      'Driver location has not updated recently.',
                       style: AppTextStyles.body(context),
                     ),
                   ),
@@ -282,9 +409,6 @@ class _TrackingContent extends StatelessWidget {
               ),
             ),
           _TrackingMap(
-            key: ValueKey(
-              '${location.latitude}_${location.longitude}_${location.capturedAt.millisecondsSinceEpoch}',
-            ),
             driverLocation: location,
             dropoffLatitude: tracking.dropoffLatitude,
             dropoffLongitude: tracking.dropoffLongitude,
@@ -292,6 +416,15 @@ class _TrackingContent extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Last updated: ${DateFormat.yMMMd().add_jm().format(location.capturedAt.toLocal())}',
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textMuted),
+          ),
+        ],
+        if (showAutoUpdateHint) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Auto-updates while this page is open.',
             style: AppTextStyles.label(
               context,
             ).copyWith(color: palette.textMuted),
@@ -325,7 +458,6 @@ class _TrackingContent extends StatelessWidget {
 
 class _TrackingMap extends StatefulWidget {
   const _TrackingMap({
-    super.key,
     required this.driverLocation,
     this.dropoffLatitude,
     this.dropoffLongitude,
@@ -341,29 +473,51 @@ class _TrackingMap extends StatefulWidget {
 
 class _TrackingMapState extends State<_TrackingMap> {
   late final MapController _mapController;
-  late LatLng _driverPoint;
+  bool _mapReady = false;
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
-    _driverPoint = LatLng(
-      widget.driverLocation.latitude,
-      widget.driverLocation.longitude,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() => _mapReady = true);
+      }
+    });
   }
 
   @override
   void didUpdateWidget(covariant _TrackingMap oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final oldPoint = LatLng(
+      oldWidget.driverLocation.latitude,
+      oldWidget.driverLocation.longitude,
+    );
     final nextPoint = LatLng(
       widget.driverLocation.latitude,
       widget.driverLocation.longitude,
     );
-    if (nextPoint != _driverPoint) {
-      _driverPoint = nextPoint;
-      _mapController.move(nextPoint, _mapController.camera.zoom);
+
+    if (oldPoint.latitude == nextPoint.latitude &&
+        oldPoint.longitude == nextPoint.longitude) {
+      return;
     }
+
+    if (!_mapReady) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      try {
+        _mapController.move(nextPoint, _mapController.camera.zoom);
+      } catch (_) {
+        // Map may not be ready yet; marker layer still updates.
+      }
+    });
   }
 
   @override
@@ -375,6 +529,10 @@ class _TrackingMapState extends State<_TrackingMap> {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final driverPoint = LatLng(
+      widget.driverLocation.latitude,
+      widget.driverLocation.longitude,
+    );
     final dropoffPoint = widget.dropoffLatitude != null &&
             widget.dropoffLongitude != null
         ? LatLng(widget.dropoffLatitude!, widget.dropoffLongitude!)
@@ -382,7 +540,7 @@ class _TrackingMapState extends State<_TrackingMap> {
 
     final markers = <Marker>[
       Marker(
-        point: _driverPoint,
+        point: driverPoint,
         width: 40,
         height: 40,
         alignment: Alignment.center,
@@ -406,7 +564,7 @@ class _TrackingMapState extends State<_TrackingMap> {
         child: FlutterMap(
           mapController: _mapController,
           options: MapOptions(
-            initialCenter: _driverPoint,
+            initialCenter: driverPoint,
             initialZoom: 13,
             minZoom: 5,
             maxZoom: 18,

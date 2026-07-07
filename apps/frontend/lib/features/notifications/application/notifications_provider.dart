@@ -315,6 +315,9 @@ Future<void> setNotificationReadFilter(
   NotificationReadFilter filter,
 ) async {
   ref.read(notificationReadFilterProvider.notifier).setFilter(filter);
+  if (ref.exists(notificationsListProvider)) {
+    ref.invalidate(notificationsListProvider);
+  }
 }
 
 Future<void> markNotificationRead(WidgetRef ref, String notificationId) async {

@@ -28,7 +28,12 @@ import {
   supplierPickupWindowNotStartedMessage,
   supplierPickupWindowPassedMessage,
 } from '../../utils/handover-timing.js';
-import { syncDriverDeliveryRemindersForUser } from '../notifications/driver-delivery-notifications.js';
+import {
+  clearUnreadNewJobNotificationsForDelivery,
+  notifyDriverDropoffTime,
+  notifyDriverPickupTime,
+  syncDueDriverTimeRemindersForUser,
+} from '../notifications/driver-notification-events.service.js';
 
 import type {
   CreateDeliveryLocationPingInput,
@@ -307,7 +312,8 @@ export const listAvailableDeliveries = async (
   driverUserId: string,
   query: ListAvailableDeliveriesQuery = {},
 ) => {
-  void syncDriverDeliveryRemindersForUser(driverUserId);
+  await syncDueDriverTimeRemindersForUser(driverUserId);
+
   const profile = await findActiveDriverProfile(driverUserId);
   const referencePoint = await resolveDriverReferencePoint(profile.id);
   const activeDeliveryCount = await countActiveAssignedDeliveries(profile.id);
@@ -374,7 +380,8 @@ export const listAvailableDeliveries = async (
   if (effectiveMaxDistanceKm != null && hasDriverCoordinates) {
     filtered = filtered.filter(
       (item) =>
-        item.distanceKm != null && item.distanceKm <= effectiveMaxDistanceKm,
+        item.distanceKm == null ||
+        item.distanceKm <= effectiveMaxDistanceKm,
     );
   }
 
@@ -417,7 +424,8 @@ export const listAvailableDeliveries = async (
 };
 
 export const listActiveDriverDeliveries = async (driverUserId: string) => {
-  void syncDriverDeliveryRemindersForUser(driverUserId);
+  await syncDueDriverTimeRemindersForUser(driverUserId);
+
   const profile = await findActiveDriverProfile(driverUserId);
   const referencePoint = await resolveDriverReferencePoint(profile.id);
   const activeDeliveryCount = await countActiveAssignedDeliveries(profile.id);
@@ -627,7 +635,8 @@ export const acceptDelivery = async (
     return mapAssignedDelivery(delivery);
   });
 
-  void syncDriverDeliveryRemindersForUser(driverUserId);
+  await notifyDriverPickupTime(deliveryId);
+  await clearUnreadNewJobNotificationsForDelivery(deliveryId);
 
   return delivery;
 };
@@ -804,7 +813,9 @@ export const updateDriverDeliveryStatus = async (
 
   switch (result.outcome) {
     case 'UPDATED':
-      void syncDriverDeliveryRemindersForUser(driverUserId);
+      if (input.status === 'PICKED_UP') {
+        await notifyDriverDropoffTime(deliveryId);
+      }
       return mapAssignedDelivery(result.delivery);
     case 'NOT_FOUND':
       throw new AppError('Delivery not found.', 404, 'NOT_FOUND');

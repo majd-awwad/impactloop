@@ -71,7 +71,7 @@ class DriverAvailableJobsFilterNotifier
   void resetToProfileDefaults(DriverDeliveriesListMeta meta) {
     _userModified = false;
     _defaultsSeeded = true;
-    _apply(profileDefaultFilter(meta), userInitiated: false);
+    _apply(openJobsFilter(meta), userInitiated: false);
   }
 
   void setRadiusKm(double? radiusKm) {

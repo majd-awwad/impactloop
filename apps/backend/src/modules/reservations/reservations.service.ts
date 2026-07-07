@@ -1,5 +1,6 @@
 import { AppError } from '../../utils/app-error.js';
 import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
+import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
 import { notifyReservationCancelledByLearner } from '../notifications/reservation-notifications.js';
 import {
   deriveHandoverCode,
@@ -774,6 +775,10 @@ export const resolveLearnerConfirmation = async (
   switch (result.outcome) {
     case 'ACCEPTED':
     case 'CANCELLED': {
+      if (result.outcome === 'ACCEPTED') {
+        await notifyNewJobForReservationWaitingDelivery(reservationId);
+      }
+
       const reservation = await mapLearnerReservationById(
         requesterId,
         reservationId,

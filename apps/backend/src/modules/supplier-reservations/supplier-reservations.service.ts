@@ -63,6 +63,7 @@ import {
   notifyReservationAccepted,
   notifyReservationDeclined,
 } from '../notifications/reservation-notifications.js';
+import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
 import type {
   AcceptSupplierReservationInput,
   CancelSupplierReservationInput,
@@ -611,6 +612,7 @@ export const acceptSupplierReservation = async (
   }
 
   void notifyReservationAccepted(result.reservation.id);
+  await notifyNewJobForReservationWaitingDelivery(result.reservation.id);
 
   return mapSupplierReservation(result.reservation);
 };
@@ -1016,6 +1018,8 @@ export const submitNoDriverPickupWindow = async (
       'INVALID_STATE',
     );
   }
+
+  await notifyNewJobForReservationWaitingDelivery(reservationId);
 
   return mapSupplierReservation(result.reservation);
 };
