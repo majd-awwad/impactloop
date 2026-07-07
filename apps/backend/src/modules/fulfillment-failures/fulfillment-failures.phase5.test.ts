@@ -8,6 +8,7 @@ import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import { HANDOVER_GRACE_MINUTES } from '../../utils/handover-timing.js';
 import { hashPassword } from '../../utils/password.js';
 import { acceptDelivery, updateDriverDeliveryStatus } from '../driver/driver.service.js';
+import type { UpdateDriverDeliveryStatusInput } from '../driver/driver.validation.js';
 import {
   markDriverDeliveryFailed,
   markDriverPickupFailed,
@@ -300,8 +301,8 @@ async function progressDeliveryTo(
       });
     }
 
-    const input: { status: DeliveryStatus; confirmationCode?: string } = {
-      status,
+    const input: UpdateDriverDeliveryStatusInput = {
+      status: status as UpdateDriverDeliveryStatusInput['status'],
     };
 
     if (status === 'PICKED_UP') {
@@ -497,6 +498,7 @@ describe('fulfillment failures phase 5', () => {
       () =>
         markDriverPickupFailed(ctx.driverId, delivery.id, {
           reason: 'SUPPLIER_UNAVAILABLE',
+          note: 'Supplier was not available at pickup.',
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
@@ -513,6 +515,7 @@ describe('fulfillment failures phase 5', () => {
 
     const mapped = await markDriverPickupFailed(ctx.driverId, delivery.id, {
       reason: 'SUPPLIER_UNAVAILABLE',
+      note: 'Supplier was not available at pickup.',
     });
 
     assert.equal(mapped.status, 'FAILED_PICKUP');
@@ -526,6 +529,7 @@ describe('fulfillment failures phase 5', () => {
 
     await markDriverPickupFailed(ctx.driverId, delivery.id, {
       reason: 'MATERIAL_NOT_READY',
+      note: 'Material was not ready for pickup.',
     });
 
     const materialRow = await prisma.material.findUniqueOrThrow({
@@ -541,6 +545,7 @@ describe('fulfillment failures phase 5', () => {
 
     await markDriverPickupFailed(ctx.driverId, delivery.id, {
       reason: 'OTHER',
+      note: 'Pickup could not be completed.',
     });
 
     const updated = await prisma.reservation.findUniqueOrThrow({
@@ -555,7 +560,10 @@ describe('fulfillment failures phase 5', () => {
     await acceptDelivery(ctx.driverId, delivery.id);
 
     await assert.rejects(
-      () => markSupplierDriverNoShow(ctx.supplierId, delivery.id, {}),
+      () =>
+        markSupplierDriverNoShow(ctx.supplierId, delivery.id, {
+          note: 'Driver did not arrive for pickup.',
+        }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.match(error.message, /not expired/i);
@@ -572,7 +580,7 @@ describe('fulfillment failures phase 5', () => {
     const result = await markSupplierDriverNoShow(
       ctx.supplierId,
       delivery.id,
-      {},
+      { note: 'Driver did not arrive for pickup.' },
     );
 
     assert.equal(result.status, 'AWAITING_RESOLUTION');
@@ -591,6 +599,7 @@ describe('fulfillment failures phase 5', () => {
       () =>
         markDriverDeliveryFailed(ctx.driverId, delivery.id, {
           reason: 'LEARNER_UNAVAILABLE',
+          note: 'Learner was unavailable at drop-off.',
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
@@ -607,6 +616,7 @@ describe('fulfillment failures phase 5', () => {
 
     const mapped = await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
       reason: 'LEARNER_UNAVAILABLE',
+      note: 'Learner was unavailable at drop-off.',
     });
 
     assert.equal(mapped.status, 'LEARNER_NO_SHOW');
@@ -623,6 +633,7 @@ describe('fulfillment failures phase 5', () => {
 
     await markDriverDeliveryFailed(ctx.driverId, delivery.id, {
       reason: 'ADDRESS_ISSUE',
+      note: 'Drop-off address could not be reached.',
     });
 
     const materialRow = await prisma.material.findUniqueOrThrow({
@@ -652,8 +663,6 @@ describe('fulfillment failures phase 5', () => {
   });
 
   test('completed reservations cannot be marked failed/no-show', async () => {
-    const start = new Date(Date.now() - 30 * 60_000);
-    const end = new Date(Date.now() + 30 * 60_000);
     const material = await createMaterial(ctx);
     const preferred = futurePreferredWindow();
     const reservation = await createReservation(ctx.learnerId, {
@@ -671,11 +680,7 @@ describe('fulfillment failures phase 5', () => {
 
     await prisma.reservation.update({
       where: { id: reservation.id },
-      data: {
-        pickupWindowStart: start,
-        pickupWindowEnd: end,
-        ...activePickupWindowReservationUpdate(),
-      },
+      data: activePickupWindowReservationUpdate(),
     });
 
     await completeSupplierReservation(ctx.supplierId, reservation.id, {

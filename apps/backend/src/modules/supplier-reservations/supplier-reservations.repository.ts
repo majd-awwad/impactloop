@@ -948,6 +948,7 @@ export const createSupplierNoShowReport = async (input: {
       include: {
         deliveries: {
           select: {
+            id: true,
             assignedDriverProfileId: true,
             assignedDriverProfile: {
               select: { userId: true },
