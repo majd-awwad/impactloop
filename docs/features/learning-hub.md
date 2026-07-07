@@ -16,9 +16,9 @@ Browse educational project ideas (components, steps, links) for inspiration. The
 | Project likes | **Implemented** | List/home/detail surfaces have optimistic learner-only like/unlike controls backed by `POST`/`DELETE /api/learning-projects/:id/like` |
 | Project saves | **Implemented** | List/home/detail surfaces have optimistic learner-only save/unsave controls backed by `POST`/`DELETE /api/learning-projects/:id/save` |
 | Project follows | **Implemented** | List/home/detail surfaces have optimistic learner-only follow/unfollow controls backed by `POST`/`DELETE /api/learning-projects/:id/follow` |
-| Add draft page | **Implemented for learner submit** | `LearningAddDraftPage` is reachable from Learning Hub, can save a local device draft, and posts to `POST /api/learning-projects/submit` with `Idempotency-Key`; submitted projects enter `PENDING_REVIEW` |
+| Add draft page | **Implemented for learner submit** | `LearningAddDraftPage` uses structured component cards (name, quantity, unit, role, optional matching hints) and posts to `POST /api/learning-projects/submit` with `Idempotency-Key`; submitted projects enter `PENDING_REVIEW` |
 | Admin project moderation | **Implemented** | `/admin/learning-projects` lists, filters, reviews, approves/rejects/request-changes, hides/restores, and archives projects |
-| Project build checklist | **Implemented** | Learners can start/continue a persisted manual checklist at `/learning/:id/build`, mark manual statuses, browse deterministic material candidates per item, link/unlink a platform material, reserve linked materials with build-context linking, and see linked reservation progress/readiness |
+| Project build checklist | **Implemented** | Learners can start/continue a persisted manual checklist at `/learning/:id/build`, mark manual statuses, browse ranked deterministic material candidates per item (relevance/convenience/cost, not freshness-first), link/unlink a platform material, reserve linked materials with build-context linking, and see linked reservation progress/readiness |
 | Ratings/reviews | **Implemented** | List/home cards show real `ratingSummary` when reviews exist; detail shows recent reviews and a learner-only review form backed by `PUT`/`DELETE /api/learning-projects/:id/review` |
 | Project links | **Implemented** | Detail links open safe `http`/`https` URLs through `url_launcher`; invalid/missing URLs are disabled |
 | AI material agent | **Not implemented** | No `ai-agent` module |
@@ -51,7 +51,7 @@ Product intent from role planning: the learning hub should support project-to-ma
 | Theme | `presentation/theme/learning_ui_palette.dart`, `learning_project_visuals.dart` |
 | Domain | `domain/models/learning_project.dart`, `domain/models/project_build.dart`, `domain/models/project_build_material_link.dart`, `domain/learning_projects_result.dart` |
 | Pages | `presentation/pages/learning_hub_page.dart`, `learning_project_details_page.dart`, `learning_project_build_page.dart`, `learning_add_draft_page.dart` |
-| Widgets | `learning_project_card.dart`, `featured_project_card.dart`, `learning_hub_hero.dart`, `learning_category_chips.dart`, `project_components_section.dart`, `project_build_actions_panel.dart`, `project_build_material_linking.dart`, `project_steps_timeline.dart`, `project_link_list.dart`, `project_reviews_section.dart`, `project_engagement_strip.dart` |
+| Widgets | `learning_project_card.dart`, `featured_project_card.dart`, `learning_hub_hero.dart`, `learning_category_chips.dart`, `project_components_section.dart`, `learning_project_component_editor.dart`, `project_build_actions_panel.dart`, `project_build_material_linking.dart`, `project_steps_timeline.dart`, `project_link_list.dart`, `project_reviews_section.dart`, `project_engagement_strip.dart` |
 
 ## Backend files
 
@@ -120,5 +120,5 @@ Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. 
 - AI material matching — **not implemented**.
 - Automatic reservation creation from build checklist links — **not implemented**.
 - Related projects API on material detail — **not implemented** (search handoff only).
-- Follow category and in-hub booking from project components — **not implemented**.
+- Admin component enrichment editor before publish — **future slice** (admin detail now shows richer submitted component fields read-only).
 - Project of the week should return later as an explicit admin/moderator-selected spotlight feature; it is not currently selected from newest/latest project ordering.

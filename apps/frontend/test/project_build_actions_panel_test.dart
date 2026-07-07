@@ -198,6 +198,11 @@ class _BuildPanelRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<List<MaterialCategory>> fetchMaterialCategories() {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<ProjectEngagement> likeProject(String id) {
     throw UnimplementedError();
   }

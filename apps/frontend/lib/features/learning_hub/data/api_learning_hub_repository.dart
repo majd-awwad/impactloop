@@ -185,6 +185,11 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<List<MaterialCategory>> fetchMaterialCategories() {
+    return _categoriesApi.fetchMaterialCategories();
+  }
+
+  @override
   Future<ProjectEngagement> likeProject(String id) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>('$_basePath/$id/like'),

@@ -20,6 +20,10 @@ import type {
   SubmitLearningProjectInput,
   UpdateProjectBuildItemInput,
 } from './learning-projects.validation.js';
+import {
+  assertUniqueSubmitComponentNames,
+  normalizeSubmitComponent,
+} from './learning-projects.submit-components.js';
 
 type SubmitLearningProjectResponse = {
   id: string;
@@ -721,6 +725,40 @@ export const submitLearningProjectForReview = async (
     );
   }
 
+  if (input.requiredComponents?.length) {
+    assertUniqueSubmitComponentNames(input.requiredComponents);
+  }
+
+  const normalizedComponents = (input.requiredComponents ?? []).map((component) =>
+    normalizeSubmitComponent(component),
+  );
+  const componentCategoryIds = [
+    ...new Set(
+      normalizedComponents
+        .map((component) => component.categoryId)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+
+  if (componentCategoryIds.length > 0) {
+    const validCategories =
+      await learningProjectsRepository.findMaterialCategoriesForSubmit(
+        componentCategoryIds,
+      );
+    const validCategoryIds = new Set(validCategories.map((entry) => entry.id));
+    const invalidCategoryId = componentCategoryIds.find(
+      (categoryId) => !validCategoryIds.has(categoryId),
+    );
+
+    if (invalidCategoryId) {
+      throw new AppError(
+        'Component material category must be an active MATERIAL or BOTH category.',
+        400,
+        'INVALID_COMPONENT_CATEGORY',
+      );
+    }
+  }
+
   return runIdempotentOperation<SubmitLearningProjectResponse>({
     userId,
     scope: LEARNING_PROJECT_SUBMIT_SCOPE,
@@ -739,7 +777,7 @@ export const submitLearningProjectForReview = async (
           difficulty: input.difficulty,
           estimatedDurationMinutes: input.estimatedDurationMinutes,
           coverImageUrl: input.coverImageUrl,
-          requiredComponents: input.requiredComponents,
+          requiredComponents: normalizedComponents,
           steps: input.steps,
           links: input.links,
           client: tx,

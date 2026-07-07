@@ -13,6 +13,29 @@ import '../widgets/admin_kpi_card.dart' show AdminTypography;
 import '../widgets/admin_monitoring_filters.dart';
 import '../widgets/admin_monitoring_utils.dart';
 
+String _formatAdminComponentRole(String role) {
+  return switch (role) {
+    'TOOL' => 'Tool',
+    'CONSUMABLE' => 'Consumable',
+    _ => 'Material',
+  };
+}
+
+String _formatAdminComponentValue(AdminLearningProjectComponent component) {
+  final parts = <String>[
+    '${component.quantity} ${component.unit}',
+    _formatAdminComponentRole(component.componentRole),
+    component.materialType,
+    if (!component.isRequired) 'optional',
+    if (component.canBeSubstituted) 'alternatives allowed',
+    if (component.searchKeywords.isNotEmpty)
+      'keywords: ${component.searchKeywords.join(', ')}',
+    if (component.notes != null && component.notes!.trim().isNotEmpty)
+      component.notes!.trim(),
+  ];
+  return parts.join(' · ');
+}
+
 class _LearningProjectFilters {
   const _LearningProjectFilters({
     required this.page,
@@ -1199,8 +1222,9 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                                       in detail.requiredComponents)
                                     AdminDetailRow(
                                       label: component.name,
-                                      value:
-                                          '${component.quantity} ${component.unit}${component.isRequired ? '' : ' (optional)'}${component.notes != null ? ' · ${component.notes}' : ''}',
+                                      value: _formatAdminComponentValue(
+                                        component,
+                                      ),
                                     ),
                                 ],
                         ),

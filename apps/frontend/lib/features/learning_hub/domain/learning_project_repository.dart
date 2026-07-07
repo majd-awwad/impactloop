@@ -45,6 +45,8 @@ abstract class LearningProjectRepository {
 
   Future<List<MaterialCategory>> fetchProjectCategories();
 
+  Future<List<MaterialCategory>> fetchMaterialCategories();
+
   Future<ProjectEngagement> likeProject(String id);
 
   Future<ProjectEngagement> unlikeProject(String id);

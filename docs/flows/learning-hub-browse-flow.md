@@ -112,7 +112,7 @@ The build page fetches `GET /api/learning-projects/:id/builds/me`. If no build e
 
 `PATCH /api/learning-projects/:id/builds/me/items/:itemId` — learner-only manual status/note update; returns the refreshed build checklist.
 
-`GET /api/learning-projects/:id/builds/me/items/:itemId/material-candidates` — learner-only deterministic available-material suggestions (max 10).
+`GET /api/learning-projects/:id/builds/me/items/:itemId/material-candidates` — learner-only deterministic available-material suggestions (max 10), ranked by match quality/convenience/cost rather than listing freshness alone; includes `matchHints[]`.
 
 `POST /api/learning-projects/:id/builds/me/items/:itemId/link-material` — learner-only link a platform material to the checklist item; body `{ materialId }`.
 

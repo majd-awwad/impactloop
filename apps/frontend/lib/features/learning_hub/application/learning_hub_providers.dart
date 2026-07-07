@@ -24,6 +24,11 @@ final projectCategoriesProvider =
       return ref.watch(learningHubRepositoryProvider).fetchProjectCategories();
     });
 
+final materialCategoriesProvider =
+    FutureProvider.autoDispose<List<MaterialCategory>>((ref) {
+      return ref.watch(learningHubRepositoryProvider).fetchMaterialCategories();
+    });
+
 final learningProjectsProvider = FutureProvider.autoDispose
     .family<LearningProjectsResult, LearningProjectsQuery>((ref, query) async {
       return ref.watch(learningHubRepositoryProvider).fetchProjects(query);

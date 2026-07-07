@@ -103,6 +103,11 @@ const mapDetail = (project: repository.AdminLearningProjectDetailRecord) => ({
     unit: component.unit,
     componentRole: component.componentRole,
     isRequired: component.isRequired,
+    canBeSubstituted: component.canBeSubstituted,
+    categoryId: component.categoryId,
+    searchKeywords: Array.isArray(component.searchKeywords)
+      ? (component.searchKeywords as string[])
+      : [],
     notes: component.notes,
   })),
   steps: project.steps.map((step) => ({

@@ -218,6 +218,9 @@ class AdminLearningProjectComponent {
     required this.unit,
     required this.componentRole,
     required this.isRequired,
+    this.canBeSubstituted = false,
+    this.categoryId,
+    this.searchKeywords = const [],
     this.notes,
   });
 
@@ -228,9 +231,13 @@ class AdminLearningProjectComponent {
   final String unit;
   final String componentRole;
   final bool isRequired;
+  final bool canBeSubstituted;
+  final String? categoryId;
+  final List<String> searchKeywords;
   final String? notes;
 
   factory AdminLearningProjectComponent.fromJson(Map<String, dynamic> json) {
+    final keywords = json['searchKeywords'];
     return AdminLearningProjectComponent(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
@@ -239,6 +246,11 @@ class AdminLearningProjectComponent {
       unit: json['unit'] as String? ?? '',
       componentRole: json['componentRole'] as String? ?? '',
       isRequired: json['isRequired'] as bool? ?? true,
+      canBeSubstituted: json['canBeSubstituted'] as bool? ?? false,
+      categoryId: json['categoryId'] as String?,
+      searchKeywords: keywords is List
+          ? keywords.whereType<String>().toList(growable: false)
+          : const [],
       notes: json['notes'] as String?,
     );
   }

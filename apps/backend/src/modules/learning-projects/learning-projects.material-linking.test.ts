@@ -132,6 +132,11 @@ async function createMaterial(input: {
   locationId: string;
   title: string;
   status?: 'AVAILABLE' | 'UNAVAILABLE' | 'REUSED';
+  isFree?: boolean;
+  price?: number | null;
+  materialType?: string;
+  condition?: 'NEW' | 'LIKE_NEW' | 'GOOD' | 'USED' | 'NEEDS_REPAIR';
+  createdAt?: Date;
 }) {
   const supplierProfile = await prisma.supplierProfile.findUnique({
     where: { userId: input.ownerId },
@@ -145,17 +150,33 @@ async function createMaterial(input: {
       locationId: input.locationId,
       title: input.title,
       description: `${TEST_MARKER} material description`,
-      materialType: 'Arduino board',
+      materialType: input.materialType ?? 'Arduino board',
       quantity: 1,
       unit: 'piece',
-      condition: 'GOOD',
+      condition: input.condition ?? 'GOOD',
       sourceType: 'WORKSHOP_SURPLUS',
       status: input.status ?? 'AVAILABLE',
-      isFree: true,
+      isFree: input.isFree ?? true,
+      price: input.isFree === false ? input.price ?? 25 : input.price ?? null,
+      createdAt: input.createdAt,
     },
   });
   ids.materials.push(material.id);
   return material;
+}
+
+async function createLearnerSavedLocation(input: {
+  learnerId: string;
+  locationId: string;
+}) {
+  await prisma.userSavedLocation.create({
+    data: {
+      userId: input.learnerId,
+      locationId: input.locationId,
+      label: 'Home',
+      isDefault: true,
+    },
+  });
 }
 
 async function createPublishedProject(input: {
@@ -163,6 +184,7 @@ async function createPublishedProject(input: {
   projectCategoryId: string;
   materialCategoryId: string;
   componentName: string;
+  componentRole?: 'REQUIRED_MATERIAL' | 'TOOL';
 }) {
   const project = await prisma.learningProject.create({
     data: {
@@ -180,7 +202,7 @@ async function createPublishedProject(input: {
             materialType: 'Arduino board',
             quantity: 1,
             unit: 'piece',
-            componentRole: 'REQUIRED_MATERIAL',
+            componentRole: input.componentRole ?? 'REQUIRED_MATERIAL',
             categoryId: input.materialCategoryId,
             searchKeywords: ['arduino', 'microcontroller'],
           },
@@ -227,6 +249,9 @@ after(async () => {
   }
 
   if (ids.users.length > 0) {
+    await prisma.userSavedLocation.deleteMany({
+      where: { userId: { in: ids.users } },
+    });
     await prisma.user.deleteMany({ where: { id: { in: ids.users } } });
   }
 });
@@ -465,6 +490,186 @@ describe('learning project build material linking', () => {
         assert.equal(error.code, 'ACTIVE_LINKED_RESERVATION');
         return true;
       },
+    );
+  });
+
+  test('ranks free same-city exact match above newer paid exact match', async () => {
+    const learner = await createLearnerUser('rank-free');
+    const supplier = await createSupplierUser('rank-free');
+    const materialCategory = await createMaterialCategory();
+    const projectCategory = await createProjectCategory();
+    const location = await createLocation();
+    await createLearnerSavedLocation({
+      learnerId: learner.id,
+      locationId: location.id,
+    });
+
+    const freeMaterial = await createMaterial({
+      ownerId: supplier.id,
+      categoryId: materialCategory.id,
+      locationId: location.id,
+      title: `${TEST_MARKER} Arduino Uno board`,
+      isFree: true,
+      createdAt: new Date('2025-01-01T00:00:00.000Z'),
+    });
+    const paidMaterial = await createMaterial({
+      ownerId: supplier.id,
+      categoryId: materialCategory.id,
+      locationId: location.id,
+      title: `${TEST_MARKER} Arduino Uno board`,
+      isFree: false,
+      price: 40,
+      createdAt: new Date('2026-07-01T00:00:00.000Z'),
+    });
+
+    const project = await createPublishedProject({
+      authorId: learner.id,
+      projectCategoryId: projectCategory.id,
+      materialCategoryId: materialCategory.id,
+      componentName: 'Arduino Uno board',
+    });
+
+    const build = await startProjectBuildById(project.id, learner.id);
+    ids.builds.push(build.id);
+    const itemId = build.items[0]!.id;
+
+    const candidates = await getBuildItemMaterialCandidatesById(
+      project.id,
+      learner.id,
+      itemId,
+    );
+
+    assert.ok(candidates.items.length >= 2);
+    assert.equal(candidates.items[0]!.id, freeMaterial.id);
+    assert.ok(candidates.items.some((item) => item.id === paidMaterial.id));
+    assert.ok(candidates.items[0]!.matchHints.includes('Free'));
+    assert.ok(candidates.items[0]!.matchHints.includes('Same city'));
+  });
+
+  test('ranks exact paid match above weak free mismatch', async () => {
+    const learner = await createLearnerUser('rank-paid');
+    const supplier = await createSupplierUser('rank-paid');
+    const materialCategory = await createMaterialCategory();
+    const projectCategory = await createProjectCategory();
+    const location = await createLocation();
+    await createLearnerSavedLocation({
+      learnerId: learner.id,
+      locationId: location.id,
+    });
+
+    const exactPaid = await createMaterial({
+      ownerId: supplier.id,
+      categoryId: materialCategory.id,
+      locationId: location.id,
+      title: `${TEST_MARKER} Arduino Uno board`,
+      isFree: false,
+      price: 35,
+    });
+    const weakFree = await createMaterial({
+      ownerId: supplier.id,
+      categoryId: materialCategory.id,
+      locationId: location.id,
+      title: `${TEST_MARKER} plastic storage box`,
+      materialType: 'Container',
+      isFree: true,
+    });
+
+    const project = await createPublishedProject({
+      authorId: learner.id,
+      projectCategoryId: projectCategory.id,
+      materialCategoryId: materialCategory.id,
+      componentName: 'Arduino Uno board',
+    });
+
+    const build = await startProjectBuildById(project.id, learner.id);
+    ids.builds.push(build.id);
+    const itemId = build.items[0]!.id;
+
+    const candidates = await getBuildItemMaterialCandidatesById(
+      project.id,
+      learner.id,
+      itemId,
+    );
+
+    assert.equal(candidates.items[0]!.id, exactPaid.id);
+    assert.ok(candidates.items.some((item) => item.id === weakFree.id));
+  });
+
+  test('TOOL components return empty candidates', async () => {
+    const learner = await createLearnerUser('tool');
+    const materialCategory = await createMaterialCategory();
+    const projectCategory = await createProjectCategory();
+    const project = await createPublishedProject({
+      authorId: learner.id,
+      projectCategoryId: projectCategory.id,
+      materialCategoryId: materialCategory.id,
+      componentName: 'Soldering iron',
+      componentRole: 'TOOL',
+    });
+
+    const build = await startProjectBuildById(project.id, learner.id);
+    ids.builds.push(build.id);
+    const itemId = build.items[0]!.id;
+
+    const candidates = await getBuildItemMaterialCandidatesById(
+      project.id,
+      learner.id,
+      itemId,
+    );
+
+    assert.equal(candidates.items.length, 0);
+  });
+
+  test('excludes own listings and unavailable materials from candidates', async () => {
+    const learner = await createLearnerUser('exclude');
+    const supplier = await createSupplierUser('exclude');
+    const materialCategory = await createMaterialCategory();
+    const projectCategory = await createProjectCategory();
+    const location = await createLocation();
+
+    const available = await createMaterial({
+      ownerId: supplier.id,
+      categoryId: materialCategory.id,
+      locationId: location.id,
+      title: `${TEST_MARKER} Arduino Uno board available`,
+    });
+    const ownListing = await createMaterial({
+      ownerId: learner.id,
+      categoryId: materialCategory.id,
+      locationId: location.id,
+      title: `${TEST_MARKER} Arduino Uno board own`,
+    });
+    const unavailable = await createMaterial({
+      ownerId: supplier.id,
+      categoryId: materialCategory.id,
+      locationId: location.id,
+      title: `${TEST_MARKER} Arduino Uno board unavailable`,
+      status: 'UNAVAILABLE',
+    });
+
+    const project = await createPublishedProject({
+      authorId: supplier.id,
+      projectCategoryId: projectCategory.id,
+      materialCategoryId: materialCategory.id,
+      componentName: 'Arduino Uno board',
+    });
+
+    const build = await startProjectBuildById(project.id, learner.id);
+    ids.builds.push(build.id);
+    const itemId = build.items[0]!.id;
+
+    const candidates = await getBuildItemMaterialCandidatesById(
+      project.id,
+      learner.id,
+      itemId,
+    );
+
+    assert.ok(candidates.items.length >= 1);
+    assert.equal(candidates.items[0]!.id, available.id);
+    assert.ok(
+      candidates.items.every(
+        (item) => item.id !== ownListing.id && item.id !== unavailable.id,
+      ),
     );
   });
 });

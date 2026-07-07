@@ -10,6 +10,10 @@ import {
   setBuildItemLinkedReservationId,
   validateBuildItemForReservationLink,
 } from './learning-projects.build-reservation-linking.js';
+import {
+  mapNormalizedComponentToCreateData,
+  type NormalizedSubmitComponent,
+} from './learning-projects.submit-components.js';
 
 const clientOrPrisma = (client?: Prisma.TransactionClient) => client ?? prisma;
 
@@ -569,7 +573,9 @@ export const findLearnerBuildItem = async (input: {
           categoryId: true,
           componentName: true,
           materialType: true,
+          componentRole: true,
           searchKeywords: true,
+          alternativeKeywords: true,
         },
       },
       linkedReservation: {
@@ -1105,13 +1111,7 @@ export const createLearningProjectForReview = async (input: {
   difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
   estimatedDurationMinutes?: number;
   coverImageUrl?: string | null;
-  requiredComponents?: {
-    name: string;
-    quantity?: number;
-    unit?: string;
-    notes?: string;
-    isRequired?: boolean;
-  }[];
+  requiredComponents?: NormalizedSubmitComponent[];
   steps?: { title: string; description: string }[];
   links?: { url: string; title?: string }[];
   client?: Prisma.TransactionClient;
@@ -1133,15 +1133,9 @@ export const createLearningProjectForReview = async (input: {
       submittedAt: now,
       requiredComponents: input.requiredComponents?.length
         ? {
-            create: input.requiredComponents.map((component) => ({
-              componentName: component.name,
-              materialType: 'General',
-              quantity: component.quantity ?? 1,
-              unit: component.unit ?? 'piece',
-              componentRole: 'REQUIRED_MATERIAL',
-              isRequired: component.isRequired ?? true,
-              notes: component.notes,
-            })),
+            create: input.requiredComponents.map((component) =>
+              mapNormalizedComponentToCreateData(component),
+            ),
           }
         : undefined,
       steps: input.steps?.length
@@ -1181,3 +1175,18 @@ export const findProjectCategoryForSubmit = async (categoryId: string) =>
     },
     select: { id: true },
   });
+
+export const findMaterialCategoriesForSubmit = async (categoryIds: string[]) => {
+  if (categoryIds.length === 0) {
+    return [] as { id: string }[];
+  }
+
+  return prisma.category.findMany({
+    where: {
+      id: { in: categoryIds },
+      isActive: true,
+      categoryType: { in: ['MATERIAL', 'BOTH'] },
+    },
+    select: { id: true },
+  });
+};

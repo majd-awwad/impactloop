@@ -4,9 +4,17 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { ACTIVE_HOLD_STATUSES } from '../reservations/reservations.quantity.js';
 
+import {
+  buildCandidateMatchHints,
+  rankBuildMaterialCandidates,
+  type BuildCandidateComponentInput,
+  type BuildCandidateLearnerContext,
+  type BuildCandidateMaterialInput,
+} from './learning-projects.build-candidate-ranking.js';
 import * as learningProjectsRepository from './learning-projects.repository.js';
 
 const CANDIDATE_LIMIT = 10;
+const CANDIDATE_POOL_LIMIT = 60;
 
 const LINKABLE_MATERIAL_STATUSES = ['AVAILABLE'] as const;
 
@@ -290,6 +298,7 @@ const buildCandidateSearchTerms = (component: {
   componentName: string;
   materialType: string;
   searchKeywords: Prisma.JsonValue | null;
+  alternativeKeywords?: Prisma.JsonValue | null;
 }) => {
   const terms = new Set<string>();
   const name = component.componentName.trim();
@@ -301,8 +310,17 @@ const buildCandidateSearchTerms = (component: {
     terms.add(keyword);
   }
 
+  for (const keyword of parseSearchKeywords(component.alternativeKeywords)) {
+    terms.add(keyword);
+  }
+
   const materialType = component.materialType.trim();
-  if (materialType.length > 0 && materialType.toLowerCase() !== 'general') {
+  const normalizedType = materialType.toLowerCase();
+  if (
+    materialType.length > 0 &&
+    normalizedType !== 'general' &&
+    normalizedType !== 'unspecified'
+  ) {
     terms.add(materialType);
   }
 
@@ -313,93 +331,44 @@ const buildCandidateSearchTerm = (component: {
   componentName: string;
   materialType: string;
   searchKeywords: Prisma.JsonValue | null;
+  alternativeKeywords?: Prisma.JsonValue | null;
 }) => buildCandidateSearchTerms(component).join(' ');
 
-const computeMatchHints = (input: {
-  material: {
-    categoryId: string;
-    title: string;
-    materialType: string;
-    description: string;
-  };
-  component: {
-    categoryId: string | null;
-    componentName: string;
-    materialType: string;
-    searchKeywords: Prisma.JsonValue | null;
-  };
-  searchTerm: string;
-}) => {
-  const hints = new Set<string>();
-  const normalizedSearch = input.searchTerm.toLowerCase();
-  const normalizedName = input.component.componentName.toLowerCase();
+const candidateMaterialSelect = {
+  id: true,
+  title: true,
+  description: true,
+  materialType: true,
+  condition: true,
+  status: true,
+  isFree: true,
+  price: true,
+  currency: true,
+  pickupAllowed: true,
+  deliveryAllowed: true,
+  ownerId: true,
+  createdAt: true,
+  category: linkedMaterialSelect.category,
+  location: linkedMaterialSelect.location,
+  images: linkedMaterialSelect.images,
+  supplierProfile: linkedMaterialSelect.supplierProfile,
+  owner: linkedMaterialSelect.owner,
+  tags: {
+    select: {
+      tag: true,
+    },
+  },
+} satisfies Prisma.MaterialSelect;
 
-  if (
-    input.component.categoryId &&
-    input.material.categoryId === input.component.categoryId
-  ) {
-    hints.add('Category match');
-  }
+type CandidateMaterialRecord = Prisma.MaterialGetPayload<{
+  select: typeof candidateMaterialSelect;
+}>;
 
-  if (
-    normalizedName.length > 0 &&
-    input.material.title.toLowerCase().includes(normalizedName)
-  ) {
-    hints.add('Name match');
-  } else if (
-    normalizedSearch.length > 0 &&
-    (input.material.title.toLowerCase().includes(normalizedSearch) ||
-      input.material.description.toLowerCase().includes(normalizedSearch))
-  ) {
-    hints.add('Name match');
-  }
-
-  const keywords = parseSearchKeywords(input.component.searchKeywords);
-  if (
-    keywords.some((keyword) =>
-      `${input.material.title} ${input.material.description} ${input.material.materialType}`
-        .toLowerCase()
-        .includes(keyword.toLowerCase()),
-    )
-  ) {
-    hints.add('Keyword match');
-  }
-
-  const componentType = input.component.materialType.trim().toLowerCase();
-  const materialType = input.material.materialType.trim().toLowerCase();
-  if (
-    componentType.length > 0 &&
-    componentType !== 'general' &&
-    (materialType.includes(componentType) || componentType.includes(materialType))
-  ) {
-    hints.add('Material type match');
-  }
-
-  if (hints.size === 0) {
-    hints.add('Possible option');
-  }
-
-  return [...hints];
-};
-
-export const getBuildItemMaterialCandidates = async (input: {
-  projectId: string;
+const buildEligibleCandidateWhere = (input: {
   learnerId: string;
-  itemId: string;
-}) => {
-  const buildItem = await learningProjectsRepository.findLearnerBuildItem({
-    projectId: input.projectId,
-    learnerId: input.learnerId,
-    itemId: input.itemId,
-  });
-
-  if (!buildItem) {
-    throw new AppError('Project build item not found', 404, 'NOT_FOUND');
-  }
-
-  const component = buildItem.requiredComponent;
-  const searchTerms = buildCandidateSearchTerms(component);
-  const searchTerm = buildCandidateSearchTerm(component);
+  categoryId: string | null;
+  searchTerms: string[];
+}): Prisma.MaterialWhereInput => {
   const where: Prisma.MaterialWhereInput = {
     status: { in: [...LINKABLE_MATERIAL_STATUSES] },
     ownerId: { not: input.learnerId },
@@ -411,10 +380,10 @@ export const getBuildItemMaterialCandidates = async (input: {
     },
   };
 
-  if (component.categoryId) {
-    where.categoryId = component.categoryId;
-  } else if (searchTerms.length > 0) {
-    where.OR = searchTerms.flatMap((term) => [
+  if (input.categoryId) {
+    where.categoryId = input.categoryId;
+  } else if (input.searchTerms.length > 0) {
+    where.OR = input.searchTerms.flatMap((term) => [
       {
         title: {
           contains: term,
@@ -446,179 +415,262 @@ export const getBuildItemMaterialCandidates = async (input: {
     ]);
   }
 
-  const materials = await prisma.material.findMany({
-    where,
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      materialType: true,
-      condition: true,
-      status: true,
-      isFree: true,
-      price: true,
-      currency: true,
-      pickupAllowed: true,
-      deliveryAllowed: true,
-      ownerId: true,
-      category: linkedMaterialSelect.category,
-      location: linkedMaterialSelect.location,
-      images: linkedMaterialSelect.images,
-      supplierProfile: linkedMaterialSelect.supplierProfile,
-      owner: linkedMaterialSelect.owner,
-    },
-    orderBy: [{ createdAt: 'desc' }],
-    take: CANDIDATE_LIMIT,
-  });
+  return where;
+};
 
-  if (materials.length === 0 && searchTerms.length > 0) {
-    const textFallbackMaterials = await prisma.material.findMany({
-      where: {
-        status: { in: [...LINKABLE_MATERIAL_STATUSES] },
-        ownerId: { not: input.learnerId },
-        category: {
-          isActive: true,
-          categoryType: {
-            in: ['MATERIAL', 'BOTH'],
+const buildTextFallbackCandidateWhere = (input: {
+  learnerId: string;
+  searchTerms: string[];
+}): Prisma.MaterialWhereInput => ({
+  status: { in: [...LINKABLE_MATERIAL_STATUSES] },
+  ownerId: { not: input.learnerId },
+  category: {
+    isActive: true,
+    categoryType: {
+      in: ['MATERIAL', 'BOTH'],
+    },
+  },
+  OR: input.searchTerms.flatMap((term) => [
+    {
+      title: {
+        contains: term,
+        mode: 'insensitive' as const,
+      },
+    },
+    {
+      description: {
+        contains: term,
+        mode: 'insensitive' as const,
+      },
+    },
+    {
+      materialType: {
+        contains: term,
+        mode: 'insensitive' as const,
+      },
+    },
+    {
+      tags: {
+        some: {
+          tag: {
+            contains: term,
+            mode: 'insensitive' as const,
           },
         },
-        OR: searchTerms.flatMap((term) => [
-          {
-            title: {
-              contains: term,
-              mode: 'insensitive' as const,
-            },
-          },
-          {
-            description: {
-              contains: term,
-              mode: 'insensitive' as const,
-            },
-          },
-          {
-            materialType: {
-              contains: term,
-              mode: 'insensitive' as const,
-            },
-          },
-        ]),
       },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        materialType: true,
-        condition: true,
-        status: true,
-        isFree: true,
-        price: true,
-        currency: true,
-        pickupAllowed: true,
-        deliveryAllowed: true,
-        ownerId: true,
-        category: linkedMaterialSelect.category,
-        location: linkedMaterialSelect.location,
-        images: linkedMaterialSelect.images,
-        supplierProfile: linkedMaterialSelect.supplierProfile,
-        owner: linkedMaterialSelect.owner,
-      },
-      orderBy: [{ createdAt: 'desc' }],
-      take: CANDIDATE_LIMIT,
-    });
+    },
+  ]),
+});
 
+const loadLearnerCandidateContext = async (
+  learnerId: string,
+): Promise<BuildCandidateLearnerContext> => {
+  const savedLocation = await prisma.userSavedLocation.findFirst({
+    where: { userId: learnerId },
+    orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }],
+    select: {
+      location: {
+        select: {
+          city: true,
+          area: true,
+        },
+      },
+    },
+  });
+
+  return {
+    city: savedLocation?.location.city ?? null,
+    area: savedLocation?.location.area ?? null,
+  };
+};
+
+const loadOwnerCompletedHandoverCounts = async (ownerIds: string[]) => {
+  if (ownerIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await prisma.reservation.groupBy({
+    by: ['ownerId'],
+    where: {
+      ownerId: { in: ownerIds },
+      status: 'COMPLETED',
+    },
+    _count: {
+      id: true,
+    },
+  });
+
+  return new Map(rows.map((row) => [row.ownerId, row._count.id]));
+};
+
+const toRankingMaterialInput = (
+  material: CandidateMaterialRecord,
+  ownerCompletedHandovers: number,
+): BuildCandidateMaterialInput => ({
+  id: material.id,
+  title: material.title,
+  description: material.description,
+  materialType: material.materialType,
+  condition: material.condition,
+  isFree: material.isFree,
+  price: decimalToNumber(material.price),
+  pickupAllowed: material.pickupAllowed,
+  deliveryAllowed: material.deliveryAllowed,
+  createdAt: material.createdAt,
+  categoryId: material.category.id,
+  city: material.location.city,
+  area: material.location.area,
+  tags: material.tags.map((entry) => entry.tag),
+  supplierVerified: resolvePublicSupplierVerified(
+    material.supplierProfile?.verificationStatus,
+  ),
+  ownerCompletedHandovers,
+});
+
+const toRankingComponentInput = (
+  component: {
+    categoryId: string | null;
+    componentName: string;
+    materialType: string;
+    searchKeywords: Prisma.JsonValue | null;
+    alternativeKeywords?: Prisma.JsonValue | null;
+  },
+  searchTerms: string[],
+): BuildCandidateComponentInput => ({
+  categoryId: component.categoryId,
+  componentName: component.componentName,
+  materialType: component.materialType,
+  searchKeywords: parseSearchKeywords(component.searchKeywords),
+  alternativeKeywords: parseSearchKeywords(component.alternativeKeywords),
+  searchTerms,
+});
+
+const mapRankedCandidateItems = (input: {
+  materials: CandidateMaterialRecord[];
+  component: {
+    categoryId: string | null;
+    componentName: string;
+    materialType: string;
+    searchKeywords: Prisma.JsonValue | null;
+    alternativeKeywords?: Prisma.JsonValue | null;
+  };
+  searchTerms: string[];
+  learner: BuildCandidateLearnerContext;
+  ownerCompletedHandoversByOwnerId: Map<string, number>;
+}) => {
+  const rankingComponent = toRankingComponentInput(
+    input.component,
+    input.searchTerms,
+  );
+  const rankingMaterials = input.materials.map((material) =>
+    toRankingMaterialInput(
+      material,
+      input.ownerCompletedHandoversByOwnerId.get(material.ownerId) ?? 0,
+    ),
+  );
+  const ranked = rankBuildMaterialCandidates(
+    rankingMaterials,
+    rankingComponent,
+    input.learner,
+    CANDIDATE_LIMIT,
+  );
+
+  const materialById = new Map(input.materials.map((material) => [material.id, material]));
+
+  return ranked.map(({ material, score }) => {
+    const record = materialById.get(material.id)!;
+
+    return {
+      ...mapLinkedMaterialSummary(record)!,
+      matchHints: buildCandidateMatchHints({
+        material,
+        component: rankingComponent,
+        learner: input.learner,
+        score,
+      }),
+    };
+  });
+};
+
+const fetchCandidateMaterials = async (where: Prisma.MaterialWhereInput) =>
+  prisma.material.findMany({
+    where,
+    select: candidateMaterialSelect,
+    take: CANDIDATE_POOL_LIMIT,
+  });
+
+export const getBuildItemMaterialCandidates = async (input: {
+  projectId: string;
+  learnerId: string;
+  itemId: string;
+}) => {
+  const buildItem = await learningProjectsRepository.findLearnerBuildItem({
+    projectId: input.projectId,
+    learnerId: input.learnerId,
+    itemId: input.itemId,
+  });
+
+  if (!buildItem) {
+    throw new AppError('Project build item not found', 404, 'NOT_FOUND');
+  }
+
+  const component = buildItem.requiredComponent;
+
+  if (component.componentRole === 'TOOL') {
     return {
       itemId: buildItem.id,
       componentId: component.id,
-      searchTerm,
-      items: textFallbackMaterials.map((material) => ({
-        ...mapLinkedMaterialSummary(material)!,
-        matchHints: computeMatchHints({
-          material: {
-            categoryId: material.category.id,
-            title: material.title,
-            materialType: material.materialType,
-            description: material.description,
-          },
-          component,
-          searchTerm,
-        }),
-      })),
+      searchTerm: component.componentName.trim(),
+      items: [],
     };
+  }
+
+  const searchTerms = buildCandidateSearchTerms(component);
+  const searchTerm = buildCandidateSearchTerm(component);
+  const learner = await loadLearnerCandidateContext(input.learnerId);
+
+  let materials = await fetchCandidateMaterials(
+    buildEligibleCandidateWhere({
+      learnerId: input.learnerId,
+      categoryId: component.categoryId,
+      searchTerms,
+    }),
+  );
+
+  if (materials.length === 0 && searchTerms.length > 0) {
+    materials = await fetchCandidateMaterials(
+      buildTextFallbackCandidateWhere({
+        learnerId: input.learnerId,
+        searchTerms,
+      }),
+    );
   }
 
   if (materials.length === 0 && component.categoryId) {
-    const fallbackMaterials = await prisma.material.findMany({
-      where: {
-        status: { in: [...LINKABLE_MATERIAL_STATUSES] },
-        ownerId: { not: input.learnerId },
+    materials = await fetchCandidateMaterials(
+      buildEligibleCandidateWhere({
+        learnerId: input.learnerId,
         categoryId: component.categoryId,
-        category: {
-          isActive: true,
-          categoryType: {
-            in: ['MATERIAL', 'BOTH'],
-          },
-        },
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        materialType: true,
-        condition: true,
-        status: true,
-        isFree: true,
-        price: true,
-        currency: true,
-        pickupAllowed: true,
-        deliveryAllowed: true,
-        ownerId: true,
-        category: linkedMaterialSelect.category,
-        location: linkedMaterialSelect.location,
-        images: linkedMaterialSelect.images,
-        supplierProfile: linkedMaterialSelect.supplierProfile,
-        owner: linkedMaterialSelect.owner,
-      },
-      orderBy: [{ createdAt: 'desc' }],
-      take: CANDIDATE_LIMIT,
-    });
-
-    return {
-      itemId: buildItem.id,
-      componentId: component.id,
-      searchTerm,
-      items: fallbackMaterials.map((material) => ({
-        ...mapLinkedMaterialSummary(material)!,
-        matchHints: computeMatchHints({
-          material: {
-            categoryId: material.category.id,
-            title: material.title,
-            materialType: material.materialType,
-            description: material.description,
-          },
-          component,
-          searchTerm,
-        }),
-      })),
-    };
+        searchTerms: [],
+      }),
+    );
   }
+
+  const ownerCompletedHandoversByOwnerId = await loadOwnerCompletedHandoverCounts(
+    [...new Set(materials.map((material) => material.ownerId))],
+  );
 
   return {
     itemId: buildItem.id,
     componentId: component.id,
     searchTerm,
-    items: materials.map((material) => ({
-      ...mapLinkedMaterialSummary(material)!,
-      matchHints: computeMatchHints({
-        material: {
-          categoryId: material.category.id,
-          title: material.title,
-          materialType: material.materialType,
-          description: material.description,
-        },
-        component,
-        searchTerm,
-      }),
-    })),
+    items: mapRankedCandidateItems({
+      materials,
+      component,
+      searchTerms,
+      learner,
+      ownerCompletedHandoversByOwnerId,
+    }),
   };
 };
 

@@ -163,6 +163,11 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<List<MaterialCategory>> fetchMaterialCategories() async {
+    return const [];
+  }
+
+  @override
   Future<void> submitProjectForReview({
     required String idempotencyKey,
     required String title,
