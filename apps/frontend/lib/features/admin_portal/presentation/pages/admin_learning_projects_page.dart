@@ -10,31 +10,9 @@ import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart' show AdminTypography;
+import '../widgets/admin_learning_project_component_editor_dialog.dart';
 import '../widgets/admin_monitoring_filters.dart';
 import '../widgets/admin_monitoring_utils.dart';
-
-String _formatAdminComponentRole(String role) {
-  return switch (role) {
-    'TOOL' => 'Tool',
-    'CONSUMABLE' => 'Consumable',
-    _ => 'Material',
-  };
-}
-
-String _formatAdminComponentValue(AdminLearningProjectComponent component) {
-  final parts = <String>[
-    '${component.quantity} ${component.unit}',
-    _formatAdminComponentRole(component.componentRole),
-    component.materialType,
-    if (!component.isRequired) 'optional',
-    if (component.canBeSubstituted) 'alternatives allowed',
-    if (component.searchKeywords.isNotEmpty)
-      'keywords: ${component.searchKeywords.join(', ')}',
-    if (component.notes != null && component.notes!.trim().isNotEmpty)
-      component.notes!.trim(),
-  ];
-  return parts.join(' · ');
-}
 
 class _LearningProjectFilters {
   const _LearningProjectFilters({
@@ -991,30 +969,114 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
     return result;
   }
 
+  Future<void> _editComponent(
+    AdminLearningProjectDetail detail,
+    AdminLearningProjectComponent component,
+  ) async {
+    final updated = await AdminLearningProjectComponentEditorDialog.show(
+      context,
+      projectId: detail.id,
+      component: component,
+    );
+    if (!mounted || updated == null) return;
+    setState(() => _detailFuture = Future.value(updated));
+  }
+
   Future<void> _runAction(String action, AdminLearningProjectDetail detail) async {
     final api = ref.read(adminLearningProjectsApiProvider);
     try {
       switch (action) {
         case 'approve':
-          final confirmed = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Approve project'),
-              content: Text('Publish "${detail.title}" to the Learning Hub?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
+          if (adminApproveBlockedByComponentQuality(detail.componentQuality)) {
+            final hardMessages = detail.componentQuality.hardIssues
+                .map((issue) => issue.message)
+                .join('\n');
+            await showDialog<void>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Cannot approve project'),
+                content: Text(
+                  hardMessages.isEmpty
+                      ? 'Resolve component quality issues before approving.'
+                      : hardMessages,
                 ),
-                FilledButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Approve'),
+                actions: [
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+
+          if (adminApproveNeedsSoftWarningConfirmation(detail.componentQuality)) {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Component quality warnings'),
+                content: Text(
+                  'This project has component quality warnings. Approve anyway?\n\n'
+                  '${detail.componentQuality.softWarnings.map((issue) => '• ${issue.message}').join('\n')}',
                 ),
-              ],
-            ),
-          );
-          if (confirmed != true || !mounted) return;
-          await api.approveProject(detail.id);
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Approve anyway'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed != true || !mounted) return;
+          } else {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Approve project'),
+                content: Text('Publish "${detail.title}" to the Learning Hub?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Approve'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed != true || !mounted) return;
+          }
+
+          try {
+            await api.approveProject(detail.id);
+          } on ApiException catch (error) {
+            if (!mounted) return;
+            if (error.code == 'COMPONENT_QUALITY_HARD_ISSUES') {
+              await showDialog<void>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Cannot approve project'),
+                  content: Text(error.message),
+                  actions: [
+                    FilledButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+              return;
+            }
+            rethrow;
+          }
+          break;
         case 'request-changes':
           final reason = await _promptReason('Request changes');
           if (reason == null || !mounted) return;
@@ -1218,12 +1280,68 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                                   ),
                                 ]
                               : [
+                                  if (detail
+                                      .componentQuality
+                                      .hardIssues
+                                      .isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: buildAdminComponentQualityChips(
+                                        detail.componentQuality.hardIssues,
+                                      ),
+                                    ),
+                                  if (detail
+                                      .componentQuality
+                                      .softWarnings
+                                      .isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: buildAdminComponentQualityChips(
+                                        detail.componentQuality.softWarnings,
+                                      ),
+                                    ),
                                   for (final component
                                       in detail.requiredComponents)
-                                    AdminDetailRow(
-                                      label: component.name,
-                                      value: _formatAdminComponentValue(
-                                        component,
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 12),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Expanded(
+                                                child: AdminDetailRow(
+                                                  label: component.name,
+                                                  value:
+                                                      formatAdminComponentSummary(
+                                                    component,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (detail
+                                                  .allowedActions
+                                                  .canEditComponents)
+                                                TextButton.icon(
+                                                  onPressed: () => _editComponent(
+                                                    detail,
+                                                    component,
+                                                  ),
+                                                  icon: const Icon(
+                                                    Icons.edit_outlined,
+                                                    size: 18,
+                                                  ),
+                                                  label: const Text('Edit'),
+                                                ),
+                                            ],
+                                          ),
+                                          buildAdminComponentQualityChips([
+                                            ...component.quality.hardIssues,
+                                            ...component.quality.softWarnings,
+                                          ]),
+                                        ],
                                       ),
                                     ),
                                 ],

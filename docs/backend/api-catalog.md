@@ -321,6 +321,13 @@ Saved locations are private to the authenticated user. Response rows include `la
 | PATCH | `/api/admin/learning-projects/:id/hide` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | PATCH | `/api/admin/learning-projects/:id/restore` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | PATCH | `/api/admin/learning-projects/:id/archive` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+| PATCH | `/api/admin/learning-projects/:id/components/:componentId` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
+
+**Admin learning project detail:** `GET .../:id` includes `componentQuality` (project-level hard/soft warnings) and per-component `quality` warnings. `canEditComponents` is true only when status is `PENDING_REVIEW` or `CHANGES_REQUESTED`.
+
+**Admin component enrichment PATCH:** Partial body may include `componentName`, `quantity`, `unit`, `componentRole`, `categoryId`, `materialType`, `searchKeywords`, `alternativeKeywords`, `canBeSubstituted`, `isRequired`, `notes`, `reviewStatus`. Rejected when project is `PUBLISHED`, `HIDDEN`, `ARCHIVED`, or `REJECTED`. Validates active `MATERIAL`/`BOTH` categories, keyword limits, and case-insensitive duplicate names within the project. On success sets `confirmedByUser=true`, defaults `reviewStatus` to `ACCEPTED`, logs `LEARNING_PROJECT_COMPONENT_ENRICHED`.
+
+**Admin approve:** `PATCH .../approve` blocks on hard component quality issues (`COMPONENT_QUALITY_HARD_ISSUES`); soft warnings are returned in detail for frontend confirmation but do not block approve.
 | GET | `/api/admin/invitations` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | GET | `/api/admin/invitations/:id` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |
 | POST | `/api/admin/invitations` | Bearer JWT | `ADMIN` | `admin/admin.routes.ts` |

@@ -7,14 +7,101 @@ import {
   logAdminActivity,
 } from '../admin/admin-activity-log.js';
 
+import {
+  assertEditableProjectStatus,
+  assertUniqueComponentName,
+  buildComponentUpdateData,
+} from './admin-learning-projects.component-enrichment.js';
+import {
+  assessComponentQuality,
+  COMPONENT_EDITABLE_STATUSES,
+  type ComponentQualityIssue,
+} from './admin-learning-projects.component-quality.js';
 import * as repository from './admin-learning-projects.repository.js';
 import type {
   AdminLearningProjectsListQuery,
   ModerationReasonInput,
+  UpdateAdminLearningProjectComponentInput,
 } from './admin-learning-projects.validation.js';
 
 const decimalToNumber = (value: { toNumber(): number } | number): number =>
   typeof value === 'number' ? value : value.toNumber();
+
+const parseKeywordJson = (value: Prisma.JsonValue | null | undefined) => {
+  if (!Array.isArray(value)) {
+    return [] as string[];
+  }
+
+  return value.filter((entry): entry is string => typeof entry === 'string');
+};
+
+const toQualityInputs = (
+  components: repository.AdminLearningProjectDetailRecord['requiredComponents'],
+) =>
+  components.map((component) => ({
+    id: component.id,
+    componentName: component.componentName,
+    quantity: decimalToNumber(component.quantity),
+    componentRole: component.componentRole,
+    categoryId: component.categoryId,
+    categoryType: component.category?.categoryType ?? null,
+    categoryActive: component.category?.isActive ?? null,
+    materialType: component.materialType,
+    searchKeywords: parseKeywordJson(component.searchKeywords),
+  }));
+
+const buildComponentQualityReport = (
+  project: repository.AdminLearningProjectDetailRecord,
+) => {
+  const assessment = assessComponentQuality(toQualityInputs(project.requiredComponents));
+
+  return {
+    hardIssues: assessment.hardIssues,
+    softWarnings: assessment.softWarnings,
+    canApprove: assessment.hardIssues.length === 0,
+    byComponentId: assessment.byComponentId,
+  };
+};
+
+const mapComponentQualityIssues = (
+  componentId: string,
+  report: ReturnType<typeof buildComponentQualityReport>,
+): {
+  hardIssues: ComponentQualityIssue[];
+  softWarnings: ComponentQualityIssue[];
+} => ({
+  hardIssues: report.byComponentId[componentId]?.hardIssues ?? [],
+  softWarnings: report.byComponentId[componentId]?.softWarnings ?? [],
+});
+
+const mapComponent = (
+  component: repository.AdminLearningProjectDetailRecord['requiredComponents'][number],
+  report: ReturnType<typeof buildComponentQualityReport>,
+) => ({
+  id: component.id,
+  name: component.componentName,
+  materialType: component.materialType,
+  quantity: decimalToNumber(component.quantity),
+  unit: component.unit,
+  componentRole: component.componentRole,
+  isRequired: component.isRequired,
+  canBeSubstituted: component.canBeSubstituted,
+  categoryId: component.categoryId,
+  category: component.category
+    ? {
+        id: component.category.id,
+        nameEn: component.category.nameEn,
+        nameAr: component.category.nameAr,
+      }
+    : null,
+  searchKeywords: parseKeywordJson(component.searchKeywords),
+  alternativeKeywords: parseKeywordJson(component.alternativeKeywords),
+  notes: component.notes,
+  providedByUser: component.providedByUser,
+  confirmedByUser: component.confirmedByUser,
+  reviewStatus: component.reviewStatus,
+  quality: mapComponentQualityIssues(component.id, report),
+});
 
 const resolvePrimaryRole = (
   roles: { role: string; isPrimary: boolean }[],
@@ -63,7 +150,10 @@ const mapListItem = (project: repository.AdminLearningProjectListRecord) => ({
   reviewedAt: project.reviewedAt?.toISOString() ?? null,
 });
 
-const mapDetail = (project: repository.AdminLearningProjectDetailRecord) => ({
+const mapDetail = (project: repository.AdminLearningProjectDetailRecord) => {
+  const componentQuality = buildComponentQualityReport(project);
+
+  return {
   id: project.id,
   title: project.title,
   shortDescription: project.shortDescription,
@@ -95,21 +185,9 @@ const mapDetail = (project: repository.AdminLearningProjectDetailRecord) => ({
     imageUrl: image.imageUrl,
     sortOrder: image.sortOrder,
   })),
-  requiredComponents: project.requiredComponents.map((component) => ({
-    id: component.id,
-    name: component.componentName,
-    materialType: component.materialType,
-    quantity: decimalToNumber(component.quantity),
-    unit: component.unit,
-    componentRole: component.componentRole,
-    isRequired: component.isRequired,
-    canBeSubstituted: component.canBeSubstituted,
-    categoryId: component.categoryId,
-    searchKeywords: Array.isArray(component.searchKeywords)
-      ? (component.searchKeywords as string[])
-      : [],
-    notes: component.notes,
-  })),
+  requiredComponents: project.requiredComponents.map((component) =>
+    mapComponent(component, componentQuality),
+  ),
   steps: project.steps.map((step) => ({
     id: step.id,
     stepNumber: step.stepNumber,
@@ -125,8 +203,17 @@ const mapDetail = (project: repository.AdminLearningProjectDetailRecord) => ({
     sourceName: link.sourceName,
   })),
   tags: project.tags.map((tag) => tag.tag),
-  allowedActions: getAllowedActions(project.status),
-});
+  componentQuality: {
+    hardIssues: componentQuality.hardIssues,
+    softWarnings: componentQuality.softWarnings,
+    canApprove: componentQuality.canApprove,
+  },
+  allowedActions: {
+    ...getAllowedActions(project.status),
+    canEditComponents: COMPONENT_EDITABLE_STATUSES.has(project.status),
+  },
+};
+};
 
 const connectReviewer = (userId: string): Prisma.LearningProjectUpdateInput => ({
   reviewedByUser: { connect: { id: userId } },
@@ -266,6 +353,19 @@ export const approveAdminLearningProject = async (
 ) => {
   const project = await loadProjectOrThrow(id);
   assertTransition(project.status, APPROVE_FROM, 'approve');
+
+  const quality = buildComponentQualityReport(project);
+  if (!quality.canApprove) {
+    throw new AppError(
+      'Project cannot be approved until component quality issues are resolved.',
+      400,
+      'COMPONENT_QUALITY_HARD_ISSUES',
+      {
+        hardIssues: quality.hardIssues,
+        softWarnings: quality.softWarnings,
+      },
+    );
+  }
 
   const now = new Date();
   const updated = await repository.updateLearningProjectModeration(id, {
@@ -452,4 +552,57 @@ export const archiveAdminLearningProject = async (
   );
 
   return mapDetail(updated);
+};
+
+export const updateAdminLearningProjectComponent = async (
+  actorUserId: string,
+  projectId: string,
+  componentId: string,
+  input: UpdateAdminLearningProjectComponentInput,
+) => {
+  const project = await loadProjectOrThrow(projectId);
+  assertEditableProjectStatus(project.status);
+
+  const component = project.requiredComponents.find((item) => item.id === componentId);
+  if (!component) {
+    throw new AppError('Project component not found.', 404, 'NOT_FOUND');
+  }
+
+  if (input.componentName !== undefined) {
+    assertUniqueComponentName(
+      project.requiredComponents,
+      componentId,
+      input.componentName,
+    );
+  }
+
+  const updateData = await buildComponentUpdateData(input, {
+    componentName: component.componentName,
+    materialType: component.materialType,
+    reviewStatus: component.reviewStatus,
+  });
+
+  const updatedComponent = await repository.updateAdminLearningProjectComponent({
+    projectId,
+    componentId,
+    data: updateData,
+  });
+
+  if (!updatedComponent) {
+    throw new AppError('Project component not found.', 404, 'NOT_FOUND');
+  }
+
+  const refreshed = await loadProjectOrThrow(projectId);
+
+  await logModeration(
+    actorUserId,
+    ADMIN_ACTIVITY_ACTIONS.LEARNING_PROJECT_COMPONENT_ENRICHED,
+    refreshed,
+    {
+      componentId,
+      changedFields: Object.keys(input),
+    },
+  );
+
+  return mapDetail(refreshed);
 };

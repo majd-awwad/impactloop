@@ -17,7 +17,7 @@ Browse educational project ideas (components, steps, links) for inspiration. The
 | Project saves | **Implemented** | List/home/detail surfaces have optimistic learner-only save/unsave controls backed by `POST`/`DELETE /api/learning-projects/:id/save` |
 | Project follows | **Implemented** | List/home/detail surfaces have optimistic learner-only follow/unfollow controls backed by `POST`/`DELETE /api/learning-projects/:id/follow` |
 | Add draft page | **Implemented for learner submit** | `LearningAddDraftPage` uses structured component cards (name, quantity, unit, role, optional matching hints) and posts to `POST /api/learning-projects/submit` with `Idempotency-Key`; submitted projects enter `PENDING_REVIEW` |
-| Admin project moderation | **Implemented** | `/admin/learning-projects` lists, filters, reviews, approves/rejects/request-changes, hides/restores, and archives projects |
+| Admin project moderation | **Implemented** | `/admin/learning-projects` lists, filters, reviews, approves/rejects/request-changes, hides/restores, and archives projects; admins can enrich component quality on `PENDING_REVIEW` / `CHANGES_REQUESTED` projects before publish |
 | Project build checklist | **Implemented** | Learners can start/continue a persisted manual checklist at `/learning/:id/build`, mark manual statuses, browse ranked deterministic material candidates per item (relevance/convenience/cost, not freshness-first), link/unlink a platform material, reserve linked materials with build-context linking, and see linked reservation progress/readiness |
 | Ratings/reviews | **Implemented** | List/home cards show real `ratingSummary` when reviews exist; detail shows recent reviews and a learner-only review form backed by `PUT`/`DELETE /api/learning-projects/:id/review` |
 | Project links | **Implemented** | Detail links open safe `http`/`https` URLs through `url_launcher`; invalid/missing URLs are disabled |
@@ -120,5 +120,5 @@ Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. 
 - AI material matching — **not implemented**.
 - Automatic reservation creation from build checklist links — **not implemented**.
 - Related projects API on material detail — **not implemented** (search handoff only).
-- Admin component enrichment editor before publish — **future slice** (admin detail now shows richer submitted component fields read-only).
+- Admin component enrichment before publish — **Implemented (v1)** — admin detail returns `componentQuality` warnings; `PATCH /api/admin/learning-projects/:id/components/:componentId` edits a single component while project is `PENDING_REVIEW` or `CHANGES_REQUESTED`; hard issues block approve; soft warnings require confirmation
 - Project of the week should return later as an explicit admin/moderator-selected spotlight feature; it is not currently selected from newest/latest project ordering.

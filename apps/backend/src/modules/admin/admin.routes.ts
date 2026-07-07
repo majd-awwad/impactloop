@@ -116,11 +116,14 @@ import {
   rejectAdminLearningProjectHandler,
   requestChangesAdminLearningProjectHandler,
   restoreAdminLearningProjectHandler,
+  updateAdminLearningProjectComponentHandler,
 } from '../admin-learning-projects/admin-learning-projects.controller.js';
 import {
+  adminLearningProjectComponentParamsSchema,
   adminLearningProjectIdParamSchema,
   adminLearningProjectsListQuerySchema,
   moderationReasonSchema,
+  updateAdminLearningProjectComponentSchema,
 } from '../admin-learning-projects/admin-learning-projects.validation.js';
 import {
   getAdminNoShowReportHandler,
@@ -535,6 +538,15 @@ adminRouter.patch(
   validate(adminLearningProjectIdParamSchema, 'params'),
   validate(moderationReasonSchema),
   asyncHandler(archiveAdminLearningProjectHandler),
+);
+
+adminRouter.patch(
+  '/learning-projects/:id/components/:componentId',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectComponentParamsSchema, 'params'),
+  validate(updateAdminLearningProjectComponentSchema),
+  asyncHandler(updateAdminLearningProjectComponentHandler),
 );
 
 adminRouter.get(

@@ -156,6 +156,7 @@ class AdminLearningProjectAllowedActions {
     required this.canHide,
     required this.canRestore,
     required this.canArchive,
+    this.canEditComponents = false,
   });
 
   final bool canApprove;
@@ -164,6 +165,7 @@ class AdminLearningProjectAllowedActions {
   final bool canHide;
   final bool canRestore;
   final bool canArchive;
+  final bool canEditComponents;
 
   factory AdminLearningProjectAllowedActions.fromJson(
     Map<String, dynamic>? json,
@@ -185,9 +187,120 @@ class AdminLearningProjectAllowedActions {
       canHide: json['canHide'] as bool? ?? false,
       canRestore: json['canRestore'] as bool? ?? false,
       canArchive: json['canArchive'] as bool? ?? false,
+      canEditComponents: json['canEditComponents'] as bool? ?? false,
     );
   }
 }
+
+class AdminComponentQualityIssue {
+  const AdminComponentQualityIssue({
+    required this.code,
+    required this.message,
+    required this.severity,
+    this.componentId,
+  });
+
+  final String code;
+  final String message;
+  final String severity;
+  final String? componentId;
+
+  bool get isHard => severity == 'hard';
+
+  factory AdminComponentQualityIssue.fromJson(Map<String, dynamic> json) {
+    return AdminComponentQualityIssue(
+      code: json['code'] as String? ?? '',
+      message: json['message'] as String? ?? '',
+      severity: json['severity'] as String? ?? 'soft',
+      componentId: json['componentId'] as String?,
+    );
+  }
+}
+
+class AdminComponentItemQuality {
+  const AdminComponentItemQuality({
+    this.hardIssues = const [],
+    this.softWarnings = const [],
+  });
+
+  final List<AdminComponentQualityIssue> hardIssues;
+  final List<AdminComponentQualityIssue> softWarnings;
+
+  factory AdminComponentItemQuality.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const AdminComponentItemQuality();
+    }
+
+    return AdminComponentItemQuality(
+      hardIssues: (json['hardIssues'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map(
+            (item) => AdminComponentQualityIssue.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList(),
+      softWarnings: (json['softWarnings'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map(
+            (item) => AdminComponentQualityIssue.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class AdminLearningProjectComponentQuality {
+  const AdminLearningProjectComponentQuality({
+    this.hardIssues = const [],
+    this.softWarnings = const [],
+    this.canApprove = true,
+  });
+
+  final List<AdminComponentQualityIssue> hardIssues;
+  final List<AdminComponentQualityIssue> softWarnings;
+  final bool canApprove;
+
+  factory AdminLearningProjectComponentQuality.fromJson(
+    Map<String, dynamic>? json,
+  ) {
+    if (json == null) {
+      return const AdminLearningProjectComponentQuality();
+    }
+
+    return AdminLearningProjectComponentQuality(
+      hardIssues: (json['hardIssues'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map(
+            (item) => AdminComponentQualityIssue.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList(),
+      softWarnings: (json['softWarnings'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map(
+            (item) => AdminComponentQualityIssue.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList(),
+      canApprove: json['canApprove'] as bool? ?? true,
+    );
+  }
+}
+
+bool adminApproveBlockedByComponentQuality(
+  AdminLearningProjectComponentQuality quality,
+) =>
+    !quality.canApprove;
+
+bool adminApproveNeedsSoftWarningConfirmation(
+  AdminLearningProjectComponentQuality quality,
+) =>
+    quality.canApprove && quality.softWarnings.isNotEmpty;
 
 class AdminLearningProjectImage {
   const AdminLearningProjectImage({
@@ -220,8 +333,14 @@ class AdminLearningProjectComponent {
     required this.isRequired,
     this.canBeSubstituted = false,
     this.categoryId,
+    this.category,
     this.searchKeywords = const [],
+    this.alternativeKeywords = const [],
     this.notes,
+    this.providedByUser = false,
+    this.confirmedByUser = false,
+    this.reviewStatus = 'PENDING_REVIEW',
+    this.quality = const AdminComponentItemQuality(),
   });
 
   final String id;
@@ -233,11 +352,18 @@ class AdminLearningProjectComponent {
   final bool isRequired;
   final bool canBeSubstituted;
   final String? categoryId;
+  final AdminLearningProjectCategory? category;
   final List<String> searchKeywords;
+  final List<String> alternativeKeywords;
   final String? notes;
+  final bool providedByUser;
+  final bool confirmedByUser;
+  final String reviewStatus;
+  final AdminComponentItemQuality quality;
 
   factory AdminLearningProjectComponent.fromJson(Map<String, dynamic> json) {
     final keywords = json['searchKeywords'];
+    final alternativeKeywords = json['alternativeKeywords'];
     return AdminLearningProjectComponent(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
@@ -248,10 +374,24 @@ class AdminLearningProjectComponent {
       isRequired: json['isRequired'] as bool? ?? true,
       canBeSubstituted: json['canBeSubstituted'] as bool? ?? false,
       categoryId: json['categoryId'] as String?,
+      category: json['category'] is Map
+          ? AdminLearningProjectCategory.fromJson(
+              Map<String, dynamic>.from(json['category'] as Map),
+            )
+          : null,
       searchKeywords: keywords is List
           ? keywords.whereType<String>().toList(growable: false)
           : const [],
+      alternativeKeywords: alternativeKeywords is List
+          ? alternativeKeywords.whereType<String>().toList(growable: false)
+          : const [],
       notes: json['notes'] as String?,
+      providedByUser: json['providedByUser'] as bool? ?? false,
+      confirmedByUser: json['confirmedByUser'] as bool? ?? false,
+      reviewStatus: json['reviewStatus'] as String? ?? 'PENDING_REVIEW',
+      quality: AdminComponentItemQuality.fromJson(
+        json['quality'] as Map<String, dynamic>?,
+      ),
     );
   }
 }
@@ -338,6 +478,7 @@ class AdminLearningProjectDetail {
     required this.links,
     required this.tags,
     required this.allowedActions,
+    this.componentQuality = const AdminLearningProjectComponentQuality(),
   });
 
   final String id;
@@ -368,6 +509,7 @@ class AdminLearningProjectDetail {
   final List<AdminLearningProjectLink> links;
   final List<String> tags;
   final AdminLearningProjectAllowedActions allowedActions;
+  final AdminLearningProjectComponentQuality componentQuality;
 
   factory AdminLearningProjectDetail.fromJson(Map<String, dynamic> json) {
     return AdminLearningProjectDetail(
@@ -438,6 +580,9 @@ class AdminLearningProjectDetail {
           .toList(),
       allowedActions: AdminLearningProjectAllowedActions.fromJson(
         json['allowedActions'] as Map<String, dynamic>?,
+      ),
+      componentQuality: AdminLearningProjectComponentQuality.fromJson(
+        json['componentQuality'] as Map<String, dynamic>?,
       ),
     );
   }
