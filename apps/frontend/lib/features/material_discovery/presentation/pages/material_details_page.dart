@@ -32,11 +32,15 @@ import '../../../reservations/data/models/create_reservation_request.dart';
 import '../../../reservations/data/models/learner_reservation.dart';
 import '../../../reservations/data/models/reservation_preferred_window.dart';
 import '../../../reservations/presentation/learner_reservation_ui_helpers.dart';
+import '../../../reservations/data/models/reservation_quote.dart';
+import '../../../reservations/data/reservations_repository.dart';
 import '../../../reservations/presentation/reservation_create_error_message.dart';
+import '../../../reservations/presentation/widgets/reservation_price_breakdown.dart';
 import '../../application/material_discovery_providers.dart';
 import '../../domain/discovery_material.dart';
 import '../../domain/material_discovery_query.dart';
 import '../../domain/material_discovery_repository.dart';
+import '../material_reserve_eligibility.dart';
 import '../material_discovery_content.dart';
 import '../widgets/material_details_gallery.dart';
 import '../discovery_material_display.dart';
@@ -149,6 +153,18 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+
+    ref.listen(authControllerProvider, (previous, next) {
+      final previousUserId = previous?.user?.id;
+      final nextUserId = next.user?.id;
+      if (previous?.status != next.status || previousUserId != nextUserId) {
+        setState(() {
+          _materialOverride = null;
+          _materialFuture =
+              _activeRepository.getMaterialById(widget.materialId);
+        });
+      }
+    });
 
     return FutureBuilder<DiscoveryMaterial?>(
       future: _materialFuture,
@@ -397,10 +413,7 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
     final reserveState = ref.watch(reservationCreateControllerProvider);
     final shouldLoadReservationDetails =
         authState.status == AuthStatus.authenticated &&
-        authState.user?.hasRole('LEARNER') == true &&
-        (showReservationStatusCta ||
-            material.reserveBlockReason == 'OPEN_RESERVATION_EXISTS' ||
-            material.canReserve == false);
+        authState.user?.hasRole('LEARNER') == true;
     final myReservationsState = shouldLoadReservationDetails
         ? ref.watch(myReservationsProvider)
         : null;
@@ -416,12 +429,11 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
           _deliveryForReservation(deliveries, learnerReservation!.id),
       orElse: () => null,
     );
-    final reservationUi = _ReservationUiState.from(
+    final reservationUi = MaterialReserveEligibility.resolve(
       material: material,
       authState: authState,
       isSubmitting: reserveState.isLoading,
-      isLoadingReservation:
-          myReservationsState?.isLoading == true && material.canReserve == null,
+      isLoadingReservation: false,
       showReservationStatusCta: showReservationStatusCta,
       learnerReservation: learnerReservation,
     );
@@ -429,7 +441,6 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
     final isWide = screenWidth >= 980;
     final showMobileStickyCta =
         !isWide &&
-        !reservationUi.isLoadingReservation &&
         learnerReservation == null &&
         !showReservationStatusCta;
 
@@ -569,117 +580,6 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ReservationUiState {
-  const _ReservationUiState({
-    required this.isAvailable,
-    required this.isAuthenticatedLearner,
-    required this.isAuthenticatedNonLearner,
-    required this.canTapReserve,
-    required this.isSubmitting,
-    required this.isLoadingReservation,
-    required this.showReservationStatusCta,
-    required this.learnerReservation,
-    required this.helperText,
-    required this.buttonLabel,
-  });
-
-  final bool isAvailable;
-  final bool isAuthenticatedLearner;
-  final bool isAuthenticatedNonLearner;
-  final bool canTapReserve;
-  final bool isSubmitting;
-  final bool isLoadingReservation;
-  final bool showReservationStatusCta;
-  final LearnerReservation? learnerReservation;
-  final LocalizedText helperText;
-  final LocalizedText buttonLabel;
-
-  factory _ReservationUiState.from({
-    required DiscoveryMaterial material,
-    required AuthState authState,
-    required bool isSubmitting,
-    required bool isLoadingReservation,
-    required bool showReservationStatusCta,
-    required LearnerReservation? learnerReservation,
-  }) {
-    final isAvailable =
-        material.availableQuantity > 0 &&
-        material.status != 'REUSED' &&
-        material.status != 'UNAVAILABLE';
-    final isAuthenticatedLearner =
-        authState.status == AuthStatus.authenticated &&
-        authState.user?.hasRole('LEARNER') == true;
-    final isAuthenticatedNonLearner =
-        authState.status == AuthStatus.authenticated &&
-        authState.user?.hasRole('LEARNER') != true;
-    final isOwnMaterial = material.isOwnMaterial == true;
-    final backendBlocksReserve =
-        authState.status == AuthStatus.authenticated &&
-        material.canReserve == false;
-    final canTapReserve =
-        isAvailable &&
-        learnerReservation == null &&
-        !isAuthenticatedNonLearner &&
-        !isSubmitting &&
-        !isOwnMaterial &&
-        !backendBlocksReserve;
-
-    final helperText = !isAvailable
-        ? const LocalizedText(
-            en: 'This material is no longer available.',
-            ar: 'هذه المادة لم تعد متاحة.',
-          )
-        : isOwnMaterial
-        ? const LocalizedText(
-            en: 'This is your listing. You cannot reserve your own material.',
-            ar: 'هذه مادتك. لا يمكنك حجز مادتك الخاصة.',
-          )
-        : material.reserveBlockReason == 'OPEN_RESERVATION_EXISTS'
-        ? const LocalizedText(
-            en: 'You already have an open reservation for this material.',
-            ar: 'لديك بالفعل حجزاً مفتوحاً لهذه المادة.',
-          )
-        : isAuthenticatedNonLearner
-        ? const LocalizedText(
-            en: 'Use a learner account to reserve materials.',
-            ar: 'استخدم حساب متعلم لحجز المواد.',
-          )
-        : authState.status == AuthStatus.unauthenticated
-        ? const LocalizedText(
-            en: 'Sign in as a learner to request this material.',
-            ar: 'سجل الدخول كمتعلم لطلب هذه المادة.',
-          )
-        : const LocalizedText(
-            en: 'Request this material from the supplier.',
-            ar: 'اطلب هذه المادة من المورد.',
-          );
-
-    final buttonLabel = isSubmitting
-        ? const LocalizedText(en: 'Requesting...', ar: 'جارٍ الطلب...')
-        : isOwnMaterial
-        ? const LocalizedText(en: 'Your listing', ar: 'مادتك')
-        : !isAvailable
-        ? const LocalizedText(en: 'Not available', ar: 'غير متاح')
-        : isAuthenticatedLearner ||
-              authState.status == AuthStatus.unauthenticated
-        ? const LocalizedText(en: 'Reserve Material', ar: 'احجز المادة')
-        : const LocalizedText(en: 'Sign in to Reserve', ar: 'سجل الدخول للحجز');
-
-    return _ReservationUiState(
-      isAvailable: isAvailable,
-      isAuthenticatedLearner: isAuthenticatedLearner,
-      isAuthenticatedNonLearner: isAuthenticatedNonLearner,
-      canTapReserve: canTapReserve,
-      isSubmitting: isSubmitting,
-      isLoadingReservation: isLoadingReservation,
-      showReservationStatusCta: showReservationStatusCta,
-      learnerReservation: learnerReservation,
-      helperText: helperText,
-      buttonLabel: buttonLabel,
     );
   }
 }
@@ -1486,7 +1386,7 @@ class _ReservationPanel extends StatelessWidget {
   });
 
   final DiscoveryMaterial material;
-  final _ReservationUiState reservationUi;
+  final MaterialReserveEligibility reservationUi;
   final LearnerDelivery? learnerDelivery;
   final VoidCallback onReserve;
   final bool showPrimaryReserveButton;
@@ -1498,10 +1398,7 @@ class _ReservationPanel extends StatelessWidget {
   );
 
   bool get _showQuantityStepHint =>
-      reservationUi.isAvailable &&
-      !reservationUi.isAuthenticatedNonLearner &&
-      reservationUi.learnerReservation == null &&
-      !reservationUi.showReservationStatusCta;
+      reservationUi.canTapReserve;
 
   @override
   Widget build(BuildContext context) {
@@ -1552,10 +1449,7 @@ class _ReservationPanel extends StatelessWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          if (reservationUi.isLoadingReservation &&
-              reservationUi.isAuthenticatedLearner)
-            const _ReservationLoadingState()
-          else if (reservationUi.learnerReservation != null)
+          if (reservationUi.learnerReservation != null)
             _LearnerReservationStateCard(
               reservation: reservationUi.learnerReservation!,
               delivery: learnerDelivery,
@@ -1580,27 +1474,43 @@ class _ReserveMaterialButton extends StatelessWidget {
     required this.onReserve,
   });
 
-  final _ReservationUiState reservationUi;
+  final MaterialReserveEligibility reservationUi;
   final VoidCallback onReserve;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final palette = MaterialsUiPalette.of(context);
+    final disabledReason = reservationUi.disabledReason;
 
-    return FilledButton.icon(
-      onPressed: reservationUi.canTapReserve ? onReserve : null,
-      style: _materialDetailsReserveButtonStyle(context),
-      icon: reservationUi.isSubmitting
-          ? SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: colors.textOnPrimary,
-              ),
-            )
-          : const Icon(Icons.shopping_bag_outlined),
-      label: Text(reservationUi.buttonLabel.resolve(context)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton.icon(
+          onPressed: reservationUi.canTapReserve ? onReserve : null,
+          style: _materialDetailsReserveButtonStyle(context),
+          icon: reservationUi.isSubmitting
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: colors.textOnPrimary,
+                  ),
+                )
+              : const Icon(Icons.shopping_bag_outlined),
+          label: Text(reservationUi.buttonLabel.resolve(context)),
+        ),
+        if (!reservationUi.canTapReserve && disabledReason != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            disabledReason.resolve(context),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textMuted),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -1673,7 +1583,7 @@ class _MobileStickyReserveBar extends StatelessWidget {
     required this.onReserve,
   });
 
-  final _ReservationUiState reservationUi;
+  final MaterialReserveEligibility reservationUi;
   final VoidCallback onReserve;
 
   @override
@@ -1778,7 +1688,7 @@ class _DetailsSideColumn extends StatelessWidget {
   });
 
   final DiscoveryMaterial material;
-  final _ReservationUiState reservationUi;
+  final MaterialReserveEligibility reservationUi;
   final LearnerDelivery? learnerDelivery;
   final VoidCallback onReserve;
   final bool showPrimaryReserveButton;
@@ -1802,32 +1712,6 @@ class _DetailsSideColumn extends StatelessWidget {
         _MaterialProjectHandoffPanel(material: material),
         const SizedBox(height: _materialDetailsSectionGap),
         _ReportMaterialSection(materialId: material.id),
-      ],
-    );
-  }
-}
-
-class _ReservationLoadingState extends StatelessWidget {
-  const _ReservationLoadingState();
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-
-    return Row(
-      children: [
-        SizedBox(
-          width: 18,
-          height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2, color: palette.mint),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Text(
-          'Checking your reservations...',
-          style: AppTextStyles.body(
-            context,
-          ).copyWith(color: palette.textSecondary),
-        ),
       ],
     );
   }
@@ -2542,7 +2426,7 @@ class _RelatedMaterialCompactCard extends StatelessWidget {
   }
 }
 
-class _ReserveMaterialDialog extends StatefulWidget {
+class _ReserveMaterialDialog extends ConsumerStatefulWidget {
   const _ReserveMaterialDialog({
     required this.material,
     required this.onSubmit,
@@ -2552,14 +2436,16 @@ class _ReserveMaterialDialog extends StatefulWidget {
   final Future<void> Function(CreateReservationRequest request) onSubmit;
 
   @override
-  State<_ReserveMaterialDialog> createState() => _ReserveMaterialDialogState();
+  ConsumerState<_ReserveMaterialDialog> createState() =>
+      _ReserveMaterialDialogState();
 }
 
-class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
+class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _quantityController;
   final _messageController = TextEditingController();
   final _deliveryAddressController = TextEditingController();
+  final _dropoffCityController = TextEditingController();
   final _deliveryNoteController = TextEditingController();
   String? _fulfillmentMethod;
   final _pickupWindows = <PreferredWindowDraft>[PreferredWindowDraft()];
@@ -2567,6 +2453,11 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
   bool? _safeDropoffAllowed;
   var _isSubmitting = false;
   String? _errorMessage;
+  ReservationQuote? _quote;
+  var _quoteLoading = false;
+  String? _quoteError;
+  var _combineWithGroup = true;
+  Timer? _quoteDebounce;
 
   @override
   void initState() {
@@ -2579,26 +2470,163 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
       text: _formatQuantity(defaultQuantity),
     );
     _fulfillmentMethod = _initialFulfillmentMethod();
+    _quantityController.addListener(_scheduleQuoteRefresh);
+    _deliveryAddressController.addListener(_scheduleQuoteRefresh);
+    _dropoffCityController.addListener(_scheduleQuoteRefresh);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshQuote());
   }
 
   @override
   void dispose() {
+    _quoteDebounce?.cancel();
+    _quantityController.removeListener(_scheduleQuoteRefresh);
+    _deliveryAddressController.removeListener(_scheduleQuoteRefresh);
+    _dropoffCityController.removeListener(_scheduleQuoteRefresh);
     _quantityController.dispose();
     _messageController.dispose();
     _deliveryAddressController.dispose();
+    _dropoffCityController.dispose();
     _deliveryNoteController.dispose();
     super.dispose();
+  }
+
+  void _scheduleQuoteRefresh() {
+    _quoteDebounce?.cancel();
+    _quoteDebounce = Timer(const Duration(milliseconds: 400), _refreshQuote);
+  }
+
+  List<Map<String, String>> _deliveryWindowsPayload() {
+    final now = DateTime.now();
+    final windows = <Map<String, String>>[];
+
+    for (final draft in _deliveryWindows) {
+      if (draft.start != null && draft.end != null) {
+        final error = draft.validationError(now: now);
+        if (error == null) {
+          windows.add({
+            'start': draft.start!.toUtc().toIso8601String(),
+            'end': draft.end!.toUtc().toIso8601String(),
+          });
+        }
+      }
+    }
+
+    return windows;
+  }
+
+  Future<void> _refreshQuote() async {
+    if (!mounted || _isSubmitting) {
+      return;
+    }
+
+    final quantity = _parsedQuantity();
+    if (quantity == null || quantity <= 0 || _fulfillmentMethod == null) {
+      setState(() {
+        _quote = null;
+        _quoteError = null;
+        _quoteLoading = false;
+      });
+      return;
+    }
+
+    if (_isDelivery) {
+      final dropoffCity = _dropoffCityController.text.trim();
+      if (dropoffCity.isEmpty) {
+        setState(() {
+          _quote = null;
+          _quoteError = null;
+          _quoteLoading = false;
+        });
+        return;
+      }
+
+      final windows = _deliveryWindowsPayload();
+      if (windows.isEmpty) {
+        setState(() {
+          _quote = null;
+          _quoteError = null;
+          _quoteLoading = false;
+        });
+        return;
+      }
+    }
+
+    setState(() {
+      _quoteLoading = true;
+      _quoteError = null;
+    });
+
+    try {
+      final repository = ref.read(reservationsRepositoryProvider);
+      final baseRequest = ReservationQuoteRequest(
+        materialId: widget.material.id,
+        quantity: quantity,
+        fulfillmentMethod: _fulfillmentMethod!,
+        dropoffCity: _isDelivery ? _dropoffCityController.text.trim() : null,
+        learnerPreferredDeliveryWindows:
+            _isDelivery ? _deliveryWindowsPayload() : const [],
+      );
+
+      var quote = await repository.fetchReservationQuote(baseRequest);
+
+      if (_isDelivery &&
+          _combineWithGroup &&
+          quote.deliveryGroupCandidate != null) {
+        quote = await repository.fetchReservationQuote(
+          ReservationQuoteRequest(
+            materialId: widget.material.id,
+            quantity: quantity,
+            fulfillmentMethod: 'DELIVERY',
+            dropoffCity: _dropoffCityController.text.trim(),
+            learnerPreferredDeliveryWindows: _deliveryWindowsPayload(),
+            combineWithDeliveryGroupId: quote.deliveryGroupCandidate!.id,
+          ),
+        );
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _quote = quote;
+        _quoteLoading = false;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _quoteLoading = false;
+        _quote = null;
+        _quoteError = error.message.toLowerCase().contains('delivery')
+            ? 'Could not calculate delivery price. Please check delivery location.'
+            : error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _quoteLoading = false;
+        _quote = null;
+        _quoteError =
+            'Could not calculate delivery price. Please check delivery location.';
+      });
+    }
   }
 
   String? _initialFulfillmentMethod() {
     final canPickup = widget.material.pickupAllowed;
     final canDelivery = widget.material.deliveryAvailable;
 
-    if (canPickup && !canDelivery) {
+    if (canPickup) {
       return 'PICKUP';
     }
 
-    if (!canPickup && canDelivery) {
+    if (canDelivery) {
       return 'DELIVERY';
     }
 
@@ -2710,6 +2738,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
 
     final step = _usesCountSteps ? 1.0 : 0.1;
     setState(() => _setQuantity(current + step));
+    _scheduleQuoteRefresh();
   }
 
   void _decrementQuantity() {
@@ -2726,6 +2755,57 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
     }
 
     setState(() => _setQuantity(current - step));
+    _scheduleQuoteRefresh();
+  }
+
+  bool get _canSubmitReservation {
+    if (_isSubmitting || _fulfillmentMethod == null) {
+      return false;
+    }
+
+    final quantity = _parsedQuantity();
+    if (quantity == null || quantity <= 0 || quantity > _availableQuantity) {
+      return false;
+    }
+
+    if (_isPickup) {
+      return _quote != null && !_quoteLoading;
+    }
+
+    if (_isDelivery) {
+      if (_dropoffCityController.text.trim().isEmpty ||
+          _deliveryAddressController.text.trim().isEmpty) {
+        return false;
+      }
+
+      if (_deliveryWindowsPayload().isEmpty) {
+        return false;
+      }
+
+      return _quote != null && !_quoteLoading && _quoteError == null;
+    }
+
+    return false;
+  }
+
+  String? get _quoteWaitingMessage {
+    if (_fulfillmentMethod == null) {
+      return 'Choose pickup or delivery to see the estimated total.';
+    }
+
+    if (_isDelivery && _dropoffCityController.text.trim().isEmpty) {
+      return 'Enter drop-off city to calculate delivery fee.';
+    }
+
+    if (_isDelivery && _deliveryWindowsPayload().isEmpty) {
+      return 'Add at least one delivery window to calculate delivery fee.';
+    }
+
+    if (!_quoteLoading && _quote == null && _quoteError == null) {
+      return 'Estimated total will appear after required details are entered.';
+    }
+
+    return null;
   }
 
   Future<void> _submit() async {
@@ -2798,8 +2878,14 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
       }
 
       final deliveryAddress = _deliveryAddressController.text.trim();
+      final dropoffCity = _dropoffCityController.text.trim();
       if (deliveryAddress.isEmpty) {
         setState(() => _errorMessage = 'Enter a delivery address.');
+        return;
+      }
+
+      if (dropoffCity.isEmpty) {
+        setState(() => _errorMessage = 'Enter a drop-off city.');
         return;
       }
 
@@ -2826,8 +2912,14 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
             message: message.isEmpty ? null : message,
             learnerPreferredDeliveryWindows: windows,
             deliveryAddressText: deliveryAddress,
+            dropoffCity: dropoffCity,
             safeDropoffAllowed: _safeDropoffAllowed,
             deliveryNote: deliveryNote.isEmpty ? null : deliveryNote,
+            combineWithDeliveryGroupId:
+                _combineWithGroup &&
+                    _quote?.deliveryGroupCandidate != null
+                ? _quote!.deliveryGroupCandidate!.id
+                : null,
           ),
         );
       } on ApiException catch (error) {
@@ -3046,6 +3138,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                                         : selection.first;
                                     _errorMessage = null;
                                   });
+                                  _scheduleQuoteRefresh();
                                 },
                         ),
                         if (!_canChoosePickup || !_canChooseDelivery) ...[
@@ -3073,6 +3166,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                                   ..clear()
                                   ..addAll(windows),
                               );
+                              _scheduleQuoteRefresh();
                             },
                           )
                         else if (_isDelivery) ...[
@@ -3086,7 +3180,44 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                                   ..clear()
                                   ..addAll(windows),
                               );
+                              _scheduleQuoteRefresh();
                             },
+                          ),
+                          const SizedBox(height: _reservationDialogSectionGap),
+                          Text(
+                            'Drop-off city',
+                            style: AppTextStyles.label(
+                              context,
+                            ).copyWith(color: palette.textSecondary),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          TextFormField(
+                            controller: _dropoffCityController,
+                            enabled: !_isSubmitting,
+                            decoration: InputDecoration(
+                              hintText: 'e.g. Nablus, Jerusalem, Tel Aviv',
+                              filled: true,
+                              fillColor: palette.inputSurface,
+                              contentPadding: const EdgeInsetsDirectional.all(
+                                AppSpacing.sm,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide: BorderSide(
+                                  color: palette.borderSubtle,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide: BorderSide(
+                                  color: palette.borderSubtle,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: AppRadius.mdAll,
+                                borderSide: BorderSide(color: palette.mint),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: _reservationDialogSectionGap),
                           Text(
@@ -3202,6 +3333,20 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                             ).copyWith(color: palette.textMuted),
                           ),
                         const SizedBox(height: _reservationDialogSectionGap),
+                        ReservationPriceBreakdown(
+                          quote: _quote,
+                          isLoading: _quoteLoading,
+                          errorMessage: _quoteError,
+                          waitingForInputMessage: _quoteWaitingMessage,
+                          combineWithGroup: _combineWithGroup,
+                          onCombineWithGroupChanged: _isSubmitting
+                              ? null
+                              : (value) {
+                                  setState(() => _combineWithGroup = value);
+                                  _scheduleQuoteRefresh();
+                                },
+                        ),
+                        const SizedBox(height: _reservationDialogSectionGap),
                         Text(
                           'Message to supplier',
                           style: AppTextStyles.label(
@@ -3262,7 +3407,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                         children: [
                           _ReservationDialogSubmitButton(
                             isSubmitting: _isSubmitting,
-                            onPressed: _submit,
+                            onPressed: _canSubmitReservation ? _submit : null,
                             fullWidth: true,
                           ),
                           const SizedBox(height: AppSpacing.xs),
@@ -3286,7 +3431,7 @@ class _ReserveMaterialDialogState extends State<_ReserveMaterialDialog> {
                           const SizedBox(width: AppSpacing.sm),
                           _ReservationDialogSubmitButton(
                             isSubmitting: _isSubmitting,
-                            onPressed: _submit,
+                            onPressed: _canSubmitReservation ? _submit : null,
                           ),
                         ],
                       ),

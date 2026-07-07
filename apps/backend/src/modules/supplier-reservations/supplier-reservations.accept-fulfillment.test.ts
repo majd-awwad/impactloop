@@ -62,6 +62,7 @@ function deliveryReservationPayload(
     fulfillmentMethod: 'DELIVERY',
     learnerPreferredDeliveryWindows: [futurePreferredWindow()],
     deliveryAddressText: '12 Learner Street, Nablus',
+    dropoffCity: 'Nablus',
     safeDropoffAllowed: false,
     ...overrides,
   };

@@ -231,8 +231,12 @@ export const mapSupplierReservation = (
   reservation: supplierReservationsRepository.SupplierReservationRecord,
   latestMessage?: ReturnType<typeof mapReservationMessage> | null,
 ) => {
-  const latestDelivery = reservation.deliveries[0] ?? null;
-  const hasDelivery = reservation._count.deliveries > 0;
+  const directDelivery = reservation.deliveries[0] ?? null;
+  const groupDelivery = reservation.deliveryGroup?.delivery ?? null;
+  const latestDelivery = directDelivery ?? groupDelivery;
+  const hasDelivery = latestDelivery != null;
+  const deliveryCount = hasDelivery ? 1 : 0;
+  const groupItemCount = reservation.deliveryGroup?.reservations.length ?? 0;
   const followUp = resolveReservationFollowUp({
     status: reservation.status,
     pickupWindowStart: reservation.pickupWindowStart,
@@ -246,7 +250,7 @@ export const mapSupplierReservation = (
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
     fulfillmentMethod: reservation.fulfillmentMethod,
-    deliveryCount: reservation._count.deliveries,
+    deliveryCount: deliveryCount,
   });
   const hasLearnerNoShowReport = reservation.noShowReports.some(
     (report) => report.targetRole === 'LEARNER',
@@ -264,7 +268,7 @@ export const mapSupplierReservation = (
   const canReschedule = canRequestPickupReschedule({
     status: reservation.status,
     fulfillmentMethod: reservation.fulfillmentMethod,
-    deliveryCount: reservation._count.deliveries,
+    deliveryCount,
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
     hasFinalReport: hasOpenIncident,
@@ -297,7 +301,7 @@ export const mapSupplierReservation = (
     fulfillmentMethod: reservation.fulfillmentMethod,
     fulfillmentLabel: mapFulfillmentLabel(
       reservation.fulfillmentMethod,
-      reservation._count.deliveries,
+      deliveryCount,
     ),
     learnerPreferredPickupWindows: mapPreferredWindowsForResponse(
       reservation.learnerPreferredPickupWindows,
@@ -334,6 +338,13 @@ export const mapSupplierReservation = (
           status: latestDelivery.status,
         }
       : null,
+    deliveryGroupId: reservation.deliveryGroupId,
+    groupedDelivery: reservation.deliveryGroupId != null,
+    groupItemCount: groupItemCount > 0 ? groupItemCount : null,
+    combinedDeliveryLabel:
+      reservation.deliveryGroupId != null && groupItemCount > 0
+        ? 'Combined delivery'
+        : null,
     supplierHandoverCode:
       reservation.status === 'ACCEPTED' &&
       reservation.fulfillmentMethod === 'DELIVERY' &&

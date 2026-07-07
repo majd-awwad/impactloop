@@ -202,9 +202,10 @@ class _SummaryPanel extends StatelessWidget {
         children: [
           _PanelTitle(
             icon: Icons.inventory_2_outlined,
-            title: 'Material',
-            body:
-                '${delivery.material.title} - ${delivery.material.quantityLabel}',
+            title: delivery.hasGroupedItems ? 'Materials' : 'Material',
+            body: delivery.hasGroupedItems
+                ? delivery.groupedItemLines.join('\n')
+                : '${delivery.material.title} - ${delivery.material.quantityLabel}',
           ),
           const SizedBox(height: AppSpacing.lg),
           _InfoRow(label: 'Pickup window', value: driverPickupWindowDetail(delivery)),

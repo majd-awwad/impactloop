@@ -147,6 +147,7 @@ async function acceptDeliveryReservation(ctx: TestContext) {
     learnerPreferredPickupWindows: [pickupPreferred],
     learnerPreferredDeliveryWindows: [deliveryPreferred],
     deliveryAddressText: `${TEST_MARKER} delivery address`,
+    dropoffCity: 'Nablus',
     safeDropoffAllowed: false,
   } satisfies CreateReservationInput);
   ctx.createdReservationIds.push(reservation.id);

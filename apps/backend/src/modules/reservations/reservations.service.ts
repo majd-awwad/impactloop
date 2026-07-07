@@ -56,10 +56,19 @@ import {
 } from './reservations.stale-assigned-driver-auto-escalation.repository.js';
 import { isAssignedDriverPickupOverdue } from './reservation-assigned-driver-pickup-overdue.js';
 import { notifyReservationCreated } from '../notifications/reservation-notifications.js';
+import {
+  buildReservationQuote,
+  mapPricingFields,
+} from './reservation-pricing.service.js';
+import {
+  decimalToNumber,
+  getMaterialQuantityState,
+} from './reservations.quantity.js';
 import type {
   CreateReservationInput,
   CreateReservationMessageInput,
   LearnerConfirmationInput,
+  ReservationQuoteInput as ReservationQuoteBody,
 } from './reservations.validation.js';
 
 const PICKUP_LOCATION_REVEAL_STATUSES = new Set(['ACCEPTED', 'COMPLETED']);
@@ -164,6 +173,7 @@ const mapReservation = (
   safeDropoffAllowed: reservation.safeDropoffAllowed,
   deliveryNote: reservation.deliveryNote,
   createdAt: reservation.createdAt.toISOString(),
+  ...mapPricingFields(reservation),
 });
 
 const LEARNER_DELIVERY_CODE_VISIBLE_STATUSES = new Set([
@@ -171,6 +181,34 @@ const LEARNER_DELIVERY_CODE_VISIBLE_STATUSES = new Set([
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
 ]);
+
+const resolveReservationOperationalDelivery = (
+  reservation: reservationsRepository.LearnerReservationListRecord,
+) => {
+  const directDelivery = reservation.deliveries[0] ?? null;
+  const groupDelivery = reservation.deliveryGroup?.delivery ?? null;
+  const effectiveDelivery = directDelivery ?? groupDelivery;
+
+  return {
+    effectiveDelivery,
+    deliveryCount: effectiveDelivery ? 1 : 0,
+    groupItemCount: reservation.deliveryGroup?.reservations.length ?? 0,
+    groupDeliveryFee:
+      reservation.deliveryGroup?.deliveryFee != null
+        ? Number(reservation.deliveryGroup.deliveryFee)
+        : null,
+    groupTotal:
+      reservation.deliveryGroup != null
+        ? Number(
+            reservation.deliveryGroup.reservations.reduce(
+              (sum, item) =>
+                sum + Number(item.materialSubtotal ?? 0),
+              Number(reservation.deliveryGroup!.deliveryFee),
+            ),
+          )
+        : null,
+  };
+};
 
 const mapLearnerReservation = (
   reservation: reservationsRepository.LearnerReservationListRecord,
@@ -181,8 +219,13 @@ const mapLearnerReservation = (
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
   });
-  const latestDelivery = reservation.deliveries[0] ?? null;
-  const deliveryCount = reservation.deliveries.length;
+  const {
+    effectiveDelivery: latestDelivery,
+    deliveryCount,
+    groupItemCount,
+    groupDeliveryFee,
+    groupTotal,
+  } = resolveReservationOperationalDelivery(reservation);
   const pickupHandoverPhase = resolveSelfPickupHandoverPhase({
     status: reservation.status,
     pickupWindowStart: reservation.pickupWindowStart,
@@ -333,6 +376,10 @@ const mapLearnerReservation = (
     pickupLocationFull: PICKUP_LOCATION_REVEAL_STATUSES.has(reservation.status)
       ? mapPickupLocationFull(reservation.material.location)
       : null,
+    groupItemCount: groupItemCount > 0 ? groupItemCount : null,
+    groupDeliveryFee,
+    groupTotal,
+    ...mapPricingFields(reservation),
   };
 };
 
@@ -506,9 +553,12 @@ export const createReservation = async (
     learnerPreferredPickupWindows: input.learnerPreferredPickupWindows,
     learnerPreferredDeliveryWindows: input.learnerPreferredDeliveryWindows,
     deliveryAddressText: input.deliveryAddressText,
+    dropoffCity: input.dropoffCity,
+    dropoffArea: input.dropoffArea,
     safeDropoffAllowed: input.safeDropoffAllowed,
     deliveryNote: input.deliveryNote,
     buildItemId: input.buildItemId,
+    combineWithDeliveryGroupId: input.combineWithDeliveryGroupId,
   });
 
   switch (result.outcome) {
@@ -568,9 +618,102 @@ export const createReservation = async (
         409,
         'ACTIVE_BUILD_ITEM_RESERVATION',
       );
+    case 'DELIVERY_PRICING_ERROR':
+      throw new AppError(
+        result.message ?? 'Delivery fee could not be calculated for this location.',
+        400,
+        'DELIVERY_PRICING_ERROR',
+      );
+    case 'GROUP_NOT_AVAILABLE':
+      throw new AppError(
+        result.message ?? 'Combined delivery is no longer available.',
+        409,
+        'GROUP_NOT_AVAILABLE',
+      );
+    case 'VALIDATION_ERROR':
+      throw new AppError(
+        result.message ?? 'Invalid reservation request.',
+        400,
+        'VALIDATION_ERROR',
+      );
     default:
       throw new AppError('Unable to create reservation.', 500, 'INTERNAL_ERROR');
   }
+};
+
+export const quoteReservation = async (
+  requesterId: string,
+  input: ReservationQuoteBody,
+) => {
+  const material = await reservationsRepository.findMaterialForReservationQuote(
+    input.materialId,
+  );
+
+  if (!material) {
+    throw new AppError('Material not found.', 404, 'NOT_FOUND');
+  }
+
+  if (material.ownerId === requesterId) {
+    throw new AppError(
+      'You cannot reserve your own material.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if (material.status === 'UNAVAILABLE' || material.status === 'REUSED') {
+    throw new AppError(
+      'This material is no longer available.',
+      409,
+      'CONFLICT',
+    );
+  }
+
+  const quantityState = await getMaterialQuantityState(prisma, material.id);
+
+  if (!quantityState) {
+    throw new AppError('Material not found.', 404, 'NOT_FOUND');
+  }
+
+  const availableQuantity = decimalToNumber(quantityState.availableQuantity);
+
+  const result = await buildReservationQuote(
+    {
+      id: material.id,
+      isFree: material.isFree,
+      price: material.price,
+      currency: material.currency,
+      pickupCity: material.location.city,
+      supplierProfileId: material.supplierProfileId,
+      deliveryAllowed: material.deliveryAllowed,
+      pickupAllowed: material.pickupAllowed,
+      status: material.status,
+    },
+    availableQuantity,
+    {
+      learnerId: requesterId,
+      materialId: input.materialId,
+      quantity: input.quantity,
+      fulfillmentMethod: input.fulfillmentMethod,
+      dropoffCity: input.dropoffCity,
+      dropoffArea: input.dropoffArea,
+      learnerPreferredDeliveryWindows: input.learnerPreferredDeliveryWindows,
+      combineWithDeliveryGroupId: input.combineWithDeliveryGroupId,
+    },
+  );
+
+  if (!result.ok) {
+    const status =
+      result.code === 'INVALID_QUANTITY'
+        ? 400
+        : result.code === 'GROUP_NOT_AVAILABLE'
+          ? 409
+          : 400;
+
+    throw new AppError(result.message, status, result.code, result.details);
+  }
+
+  return result.quote;
 };
 
 export const cancelReservation = async (

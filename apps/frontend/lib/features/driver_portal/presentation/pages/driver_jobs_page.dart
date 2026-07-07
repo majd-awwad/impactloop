@@ -433,12 +433,23 @@ class _ActiveDeliveryCard extends StatelessWidget {
                       ).copyWith(color: palette.textPrimary),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      delivery.material.quantityLabel,
-                      style: AppTextStyles.body(
-                        context,
-                      ).copyWith(color: palette.textSecondary),
-                    ),
+                    if (delivery.hasGroupedItems) ...[
+                      for (final line in delivery.groupedItemLines) ...[
+                        Text(
+                          line,
+                          style: AppTextStyles.body(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
+                        ),
+                        const SizedBox(height: 2),
+                      ],
+                    ] else
+                      Text(
+                        delivery.material.quantityLabel,
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(color: palette.textSecondary),
+                      ),
                   ],
                 ),
               ),
@@ -948,12 +959,23 @@ class _AvailableJobCard extends ConsumerWidget {
                       ).copyWith(color: palette.textPrimary),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      delivery.material.quantityLabel,
-                      style: AppTextStyles.body(
-                        context,
-                      ).copyWith(color: palette.textSecondary),
-                    ),
+                    if (delivery.hasGroupedItems) ...[
+                      for (final line in delivery.groupedItemLines) ...[
+                        Text(
+                          line,
+                          style: AppTextStyles.body(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
+                        ),
+                        const SizedBox(height: 2),
+                      ],
+                    ] else
+                      Text(
+                        delivery.material.quantityLabel,
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(color: palette.textSecondary),
+                      ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       routeLabel,

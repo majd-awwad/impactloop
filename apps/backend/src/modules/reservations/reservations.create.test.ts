@@ -80,6 +80,7 @@ function deliveryReservationPayload(
     fulfillmentMethod: 'DELIVERY',
     learnerPreferredDeliveryWindows: [futurePreferredWindow()],
     deliveryAddressText: '12 Learner Street, Nablus',
+    dropoffCity: 'Nablus',
     safeDropoffAllowed: false,
     ...overrides,
   };
@@ -186,6 +187,14 @@ async function cleanup(ctx: TestContext) {
       where: { id: { in: ctx.createdReservationIds } },
     });
   }
+
+  await prisma.deliveryGroup.deleteMany({
+    where: {
+      learner: {
+        displayName: { contains: TEST_MARKER },
+      },
+    },
+  });
 
   if (ctx.createdMaterialIds.length) {
     await prisma.material.deleteMany({
