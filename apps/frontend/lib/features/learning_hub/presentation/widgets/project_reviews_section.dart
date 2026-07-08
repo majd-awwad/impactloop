@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
@@ -168,11 +167,11 @@ class _ProjectReviewsSectionState extends ConsumerState<ProjectReviewsSection> {
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: palette.cardSurface,
-        borderRadius: AppRadius.xlAll,
+        borderRadius: AppRadius.lgAll,
         border: Border.all(color: palette.borderSubtle),
         boxShadow: [
           BoxShadow(
-            color: palette.cardShadow,
+            color: palette.cardShadow.withValues(alpha: 0.08),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -232,6 +231,7 @@ class _ReviewsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final summary = project.hasRatings
         ? '${project.ratingValue.toStringAsFixed(1)} from ${project.ratingCount} ${project.ratingCount == 1 ? 'review' : 'reviews'}'
         : 'No learner reviews yet';
@@ -243,10 +243,11 @@ class _ReviewsHeader extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: palette.lime.withValues(alpha: 0.16),
+            color: palette.limeSoft,
             borderRadius: AppRadius.mdAll,
+            border: Border.all(color: palette.lime.withValues(alpha: 0.28)),
           ),
-          child: Icon(Icons.star_rounded, color: palette.limeSoft),
+          child: Icon(Icons.star_rounded, color: palette.lime),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
@@ -258,16 +259,17 @@ class _ReviewsHeader extends StatelessWidget {
                   en: 'Learner reviews',
                   ar: 'مراجعات المتعلمين',
                 ).resolve(context),
-                style: AppTextStyles.title(
-                  context,
-                ).copyWith(color: palette.textPrimary),
+                style: textTheme.titleLarge?.copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 summary,
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: palette.textSecondary),
+                style: textTheme.bodyMedium?.copyWith(
+                  color: palette.textSecondary,
+                ),
               ),
             ],
           ),
@@ -301,10 +303,11 @@ class _ReviewForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.mutedChip,
+        color: palette.cardSurfaceAlt,
         borderRadius: AppRadius.lgAll,
         border: Border.all(color: palette.borderSubtle),
       ),
@@ -315,9 +318,10 @@ class _ReviewForm extends StatelessWidget {
           children: [
             Text(
               hasViewerReview ? 'Update your review' : 'Review this project',
-              style: AppTextStyles.label(
-                context,
-              ).copyWith(color: palette.textPrimary),
+              style: textTheme.labelLarge?.copyWith(
+                color: palette.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             _StarRatingInput(value: rating, onChanged: onRatingChanged),
@@ -330,12 +334,6 @@ class _ReviewForm extends StatelessWidget {
               decoration: InputDecoration(
                 hintText:
                     'What helped, what was missing, or what would you change?',
-                filled: true,
-                fillColor: palette.cardSurface,
-                border: OutlineInputBorder(
-                  borderRadius: AppRadius.mdAll,
-                  borderSide: BorderSide(color: palette.borderSubtle),
-                ),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -398,7 +396,7 @@ class _StarRatingInput extends StatelessWidget {
           onPressed: () => onChanged(star),
           icon: Icon(
             selected ? Icons.star_rounded : Icons.star_border_rounded,
-            color: selected ? palette.limeSoft : palette.textSecondary,
+            color: selected ? palette.lime : palette.textSecondary,
           ),
         );
       }),
@@ -415,11 +413,12 @@ class _RecentReviews extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     if (!hasReviews) {
       return DecoratedBox(
         decoration: BoxDecoration(
-          color: palette.mutedChip,
+          color: palette.cardSurfaceAlt,
           borderRadius: AppRadius.lgAll,
           border: Border.all(color: palette.borderSubtle),
         ),
@@ -427,9 +426,10 @@ class _RecentReviews extends StatelessWidget {
           padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
           child: Text(
             'No reviews yet. Be the first learner to rate this project.',
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: palette.textSecondary),
+            style: textTheme.bodyMedium?.copyWith(
+              color: palette.textSecondary,
+              height: 1.45,
+            ),
           ),
         ),
       );
@@ -456,14 +456,17 @@ class _ReviewTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final comment = review.comment;
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.mutedChip,
+        color: palette.cardSurfaceAlt,
         borderRadius: AppRadius.lgAll,
         border: Border.all(
-          color: review.isViewerReview ? palette.lime : palette.borderSubtle,
+          color: review.isViewerReview
+              ? palette.lime.withValues(alpha: 0.42)
+              : palette.borderSubtle,
         ),
       ),
       child: Padding(
@@ -476,9 +479,10 @@ class _ReviewTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     review.isViewerReview ? 'Your review' : review.reviewerName,
-                    style: AppTextStyles.label(
-                      context,
-                    ).copyWith(color: palette.textPrimary),
+                    style: textTheme.labelLarge?.copyWith(
+                      color: palette.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 _ReadOnlyStars(rating: review.rating),
@@ -488,9 +492,10 @@ class _ReviewTile extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Text(
                 comment,
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: palette.textSecondary, height: 1.4),
+                style: textTheme.bodyMedium?.copyWith(
+                  color: palette.textSecondary,
+                  height: 1.45,
+                ),
               ),
             ],
           ],
@@ -514,9 +519,9 @@ class _ReadOnlyStars extends StatelessWidget {
       children: List.generate(5, (index) {
         final selected = index < rating;
         return Icon(
-          selected ? Icons.star_rounded : Icons.star_border_rounded,
-          size: 18,
-          color: selected ? palette.limeSoft : palette.textSecondary,
+            selected ? Icons.star_rounded : Icons.star_border_rounded,
+            size: 18,
+          color: selected ? palette.lime : palette.textSecondary,
         );
       }),
     );
