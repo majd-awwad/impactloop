@@ -251,6 +251,10 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
     AsyncValue<List<MaterialCategory>> categoriesAsync,
   ) {
     final query = _query;
+    final authState = ref.watch(authControllerProvider);
+    final canManageSubmissions =
+        authState.status == AuthStatus.authenticated &&
+        authState.user?.hasRole('LEARNER') == true;
 
     Widget contentFor(
       LearningProjectsResult result, {
@@ -278,6 +282,9 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
         onClearFilters: _clearFilters,
         onRetry: () => _invalidateCurrentProjects(query),
         onSubmitProject: () => context.go('/learning/add-draft'),
+        onMySubmissions: canManageSubmissions
+            ? () => context.go('/learning/submissions')
+            : null,
         onFocusSearch: () => _searchFocusNode.requestFocus(),
         onCategorySelected: (index, categoryId) {
           setState(() {
@@ -352,6 +359,7 @@ class _HubContent extends StatelessWidget {
     required this.onClearFilters,
     required this.onRetry,
     required this.onSubmitProject,
+    required this.onMySubmissions,
     required this.onFocusSearch,
     required this.onCategorySelected,
     required this.onPageChanged,
@@ -377,6 +385,7 @@ class _HubContent extends StatelessWidget {
   final VoidCallback onClearFilters;
   final VoidCallback onRetry;
   final VoidCallback onSubmitProject;
+  final VoidCallback? onMySubmissions;
   final VoidCallback onFocusSearch;
   final void Function(int index, String? categoryId) onCategorySelected;
   final ValueChanged<int> onPageChanged;
@@ -435,7 +444,10 @@ class _HubContent extends StatelessWidget {
                 onSubmitPressed: onSubmitProject,
               ),
               const SizedBox(height: AppSpacing.lg),
-              _SubmitProjectCallout(onSubmitProject: onSubmitProject),
+              _SubmitProjectCallout(
+                onSubmitProject: onSubmitProject,
+                onMySubmissions: onMySubmissions,
+              ),
               const SizedBox(height: AppSpacing.lg),
               if (categoryLabels.isNotEmpty)
                 LearningCategoryChips(
@@ -1119,9 +1131,13 @@ class _LearningHubRoadmapPanel extends StatelessWidget {
 }
 
 class _SubmitProjectCallout extends StatelessWidget {
-  const _SubmitProjectCallout({required this.onSubmitProject});
+  const _SubmitProjectCallout({
+    required this.onSubmitProject,
+    required this.onMySubmissions,
+  });
 
   final VoidCallback onSubmitProject;
+  final VoidCallback? onMySubmissions;
 
   @override
   Widget build(BuildContext context) {
@@ -1161,15 +1177,33 @@ class _SubmitProjectCallout extends StatelessWidget {
               ),
             ],
           );
-          final action = FilledButton.icon(
-            onPressed: onSubmitProject,
-            icon: const Icon(Icons.edit_note_rounded),
-            label: Text(
-              const LocalizedText(
-                en: 'Add project draft',
-                ar: 'إضافة مسودة مشروع',
-              ).resolve(context),
-            ),
+          final actions = Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            alignment: compact ? WrapAlignment.start : WrapAlignment.end,
+            children: [
+              if (onMySubmissions != null)
+                OutlinedButton.icon(
+                  onPressed: onMySubmissions,
+                  icon: const Icon(Icons.assignment_outlined),
+                  label: Text(
+                    const LocalizedText(
+                      en: 'My submissions',
+                      ar: 'إرسالاتي',
+                    ).resolve(context),
+                  ),
+                ),
+              FilledButton.icon(
+                onPressed: onSubmitProject,
+                icon: const Icon(Icons.edit_note_rounded),
+                label: Text(
+                  const LocalizedText(
+                    en: 'Add project draft',
+                    ar: 'إضافة مسودة مشروع',
+                  ).resolve(context),
+                ),
+              ),
+            ],
           );
 
           if (compact) {
@@ -1178,7 +1212,7 @@ class _SubmitProjectCallout extends StatelessWidget {
               children: [
                 copy,
                 const SizedBox(height: AppSpacing.md),
-                action,
+                actions,
               ],
             );
           }
@@ -1187,7 +1221,7 @@ class _SubmitProjectCallout extends StatelessWidget {
             children: [
               Expanded(child: copy),
               const SizedBox(width: AppSpacing.lg),
-              SizedBox(width: 240, child: action),
+              Flexible(child: actions),
             ],
           );
         },

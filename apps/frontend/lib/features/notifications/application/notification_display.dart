@@ -29,7 +29,9 @@ enum NotificationVisualCategory {
   general,
 }
 
-NotificationVisualCategory categoryForNotification(AppNotification notification) {
+NotificationVisualCategory categoryForNotification(
+  AppNotification notification,
+) {
   switch (notification.notificationType) {
     case 'DRIVER_NEW_JOB':
       return NotificationVisualCategory.job;
@@ -85,12 +87,16 @@ String notificationActionLabel(AppNotification notification) {
   if (notification.relatedEntityType == 'RESERVATION') {
     return 'View reservation';
   }
+  if (notification.relatedEntityType == 'LEARNING_PROJECT') {
+    return 'View submission';
+  }
   return 'Open';
 }
 
 bool notificationHasNavigationTarget(AppNotification notification) {
   return (notification.relatedEntityType == 'DELIVERY' ||
-          notification.relatedEntityType == 'RESERVATION') &&
+          notification.relatedEntityType == 'RESERVATION' ||
+          notification.relatedEntityType == 'LEARNING_PROJECT') &&
       notification.relatedEntityId != null &&
       notification.relatedEntityId!.isNotEmpty;
 }

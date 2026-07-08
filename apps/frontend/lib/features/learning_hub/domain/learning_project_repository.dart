@@ -1,5 +1,6 @@
 import 'learning_projects_result.dart';
 import 'models/learning_project.dart';
+import 'models/learning_project_submission.dart';
 import 'models/project_build.dart';
 import 'project_engagement.dart';
 import 'project_follow_status.dart';
@@ -18,6 +19,21 @@ abstract class LearningProjectRepository {
   );
 
   Future<LearningProject?> fetchProjectById(String id);
+
+  Future<LearningProjectSubmissionsResult> fetchMyLearningProjectSubmissions(
+    LearningProjectSubmissionsQuery query,
+  );
+
+  Future<LearningProjectSubmission> fetchMyLearningProjectSubmission(String id);
+
+  Future<LearningProjectSubmission> updateMyLearningProjectSubmission(
+    String id,
+    Map<String, dynamic> payload,
+  );
+
+  Future<LearningProjectSubmission> resubmitMyLearningProjectSubmission(
+    String id,
+  );
 
   Future<ProjectBuild?> fetchMyBuild(String projectId);
 

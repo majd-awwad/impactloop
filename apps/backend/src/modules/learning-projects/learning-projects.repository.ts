@@ -4,6 +4,7 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import type {
   LearningProjectsQuery,
+  MyLearningProjectsQuery,
   UpdateProjectBuildItemInput,
 } from './learning-projects.validation.js';
 import {
@@ -212,6 +213,34 @@ const learningProjectDetailInclude = {
   },
 } satisfies Prisma.LearningProjectInclude;
 
+const myLearningProjectDetailInclude = {
+  ...learningProjectDetailInclude,
+  requiredComponents: {
+    select: {
+      id: true,
+      categoryId: true,
+      componentName: true,
+      materialType: true,
+      quantity: true,
+      unit: true,
+      componentRole: true,
+      isRequired: true,
+      canBeSubstituted: true,
+      searchKeywords: true,
+      alternativeKeywords: true,
+      providedByUser: true,
+      confirmedByUser: true,
+      generatedOrSuggestedByAi: true,
+      reviewStatus: true,
+      notes: true,
+      createdAt: true,
+    },
+    orderBy: {
+      createdAt: 'asc' as const,
+    },
+  },
+} satisfies Prisma.LearningProjectInclude;
+
 const projectBuildInclude = {
   project: {
     select: {
@@ -393,6 +422,47 @@ export const findFollowedLearningProjects = async (
   ]);
 
   return { items, total };
+};
+
+export const findMyLearningProjectSubmissions = async (
+  query: MyLearningProjectsQuery,
+  userId: string,
+) => {
+  const where: Prisma.LearningProjectWhereInput = {
+    createdBy: userId,
+    ...(query.status ? { status: query.status } : {}),
+  };
+  const skip = (query.page - 1) * query.limit;
+
+  const [items, total] = await Promise.all([
+    prisma.learningProject.findMany({
+      where,
+      include: learningProjectListInclude,
+      orderBy: [
+        { submittedAt: 'desc' },
+        { updatedAt: 'desc' },
+        { createdAt: 'desc' },
+      ],
+      skip,
+      take: query.limit,
+    }),
+    prisma.learningProject.count({ where }),
+  ]);
+
+  return { items, total };
+};
+
+export const findMyLearningProjectSubmissionById = async (
+  id: string,
+  userId: string,
+) => {
+  return prisma.learningProject.findFirst({
+    where: {
+      id,
+      createdBy: userId,
+    },
+    include: myLearningProjectDetailInclude,
+  });
 };
 
 export const findLearningProjectById = async (id: string) => {
@@ -1162,6 +1232,204 @@ export const createLearningProjectForReview = async (input: {
       title: true,
       status: true,
       submittedAt: true,
+    },
+  });
+};
+
+export const updateMyLearningProjectSubmission = async (input: {
+  id: string;
+  userId: string;
+  categoryId: string;
+  title: string;
+  shortDescription: string;
+  description: string;
+  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  estimatedDurationMinutes?: number;
+  coverImageUrl?: string | null;
+  requiredComponents?: Array<{
+    id?: string;
+    component: NormalizedSubmitComponent;
+  }>;
+  steps?: { title: string; description: string }[];
+  links?: { url: string; title?: string }[];
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.learningProject.findFirst({
+      where: {
+        id: input.id,
+        createdBy: input.userId,
+      },
+      select: {
+        id: true,
+        status: true,
+        requiredComponents: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    if (
+      existing.status !== 'DRAFT' &&
+      existing.status !== 'CHANGES_REQUESTED' &&
+      existing.status !== 'PENDING_REVIEW'
+    ) {
+      return null;
+    }
+
+    const projectUpdateData: Prisma.LearningProjectUpdateManyMutationInput = {
+      categoryId: input.categoryId,
+      title: input.title,
+      shortDescription: input.shortDescription,
+      description: input.description,
+      difficulty: input.difficulty,
+      estimatedDurationMinutes: input.estimatedDurationMinutes,
+      coverImageUrl: input.coverImageUrl ?? null,
+    };
+
+    if (existing.status === 'PENDING_REVIEW') {
+      projectUpdateData.reviewNote = null;
+      projectUpdateData.changesRequestedReason = null;
+      projectUpdateData.rejectionReason = null;
+    }
+
+    const projectUpdate = await tx.learningProject.updateMany({
+      where: {
+        id: input.id,
+        createdBy: input.userId,
+        status: { in: ['DRAFT', 'CHANGES_REQUESTED', 'PENDING_REVIEW'] },
+      },
+      data: projectUpdateData,
+    });
+
+    if (projectUpdate.count === 0) {
+      return null;
+    }
+
+    if (input.requiredComponents !== undefined) {
+      const existingIds = new Set(
+        existing.requiredComponents.map((component) => component.id),
+      );
+      const keepIds = input.requiredComponents
+        .map((entry) => entry.id)
+        .filter((id): id is string => Boolean(id && existingIds.has(id)));
+
+      await tx.projectRequiredComponent.deleteMany({
+        where: {
+          projectId: input.id,
+          ...(keepIds.length > 0 ? { id: { notIn: keepIds } } : {}),
+        },
+      });
+
+      for (const entry of input.requiredComponents) {
+        const data = mapNormalizedComponentToCreateData(entry.component);
+
+        if (entry.id && existingIds.has(entry.id)) {
+          await tx.projectRequiredComponent.update({
+            where: { id: entry.id },
+            data: {
+              componentName: data.componentName,
+              materialType: data.materialType,
+              quantity: data.quantity,
+              unit: data.unit,
+              componentRole: data.componentRole,
+              isRequired: data.isRequired,
+              canBeSubstituted: data.canBeSubstituted,
+              category: entry.component.categoryId
+                ? { connect: { id: entry.component.categoryId } }
+                : { disconnect: true },
+              searchKeywords: data.searchKeywords,
+              notes: data.notes,
+              providedByUser: true,
+              confirmedByUser: false,
+              reviewStatus: 'PENDING_REVIEW',
+            },
+          });
+          continue;
+        }
+
+        await tx.projectRequiredComponent.create({
+          data: {
+            projectId: input.id,
+            componentName: entry.component.name,
+            materialType: entry.component.materialType,
+            quantity: entry.component.quantity,
+            unit: entry.component.unit,
+            componentRole: entry.component.componentRole,
+            isRequired: entry.component.isRequired,
+            canBeSubstituted: entry.component.canBeSubstituted,
+            categoryId: entry.component.categoryId,
+            searchKeywords: entry.component.searchKeywords,
+            notes: entry.component.notes,
+            providedByUser: true,
+            confirmedByUser: false,
+            reviewStatus: 'PENDING_REVIEW',
+          },
+        });
+      }
+    }
+
+    if (input.steps !== undefined) {
+      await tx.projectStep.deleteMany({ where: { projectId: input.id } });
+      if (input.steps.length > 0) {
+        await tx.projectStep.createMany({
+          data: input.steps.map((step, index) => ({
+            projectId: input.id,
+            stepNumber: index + 1,
+            title: step.title,
+            description: step.description,
+          })),
+        });
+      }
+    }
+
+    if (input.links !== undefined) {
+      await tx.projectLink.deleteMany({ where: { projectId: input.id } });
+      if (input.links.length > 0) {
+        await tx.projectLink.createMany({
+          data: input.links.map((link) => ({
+            projectId: input.id,
+            linkType: 'OTHER',
+            url: link.url,
+            title: link.title,
+          })),
+        });
+      }
+    }
+
+    return tx.learningProject.findFirst({
+      where: {
+        id: input.id,
+        createdBy: input.userId,
+      },
+      include: myLearningProjectDetailInclude,
+    });
+  });
+};
+
+export const resubmitMyLearningProjectSubmission = async (
+  id: string,
+  userId: string,
+) => {
+  return prisma.learningProject.updateMany({
+    where: {
+      id,
+      createdBy: userId,
+      status: 'CHANGES_REQUESTED',
+    },
+    data: {
+      status: 'PENDING_REVIEW',
+      submittedAt: new Date(),
+      reviewedBy: null,
+      reviewedAt: null,
+      reviewNote: null,
+      changesRequestedReason: null,
+      rejectionReason: null,
     },
   });
 };

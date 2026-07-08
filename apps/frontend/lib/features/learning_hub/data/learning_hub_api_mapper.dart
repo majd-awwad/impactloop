@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../domain/models/learning_project.dart';
+import '../domain/models/learning_project_draft_component.dart';
+import '../domain/models/learning_project_submission.dart';
 import '../domain/models/project_build.dart';
 
 class LearningHubApiMapper {
@@ -49,6 +51,53 @@ class LearningHubApiMapper {
                 .map((item) => _mapBuildItem(Map<String, dynamic>.from(item)))
                 .toList(growable: false)
           : const <ProjectBuildItem>[],
+    );
+  }
+
+  static LearningProjectSubmission submissionFromJson(
+    Map<String, dynamic> json,
+  ) {
+    final categoryJson = _asMap(json['category']);
+    final categoryNameEn = _stringOrFallback(
+      categoryJson?['nameEn'],
+      fallback: 'Projects',
+    );
+    final categoryNameAr = _stringOrFallback(
+      categoryJson?['nameAr'],
+      fallback: categoryNameEn,
+    );
+
+    return LearningProjectSubmission(
+      id: _stringOrFallback(json['id'], fallback: ''),
+      title: _stringOrFallback(json['title'], fallback: 'Untitled project'),
+      shortDescription: _stringOrFallback(
+        json['shortDescription'],
+        fallback: '',
+      ),
+      description: _nullableString(json['description']),
+      status: LearningProjectSubmissionStatus.fromApiValue(
+        _stringOrFallback(json['status'], fallback: 'PENDING_REVIEW'),
+      ),
+      category: LocalizedText(en: categoryNameEn, ar: categoryNameAr),
+      difficulty: _stringOrFallback(json['difficulty'], fallback: 'BEGINNER'),
+      estimatedDurationMinutes: _intFromDynamic(
+        json['estimatedDurationMinutes'] ?? json['estimatedTimeMinutes'],
+      ),
+      coverImageUrl: _nullableString(json['coverImageUrl']),
+      submittedAt: _dateTimeFromDynamic(json['submittedAt']),
+      reviewedAt: _dateTimeFromDynamic(json['reviewedAt']),
+      createdAt: _dateTimeFromDynamic(json['createdAt']),
+      updatedAt: _dateTimeFromDynamic(json['updatedAt']),
+      reviewNote: _nullableString(json['reviewNote']),
+      changesRequestedReason: _nullableString(json['changesRequestedReason']),
+      rejectionReason: _nullableString(json['rejectionReason']),
+      publicProjectPath: _nullableString(json['publicProjectPath']),
+      availableActions: LearningProjectSubmissionActions.fromJson(
+        json['availableActions'],
+      ),
+      requiredComponents: _mapSubmissionComponents(json['requiredComponents']),
+      steps: _mapSubmissionSteps(json['steps']),
+      links: _mapSubmissionLinks(json['links']),
     );
   }
 
@@ -231,6 +280,84 @@ class LearningHubApiMapper {
             notes: _nullableString(item['notes']),
           );
         })
+        .toList(growable: false);
+  }
+
+  static List<LearningProjectSubmissionComponent> _mapSubmissionComponents(
+    Object? raw,
+  ) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    return raw
+        .whereType<Map>()
+        .map((item) {
+          final name = _stringOrFallback(
+            item['componentName'] ?? item['name'],
+            fallback: 'Component',
+          );
+          return LearningProjectSubmissionComponent(
+            id: _stringOrFallback(item['id'], fallback: ''),
+            name: name,
+            quantity: _numberFromDynamic(item['quantity']) ?? 1,
+            unit: _stringOrFallback(item['unit'], fallback: 'piece'),
+            role: LearningProjectComponentRole.fromApiValue(
+              _stringOrFallback(
+                item['componentRole'],
+                fallback: 'REQUIRED_MATERIAL',
+              ),
+            ),
+            isRequired: item['isRequired'] != false,
+            canBeSubstituted: item['canBeSubstituted'] == true,
+            materialCategoryId: _nullableString(item['categoryId']),
+            materialType: _nullableString(item['materialType']),
+            searchKeywords: _stringList(item['searchKeywords']),
+            notes: _nullableString(item['notes']),
+          );
+        })
+        .toList(growable: false);
+  }
+
+  static List<LearningProjectSubmissionStep> _mapSubmissionSteps(Object? raw) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    final steps = raw.whereType<Map>().toList(growable: false);
+    steps.sort((a, b) {
+      final left = _intFromDynamic(a['stepNumber']) ?? 0;
+      final right = _intFromDynamic(b['stepNumber']) ?? 0;
+      return left.compareTo(right);
+    });
+
+    return steps
+        .map(
+          (item) => LearningProjectSubmissionStep(
+            id: _nullableString(item['id']),
+            stepNumber: _intFromDynamic(item['stepNumber']),
+            title: _stringOrFallback(item['title'], fallback: 'Step'),
+            description: _stringOrFallback(item['description'], fallback: ''),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  static List<LearningProjectSubmissionLink> _mapSubmissionLinks(Object? raw) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => LearningProjectSubmissionLink(
+            id: _nullableString(item['id']),
+            url: _stringOrFallback(item['url'], fallback: ''),
+            title: _nullableString(item['title']),
+          ),
+        )
+        .where((link) => link.url.trim().isNotEmpty)
         .toList(growable: false);
   }
 
@@ -460,6 +587,18 @@ class LearningHubApiMapper {
         .map((tag) => tag.trim())
         .where((tag) => tag.isNotEmpty)
         .toSet()
+        .toList(growable: false);
+  }
+
+  static List<String> _stringList(Object? raw) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    return raw
+        .whereType<String>()
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
         .toList(growable: false);
   }
 

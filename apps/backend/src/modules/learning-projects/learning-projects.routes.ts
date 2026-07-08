@@ -13,14 +13,17 @@ import {
   followLearningProject,
   getBuildItemMaterialCandidates,
   getLearningProject,
+  getMyLearningProjectSubmission,
   getMyProjectBuild,
   likeLearningProject,
   linkBuildItemMaterial,
   linkBuildItemReservation,
   listFollowedLearningProjects,
   listLearningProjects,
+  listMyLearningProjectSubmissions,
   listSavedLearningProjects,
   reviewLearningProject,
+  resubmitMyLearningProjectSubmission,
   saveLearningProject,
   startProjectBuild,
   submitLearningProject,
@@ -28,6 +31,7 @@ import {
   unfollowLearningProject,
   unlinkBuildItemMaterial,
   unsaveLearningProject,
+  updateMyLearningProjectSubmission,
   updateProjectBuildItem,
 } from './learning-projects.controller.js';
 import {
@@ -37,7 +41,9 @@ import {
   linkBuildItemReservationSchema,
   projectBuildItemParamSchema,
   projectReviewSchema,
+  myLearningProjectsQuerySchema,
   submitLearningProjectSchema,
+  updateMyLearningProjectSubmissionSchema,
   updateProjectBuildItemSchema,
 } from './learning-projects.validation.js';
 
@@ -72,6 +78,39 @@ learningProjectsRouter.get(
   requireRoles('LEARNER'),
   validate(learningProjectsQuerySchema, 'query'),
   asyncHandler(listFollowedLearningProjects),
+);
+
+learningProjectsRouter.get(
+  '/mine',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(myLearningProjectsQuerySchema, 'query'),
+  asyncHandler(listMyLearningProjectSubmissions),
+);
+
+learningProjectsRouter.get(
+  '/mine/:id',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  asyncHandler(getMyLearningProjectSubmission),
+);
+
+learningProjectsRouter.patch(
+  '/mine/:id',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  validate(updateMyLearningProjectSubmissionSchema),
+  asyncHandler(updateMyLearningProjectSubmission),
+);
+
+learningProjectsRouter.post(
+  '/mine/:id/resubmit',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  asyncHandler(resubmitMyLearningProjectSubmission),
 );
 
 learningProjectsRouter.get(
