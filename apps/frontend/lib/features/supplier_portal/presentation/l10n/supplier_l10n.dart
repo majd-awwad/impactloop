@@ -119,6 +119,10 @@ class SupplierL10n {
       );
   String get likesLabel => t('Likes', 'الإعجابات');
   String get engagementSectionTitle => t('Engagement', 'التفاعل');
+  String get activeDemandSectionTitle => t('Active demand', 'الطلب النشط');
+  String get interestScoreSectionTitle =>
+      t('Demand / interest score', 'درجة الطلب / الاهتمام');
+  String get reuseHistorySectionTitle => t('Reuse history', 'سجل إعادة الاستخدام');
   String get reservationsSectionTitle =>
       t('Reservations for this material', 'حجوزات هذه المادة');
   String get demandSectionTitle => t('Demand indicators', 'مؤشرات الطلب');
@@ -126,11 +130,65 @@ class SupplierL10n {
         'No reservations for this material yet.',
         'لا توجد حجوزات لهذه المادة بعد.',
       );
+  String get noDemandSignalsYet => t(
+        'No demand signals yet.',
+        'لا توجد إشارات طلب بعد.',
+      );
+  String get noActiveRequestsAlreadyReused => t(
+        'No active requests right now. This material has already been reused.',
+        'لا توجد طلبات نشطة حالياً. تمت إعادة استخدام هذه المادة بالفعل.',
+      );
+  String get materialHasActiveDemand => t(
+        'This material has active demand.',
+        'هذه المادة لديها طلب نشط.',
+      );
+  String get interestWithoutReservations => t(
+        'Learners are showing interest, but no reservations yet.',
+        'المتعلمون يُظهرون اهتماماً، لكن لا توجد حجوزات بعد.',
+      );
   String get noActiveDemandYet => t(
         'No active demand yet.',
         'لا يوجد طلب نشط بعد.',
       );
   String get activeDemandLabel => t('Active demand', 'طلب نشط');
+  String get activeDemandScoreLabel =>
+      t('Active demand score', 'درجة الطلب النشط');
+  String get overallDemandScoreLabel =>
+      t('Overall demand score', 'درجة الطلب الإجمالية');
+  String overallDemandScoreValue(int percent) =>
+      t('$percent%', '$percent%');
+  String get demandScoreExplanation => t(
+        'Based on views, likes, active requests, and completed reuses.',
+        'بناءً على المشاهدات والإعجابات والطلبات النشطة وعمليات إعادة الاستخدام المكتملة.',
+      );
+  String get completedReservationsMetricLabel =>
+      t('Completed reservations', 'حجوزات مكتملة');
+  String get completedReusesMetricLabel =>
+      t('Completed reuses', 'عمليات إعادة استخدام مكتملة');
+  String get lastCompletedLabel => t('Last completed', 'آخر إكمال');
+  String materialDemandStatusMessage({
+    required int activeRequestsCount,
+    required int completedReservationsCount,
+    required int demandScorePercent,
+    required int viewsCount,
+    required int likesCount,
+  }) {
+    if (activeRequestsCount > 0) {
+      return materialHasActiveDemand;
+    }
+
+    if (completedReservationsCount > 0) {
+      return noActiveRequestsAlreadyReused;
+    }
+
+    if ((viewsCount > 0 || likesCount > 0) &&
+        completedReservationsCount == 0 &&
+        demandScorePercent > 0) {
+      return interestWithoutReservations;
+    }
+
+    return noDemandSignalsYet;
+  }
   String get markUnavailableAction =>
       t('Mark unavailable', 'تعليم كغير متاحة');
   String get restoreAvailableAction =>
