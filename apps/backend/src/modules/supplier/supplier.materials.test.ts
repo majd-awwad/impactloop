@@ -1989,7 +1989,7 @@ describe("supplier material status and detail", () => {
     assert.equal(restored.canMarkUnavailable, true);
   });
 
-  test("detail includes demand score from pending and accepted reservations", async () => {
+  test("detail includes active and lifetime demand metrics from reservations", async () => {
     const material = await createMaterial(
       ctx,
       ctx.supplierId,
@@ -2021,9 +2021,91 @@ describe("supplier material status and detail", () => {
 
     assert.equal(detail.pendingReservationsCount, 1);
     assert.equal(detail.reservedReservationsCount, 1);
-    assert.equal(detail.demandScore, 2);
+    assert.equal(detail.activeRequestsCount, 2);
+    assert.equal(detail.activeDemandScore, 50);
+    assert.equal(detail.demandScore, 50);
+    assert.equal(detail.demandScorePercent, 50);
     assert.equal(detail.reservations.length, 2);
     assert.equal(detail.canMarkUnavailable, false);
+  });
+
+  test("detail includes lifetime demand from completed reservation without active demand", async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      "status-completed-demand",
+      "REUSED",
+    );
+
+    await prisma.materialView.create({
+      data: {
+        materialId: material.id,
+        viewerUserId: ctx.learnerId,
+      },
+    });
+    await prisma.materialLike.create({
+      data: {
+        materialId: material.id,
+        userId: ctx.learnerId,
+      },
+    });
+
+    const completedAt = new Date("2026-01-15T10:00:00.000Z");
+    const completed = await prisma.reservation.create({
+      data: {
+        materialId: material.id,
+        requesterId: ctx.learnerId,
+        ownerId: ctx.supplierId,
+        quantityRequested: 1,
+        status: "COMPLETED",
+        completedAt,
+      },
+    });
+    await prisma.material.update({
+      where: { id: material.id },
+      data: {
+        reusedAt: completedAt,
+        reusedByReservationId: completed.id,
+      },
+    });
+    ctx.createdReservationIds.push(completed.id);
+
+    const detail = await getSupplierMaterial(ctx.supplierId, material.id);
+
+    assert.equal(detail.viewsCount, 1);
+    assert.equal(detail.likesCount, 1);
+    assert.equal(detail.activeRequestsCount, 0);
+    assert.equal(detail.completedReservationsCount, 1);
+    assert.equal(detail.reusedCount, 1);
+    assert.equal(detail.demandScorePercent, 46);
+    assert.equal(detail.activeDemandScore, 0);
+    assert.equal(detail.lastCompletedAt, completedAt.toISOString());
+  });
+
+  test("rejected reservation does not contribute to demand metrics", async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      "status-rejected-demand",
+      "AVAILABLE",
+    );
+
+    const rejected = await prisma.reservation.create({
+      data: {
+        materialId: material.id,
+        requesterId: ctx.learnerId,
+        ownerId: ctx.supplierId,
+        quantityRequested: 1,
+        status: "REJECTED",
+      },
+    });
+    ctx.createdReservationIds.push(rejected.id);
+
+    const detail = await getSupplierMaterial(ctx.supplierId, material.id);
+
+    assert.equal(detail.activeRequestsCount, 0);
+    assert.equal(detail.completedReservationsCount, 0);
+    assert.equal(detail.demandScorePercent, 0);
   });
 
   test("list uses MaterialView-based views count", async () => {

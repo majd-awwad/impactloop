@@ -84,9 +84,9 @@ Widget buildSupplierMaterialCard({
       ? null
       : ApiConfig.resolveMediaUrl(material.coverImageUrl!);
   final compactBadges = <String>[];
-  if (material.demandScore > 0) {
-    if (material.reservationsCount > 0) {
-      compactBadges.add(context.s.materialRequestsBadge(material.reservationsCount));
+  if (material.demandScorePercent > 0) {
+    if (material.totalActiveRequests > 0) {
+      compactBadges.add(context.s.materialRequestsBadge(material.totalActiveRequests));
     }
     compactBadges.add(context.s.highDemandBadge);
   }

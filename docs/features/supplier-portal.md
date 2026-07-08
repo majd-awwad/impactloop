@@ -14,7 +14,7 @@ Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials,
 |------|--------|-------|
 | Supplier shell + routes | **Implemented** | `/supplier/*` with role guard |
 | Dashboard, profile, notifications | **Implemented** | API-backed |
-| My materials list + detail | **Implemented** | List/detail read; edit/delete gated by lifecycle |
+| My materials list + detail | **Implemented** | List/detail read; edit/delete gated by lifecycle; detail shows engagement, active demand, lifetime interest score, and reuse history from backend metrics |
 | Edit material | **Implemented** | `PATCH /api/supplier/materials/:id`; safe fields only; blocked when status/reservations unsafe |
 | Delete material | **Implemented** | `DELETE /api/supplier/materials/:id`; same eligibility as edit |
 | Add material | **Implemented** | Create + required image upload + price check + category/price-rule requests |
@@ -114,3 +114,4 @@ Static images: `GET /uploads/materials/*`
 - Supplier dashboard `GET /dashboard` includes reuse stats (`stats.impact.reusedMaterials`) and **project-linked impact** (`projectSupport`) derived from completed build-linked reservations. Counts only `Reservation.status = COMPLETED` on linked `project_build_items`; does not expose learner identity.
 - `POST /api/price-rule-requests` has auth but no `SUPPLIER` role guard in route file.
 - Supplier followers, follower impact, saves/likes analytics, category demand insights, and "related projects for this material" are planned/future.
+- Supplier owned material detail shows backend-computed demand metrics: active demand (unfinished reservations only), lifetime `demandScorePercent` (views, likes, active reservations, completed reuses), and reuse history (`completedReservationsCount`, `reusedCount`, `lastCompletedAt`).

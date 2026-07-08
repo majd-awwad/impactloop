@@ -36,6 +36,7 @@ import {
   SUPPLIER_CREATE_MATERIAL_SCOPE,
 } from "../../services/idempotency.service.js";
 import * as supplierRepository from "./supplier.repository.js";
+import { computeMaterialDemandMetrics } from "./supplier.material-demand-metrics.js";
 import { mapReservationFulfillmentLabel } from "../reservations/reservation-delivery.js";
 import {
   assertCanMarkMaterialUnavailable,
@@ -1302,11 +1303,49 @@ type SupplierMaterialEngagementExtras = {
   likesCount?: number;
   pendingReservationsCount?: number;
   reservedReservationsCount?: number;
+  activeRequestsCount?: number;
+  completedReservationsCount?: number;
+  reusedCount?: number;
+  lastCompletedAt?: string | null;
   reservationsCount?: number;
+  activeDemandScore?: number;
   demandScore?: number;
+  demandScorePercent?: number;
   canMarkUnavailable?: boolean;
   canRestoreAvailable?: boolean;
   statusActionBlockedReason?: string | null;
+};
+
+const buildSupplierMaterialDemandExtras = (input: {
+  viewsCount: number;
+  likesCount: number;
+  reservationCounts: supplierRepository.MaterialReservationDemandCounts;
+  reusedCount: number;
+  lastCompletedAt: Date | null;
+}): SupplierMaterialEngagementExtras => {
+  const metrics = computeMaterialDemandMetrics({
+    viewsCount: input.viewsCount,
+    likesCount: input.likesCount,
+    pendingReservationsCount: input.reservationCounts.pendingReservationsCount,
+    reservedReservationsCount: input.reservationCounts.reservedReservationsCount,
+    completedReservationsCount: input.reservationCounts.completedReservationsCount,
+    reusedCount: input.reusedCount,
+  });
+
+  return {
+    viewsCount: metrics.viewsCount,
+    likesCount: metrics.likesCount,
+    pendingReservationsCount: metrics.pendingReservationsCount,
+    reservedReservationsCount: metrics.reservedReservationsCount,
+    activeRequestsCount: metrics.activeRequestsCount,
+    completedReservationsCount: metrics.completedReservationsCount,
+    reusedCount: metrics.reusedCount,
+    lastCompletedAt: input.lastCompletedAt?.toISOString() ?? null,
+    reservationsCount: metrics.reservationsCount,
+    activeDemandScore: metrics.activeDemandScore,
+    demandScore: metrics.demandScore,
+    demandScorePercent: metrics.demandScorePercent,
+  };
 };
 
 const mapSupplierOwnedMaterial = (
@@ -1365,8 +1404,14 @@ const mapSupplierOwnedMaterial = (
   likesCount: extras.likesCount ?? likesCount,
   pendingReservationsCount: extras.pendingReservationsCount ?? 0,
   reservedReservationsCount: extras.reservedReservationsCount ?? 0,
-  reservationsCount: extras.reservationsCount ?? 0,
+  activeRequestsCount: extras.activeRequestsCount ?? extras.reservationsCount ?? 0,
+  completedReservationsCount: extras.completedReservationsCount ?? 0,
+  reusedCount: extras.reusedCount ?? 0,
+  lastCompletedAt: extras.lastCompletedAt ?? null,
+  reservationsCount: extras.reservationsCount ?? extras.activeRequestsCount ?? 0,
+  activeDemandScore: extras.activeDemandScore ?? 0,
   demandScore: extras.demandScore ?? 0,
+  demandScorePercent: extras.demandScorePercent ?? extras.demandScore ?? 0,
   canMarkUnavailable: extras.canMarkUnavailable ?? false,
   canRestoreAvailable: extras.canRestoreAvailable ?? false,
   statusActionBlockedReason: extras.statusActionBlockedReason ?? null,
@@ -1452,12 +1497,13 @@ export const getSupplierMaterials = async (
 
   const materialIds = result.items.map((item) => item.id);
 
-  const [blockingReservationCounts, likesByMaterial, viewsByMaterial, demandByMaterial, heldByMaterialId] =
+  const [blockingReservationCounts, likesByMaterial, viewsByMaterial, demandByMaterial, reuseByMaterial, heldByMaterialId] =
     await Promise.all([
       supplierRepository.countBlockingReservationsByMaterialIds(materialIds),
       supplierRepository.countLikesByMaterialIds(materialIds),
       supplierRepository.countViewsByMaterialIds(materialIds),
       supplierRepository.findReservationDemandByMaterialIds(materialIds),
+      supplierRepository.findMaterialReuseSummaryByMaterialIds(materialIds),
       getHeldQuantitiesByMaterialIds(materialIds),
     ]);
 
@@ -1466,17 +1512,25 @@ export const getSupplierMaterials = async (
 
   return {
     items: result.items.map((item) => {
-      const demand = demandByMaterial.get(item.id) ?? {
+      const reservationCounts = demandByMaterial.get(item.id) ?? {
         pendingReservationsCount: 0,
         reservedReservationsCount: 0,
-        reservationsCount: 0,
-        demandScore: 0,
+        completedReservationsCount: 0,
       };
-      const activeReservationCount =
-        demand.pendingReservationsCount + demand.reservedReservationsCount;
+      const reuse = reuseByMaterial.get(item.id) ?? {
+        reusedCount: 0,
+        lastCompletedAt: null,
+      };
+      const demandExtras = buildSupplierMaterialDemandExtras({
+        viewsCount: viewsByMaterial.get(item.id) ?? 0,
+        likesCount: likesByMaterial.get(item.id) ?? 0,
+        reservationCounts,
+        reusedCount: reuse.reusedCount,
+        lastCompletedAt: reuse.lastCompletedAt,
+      });
       const statusActions = resolveSupplierMaterialStatusActions(
         item.status,
-        activeReservationCount,
+        demandExtras.activeRequestsCount ?? 0,
       );
 
       return mapSupplierOwnedMaterial(
@@ -1484,9 +1538,7 @@ export const getSupplierMaterials = async (
         blockingReservationCounts.get(item.id) ?? 0,
         likesByMaterial.get(item.id) ?? 0,
         {
-          viewsCount: viewsByMaterial.get(item.id) ?? 0,
-          likesCount: likesByMaterial.get(item.id) ?? 0,
-          ...demand,
+          ...demandExtras,
           ...statusActions,
         },
         heldByMaterialId.get(item.id) ?? toDecimal(0),
@@ -1522,7 +1574,7 @@ export const getSupplierMaterial = async (
     await supplierRepository.countBlockingReservationsForMaterial(materialId);
 
   const materialIds = [materialId];
-  const [likesCount, viewsCount, demandByMaterial, activeReservationCount, reservations, heldByMaterialId] =
+  const [likesCount, viewsCount, demandByMaterial, reuseByMaterial, activeReservationCount, reservations, heldByMaterialId] =
     await Promise.all([
       supplierRepository
         .countLikesByMaterialIds(materialIds)
@@ -1531,17 +1583,28 @@ export const getSupplierMaterial = async (
         .countViewsByMaterialIds(materialIds)
         .then((map) => map.get(materialId) ?? 0),
       supplierRepository.findReservationDemandByMaterialIds(materialIds),
+      supplierRepository.findMaterialReuseSummaryByMaterialIds(materialIds),
       supplierRepository.countActiveReservationsForMaterial(materialId),
       supplierRepository.findReservationsForSupplierMaterial(scope, materialId),
       getHeldQuantitiesByMaterialIds(materialIds),
     ]);
 
-  const demand = demandByMaterial.get(materialId) ?? {
+  const reservationCounts = demandByMaterial.get(materialId) ?? {
     pendingReservationsCount: 0,
     reservedReservationsCount: 0,
-    reservationsCount: 0,
-    demandScore: 0,
+    completedReservationsCount: 0,
   };
+  const reuse = reuseByMaterial.get(materialId) ?? {
+    reusedCount: 0,
+    lastCompletedAt: null,
+  };
+  const demandExtras = buildSupplierMaterialDemandExtras({
+    viewsCount,
+    likesCount,
+    reservationCounts,
+    reusedCount: reuse.reusedCount,
+    lastCompletedAt: reuse.lastCompletedAt,
+  });
   const statusActions = resolveSupplierMaterialStatusActions(
     material.status,
     activeReservationCount,
@@ -1553,9 +1616,7 @@ export const getSupplierMaterial = async (
       blockingReservationCount,
       likesCount,
       {
-        viewsCount,
-        likesCount,
-        ...demand,
+        ...demandExtras,
         ...statusActions,
       },
       heldByMaterialId.get(materialId) ?? toDecimal(0),

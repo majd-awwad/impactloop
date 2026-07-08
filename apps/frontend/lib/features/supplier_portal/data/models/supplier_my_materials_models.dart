@@ -179,7 +179,13 @@ class SupplierMyMaterial {
     this.pendingReservationsCount = 0,
     this.reservedReservationsCount = 0,
     this.reservationsCount = 0,
+    this.activeRequestsCount = 0,
+    this.completedReservationsCount = 0,
+    this.reusedCount = 0,
+    this.lastCompletedAt,
+    this.activeDemandScore = 0,
     this.demandScore = 0,
+    this.demandScorePercent = 0,
     this.canMarkUnavailable = false,
     this.canRestoreAvailable = false,
     this.statusActionBlockedReason,
@@ -217,7 +223,13 @@ class SupplierMyMaterial {
   final int pendingReservationsCount;
   final int reservedReservationsCount;
   final int reservationsCount;
+  final int activeRequestsCount;
+  final int completedReservationsCount;
+  final int reusedCount;
+  final DateTime? lastCompletedAt;
+  final int activeDemandScore;
   final int demandScore;
+  final int demandScorePercent;
   final bool canMarkUnavailable;
   final bool canRestoreAvailable;
   final String? statusActionBlockedReason;
@@ -228,6 +240,9 @@ class SupplierMyMaterial {
   final String? deleteBlockedReason;
   final bool canEdit;
   final String? editBlockedReason;
+
+  int get totalActiveRequests =>
+      activeRequestsCount > 0 ? activeRequestsCount : reservationsCount;
 
   String? get coverImageUrl {
     for (final image in images) {
@@ -283,7 +298,20 @@ class SupplierMyMaterial {
       reservedReservationsCount:
           (json['reservedReservationsCount'] as num?)?.toInt() ?? 0,
       reservationsCount: (json['reservationsCount'] as num?)?.toInt() ?? 0,
+      activeRequestsCount: (json['activeRequestsCount'] as num?)?.toInt() ??
+          (json['reservationsCount'] as num?)?.toInt() ??
+          0,
+      completedReservationsCount:
+          (json['completedReservationsCount'] as num?)?.toInt() ?? 0,
+      reusedCount: (json['reusedCount'] as num?)?.toInt() ?? 0,
+      lastCompletedAt: DateTime.tryParse(
+        json['lastCompletedAt'] as String? ?? '',
+      ),
+      activeDemandScore: (json['activeDemandScore'] as num?)?.toInt() ?? 0,
       demandScore: (json['demandScore'] as num?)?.toInt() ?? 0,
+      demandScorePercent: (json['demandScorePercent'] as num?)?.toInt() ??
+          (json['demandScore'] as num?)?.toInt() ??
+          0,
       canMarkUnavailable: json['canMarkUnavailable'] == true,
       canRestoreAvailable: json['canRestoreAvailable'] == true,
       statusActionBlockedReason: json['statusActionBlockedReason'] as String?,

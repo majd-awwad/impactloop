@@ -462,6 +462,8 @@ Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must s
 
 `PATCH /api/supplier/materials/:id` updates safe listing fields only (`title`, `description`, `quantity`, `unit`, `condition`, `pickupAllowed`, `deliveryAllowed`, `pickupNotes`, `suggestedUses`). Edit is allowed only when `canEdit` is true (same lifecycle rules as delete). List/detail responses include `canEdit` / `editBlockedReason` and `canDelete` / `deleteBlockedReason`.
 
+`GET /api/supplier/materials` and `GET /api/supplier/materials/:id` include engagement and demand metrics on each material: `viewsCount`, `likesCount`, `pendingReservationsCount`, `reservedReservationsCount`, `activeRequestsCount`, `completedReservationsCount`, `reusedCount`, optional `lastCompletedAt`, `activeDemandScore`, `demandScore` (lifetime raw score), and `demandScorePercent` (0–100). `demandScore`/`demandScorePercent` include views, likes, active reservations, and completed reuses; `activeDemandScore` counts only unfinished reservations. `reservationsCount` remains an alias of `activeRequestsCount` for backward compatibility. Detail additionally returns `reservations[]` summaries for the material.
+
 `DELETE /api/supplier/materials/:id` removes an owned listing when `canDelete` is true (409 when blocked).
 
 ### Category requests — `/api/supplier/category-requests`
