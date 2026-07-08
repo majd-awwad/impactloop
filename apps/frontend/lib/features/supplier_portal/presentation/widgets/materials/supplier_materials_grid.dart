@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
+import '../../../../../app/theme/app_theme_colors.dart';
 import '../../../../../core/config/api_config.dart';
 import '../../../data/models/supplier_my_materials_models.dart';
 import '../../theme/supplier_theme_extension.dart';
@@ -55,14 +57,21 @@ class SupplierMaterialCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.supplierColors;
+    final colors = AppThemeColors.of(context);
 
     return Container(
       height: supplierMaterialCardHeight,
       decoration: BoxDecoration(
-        color: colors.surfaceSolid.withValues(alpha: colors.isDark ? 0.5 : 0.85),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border.withValues(alpha: 0.35)),
+        color: colors.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: colors.borderSubtle),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
     );
   }
