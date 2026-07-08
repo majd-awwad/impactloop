@@ -35,7 +35,8 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
       case SupplierIncomingRequestTab.completed:
         return request.status == SupplierIncomingRequestStatus.completed;
       case SupplierIncomingRequestTab.cancelled:
-        return request.status == SupplierIncomingRequestStatus.cancelled;
+        return request.status == SupplierIncomingRequestStatus.cancelled ||
+            request.status == SupplierIncomingRequestStatus.expired;
     }
   }
 
@@ -130,6 +131,21 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
     if (index == -1) throw StateError('Request not found');
     final updated = _requests[index].copyWith(
       status: SupplierIncomingRequestStatus.accepted,
+    );
+    _requests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<SupplierIncomingRequest> submitNoDriverPickupWindow(
+    String requestId,
+    SupplierPickupWindow pickupWindow,
+  ) async {
+    final index = _requests.indexWhere((request) => request.id == requestId);
+    if (index == -1) throw StateError('Request not found');
+    final updated = _requests[index].copyWith(
+      status: SupplierIncomingRequestStatus.accepted,
+      pickupWindow: pickupWindow,
     );
     _requests[index] = updated;
     return updated;

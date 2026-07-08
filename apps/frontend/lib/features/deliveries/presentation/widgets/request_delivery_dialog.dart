@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/location/current_location_service.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../reservations/application/learner_reservation_cache.dart';
 import '../../../reservations/data/models/learner_reservation.dart';
@@ -60,6 +61,9 @@ class _RequestDeliveryDialogState
   String? _selectedSavedAddressId;
   bool _saveForLater = false;
   bool _submitting = false;
+  bool _capturingLocation = false;
+  double? _latitude;
+  double? _longitude;
 
   @override
   void dispose() {
@@ -79,7 +83,43 @@ class _RequestDeliveryDialogState
       _cityController.text = address.location.city;
       _areaController.text = address.location.area ?? '';
       _addressController.text = address.location.addressLine ?? '';
+      _latitude = address.location.latitude;
+      _longitude = address.location.longitude;
     });
+  }
+
+  Future<void> _useCurrentLocation() async {
+    setState(() => _capturingLocation = true);
+
+    try {
+      final capture = await ref
+          .read(currentLocationServiceProvider)
+          .captureCurrentLocation();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _latitude = capture.latitude;
+        _longitude = capture.longitude;
+      });
+      showInfoSnackBar(context, 'Current location captured.');
+    } on CurrentLocationException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      showErrorSnackBar(context, error.message);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) {
+        setState(() => _capturingLocation = false);
+      }
+    }
   }
 
   Future<void> _submit() async {
@@ -121,6 +161,9 @@ class _RequestDeliveryDialogState
           addressLine: _addressController.text.trim().isEmpty
               ? null
               : _addressController.text.trim(),
+          latitude: _latitude,
+          longitude: _longitude,
+          isApproximate: _latitude == null || _longitude == null,
         ),
         saveDropoffAddressLabel: _saveForLater
             ? _saveLabelController.text.trim()
@@ -311,6 +354,34 @@ class _RequestDeliveryDialogState
                   textInputAction: TextInputAction.next,
                   maxLines: 2,
                 ),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton.icon(
+                  onPressed: _capturingLocation ? null : _useCurrentLocation,
+                  icon: _capturingLocation
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.my_location_outlined),
+                  label: Text(
+                    _capturingLocation
+                        ? 'Getting location…'
+                        : 'Use current location',
+                  ),
+                ),
+                if (_latitude != null && _longitude != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Coordinates: ${_latitude!.toStringAsFixed(5)}, '
+                    '${_longitude!.toStringAsFixed(5)}',
+                  ),
+                ] else ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  const Text(
+                    'Precise location helps drivers find you. You can still submit city and address only.',
+                  ),
+                ],
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   value: _saveForLater,

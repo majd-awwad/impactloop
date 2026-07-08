@@ -11,12 +11,11 @@ import {
 } from '../reservations/reservations.quantity.js';
 import { resolveReservationFollowUp } from '../reservations/reservation-follow-up.js';
 import {
-  buildDeliveryHandoverCodeData,
   buildSelfPickupCodeData,
-  createDeliveryId,
   ensureSelfPickupCodeStored,
   verifyHandoverCode,
 } from '../../utils/handover-codes.js';
+import { ensureDeliveryForAcceptedReservation } from '../delivery-groups/delivery-group-operations.service.js';
 import {
   computeEarliestDeliveryStart,
   findFeasibleDeliveryWindow,
@@ -34,7 +33,7 @@ import {
   clearPendingRescheduleFields,
 } from '../reservations/reservation-reschedule.js';
 
-const reservationInclude = {
+export const reservationInclude = {
   material: {
     include: {
       category: { select: { nameEn: true } },
@@ -60,6 +59,31 @@ const reservationInclude = {
     orderBy: { requestedAt: 'desc' as const },
     take: 1,
   },
+  deliveryGroup: {
+    select: {
+      id: true,
+      deliveryFee: true,
+      currency: true,
+      status: true,
+      delivery: {
+        select: {
+          id: true,
+          status: true,
+          assignedDriverProfileId: true,
+        },
+      },
+      reservations: {
+        where: {
+          status: 'ACCEPTED',
+          fulfillmentMethod: 'DELIVERY',
+        },
+        select: {
+          id: true,
+          materialSubtotal: true,
+        },
+      },
+    },
+  },
   _count: {
     select: {
       deliveries: true,
@@ -84,7 +108,6 @@ export type SupplierReservationRecord = Prisma.ReservationGetPayload<{
 export const supplierCanCompleteReservation = (input: {
   status: ReservationStatus;
   fulfillmentMethod: string;
-  deliveryRequested: boolean;
   hasDelivery: boolean;
 }) => {
   if (input.status !== 'ACCEPTED') {
@@ -95,7 +118,7 @@ export const supplierCanCompleteReservation = (input: {
     return false;
   }
 
-  if (input.deliveryRequested || input.hasDelivery) {
+  if (input.hasDelivery) {
     return false;
   }
 
@@ -113,75 +136,6 @@ export const findSupplierReservations = async (
     },
     include: reservationInclude,
     orderBy: { createdAt: 'desc' },
-  });
-};
-
-const createDeliveryForAcceptedReservation = async (
-  tx: Prisma.TransactionClient,
-  input: {
-    reservationId: string;
-    requesterId: string;
-    changedByUserId: string;
-    materialLocation: {
-      country: string;
-      city: string;
-      area: string | null;
-      addressLine: string | null;
-      latitude: number | null;
-      longitude: number | null;
-      isApproximate: boolean;
-    };
-    deliveryAddressText: string;
-    deliveryNote: string | null;
-  },
-) => {
-  const pickupLocation = await tx.location.create({
-    data: {
-      country: input.materialLocation.country,
-      city: input.materialLocation.city,
-      area: input.materialLocation.area,
-      addressLine: input.materialLocation.addressLine,
-      latitude: input.materialLocation.latitude,
-      longitude: input.materialLocation.longitude,
-      visibility: 'PRIVATE',
-      isApproximate: input.materialLocation.isApproximate,
-      locationType: 'DELIVERY_PICKUP',
-    },
-  });
-
-  const dropoffLocation = await tx.location.create({
-    data: {
-      country: input.materialLocation.country,
-      city: input.materialLocation.city,
-      addressLine: input.deliveryAddressText,
-      visibility: 'PRIVATE',
-      isApproximate: true,
-      locationType: 'DELIVERY_DROPOFF',
-    },
-  });
-
-  const deliveryId = createDeliveryId();
-  const handoverCodes = await buildDeliveryHandoverCodeData(deliveryId);
-
-  return tx.delivery.create({
-    data: {
-      id: deliveryId,
-      ...handoverCodes.data,
-      reservationId: input.reservationId,
-      pickupLocationId: pickupLocation.id,
-      dropoffLocationId: dropoffLocation.id,
-      requestedByUserId: input.requesterId,
-      status: 'WAITING_FOR_DRIVER',
-      learnerNote: input.deliveryNote,
-      statusHistory: {
-        create: {
-          oldStatus: null,
-          newStatus: 'WAITING_FOR_DRIVER',
-          changedByUserId: input.changedByUserId,
-          note: 'Delivery created when supplier accepted reservation',
-        },
-      },
-    },
   });
 };
 
@@ -286,7 +240,10 @@ const acceptDeliveryWithConfirmedWindow = async (
     reservation: {
       id: string;
       requesterId: string;
+      deliveryGroupId: string | null;
       deliveryAddressText: string | null;
+      dropoffCity: string | null;
+      dropoffArea: string | null;
       deliveryNote: string | null;
       material: {
         location: {
@@ -294,8 +251,8 @@ const acceptDeliveryWithConfirmedWindow = async (
           city: string;
           area: string | null;
           addressLine: string | null;
-          latitude: number | null;
-          longitude: number | null;
+          latitude: Prisma.Decimal | number | null;
+          longitude: Prisma.Decimal | number | null;
           isApproximate: boolean;
         };
       };
@@ -319,20 +276,16 @@ const acceptDeliveryWithConfirmedWindow = async (
       schedulingConflictReason: null,
       supplierProposedPickupWindowStart: null,
       supplierProposedPickupWindowEnd: null,
-      deliveryRequested: true,
       supplierNote: input.supplierNote,
       acceptedAt: new Date(),
     },
     include: reservationInclude,
   });
 
-  await createDeliveryForAcceptedReservation(tx, {
-    reservationId: input.reservation.id,
-    requesterId: input.reservation.requesterId,
+  await ensureDeliveryForAcceptedReservation(tx, {
+    reservation: input.reservation,
     changedByUserId: input.ownerId,
-    materialLocation: input.reservation.material.location,
-    deliveryAddressText: input.reservation.deliveryAddressText!.trim(),
-    deliveryNote: input.reservation.deliveryNote,
+    statusHistoryNote: 'Delivery created when supplier accepted reservation',
   });
 
   return tx.reservation.findFirstOrThrow({
@@ -347,7 +300,10 @@ const acceptDeliveryReservation = async (
     reservation: {
       id: string;
       requesterId: string;
+      deliveryGroupId: string | null;
       deliveryAddressText: string | null;
+      dropoffCity: string | null;
+      dropoffArea: string | null;
       deliveryNote: string | null;
       material: {
         location: {
@@ -355,8 +311,8 @@ const acceptDeliveryReservation = async (
           city: string;
           area: string | null;
           addressLine: string | null;
-          latitude: number | null;
-          longitude: number | null;
+          latitude: Prisma.Decimal | number | null;
+          longitude: Prisma.Decimal | number | null;
           isApproximate: boolean;
         };
       };
@@ -652,7 +608,7 @@ export const completeSupplierReservation = async (input: {
       where: { reservationId: existing.id },
     });
 
-    if (existing.deliveryRequested || deliveryCount > 0) {
+    if (deliveryCount > 0) {
       return { conflict: true as const, reservation: existing };
     }
 
@@ -941,7 +897,7 @@ export const cancelSupplierAcceptedReservation = async (input: {
       where: { reservationId: existing.id },
     });
 
-    if (deliveryCount > 0 || existing.deliveryRequested) {
+    if (deliveryCount > 0) {
       return { deliveryBlocked: true as const, reservation: existing };
     }
 
@@ -992,6 +948,7 @@ export const createSupplierNoShowReport = async (input: {
       include: {
         deliveries: {
           select: {
+            id: true,
             assignedDriverProfileId: true,
             assignedDriverProfile: {
               select: { userId: true },
@@ -1029,7 +986,7 @@ export const createSupplierNoShowReport = async (input: {
     let targetUserId = existing.requesterId;
     let targetRole: 'LEARNER' | 'DRIVER' = 'LEARNER';
 
-    if (existing.deliveryRequested || latestDelivery) {
+    if (latestDelivery) {
       const driverUserId = latestDelivery?.assignedDriverProfile?.userId;
       if (driverUserId) {
         targetUserId = driverUserId;
@@ -1070,7 +1027,6 @@ export const createSupplierNoShowReport = async (input: {
 
     const isSelfPickupOverdue =
       existing.fulfillmentMethod === 'PICKUP' &&
-      !existing.deliveryRequested &&
       existing.deliveries.length === 0 &&
       (existing.status === 'AWAITING_SUPPLIER_CONFIRMATION' ||
         (existing.pickupWindowEnd != null &&

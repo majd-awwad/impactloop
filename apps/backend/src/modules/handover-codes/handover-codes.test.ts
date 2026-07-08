@@ -375,6 +375,7 @@ describe('handover confirmation codes', () => {
         },
       ],
       deliveryAddressText: '12 Learner Street',
+      dropoffCity: 'Nablus',
       safeDropoffAllowed: false,
     } satisfies CreateReservationInput);
     ctx.createdReservationIds.push(reservation.id);
@@ -412,6 +413,7 @@ describe('handover confirmation codes', () => {
         },
       ],
       deliveryAddressText: '12 Learner Street',
+      dropoffCity: 'Nablus',
       safeDropoffAllowed: false,
     });
     ctx.createdReservationIds.push(reservation.id);
@@ -464,6 +466,7 @@ describe('handover confirmation codes', () => {
         },
       ],
       deliveryAddressText: '12 Learner Street',
+      dropoffCity: 'Nablus',
       safeDropoffAllowed: false,
     });
     ctx.createdReservationIds.push(reservation.id);
@@ -524,6 +527,7 @@ describe('handover confirmation codes', () => {
         },
       ],
       deliveryAddressText: '12 Learner Street',
+      dropoffCity: 'Nablus',
       safeDropoffAllowed: false,
     });
     ctx.createdReservationIds.push(reservation.id);
@@ -595,6 +599,7 @@ describe('handover confirmation codes', () => {
         },
       ],
       deliveryAddressText: '12 Learner Street',
+      dropoffCity: 'Nablus',
       safeDropoffAllowed: false,
     });
     ctx.createdReservationIds.push(reservation.id);
@@ -675,7 +680,6 @@ describe('handover confirmation codes', () => {
         quantityRequested: 1,
         status: 'ACCEPTED',
         fulfillmentMethod: 'DELIVERY',
-        deliveryRequested: true,
         acceptedAt: new Date(),
       },
     });

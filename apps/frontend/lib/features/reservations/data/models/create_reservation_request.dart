@@ -6,28 +6,38 @@ class CreateReservationRequest {
     required this.quantityRequested,
     required this.fulfillmentMethod,
     this.message,
+    this.buildItemId,
     this.learnerPreferredPickupWindows = const [],
     this.learnerPreferredDeliveryWindows = const [],
     this.deliveryAddressText,
+    this.dropoffCity,
+    this.dropoffArea,
     this.safeDropoffAllowed,
     this.deliveryNote,
+    this.combineWithDeliveryGroupId,
   });
 
   final String materialId;
   final double quantityRequested;
   final String fulfillmentMethod;
   final String? message;
+  final String? buildItemId;
   final List<ReservationPreferredWindow> learnerPreferredPickupWindows;
   final List<ReservationPreferredWindow> learnerPreferredDeliveryWindows;
   final String? deliveryAddressText;
+  final String? dropoffCity;
+  final String? dropoffArea;
   final bool? safeDropoffAllowed;
   final String? deliveryNote;
+  final String? combineWithDeliveryGroupId;
 
   Map<String, dynamic> toJson() {
     return {
       'materialId': materialId,
       'quantityRequested': quantityRequested,
       'fulfillmentMethod': fulfillmentMethod,
+      if (buildItemId != null && buildItemId!.trim().isNotEmpty)
+        'buildItemId': buildItemId!.trim(),
       if (message != null && message!.trim().isNotEmpty)
         'message': message!.trim(),
       if (fulfillmentMethod == 'PICKUP' &&
@@ -44,12 +54,24 @@ class CreateReservationRequest {
           deliveryAddressText != null &&
           deliveryAddressText!.trim().isNotEmpty)
         'deliveryAddressText': deliveryAddressText!.trim(),
+      if (fulfillmentMethod == 'DELIVERY' &&
+          dropoffCity != null &&
+          dropoffCity!.trim().isNotEmpty)
+        'dropoffCity': dropoffCity!.trim(),
+      if (fulfillmentMethod == 'DELIVERY' &&
+          dropoffArea != null &&
+          dropoffArea!.trim().isNotEmpty)
+        'dropoffArea': dropoffArea!.trim(),
       if (fulfillmentMethod == 'DELIVERY' && safeDropoffAllowed != null)
         'safeDropoffAllowed': safeDropoffAllowed,
       if (fulfillmentMethod == 'DELIVERY' &&
           deliveryNote != null &&
           deliveryNote!.trim().isNotEmpty)
         'deliveryNote': deliveryNote!.trim(),
+      if (fulfillmentMethod == 'DELIVERY' &&
+          combineWithDeliveryGroupId != null &&
+          combineWithDeliveryGroupId!.trim().isNotEmpty)
+        'combineWithDeliveryGroupId': combineWithDeliveryGroupId!.trim(),
     };
   }
 }

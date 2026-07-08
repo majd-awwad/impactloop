@@ -36,7 +36,7 @@ final learnerDeliveryProvider =
           .watch(deliveriesRepositoryProvider)
           .fetchDelivery(deliveryId);
 
-      if (delivery.isTrackingEligible) {
+      if (delivery.canTrack) {
         final timer = Timer(_learnerDeliveryTrackingPollInterval, () {
           ref.invalidateSelf();
         });

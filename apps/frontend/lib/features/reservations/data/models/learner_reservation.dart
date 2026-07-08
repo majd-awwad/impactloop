@@ -166,7 +166,6 @@ class LearnerReservation {
     this.supplierNote,
     this.rejectionReason,
     this.pickupLocationFull,
-    this.deliveryRequested = false,
     this.fulfillmentMethod = 'PICKUP',
     this.learnerPreferredPickupWindows = const [],
     this.learnerPreferredDeliveryWindows = const [],
@@ -186,7 +185,21 @@ class LearnerReservation {
     this.pendingRescheduleReason,
     this.canLearnerReportSupplier = false,
     this.canReportNoDriverAvailable = false,
+    this.assignedDriverPickupOverdue = false,
     this.canLearnerRequestDelivery = false,
+    this.incidentReviewStatus,
+    this.pendingIncidentReasonCode,
+    this.unitPriceAtReservation,
+    this.materialSubtotal,
+    this.deliveryFee,
+    this.totalAmount,
+    this.currency,
+    this.deliveryZone,
+    this.deliveryGroupId,
+    this.groupedDelivery = false,
+    this.groupItemCount,
+    this.groupDeliveryFee,
+    this.groupTotal,
   });
 
   final String id;
@@ -209,7 +222,6 @@ class LearnerReservation {
   final String? supplierNote;
   final String? rejectionReason;
   final LearnerReservationPickupLocation? pickupLocationFull;
-  final bool deliveryRequested;
   final String fulfillmentMethod;
   final List<ReservationPreferredWindow> learnerPreferredPickupWindows;
   final List<ReservationPreferredWindow> learnerPreferredDeliveryWindows;
@@ -229,7 +241,21 @@ class LearnerReservation {
   final String? pendingRescheduleReason;
   final bool canLearnerReportSupplier;
   final bool canReportNoDriverAvailable;
+  final bool assignedDriverPickupOverdue;
   final bool canLearnerRequestDelivery;
+  final String? incidentReviewStatus;
+  final String? pendingIncidentReasonCode;
+  final double? unitPriceAtReservation;
+  final double? materialSubtotal;
+  final double? deliveryFee;
+  final double? totalAmount;
+  final String? currency;
+  final String? deliveryZone;
+  final String? deliveryGroupId;
+  final bool groupedDelivery;
+  final int? groupItemCount;
+  final double? groupDeliveryFee;
+  final double? groupTotal;
 
   factory LearnerReservation.fromJson(Map<String, dynamic> json) {
     final materialJson = json['material'];
@@ -285,7 +311,6 @@ class LearnerReservation {
       pickupLocationFull: pickupLocationJson is Map<String, dynamic>
           ? LearnerReservationPickupLocation.fromJson(pickupLocationJson)
           : null,
-      deliveryRequested: json['deliveryRequested'] == true,
       fulfillmentMethod: json['fulfillmentMethod'] as String? ?? 'PICKUP',
       learnerPreferredPickupWindows: _parsePreferredWindows(
         json['learnerPreferredPickupWindows'],
@@ -327,7 +352,22 @@ class LearnerReservation {
       }(),
       canLearnerReportSupplier: json['canLearnerReportSupplier'] == true,
       canReportNoDriverAvailable: json['canReportNoDriverAvailable'] == true,
+      assignedDriverPickupOverdue: json['assignedDriverPickupOverdue'] == true,
       canLearnerRequestDelivery: json['canLearnerRequestDelivery'] == true,
+      incidentReviewStatus: json['incidentReviewStatus'] as String?,
+      pendingIncidentReasonCode: json['pendingIncidentReasonCode'] as String?,
+      unitPriceAtReservation:
+          (json['unitPriceAtReservation'] as num?)?.toDouble(),
+      materialSubtotal: (json['materialSubtotal'] as num?)?.toDouble(),
+      deliveryFee: (json['deliveryFee'] as num?)?.toDouble(),
+      totalAmount: (json['totalAmount'] as num?)?.toDouble(),
+      currency: json['currency'] as String?,
+      deliveryZone: json['deliveryZone'] as String?,
+      deliveryGroupId: json['deliveryGroupId'] as String?,
+      groupedDelivery: json['groupedDelivery'] == true,
+      groupItemCount: (json['groupItemCount'] as num?)?.toInt(),
+      groupDeliveryFee: (json['groupDeliveryFee'] as num?)?.toDouble(),
+      groupTotal: (json['groupTotal'] as num?)?.toDouble(),
     );
   }
 
@@ -353,6 +393,9 @@ class LearnerReservation {
 
   bool get isPickupFulfillment => fulfillmentMethod == 'PICKUP';
   bool get isDeliveryFulfillment => fulfillmentMethod == 'DELIVERY';
+
+  bool get hasDeliveryJob =>
+      isDeliveryFulfillment || activeDelivery != null;
 
   static List<ReservationPreferredWindow> _parsePreferredWindows(Object? value) {
     if (value is! List) {

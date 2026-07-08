@@ -708,6 +708,11 @@ class _PersonCard extends StatelessWidget {
                   label: _formatStatus(item.accountStatus),
                   color: statusColor,
                 ),
+                if (item.verifiedStrikeCount > 0)
+                  _Badge(
+                    label: 'Verified strikes: ${item.verifiedStrikeCount}',
+                    color: palette.amber,
+                  ),
                 if (item.primaryRole != null)
                   _Badge(
                     label: _formatRole(item.primaryRole),
@@ -806,6 +811,11 @@ class _PersonDetailDialog extends StatelessWidget {
               _DetailRow('Phone', detail['phone']),
               _DetailRow('Created', _formatDetailDate(detail['createdAt'])),
               _DetailRow('Last login', _formatDetailDate(detail['lastLoginAt'])),
+              if (((detail['verifiedStrikeCount'] as num?)?.toInt() ?? 0) > 0)
+                _DetailRow(
+                  'Verified strikes',
+                  '${detail['verifiedStrikeCount']}',
+                ),
               if (isSuspended) ...[
                 const SizedBox(height: 12),
                 Text('Suspension', style: AdminTypography.sectionTitle(palette)),

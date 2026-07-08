@@ -10,6 +10,11 @@ import 'package:frontend/features/learning_hub/application/learning_hub_provider
 import 'package:frontend/features/learning_hub/domain/learning_project_repository.dart';
 import 'package:frontend/features/learning_hub/domain/learning_projects_result.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project.dart';
+import 'package:frontend/features/learning_hub/domain/models/learning_project_submission.dart';
+import 'package:frontend/features/learning_hub/domain/models/project_build.dart';
+import 'package:frontend/features/learning_hub/domain/project_engagement.dart';
+import 'package:frontend/features/learning_hub/domain/project_follow_status.dart';
+import 'package:frontend/features/learning_hub/domain/project_save_status.dart';
 import 'package:frontend/features/materials/data/models/category.dart';
 
 void main() {
@@ -75,6 +80,42 @@ void main() {
         );
       },
     );
+
+    testWidgets('shows compact engagement controls on project cards', (
+      tester,
+    ) async {
+      final router = _buildRouter(
+        repository: _FakeLearningHubRepository(
+          fetchProjects: () async => LearningProjectsResult(
+            items: [
+              _project(
+                id: '11111111-1111-1111-1111-111111111111',
+                title: 'Solar Station',
+                likesCount: 7,
+                followersCount: 3,
+                isSaved: true,
+              ),
+            ],
+            page: 1,
+            limit: 2,
+            total: 1,
+            totalPages: 1,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(router);
+      await tester.pumpAndSettle();
+
+      expect(find.text('7 likes'), findsOneWidget);
+      expect(find.text('Saved'), findsOneWidget);
+      expect(find.text('3 followers'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Remove saved project'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('login'), findsOneWidget);
+    });
 
     testWidgets('shows empty state when no published projects exist', (
       tester,
@@ -145,6 +186,10 @@ Widget _buildRouter({required LearningProjectRepository repository}) {
           return Scaffold(body: Text('detail:$id'));
         },
       ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const Scaffold(body: Text('login')),
+      ),
     ],
   );
 
@@ -164,7 +209,15 @@ LearningProjectsResult _emptyResult() {
   );
 }
 
-LearningProject _project({required String id, required String title}) {
+LearningProject _project({
+  required String id,
+  required String title,
+  int likesCount = 0,
+  bool isLiked = false,
+  bool isSaved = false,
+  int followersCount = 0,
+  bool isFollowing = false,
+}) {
   return LearningProject(
     id: id,
     category: const LocalizedText(en: 'Robotics', ar: 'Robotics'),
@@ -184,6 +237,11 @@ LearningProject _project({required String id, required String title}) {
     cardGradient: const [0xFF1F2937, 0xFF243B53],
     isFeatured: false,
     hasRatings: false,
+    likesCount: likesCount,
+    isLiked: isLiked,
+    isSaved: isSaved,
+    followersCount: followersCount,
+    isFollowing: isFollowing,
   );
 }
 
@@ -200,10 +258,170 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<LearningProjectsResult> fetchSavedProjects(
+    LearningProjectsQuery query,
+  ) {
+    return _fetchProjects();
+  }
+
+  @override
+  Future<LearningProjectsResult> fetchFollowedProjects(
+    LearningProjectsQuery query,
+  ) {
+    return _fetchProjects();
+  }
+
+  @override
   Future<LearningProject?> fetchProjectById(String id) async => null;
 
   @override
+  Future<LearningProjectSubmissionsResult> fetchMyLearningProjectSubmissions(
+    LearningProjectSubmissionsQuery query,
+  ) async {
+    return const LearningProjectSubmissionsResult(
+      items: [],
+      page: 1,
+      limit: 20,
+      total: 0,
+      totalPages: 0,
+    );
+  }
+
+  @override
+  Future<LearningProjectSubmission> fetchMyLearningProjectSubmission(
+    String id,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LearningProjectSubmission> updateMyLearningProjectSubmission(
+    String id,
+    Map<String, dynamic> payload,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LearningProjectSubmission> resubmitMyLearningProjectSubmission(
+    String id,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ProjectBuild?> fetchMyBuild(String projectId) async => null;
+
+  @override
+  Future<ProjectBuild> startBuild(String projectId) async {
+    return ProjectBuild(
+      id: 'test-build',
+      projectId: projectId,
+      status: ProjectBuildStatus.inProgress,
+      project: const ProjectBuildProject(
+        id: 'test-project',
+        title: 'Test project',
+        shortDescription: '',
+      ),
+      progress: const ProjectBuildProgress(total: 0, ready: 0, percent: 0),
+      items: const [],
+    );
+  }
+
+  @override
+  Future<ProjectBuild> updateBuildItem(
+    String projectId,
+    String itemId, {
+    required ProjectBuildItemStatus status,
+    String? learnerNote,
+  }) async {
+    return startBuild(projectId);
+  }
+
+  @override
+  Future<BuildMaterialCandidatesResult> fetchMaterialCandidates(
+    String projectId,
+    String itemId,
+  ) async {
+    return BuildMaterialCandidatesResult(
+      itemId: itemId,
+      componentId: 'component',
+      searchTerm: '',
+      items: const [],
+    );
+  }
+
+  @override
+  Future<ProjectBuild> linkMaterial(
+    String projectId,
+    String itemId, {
+    required String materialId,
+  }) async {
+    return startBuild(projectId);
+  }
+
+  @override
+  Future<ProjectBuild> unlinkMaterial(String projectId, String itemId) async {
+    return startBuild(projectId);
+  }
+
+  @override
+  Future<ProjectEngagement> likeProject(String id) async {
+    return ProjectEngagement(projectId: id, likesCount: 1, isLiked: true);
+  }
+
+  @override
+  Future<ProjectEngagement> unlikeProject(String id) async {
+    return ProjectEngagement(projectId: id, likesCount: 0, isLiked: false);
+  }
+
+  @override
+  Future<ProjectSaveStatus> saveProject(String id) async {
+    return ProjectSaveStatus(projectId: id, isSaved: true);
+  }
+
+  @override
+  Future<ProjectSaveStatus> unsaveProject(String id) async {
+    return ProjectSaveStatus(projectId: id, isSaved: false);
+  }
+
+  @override
+  Future<ProjectFollowStatus> followProject(String id) async {
+    return ProjectFollowStatus(
+      projectId: id,
+      followersCount: 1,
+      isFollowing: true,
+    );
+  }
+
+  @override
+  Future<ProjectFollowStatus> unfollowProject(String id) async {
+    return ProjectFollowStatus(
+      projectId: id,
+      followersCount: 0,
+      isFollowing: false,
+    );
+  }
+
+  @override
+  Future<void> reviewProject(
+    String id, {
+    required int rating,
+    String? comment,
+  }) async {
+    return;
+  }
+
+  @override
+  Future<void> deleteProjectReview(String id) async {
+    return;
+  }
+
+  @override
   Future<List<MaterialCategory>> fetchProjectCategories() async => const [];
+
+  @override
+  Future<List<MaterialCategory>> fetchMaterialCategories() async => const [];
 
   @override
   Future<void> submitProjectForReview({

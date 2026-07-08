@@ -3,6 +3,7 @@ import {
   resolvePickupHandoverPhase,
   type PickupHandoverPhase,
 } from '../../utils/handover-timing.js';
+import { isSelfPickupReservation } from './reservation-delivery.js';
 
 export type PendingRescheduleSummary = {
   requestedBy: 'SUPPLIER' | 'LEARNER' | null;
@@ -12,28 +13,19 @@ export type PendingRescheduleSummary = {
   proposedPickupWindowEnd: string | null;
 };
 
-export const isSelfPickupReservation = (input: {
-  fulfillmentMethod: string;
-  deliveryRequested: boolean;
-  deliveryCount: number;
-}) =>
-  input.fulfillmentMethod === 'PICKUP' &&
-  !input.deliveryRequested &&
-  input.deliveryCount === 0;
+export { isSelfPickupReservation } from './reservation-delivery.js';
 
 export const resolveSelfPickupHandoverPhase = (input: {
   status: ReservationStatus;
   pickupWindowStart: Date | null;
   pickupWindowEnd: Date | null;
   fulfillmentMethod: string;
-  deliveryRequested: boolean;
   deliveryCount: number;
 }): PickupHandoverPhase | null => {
   if (
     input.status !== 'ACCEPTED' ||
     !isSelfPickupReservation({
       fulfillmentMethod: input.fulfillmentMethod,
-      deliveryRequested: input.deliveryRequested,
       deliveryCount: input.deliveryCount,
     })
   ) {
@@ -50,7 +42,6 @@ export const resolveSelfPickupHandoverPhase = (input: {
 export const canRequestPickupReschedule = (input: {
   status: ReservationStatus;
   fulfillmentMethod: string;
-  deliveryRequested: boolean;
   deliveryCount: number;
   pickupWindowStart: Date | null;
   pickupWindowEnd: Date | null;
@@ -63,7 +54,6 @@ export const canRequestPickupReschedule = (input: {
   if (
     !isSelfPickupReservation({
       fulfillmentMethod: input.fulfillmentMethod,
-      deliveryRequested: input.deliveryRequested,
       deliveryCount: input.deliveryCount,
     })
   ) {

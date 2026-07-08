@@ -514,6 +514,23 @@ class SupplierL10n {
         'Impact is calculated from completed reuse data.',
         'يُحسب الأثر من بيانات إعادة الاستخدام المكتملة.',
       );
+  String get projectImpactTitle => t('Project impact', 'أثر المشاريع');
+  String get projectImpactDescription => t(
+        'Your materials helped learners complete real project components.',
+        'ساعدت موادك المتعلمين على إكمال مكوّنات مشاريع حقيقية.',
+      );
+  String get projectImpactEmptyDescription => t(
+        'Your completed project impact will appear here when learners finish components using your materials.',
+        'سيظهر أثر مشاريعك المكتمل هنا عندما ينهي المتعلمون المكوّنات باستخدام موادك.',
+      );
+  String get projectImpactProjectsSupported =>
+      t('Projects supported', 'مشاريع مدعومة');
+  String get projectImpactComponentsCompleted =>
+      t('Components completed', 'مكوّنات مكتملة');
+  String get projectImpactLearnerBuildsHelped =>
+      t('Learner builds helped', 'بناءات متعلمين مساندة');
+  String get projectImpactRecentProjects =>
+      t('Recent supported projects', 'مشاريع مدعومة حديثاً');
   String get noReviewsYet => t('No reviews yet', 'لا توجد مراجعات بعد');
   String get ratingLabel => t('Rating', 'التقييم');
   String reviewsCount(int count) =>
@@ -803,6 +820,8 @@ class SupplierL10n {
   String get tabNeedsLearner => t('Needs learner', 'بحاجة إلى المتعلم');
   String get tabCancelled => t('Cancelled', 'ملغى');
   String get tabDeclined => t('Declined', 'مرفوض');
+  String get tabExpired =>
+      t('Expired — no response', 'منتهٍ — لا رد');
   String get tabCompleted => filterCompleted;
   String get noRequests => t('No requests yet.', 'لا توجد طلبات بعد.');
   String get noRequestsForFilter => t(
@@ -889,6 +908,7 @@ class SupplierL10n {
         SupplierIncomingRequestStatus.awaitingSupplierConfirmation =>
           t('Waiting for supplier', 'بانتظار المورد'),
         SupplierIncomingRequestStatus.declined => tabDeclined,
+        SupplierIncomingRequestStatus.expired => tabExpired,
         SupplierIncomingRequestStatus.completed => tabCompleted,
         SupplierIncomingRequestStatus.cancelled => tabCancelled,
         SupplierIncomingRequestStatus.noShow => 'Learner no-show',
@@ -1712,6 +1732,10 @@ class SupplierL10n {
   String get noDeclineReasonProvided => t(
         'No decline reason provided.',
         'لم يُقدَّم سبب للرفض.',
+      );
+  String get expiredIncomingRequestMessage => t(
+        'This request expired because you did not accept or decline in time.',
+        'انتهت صلاحية هذا الطلب لأنك لم تقبل أو ترفض في الوقت المحدد.',
       );
   String get completedLabel => t('Completed', 'مكتمل');
   String get supplierNoteLabel => t('Supplier note', 'ملاحظة المورد');

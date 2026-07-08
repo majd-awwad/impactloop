@@ -12,8 +12,10 @@ import {
   acceptDelivery,
   createDeliveryLocationPing,
   listAvailableDeliveries,
+  listActiveDriverDeliveries,
   updateDriverDeliveryStatus,
 } from '../driver/driver.service.js';
+import { MAX_ACTIVE_DRIVER_DELIVERIES } from '../deliveries/deliveries.service.js';
 import { createDeliveryLocationPingSchema } from '../driver/driver.validation.js';
 import { completeSupplierReservation } from '../supplier-reservations/supplier-reservations.service.js';
 import {
@@ -22,6 +24,7 @@ import {
 } from '../../test-utils/handover-test-windows.js';
 
 import {
+  getLearnerDeliveryTracking,
   getMyDelivery,
   listMyDeliveries,
   requestDeliveryForReservation,
@@ -265,6 +268,16 @@ async function cleanup(ctx: TestContext) {
   }
 }
 
+async function progressToPickedUp(driverId: string, deliveryId: string) {
+  await updateDriverDeliveryStatus(driverId, deliveryId, {
+    status: 'ARRIVED_PICKUP',
+  });
+  return updateDriverDeliveryStatus(driverId, deliveryId, {
+    status: 'PICKED_UP',
+    confirmationCode: deriveHandoverCode('supplier-handover', deliveryId),
+  });
+}
+
 async function progressToDelivered(driverId: string, deliveryId: string) {
   await updateDriverDeliveryStatus(driverId, deliveryId, {
     status: 'ARRIVED_PICKUP',
@@ -384,11 +397,10 @@ describe('internal delivery backend core', () => {
     assert.equal(delivery.pickupLocation.city, 'Nablus');
     assert.equal(delivery.dropoffLocation.city, 'Ramallah');
 
-    const updatedReservation = await prisma.reservation.findUnique({
-      where: { id: reservation.id },
-      select: { deliveryRequested: true },
+    const deliveryCount = await prisma.delivery.count({
+      where: { reservationId: reservation.id },
     });
-    assert.equal(updatedReservation?.deliveryRequested, true);
+    assert.equal(deliveryCount, 1);
   });
 
   test('learner cannot request delivery before reservation is accepted', async () => {
@@ -515,10 +527,11 @@ describe('internal delivery backend core', () => {
     );
 
     const jobs = await listAvailableDeliveries(ctx.driverId);
-    assert.ok(jobs.some((job) => job.id === delivery.id));
-    const listed = jobs.find((job) => job.id === delivery.id);
+    assert.ok(jobs.deliveries.some((job) => job.id === delivery.id));
+    const listed = jobs.deliveries.find((job) => job.id === delivery.id);
     assert.equal(listed?.pickupLocation.city, 'Nablus');
     assert.equal('latitude' in listed!.pickupLocation, false);
+    assert.equal(listed?.distanceKm, null);
   });
 
   test('non-driver role middleware rejects driver routes', () => {
@@ -620,7 +633,99 @@ describe('internal delivery backend core', () => {
     assert.equal(driverProfile?.availability, 'ON_DELIVERY');
   });
 
-  test('driver with active delivery cannot accept another delivery', async () => {
+  test('driver can accept up to three active deliveries', async () => {
+    const driverId = await createAvailableDriver(ctx, 'queue');
+    const deliveryIds: string[] = [];
+
+    for (let index = 0; index < MAX_ACTIVE_DRIVER_DELIVERIES; index += 1) {
+      const { reservation } = await createAcceptedReservation(ctx, {
+        learnerId: index % 2 === 0 ? ctx.learnerId : ctx.otherLearnerId,
+      });
+      const delivery = await requestDeliveryForReservation(
+        index % 2 === 0 ? ctx.learnerId : ctx.otherLearnerId,
+        reservation.id,
+        deliveryInput(),
+      );
+      deliveryIds.push(delivery.id);
+      const assigned = await acceptDelivery(driverId, delivery.id);
+      assert.equal(assigned.status, 'DRIVER_ASSIGNED');
+    }
+
+    const active = await listActiveDriverDeliveries(driverId);
+    assert.equal(active.deliveries.length, MAX_ACTIVE_DRIVER_DELIVERIES);
+    assert.equal(active.activeDeliveryCount, MAX_ACTIVE_DRIVER_DELIVERIES);
+    assert.equal(active.canAcceptMore, false);
+  });
+
+  test('driver cannot accept fourth active delivery', async () => {
+    const driverId = await createAvailableDriver(ctx, 'queue-limit');
+    const deliveryIds: string[] = [];
+
+    for (let index = 0; index < MAX_ACTIVE_DRIVER_DELIVERIES; index += 1) {
+      const { reservation } = await createAcceptedReservation(ctx, {
+        learnerId: index % 2 === 0 ? ctx.learnerId : ctx.otherLearnerId,
+      });
+      const delivery = await requestDeliveryForReservation(
+        index % 2 === 0 ? ctx.learnerId : ctx.otherLearnerId,
+        reservation.id,
+        deliveryInput(),
+      );
+      deliveryIds.push(delivery.id);
+      await acceptDelivery(driverId, delivery.id);
+    }
+
+    const { reservation } = await createAcceptedReservation(ctx);
+    const fourthDelivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+
+    await assert.rejects(
+      () => acceptDelivery(driverId, fourthDelivery.id),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.match(error.message, /active delivery limit/i);
+        return true;
+      },
+    );
+  });
+
+  test('delivered deliveries do not count against active limit', async () => {
+    const driverId = await createAvailableDriver(ctx, 'queue-freed');
+    const deliveries: string[] = [];
+
+    for (let index = 0; index < MAX_ACTIVE_DRIVER_DELIVERIES; index += 1) {
+      const { reservation } = await createAcceptedReservation(ctx, {
+        learnerId: index % 2 === 0 ? ctx.learnerId : ctx.otherLearnerId,
+      });
+      const delivery = await requestDeliveryForReservation(
+        index % 2 === 0 ? ctx.learnerId : ctx.otherLearnerId,
+        reservation.id,
+        deliveryInput(),
+      );
+      deliveries.push(delivery.id);
+      await acceptDelivery(driverId, delivery.id);
+    }
+
+    await progressToDelivered(driverId, deliveries[0]!);
+
+    const { reservation } = await createAcceptedReservation(ctx);
+    const replacement = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+
+    const assigned = await acceptDelivery(driverId, replacement.id);
+    assert.equal(assigned.status, 'DRIVER_ASSIGNED');
+
+    const active = await listActiveDriverDeliveries(driverId);
+    assert.equal(active.activeDeliveryCount, MAX_ACTIVE_DRIVER_DELIVERIES);
+  });
+
+  test('driver with active delivery can accept another delivery', async () => {
     const driverId = await createAvailableDriver(ctx, 'busy');
     const first = await createAcceptedReservation(ctx);
     const firstDelivery = await requestDeliveryForReservation(
@@ -630,24 +735,23 @@ describe('internal delivery backend core', () => {
     );
     await acceptDelivery(driverId, firstDelivery.id);
 
-    const second = await createAcceptedReservation(ctx);
+    const second = await createAcceptedReservation(ctx, {
+      learnerId: ctx.otherLearnerId,
+    });
     const secondDelivery = await requestDeliveryForReservation(
-      ctx.learnerId,
+      ctx.otherLearnerId,
       second.reservation.id,
       deliveryInput(),
     );
 
-    await assert.rejects(
-      () => acceptDelivery(driverId, secondDelivery.id),
-      (error: unknown) => {
-        assert.ok(error instanceof AppError);
-        assert.equal(error.statusCode, 409);
-        return true;
-      },
-    );
+    const assigned = await acceptDelivery(driverId, secondDelivery.id);
+    assert.equal(assigned.status, 'DRIVER_ASSIGNED');
+
+    const active = await listActiveDriverDeliveries(driverId);
+    assert.equal(active.deliveries.length, 2);
   });
 
-  test('same driver cannot concurrently accept two deliveries', async () => {
+  test('same driver can concurrently accept two different deliveries', async () => {
     const driverId = await createAvailableDriver(ctx, 'busy-race');
     const first = await createAcceptedReservation(ctx);
     const firstDelivery = await requestDeliveryForReservation(
@@ -669,13 +773,8 @@ describe('internal delivery backend core', () => {
 
     assert.equal(
       results.filter((result) => result.status === 'fulfilled').length,
-      1,
+      2,
     );
-
-    const rejected = results.find((result) => result.status === 'rejected');
-    assert.ok(rejected && rejected.status === 'rejected');
-    assert.ok(rejected.reason instanceof AppError);
-    assert.equal(rejected.reason.statusCode, 409);
 
     const driverProfile = await prisma.driverProfile.findUnique({
       where: { userId: driverId },
@@ -697,7 +796,205 @@ describe('internal delivery backend core', () => {
         },
       },
     });
-    assert.equal(activeAssignedCount, 1);
+    assert.equal(activeAssignedCount, 2);
+  });
+
+  test('available jobs can filter by city', async () => {
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+
+    const nablusJobs = await listAvailableDeliveries(ctx.driverId, {
+      city: 'Nablus',
+    });
+    assert.ok(nablusJobs.deliveries.some((job) => job.id === delivery.id));
+
+    const ramallahJobs = await listAvailableDeliveries(ctx.driverId, {
+      city: 'Ramallah',
+    });
+    assert.equal(
+      ramallahJobs.deliveries.some((job) => job.id === delivery.id),
+      false,
+    );
+  });
+
+  test('available jobs can filter by area', async () => {
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+
+    const matching = await listAvailableDeliveries(ctx.driverId, {
+      area: TEST_MARKER,
+    });
+    assert.ok(matching.deliveries.some((job) => job.id === delivery.id));
+  });
+
+  test('available jobs can filter by maxDistanceKm when coordinates exist', async () => {
+    const driverId = await createAvailableDriver(ctx, 'distance-filter');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+
+    const driverProfile = await prisma.driverProfile.findUniqueOrThrow({
+      where: { userId: driverId },
+      select: { id: true },
+    });
+
+    await prisma.deliveryLocationPing.create({
+      data: {
+        deliveryId: delivery.id,
+        driverProfileId: driverProfile.id,
+        latitude: 31.9,
+        longitude: 35.2,
+        capturedAt: new Date(),
+      },
+    });
+
+    const nearby = await listAvailableDeliveries(driverId, {
+      maxDistanceKm: 50,
+      sortBy: 'nearest',
+    });
+    assert.ok(nearby.deliveries.some((job) => job.id === delivery.id));
+    const listed = nearby.deliveries.find((job) => job.id === delivery.id);
+    assert.ok(listed?.distanceKm != null);
+    assert.ok(listed?.distanceLabel?.includes('km'));
+
+    const far = await listAvailableDeliveries(driverId, {
+      maxDistanceKm: 1,
+      sortBy: 'nearest',
+    });
+    assert.equal(far.deliveries.some((job) => job.id === delivery.id), false);
+  });
+
+  test('available jobs sorted by nearest when requested', async () => {
+    const driverId = await createAvailableDriver(ctx, 'nearest-sort');
+    const nearLocation = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: 'Nablus',
+        area: `${TEST_MARKER}-near`,
+        latitude: 32.221,
+        longitude: 35.261,
+        visibility: 'ORDER_ONLY',
+        isApproximate: false,
+        locationType: 'DELIVERY_PICKUP',
+      },
+    });
+    const farLocation = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: 'Nablus',
+        area: `${TEST_MARKER}-far`,
+        latitude: 32.5,
+        longitude: 35.5,
+        visibility: 'ORDER_ONLY',
+        isApproximate: false,
+        locationType: 'DELIVERY_PICKUP',
+      },
+    });
+
+    const createDeliveryAtLocation = async (locationId: string) => {
+      const { reservation } = await createAcceptedReservation(ctx);
+      const dropoff = await prisma.location.create({
+        data: {
+          country: 'Palestine',
+          city: 'Ramallah',
+          area: TEST_MARKER,
+          latitude: 31.9,
+          longitude: 35.2,
+          visibility: 'PRIVATE',
+          isApproximate: false,
+          locationType: 'DELIVERY_DROPOFF',
+        },
+      });
+      return prisma.delivery.create({
+        data: {
+          reservationId: reservation.id,
+          pickupLocationId: locationId,
+          dropoffLocationId: dropoff.id,
+          requestedByUserId: ctx.learnerId,
+          status: 'WAITING_FOR_DRIVER',
+        },
+      });
+    };
+
+    const nearDelivery = await createDeliveryAtLocation(nearLocation.id);
+    const farDelivery = await createDeliveryAtLocation(farLocation.id);
+
+    const driverProfile = await prisma.driverProfile.findUniqueOrThrow({
+      where: { userId: driverId },
+      select: { id: true },
+    });
+    await prisma.deliveryLocationPing.create({
+      data: {
+        deliveryId: nearDelivery.id,
+        driverProfileId: driverProfile.id,
+        latitude: 32.22,
+        longitude: 35.26,
+        capturedAt: new Date(),
+      },
+    });
+
+    const jobs = await listAvailableDeliveries(driverId, { sortBy: 'nearest' });
+    const ids = jobs.deliveries.map((job) => job.id);
+    assert.ok(ids.includes(nearDelivery.id));
+    assert.ok(ids.includes(farDelivery.id));
+    assert.ok(
+      ids.indexOf(nearDelivery.id) < ids.indexOf(farDelivery.id),
+      'Expected nearer delivery to sort before farther delivery',
+    );
+  });
+
+  test('missing coordinates do not crash filtering', async () => {
+    const noCoordLocation = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: 'Jenin',
+        area: `${TEST_MARKER}-no-coords`,
+        visibility: 'ORDER_ONLY',
+        isApproximate: true,
+        locationType: 'DELIVERY_PICKUP',
+      },
+    });
+    const { reservation } = await createAcceptedReservation(ctx);
+    const dropoff = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: 'Ramallah',
+        area: TEST_MARKER,
+        latitude: 31.9,
+        longitude: 35.2,
+        visibility: 'PRIVATE',
+        isApproximate: false,
+        locationType: 'DELIVERY_DROPOFF',
+      },
+    });
+    await prisma.delivery.create({
+      data: {
+        reservationId: reservation.id,
+        pickupLocationId: noCoordLocation.id,
+        dropoffLocationId: dropoff.id,
+        requestedByUserId: ctx.learnerId,
+        status: 'WAITING_FOR_DRIVER',
+      },
+    });
+
+    const jobs = await listAvailableDeliveries(ctx.driverId, {
+      city: 'Jenin',
+      maxDistanceKm: 5,
+      sortBy: 'nearest',
+    });
+    assert.ok(jobs.deliveries.length >= 1);
+    assert.equal(jobs.deliveries[0]?.distanceKm ?? null, null);
   });
 
   test('only assigned driver can update delivery status', async () => {
@@ -747,7 +1044,7 @@ describe('internal delivery backend core', () => {
     );
   });
 
-  test('location pings are stored for assigned active driver', async () => {
+  test('location pings are stored for assigned active driver after pickup', async () => {
     const driverId = await createAvailableDriver(ctx, 'ping');
     const { reservation } = await createAcceptedReservation(ctx);
     const delivery = await requestDeliveryForReservation(
@@ -756,6 +1053,7 @@ describe('internal delivery backend core', () => {
       deliveryInput(),
     );
     await acceptDelivery(driverId, delivery.id);
+    await progressToPickedUp(driverId, delivery.id);
 
     const ping = await createDeliveryLocationPing(driverId, delivery.id, {
       latitude: 31.91,
@@ -771,7 +1069,54 @@ describe('internal delivery backend core', () => {
     assert.equal(typeof ping.accuracyMeters, 'number');
   });
 
-  test('owning learner gets latest driver ping coordinates for tracking-eligible delivery only', async () => {
+  test('location ping is rejected before PICKED_UP', async () => {
+    const driverId = await createAvailableDriver(ctx, 'pre-pickup-ping');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+
+    await assert.rejects(
+      () =>
+        createDeliveryLocationPing(driverId, delivery.id, {
+          latitude: 31.91,
+          longitude: 35.21,
+          accuracyMeters: 12,
+          capturedAt: new Date().toISOString(),
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 404);
+        return true;
+      },
+    );
+  });
+
+  test('owning learner cannot see driver coordinates before pickup', async () => {
+    const driverId = await createAvailableDriver(ctx, 'pre-pickup-hidden');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+
+    const learnerDelivery = await getMyDelivery(ctx.learnerId, delivery.id);
+
+    assert.equal(learnerDelivery.status, 'DRIVER_ASSIGNED');
+    assert.equal(learnerDelivery.canTrack, false);
+    assert.equal(
+      learnerDelivery.trackingMessage,
+      'Driver is heading to supplier pickup.',
+    );
+    assert.equal(learnerDelivery.latestDriverPing, null);
+  });
+
+  test('owning learner gets latest driver ping coordinates only after pickup', async () => {
     const driverId = await createAvailableDriver(ctx, 'latest-ping');
     const { reservation } = await createAcceptedReservation(ctx);
     const delivery = await requestDeliveryForReservation(
@@ -781,12 +1126,12 @@ describe('internal delivery backend core', () => {
     );
     await acceptDelivery(driverId, delivery.id);
 
-    await createDeliveryLocationPing(driverId, delivery.id, {
-      latitude: 31.91,
-      longitude: 35.21,
-      accuracyMeters: 12,
-      capturedAt: new Date(Date.now() - 30_000).toISOString(),
-    });
+    const beforePickup = await getMyDelivery(ctx.learnerId, delivery.id);
+    assert.equal(beforePickup.latestDriverPing, null);
+    assert.equal(beforePickup.canTrack, false);
+
+    await progressToPickedUp(driverId, delivery.id);
+
     const latest = await createDeliveryLocationPing(driverId, delivery.id, {
       latitude: 31.92,
       longitude: 35.22,
@@ -800,14 +1145,16 @@ describe('internal delivery backend core', () => {
       longitude: 35.22,
       capturedAt: latest.capturedAt,
       accuracyMeters: 8,
+      coordinatesVisible: true,
+      trackingLockedReason: null,
     });
+    assert.equal(learnerDelivery.canTrack, true);
     assert.equal('locationPings' in learnerDelivery, false);
 
     const learnerDeliveries = await listMyDeliveries(ctx.learnerId);
     const listedDelivery = learnerDeliveries.find((item) => item.id === delivery.id);
-    assert.ok(listedDelivery?.latestDriverPing);
-    assert.equal('latitude' in listedDelivery.latestDriverPing, false);
-    assert.equal('longitude' in listedDelivery.latestDriverPing, false);
+    assert.equal(listedDelivery?.canTrack, true);
+    assert.equal(listedDelivery?.latestDriverPing, null);
 
     await assert.rejects(
       () => getMyDelivery(ctx.otherLearnerId, delivery.id),
@@ -843,22 +1190,84 @@ describe('internal delivery backend core', () => {
       deliveryInput(),
     );
     await acceptDelivery(driverId, delivery.id);
+    await progressToPickedUp(driverId, delivery.id);
+    await createDeliveryLocationPing(driverId, delivery.id, {
+      latitude: 31.92,
+      longitude: 35.22,
+      accuracyMeters: 8,
+      capturedAt: new Date().toISOString(),
+    });
+    await updateDriverDeliveryStatus(driverId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(driverId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
+    await updateDriverDeliveryStatus(driverId, delivery.id, {
+      status: 'DELIVERED',
+      confirmationCode: deriveHandoverCode('learner-delivery', delivery.id),
+    });
+
+    const learnerDelivery = await getMyDelivery(ctx.learnerId, delivery.id);
+
+    assert.equal(learnerDelivery.latestDriverPing, null);
+    assert.equal(learnerDelivery.canTrack, false);
+    assert.equal(learnerDelivery.trackingMessage, 'Delivery completed.');
+  });
+
+  test('learner tracking endpoint hides coordinates before pickup', async () => {
+    const driverId = await createAvailableDriver(ctx, 'tracking-pre-pickup');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+
+    const tracking = await getLearnerDeliveryTracking(
+      ctx.learnerId,
+      delivery.id,
+    );
+
+    assert.equal(tracking.canTrack, false);
+    assert.equal(tracking.latestDriverLocation, null);
+    assert.equal(
+      tracking.trackingMessage,
+      'Driver is heading to supplier pickup.',
+    );
+  });
+
+  test('learner tracking endpoint returns coordinates after pickup', async () => {
+    const driverId = await createAvailableDriver(ctx, 'tracking-post-pickup');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+    await progressToPickedUp(driverId, delivery.id);
+
     const latest = await createDeliveryLocationPing(driverId, delivery.id, {
       latitude: 31.92,
       longitude: 35.22,
       accuracyMeters: 8,
       capturedAt: new Date().toISOString(),
     });
-    await progressToDelivered(driverId, delivery.id);
 
-    const learnerDelivery = await getMyDelivery(ctx.learnerId, delivery.id);
+    const tracking = await getLearnerDeliveryTracking(
+      ctx.learnerId,
+      delivery.id,
+    );
 
-    assert.deepEqual(learnerDelivery.latestDriverPing, {
+    assert.equal(tracking.canTrack, true);
+    assert.deepEqual(tracking.latestDriverLocation, {
+      latitude: 31.92,
+      longitude: 35.22,
       capturedAt: latest.capturedAt,
       accuracyMeters: 8,
     });
-    assert.equal('latitude' in learnerDelivery.latestDriverPing!, false);
-    assert.equal('longitude' in learnerDelivery.latestDriverPing!, false);
   });
 
   test('unassigned driver cannot ping another driver delivery', async () => {

@@ -8,8 +8,8 @@
 
 | Metric | Value | Source |
 |--------|-------|--------|
-| Prisma models | 35 | `schema.prisma` (`^model ` count) |
-| PostgreSQL tables | 35 | `@@map(...)` on each model |
+| Prisma models | 46 | `schema.prisma` (`^model ` count) |
+| PostgreSQL tables | 46 | `@@map(...)` on each model |
 | Enums | 33 | [enums.md](enums.md) |
 | PostGIS | Yes | `Location.location` — `Unsupported("geography(Point,4326)")`; enabled in migration `20260614145408_add_auth_schema` |
 
@@ -91,7 +91,7 @@ Delivery ──┬── DeliveryAssignment
            └── assigned DriverProfile
 ```
 
-Legacy reservation delivery fields still exist for compatibility: `deliveryRequested`, `deliveryStatus`, `deliveryCost`, `dropoffLocationId`, `driverProfileId`. New delivery code uses `deliveries` as the source of truth. `driverProfileId` on `Reservation` remains a nullable string legacy field; `Delivery.assignedDriverProfileId` is the real relation.
+Delivery logistics use `deliveries` as the source of truth (`status`, `assignedDriverProfileId`, pickup/dropoff locations). Reservation rows hold booking state only (`fulfillmentMethod`, `status`, scheduling windows).
 
 ### Learning hub
 
@@ -100,13 +100,18 @@ LearningProject ──┬── ProjectImage
                   ├── ProjectRequiredComponent
                   ├── ProjectStep
                   ├── ProjectLink
-                  └── ProjectTag
+                  ├── ProjectTag
+                  ├── ProjectLike
+                  ├── ProjectSave
+                  ├── ProjectFollow
+                  └── ProjectUserReview
 ```
 
 ### Reviews and notifications
 
 ```
 Review → Reservation, User (reviewer, reviewedUser)
+ProjectUserReview → LearningProject, User
 MaterialReport → Material, User (reporter, reviewedBy)
 Notification → User (generic table; no REST module in apps/backend/src/modules/)
 ```
@@ -157,6 +162,11 @@ Tables listed in [03-database.md](../03-database.md) but **absent** from current
 | `20260625123000_add_delivery_active_invariant_indexes` | Partial unique indexes for active delivery invariants |
 | `20260627120000_add_idempotency_records` | Generic idempotency records for safe create retries |
 | `20260704120000_add_user_saved_locations` | Private saved locations and PostGIS location index |
+| `20260705120000_add_project_likes` | Learner likes for published learning projects |
+| `20260705130000_add_project_saves` | Private learner saves for published learning projects |
+| `20260705140000_add_project_follows` | Learner follows for published learning projects |
+| `20260706100000_add_project_user_reviews` | Learner ratings/reviews for published learning projects |
+| `20260707100000_add_project_build_checklists` | Learner manual build checklists for learning projects |
 
 ## Design rules (still valid from code)
 

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
@@ -14,6 +14,7 @@ import '../../application/learner_deliveries_provider.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../data/models/learner_delivery.dart';
 import '../delivery_status_presentation.dart';
+import '../pickup_window_presentation.dart';
 
 class LearnerDeliveryDetailPage extends ConsumerWidget {
   const LearnerDeliveryDetailPage({super.key, required this.deliveryId});
@@ -129,6 +130,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final colors = AppThemeColors.of(context);
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
@@ -171,6 +173,20 @@ class _Header extends StatelessWidget {
               ),
             ],
           ),
+          if (delivery.assignedDriverPickupOverdue) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              delivery.status.toUpperCase() == 'ARRIVED_PICKUP'
+                  ? 'Pickup was not completed before the supplier window ended. '
+                      'An admin may review if no one reports the issue.'
+                  : 'The assigned driver has not completed supplier pickup before '
+                      'the window ended. An admin may review if no one reports the issue.',
+              style: AppTextStyles.label(context).copyWith(
+                color: colors.warningText,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -204,7 +220,7 @@ class _DeliverySummaryPanel extends StatelessWidget {
           ),
           _InfoRow(
             label: 'Pickup window',
-            value: _pickupWindowText(delivery.reservation),
+            value: learnerReservationPickupWindowDetail(delivery.reservation),
           ),
           _InfoRow(
             label: 'Pickup area',
@@ -221,10 +237,6 @@ class _DeliverySummaryPanel extends StatelessWidget {
           ],
           const SizedBox(height: AppSpacing.md),
           _TrackingStatusCard(delivery: delivery, onRefresh: onRefresh),
-          if (delivery.latestDriverPing?.hasCoordinates == true) ...[
-            const SizedBox(height: AppSpacing.md),
-            _TrackingMapCard(ping: delivery.latestDriverPing!),
-          ],
           if (delivery.driverNote?.trim().isNotEmpty == true)
             _InfoRow(label: 'Driver note', value: delivery.driverNote!),
           if (delivery.shouldShowLearnerDeliveryCode) ...[
@@ -265,87 +277,36 @@ class _TrackingStatusCard extends StatelessWidget {
       children: [
         _PanelTitle(
           icon: Icons.my_location_outlined,
-          title: ping?.hasCoordinates == true
-              ? 'Driver location updated recently'
-              : 'Tracking status',
+          title: delivery.canTrack
+              ? (ping?.hasCoordinates == true
+                    ? 'Driver location updated recently'
+                    : 'Live tracking')
+              : 'Delivery status',
           body: body,
         ),
         const SizedBox(height: AppSpacing.sm),
-        TextButton.icon(
-          onPressed: onRefresh,
-          icon: const Icon(Icons.refresh_outlined, size: 18),
-          label: const Text('Refresh tracking'),
-        ),
+        if (delivery.canTrack)
+          FilledButton.icon(
+            onPressed: () =>
+                context.push('/learner/deliveries/${delivery.id}/track'),
+            icon: const Icon(Icons.map_outlined),
+            label: const Text('Track delivery'),
+          ),
+        if (delivery.canTrack) const SizedBox(height: AppSpacing.sm),
+        if (delivery.canTrack)
+          TextButton.icon(
+            onPressed: onRefresh,
+            icon: const Icon(Icons.refresh_outlined, size: 18),
+            label: const Text('Refresh status'),
+          )
+        else
+          TextButton.icon(
+            onPressed: onRefresh,
+            icon: const Icon(Icons.refresh_outlined, size: 18),
+            label: const Text('Refresh status'),
+          ),
       ],
     );
-  }
-}
-
-class _TrackingMapCard extends StatelessWidget {
-  const _TrackingMapCard({required this.ping});
-
-  final LearnerDeliveryDriverPing ping;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final point = LatLng(ping.latitude!, ping.longitude!);
-
-    return ClipRRect(
-      borderRadius: AppRadius.lgAll,
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).width >= 700 ? 280 : 230,
-        width: double.infinity,
-        child: FlutterMap(
-          options: MapOptions(
-            initialCenter: point,
-            initialZoom: 15,
-            minZoom: 5,
-            maxZoom: 18,
-            interactionOptions: const InteractionOptions(
-              flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-            ),
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.impactloop.frontend',
-            ),
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: point,
-                  width: 48,
-                  height: 48,
-                  alignment: Alignment.topCenter,
-                  child: _DriverMapMarker(color: palette.mint),
-                ),
-              ],
-            ),
-            RichAttributionWidget(
-              alignment: AttributionAlignment.bottomRight,
-              attributions: [
-                TextSourceAttribution(
-                  'OpenStreetMap contributors',
-                  onTap: () {},
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DriverMapMarker extends StatelessWidget {
-  const _DriverMapMarker({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Icon(Icons.location_pin, color: color, size: 42);
   }
 }
 
@@ -606,19 +567,6 @@ class _StatePanel extends StatelessWidget {
   }
 }
 
-String _pickupWindowText(LearnerDeliveryReservation reservation) {
-  if (reservation.pickupWindowStart == null) {
-    return 'Pickup window not set';
-  }
-
-  final start = _formatDateTime(reservation.pickupWindowStart!);
-  final end = reservation.pickupWindowEnd == null
-      ? null
-      : _formatDateTime(reservation.pickupWindowEnd!);
-
-  return end == null ? 'Starts $start' : '$start - $end';
-}
-
 String _driverSummary(LearnerDeliveryDriver driver) {
   final details = [
     driver.vehicleLabel,
@@ -632,13 +580,19 @@ String _driverSummary(LearnerDeliveryDriver driver) {
 }
 
 String _trackingStatusBody(LearnerDelivery delivery) {
-  if (delivery.status == 'WAITING_FOR_DRIVER') {
-    return 'Waiting for a driver to be assigned.\n'
-        'Location updates appear when the driver shares their position.';
-  }
+  if (!delivery.canTrack) {
+    final message = delivery.trackingMessage?.trim();
+    if (message != null && message.isNotEmpty) {
+      return message;
+    }
 
-  if (delivery.isTerminal) {
-    return 'Tracking is complete for this delivery.';
+    return switch (delivery.status) {
+      'WAITING_FOR_DRIVER' => 'Waiting for driver.',
+      'DRIVER_ASSIGNED' => 'Driver assigned.',
+      'ARRIVED_PICKUP' => 'Driver is heading to supplier pickup.',
+      _ when delivery.isTerminal => 'Tracking is complete for this delivery.',
+      _ => 'Driver location is available after pickup.',
+    };
   }
 
   final ping = delivery.latestDriverPing;
@@ -647,9 +601,14 @@ String _trackingStatusBody(LearnerDelivery delivery) {
         'Location updates appear when the driver shares their position.';
   }
 
+  final secondsAgo = DateTime.now().difference(ping.capturedAt).inSeconds;
+  final freshness = secondsAgo < 60
+      ? 'Last updated $secondsAgo seconds ago.'
+      : 'Last updated ${_formatDateTime(ping.capturedAt)}.';
+
   return [
-    'Location updates appear when the driver shares their position.',
-    'Last update: ${_formatDateTime(ping.capturedAt)}',
+    deliveryStatusLabel(delivery.status),
+    freshness,
     if (ping.accuracyMeters != null)
       'Accuracy: about ${ping.accuracyMeters!.round()} m',
   ].join('\n');

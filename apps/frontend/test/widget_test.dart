@@ -32,9 +32,8 @@ import 'package:go_router/go_router.dart';
 
 import 'support/learning_hub_test_support.dart';
 
-final _learningHubTestOverride = learningHubRepositoryProvider.overrideWithValue(
-  emptyLearningHubRepository,
-);
+final _learningHubTestOverride = learningHubRepositoryProvider
+    .overrideWithValue(emptyLearningHubRepository);
 
 final _materialDiscoveryTestOverrides = [
   materialDiscoveryRepositoryProvider.overrideWithValue(
@@ -483,7 +482,10 @@ void main() {
     ).go('/login');
     await tester.pumpAndSettle();
 
-    expect(router.routeInformationProvider.value.uri.path, '/supplier/overview');
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/supplier/overview',
+    );
   });
 
   testWidgets('supplier users are redirected from /register to /supplier', (
@@ -536,7 +538,10 @@ void main() {
     ).go('/register');
     await tester.pumpAndSettle();
 
-    expect(router.routeInformationProvider.value.uri.path, '/supplier/overview');
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/supplier/overview',
+    );
   });
 
   testWidgets('logged out users are redirected from /supplier to /login', (
@@ -642,6 +647,21 @@ void main() {
 
     expect(find.text('Material Discovery'), findsOneWidget);
     expect(find.text('Reusable Materials'), findsOneWidget);
+  });
+
+  testWidgets('learning route q parameter pre-fills project search', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+
+    GoRouter.of(
+      tester.element(find.text('Build a better future')),
+    ).go('/learning?q=Cardboard%20sheets');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Learning Hub'), findsOneWidget);
+    expect(find.text('Cardboard sheets'), findsOneWidget);
+    expect(find.text('No projects match your filters'), findsOneWidget);
   });
 
   test('User.fromJson parses string, object, and primaryRole role shapes', () {
@@ -814,11 +834,9 @@ class _FakeAuthApi extends AuthApi {
   }) async {}
 }
 
-User _testUser({
-  List<String> roles = const ['LEARNER'],
-  String? activeRole,
-}) {
-  final resolvedActiveRole = activeRole ??
+User _testUser({List<String> roles = const ['LEARNER'], String? activeRole}) {
+  final resolvedActiveRole =
+      activeRole ??
       (roles.length == 1 && roles.first == 'SUPPLIER' ? 'SUPPLIER' : 'LEARNER');
 
   return User(

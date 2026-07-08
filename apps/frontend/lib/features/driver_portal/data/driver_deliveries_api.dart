@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_response.dart';
+import 'models/driver_delivery_inactive_context.dart';
 import 'models/driver_delivery_failure_request.dart';
 import 'models/driver_delivery.dart';
+import 'models/driver_deliveries_list_result.dart';
 import 'models/driver_location_ping_request.dart';
 import 'models/update_driver_delivery_status_request.dart';
 
@@ -11,17 +13,31 @@ class DriverDeliveriesApi {
 
   final Dio _client;
 
-  Future<List<DriverDelivery>> fetchAvailableDeliveries() {
+  Future<DriverDeliveriesListResult> fetchAvailableDeliveries({
+    DriverAvailableJobsFilter? filter,
+  }) {
     return unwrapApiResponse(
-      _client.get<Map<String, dynamic>>('/api/driver/deliveries/available'),
-      _parseDeliveryList,
+      _client.get<Map<String, dynamic>>(
+        '/api/driver/deliveries/available',
+        queryParameters: filter?.toQueryParameters(),
+      ),
+      _parseDeliveriesListResult,
     );
   }
 
-  Future<List<DriverDelivery>> fetchActiveDeliveries() {
+  Future<DriverDeliveriesListResult> fetchActiveDeliveries() {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>('/api/driver/deliveries/active'),
-      _parseDeliveryList,
+      _parseDeliveriesListResult,
+    );
+  }
+
+  Future<DriverDeliveryInactiveContext> fetchInactiveContext(String deliveryId) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/driver/deliveries/$deliveryId/inactive-context',
+      ),
+      DriverDeliveryInactiveContext.fromJson,
     );
   }
 
@@ -106,14 +122,21 @@ class DriverDeliveriesApi {
   }
 }
 
-List<DriverDelivery> _parseDeliveryList(Map<String, dynamic> json) {
+DriverDeliveriesListResult _parseDeliveriesListResult(
+  Map<String, dynamic> json,
+) {
   final deliveries = json['deliveries'];
-  if (deliveries is! List) {
-    return const <DriverDelivery>[];
-  }
+  final list = deliveries is List
+      ? deliveries
+            .whereType<Map>()
+            .map(
+              (item) => DriverDelivery.fromJson(Map<String, dynamic>.from(item)),
+            )
+            .toList(growable: false)
+      : const <DriverDelivery>[];
 
-  return deliveries
-      .whereType<Map>()
-      .map((item) => DriverDelivery.fromJson(Map<String, dynamic>.from(item)))
-      .toList(growable: false);
+  return DriverDeliveriesListResult(
+    deliveries: list,
+    meta: DriverDeliveriesListMeta.fromJson(json),
+  );
 }

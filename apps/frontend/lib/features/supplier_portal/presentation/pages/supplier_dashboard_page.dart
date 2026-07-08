@@ -14,6 +14,7 @@ import '../widgets/dashboard/supplier_dashboard_recent_activity_panel.dart';
 import '../widgets/dashboard/supplier_dashboard_insights_panel.dart';
 import '../widgets/dashboard/supplier_dashboard_stat_card.dart';
 import '../widgets/dashboard/supplier_materials_status_chart.dart';
+import '../widgets/dashboard/supplier_project_impact_panel.dart';
 import '../widgets/dashboard/supplier_performance_summary.dart';
 import '../widgets/dashboard/supplier_reservation_status_chart.dart';
 import '../widgets/supplier_empty_dashboard_state.dart';
@@ -178,6 +179,12 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
             },
           ),
           const SizedBox(height: AppSpacing.md),
+          if (widget.dashboard.hasSupplierProfile)
+            SupplierProjectImpactPanel(
+              projectSupport: widget.dashboard.projectSupport,
+            ),
+          if (widget.dashboard.hasSupplierProfile)
+            const SizedBox(height: AppSpacing.lg),
           SupplierPerformanceSummary(dashboard: widget.dashboard),
           const SizedBox(height: AppSpacing.lg),
           SupplierDashboardInsightsPanel(dashboard: widget.dashboard),

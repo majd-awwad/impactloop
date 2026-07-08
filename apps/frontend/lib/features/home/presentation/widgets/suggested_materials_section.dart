@@ -34,11 +34,11 @@ class SuggestedMaterialsSection extends ConsumerWidget {
               compactInlineAction: useMobileList,
               action: useMobileList
                   ? TextButton(
-                      onPressed: () => context.push('/materials'),
+                      onPressed: () => context.go('/materials'),
                       child: const Text('Browse all'),
                     )
                   : HomeSectionActionButton(
-                      onPressed: () => context.push('/materials'),
+                      onPressed: () => context.go('/materials'),
                       icon: const Icon(Icons.arrow_forward_rounded),
                       label: 'Browse all',
                     ),
@@ -57,7 +57,7 @@ class SuggestedMaterialsSection extends ConsumerWidget {
                     description:
                         'When suppliers list reusable materials, a small set will appear here.',
                     actionLabel: 'Open materials',
-                    onAction: () => context.push('/materials'),
+                    onAction: () => context.go('/materials'),
                   );
                 }
 

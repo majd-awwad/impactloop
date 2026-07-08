@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../domain/models/learning_project.dart';
+import '../domain/models/learning_project_draft_component.dart';
+import '../domain/models/learning_project_submission.dart';
+import '../domain/models/project_build.dart';
 
 class LearningHubApiMapper {
   const LearningHubApiMapper._();
@@ -11,6 +14,91 @@ class LearningHubApiMapper {
 
   static LearningProject fromDetailJson(Map<String, dynamic> json) {
     return _mapProject(json, includeDetailFields: true);
+  }
+
+  static ProjectBuild fromBuildJson(Map<String, dynamic> json) {
+    final projectJson = _asMap(json['project']) ?? const <String, dynamic>{};
+    final progressJson = _asMap(json['progress']) ?? const <String, dynamic>{};
+    final itemsJson = json['items'];
+
+    return ProjectBuild(
+      id: _stringOrFallback(json['id'], fallback: ''),
+      projectId: _stringOrFallback(json['projectId'], fallback: ''),
+      status: _mapBuildStatus(json['status']),
+      startedAt: _dateTimeFromDynamic(json['startedAt']),
+      completedAt: _dateTimeFromDynamic(json['completedAt']),
+      updatedAt: _dateTimeFromDynamic(json['updatedAt']),
+      project: ProjectBuildProject(
+        id: _stringOrFallback(projectJson['id'], fallback: ''),
+        title: _stringOrFallback(projectJson['title'], fallback: 'Project'),
+        shortDescription: _stringOrFallback(
+          projectJson['shortDescription'],
+          fallback: '',
+        ),
+        coverImageUrl: _nullableString(projectJson['coverImageUrl']),
+      ),
+      progress: ProjectBuildProgress(
+        total: _intFromDynamic(progressJson['total']) ?? 0,
+        ready:
+            _intFromDynamic(progressJson['ready']) ??
+            _intFromDynamic(progressJson['handled']) ??
+            0,
+        percent: _intFromDynamic(progressJson['percent']) ?? 0,
+      ),
+      items: itemsJson is List
+          ? itemsJson
+                .whereType<Map>()
+                .map((item) => _mapBuildItem(Map<String, dynamic>.from(item)))
+                .toList(growable: false)
+          : const <ProjectBuildItem>[],
+    );
+  }
+
+  static LearningProjectSubmission submissionFromJson(
+    Map<String, dynamic> json,
+  ) {
+    final categoryJson = _asMap(json['category']);
+    final categoryNameEn = _stringOrFallback(
+      categoryJson?['nameEn'],
+      fallback: 'Projects',
+    );
+    final categoryNameAr = _stringOrFallback(
+      categoryJson?['nameAr'],
+      fallback: categoryNameEn,
+    );
+
+    return LearningProjectSubmission(
+      id: _stringOrFallback(json['id'], fallback: ''),
+      title: _stringOrFallback(json['title'], fallback: 'Untitled project'),
+      shortDescription: _stringOrFallback(
+        json['shortDescription'],
+        fallback: '',
+      ),
+      description: _nullableString(json['description']),
+      status: LearningProjectSubmissionStatus.fromApiValue(
+        _stringOrFallback(json['status'], fallback: 'PENDING_REVIEW'),
+      ),
+      category: LocalizedText(en: categoryNameEn, ar: categoryNameAr),
+      difficulty: _stringOrFallback(json['difficulty'], fallback: 'BEGINNER'),
+      estimatedDurationMinutes: _intFromDynamic(
+        json['estimatedDurationMinutes'] ?? json['estimatedTimeMinutes'],
+      ),
+      coverImageUrl: _nullableString(json['coverImageUrl']),
+      submittedAt: _dateTimeFromDynamic(json['submittedAt']),
+      reviewedAt: _dateTimeFromDynamic(json['reviewedAt']),
+      createdAt: _dateTimeFromDynamic(json['createdAt']),
+      updatedAt: _dateTimeFromDynamic(json['updatedAt']),
+      reviewNote: _nullableString(json['reviewNote']),
+      changesRequestedReason: _nullableString(json['changesRequestedReason']),
+      rejectionReason: _nullableString(json['rejectionReason']),
+      publicProjectPath: _nullableString(json['publicProjectPath']),
+      availableActions: LearningProjectSubmissionActions.fromJson(
+        json['availableActions'],
+      ),
+      requiredComponents: _mapSubmissionComponents(json['requiredComponents']),
+      steps: _mapSubmissionSteps(json['steps']),
+      links: _mapSubmissionLinks(json['links']),
+    );
   }
 
   static LearningProject _mapProject(
@@ -46,10 +134,26 @@ class LearningHubApiMapper {
     final durationMinutes = _intFromDynamic(json['estimatedDurationMinutes']);
     final coverImageUrl = _nullableString(json['coverImageUrl']);
     final rating = _parseRatingSummary(json['ratingSummary']);
+    final likesCount = _intFromDynamic(json['likesCount']) ?? 0;
+    final isLiked = json['isLiked'] == true;
+    final isSaved = json['isSaved'] == true;
+    final followersCount = _intFromDynamic(json['followersCount']) ?? 0;
+    final isFollowing = json['isFollowing'] == true;
+    final isFeatured =
+        json['isFeatured'] == true || json['isSpotlight'] == true;
     final tags = _mapTags(json['tags']);
+    final recentReviews = includeDetailFields
+        ? _mapProjectReviews(json['recentReviews'])
+        : const <ProjectReviewItem>[];
+    final viewerReview = includeDetailFields
+        ? _mapProjectReview(json['viewerReview'])
+        : null;
 
+    final requiredComponents = includeDetailFields
+        ? _mapRequiredComponents(json['requiredComponents'])
+        : const <ProjectRequiredComponentItem>[];
     final components = includeDetailFields
-        ? _mapComponents(json['requiredComponents'])
+        ? requiredComponents.map((component) => component.name).toList()
         : const <LocalizedText>[];
     final steps = includeDetailFields
         ? _mapSteps(json['steps'])
@@ -89,12 +193,20 @@ class LearningHubApiMapper {
       hasRatings: rating.hasRatings,
       componentCountLabel: componentCountLabel,
       components: components,
+      requiredComponents: requiredComponents,
       steps: steps,
       links: links,
       imageUrl: imageUrl,
       heroIconData: heroIconForCategory(categoryNameEn, id: id),
       cardGradient: gradientForCategory(categoryNameEn, id: id),
-      isFeatured: false,
+      isFeatured: isFeatured,
+      likesCount: likesCount,
+      isLiked: isLiked,
+      isSaved: isSaved,
+      followersCount: followersCount,
+      isFollowing: isFollowing,
+      recentReviews: recentReviews,
+      viewerReview: viewerReview,
       tags: tags,
     );
   }
@@ -139,7 +251,9 @@ class LearningHubApiMapper {
     return '$count components';
   }
 
-  static List<LocalizedText> _mapComponents(Object? raw) {
+  static List<ProjectRequiredComponentItem> _mapRequiredComponents(
+    Object? raw,
+  ) {
     if (raw is! List) {
       return const [];
     }
@@ -151,8 +265,99 @@ class LearningHubApiMapper {
             item['componentName'],
             fallback: 'Component',
           );
-          return LocalizedText(en: name, ar: name);
+          return ProjectRequiredComponentItem(
+            id: _stringOrFallback(item['id'], fallback: ''),
+            name: LocalizedText(en: name, ar: name),
+            materialType: _stringOrFallback(
+              item['materialType'],
+              fallback: 'General',
+            ),
+            quantity: _numberFromDynamic(item['quantity']) ?? 1,
+            unit: _stringOrFallback(item['unit'], fallback: 'piece'),
+            isRequired: item['isRequired'] != false,
+            canBeSubstituted: item['canBeSubstituted'] == true,
+            categoryId: _nullableString(item['categoryId']),
+            notes: _nullableString(item['notes']),
+          );
         })
+        .toList(growable: false);
+  }
+
+  static List<LearningProjectSubmissionComponent> _mapSubmissionComponents(
+    Object? raw,
+  ) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    return raw
+        .whereType<Map>()
+        .map((item) {
+          final name = _stringOrFallback(
+            item['componentName'] ?? item['name'],
+            fallback: 'Component',
+          );
+          return LearningProjectSubmissionComponent(
+            id: _stringOrFallback(item['id'], fallback: ''),
+            name: name,
+            quantity: _numberFromDynamic(item['quantity']) ?? 1,
+            unit: _stringOrFallback(item['unit'], fallback: 'piece'),
+            role: LearningProjectComponentRole.fromApiValue(
+              _stringOrFallback(
+                item['componentRole'],
+                fallback: 'REQUIRED_MATERIAL',
+              ),
+            ),
+            isRequired: item['isRequired'] != false,
+            canBeSubstituted: item['canBeSubstituted'] == true,
+            materialCategoryId: _nullableString(item['categoryId']),
+            materialType: _nullableString(item['materialType']),
+            searchKeywords: _stringList(item['searchKeywords']),
+            notes: _nullableString(item['notes']),
+          );
+        })
+        .toList(growable: false);
+  }
+
+  static List<LearningProjectSubmissionStep> _mapSubmissionSteps(Object? raw) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    final steps = raw.whereType<Map>().toList(growable: false);
+    steps.sort((a, b) {
+      final left = _intFromDynamic(a['stepNumber']) ?? 0;
+      final right = _intFromDynamic(b['stepNumber']) ?? 0;
+      return left.compareTo(right);
+    });
+
+    return steps
+        .map(
+          (item) => LearningProjectSubmissionStep(
+            id: _nullableString(item['id']),
+            stepNumber: _intFromDynamic(item['stepNumber']),
+            title: _stringOrFallback(item['title'], fallback: 'Step'),
+            description: _stringOrFallback(item['description'], fallback: ''),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  static List<LearningProjectSubmissionLink> _mapSubmissionLinks(Object? raw) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => LearningProjectSubmissionLink(
+            id: _nullableString(item['id']),
+            url: _stringOrFallback(item['url'], fallback: ''),
+            title: _nullableString(item['title']),
+          ),
+        )
+        .where((link) => link.url.trim().isNotEmpty)
         .toList(growable: false);
   }
 
@@ -199,6 +404,179 @@ class LearningHubApiMapper {
         .toList(growable: false);
   }
 
+  static ProjectBuildItem _mapBuildItem(Map<String, dynamic> json) {
+    final componentJson =
+        _asMap(json['component']) ?? const <String, dynamic>{};
+    final name = _stringOrFallback(
+      componentJson['componentName'],
+      fallback: 'Component',
+    );
+
+    return ProjectBuildItem(
+      id: _stringOrFallback(json['id'], fallback: ''),
+      requiredComponentId: _stringOrFallback(
+        json['requiredComponentId'],
+        fallback: '',
+      ),
+      status: _mapBuildItemStatus(json['status']),
+      learnerNote: _nullableString(json['learnerNote']),
+      linkedMaterial: _mapLinkedMaterial(json['linkedMaterial']),
+      linkedReservation: _mapLinkedReservation(json['linkedReservation']),
+      isReadyForBuild: json['isReadyForBuild'] == true,
+      readinessLabel: _stringOrFallback(
+        json['readinessLabel'],
+        fallback: 'Still missing',
+      ),
+      component: ProjectRequiredComponentItem(
+        id: _stringOrFallback(componentJson['id'], fallback: ''),
+        name: LocalizedText(en: name, ar: name),
+        materialType: _stringOrFallback(
+          componentJson['materialType'],
+          fallback: 'General',
+        ),
+        quantity: _numberFromDynamic(componentJson['quantity']) ?? 1,
+        unit: _stringOrFallback(componentJson['unit'], fallback: 'piece'),
+        isRequired: componentJson['isRequired'] != false,
+        canBeSubstituted: componentJson['canBeSubstituted'] == true,
+        categoryId: _nullableString(componentJson['categoryId']),
+        notes: _nullableString(componentJson['notes']),
+      ),
+    );
+  }
+
+  static LinkedMaterialSummary? _mapLinkedMaterial(Object? raw) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+
+    final id = _stringOrFallback(json['id'], fallback: '');
+    if (id.isEmpty) {
+      return null;
+    }
+
+    final category = _asMap(json['category']);
+    return LinkedMaterialSummary(
+      id: id,
+      title: _stringOrFallback(json['title'], fallback: 'Material'),
+      imageUrl: _nullableString(json['imageUrl']),
+      categoryNameEn: _stringOrFallback(
+        category?['nameEn'],
+        fallback: 'Material',
+      ),
+      condition: _stringOrFallback(json['condition'], fallback: 'GOOD'),
+      status: _stringOrFallback(json['status'], fallback: 'AVAILABLE'),
+      isPubliclyAvailable: json['isPubliclyAvailable'] != false,
+      availabilityWarning: _nullableString(json['availabilityWarning']),
+      isFree: json['isFree'] == true,
+      price: _numberFromDynamic(json['price']),
+      currency: _stringOrFallback(json['currency'], fallback: 'NIS'),
+      supplierName: _stringOrFallback(
+        json['supplierName'],
+        fallback: 'Supplier',
+      ),
+      supplierType: _nullableString(json['supplierType']),
+      supplierVerified: json['supplierVerified'] == true,
+      city: _stringOrFallback(json['city'], fallback: ''),
+      area: _nullableString(json['area']),
+      pickupAllowed: json['pickupAllowed'] != false,
+      deliveryAllowed: json['deliveryAllowed'] == true,
+    );
+  }
+
+  static LinkedReservationSummary? _mapLinkedReservation(Object? raw) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+
+    final id = _stringOrFallback(json['id'], fallback: '');
+    if (id.isEmpty) {
+      return null;
+    }
+
+    return LinkedReservationSummary(
+      id: id,
+      status: _stringOrFallback(json['status'], fallback: ''),
+      materialId: _stringOrFallback(json['materialId'], fallback: ''),
+      needsAction: json['needsAction'] == true,
+      statusLabel: _stringOrFallback(json['statusLabel'], fallback: ''),
+    );
+  }
+
+  static BuildMaterialCandidatesResult fromMaterialCandidatesJson(
+    Map<String, dynamic> json,
+  ) {
+    final itemsJson = json['items'];
+    final items = itemsJson is List
+        ? itemsJson
+              .whereType<Map>()
+              .map(
+                (item) =>
+                    _mapMaterialCandidate(Map<String, dynamic>.from(item)),
+              )
+              .toList(growable: false)
+        : const <BuildMaterialCandidate>[];
+
+    return BuildMaterialCandidatesResult(
+      itemId: _stringOrFallback(json['itemId'], fallback: ''),
+      componentId: _stringOrFallback(json['componentId'], fallback: ''),
+      searchTerm: _stringOrFallback(json['searchTerm'], fallback: ''),
+      items: items,
+    );
+  }
+
+  static BuildMaterialCandidate _mapMaterialCandidate(
+    Map<String, dynamic> json,
+  ) {
+    final hintsJson = json['matchHints'];
+    final hints = hintsJson is List
+        ? hintsJson.whereType<String>().toList(growable: false)
+        : const <String>[];
+
+    return BuildMaterialCandidate(
+      id: _stringOrFallback(json['id'], fallback: ''),
+      title: _stringOrFallback(json['title'], fallback: 'Material'),
+      imageUrl: _nullableString(json['imageUrl']),
+      categoryNameEn: _stringOrFallback(
+        _asMap(json['category'])?['nameEn'],
+        fallback: 'Material',
+      ),
+      condition: _stringOrFallback(json['condition'], fallback: 'GOOD'),
+      status: _stringOrFallback(json['status'], fallback: 'AVAILABLE'),
+      isFree: json['isFree'] == true,
+      price: _numberFromDynamic(json['price']),
+      currency: _stringOrFallback(json['currency'], fallback: 'NIS'),
+      supplierName: _stringOrFallback(
+        json['supplierName'],
+        fallback: 'Supplier',
+      ),
+      city: _stringOrFallback(json['city'], fallback: ''),
+      area: _nullableString(json['area']),
+      pickupAllowed: json['pickupAllowed'] != false,
+      deliveryAllowed: json['deliveryAllowed'] == true,
+      matchHints: hints,
+    );
+  }
+
+  static ProjectBuildStatus _mapBuildStatus(Object? raw) {
+    return switch (_stringOrFallback(raw, fallback: 'IN_PROGRESS')) {
+      'COMPLETED' => ProjectBuildStatus.completed,
+      'ARCHIVED' => ProjectBuildStatus.archived,
+      _ => ProjectBuildStatus.inProgress,
+    };
+  }
+
+  static ProjectBuildItemStatus _mapBuildItemStatus(Object? raw) {
+    return switch (_stringOrFallback(raw, fallback: 'MISSING')) {
+      'ALREADY_OWNED' => ProjectBuildItemStatus.alreadyOwned,
+      'AVAILABLE' => ProjectBuildItemStatus.available,
+      'RESERVED' => ProjectBuildItemStatus.reserved,
+      'ALTERNATIVE' => ProjectBuildItemStatus.alternative,
+      _ => ProjectBuildItemStatus.missing,
+    };
+  }
+
   static List<String> _mapTags(Object? raw) {
     if (raw is! List) {
       return const [];
@@ -209,6 +587,18 @@ class LearningHubApiMapper {
         .map((tag) => tag.trim())
         .where((tag) => tag.isNotEmpty)
         .toSet()
+        .toList(growable: false);
+  }
+
+  static List<String> _stringList(Object? raw) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    return raw
+        .whereType<String>()
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
         .toList(growable: false);
   }
 
@@ -227,6 +617,47 @@ class LearningHubApiMapper {
     }
 
     return (hasRatings: true, value: average, count: count);
+  }
+
+  static List<ProjectReviewItem> _mapProjectReviews(Object? raw) {
+    if (raw is! List) {
+      return const [];
+    }
+
+    return raw
+        .whereType<Map>()
+        .map(_mapProjectReview)
+        .whereType<ProjectReviewItem>()
+        .toList(growable: false);
+  }
+
+  static ProjectReviewItem? _mapProjectReview(Object? raw) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+
+    final id = _stringOrFallback(json['id'], fallback: '');
+    final projectId = _stringOrFallback(json['projectId'], fallback: '');
+    final rating = _intFromDynamic(json['rating']) ?? 0;
+
+    if (id.isEmpty || projectId.isEmpty || rating <= 0) {
+      return null;
+    }
+
+    return ProjectReviewItem(
+      id: id,
+      projectId: projectId,
+      reviewerName: _stringOrFallback(
+        json['reviewerName'],
+        fallback: 'Learner',
+      ),
+      rating: rating,
+      comment: _nullableString(json['comment']),
+      isViewerReview: json['isViewerReview'] == true,
+      createdAt: _dateTimeFromDynamic(json['createdAt']),
+      updatedAt: _dateTimeFromDynamic(json['updatedAt']),
+    );
   }
 
   static String? _firstImageUrl(Object? raw) {
@@ -348,6 +779,14 @@ class LearningHubApiMapper {
 
     if (value is String) {
       return double.tryParse(value);
+    }
+
+    return null;
+  }
+
+  static DateTime? _dateTimeFromDynamic(Object? value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value.trim());
     }
 
     return null;

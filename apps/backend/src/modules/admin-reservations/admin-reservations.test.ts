@@ -135,7 +135,6 @@ async function createReservation(materialId: string, withDelivery: boolean) {
       quantityRequested: 1,
       status: 'ACCEPTED',
       acceptedAt: new Date(),
-      deliveryRequested: withDelivery,
     },
   });
   ctx.reservationIds.push(reservation.id);

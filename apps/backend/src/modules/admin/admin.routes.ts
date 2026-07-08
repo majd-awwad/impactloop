@@ -116,22 +116,29 @@ import {
   rejectAdminLearningProjectHandler,
   requestChangesAdminLearningProjectHandler,
   restoreAdminLearningProjectHandler,
+  updateAdminLearningProjectComponentHandler,
 } from '../admin-learning-projects/admin-learning-projects.controller.js';
 import {
+  adminLearningProjectComponentParamsSchema,
   adminLearningProjectIdParamSchema,
   adminLearningProjectsListQuerySchema,
   moderationReasonSchema,
+  updateAdminLearningProjectComponentSchema,
 } from '../admin-learning-projects/admin-learning-projects.validation.js';
 import {
   getAdminNoShowReportHandler,
   listAdminNoShowReportsHandler,
   rejectAdminNoShowReportHandler,
+  requestSupplierRescheduleAdminNoShowReportHandler,
+  cancelReleaseHoldAdminNoShowReportHandler,
   resolveAdminNoShowReportHandler,
   verifyAdminNoShowReportHandler,
 } from '../admin-no-show-reports/admin-no-show-reports.controller.js';
 import {
   adminNoShowReportIdParamSchema,
   adminNoShowReportsListQuerySchema,
+  cancelReleaseHoldSchema,
+  requestSupplierRescheduleSchema,
   reviewNoShowReportSchema,
 } from '../admin-no-show-reports/admin-no-show-reports.validation.js';
 
@@ -533,6 +540,15 @@ adminRouter.patch(
   asyncHandler(archiveAdminLearningProjectHandler),
 );
 
+adminRouter.patch(
+  '/learning-projects/:id/components/:componentId',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectComponentParamsSchema, 'params'),
+  validate(updateAdminLearningProjectComponentSchema),
+  asyncHandler(updateAdminLearningProjectComponentHandler),
+);
+
 adminRouter.get(
   '/no-show-reports',
   authMiddleware,
@@ -574,6 +590,24 @@ adminRouter.patch(
   validate(adminNoShowReportIdParamSchema, 'params'),
   validate(reviewNoShowReportSchema),
   asyncHandler(resolveAdminNoShowReportHandler),
+);
+
+adminRouter.post(
+  '/no-show-reports/:id/request-supplier-reschedule',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  validate(requestSupplierRescheduleSchema),
+  asyncHandler(requestSupplierRescheduleAdminNoShowReportHandler),
+);
+
+adminRouter.post(
+  '/no-show-reports/:id/cancel-release-hold',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  validate(cancelReleaseHoldSchema),
+  asyncHandler(cancelReleaseHoldAdminNoShowReportHandler),
 );
 
 adminRouter.get(
@@ -619,3 +653,20 @@ adminRouter.post(
   asyncHandler(resolveAdminNoShowReportHandler),
 );
 
+adminRouter.post(
+  '/reservation-reports/:id/request-supplier-reschedule',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  validate(requestSupplierRescheduleSchema),
+  asyncHandler(requestSupplierRescheduleAdminNoShowReportHandler),
+);
+
+adminRouter.post(
+  '/reservation-reports/:id/cancel-release-hold',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportIdParamSchema, 'params'),
+  validate(cancelReleaseHoldSchema),
+  asyncHandler(cancelReleaseHoldAdminNoShowReportHandler),
+);

@@ -11,7 +11,8 @@ void main() {
       'status': 'ACCEPTED',
       'quantityRequested': 1,
       'message': 'I need it for a robotics project.',
-      'pickupType': 'SELF_PICKUP',
+      'fulfillmentMethod': 'PICKUP',
+      'fulfillmentLabel': 'Pickup selected',
       'pickupWindowStart': '2026-06-17T10:00:00.000Z',
       'pickupWindowEnd': '2026-06-17T12:00:00.000Z',
       'supplierNote': 'Pickup near main gate.',
@@ -27,8 +28,7 @@ void main() {
     expect(item.materialTitle, 'Arduino Uno');
     expect(item.learnerName, 'Ahmad');
     expect(item.status, SupplierPickupScheduleStatus.accepted);
-    expect(item.pickupType, 'Self pickup');
-    expect(item.deliveryRequested, isFalse);
+    expect(item.pickupType, 'Pickup selected');
     expect(item.activeDelivery, isNull);
     expect(item.canSupplierComplete, isTrue);
     expect(item.supplierNote, 'Pickup near main gate.');
@@ -42,7 +42,8 @@ void main() {
       'id': 'res-completed-1',
       'status': 'COMPLETED',
       'quantityRequested': 6,
-      'pickupType': 'SELF_PICKUP',
+      'fulfillmentMethod': 'PICKUP',
+      'fulfillmentLabel': 'Pickup selected',
       'pickupWindowStart': '2026-06-16T11:00:00.000Z',
       'pickupWindowEnd': '2026-06-16T13:00:00.000Z',
       'material': {'title': 'Cardboard boxes', 'unit': 'boxes'},
@@ -58,7 +59,8 @@ void main() {
       'id': 'res-delivery-1',
       'status': 'ACCEPTED',
       'quantityRequested': 2,
-      'deliveryRequested': true,
+      'fulfillmentMethod': 'PICKUP',
+      'fulfillmentLabel': 'Delivery requested',
       'activeDelivery': {'id': 'delivery-1', 'status': 'ON_THE_WAY'},
       'canSupplierComplete': false,
       'pickupWindowStart': '2026-06-17T10:00:00.000Z',
@@ -67,7 +69,6 @@ void main() {
       'learner': {'displayName': 'Sara'},
     });
 
-    expect(item.deliveryRequested, isTrue);
     expect(item.activeDelivery?.id, 'delivery-1');
     expect(item.deliveryStatusLabel, 'On the way');
     expect(item.canSupplierComplete, isFalse);

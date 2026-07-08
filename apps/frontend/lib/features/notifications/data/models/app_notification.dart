@@ -32,6 +32,28 @@ class AppNotification {
       relatedEntityId: json['relatedEntityId'] as String?,
     );
   }
+
+  AppNotification copyWith({
+    String? id,
+    String? notificationType,
+    String? title,
+    String? body,
+    bool? isRead,
+    DateTime? createdAt,
+    String? relatedEntityType,
+    String? relatedEntityId,
+  }) {
+    return AppNotification(
+      id: id ?? this.id,
+      notificationType: notificationType ?? this.notificationType,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
+      relatedEntityType: relatedEntityType ?? this.relatedEntityType,
+      relatedEntityId: relatedEntityId ?? this.relatedEntityId,
+    );
+  }
 }
 
 class AppNotificationsPage {

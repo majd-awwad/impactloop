@@ -323,4 +323,55 @@ describe('notifications module', () => {
       ),
     );
   });
+
+  test('listMyNotifications tolerates unknown types and empty labels', async () => {
+    await resetNotifications();
+    const notification = await createNotification({
+      userId: ctx.learnerId,
+      notificationType: 'LEGACY_UNKNOWN_EVENT',
+      title: ' ',
+      body: '',
+    });
+    ctx.createdNotificationIds.push(notification.id);
+
+    const listed = await listMyNotifications(ctx.learnerId, {
+      page: 1,
+      limit: 50,
+      isRead: undefined,
+    });
+
+    const item = listed.items.find((row) => row.id === notification.id);
+    assert.ok(item);
+    assert.equal(item?.notificationType, 'LEGACY_UNKNOWN_EVENT');
+    assert.equal(item?.title, 'Notification');
+    assert.equal(item?.body, '');
+  });
+
+  test('listMyNotifications normalizes pagination numbers', async () => {
+    await resetNotifications();
+    const notification = await createNotification({
+      userId: ctx.learnerId,
+      notificationType: 'TEST',
+      title: 'Paged',
+      body: 'Paged notification',
+    });
+    ctx.createdNotificationIds.push(notification.id);
+
+    const listed = await listMyNotifications(ctx.learnerId, {
+      page: 1,
+      limit: 50,
+      isRead: undefined,
+    });
+
+    assert.equal(listed.pagination.limit, 50);
+    assert.ok(listed.items.length >= 1);
+
+    const capped = await listMyNotifications(ctx.learnerId, {
+      page: 1,
+      limit: 100,
+      isRead: undefined,
+    });
+
+    assert.equal(capped.pagination.limit, 50);
+  });
 });

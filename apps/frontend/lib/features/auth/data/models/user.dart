@@ -108,6 +108,8 @@ class User {
 
   bool get isSupplierMode => activeRole.trim().toUpperCase() == 'SUPPLIER';
 
+  bool get isDriverMode => activeRole.trim().toUpperCase() == 'DRIVER';
+
   bool hasRole(String role) {
     final normalizedRole = role.trim().toUpperCase();
     return roles.any((item) => item.trim().toUpperCase() == normalizedRole);

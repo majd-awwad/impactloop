@@ -8,6 +8,7 @@ import { asyncHandler } from '../../utils/async-handler.js';
 import {
   acceptDriverDeliveryHandler,
   createDriverDeliveryLocationPingHandler,
+  getDriverDeliveryInactiveContextHandler,
   listActiveDriverDeliveriesHandler,
   listAvailableDriverDeliveriesHandler,
   updateDriverDeliveryStatusHandler,
@@ -20,6 +21,7 @@ import {
 import {
   createDeliveryLocationPingSchema,
   deliveryIdParamsSchema,
+  listAvailableDeliveriesQuerySchema,
   updateDriverDeliveryStatusSchema,
 } from './driver.validation.js';
 import {
@@ -34,12 +36,19 @@ driverRouter.use(authMiddleware, requireRoles('DRIVER'));
 
 driverRouter.get(
   '/deliveries/available',
+  validate(listAvailableDeliveriesQuerySchema, 'query'),
   asyncHandler(listAvailableDriverDeliveriesHandler),
 );
 
 driverRouter.get(
   '/deliveries/active',
   asyncHandler(listActiveDriverDeliveriesHandler),
+);
+
+driverRouter.get(
+  '/deliveries/:id/inactive-context',
+  validate(deliveryIdParamsSchema, 'params'),
+  asyncHandler(getDriverDeliveryInactiveContextHandler),
 );
 
 driverRouter.post(

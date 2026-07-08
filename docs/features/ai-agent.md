@@ -2,7 +2,7 @@
 
 **Gap / stub — not an implementation guide.**
 
-**Sources inspected:** `apps/backend/src/app.ts`, `apps/backend/prisma/schema.prisma`, `apps/backend/src/services/ai-price-suggestion.service.ts`, `apps/backend/src/services/ai-price-lookup.repository.ts`, `apps/backend/src/modules/price-rule-requests/*`, `apps/frontend/lib/features/learning_hub/presentation/widgets/disabled_ai_panel.dart`, `apps/frontend/lib/features/home/presentation/pages/learner_home_page.dart`, `docs/01-requirements.md` (§AI Agent), `docs/05-roadmap.md` (Phase 5), `AGENTS.md`, `docs/08-implementation-status.md`
+**Sources inspected:** `apps/backend/src/app.ts`, `apps/backend/prisma/schema.prisma`, `apps/backend/src/services/ai-price-suggestion.service.ts`, `apps/backend/src/services/ai-price-lookup.repository.ts`, `apps/backend/src/modules/price-rule-requests/*`, `apps/frontend/lib/features/learning_hub/presentation/widgets/project_build_actions_panel.dart`, `apps/frontend/lib/features/home/presentation/pages/learner_home_page.dart`, `docs/01-requirements.md` (§AI Agent), `docs/05-roadmap.md` (Phase 5), `AGENTS.md`, `docs/08-implementation-status.md`
 
 ## Intended purpose (requirements / roadmap — aspirational)
 
@@ -22,7 +22,7 @@ From [01-requirements.md](01-requirements.md) and [05-roadmap.md](05-roadmap.md)
 | AI **price suggestion** (listing / price-rule review) | **Partial** | `ai-price-suggestion.service.ts`, `price-rule-requests.service.ts` |
 | `ai_price_lookup_logs` | **Partial** | Table + `ai-price-lookup.repository.ts`; listing-internal only |
 | Flutter AI helper on home | **Frontend-only** placeholder | `ComingSoonCard` — “AI material helper” |
-| Flutter AI on learning hub | **Frontend-only** | `disabled_ai_panel.dart` — non-functional UI |
+| Flutter AI on learning hub | **Not implemented** | Old disabled panel was removed; project detail now shows non-AI build planning actions |
 
 **Overall:** Material-matching **AI agent** is **not implemented**. Internal price AI is **Partial** and separate from product “AI agent” scope.
 
@@ -50,11 +50,11 @@ These are planned/future capabilities and should not be documented as shipped un
 | `modules/price-rule-requests/price-rule-requests.service.ts` | Invokes AI on create |
 | `config/env.ts` | `isAiProviderOperational` gating |
 
-### Frontend (placeholders)
+### Frontend
 
 | Path | Role |
 |------|------|
-| `learning_hub/.../disabled_ai_panel.dart` | Disabled copy only |
+| `learning_hub/.../project_build_actions_panel.dart` | Non-AI project planning and material browsing handoff |
 | `home/.../learner_home_page.dart` | Future tools — AI coming soon |
 
 ### Database
@@ -86,5 +86,5 @@ These are planned/future capabilities and should not be documented as shipped un
 
 ## Related docs
 
-- [Learning hub](learning-hub.md) — disabled AI panel context
+- [Learning hub](learning-hub.md) — current non-AI project planning context
 - [Materials listing](materials-listing.md) — price-rule AI overlap

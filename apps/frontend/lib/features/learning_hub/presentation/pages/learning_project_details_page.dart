@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../shared/widgets/app_feedback.dart';
+import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project.dart';
 import '../theme/learning_project_visuals.dart';
 import '../theme/learning_ui_palette.dart';
-import '../widgets/disabled_ai_panel.dart';
+import '../widgets/project_build_actions_panel.dart';
 import '../widgets/project_components_section.dart';
 import '../widgets/project_link_list.dart';
+import '../widgets/project_reviews_section.dart';
 import '../widgets/project_steps_timeline.dart';
 
 class LearningProjectDetailsPage extends ConsumerWidget {
@@ -110,13 +114,15 @@ class _ProjectDetailsBody extends StatelessWidget {
                     children: [
                       _DetailsSummaryCard(project: project),
                       const SizedBox(height: AppSpacing.lg),
+                      ProjectReviewsSection(project: project),
+                      const SizedBox(height: AppSpacing.lg),
                       if (project.components.isNotEmpty) ...[
                         ProjectComponentsSection(
                           components: project.components,
                         ),
                         const SizedBox(height: AppSpacing.lg),
                       ],
-                      const DisabledAiPanel(),
+                      ProjectBuildActionsPanel(project: project),
                       if (project.steps.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.lg),
                         ProjectStepsTimeline(steps: project.steps),
@@ -328,6 +334,9 @@ class _DetailsSummaryCard extends StatelessWidget {
                 dark: true,
               ),
               _DetailsChip(label: project.duration.resolve(context)),
+              _ProjectLikeButton(project: project),
+              _ProjectFollowButton(project: project),
+              _ProjectSaveButton(project: project),
               if (project.componentCountLabel.en.trim().isNotEmpty)
                 _DetailsChip(
                   label: project.componentCountLabel.resolve(context),
@@ -402,6 +411,489 @@ class _DetailsChip extends StatelessWidget {
       child: Text(
         label,
         style: AppTextStyles.label(context).copyWith(color: foreground),
+      ),
+    );
+  }
+}
+
+class _ProjectLikeButton extends ConsumerStatefulWidget {
+  const _ProjectLikeButton({required this.project});
+
+  final LearningProject project;
+
+  @override
+  ConsumerState<_ProjectLikeButton> createState() => _ProjectLikeButtonState();
+}
+
+class _ProjectLikeButtonState extends ConsumerState<_ProjectLikeButton> {
+  late int _likesCount;
+  late bool _isLiked;
+  bool _isUpdating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromProject();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProjectLikeButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.project.id != widget.project.id ||
+        oldWidget.project.likesCount != widget.project.likesCount ||
+        oldWidget.project.isLiked != widget.project.isLiked) {
+      _syncFromProject();
+    }
+  }
+
+  void _syncFromProject() {
+    _likesCount = widget.project.likesCount;
+    _isLiked = widget.project.isLiked;
+  }
+
+  Future<void> _toggleLike() async {
+    if (_isUpdating) {
+      return;
+    }
+
+    final authState = ref.read(authControllerProvider);
+    if (authState.status != AuthStatus.authenticated) {
+      final from = Uri.encodeQueryComponent('/learning/${widget.project.id}');
+      context.go('/login?from=$from');
+      return;
+    }
+
+    if (authState.user?.hasRole('LEARNER') != true) {
+      showInfoSnackBar(context, 'Use a learner account to like projects.');
+      return;
+    }
+
+    final previousLikes = _likesCount;
+    final previousLiked = _isLiked;
+    final shouldLike = !_isLiked;
+
+    setState(() {
+      _isUpdating = true;
+      _isLiked = shouldLike;
+      _likesCount = shouldLike
+          ? _likesCount + 1
+          : (_likesCount > 0 ? _likesCount - 1 : 0);
+    });
+
+    try {
+      final engagement = shouldLike
+          ? await ref
+                .read(learningHubRepositoryProvider)
+                .likeProject(widget.project.id)
+          : await ref
+                .read(learningHubRepositoryProvider)
+                .unlikeProject(widget.project.id);
+
+      if (!mounted) {
+        return;
+      }
+
+      invalidateLearningHubEngagement(ref, widget.project.id);
+      setState(() {
+        _likesCount = engagement.likesCount;
+        _isLiked = engagement.isLiked;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _likesCount = previousLikes;
+        _isLiked = previousLiked;
+      });
+      showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdating = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final background = _isLiked
+        ? palette.lime.withValues(alpha: 0.18)
+        : palette.mutedChip;
+    final foreground = _isLiked ? palette.limeSoft : palette.textSecondary;
+
+    return Tooltip(
+      message: _isLiked ? 'Unlike project' : 'Like project',
+      child: InkWell(
+        borderRadius: AppRadius.pillAll,
+        onTap: _isUpdating ? null : _toggleLike,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: AppRadius.pillAll,
+            border: Border.all(
+              color: _isLiked ? palette.lime : palette.borderSubtle,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isUpdating)
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: foreground,
+                  ),
+                )
+              else
+                Icon(
+                  _isLiked
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  size: 18,
+                  color: foreground,
+                ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                LocalizedText(
+                  en: _likesCount == 1 ? '1 like' : '$_likesCount likes',
+                  ar: '$_likesCount إعجاب',
+                ).resolve(context),
+                style: AppTextStyles.label(context).copyWith(color: foreground),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProjectSaveButton extends ConsumerStatefulWidget {
+  const _ProjectSaveButton({required this.project});
+
+  final LearningProject project;
+
+  @override
+  ConsumerState<_ProjectSaveButton> createState() => _ProjectSaveButtonState();
+}
+
+class _ProjectSaveButtonState extends ConsumerState<_ProjectSaveButton> {
+  late bool _isSaved;
+  bool _isUpdating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromProject();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProjectSaveButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.project.id != widget.project.id ||
+        oldWidget.project.isSaved != widget.project.isSaved) {
+      _syncFromProject();
+    }
+  }
+
+  void _syncFromProject() {
+    _isSaved = widget.project.isSaved;
+  }
+
+  Future<void> _toggleSave() async {
+    if (_isUpdating) {
+      return;
+    }
+
+    final authState = ref.read(authControllerProvider);
+    if (authState.status != AuthStatus.authenticated) {
+      final from = Uri.encodeQueryComponent('/learning/${widget.project.id}');
+      context.go('/login?from=$from');
+      return;
+    }
+
+    if (authState.user?.hasRole('LEARNER') != true) {
+      showInfoSnackBar(context, 'Use a learner account to save projects.');
+      return;
+    }
+
+    final previousSaved = _isSaved;
+    final shouldSave = !_isSaved;
+
+    setState(() {
+      _isUpdating = true;
+      _isSaved = shouldSave;
+    });
+
+    try {
+      final saveStatus = shouldSave
+          ? await ref
+                .read(learningHubRepositoryProvider)
+                .saveProject(widget.project.id)
+          : await ref
+                .read(learningHubRepositoryProvider)
+                .unsaveProject(widget.project.id);
+
+      if (!mounted) {
+        return;
+      }
+
+      invalidateLearningHubEngagement(ref, widget.project.id);
+      setState(() {
+        _isSaved = saveStatus.isSaved;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSaved = previousSaved;
+      });
+      showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdating = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final background = _isSaved
+        ? palette.lime.withValues(alpha: 0.18)
+        : palette.mutedChip;
+    final foreground = _isSaved ? palette.limeSoft : palette.textSecondary;
+
+    return Tooltip(
+      message: _isSaved ? 'Remove saved project' : 'Save project',
+      child: InkWell(
+        borderRadius: AppRadius.pillAll,
+        onTap: _isUpdating ? null : _toggleSave,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: AppRadius.pillAll,
+            border: Border.all(
+              color: _isSaved ? palette.lime : palette.borderSubtle,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isUpdating)
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: foreground,
+                  ),
+                )
+              else
+                Icon(
+                  _isSaved
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_border_rounded,
+                  size: 18,
+                  color: foreground,
+                ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                LocalizedText(
+                  en: _isSaved ? 'Saved' : 'Save',
+                  ar: _isSaved ? 'محفوظ' : 'حفظ',
+                ).resolve(context),
+                style: AppTextStyles.label(context).copyWith(color: foreground),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProjectFollowButton extends ConsumerStatefulWidget {
+  const _ProjectFollowButton({required this.project});
+
+  final LearningProject project;
+
+  @override
+  ConsumerState<_ProjectFollowButton> createState() =>
+      _ProjectFollowButtonState();
+}
+
+class _ProjectFollowButtonState extends ConsumerState<_ProjectFollowButton> {
+  late int _followersCount;
+  late bool _isFollowing;
+  bool _isUpdating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromProject();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProjectFollowButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.project.id != widget.project.id ||
+        oldWidget.project.followersCount != widget.project.followersCount ||
+        oldWidget.project.isFollowing != widget.project.isFollowing) {
+      _syncFromProject();
+    }
+  }
+
+  void _syncFromProject() {
+    _followersCount = widget.project.followersCount;
+    _isFollowing = widget.project.isFollowing;
+  }
+
+  Future<void> _toggleFollow() async {
+    if (_isUpdating) {
+      return;
+    }
+
+    final authState = ref.read(authControllerProvider);
+    if (authState.status != AuthStatus.authenticated) {
+      final from = Uri.encodeQueryComponent('/learning/${widget.project.id}');
+      context.go('/login?from=$from');
+      return;
+    }
+
+    if (authState.user?.hasRole('LEARNER') != true) {
+      showInfoSnackBar(context, 'Use a learner account to follow projects.');
+      return;
+    }
+
+    final previousCount = _followersCount;
+    final previousFollowing = _isFollowing;
+    final shouldFollow = !_isFollowing;
+
+    setState(() {
+      _isUpdating = true;
+      _isFollowing = shouldFollow;
+      _followersCount = shouldFollow
+          ? _followersCount + 1
+          : (_followersCount > 0 ? _followersCount - 1 : 0);
+    });
+
+    try {
+      final followStatus = shouldFollow
+          ? await ref
+                .read(learningHubRepositoryProvider)
+                .followProject(widget.project.id)
+          : await ref
+                .read(learningHubRepositoryProvider)
+                .unfollowProject(widget.project.id);
+
+      if (!mounted) {
+        return;
+      }
+
+      invalidateLearningHubEngagement(ref, widget.project.id);
+      setState(() {
+        _followersCount = followStatus.followersCount;
+        _isFollowing = followStatus.isFollowing;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _followersCount = previousCount;
+        _isFollowing = previousFollowing;
+      });
+      showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdating = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final background = _isFollowing
+        ? palette.lime.withValues(alpha: 0.18)
+        : palette.mutedChip;
+    final foreground = _isFollowing ? palette.limeSoft : palette.textSecondary;
+
+    return Tooltip(
+      message: _isFollowing ? 'Unfollow project' : 'Follow project',
+      child: InkWell(
+        borderRadius: AppRadius.pillAll,
+        onTap: _isUpdating ? null : _toggleFollow,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: AppRadius.pillAll,
+            border: Border.all(
+              color: _isFollowing ? palette.lime : palette.borderSubtle,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isUpdating)
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: foreground,
+                  ),
+                )
+              else
+                Icon(
+                  _isFollowing
+                      ? Icons.notifications_active_rounded
+                      : Icons.notifications_none_rounded,
+                  size: 18,
+                  color: foreground,
+                ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                LocalizedText(
+                  en: _followersCount == 1
+                      ? '1 follower'
+                      : '$_followersCount followers',
+                  ar: '$_followersCount متابع',
+                ).resolve(context),
+                style: AppTextStyles.label(context).copyWith(color: foreground),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

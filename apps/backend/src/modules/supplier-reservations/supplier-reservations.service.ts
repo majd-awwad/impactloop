@@ -6,6 +6,18 @@ import {
   expireStalePendingReservationsForOwner,
 } from '../reservations/reservations.pending-expiry.repository.js';
 import {
+  expireStaleMissedPickupsByIds,
+  expireStaleMissedPickupsForOwner,
+} from '../reservations/reservations.missed-pickup-expiry.repository.js';
+import {
+  escalateStaleNoDriverDeliveriesByIds,
+  escalateStaleNoDriverDeliveriesForOwner,
+} from '../reservations/reservations.no-driver-auto-escalation.repository.js';
+import {
+  escalateStaleAssignedDriverPickupsForOwner,
+} from '../reservations/reservations.stale-assigned-driver-auto-escalation.repository.js';
+import { isAssignedDriverPickupOverdue } from '../reservations/reservation-assigned-driver-pickup-overdue.js';
+import {
   mapReservationMessage,
   findLatestReservationMessagesByReservationIds,
   findReservationMessages,
@@ -22,11 +34,11 @@ import {
   resolvePreferredWindowByIndex,
 } from './supplier-reservation-scheduling.js';
 import {
-  MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES,
-  MIN_PICKUP_NOTICE_MINUTES,
-  PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
-  PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
-} from '../reservations/reservation-timing-policy.js';
+  assertValidPickupWindow,
+  validatePickupWindow,
+} from '../reservations/pickup-window-validation.js';
+import { PICKUP_WINDOW_TOO_CLOSE_MESSAGE, isAdminSupplierPickupReconfirmReason } from '../reservations/reservation-timing-policy.js';
+import { submitNoDriverPickupWindowForSupplier } from './no-driver-supplier-pickup.repository.js';
 import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import {
   evaluateHandoverWindow,
@@ -38,6 +50,7 @@ import {
   mapPendingRescheduleSummary,
   resolveSelfPickupHandoverPhase,
 } from '../reservations/reservation-reschedule.js';
+import { mapReservationFulfillmentLabel } from '../reservations/reservation-delivery.js';
 import {
   canSupplierMarkDeliveryPickupExpired,
   canSupplierMarkDriverNoShow,
@@ -50,6 +63,7 @@ import {
   notifyReservationAccepted,
   notifyReservationDeclined,
 } from '../notifications/reservation-notifications.js';
+import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
 import type {
   AcceptSupplierReservationInput,
   CancelSupplierReservationInput,
@@ -57,9 +71,98 @@ import type {
   DeclineSupplierReservationInput,
   ListSupplierReservationsQuery,
   RescheduleSupplierReservationInput,
+  SubmitNoDriverPickupWindowInput,
   SubmitNoShowReportInput,
   CreateReservationMessageInput,
 } from './supplier-reservations.validation.js';
+
+const assertPendingReservationForAccept = (status: ReservationStatus) => {
+  if (status === 'PENDING') {
+    return;
+  }
+
+  if (status === 'EXPIRED') {
+    throw new AppError(
+      'This reservation expired before it could be accepted.',
+      409,
+      'RESERVATION_EXPIRED',
+    );
+  }
+
+  if (status === 'ACCEPTED') {
+    throw new AppError(
+      'This reservation was already accepted.',
+      409,
+      'RESERVATION_ALREADY_ACCEPTED',
+    );
+  }
+
+  if (status === 'REJECTED') {
+    throw new AppError(
+      'This reservation was already declined.',
+      409,
+      'RESERVATION_ALREADY_DECLINED',
+    );
+  }
+
+  if (status === 'CANCELLED') {
+    throw new AppError(
+      'This reservation was cancelled and cannot be accepted.',
+      409,
+      'RESERVATION_CANCELLED',
+    );
+  }
+
+  throw new AppError(
+    'Only pending reservations can be accepted.',
+    409,
+    'RESERVATION_NOT_PENDING',
+  );
+};
+
+const assertPendingReservationForDecline = (status: ReservationStatus) => {
+  if (status === 'PENDING') {
+    return;
+  }
+
+  if (status === 'EXPIRED') {
+    throw new AppError(
+      'This reservation expired before it could be declined.',
+      409,
+      'RESERVATION_EXPIRED',
+    );
+  }
+
+  if (status === 'ACCEPTED') {
+    throw new AppError(
+      'Accepted reservations cannot be declined.',
+      409,
+      'RESERVATION_ALREADY_ACCEPTED',
+    );
+  }
+
+  if (status === 'REJECTED') {
+    throw new AppError(
+      'This reservation was already declined.',
+      409,
+      'RESERVATION_ALREADY_DECLINED',
+    );
+  }
+
+  if (status === 'CANCELLED') {
+    throw new AppError(
+      'This reservation was cancelled and cannot be declined.',
+      409,
+      'RESERVATION_CANCELLED',
+    );
+  }
+
+  throw new AppError(
+    'Only pending reservations can be declined.',
+    409,
+    'RESERVATION_NOT_PENDING',
+  );
+};
 
 const tabToReservationStatuses = (
   status: NonNullable<ListSupplierReservationsQuery['status']>,
@@ -86,13 +189,10 @@ const tabToReservationStatuses = (
   }
 };
 
-const mapFulfillmentLabel = (fulfillmentMethod: string): string => {
-  if (fulfillmentMethod === 'DELIVERY') {
-    return 'Delivery selected';
-  }
-
-  return 'Pickup selected';
-};
+const mapFulfillmentLabel = (
+  fulfillmentMethod: string,
+  deliveryCount: number,
+): string => mapReservationFulfillmentLabel(fulfillmentMethod, deliveryCount);
 
 const pickMaterialImageUrl = (
   images: { imageUrl: string; isCover: boolean; sortOrder: number }[],
@@ -107,21 +207,6 @@ const pickMaterialImageUrl = (
   }
 
   return images[0]?.imageUrl ?? null;
-};
-
-const mapPickupPreference = (
-  pickupType: string,
-  deliveryRequested: boolean,
-): string => {
-  if (deliveryRequested) {
-    return 'Delivery requested';
-  }
-
-  if (pickupType === 'SELF_PICKUP') {
-    return 'Self pickup';
-  }
-
-  return pickupType;
 };
 
 const mapNoShowReportSummary = (
@@ -146,8 +231,12 @@ export const mapSupplierReservation = (
   reservation: supplierReservationsRepository.SupplierReservationRecord,
   latestMessage?: ReturnType<typeof mapReservationMessage> | null,
 ) => {
-  const latestDelivery = reservation.deliveries[0] ?? null;
-  const hasDelivery = reservation._count.deliveries > 0;
+  const directDelivery = reservation.deliveries[0] ?? null;
+  const groupDelivery = reservation.deliveryGroup?.delivery ?? null;
+  const latestDelivery = directDelivery ?? groupDelivery;
+  const hasDelivery = latestDelivery != null;
+  const deliveryCount = hasDelivery ? 1 : 0;
+  const groupItemCount = reservation.deliveryGroup?.reservations.length ?? 0;
   const followUp = resolveReservationFollowUp({
     status: reservation.status,
     pickupWindowStart: reservation.pickupWindowStart,
@@ -161,8 +250,7 @@ export const mapSupplierReservation = (
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
     fulfillmentMethod: reservation.fulfillmentMethod,
-    deliveryRequested: reservation.deliveryRequested,
-    deliveryCount: reservation._count.deliveries,
+    deliveryCount: deliveryCount,
   });
   const hasLearnerNoShowReport = reservation.noShowReports.some(
     (report) => report.targetRole === 'LEARNER',
@@ -174,11 +262,13 @@ export const mapSupplierReservation = (
     );
   const awaitingLearnerReschedule =
     reservation.status === 'AWAITING_SUPPLIER_CONFIRMATION';
+  const hasLearnerProposedPickupWindow =
+    reservation.learnerProposedPickupWindowStart != null &&
+    reservation.learnerProposedPickupWindowEnd != null;
   const canReschedule = canRequestPickupReschedule({
     status: reservation.status,
     fulfillmentMethod: reservation.fulfillmentMethod,
-    deliveryRequested: reservation.deliveryRequested,
-    deliveryCount: reservation._count.deliveries,
+    deliveryCount,
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
     hasFinalReport: hasOpenIncident,
@@ -187,7 +277,6 @@ export const mapSupplierReservation = (
     supplierReservationsRepository.supplierCanCompleteReservation({
       status: reservation.status,
       fulfillmentMethod: reservation.fulfillmentMethod,
-      deliveryRequested: reservation.deliveryRequested,
       hasDelivery,
     });
 
@@ -209,13 +298,11 @@ export const mapSupplierReservation = (
     quantityRequested: Number(reservation.quantityRequested),
     unit: reservation.material.unit,
     message: reservation.message,
-    pickupType: reservation.pickupType,
-    pickupPreference: mapPickupPreference(
-      reservation.pickupType,
-      reservation.deliveryRequested,
-    ),
     fulfillmentMethod: reservation.fulfillmentMethod,
-    fulfillmentLabel: mapFulfillmentLabel(reservation.fulfillmentMethod),
+    fulfillmentLabel: mapFulfillmentLabel(
+      reservation.fulfillmentMethod,
+      deliveryCount,
+    ),
     learnerPreferredPickupWindows: mapPreferredWindowsForResponse(
       reservation.learnerPreferredPickupWindows,
     ),
@@ -245,13 +332,19 @@ export const mapSupplierReservation = (
     earliestDeliveryStart:
       reservation.earliestDeliveryStart?.toISOString() ?? null,
     schedulingConflictReason: reservation.schedulingConflictReason,
-    deliveryRequested: reservation.deliveryRequested,
     activeDelivery: latestDelivery
       ? {
           id: latestDelivery.id,
           status: latestDelivery.status,
         }
       : null,
+    deliveryGroupId: reservation.deliveryGroupId,
+    groupedDelivery: reservation.deliveryGroupId != null,
+    groupItemCount: groupItemCount > 0 ? groupItemCount : null,
+    combinedDeliveryLabel:
+      reservation.deliveryGroupId != null && groupItemCount > 0
+        ? 'Combined delivery'
+        : null,
     supplierHandoverCode:
       reservation.status === 'ACCEPTED' &&
       reservation.fulfillmentMethod === 'DELIVERY' &&
@@ -279,7 +372,8 @@ export const mapSupplierReservation = (
       isSelfPickup &&
       !hasOpenIncident,
     canSupplierReschedule: canReschedule,
-    canSupplierAcceptLearnerReschedule: awaitingLearnerReschedule && isSelfPickup,
+    canSupplierAcceptLearnerReschedule:
+      awaitingLearnerReschedule && isSelfPickup && hasLearnerProposedPickupWindow,
     canSupplierProposeDifferentTime: awaitingLearnerReschedule && isSelfPickup,
     canSupplierCloseAwaitingLearnerRequest:
       awaitingLearnerReschedule && isSelfPickup && !hasOpenIncident,
@@ -295,6 +389,13 @@ export const mapSupplierReservation = (
       hasDelivery,
       hasPendingReport: hasOpenIncident,
     }),
+    canSubmitNoDriverPickupWindow:
+      reservation.status === 'AWAITING_SUPPLIER_CONFIRMATION' &&
+      reservation.fulfillmentMethod === 'DELIVERY' &&
+      isAdminSupplierPickupReconfirmReason(
+        reservation.pendingRescheduleReason,
+      ) &&
+      latestDelivery?.status === 'AWAITING_RESOLUTION',
     canSupplierMarkDeliveryPickupExpired:
       !hasOpenIncident &&
       canSupplierMarkDeliveryPickupExpired({
@@ -315,6 +416,11 @@ export const mapSupplierReservation = (
         deliveryStatus: latestDelivery?.status ?? null,
         assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
       }),
+    assignedDriverPickupOverdue: isAssignedDriverPickupOverdue({
+      supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+      pickupWindowEnd: reservation.pickupWindowEnd,
+      deliveryStatus: latestDelivery?.status ?? null,
+    }),
     canSendMessage:
       reservationAllowsMessaging(reservation.status) && !hasOpenIncident,
     noShowReport: mapNoShowReportSummary(reservation.noShowReports),
@@ -327,6 +433,9 @@ export const listSupplierReservations = async (
   query: ListSupplierReservationsQuery,
 ) => {
   await expireStalePendingReservationsForOwner(ownerId);
+  await expireStaleMissedPickupsForOwner(ownerId);
+  await escalateStaleNoDriverDeliveriesForOwner(ownerId);
+  await escalateStaleAssignedDriverPickupsForOwner(ownerId);
 
   const statuses = query.status
     ? tabToReservationStatuses(query.status)
@@ -368,6 +477,7 @@ export const acceptSupplierReservation = async (
   }
 
   await expireStalePendingReservationsByIds([reservationId], ownerId);
+  await expireStaleMissedPickupsByIds([reservationId], ownerId);
 
   existing =
     await supplierReservationsRepository.findSupplierReservationForOwner(
@@ -379,21 +489,7 @@ export const acceptSupplierReservation = async (
     throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
   }
 
-  if (existing.status === 'EXPIRED') {
-    throw new AppError(
-      'This reservation expired before it could be accepted.',
-      409,
-      'CONFLICT',
-    );
-  }
-
-  if (existing.status !== 'PENDING') {
-    throw new AppError(
-      'Only pending reservations can be accepted.',
-      409,
-      'CONFLICT',
-    );
-  }
+  assertPendingReservationForAccept(existing.status);
 
   let pickupWindowStart = new Date(input.pickupWindowStart);
   let pickupWindowEnd = new Date(input.pickupWindowEnd);
@@ -454,35 +550,13 @@ export const acceptSupplierReservation = async (
     existing.fulfillmentMethod === 'PICKUP' &&
     input.selectedPreferredWindowIndex != null;
 
-  if (isSelectedLearnerPickupWindow) {
-    const latestAcceptableEnd =
-      now + MIN_PICKUP_NOTICE_MINUTES * 60_000;
-    if (pickupWindowEnd.getTime() < latestAcceptableEnd) {
-      throw new AppError(
-        PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
-        400,
-        'VALIDATION_ERROR',
-      );
-    }
-  } else {
-    const earliestCustomStart =
-      now + MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES * 60_000;
-    if (pickupWindowStart.getTime() < earliestCustomStart) {
-      throw new AppError(
-        PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
-        400,
-        'VALIDATION_ERROR',
-      );
-    }
-
-    if (pickupWindowEnd.getTime() <= now) {
-      throw new AppError(
-        'Supplier window end must be in the future.',
-        400,
-        'VALIDATION_ERROR',
-      );
-    }
-  }
+  assertValidPickupWindow(
+    { start: pickupWindowStart, end: pickupWindowEnd },
+    isSelectedLearnerPickupWindow
+      ? 'supplier_selected_preferred'
+      : 'supplier_custom_proposal',
+    now,
+  );
 
   if (
     proposedDeliveryWindow &&
@@ -540,14 +614,16 @@ export const acceptSupplierReservation = async (
   }
 
   if (result.conflict) {
+    assertPendingReservationForAccept(result.reservation.status);
     throw new AppError(
       'Only pending reservations can be accepted.',
       409,
-      'CONFLICT',
+      'RESERVATION_NOT_PENDING',
     );
   }
 
   void notifyReservationAccepted(result.reservation.id);
+  await notifyNewJobForReservationWaitingDelivery(result.reservation.id);
 
   return mapSupplierReservation(result.reservation);
 };
@@ -557,6 +633,31 @@ export const declineSupplierReservation = async (
   reservationId: string,
   input: DeclineSupplierReservationInput,
 ) => {
+  const existing =
+    await supplierReservationsRepository.findSupplierReservationForOwner(
+      ownerId,
+      reservationId,
+    );
+
+  if (!existing) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  await expireStalePendingReservationsByIds([reservationId], ownerId);
+  await expireStaleMissedPickupsByIds([reservationId], ownerId);
+
+  const refreshed =
+    await supplierReservationsRepository.findSupplierReservationForOwner(
+      ownerId,
+      reservationId,
+    );
+
+  if (!refreshed) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  assertPendingReservationForDecline(refreshed.status);
+
   const result = await supplierReservationsRepository.declineSupplierReservation(
     {
       reservationId,
@@ -570,10 +671,11 @@ export const declineSupplierReservation = async (
   }
 
   if (result.conflict) {
+    assertPendingReservationForDecline(result.reservation.status);
     throw new AppError(
       'Only pending reservations can be declined.',
       409,
-      'CONFLICT',
+      'RESERVATION_NOT_PENDING',
     );
   }
 
@@ -587,6 +689,8 @@ export const completeSupplierReservation = async (
   reservationId: string,
   input: CompleteSupplierReservationInput = { confirmationCode: '' },
 ) => {
+  await expireStaleMissedPickupsByIds([reservationId], ownerId);
+
   const result = await supplierReservationsRepository.completeSupplierReservation(
     {
       reservationId,
@@ -633,26 +737,13 @@ export const rescheduleSupplierReservation = async (
 ) => {
   const start = new Date(input.pickupWindowStart);
   const end = new Date(input.pickupWindowEnd);
-  const now = Date.now();
 
-  if (
-    start.getTime() <
-    now + MIN_CUSTOM_PICKUP_START_NOTICE_MINUTES * 60_000
-  ) {
-    throw new AppError(
-      PROPOSED_PICKUP_START_TOO_SOON_MESSAGE,
-      400,
-      'VALIDATION_ERROR',
-    );
-  }
+  assertValidPickupWindow(
+    { start, end },
+    'supplier_custom_proposal',
+  );
 
-  if (end.getTime() <= now) {
-    throw new AppError(
-      'Pickup window end must be in the future.',
-      400,
-      'VALIDATION_ERROR',
-    );
-  }
+  await expireStaleMissedPickupsByIds([reservationId], ownerId);
 
   const result = await supplierReservationsRepository.rescheduleSupplierReservation({
     reservationId,
@@ -715,10 +806,18 @@ export const acceptLearnerRescheduleProposal = async (
   }
 
   if ('windowTooClose' in result && result.windowTooClose) {
+    const failure = validatePickupWindow(
+      {
+        start: result.reservation.learnerProposedPickupWindowStart!,
+        end: result.reservation.learnerProposedPickupWindowEnd!,
+      },
+      'supplier_selected_preferred',
+    );
+
     throw new AppError(
-      PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+      failure?.message ?? PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
       400,
-      'VALIDATION_ERROR',
+      failure?.code ?? 'PICKUP_WINDOW_TOO_CLOSE_TO_ENDING',
     );
   }
 
@@ -730,6 +829,8 @@ export const cancelSupplierAcceptedReservation = async (
   reservationId: string,
   input: CancelSupplierReservationInput,
 ) => {
+  await expireStaleMissedPickupsByIds([reservationId], ownerId);
+
   const result =
     await supplierReservationsRepository.cancelSupplierAcceptedReservation({
       reservationId,
@@ -773,6 +874,8 @@ export const submitSupplierNoShowReport = async (
   reservationId: string,
   input: SubmitNoShowReportInput,
 ) => {
+  await expireStaleMissedPickupsByIds([reservationId], ownerId);
+
   const result = await supplierReservationsRepository.createSupplierNoShowReport({
     reservationId,
     ownerId,
@@ -881,6 +984,55 @@ export const reportSupplierNoDriverAvailable = async (
   }
 
   return mapSupplierReservation(reservation);
+};
+
+export const submitNoDriverPickupWindow = async (
+  ownerId: string,
+  reservationId: string,
+  input: SubmitNoDriverPickupWindowInput,
+) => {
+  const result = await submitNoDriverPickupWindowForSupplier({
+    reservationId,
+    ownerId,
+    supplierPickupWindowStart: new Date(input.pickupWindowStart),
+    supplierPickupWindowEnd: new Date(input.pickupWindowEnd),
+    supplierNote: input.supplierNote,
+  });
+
+  if (result.outcome === 'NOT_FOUND') {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  if (result.outcome === 'NOT_DELIVERY') {
+    throw new AppError(
+      'This action is only available for delivery reservations.',
+      409,
+      'NOT_ELIGIBLE',
+    );
+  }
+
+  if (result.outcome === 'NOT_ELIGIBLE') {
+    throw new AppError(
+      'Supplier pickup reconfirmation is not requested for this reservation.',
+      409,
+      'NOT_ELIGIBLE',
+    );
+  }
+
+  if (
+    result.outcome === 'INVALID_RESERVATION_STATUS' ||
+    result.outcome === 'INVALID_DELIVERY_STATUS'
+  ) {
+    throw new AppError(
+      'Reservation or delivery is not in the expected state.',
+      409,
+      'INVALID_STATE',
+    );
+  }
+
+  await notifyNewJobForReservationWaitingDelivery(reservationId);
+
+  return mapSupplierReservation(result.reservation);
 };
 
 const assertSupplierReservationAccess = async (

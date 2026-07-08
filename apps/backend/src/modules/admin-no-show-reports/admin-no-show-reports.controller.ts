@@ -4,15 +4,19 @@ import { successResponse } from '../../utils/api-response.js';
 import { readValidatedParams, readValidatedQuery } from '../../middlewares/validate.middleware.js';
 
 import {
+  cancelReleaseHoldAdminNoShowReport,
   getAdminNoShowReportById,
   listAdminNoShowReports,
   rejectAdminNoShowReport,
+  requestSupplierRescheduleAdminNoShowReport,
   resolveAdminNoShowReport,
   verifyAdminNoShowReport,
 } from './admin-no-show-reports.service.js';
 import type {
   AdminNoShowReportIdParams,
   AdminNoShowReportsListQuery,
+  CancelReleaseHoldInput,
+  RequestSupplierRescheduleInput,
   ReviewNoShowReportInput,
 } from './admin-no-show-reports.validation.js';
 
@@ -77,4 +81,34 @@ export const resolveAdminNoShowReportHandler = async (
   );
 
   res.json(successResponse('Report resolved without strike.', report));
+};
+
+export const requestSupplierRescheduleAdminNoShowReportHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<AdminNoShowReportIdParams>(req);
+  const report = await requestSupplierRescheduleAdminNoShowReport(
+    req.auth!.sub,
+    id,
+    req.body as RequestSupplierRescheduleInput,
+  );
+
+  res.json(
+    successResponse('Supplier asked to choose a new pickup window.', report),
+  );
+};
+
+export const cancelReleaseHoldAdminNoShowReportHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<AdminNoShowReportIdParams>(req);
+  const report = await cancelReleaseHoldAdminNoShowReport(
+    req.auth!.sub,
+    id,
+    req.body as CancelReleaseHoldInput,
+  );
+
+  res.json(successResponse('Reservation cancelled and hold released.', report));
 };

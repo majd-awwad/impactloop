@@ -5,6 +5,7 @@ import 'models/create_reservation_request.dart';
 import 'models/created_reservation.dart';
 import 'models/learner_reservation.dart';
 import 'models/reservation_message.dart';
+import 'models/reservation_quote.dart';
 import 'reservations_api.dart';
 
 final reservationsApiProvider = Provider<ReservationsApi>((ref) {
@@ -24,6 +25,12 @@ class ReservationsRepository {
     CreateReservationRequest request,
   ) {
     return _api.createReservation(request);
+  }
+
+  Future<ReservationQuote> fetchReservationQuote(
+    ReservationQuoteRequest request,
+  ) {
+    return _api.fetchReservationQuote(request);
   }
 
   Future<List<LearnerReservation>> fetchMyReservations() {

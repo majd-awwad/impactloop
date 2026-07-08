@@ -66,7 +66,6 @@ class SupplierPickupScheduleItem {
     required this.unit,
     required this.status,
     required this.pickupType,
-    this.deliveryRequested = false,
     this.activeDelivery,
     this.canSupplierComplete = false,
     this.isOverdue = false,
@@ -80,6 +79,7 @@ class SupplierPickupScheduleItem {
     this.canReportNoDriverAvailable = false,
     this.canSupplierMarkDeliveryPickupExpired = false,
     this.canSupplierReportDriverNoShow = false,
+    this.assignedDriverPickupOverdue = false,
     this.noShowReport,
     this.latestMessage,
     this.materialImageUrl,
@@ -98,7 +98,6 @@ class SupplierPickupScheduleItem {
   final String unit;
   final SupplierPickupScheduleStatus status;
   final String pickupType;
-  final bool deliveryRequested;
   final SupplierReservationDeliverySummary? activeDelivery;
   final bool canSupplierComplete;
   final bool isOverdue;
@@ -112,6 +111,7 @@ class SupplierPickupScheduleItem {
   final bool canReportNoDriverAvailable;
   final bool canSupplierMarkDeliveryPickupExpired;
   final bool canSupplierReportDriverNoShow;
+  final bool assignedDriverPickupOverdue;
   final Map<String, dynamic>? noShowReport;
   final ReservationMessage? latestMessage;
   final SupplierPickupWindow? pickupWindow;
@@ -121,31 +121,64 @@ class SupplierPickupScheduleItem {
   final String? supplierHandoverCode;
 
   bool get isCompleted => status == SupplierPickupScheduleStatus.completed;
-  bool get hasDelivery => deliveryRequested || activeDelivery != null;
-  String get deliveryStatusLabel =>
-      activeDelivery?.statusLabel ?? 'Delivery requested';
+  bool get hasDelivery => activeDelivery != null;
+  String get deliveryStatusLabel {
+    if (activeDelivery?.status.toUpperCase() == 'WAITING_FOR_DRIVER' &&
+        canMarkOrReportNoDriverAvailable) {
+      return 'Driver not assigned in time';
+    }
+
+    final status = activeDelivery?.status.toUpperCase();
+    if ((status == 'DRIVER_ASSIGNED' || status == 'ARRIVED_PICKUP') &&
+        (canSupplierReportDriverNoShow || assignedDriverPickupOverdue)) {
+      return status == 'ARRIVED_PICKUP'
+          ? 'Pickup not completed'
+          : 'Driver pickup overdue';
+    }
+
+    return activeDelivery?.statusLabel ?? 'Delivery requested';
+  }
 
   bool get canMarkOrReportNoDriverAvailable =>
       canSupplierMarkDeliveryPickupExpired || canReportNoDriverAvailable;
 
-  bool get showDeliveryPickupExpiredHint {
+  bool get showNoDriverOverdueWarning {
     if (!hasDelivery || noShowReport != null) {
       return false;
     }
 
-    if (activeDelivery?.status.toUpperCase() != 'WAITING_FOR_DRIVER') {
+    final status = activeDelivery?.status.toUpperCase();
+
+    if (status == 'WAITING_FOR_DRIVER') {
+      return canMarkOrReportNoDriverAvailable;
+    }
+
+    if (status == 'DRIVER_ASSIGNED' || status == 'ARRIVED_PICKUP') {
+      return canSupplierReportDriverNoShow || assignedDriverPickupOverdue;
+    }
+
+    return false;
+  }
+
+  bool get showAssignedDriverPickupOverdueWarning {
+    if (!showNoDriverOverdueWarning) {
       return false;
     }
 
-    return !canMarkOrReportNoDriverAvailable && !canSupplierReportDriverNoShow;
+    final status = activeDelivery?.status.toUpperCase();
+    return status == 'DRIVER_ASSIGNED' || status == 'ARRIVED_PICKUP';
   }
+
+  /// @deprecated Use [showNoDriverOverdueWarning]
+  bool get showDeliveryPickupExpiredHint => showNoDriverOverdueWarning;
 
   bool get shouldShowSupplierHandoverCode =>
       hasDelivery &&
       !isCompleted &&
       supplierHandoverCode != null &&
       supplierHandoverCode!.trim().isNotEmpty &&
-      activeDelivery?.status.toUpperCase() != 'DELIVERED';
+      activeDelivery?.status.toUpperCase() != 'DELIVERED' &&
+      !canMarkOrReportNoDriverAvailable;
 
   DateTime? get scheduleDate {
     if (isCompleted) {
@@ -178,26 +211,21 @@ class SupplierPickupScheduleItem {
       }
     }
 
-    final pickupTypeRaw = json['pickupType'] as String?;
-    final deliveryRequested = json['deliveryRequested'] as bool? ?? false;
+    final fulfillmentMethod =
+        json['fulfillmentMethod'] as String? ?? 'PICKUP';
+    final fulfillmentLabel = json['fulfillmentLabel'] as String?;
     final activeDeliveryJson = json['activeDelivery'];
     final activeDelivery = activeDeliveryJson is Map
         ? SupplierReservationDeliverySummary.fromJson(
             Map<String, dynamic>.from(activeDeliveryJson),
           )
         : null;
-    String pickupTypeLabel = json['pickupPreference'] as String? ?? '';
-    if (pickupTypeLabel.isEmpty) {
-      if (deliveryRequested) {
-        pickupTypeLabel = 'Delivery requested';
-      } else if (pickupTypeRaw == 'SELF_PICKUP') {
-        pickupTypeLabel = 'Self pickup';
-      } else if (pickupTypeRaw == 'DELIVERY_ALLOWED') {
-        pickupTypeLabel = 'Delivery allowed';
-      } else {
-        pickupTypeLabel = pickupTypeRaw ?? 'Self pickup';
-      }
-    }
+    final pickupTypeLabel = fulfillmentLabel ??
+        (fulfillmentMethod.toUpperCase() == 'DELIVERY'
+            ? 'Delivery selected'
+            : activeDelivery != null
+                ? 'Delivery requested'
+                : 'Pickup selected');
 
     SupplierPickupWindow? pickupWindow;
     final start = json['pickupWindowStart'] as String?;
@@ -217,8 +245,8 @@ class SupplierPickupScheduleItem {
     final canSupplierComplete =
         json['canSupplierComplete'] as bool? ??
         (scheduleStatus == SupplierPickupScheduleStatus.accepted &&
-            !deliveryRequested &&
-            activeDelivery == null);
+            activeDelivery == null &&
+            fulfillmentMethod.toUpperCase() != 'DELIVERY');
 
     DateTime? completedAt;
     final completedAtRaw = json['completedAt'] as String?;
@@ -241,7 +269,6 @@ class SupplierPickupScheduleItem {
       unit: json['unit'] as String? ?? material?['unit'] as String? ?? 'piece',
       status: scheduleStatus,
       pickupType: pickupTypeLabel,
-      deliveryRequested: deliveryRequested,
       activeDelivery: activeDelivery,
       canSupplierComplete: canSupplierComplete,
       isOverdue: json['isOverdue'] == true,
@@ -262,6 +289,8 @@ class SupplierPickupScheduleItem {
           json['canSupplierMarkDeliveryPickupExpired'] == true,
       canSupplierReportDriverNoShow:
           json['canSupplierReportDriverNoShow'] == true,
+      assignedDriverPickupOverdue:
+          json['assignedDriverPickupOverdue'] == true,
       noShowReport: json['noShowReport'] is Map
           ? Map<String, dynamic>.from(json['noShowReport'] as Map)
           : null,

@@ -48,6 +48,8 @@ class PreferredWindowDraft {
     required DateTime now,
     Duration? minimumRemainingTime,
     String? minimumRemainingTimeMessage,
+    Duration? minimumLeadTime,
+    String? minimumLeadTimeMessage,
   }) {
     final startValue = start;
     final endValue = end;
@@ -60,8 +62,18 @@ class PreferredWindowDraft {
       return 'End time must be after start time.';
     }
 
+    if (!startValue.isAfter(now)) {
+      return 'Preferred pickup window start must be in the future.';
+    }
+
     if (!endValue.isAfter(now)) {
       return 'Preferred window must be in the future.';
+    }
+
+    if (minimumLeadTime != null &&
+        startValue.isBefore(now.add(minimumLeadTime))) {
+      return minimumLeadTimeMessage ??
+          'Preferred pickup window must start at least 30 minutes from now.';
     }
 
     if (minimumRemainingTime != null &&

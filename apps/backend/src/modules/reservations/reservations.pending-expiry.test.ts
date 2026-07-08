@@ -17,6 +17,7 @@ import {
 import { expireStalePendingReservationsByIds } from './reservations.pending-expiry.repository.js';
 import { PENDING_RESERVATION_FALLBACK_HOURS } from './reservation-timing-policy.js';
 import type { CreateReservationInput } from './reservations.validation.js';
+import { listSupplierReservations } from '../supplier-reservations/supplier-reservations.service.js';
 
 const TEST_MARKER = '[test-reservation-pending-expiry]';
 
@@ -233,7 +234,7 @@ describe('reservation pending expiry', () => {
     await prisma.$disconnect();
   });
 
-  test('uses latest preferred window end as expiry deadline', () => {
+  test('uses earliest of supplier response timeout and latest preferred window end', () => {
     const createdAt = new Date('2026-01-01T10:00:00.000Z');
     const deadline = resolvePendingReservationDeadline({
       status: 'PENDING',
@@ -246,7 +247,7 @@ describe('reservation pending expiry', () => {
       createdAt,
     });
 
-    assert.equal(deadline.toISOString(), '2026-01-03T12:00:00.000Z');
+    assert.equal(deadline.toISOString(), '2026-01-03T10:00:00.000Z');
     assert.equal(
       isPendingReservationExpired(
         {
@@ -259,13 +260,13 @@ describe('reservation pending expiry', () => {
           learnerPreferredDeliveryWindows: null,
           createdAt,
         },
-        new Date('2026-01-03T12:00:01.000Z'),
+        new Date('2026-01-03T10:00:01.000Z'),
       ),
       true,
     );
   });
 
-  test('falls back to createdAt plus 72 hours when windows are missing', () => {
+  test('falls back to createdAt plus supplier response hours when windows are missing', () => {
     const createdAt = new Date('2026-01-01T10:00:00.000Z');
     const deadline = resolvePendingReservationDeadline({
       status: 'PENDING',
@@ -303,6 +304,21 @@ describe('reservation pending expiry', () => {
 
     assert.ok(item);
     assert.equal(item?.status, 'EXPIRED');
+  });
+
+  test('listSupplierReservations returns EXPIRED not REJECTED for auto-expired pending', async () => {
+    const { reservation } = await createDuePendingReservation(ctx, 1);
+
+    await expireStalePendingReservationsByIds([reservation.id], ctx.learnerId);
+
+    const listed = await listSupplierReservations(ctx.supplierId, {
+      status: 'cancelled',
+    });
+    const item = listed.find((entry) => entry.id === reservation.id);
+
+    assert.ok(item);
+    assert.equal(item?.status, 'EXPIRED');
+    assert.notEqual(item?.status, 'REJECTED');
   });
 
   test('getMyReservationById auto-expires due pending reservation', async () => {

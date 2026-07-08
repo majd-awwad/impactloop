@@ -38,7 +38,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 |-------|-------|----------------|
 | **public** | Most routes (landing, materials, learning, auth pages, register deprecated fallbacks) | No login required |
 | **authenticated** | `/home`, `/profile`, `/profile/*`, `/supplier/access-denied`, `/admin/access-denied` | Requires login |
-| **learner** | `/learning/add-draft`, `/learner/reservations`, `/learner/reservations/:id`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
+| **learner** | `/learning/add-draft`, `/learning/submissions`, `/learning/submissions/:id`, `/learning/submissions/:id/edit`, `/learning/:id/build`, `/learner/reservations`, `/learner/reservations/:id`, `/learner/deliveries/:id` | Requires login + `LEARNER` role; non-learners redirect to `/home` |
 | **supplier** | `/supplier`, `/supplier/*` (except access-denied) | Requires login + `SUPPLIER` role |
 | **driver** | `/driver`, `/driver/*` | Requires login + `DRIVER` role; non-drivers redirect to `/home` |
 | **admin** | `/admin`, `/admin/*` (except access-denied) | Requires login + `ADMIN` role |
@@ -69,6 +69,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/health` | `HealthPage` | public | Backend health diagnostic |
 | `/home` | `HomePage` → `LearnerHomePage` | authenticated | |
 | `/profile` | `ProfilePage` | authenticated | Account summary hub; mobile bottom Profile tab and avatar menu target this route |
+
+**Learner shell tabs:** `/home`, `/materials`, `/learning`, `/learner/reservations`, and `/profile` are siblings inside `AppMobileNavigationShell`. Switch between them with `context.go(...)`, not `context.push(...)`, so Flutter web keeps the browser URL in sync. Detail routes outside the shell (for example `/materials/:id`, `/learner/reservations/:id`) should continue to use `push`.
 | `/profile/edit` | `ProfileEditPage` | authenticated | Edit display name, phone, and profile photo |
 | `/profile/learner/edit` | `LearnerProfileEditPage` | authenticated | Edit learner type, skill level, interests, and bio (`LEARNER` role required) |
 | `/profile/security` | `ProfileSecurityPage` | authenticated | Change password via `/api/auth/change-password` |
@@ -76,13 +78,18 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/profile/locations` | `SavedLocationsPage` | authenticated | Manage private saved locations via `/api/locations/saved`; exact address and coordinates are visible only to the owner |
 | `/learner/reservations` | `LearnerReservationsPage` | learner | Learner reservation status list |
 | `/learner/reservations/:id` | `LearnerReservationDetailPage` | learner | Single reservation detail with refresh + shared reservation card |
-| `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline, latest driver ping summary, and page-scoped polling map marker when tracking coordinates are allowed |
+| `/learner/deliveries/:id/track` | `LearnerDeliveryTrackingPage` | learner | Live driver map (after pickup), polls `GET /api/deliveries/:id/tracking` every 45s |
+| `/learner/deliveries/:id` | `LearnerDeliveryDetailPage` | learner | Learner-owned delivery status/timeline; **Track delivery** opens `/track` when `canTrack` |
 | `/auth/checking` | `AuthCheckingPage` | public | Auth bootstrap / redirect hub |
-| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, and category filters; add-draft submits for review; AI remains disabled |
+| `/learning` | `LearningHubPage` | public | **Partial** — API-backed list/detail with search, difficulty, tag, category filters, saved/followed learner tabs, and server-side page navigation; optional `q` query pre-fills search; add-draft submits for review; manual build checklist is persisted; AI material matching is not implemented |
 | `/learning/add-draft` | `LearningAddDraftPage` | learner | Learner project submission form; posts to `/api/learning-projects/submit` |
-| `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail |
-| `/materials` | `MaterialsDiscoveryPage` | public | API-backed default |
-| `/materials/:id` | `MaterialDetailsPage` | public | API-backed default |
+| `/learning/submissions` | `LearningProjectSubmissionsPage` | learner | Learner-owned submission dashboard backed by `/api/learning-projects/mine`; shows review status, admin feedback preview, and status CTAs |
+| `/learning/submissions/:id` | `LearningProjectSubmissionDetailPage` | learner | Owner-only unpublished/published submission detail; shows moderation feedback and status-specific actions |
+| `/learning/submissions/:id/edit` | `LearningProjectSubmissionEditPage` | learner | Edit `DRAFT` / `CHANGES_REQUESTED` owner submissions; save changes or save and resubmit |
+| `/learning/:id/build` | `LearningProjectBuildPage` | learner | Persisted manual project build checklist with per-item material candidates, link/unlink, and linked-material panel; no AI matching or auto-reservation |
+| `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail with start/continue build action |
+| `/materials` | `MaterialsDiscoveryPage` | public | API-backed default; optional `q` query pre-fills search |
+| `/materials/:id` | `MaterialDetailsPage` | public | API-backed default; optional query `projectId`, `buildItemId`, `returnTo`, `componentName` for Learning Hub build-context reserve flow |
 | `/login` | `LoginPage` | public | `_AuthPageGuard` |
 | `/forgot-password` | `ForgotPasswordPage` | public | `_AuthPageGuard`; optional `email` query pre-fills the form |
 | `/reset-password` | `ResetPasswordPage` | public | `_AuthPageGuard`; reads reset `token` query |
@@ -172,6 +179,8 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 | `/forgot-password` | `email` | Optional email prefill from the login form |
 | `/reset-password` | `token` | Password reset token from email link |
 | `/complete-learner-profile`, `/complete-supplier-profile` | any | Deprecated fallback paths; redirected to `/register` |
+| `/materials` | `q` | Optional initial search term, used by Learning Hub component handoff |
+| `/learning` | `q` | Optional initial search term, used by material detail project handoff |
 | `/supplier/materials/new` | `categoryRequestId`, `priceRuleRequestId` | Resume listing from approved request |
 | `/supplier/reservations` | `tab`, `focus` | Deep link into reservation inbox |
 

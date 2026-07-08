@@ -9,6 +9,7 @@ import {
   listLearnerReservationMessages,
   getMyReservationById,
   listMyReservations,
+  quoteReservation,
   requestLearnerPickupReschedule,
   reportLearnerSupplierIssue,
   reportNoDriverAvailable,
@@ -21,6 +22,7 @@ import type {
   ReportNoDriverInput,
   ReportSupplierIssueInput,
   RequestPickupRescheduleInput,
+  ReservationQuoteInput,
 } from './reservations.validation.js';
 
 export const createReservationHandler = async (
@@ -35,6 +37,18 @@ export const createReservationHandler = async (
   res
     .status(201)
     .json(successResponse('Reservation requested.', reservation));
+};
+
+export const quoteReservationHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const quote = await quoteReservation(
+    req.auth!.sub,
+    req.body as ReservationQuoteInput,
+  );
+
+  res.json(successResponse('Reservation quote calculated.', quote));
 };
 
 export const listMyReservationsHandler = async (

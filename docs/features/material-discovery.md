@@ -6,20 +6,21 @@
 
 Public browse and detail view of surplus materials available for reuse. Guests and authenticated users can search, filter, paginate, and open material details without logging in.
 
-**Not in current shipped scope:** similar materials, material-to-project suggestions, account-wide saved materials/favorites, project likes, and follows.
+**Not in current shipped scope:** similar materials, account-wide saved materials/favorites, persisted project linking, and follows. Material detail has a non-AI handoff to Learning Hub search for projects using the current material.
 
 ## Current status
 
 | Layer | Status | Notes |
 |-------|--------|-------|
 | Backend `materials` (read) | **Implemented** | Server-side filters, pagination, `viewsCount`, `likesCount`, `isLiked`, `sort=newest\|popular\|nearest` |
-| Flutter `material_discovery` | **Implemented** | API-backed filters, Load more pagination, categories from API |
+| Flutter `material_discovery` | **Implemented** | API-backed filters, Load more pagination, categories from API, and `/materials?q=...` initial search deep links |
 | Client search/filters | **Implemented** | Debounced refetch to `GET /api/materials` |
 | Browse/detail error states | **Implemented** | Initial load retry, filtered/no-materials empty states, detail 404 and retry/back actions |
 | Nearby map | **Implemented** | Uses public approximate list pins only; no exact pickup coordinates |
 | Learner reserve from detail | **Partial** | Quantity dialog + `POST /api/reservations`; see [reservations.md](reservations.md) |
 | Learner material likes | **Implemented** | Detail-page optimistic like toggle + read-only list/home/related-card counts |
 | Report material | **Implemented** | Detail page only; unchanged in this slice |
+| Project handoff | **Implemented** | Detail page opens `/learning?q=<material title>` so Learning Hub search can show projects/components related to the material; no AI matching or persisted material-project relation |
 
 List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, `likesCount`, `isLiked`, `pickupAllowed`, `imageUrl` / `primaryImageUrl` (URL or object-key reference only — never binary blobs in PostgreSQL), and approximate `city`/`area`. List DTOs may additionally include privacy-safe `approximateLatitude`, `approximateLongitude`, and `approximateDistanceKm`; detail DTOs do not include coordinates.
 
@@ -40,13 +41,14 @@ List/detail DTOs include `quantity`, `availableQuantity`, `unit`, `viewsCount`, 
 
 ## Main user flow
 
-1. User opens `/materials`.
+1. User opens `/materials`; optional `/materials?q=<search>` pre-fills the search box and initial API query.
 2. Page loads categories (`GET /api/categories?type=MATERIAL&rootOnly=true&discoveryOnly=true`), saved locations when authenticated (`GET /api/locations/saved`), and materials (`GET /api/materials` with query params).
 3. Search/filters debounce or apply immediately → backend refetch from page 1.
 4. **Load more** appends the next page when available.
 5. Tap card → `/materials/:id` → `GET /api/materials/:id` (writes `material_views` and increments `viewsCount` once per authenticated user/material; guest opens count per request).
 6. Authenticated learners can like/unlike the material on detail (`POST`/`DELETE /api/materials/:id/like`); own-material likes are allowed.
-7. Popular badge shows only when `viewsCount >= 10`.
+7. Optional: tap **Find matching projects** on material detail → `/learning?q=<material title>` opens Learning Hub with the search pre-filled.
+8. Popular badge shows only when `viewsCount >= 10`.
 
 Browse states:
 - Initial network/server failure shows a centered error state with **Try again**.
@@ -72,7 +74,7 @@ Detail states:
 
 **Also used from:** `features/home/application/home_suggested_materials_provider.dart` (first page subset).
 
-**Routes:** `/materials` and `/materials/:id` belong to this feature only — not to `features/materials`.
+**Routes:** `/materials` and `/materials/:id` belong to this feature only — not to `features/materials`. `/materials?q=<search>` is supported for Learning Hub component handoffs and other direct search links. Material detail can link to `/learning?q=<material title>` for a non-AI project search handoff.
 
 **Report material:** detail page calls `materialReportsApiProvider` from `features/materials/data/material_reports_api.dart` (`POST /api/materials/:id/reports`).
 
@@ -110,6 +112,6 @@ Detail states:
 
 - Bilingual material titles/descriptions (backend has single `title`/`description` today).
 - Saved-location create/update/delete UI in Flutter; backend CRUD exists and discovery can read/select saved locations.
-- Similar materials, saved materials, follows, project likes, and supplier/category follow signals.
-- "Projects you can build with this material" suggestions.
+- Similar materials, saved materials, follows, persisted material-to-project linking, and supplier/category follow signals.
+- "Projects you can build with this material" ranked suggestions. Current detail CTA uses plain Learning Hub search only.
 - Database `isPublic` category flag to replace discovery name-pattern filtering.

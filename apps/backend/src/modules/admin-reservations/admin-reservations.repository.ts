@@ -155,6 +155,16 @@ export const adminReservationDetailInclude = {
       createdAt: true,
     },
   },
+  noShowReports: {
+    orderBy: { createdAt: 'desc' as const },
+    select: {
+      id: true,
+      status: true,
+      reasonCode: true,
+      targetRole: true,
+      createdAt: true,
+    },
+  },
 } satisfies Prisma.ReservationInclude;
 
 export type AdminReservationListRecord = Prisma.ReservationGetPayload<{

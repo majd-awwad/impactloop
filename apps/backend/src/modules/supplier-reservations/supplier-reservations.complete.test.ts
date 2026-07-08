@@ -248,18 +248,13 @@ describe('completeSupplierReservation', () => {
     const listed = reservations.find((item) => item.id === reservation.id);
 
     assert.ok(listed);
-    assert.equal(listed.deliveryRequested, false);
+    assert.equal(listed.fulfillmentMethod, 'PICKUP');
     assert.equal(listed.activeDelivery, null);
     assert.equal(listed.canSupplierComplete, true);
   });
 
   test('supplier reservation list exposes delivery summary and blocks supplier complete action', async () => {
     const { reservation } = await createReservation(ctx, 'ACCEPTED');
-
-    await prisma.reservation.update({
-      where: { id: reservation.id },
-      data: { deliveryRequested: true },
-    });
 
     const delivery = await createDelivery(
       ctx,
@@ -273,7 +268,7 @@ describe('completeSupplierReservation', () => {
     const listed = reservations.find((item) => item.id === reservation.id);
 
     assert.ok(listed);
-    assert.equal(listed.deliveryRequested, true);
+    assert.equal(listed.fulfillmentLabel, 'Delivery requested');
     assert.deepEqual(listed.activeDelivery, {
       id: delivery.id,
       status: 'WAITING_FOR_DRIVER',
@@ -281,13 +276,14 @@ describe('completeSupplierReservation', () => {
     assert.equal(listed.canSupplierComplete, false);
   });
 
-  test('delivery-requested reservation without delivery row is not supplier completable', async () => {
+  test('pickup reservation with active delivery row is not supplier completable', async () => {
     const { reservation } = await createReservation(ctx, 'ACCEPTED');
 
-    await prisma.reservation.update({
-      where: { id: reservation.id },
-      data: { deliveryRequested: true },
-    });
+    await createDelivery(
+      ctx,
+      reservation.id,
+      'WAITING_FOR_DRIVER',
+    );
 
     const reservations = await listSupplierReservations(ctx.supplierId, {
       status: 'accepted',
@@ -295,8 +291,8 @@ describe('completeSupplierReservation', () => {
     const listed = reservations.find((item) => item.id === reservation.id);
 
     assert.ok(listed);
-    assert.equal(listed.deliveryRequested, true);
-    assert.equal(listed.activeDelivery, null);
+    assert.equal(listed.fulfillmentLabel, 'Delivery requested');
+    assert.ok(listed.activeDelivery);
     assert.equal(listed.canSupplierComplete, false);
 
     await assert.rejects(

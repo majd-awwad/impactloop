@@ -5,6 +5,8 @@ import '../data/learning_project_draft_storage.dart';
 import '../domain/learning_project_repository.dart';
 import '../domain/learning_projects_result.dart';
 import '../domain/models/learning_project.dart';
+import '../domain/models/learning_project_submission.dart';
+import '../domain/models/project_build.dart';
 
 final learningHubRepositoryProvider = Provider<LearningProjectRepository>(
   (ref) => throw StateError(
@@ -23,12 +25,63 @@ final projectCategoriesProvider =
       return ref.watch(learningHubRepositoryProvider).fetchProjectCategories();
     });
 
+final materialCategoriesProvider =
+    FutureProvider.autoDispose<List<MaterialCategory>>((ref) {
+      return ref.watch(learningHubRepositoryProvider).fetchMaterialCategories();
+    });
+
 final learningProjectsProvider = FutureProvider.autoDispose
     .family<LearningProjectsResult, LearningProjectsQuery>((ref, query) async {
       return ref.watch(learningHubRepositoryProvider).fetchProjects(query);
+    });
+
+final savedLearningProjectsProvider = FutureProvider.autoDispose
+    .family<LearningProjectsResult, LearningProjectsQuery>((ref, query) async {
+      return ref.watch(learningHubRepositoryProvider).fetchSavedProjects(query);
+    });
+
+final followedLearningProjectsProvider = FutureProvider.autoDispose
+    .family<LearningProjectsResult, LearningProjectsQuery>((ref, query) async {
+      return ref
+          .watch(learningHubRepositoryProvider)
+          .fetchFollowedProjects(query);
     });
 
 final learningProjectProvider = FutureProvider.autoDispose
     .family<LearningProject?, String>((ref, id) async {
       return ref.watch(learningHubRepositoryProvider).fetchProjectById(id);
     });
+
+final myLearningProjectSubmissionsProvider = FutureProvider.autoDispose
+    .family<LearningProjectSubmissionsResult, LearningProjectSubmissionsQuery>((
+      ref,
+      query,
+    ) async {
+      return ref
+          .watch(learningHubRepositoryProvider)
+          .fetchMyLearningProjectSubmissions(query);
+    });
+
+final myLearningProjectSubmissionProvider = FutureProvider.autoDispose
+    .family<LearningProjectSubmission, String>((ref, id) async {
+      return ref
+          .watch(learningHubRepositoryProvider)
+          .fetchMyLearningProjectSubmission(id);
+    });
+
+final projectBuildProvider = FutureProvider.autoDispose
+    .family<ProjectBuild?, String>((ref, projectId) async {
+      return ref.watch(learningHubRepositoryProvider).fetchMyBuild(projectId);
+    });
+
+void invalidateLearningHubEngagement(WidgetRef ref, String projectId) {
+  ref.invalidate(learningProjectProvider(projectId));
+  ref.invalidate(learningProjectsProvider);
+  ref.invalidate(savedLearningProjectsProvider);
+  ref.invalidate(followedLearningProjectsProvider);
+}
+
+void invalidateLearningProjectSubmissions(WidgetRef ref, String projectId) {
+  ref.invalidate(myLearningProjectSubmissionProvider(projectId));
+  ref.invalidate(myLearningProjectSubmissionsProvider);
+}

@@ -5,6 +5,7 @@ import 'models/create_reservation_request.dart';
 import 'models/created_reservation.dart';
 import 'models/learner_reservation.dart';
 import 'models/reservation_message.dart';
+import 'models/reservation_quote.dart';
 
 class ReservationsApi {
   const ReservationsApi(this._client);
@@ -20,6 +21,18 @@ class ReservationsApi {
         data: request.toJson(),
       ),
       CreatedReservation.fromJson,
+    );
+  }
+
+  Future<ReservationQuote> fetchReservationQuote(
+    ReservationQuoteRequest request,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/reservations/quote',
+        data: request.toJson(),
+      ),
+      ReservationQuote.fromJson,
     );
   }
 

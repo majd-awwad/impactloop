@@ -17,6 +17,7 @@ enum SupplierIncomingRequestStatus {
   awaitingConfirmation,
   awaitingSupplierConfirmation,
   declined,
+  expired,
   completed,
   cancelled,
   noShow,
@@ -115,6 +116,8 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
         return 'Waiting for supplier response';
       case SupplierIncomingRequestStatus.declined:
         return 'Declined';
+      case SupplierIncomingRequestStatus.expired:
+        return 'Expired — no response';
       case SupplierIncomingRequestStatus.completed:
         return 'Completed';
       case SupplierIncomingRequestStatus.cancelled:
@@ -140,8 +143,9 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
       case 'AWAITING_SUPPLIER_CONFIRMATION':
         return SupplierIncomingRequestStatus.awaitingSupplierConfirmation;
       case 'REJECTED':
-      case 'EXPIRED':
         return SupplierIncomingRequestStatus.declined;
+      case 'EXPIRED':
+        return SupplierIncomingRequestStatus.expired;
       case 'CANCELLED':
         return SupplierIncomingRequestStatus.cancelled;
       case 'COMPLETED':
@@ -169,6 +173,8 @@ extension SupplierIncomingRequestStatusLabels on SupplierIncomingRequestStatus {
         return 'AWAITING_SUPPLIER_CONFIRMATION';
       case SupplierIncomingRequestStatus.declined:
         return 'REJECTED';
+      case SupplierIncomingRequestStatus.expired:
+        return 'EXPIRED';
       case SupplierIncomingRequestStatus.completed:
         return 'COMPLETED';
       case SupplierIncomingRequestStatus.cancelled:
@@ -296,12 +302,10 @@ class SupplierIncomingRequest {
     this.supplierPickupWindow,
     this.confirmedDeliveryWindow,
     this.schedulingConflictReason,
-    this.deliveryRequested = false,
     this.activeDelivery,
     this.canSupplierComplete = false,
     this.materialImageUrl,
     this.learnerNote,
-    this.pickupPreference,
     this.pickupWindow,
     this.declineReason,
     this.isOverdue = false,
@@ -318,11 +322,19 @@ class SupplierIncomingRequest {
     this.canReportNoDriverAvailable = false,
     this.canSupplierMarkDeliveryPickupExpired = false,
     this.canSupplierReportDriverNoShow = false,
+    this.assignedDriverPickupOverdue = false,
+    this.canSubmitNoDriverPickupWindow = false,
     this.pendingRescheduleReason,
+    this.pendingRescheduleNote,
+    this.learnerProposedPickupWindow,
     this.canSendMessage = false,
     this.noShowReport,
     this.latestMessage,
     this.supplierHandoverCode,
+    this.deliveryGroupId,
+    this.groupedDelivery = false,
+    this.groupItemCount,
+    this.combinedDeliveryLabel,
   });
 
   final String id;
@@ -344,11 +356,9 @@ class SupplierIncomingRequest {
   final SupplierPickupWindow? supplierPickupWindow;
   final SupplierPickupWindow? confirmedDeliveryWindow;
   final String? schedulingConflictReason;
-  final bool deliveryRequested;
   final SupplierReservationDeliverySummary? activeDelivery;
   final bool canSupplierComplete;
   final String? learnerNote;
-  final String? pickupPreference;
   final SupplierPickupWindow? pickupWindow;
   final String? declineReason;
   final bool isOverdue;
@@ -365,34 +375,71 @@ class SupplierIncomingRequest {
   final bool canReportNoDriverAvailable;
   final bool canSupplierMarkDeliveryPickupExpired;
   final bool canSupplierReportDriverNoShow;
+  final bool assignedDriverPickupOverdue;
+  final bool canSubmitNoDriverPickupWindow;
   final String? pendingRescheduleReason;
+  final String? pendingRescheduleNote;
+  final SupplierPickupWindow? learnerProposedPickupWindow;
   final bool canSendMessage;
   final Map<String, dynamic>? noShowReport;
   final ReservationMessage? latestMessage;
   final String? supplierHandoverCode;
+  final String? deliveryGroupId;
+  final bool groupedDelivery;
+  final int? groupItemCount;
+  final String? combinedDeliveryLabel;
 
-  bool get hasDelivery => deliveryRequested || activeDelivery != null;
+  bool get hasDelivery =>
+      isDeliveryFulfillment || activeDelivery != null;
 
   bool get canMarkOrReportNoDriverAvailable =>
       canSupplierMarkDeliveryPickupExpired || canReportNoDriverAvailable;
 
-  bool get showDeliveryPickupExpiredHint {
+  bool get showNoDriverOverdueWarning {
     if (!hasDelivery || noShowReport != null) {
       return false;
     }
 
-    if (activeDelivery?.status.toUpperCase() != 'WAITING_FOR_DRIVER') {
+    final status = activeDelivery?.status.toUpperCase();
+
+    if (status == 'WAITING_FOR_DRIVER') {
+      return canMarkOrReportNoDriverAvailable;
+    }
+
+    if (status == 'DRIVER_ASSIGNED' || status == 'ARRIVED_PICKUP') {
+      return canSupplierReportDriverNoShow || assignedDriverPickupOverdue;
+    }
+
+    return false;
+  }
+
+  bool get showAssignedDriverPickupOverdueWarning {
+    if (!showNoDriverOverdueWarning) {
       return false;
     }
 
-    return !canMarkOrReportNoDriverAvailable && !canSupplierReportDriverNoShow;
+    final status = activeDelivery?.status.toUpperCase();
+    return status == 'DRIVER_ASSIGNED' || status == 'ARRIVED_PICKUP';
   }
 
+  /// @deprecated Use [showNoDriverOverdueWarning]
+  bool get showDeliveryPickupExpiredHint => showNoDriverOverdueWarning;
+
   bool get isDeliveryFulfillment => fulfillmentMethod.toUpperCase() == 'DELIVERY';
+
+  String get supplierActionStatusLabel {
+    if (status == SupplierIncomingRequestStatus.awaitingSupplierConfirmation &&
+        canSubmitNoDriverPickupWindow) {
+      return 'New pickup window needed';
+    }
+
+    return status.label;
+  }
 
   bool get isReadOnlyFinalState =>
       status == SupplierIncomingRequestStatus.completed ||
       status == SupplierIncomingRequestStatus.cancelled ||
+      status == SupplierIncomingRequestStatus.expired ||
       status == SupplierIncomingRequestStatus.needsResolution ||
       noShowReport != null;
 
@@ -420,6 +467,11 @@ class SupplierIncomingRequest {
       return 'Waiting for learner confirmation';
     }
 
+    if (activeDelivery?.status.toUpperCase() == 'WAITING_FOR_DRIVER' &&
+        canMarkOrReportNoDriverAvailable) {
+      return 'Driver not assigned in time';
+    }
+
     return activeDelivery?.statusLabel ?? 'Waiting for driver';
   }
 
@@ -429,7 +481,8 @@ class SupplierIncomingRequest {
       supplierHandoverCode != null &&
       supplierHandoverCode!.trim().isNotEmpty &&
       activeDelivery != null &&
-      activeDelivery!.status.toUpperCase() != 'DELIVERED';
+      activeDelivery!.status.toUpperCase() != 'DELIVERED' &&
+      !canMarkOrReportNoDriverAvailable;
 
   SupplierIncomingRequest copyWith({
     SupplierIncomingRequestStatus? status,
@@ -456,11 +509,9 @@ class SupplierIncomingRequest {
       unit: unit,
       status: status ?? this.status,
       requestedAt: requestedAt,
-      deliveryRequested: deliveryRequested,
       activeDelivery: activeDelivery,
       canSupplierComplete: canSupplierComplete ?? this.canSupplierComplete,
       learnerNote: learnerNote,
-      pickupPreference: pickupPreference,
       pickupWindow: pickupWindow ?? this.pickupWindow,
       declineReason: declineReason ?? this.declineReason,
       isOverdue: isOverdue ?? this.isOverdue,
@@ -477,6 +528,11 @@ class SupplierIncomingRequest {
       canSendMessage: canSendMessage ?? this.canSendMessage,
       noShowReport: noShowReport ?? this.noShowReport,
       latestMessage: latestMessage ?? this.latestMessage,
+      deliveryGroupId: deliveryGroupId,
+      groupedDelivery: groupedDelivery,
+      groupItemCount: groupItemCount,
+      combinedDeliveryLabel: combinedDeliveryLabel,
+      supplierHandoverCode: supplierHandoverCode,
     );
   }
 
@@ -495,28 +551,15 @@ class SupplierIncomingRequest {
       }
     }
 
-    final pickupType = json['pickupType'] as String?;
     final fulfillmentMethod =
         json['fulfillmentMethod'] as String? ?? 'PICKUP';
     final fulfillmentLabel = json['fulfillmentLabel'] as String?;
-    final deliveryRequested = json['deliveryRequested'] as bool? ?? false;
     final activeDeliveryJson = json['activeDelivery'];
     final activeDelivery = activeDeliveryJson is Map
         ? SupplierReservationDeliverySummary.fromJson(
             Map<String, dynamic>.from(activeDeliveryJson),
           )
         : null;
-    String? preference = json['pickupPreference'] as String?;
-    if (preference == null || preference.isEmpty) {
-      preference = fulfillmentLabel;
-    }
-    if (preference == null || preference.isEmpty) {
-      if (deliveryRequested) {
-        preference = 'Delivery requested';
-      } else if (pickupType == 'SELF_PICKUP') {
-        preference = 'Self pickup';
-      }
-    }
 
     List<ReservationPreferredWindow> parsePreferredWindows(String key) {
       final raw = json[key];
@@ -553,8 +596,8 @@ class SupplierIncomingRequest {
     final canSupplierComplete =
         json['canSupplierComplete'] as bool? ??
         (status == SupplierIncomingRequestStatus.accepted &&
-            !deliveryRequested &&
-            activeDelivery == null);
+            activeDelivery == null &&
+            fulfillmentMethod.toUpperCase() != 'DELIVERY');
 
     SupplierPickupWindow? pickupWindow;
     final start = json['pickupWindowStart'] as String?;
@@ -609,11 +652,9 @@ class SupplierIncomingRequest {
         'confirmedDeliveryWindowEnd',
       ),
       schedulingConflictReason: json['schedulingConflictReason'] as String?,
-      deliveryRequested: deliveryRequested,
       activeDelivery: activeDelivery,
       canSupplierComplete: canSupplierComplete,
       learnerNote: json['message'] as String?,
-      pickupPreference: preference,
       pickupWindow: pickupWindow,
       declineReason:
           json['rejectionReason'] as String? ??
@@ -643,12 +684,48 @@ class SupplierIncomingRequest {
           json['canSupplierMarkDeliveryPickupExpired'] == true,
       canSupplierReportDriverNoShow:
           json['canSupplierReportDriverNoShow'] == true,
+      assignedDriverPickupOverdue:
+          json['assignedDriverPickupOverdue'] == true,
+      canSubmitNoDriverPickupWindow:
+          json['canSubmitNoDriverPickupWindow'] == true,
       pendingRescheduleReason: () {
         final pending = json['pendingReschedule'];
         if (pending is Map) {
           return pending['reason'] as String?;
         }
         return null;
+      }(),
+      pendingRescheduleNote: () {
+        final pending = json['pendingReschedule'];
+        if (pending is Map) {
+          return pending['note'] as String?;
+        }
+        return null;
+      }(),
+      learnerProposedPickupWindow: () {
+        final fromTopLevel = parseWindow(
+          'learnerProposedPickupWindowStart',
+          'learnerProposedPickupWindowEnd',
+        );
+        if (fromTopLevel != null) {
+          return fromTopLevel;
+        }
+
+        final pending = json['pendingReschedule'];
+        if (pending is! Map) {
+          return null;
+        }
+
+        final start = pending['proposedPickupWindowStart'] as String?;
+        final end = pending['proposedPickupWindowEnd'] as String?;
+        if (start == null || end == null) {
+          return null;
+        }
+
+        return SupplierPickupWindow(
+          start: DateTime.parse(start),
+          end: DateTime.parse(end),
+        );
       }(),
       canSendMessage: json['canSendMessage'] == true,
       noShowReport: json['noShowReport'] is Map
@@ -660,6 +737,10 @@ class SupplierIncomingRequest {
             )
           : null,
       supplierHandoverCode: json['supplierHandoverCode'] as String?,
+      deliveryGroupId: json['deliveryGroupId'] as String?,
+      groupedDelivery: json['groupedDelivery'] == true,
+      groupItemCount: (json['groupItemCount'] as num?)?.toInt(),
+      combinedDeliveryLabel: json['combinedDeliveryLabel'] as String?,
     );
   }
 }

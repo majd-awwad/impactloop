@@ -15,11 +15,14 @@ import {
   rejectAdminLearningProject,
   requestChangesAdminLearningProject,
   restoreAdminLearningProject,
+  updateAdminLearningProjectComponent,
 } from './admin-learning-projects.service.js';
 import type {
+  AdminLearningProjectComponentParams,
   AdminLearningProjectIdParams,
   AdminLearningProjectsListQuery,
   ModerationReasonInput,
+  UpdateAdminLearningProjectComponentInput,
 } from './admin-learning-projects.validation.js';
 
 export const listAdminLearningProjectsHandler = async (
@@ -102,4 +105,21 @@ export const archiveAdminLearningProjectHandler = async (
   const actorUserId = req.auth!.sub;
   const result = await archiveAdminLearningProject(actorUserId, id, body);
   res.json(successResponse('Learning project archived', result));
+};
+
+export const updateAdminLearningProjectComponentHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, componentId } =
+    readValidatedParams<AdminLearningProjectComponentParams>(req);
+  const body = req.body as UpdateAdminLearningProjectComponentInput;
+  const actorUserId = req.auth!.sub;
+  const result = await updateAdminLearningProjectComponent(
+    actorUserId,
+    id,
+    componentId,
+    body,
+  );
+  res.json(successResponse('Learning project component updated', result));
 };

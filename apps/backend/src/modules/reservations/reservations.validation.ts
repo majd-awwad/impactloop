@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 import {
-  LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
-  MIN_PICKUP_NOTICE_MINUTES,
-} from './reservation-timing-policy.js';
+  mapPickupValidationFailureToZodIssue,
+  validatePickupWindow,
+} from './pickup-window-validation.js';
 
 const preferredWindowSchema = z
   .object({
@@ -11,33 +11,16 @@ const preferredWindowSchema = z
     end: z.iso.datetime(),
   })
   .superRefine((value, ctx) => {
-    const start = new Date(value.start);
-    const end = new Date(value.end);
+    const failure = validatePickupWindow(
+      {
+        start: new Date(value.start),
+        end: new Date(value.end),
+      },
+      'learner_preferred',
+    );
 
-    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Preferred window dates must be valid.',
-        path: ['end'],
-      });
-      return;
-    }
-
-    if (end <= start) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Preferred window end must be after start.',
-        path: ['end'],
-      });
-      return;
-    }
-
-    if (end.getTime() <= Date.now()) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Preferred window must be in the future.',
-        path: ['end'],
-      });
+    if (failure) {
+      ctx.addIssue(mapPickupValidationFailureToZodIssue(failure));
     }
   });
 
@@ -50,8 +33,12 @@ export const createReservationSchema = z
     learnerPreferredPickupWindows: z.array(preferredWindowSchema).optional(),
     learnerPreferredDeliveryWindows: z.array(preferredWindowSchema).optional(),
     deliveryAddressText: z.string().trim().min(1).max(500).optional(),
+    dropoffCity: z.string().trim().min(1).max(120).optional(),
+    dropoffArea: z.string().trim().max(120).optional(),
     safeDropoffAllowed: z.boolean().optional(),
     deliveryNote: z.string().trim().max(1000).optional(),
+    buildItemId: z.string().trim().min(1).optional(),
+    combineWithDeliveryGroupId: z.string().trim().min(1).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.fulfillmentMethod === 'PICKUP') {
@@ -62,21 +49,6 @@ export const createReservationSchema = z
           path: ['learnerPreferredPickupWindows'],
         });
       }
-
-      const minPickupEnd = Date.now() + MIN_PICKUP_NOTICE_MINUTES * 60_000;
-      value.learnerPreferredPickupWindows?.forEach((window, index) => {
-        const end = new Date(window.end);
-        if (
-          Number.isFinite(end.getTime()) &&
-          end.getTime() < minPickupEnd
-        ) {
-          ctx.addIssue({
-            code: 'custom',
-            message: LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
-            path: ['learnerPreferredPickupWindows', index, 'end'],
-          });
-        }
-      });
       return;
     }
 
@@ -96,6 +68,14 @@ export const createReservationSchema = z
       });
     }
 
+    if (!value.dropoffCity?.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Drop-off city is required for delivery.',
+        path: ['dropoffCity'],
+      });
+    }
+
     if (value.safeDropoffAllowed === undefined) {
       ctx.addIssue({
         code: 'custom',
@@ -106,6 +86,38 @@ export const createReservationSchema = z
   });
 
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;
+
+export const reservationQuoteSchema = z
+  .object({
+    materialId: z.string().trim().min(1),
+    quantity: z.number().positive(),
+    fulfillmentMethod: z.enum(['PICKUP', 'DELIVERY']),
+    dropoffCity: z.string().trim().min(1).max(120).optional(),
+    dropoffArea: z.string().trim().max(120).optional(),
+    learnerPreferredDeliveryWindows: z.array(preferredWindowSchema).optional(),
+    combineWithDeliveryGroupId: z.string().trim().min(1).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.fulfillmentMethod === 'DELIVERY') {
+      if (!value.dropoffCity?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Drop-off city is required for delivery pricing.',
+          path: ['dropoffCity'],
+        });
+      }
+
+      if (!value.learnerPreferredDeliveryWindows?.length) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'At least one preferred delivery window is required.',
+          path: ['learnerPreferredDeliveryWindows'],
+        });
+      }
+    }
+  });
+
+export type ReservationQuoteInput = z.infer<typeof reservationQuoteSchema>;
 
 export const reservationIdParamsSchema = z.object({
   id: z.string().trim().min(1),
@@ -147,50 +159,52 @@ export type LearnerConfirmationInput = z.infer<typeof learnerConfirmationSchema>
 
 export const requestPickupRescheduleSchema = z
   .object({
-    pickupWindowStart: z.iso.datetime(),
-    pickupWindowEnd: z.iso.datetime(),
+    pickupWindowStart: z.string().optional(),
+    pickupWindowEnd: z.string().optional(),
     reason: z.string().trim().min(1).max(500),
     note: z.string().trim().max(1000).optional(),
   })
   .superRefine((value, ctx) => {
-    const start = new Date(value.pickupWindowStart);
-    const end = new Date(value.pickupWindowEnd);
+    const startRaw = value.pickupWindowStart?.trim();
+    const endRaw = value.pickupWindowEnd?.trim();
 
-    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+    if (!startRaw || !endRaw) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Pickup window dates must be valid.',
-        path: ['pickupWindowEnd'],
+        message: 'A new pickup window is required for reschedule requests.',
+        path: ['pickupWindowStart'],
       });
       return;
     }
 
-    if (end <= start) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Pickup end time must be after start time.',
-        path: ['pickupWindowEnd'],
-      });
-      return;
-    }
-
-    if (end.getTime() <= Date.now()) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Pickup window must be in the future.',
-        path: ['pickupWindowEnd'],
-      });
-      return;
-    }
+    const start = new Date(startRaw);
+    const end = new Date(endRaw);
 
     if (
-      end.getTime() <
-      Date.now() + MIN_PICKUP_NOTICE_MINUTES * 60_000
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime())
     ) {
       ctx.addIssue({
         code: 'custom',
-        message: LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
-        path: ['pickupWindowEnd'],
+        message: 'Pickup window dates must be valid.',
+        path: ['pickupWindowStart'],
+      });
+      return;
+    }
+
+    const failure = validatePickupWindow(
+      { start, end },
+      'learner_preferred',
+    );
+
+    if (failure) {
+      ctx.addIssue({
+        code: 'custom',
+        message: failure.message,
+        path:
+          failure.field === 'start'
+            ? ['pickupWindowStart']
+            : ['pickupWindowEnd'],
       });
     }
   });

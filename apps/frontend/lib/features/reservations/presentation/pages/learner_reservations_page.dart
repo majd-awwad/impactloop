@@ -172,7 +172,7 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
                 subtitle:
                     'Reserve an available material and supplier updates will appear here.',
                 actionLabel: 'Browse materials',
-                onAction: () => context.push('/materials'),
+                onAction: () => context.go('/materials'),
               );
             }
 
@@ -192,7 +192,7 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
                 subtitle:
                     'Try another filter or browse materials to start a new request.',
                 actionLabel: 'Browse materials',
-                onAction: () => context.push('/materials'),
+                onAction: () => context.go('/materials'),
               );
             }
 

@@ -4,17 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../shared/widgets/app_feedback.dart';
+import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/learning_projects_result.dart';
 import '../../domain/models/learning_project.dart';
 import '../../../materials/data/models/category.dart';
 import '../theme/learning_ui_palette.dart';
-import '../widgets/disabled_ai_panel.dart';
 import '../widgets/featured_project_card.dart';
 import '../widgets/learning_category_chips.dart';
 import '../widgets/learning_hub_hero.dart';
@@ -25,31 +27,37 @@ const _featuredTip = LocalizedText(
   ar: ' يساعد المتعلمين على تحويل المواد الفائضة إلى مشاريع عملية. تصفح المشاريع المنشورة للإلهام، ثم احجز المواد عندما تكون مستعداً.',
 );
 
+enum _LearningProjectListMode { all, saved, followed }
+
 class LearningHubPage extends ConsumerStatefulWidget {
-  const LearningHubPage({super.key});
+  const LearningHubPage({super.key, this.initialSearch});
+
+  final String? initialSearch;
 
   @override
   ConsumerState<LearningHubPage> createState() => _LearningHubPageState();
 }
 
 class _LearningHubPageState extends ConsumerState<LearningHubPage> {
-  static const int _chunkSize = 4;
+  static const int _pageSize = 12;
 
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
   Timer? _searchDebounce;
 
-  int _visibleProjectCount = _chunkSize;
+  int _currentPage = 1;
   int _selectedCategoryIndex = 0;
   String? _selectedCategoryId;
   String _searchDraft = '';
   String? _searchTerm;
   String? _selectedDifficulty;
   String? _selectedTag;
+  _LearningProjectListMode _listMode = _LearningProjectListMode.all;
+  LearningProjectsResult? _lastResult;
 
   LearningProjectsQuery get _query => LearningProjectsQuery(
-    page: 1,
-    limit: 20,
+    page: _currentPage,
+    limit: _pageSize,
     q: _searchTerm,
     categoryId: _selectedCategoryId,
     difficulty: _selectedDifficulty,
@@ -65,8 +73,29 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
   @override
   void initState() {
     super.initState();
-    _searchController = TextEditingController();
+    final initialSearch = _normalizedSearch(widget.initialSearch);
+    _searchController = TextEditingController(text: initialSearch ?? '');
     _searchFocusNode = FocusNode();
+    _searchDraft = initialSearch ?? '';
+    _searchTerm = initialSearch;
+  }
+
+  @override
+  void didUpdateWidget(covariant LearningHubPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextSearch = _normalizedSearch(widget.initialSearch);
+    if (_normalizedSearch(oldWidget.initialSearch) == nextSearch ||
+        nextSearch == _searchTerm) {
+      return;
+    }
+
+    _searchDebounce?.cancel();
+    _searchController.text = nextSearch ?? '';
+    setState(() {
+      _searchDraft = nextSearch ?? '';
+      _searchTerm = nextSearch;
+      _currentPage = 1;
+    });
   }
 
   @override
@@ -88,6 +117,11 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
     });
   }
 
+  String? _normalizedSearch(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
   void _applySearch(String value) {
     _searchDebounce?.cancel();
     final trimmed = value.trim();
@@ -98,21 +132,21 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
 
     setState(() {
       _searchTerm = nextSearchTerm;
-      _visibleProjectCount = _chunkSize;
+      _currentPage = 1;
     });
   }
 
   void _setDifficulty(String? difficulty) {
     setState(() {
       _selectedDifficulty = difficulty;
-      _visibleProjectCount = _chunkSize;
+      _currentPage = 1;
     });
   }
 
   void _setTag(String? tag) {
     setState(() {
       _selectedTag = tag;
-      _visibleProjectCount = _chunkSize;
+      _currentPage = 1;
     });
   }
 
@@ -126,15 +160,77 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
       _searchTerm = null;
       _selectedDifficulty = null;
       _selectedTag = null;
-      _visibleProjectCount = _chunkSize;
+      _currentPage = 1;
     });
+  }
+
+  void _setPage(int page) {
+    if (page == _currentPage || page < 1) {
+      return;
+    }
+
+    setState(() {
+      _currentPage = page;
+    });
+  }
+
+  void _setListMode(_LearningProjectListMode mode) {
+    if (mode == _listMode) {
+      return;
+    }
+
+    if (mode != _LearningProjectListMode.all) {
+      final authState = ref.read(authControllerProvider);
+      if (authState.status != AuthStatus.authenticated) {
+        context.go('/login?from=${Uri.encodeQueryComponent('/learning')}');
+        return;
+      }
+
+      if (authState.user?.hasRole('LEARNER') != true) {
+        showInfoSnackBar(
+          context,
+          'Use a learner account to view saved and followed projects.',
+        );
+        return;
+      }
+    }
+
+    setState(() {
+      _listMode = mode;
+      _currentPage = 1;
+    });
+  }
+
+  void _invalidateCurrentProjects(LearningProjectsQuery query) {
+    switch (_listMode) {
+      case _LearningProjectListMode.all:
+        ref.invalidate(learningProjectsProvider(query));
+        break;
+      case _LearningProjectListMode.saved:
+        ref.invalidate(savedLearningProjectsProvider(query));
+        break;
+      case _LearningProjectListMode.followed:
+        ref.invalidate(followedLearningProjectsProvider(query));
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final categoriesAsync = ref.watch(projectCategoriesProvider);
-    final projectsAsync = ref.watch(learningProjectsProvider(_query));
+    final query = _query;
+    final projectsAsync = switch (_listMode) {
+      _LearningProjectListMode.all => ref.watch(
+        learningProjectsProvider(query),
+      ),
+      _LearningProjectListMode.saved => ref.watch(
+        savedLearningProjectsProvider(query),
+      ),
+      _LearningProjectListMode.followed => ref.watch(
+        followedLearningProjectsProvider(query),
+      ),
+    };
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -143,68 +239,100 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const EntryNavBar(homeRoute: '/home'),
-            Expanded(
-              child: projectsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stackTrace) => _HubStatePanel(
-                  icon: Icons.cloud_off_outlined,
-                  title: const LocalizedText(
-                    en: 'Unable to load learning projects',
-                    ar: 'تعذر تحميل مشاريع التعلم',
-                  ),
-                  subtitle: const LocalizedText(
-                    en: 'Check that the backend is running, then try again.',
-                    ar: 'تحقق من تشغيل الخادم ثم حاول مرة أخرى.',
-                  ),
-                  actionLabel: const LocalizedText(
-                    en: 'Try again',
-                    ar: 'حاول مرة أخرى',
-                  ),
-                  onAction: () =>
-                      ref.invalidate(learningProjectsProvider(_query)),
-                ),
-                data: (result) {
-                  return _HubContent(
-                    result: result,
-                    categoriesAsync: categoriesAsync,
-                    selectedCategoryIndex: _selectedCategoryIndex,
-                    searchController: _searchController,
-                    searchFocusNode: _searchFocusNode,
-                    searchDraft: _searchDraft,
-                    selectedDifficulty: _selectedDifficulty,
-                    selectedTag: _selectedTag,
-                    hasActiveFilters: _hasActiveFilters,
-                    visibleProjectCount: _visibleProjectCount,
-                    onSearchChanged: _onSearchChanged,
-                    onSearchSubmitted: _applySearch,
-                    onDifficultySelected: _setDifficulty,
-                    onTagSelected: _setTag,
-                    onClearFilters: _clearFilters,
-                    onSubmitProject: () => context.go('/learning/add-draft'),
-                    onFocusSearch: () => _searchFocusNode.requestFocus(),
-                    onCategorySelected: (index, categoryId) {
-                      setState(() {
-                        _selectedCategoryIndex = index;
-                        _selectedCategoryId = categoryId;
-                        _visibleProjectCount = _chunkSize;
-                      });
-                    },
-                    onLoadMore: () {
-                      setState(() {
-                        _visibleProjectCount =
-                            (_visibleProjectCount + _chunkSize).clamp(
-                              0,
-                              result.items.length - 1,
-                            );
-                      });
-                    },
-                  );
-                },
-              ),
-            ),
+            Expanded(child: _buildProjectsBody(projectsAsync, categoriesAsync)),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProjectsBody(
+    AsyncValue<LearningProjectsResult> projectsAsync,
+    AsyncValue<List<MaterialCategory>> categoriesAsync,
+  ) {
+    final query = _query;
+    final authState = ref.watch(authControllerProvider);
+    final canManageSubmissions =
+        authState.status == AuthStatus.authenticated &&
+        authState.user?.hasRole('LEARNER') == true;
+
+    Widget contentFor(
+      LearningProjectsResult result, {
+      required bool isRefreshing,
+      Object? refreshError,
+    }) {
+      return _HubContent(
+        result: result,
+        categoriesAsync: categoriesAsync,
+        selectedCategoryIndex: _selectedCategoryIndex,
+        searchController: _searchController,
+        searchFocusNode: _searchFocusNode,
+        searchDraft: _searchDraft,
+        selectedDifficulty: _selectedDifficulty,
+        selectedTag: _selectedTag,
+        listMode: _listMode,
+        hasActiveFilters: _hasActiveFilters,
+        isRefreshing: isRefreshing,
+        refreshError: refreshError,
+        onSearchChanged: _onSearchChanged,
+        onSearchSubmitted: _applySearch,
+        onDifficultySelected: _setDifficulty,
+        onTagSelected: _setTag,
+        onListModeSelected: _setListMode,
+        onClearFilters: _clearFilters,
+        onRetry: () => _invalidateCurrentProjects(query),
+        onSubmitProject: () => context.go('/learning/add-draft'),
+        onMySubmissions: canManageSubmissions
+            ? () => context.go('/learning/submissions')
+            : null,
+        onFocusSearch: () => _searchFocusNode.requestFocus(),
+        onCategorySelected: (index, categoryId) {
+          setState(() {
+            _selectedCategoryIndex = index;
+            _selectedCategoryId = categoryId;
+            _currentPage = 1;
+          });
+        },
+        onPageChanged: _setPage,
+      );
+    }
+
+    return projectsAsync.when(
+      loading: () {
+        final cached = _lastResult;
+        if (cached != null) {
+          return contentFor(cached, isRefreshing: true);
+        }
+
+        return const Center(child: CircularProgressIndicator());
+      },
+      error: (error, stackTrace) {
+        final cached = _lastResult;
+        if (cached != null) {
+          return contentFor(cached, isRefreshing: false, refreshError: error);
+        }
+
+        return _HubStatePanel(
+          icon: Icons.cloud_off_outlined,
+          title: const LocalizedText(
+            en: 'Unable to load learning projects',
+            ar: 'تعذر تحميل مشاريع التعلم',
+          ),
+          subtitle: const LocalizedText(
+            en: 'Check that the backend is running, then try again.',
+            ar: 'تحقق من تشغيل الخادم ثم حاول مرة أخرى.',
+          ),
+          actionLabel: const LocalizedText(
+            en: 'Try again',
+            ar: 'حاول مرة أخرى',
+          ),
+          onAction: () => _invalidateCurrentProjects(query),
+        );
+      },
+      data: (result) {
+        _lastResult = result;
+        return contentFor(result, isRefreshing: false);
+      },
     );
   }
 }
@@ -219,17 +347,22 @@ class _HubContent extends StatelessWidget {
     required this.searchDraft,
     required this.selectedDifficulty,
     required this.selectedTag,
+    required this.listMode,
     required this.hasActiveFilters,
-    required this.visibleProjectCount,
+    required this.isRefreshing,
+    required this.refreshError,
     required this.onSearchChanged,
     required this.onSearchSubmitted,
     required this.onDifficultySelected,
     required this.onTagSelected,
+    required this.onListModeSelected,
     required this.onClearFilters,
+    required this.onRetry,
     required this.onSubmitProject,
+    required this.onMySubmissions,
     required this.onFocusSearch,
     required this.onCategorySelected,
-    required this.onLoadMore,
+    required this.onPageChanged,
   });
 
   final LearningProjectsResult result;
@@ -240,29 +373,45 @@ class _HubContent extends StatelessWidget {
   final String searchDraft;
   final String? selectedDifficulty;
   final String? selectedTag;
+  final _LearningProjectListMode listMode;
   final bool hasActiveFilters;
-  final int visibleProjectCount;
+  final bool isRefreshing;
+  final Object? refreshError;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onSearchSubmitted;
   final ValueChanged<String?> onDifficultySelected;
   final ValueChanged<String?> onTagSelected;
+  final ValueChanged<_LearningProjectListMode> onListModeSelected;
   final VoidCallback onClearFilters;
+  final VoidCallback onRetry;
   final VoidCallback onSubmitProject;
+  final VoidCallback? onMySubmissions;
   final VoidCallback onFocusSearch;
   final void Function(int index, String? categoryId) onCategorySelected;
-  final VoidCallback onLoadMore;
+  final ValueChanged<int> onPageChanged;
 
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
-    final featuredProject = result.items.isEmpty ? null : result.items.first;
-    final otherProjects = result.items.length > 1
-        ? result.items.sublist(1)
-        : const <LearningProject>[];
-    final visibleProjects = otherProjects
-        .take(visibleProjectCount)
-        .toList(growable: false);
-    final hasMoreProjects = visibleProjectCount < otherProjects.length;
+    final isFirstPage = result.page <= 1;
+    final canShowFeatured =
+        listMode == _LearningProjectListMode.all && isFirstPage;
+    // TODO: Restore "Project of the week" when admins/moderators can select an
+    // explicit spotlight project in the backend. Do not infer it from newest.
+    final featuredProject = canShowFeatured
+        ? _explicitFeaturedProject(result.items)
+        : null;
+    final gridProjects = featuredProject == null
+        ? result.items
+        : result.items
+              .where((project) => project.id != featuredProject.id)
+              .toList(growable: false);
+    final pageStart = result.total == 0
+        ? 0
+        : ((result.page - 1) * result.limit) + 1;
+    final pageEnd = result.total == 0
+        ? 0
+        : (pageStart + result.items.length - 1).clamp(pageStart, result.total);
     final categoryLabels = _categoryLabels(categoriesAsync);
     final tagOptions = _tagOptions(result.items, selectedTag);
     final heroStats = <LocalizedText, int>{
@@ -274,7 +423,7 @@ class _HubContent extends StatelessWidget {
     };
 
     return SingleChildScrollView(
-      padding: appMobileAwareScrollPadding(context, top: AppSpacing.md),
+      padding: appMobileAwareScrollPadding(context, top: AppSpacing.xl),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1400),
@@ -295,7 +444,10 @@ class _HubContent extends StatelessWidget {
                 onSubmitPressed: onSubmitProject,
               ),
               const SizedBox(height: AppSpacing.lg),
-              _SubmitProjectCallout(onSubmitProject: onSubmitProject),
+              _SubmitProjectCallout(
+                onSubmitProject: onSubmitProject,
+                onMySubmissions: onMySubmissions,
+              ),
               const SizedBox(height: AppSpacing.lg),
               if (categoryLabels.isNotEmpty)
                 LearningCategoryChips(
@@ -325,7 +477,35 @@ class _HubContent extends StatelessWidget {
                 onClearFilters: onClearFilters,
               ),
               const SizedBox(height: AppSpacing.xl),
-              if (featuredProject == null)
+              _LearningListModeTabs(
+                selectedMode: listMode,
+                onModeSelected: onListModeSelected,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              if (isRefreshing)
+                const _HubInlineStatusBanner(
+                  icon: Icons.sync_rounded,
+                  message: LocalizedText(
+                    en: 'Updating results...',
+                    ar: 'جار تحديث النتائج...',
+                  ),
+                  showProgress: true,
+                )
+              else if (refreshError != null)
+                _HubInlineStatusBanner(
+                  icon: Icons.cloud_off_outlined,
+                  message: const LocalizedText(
+                    en: 'Could not refresh results. Showing the previous list.',
+                    ar: 'تعذر تحديث النتائج. يتم عرض القائمة السابقة.',
+                  ),
+                  actionLabel: const LocalizedText(
+                    en: 'Retry',
+                    ar: 'إعادة المحاولة',
+                  ),
+                  onAction: onRetry,
+                ),
+              const SizedBox(height: AppSpacing.xl),
+              if (result.items.isEmpty)
                 _HubStatePanel(
                   icon: hasActiveFilters
                       ? Icons.search_off_rounded
@@ -335,19 +515,13 @@ class _HubContent extends StatelessWidget {
                           en: 'No projects match your filters',
                           ar: 'لا توجد مشاريع تطابق عوامل التصفية',
                         )
-                      : const LocalizedText(
-                          en: 'No published projects yet',
-                          ar: 'لا توجد مشاريع منشورة بعد',
-                        ),
+                      : _emptyTitleForMode(listMode),
                   subtitle: hasActiveFilters
                       ? const LocalizedText(
                           en: 'Try a different search, difficulty, category, or tag.',
                           ar: 'جرّب بحثاً أو مستوى أو فئة أو وسم مختلف.',
                         )
-                      : const LocalizedText(
-                          en: 'When learning projects are published, they will appear here.',
-                          ar: 'عند نشر مشاريع تعليمية، ستظهر هنا.',
-                        ),
+                      : _emptySubtitleForMode(listMode),
                   actionLabel: hasActiveFilters
                       ? const LocalizedText(
                           en: 'Clear filters',
@@ -356,7 +530,7 @@ class _HubContent extends StatelessWidget {
                       : null,
                   onAction: hasActiveFilters ? onClearFilters : null,
                 )
-              else ...[
+              else if (featuredProject != null) ...[
                 Text(
                   const LocalizedText(
                     en: 'Project of the week',
@@ -369,20 +543,23 @@ class _HubContent extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
                 FeaturedProjectCard(project: featuredProject),
               ],
-              if (otherProjects.isNotEmpty) ...[
+              if (gridProjects.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  const LocalizedText(
-                    en: 'More projects',
-                    ar: 'مشاريع أخرى',
-                  ).resolve(context),
+                  (listMode == _LearningProjectListMode.all && isFirstPage
+                          ? const LocalizedText(
+                              en: 'More projects',
+                              ar: 'مشاريع أخرى',
+                            )
+                          : _sectionTitleForMode(listMode))
+                      .resolve(context),
                   style: AppTextStyles.display(
                     context,
                   ).copyWith(color: palette.textPrimary),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  '${otherProjects.length} ${const LocalizedText(en: 'results', ar: 'نتيجة').resolve(context)}',
+                  _pageSummary(context, pageStart, pageEnd, result.total),
                   style: AppTextStyles.subtitle(
                     context,
                   ).copyWith(color: palette.textSecondary),
@@ -404,7 +581,7 @@ class _HubContent extends StatelessWidget {
                     return Wrap(
                       spacing: AppSpacing.md,
                       runSpacing: AppSpacing.md,
-                      children: visibleProjects.map((project) {
+                      children: gridProjects.map((project) {
                         return SizedBox(
                           width: itemWidth,
                           child: LearningProjectCard(project: project),
@@ -413,20 +590,12 @@ class _HubContent extends StatelessWidget {
                     );
                   },
                 ),
-                if (hasMoreProjects) ...[
+                if (result.totalPages > 1) ...[
                   const SizedBox(height: AppSpacing.lg),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: OutlinedButton.icon(
-                      onPressed: onLoadMore,
-                      icon: const Icon(Icons.expand_more_rounded),
-                      label: Text(
-                        const LocalizedText(
-                          en: 'Load more projects',
-                          ar: 'عرض المزيد من المشاريع',
-                        ).resolve(context),
-                      ),
-                    ),
+                  _LearningPaginationControls(
+                    page: result.page,
+                    totalPages: result.totalPages,
+                    onPageChanged: onPageChanged,
                   ),
                 ],
               ],
@@ -469,7 +638,7 @@ class _HubContent extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              const DisabledAiPanel(compact: true),
+              _LearningHubRoadmapPanel(onSubmitProject: onSubmitProject),
             ],
           ),
         ),
@@ -519,30 +688,456 @@ class _HubContent extends StatelessWidget {
     );
   }
 
-  List<String> _tagOptions(List<LearningProject> projects, String? selectedTag) {
+  List<String> _tagOptions(
+    List<LearningProject> projects,
+    String? selectedTag,
+  ) {
+    const visibleTagLimit = 12;
     final tags = <String>{};
-    if (selectedTag != null && selectedTag.trim().isNotEmpty) {
-      tags.add(selectedTag.trim());
+    final selected = _userFacingTag(selectedTag);
+    if (selected != null) {
+      tags.add(selected);
     }
 
     for (final project in projects) {
       for (final tag in project.tags) {
-        final trimmed = tag.trim();
-        if (trimmed.isNotEmpty) {
-          tags.add(trimmed);
+        final visibleTag = _userFacingTag(tag);
+        if (visibleTag != null) {
+          tags.add(visibleTag);
         }
       }
     }
 
-    return tags.toList(growable: false)
-      ..sort((left, right) => left.toLowerCase().compareTo(right.toLowerCase()));
+    final sorted = tags.toList(
+      growable: false,
+    )..sort((left, right) => left.toLowerCase().compareTo(right.toLowerCase()));
+
+    return sorted.take(visibleTagLimit).toList(growable: false);
+  }
+
+  LearningProject? _explicitFeaturedProject(List<LearningProject> projects) {
+    for (final project in projects) {
+      if (project.isFeatured) {
+        return project;
+      }
+    }
+
+    return null;
+  }
+
+  String? _userFacingTag(String? tag) {
+    final trimmed = tag?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+
+    final normalized = trimmed.toLowerCase();
+    if (normalized == 'mock' ||
+        normalized == 'pagination' ||
+        normalized == 'test') {
+      return null;
+    }
+
+    if (RegExp(r'^project[-_]\d+$').hasMatch(normalized)) {
+      return null;
+    }
+
+    return trimmed;
+  }
+
+  String _pageSummary(
+    BuildContext context,
+    int pageStart,
+    int pageEnd,
+    int total,
+  ) {
+    final results = const LocalizedText(
+      en: 'results',
+      ar: 'نتيجة',
+    ).resolve(context);
+
+    if (total == 0) {
+      return '0 $results';
+    }
+
+    final showing = const LocalizedText(
+      en: 'Showing',
+      ar: 'عرض',
+    ).resolve(context);
+    final of = const LocalizedText(en: 'of', ar: 'من').resolve(context);
+
+    return '$showing $pageStart-$pageEnd $of $total $results';
+  }
+
+  LocalizedText _sectionTitleForMode(_LearningProjectListMode mode) {
+    return switch (mode) {
+      _LearningProjectListMode.all => const LocalizedText(
+        en: 'Projects',
+        ar: 'المشاريع',
+      ),
+      _LearningProjectListMode.saved => const LocalizedText(
+        en: 'Saved projects',
+        ar: 'المشاريع المحفوظة',
+      ),
+      _LearningProjectListMode.followed => const LocalizedText(
+        en: 'Followed projects',
+        ar: 'المشاريع المتابعة',
+      ),
+    };
+  }
+
+  LocalizedText _emptyTitleForMode(_LearningProjectListMode mode) {
+    return switch (mode) {
+      _LearningProjectListMode.all => const LocalizedText(
+        en: 'No published projects yet',
+        ar: 'لا توجد مشاريع منشورة بعد',
+      ),
+      _LearningProjectListMode.saved => const LocalizedText(
+        en: 'No saved projects yet',
+        ar: 'لا توجد مشاريع محفوظة بعد',
+      ),
+      _LearningProjectListMode.followed => const LocalizedText(
+        en: 'No followed projects yet',
+        ar: 'لا توجد مشاريع متابعة بعد',
+      ),
+    };
+  }
+
+  LocalizedText _emptySubtitleForMode(_LearningProjectListMode mode) {
+    return switch (mode) {
+      _LearningProjectListMode.all => const LocalizedText(
+        en: 'When learning projects are published, they will appear here.',
+        ar: 'عند نشر مشاريع تعليمية، ستظهر هنا.',
+      ),
+      _LearningProjectListMode.saved => const LocalizedText(
+        en: 'Save projects from Learning Hub cards or project details to return to them here.',
+        ar: 'احفظ المشاريع من بطاقات مركز التعلم أو تفاصيل المشروع للعودة إليها هنا.',
+      ),
+      _LearningProjectListMode.followed => const LocalizedText(
+        en: 'Follow projects from Learning Hub cards or project details to keep them grouped here.',
+        ar: 'تابع المشاريع من بطاقات مركز التعلم أو تفاصيل المشروع لتجميعها هنا.',
+      ),
+    };
+  }
+}
+
+class _LearningListModeTabs extends StatelessWidget {
+  const _LearningListModeTabs({
+    required this.selectedMode,
+    required this.onModeSelected,
+  });
+
+  final _LearningProjectListMode selectedMode;
+  final ValueChanged<_LearningProjectListMode> onModeSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: _LearningProjectListMode.values
+            .map((mode) {
+              final selected = mode == selectedMode;
+              final label = switch (mode) {
+                _LearningProjectListMode.all => const LocalizedText(
+                  en: 'All projects',
+                  ar: 'كل المشاريع',
+                ),
+                _LearningProjectListMode.saved => const LocalizedText(
+                  en: 'Saved',
+                  ar: 'محفوظ',
+                ),
+                _LearningProjectListMode.followed => const LocalizedText(
+                  en: 'Following',
+                  ar: 'المتابعة',
+                ),
+              };
+              final icon = switch (mode) {
+                _LearningProjectListMode.all => Icons.school_outlined,
+                _LearningProjectListMode.saved => Icons.bookmark_border_rounded,
+                _LearningProjectListMode.followed =>
+                  Icons.notifications_none_rounded,
+              };
+
+              return ChoiceChip(
+                selected: selected,
+                avatar: Icon(
+                  icon,
+                  size: 18,
+                  color: selected
+                      ? AppColorTokens.emerald
+                      : palette.textSecondary,
+                ),
+                label: Text(label.resolve(context)),
+                onSelected: (_) => onModeSelected(mode),
+                selectedColor: AppColorTokens.emerald.withValues(alpha: 0.10),
+                backgroundColor: palette.mutedChip,
+                side: BorderSide(
+                  color: selected
+                      ? AppColorTokens.emerald
+                      : palette.borderSubtle,
+                ),
+                labelStyle: AppTextStyles.label(context).copyWith(
+                  color: selected
+                      ? (Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : AppColorTokens.emeraldDeep)
+                      : palette.textSecondary,
+                ),
+              );
+            })
+            .toList(growable: false),
+      ),
+    );
+  }
+}
+
+class _LearningPaginationControls extends StatelessWidget {
+  const _LearningPaginationControls({
+    required this.page,
+    required this.totalPages,
+    required this.onPageChanged,
+  });
+
+  final int page;
+  final int totalPages;
+  final ValueChanged<int> onPageChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final canGoBack = page > 1;
+    final canGoForward = page < totalPages;
+
+    return Align(
+      alignment: AlignmentDirectional.center,
+      child: Container(
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: palette.hintSurface,
+          borderRadius: AppRadius.lgAll,
+          border: Border.all(color: palette.borderSubtle),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 560;
+            final pageLabel = Text(
+              LocalizedText(
+                en: 'Page $page of $totalPages',
+                ar: 'صفحة $page من $totalPages',
+              ).resolve(context),
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textPrimary),
+              textAlign: TextAlign.center,
+            );
+            final previous = _PaginationButton(
+              label: const LocalizedText(en: 'Previous', ar: 'السابق'),
+              icon: Icons.chevron_left_rounded,
+              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
+            );
+            final next = _PaginationButton(
+              label: const LocalizedText(en: 'Next', ar: 'التالي'),
+              icon: Icons.chevron_right_rounded,
+              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
+            );
+
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  pageLabel,
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      Expanded(child: previous),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(child: next),
+                    ],
+                  ),
+                ],
+              );
+            }
+
+            return ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(width: 126, child: previous),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(child: pageLabel),
+                  const SizedBox(width: AppSpacing.md),
+                  SizedBox(width: 126, child: next),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _PaginationButton extends StatelessWidget {
+  const _PaginationButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final LocalizedText label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColorTokens.emerald,
+        disabledForegroundColor: palette.textSecondary.withValues(alpha: 0.58),
+        side: BorderSide(
+          color: onPressed == null
+              ? palette.borderSubtle.withValues(alpha: 0.7)
+              : palette.borderSubtle,
+        ),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        minimumSize: const Size(0, 36),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      icon: Icon(icon, size: 18),
+      label: Text(label.resolve(context)),
+    );
+  }
+}
+
+class _LearningHubRoadmapPanel extends StatelessWidget {
+  const _LearningHubRoadmapPanel({required this.onSubmitProject});
+
+  final VoidCallback onSubmitProject;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.xlAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 760;
+          final content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.route_outlined, color: palette.lime),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                const LocalizedText(
+                  en: 'Build tools are coming next',
+                  ar: 'أدوات البناء قادمة لاحقاً',
+                ).resolve(context),
+                style: AppTextStyles.title(
+                  context,
+                ).copyWith(color: palette.textPrimary),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                const LocalizedText(
+                  en: 'Saved and followed project lists are available. The next Learning Hub steps are persisted build progress, stronger project-material linking, and in-hub reservation handoff without automated matching.',
+                  ar: 'قوائم المشاريع المحفوظة والمتابعة متاحة. الخطوات القادمة هي حفظ تقدم البناء، وتقوية ربط المشاريع بالمواد، وتحويل الحجز من داخل المركز بدون مطابقة آلية.',
+                ).resolve(context),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textSecondary, height: 1.45),
+              ),
+            ],
+          );
+          final actions = Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              FilledButton.icon(
+                onPressed: onSubmitProject,
+                icon: const Icon(Icons.edit_note_rounded),
+                label: Text(
+                  const LocalizedText(
+                    en: 'Submit a project',
+                    ar: 'إرسال مشروع',
+                  ).resolve(context),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => context.go('/materials'),
+                icon: const Icon(Icons.inventory_2_outlined),
+                label: Text(
+                  const LocalizedText(
+                    en: 'Browse materials',
+                    ar: 'تصفح المواد',
+                  ).resolve(context),
+                ),
+              ),
+            ],
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                content,
+                const SizedBox(height: AppSpacing.lg),
+                actions,
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: content),
+              const SizedBox(width: AppSpacing.lg),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: actions,
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
 
 class _SubmitProjectCallout extends StatelessWidget {
-  const _SubmitProjectCallout({required this.onSubmitProject});
+  const _SubmitProjectCallout({
+    required this.onSubmitProject,
+    required this.onMySubmissions,
+  });
 
   final VoidCallback onSubmitProject;
+  final VoidCallback? onMySubmissions;
 
   @override
   Widget build(BuildContext context) {
@@ -582,15 +1177,33 @@ class _SubmitProjectCallout extends StatelessWidget {
               ),
             ],
           );
-          final action = FilledButton.icon(
-            onPressed: onSubmitProject,
-            icon: const Icon(Icons.edit_note_rounded),
-            label: Text(
-              const LocalizedText(
-                en: 'Add project draft',
-                ar: 'إضافة مسودة مشروع',
-              ).resolve(context),
-            ),
+          final actions = Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            alignment: compact ? WrapAlignment.start : WrapAlignment.end,
+            children: [
+              if (onMySubmissions != null)
+                OutlinedButton.icon(
+                  onPressed: onMySubmissions,
+                  icon: const Icon(Icons.assignment_outlined),
+                  label: Text(
+                    const LocalizedText(
+                      en: 'My submissions',
+                      ar: 'إرسالاتي',
+                    ).resolve(context),
+                  ),
+                ),
+              FilledButton.icon(
+                onPressed: onSubmitProject,
+                icon: const Icon(Icons.edit_note_rounded),
+                label: Text(
+                  const LocalizedText(
+                    en: 'Add project draft',
+                    ar: 'إضافة مسودة مشروع',
+                  ).resolve(context),
+                ),
+              ),
+            ],
           );
 
           if (compact) {
@@ -599,7 +1212,7 @@ class _SubmitProjectCallout extends StatelessWidget {
               children: [
                 copy,
                 const SizedBox(height: AppSpacing.md),
-                action,
+                actions,
               ],
             );
           }
@@ -608,7 +1221,7 @@ class _SubmitProjectCallout extends StatelessWidget {
             children: [
               Expanded(child: copy),
               const SizedBox(width: AppSpacing.lg),
-              SizedBox(width: 240, child: action),
+              Flexible(child: actions),
             ],
           );
         },
@@ -836,14 +1449,81 @@ class _LearningFilterChip extends StatelessWidget {
       label: Text(label),
       selected: selected,
       onSelected: (_) => onSelected(),
-      selectedColor: palette.lime,
-      checkmarkColor: palette.textPrimary,
+      selectedColor: AppColorTokens.emerald,
+      checkmarkColor: Colors.white,
       labelStyle: AppTextStyles.label(context).copyWith(
-        color: palette.textPrimary,
+        color: selected ? Colors.white : palette.textSecondary,
         fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
       ),
       backgroundColor: palette.cardSurfaceAlt,
-      side: BorderSide(color: selected ? palette.lime : palette.borderSubtle),
+      side: BorderSide(
+        color: selected ? AppColorTokens.emerald : palette.borderSubtle,
+      ),
+    );
+  }
+}
+
+class _HubInlineStatusBanner extends StatelessWidget {
+  const _HubInlineStatusBanner({
+    required this.icon,
+    required this.message,
+    this.showProgress = false,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final LocalizedText message;
+  final bool showProgress;
+  final LocalizedText? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.hintSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.hintBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: AppColorTokens.emerald),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  message.resolve(context),
+                  style: AppTextStyles.label(
+                    context,
+                  ).copyWith(color: palette.textSecondary),
+                ),
+              ),
+              if (actionLabel != null && onAction != null)
+                TextButton(
+                  onPressed: onAction,
+                  child: Text(actionLabel!.resolve(context)),
+                ),
+            ],
+          ),
+          if (showProgress) ...[
+            const SizedBox(height: AppSpacing.sm),
+            ClipRRect(
+              borderRadius: AppRadius.pillAll,
+              child: LinearProgressIndicator(
+                minHeight: 3,
+                color: AppColorTokens.emerald,
+                backgroundColor: palette.borderSubtle,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

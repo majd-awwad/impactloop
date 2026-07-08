@@ -62,6 +62,7 @@ function deliveryReservationPayload(
     fulfillmentMethod: 'DELIVERY',
     learnerPreferredDeliveryWindows: [futurePreferredWindow()],
     deliveryAddressText: '12 Learner Street, Nablus',
+    dropoffCity: 'Nablus',
     safeDropoffAllowed: false,
     ...overrides,
   };
@@ -231,9 +232,9 @@ describe('supplier accept fulfillment', () => {
 
     assert.equal(result.success, false);
     if (!result.success) {
-      assert.equal(
-        result.error.issues[0]?.message,
-        'Proposed pickup time must start in the future.',
+      assert.match(
+        result.error.issues[0]?.message ?? '',
+        /30 minutes from now/i,
       );
     }
   });
@@ -292,7 +293,7 @@ describe('supplier accept fulfillment', () => {
 
   test('supplier cannot accept selected learner PICKUP window that is too close to ending', async () => {
     const material = await createMaterial(ctx);
-    const preferred = startedPreferredWindow(60, 30);
+    const preferred = startedPreferredWindow(60, 20);
     const reservation = await prisma.reservation.create({
       data: {
         materialId: material.id,
@@ -316,6 +317,7 @@ describe('supplier accept fulfillment', () => {
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 400);
+        assert.equal(error.code, 'PICKUP_WINDOW_TOO_CLOSE_TO_ENDING');
         assert.equal(
           error.message,
           'This pickup window is too close to ending. Propose a new time.',
@@ -392,10 +394,8 @@ describe('supplier accept fulfillment', () => {
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 400);
-        assert.equal(
-          error.message,
-          'Proposed pickup time must start in the future.',
-        );
+        assert.equal(error.code, 'PICKUP_START_TOO_SOON');
+        assert.match(error.message, /30 minutes from now/i);
         return true;
       },
     );
@@ -481,7 +481,6 @@ describe('supplier accept fulfillment', () => {
     assert.equal(accepted.supplierPickupWindowStart, supplierPickupStart.toISOString());
     assert.equal(accepted.confirmedDeliveryWindowStart, earliestDelivery.toISOString());
     assert.equal(accepted.confirmedDeliveryWindowEnd, learnerDeliveryEnd.toISOString());
-    assert.equal(accepted.deliveryRequested, true);
     assert.ok(accepted.activeDelivery);
     assert.equal(accepted.activeDelivery?.status, 'WAITING_FOR_DRIVER');
 
@@ -578,5 +577,38 @@ describe('supplier accept fulfillment', () => {
     assert.ok(afterDecline);
     assert.equal(Number(afterDecline.heldQuantity), 0);
     assert.equal(Number(afterDecline.availableQuantity), 2);
+  });
+
+  test('supplier cannot accept an already accepted reservation', async () => {
+    const material = await createMaterial(ctx);
+    const preferred = futurePreferredWindow();
+    const reservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, {
+        learnerPreferredPickupWindows: [preferred],
+      }),
+    );
+    ctx.createdReservationIds.push(reservation.id);
+
+    await acceptSupplierReservation(ctx.supplierId, reservation.id, {
+      pickupWindowStart: preferred.start,
+      pickupWindowEnd: preferred.end,
+      selectedPreferredWindowIndex: 0,
+    });
+
+    await assert.rejects(
+      () =>
+        acceptSupplierReservation(ctx.supplierId, reservation.id, {
+          pickupWindowStart: preferred.start,
+          pickupWindowEnd: preferred.end,
+          selectedPreferredWindowIndex: 0,
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.equal(error.code, 'RESERVATION_ALREADY_ACCEPTED');
+        return true;
+      },
+    );
   });
 });

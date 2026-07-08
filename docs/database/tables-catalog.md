@@ -22,7 +22,7 @@ Per-table reference from `apps/backend/prisma/schema.prisma`. Column names shown
 | activeRole | UserRole? | Current portal selection (`LEARNER`, `SUPPLIER`, etc.); does not remove stored roles |
 | createdAt, updatedAt | DateTime | |
 
-Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, material reports, learning projects, requests.
+Relations: roles, authTokens, idempotencyRecords, learnerProfile, supplierProfile, materials, reservations, notifications, reviews, material reports, learning projects, project likes/saves/follows/reviews, requests.
 
 ---
 
@@ -206,7 +206,7 @@ Indexes: `userId`, `(userId, isDefault)`, `locationId`.
 | stepsGeneratedByAi | Boolean | default false |
 | aiStepsGeneratedAt | DateTime? | |
 
-Child tables: project_images, project_required_components, project_steps, project_links, project_tags.
+Child tables: project_images, project_required_components, project_steps, project_links, project_tags, project_likes, project_saves, project_follows, project_user_reviews, project_builds.
 
 ---
 
@@ -273,6 +273,94 @@ Child tables: project_images, project_required_components, project_steps, projec
 | id | String (uuid) | PK |
 | projectId | String | FK → learning_projects |
 | tag | String | unique per project |
+
+---
+
+## `project_likes` — model `ProjectLike`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| projectId | String | FK → learning_projects; cascade delete |
+| userId | String | FK → users; cascade delete |
+| createdAt | DateTime | default now |
+
+**Unique:** `(projectId, userId)`. Used by learner project like/unlike and public Learning Hub `likesCount` / viewer-specific `isLiked` fields.
+
+---
+
+## `project_saves` — model `ProjectSave`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| projectId | String | FK → learning_projects; cascade delete |
+| userId | String | FK → users; cascade delete |
+| createdAt | DateTime | default now |
+
+**Unique:** `(projectId, userId)`. Used by private learner project save/unsave and viewer-specific `isSaved`; save counts are not exposed publicly.
+
+---
+
+## `project_follows` — model `ProjectFollow`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| projectId | String | FK → learning_projects; cascade delete |
+| userId | String | FK → users; cascade delete |
+| createdAt | DateTime | default now |
+
+**Unique:** `(projectId, userId)`. Used by learner project follow/unfollow and public Learning Hub `followersCount` / viewer-specific `isFollowing` fields.
+
+---
+
+## `project_user_reviews` — model `ProjectUserReview`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| projectId | String | FK → learning_projects; cascade delete |
+| userId | String | FK → users; cascade delete |
+| rating | Int | 1–5 by API validation |
+| comment | String? | Optional learner review text |
+| createdAt, updatedAt | DateTime | |
+
+**Unique:** `(projectId, userId)`. Used by learner project rating/review upsert/delete, public `ratingSummary`, detail `recentReviews`, and viewer-specific `viewerReview`.
+
+---
+
+## `project_builds` — model `ProjectBuild`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| projectId | String | FK → learning_projects; cascade delete |
+| learnerId | String | FK → users; cascade delete |
+| status | ProjectBuildStatus | default `IN_PROGRESS` |
+| startedAt | DateTime | default now |
+| completedAt | DateTime? | Reserved for later completion flow |
+| createdAt, updatedAt | DateTime | |
+
+**Unique:** `(projectId, learnerId)`. Stores one manual build checklist per learner/project.
+
+---
+
+## `project_build_items` — model `ProjectBuildItem`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | String (cuid) | PK |
+| buildId | String | FK → project_builds; cascade delete |
+| requiredComponentId | String | FK → project_required_components; cascade delete |
+| status | ProjectBuildItemStatus | default `MISSING` |
+| learnerNote | String? | Optional learner checklist note |
+| linkedMaterialId | String? | FK → materials; nullable learner-selected platform material |
+| linkedReservationId | String? | FK → reservations; reserved for future reservation-aware readiness |
+| linkedMaterialAt | DateTime? | When the learner linked the material |
+| createdAt, updatedAt | DateTime | |
+
+**Unique:** `(buildId, requiredComponentId)`. Stores manual checklist status per required component plus optional per-learner material link. Linking a material does not automatically mark the item ready.
 
 ---
 
@@ -369,14 +457,10 @@ Used by authenticated material reporting and admin material report review. This 
 | confirmedDeliveryWindowStart, confirmedDeliveryWindowEnd | DateTime? | Feasible delivery window after supplier pickup + buffer |
 | earliestDeliveryStart | DateTime? | Computed earliest learner delivery start |
 | schedulingConflictReason | String? | Set when delivery scheduling is infeasible |
-| pickupType | PickupType | default `SELF_PICKUP` (legacy) |
 | supplierNote, rejectionReason | String? | |
 | acceptedAt, rejectedAt, cancelledAt, completedAt | DateTime? | |
-| deliveryRequested | Boolean | default false |
-| deliveryStatus | DeliveryStatus? | legacy compatibility |
-| deliveryCost | Decimal? | |
-| dropoffLocationId | String? | legacy FK → locations |
-| driverProfileId | String? | legacy string-only field; use `deliveries.assignedDriverProfileId` |
+
+Logistics (driver, delivery status, dropoff location, cost) live on `deliveries`, not `reservations`.
 
 ---
 

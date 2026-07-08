@@ -11,8 +11,10 @@ import type {
 
 import {
   emptyDashboardStats,
+  emptyProjectSupportStats,
   normalizeVerificationStatus,
 } from "./dto/supplier-dashboard.dto.js";
+import { getSupplierProjectSupportSummary } from "./supplier-project-impact.js";
 
 import { AppError } from "../../utils/app-error.js";
 import { env } from "../../config/env.js";
@@ -34,6 +36,7 @@ import {
   SUPPLIER_CREATE_MATERIAL_SCOPE,
 } from "../../services/idempotency.service.js";
 import * as supplierRepository from "./supplier.repository.js";
+import { mapReservationFulfillmentLabel } from "../reservations/reservation-delivery.js";
 import {
   assertCanMarkMaterialUnavailable,
   assertCanRestoreMaterial,
@@ -330,6 +333,7 @@ export const getSupplierDashboard = async (
     scheduledPickups,
     mostViewedMaterial,
     highDemandMaterials,
+    projectSupport,
   ] = await Promise.all([
     supplierRepository.countMaterialsByStatus(scope),
     supplierRepository.countReservationsByStatus(userId),
@@ -348,6 +352,7 @@ export const getSupplierDashboard = async (
     supplierRepository.countScheduledPickups(userId),
     supplierRepository.findMostViewedMaterial(scope),
     supplierRepository.findHighDemandMaterials(scope),
+    getSupplierProjectSupportSummary(userId),
   ]);
 
   if (env.nodeEnv !== "production") {
@@ -474,6 +479,7 @@ export const getSupplierDashboard = async (
       hasSupplierProfile: false,
       message: MISSING_PROFILE_MESSAGE,
       stats,
+      projectSupport,
       recentMaterials: recentMaterialsDto,
       upcomingPickups: upcomingPickupsDto,
       recentActivity,
@@ -515,6 +521,7 @@ export const getSupplierDashboard = async (
       organization,
     },
     stats,
+    projectSupport,
     recentMaterials: recentMaterialsDto,
     upcomingPickups: upcomingPickupsDto,
     recentActivity,
@@ -828,6 +835,7 @@ export const getEmptySupplierDashboard = (): SupplierDashboardDto => ({
   hasSupplierProfile: false,
   message: MISSING_PROFILE_MESSAGE,
   stats: emptyDashboardStats(),
+  projectSupport: emptyProjectSupportStats(),
   recentMaterials: [],
   upcomingPickups: [],
   recentActivity: [],
@@ -1408,13 +1416,11 @@ const mapMaterialReservationSummary = (
     quantityRequested: Number(reservation.quantityRequested),
     unit,
     message: reservation.message,
-    pickupType: reservation.pickupType,
-    deliveryRequested: reservation.deliveryRequested,
-    pickupPreference: reservation.deliveryRequested
-      ? "Delivery requested"
-      : reservation.pickupType === "SELF_PICKUP"
-        ? "Self pickup"
-        : reservation.pickupType,
+    fulfillmentMethod: reservation.fulfillmentMethod,
+    fulfillmentLabel: mapReservationFulfillmentLabel(
+      reservation.fulfillmentMethod,
+      reservation.deliveries.length,
+    ),
     pickupWindowStart: reservation.pickupWindowStart?.toISOString() ?? null,
     pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
     activeDelivery: latestDelivery

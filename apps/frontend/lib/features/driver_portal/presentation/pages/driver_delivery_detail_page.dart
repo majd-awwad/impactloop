@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,11 +14,13 @@ import '../../../../shared/location/current_location_service.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
+import '../../../deliveries/presentation/pickup_window_presentation.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../application/driver_deliveries_provider.dart';
 import '../../application/driver_delivery_action_controller.dart';
 import '../../application/driver_location_auto_ping_controller.dart';
 import '../../data/models/driver_delivery.dart';
+import '../driver_delivery_timing_presentation.dart';
 
 class DriverDeliveryDetailPage extends ConsumerWidget {
   const DriverDeliveryDetailPage({super.key, required this.deliveryId});
@@ -25,7 +29,7 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final deliveryAsync = ref.watch(activeDriverDeliveryProvider(deliveryId));
+    final deliveryAsync = ref.watch(driverDeliveryDetailProvider(deliveryId));
 
     return SingleChildScrollView(
       padding: const EdgeInsetsDirectional.fromSTEB(
@@ -38,6 +42,7 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1040),
           child: deliveryAsync.when(
+            skipLoadingOnReload: true,
             loading: () => const _StatePanel(
               icon: Icons.route_outlined,
               title: 'Loading delivery',
@@ -45,25 +50,39 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
             ),
             error: (_, _) => _StatePanel(
               icon: Icons.cloud_off_outlined,
-              title: 'Could not load delivery',
+              title: 'Could not load delivery details.',
               subtitle: 'Please try again.',
               actionLabel: 'Retry',
-              onAction: () =>
-                  ref.invalidate(activeDriverDeliveryProvider(deliveryId)),
+              onAction: () => refreshActiveDriverDelivery(ref, deliveryId),
             ),
-            data: (delivery) {
-              if (delivery == null) {
-                return _StatePanel(
+            data: (state) {
+              return switch (state) {
+                DriverDeliveryDetailActive(:final delivery) => _DeliveryContent(
+                  delivery: delivery,
+                  onRefresh: () => refreshActiveDriverDelivery(ref, deliveryId),
+                ),
+                DriverDeliveryDetailInactive(context: final inactiveContext) =>
+                  _StatePanel(
+                  icon: inactiveContext.movedToAdminReview
+                      ? Icons.admin_panel_settings_outlined
+                      : Icons.lock_outline,
+                  title: inactiveContext.movedToAdminReview
+                      ? 'Delivery moved to admin review'
+                      : 'Delivery no longer active',
+                  subtitle: inactiveContext.message ??
+                      'This delivery is no longer active. It was moved to admin review.',
+                  actionLabel: 'Back to jobs',
+                  onAction: () => context.popOrGo('/driver/jobs'),
+                ),
+                DriverDeliveryDetailNotFound() => _StatePanel(
                   icon: Icons.lock_outline,
                   title: 'Delivery not active or not assigned to you',
                   subtitle:
                       'Open the jobs board to view your current assigned delivery.',
                   actionLabel: 'Back to jobs',
                   onAction: () => context.popOrGo('/driver/jobs'),
-                );
-              }
-
-              return _DeliveryContent(delivery: delivery);
+                ),
+              };
             },
           ),
         ),
@@ -73,9 +92,13 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
 }
 
 class _DeliveryContent extends StatelessWidget {
-  const _DeliveryContent({required this.delivery});
+  const _DeliveryContent({
+    required this.delivery,
+    required this.onRefresh,
+  });
 
   final DriverDelivery delivery;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +109,7 @@ class _DeliveryContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Header(delivery: delivery),
+        _Header(delivery: delivery, onRefresh: onRefresh),
         const SizedBox(height: AppSpacing.lg),
         if (wide)
           Row(
@@ -108,9 +131,13 @@ class _DeliveryContent extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.delivery});
+  const _Header({
+    required this.delivery,
+    required this.onRefresh,
+  });
 
   final DriverDelivery delivery;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -120,11 +147,23 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Active delivery',
-            style: AppTextStyles.display(
-              context,
-            ).copyWith(color: palette.textPrimary),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  'Active delivery',
+                  style: AppTextStyles.display(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                ),
+              ),
+              IconButton(
+                onPressed: onRefresh,
+                tooltip: 'Refresh',
+                icon: const Icon(Icons.refresh_rounded),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
@@ -163,16 +202,17 @@ class _SummaryPanel extends StatelessWidget {
         children: [
           _PanelTitle(
             icon: Icons.inventory_2_outlined,
-            title: 'Material',
-            body:
-                '${delivery.material.title} - ${delivery.material.quantityLabel}',
+            title: delivery.hasGroupedItems ? 'Materials' : 'Material',
+            body: delivery.hasGroupedItems
+                ? delivery.groupedItemLines.join('\n')
+                : '${delivery.material.title} - ${delivery.material.quantityLabel}',
           ),
           const SizedBox(height: AppSpacing.lg),
-          _InfoRow(label: 'Pickup window', value: _pickupWindowText(delivery)),
+          _InfoRow(label: 'Pickup window', value: driverPickupWindowDetail(delivery)),
           _InfoRow(label: 'Supplier', value: _partySummary(delivery.supplier)),
           _InfoRow(
             label: 'Pickup',
-            value: _locationSummary(delivery.pickupLocation),
+            value: _locationDetail(delivery.pickupLocation),
           ),
           const Divider(height: AppSpacing.xl),
           _InfoRow(
@@ -182,9 +222,15 @@ class _SummaryPanel extends StatelessWidget {
                 : _partySummary(delivery.learner!),
           ),
           _InfoRow(
-            label: 'Dropoff',
-            value: _locationSummary(delivery.dropoffLocation),
+            label: 'Drop-off',
+            value: _locationDetail(delivery.dropoffLocation),
           ),
+          if (delivery.confirmedDeliveryWindowStart != null ||
+              delivery.confirmedDeliveryWindowEnd != null)
+            _InfoRow(
+              label: 'Delivery window',
+              value: _deliveryWindowDetail(delivery),
+            ),
           if (delivery.learnerNote?.trim().isNotEmpty == true)
             _InfoRow(label: 'Learner note', value: delivery.learnerNote!),
           if (delivery.driverNote?.trim().isNotEmpty == true)
@@ -206,27 +252,56 @@ class _StatusActionPanel extends ConsumerStatefulWidget {
 
 class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
   final _noteController = TextEditingController();
+  Timer? _countdownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startCountdownTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _StatusActionPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.delivery.id != widget.delivery.id ||
+        oldWidget.delivery.status != widget.delivery.status) {
+      _startCountdownTimer();
+    }
+  }
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _noteController.dispose();
     super.dispose();
+  }
+
+  void _startCountdownTimer() {
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {});
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final actionState = ref.watch(driverDeliveryActionControllerProvider);
+    final guidance = buildDriverNextActionGuidance(widget.delivery);
     final nextStatus = widget.delivery.nextStatus;
     final isSubmitting = actionState.isLoading;
+    final canPressAction =
+        nextStatus != null && guidance.isActionEnabled && !isSubmitting;
 
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelTitle(
-            icon: Icons.timeline_outlined,
-            title: 'Status update',
-            body: 'Move this delivery through the backend order.',
+          _StatusGuidanceCard(
+            delivery: widget.delivery,
+            guidance: guidance,
           ),
           const SizedBox(height: AppSpacing.lg),
           _StepList(currentStatus: widget.delivery.status),
@@ -238,6 +313,27 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
               body: 'This delivery cannot be advanced from its current status.',
             )
           else ...[
+            if (guidance.timingGate != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: _InlineNotice(
+                  icon: guidance.isBlockedByTiming
+                      ? Icons.schedule_outlined
+                      : Icons.info_outline,
+                  title: guidance.timingGate!.title ?? 'Timing note',
+                  body: [
+                    if (guidance.timingGate!.body != null)
+                      guidance.timingGate!.body!,
+                    if (guidance.timingGate!.remainingLabel != null)
+                      guidance.timingGate!.remainingLabel!,
+                  ].join('\n'),
+                ),
+              ),
+            for (final requirement in guidance.requirements) ...[
+              _RequirementRow(text: requirement),
+              const SizedBox(height: AppSpacing.xs),
+            ],
+            const SizedBox(height: AppSpacing.sm),
             AppTextArea(
               controller: _noteController,
               label: 'Optional driver note',
@@ -247,7 +343,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             ),
             const SizedBox(height: AppSpacing.md),
             FilledButton.icon(
-              onPressed: isSubmitting ? null : () => _advance(nextStatus),
+              onPressed: canPressAction ? () => _advance(nextStatus) : null,
               icon: isSubmitting
                   ? const SizedBox(
                       width: 18,
@@ -256,9 +352,18 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                     )
                   : const Icon(Icons.arrow_forward_rounded),
               label: Text(
-                isSubmitting ? 'Updating...' : _nextActionLabel(nextStatus),
+                isSubmitting ? 'Updating...' : guidance.actionLabel,
               ),
             ),
+            if (!guidance.isActionEnabled) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                _disabledActionReason(widget.delivery, nextStatus),
+                style: AppTextStyles.body(context).copyWith(
+                  color: MaterialsUiPalette.of(context).textMuted,
+                ),
+              ),
+            ],
           ],
           const SizedBox(height: AppSpacing.md),
           if (widget.delivery.canDriverReportPickupFailed)
@@ -337,22 +442,29 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       }
 
       if (nextStatus == 'DELIVERED') {
-        showInfoSnackBar(context, 'Delivery marked delivered.');
+        if (!mounted) {
+          return;
+        }
         context.popOrGo('/driver/jobs');
+        leaveDriverDeliveryDetail(ref);
+        showInfoSnackBar(context, 'Delivery marked delivered.');
         return;
       }
 
       showInfoSnackBar(context, 'Delivery status updated.');
       _noteController.clear();
+      ref
+          .read(driverDeliveryActionControllerProvider.notifier)
+          .refreshActiveDelivery(widget.delivery.id);
     } on ApiException catch (error) {
       if (!mounted) {
         return;
       }
 
+      ref.invalidate(activeDriverDeliveryProvider(widget.delivery.id));
+
       final message = error.statusCode == 409
           ? 'Delivery status changed. Refresh and try the next valid action.'
-          : error.statusCode == 400
-          ? error.displayMessage
           : error.displayMessage;
       showInfoSnackBar(context, message);
     } catch (error) {
@@ -388,6 +500,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       if (!mounted) return;
       showInfoSnackBar(context, 'Pickup failure reported.');
       context.popOrGo('/driver/jobs');
+      leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, error.displayMessage);
@@ -418,6 +531,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       if (!mounted) return;
       showInfoSnackBar(context, 'Delivery failure reported.');
       context.popOrGo('/driver/jobs');
+      leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, error.displayMessage);
@@ -466,6 +580,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       if (!mounted) return;
       showInfoSnackBar(context, 'Driver issue reported.');
       context.popOrGo('/driver/jobs');
+      leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, error.displayMessage);
@@ -615,7 +730,7 @@ class _LocationSharingSectionState
       icon: Icons.my_location_outlined,
       title: 'Location sharing',
       body:
-          'Share your location while this delivery is active so the learner can track progress.',
+          'Share your location while this delivery is active. The learner can track you only after the material is picked up.',
       action: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -732,6 +847,80 @@ class _LocationSharingSectionState
   }
 }
 
+class _StatusGuidanceCard extends StatelessWidget {
+  const _StatusGuidanceCard({
+    required this.delivery,
+    required this.guidance,
+  });
+
+  final DriverDelivery delivery;
+  final DriverNextActionGuidance guidance;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return _InlineNotice(
+      icon: Icons.timeline_outlined,
+      title: 'Current stage: ${deliveryStatusLabel(delivery.status)}',
+      body: delivery.nextStatus == null
+          ? 'No further steps for this delivery.'
+          : 'Advance to: ${guidance.actionLabel}',
+      action: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Next: ${guidance.actionLabel}',
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.textPrimary,
+            ),
+          ),
+          if (delivery.status == 'ARRIVED_PICKUP' ||
+              delivery.nextStatus == 'PICKED_UP') ...[
+            const SizedBox(height: AppSpacing.sm),
+            const Text(
+              'Supplier handover code is required when marking picked up.',
+            ),
+          ],
+          if (delivery.nextStatus == 'DELIVERED') ...[
+            const SizedBox(height: AppSpacing.sm),
+            const Text(
+              'Learner delivery code is required when marking delivered.',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RequirementRow extends StatelessWidget {
+  const _RequirementRow({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.check_circle_outline, size: 16, color: palette.textMuted),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTextStyles.body(context).copyWith(
+              color: palette.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _StepList extends StatelessWidget {
   const _StepList({required this.currentStatus});
 
@@ -749,14 +938,15 @@ class _StepList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentIndex = _steps.indexOf(currentStatus);
+    final safeIndex = currentIndex < 0 ? 0 : currentIndex;
 
     return Column(
       children: [
         for (var index = 0; index < _steps.length; index++)
           _StatusStep(
             label: deliveryStatusLabel(_steps[index]),
-            complete: currentIndex >= index,
-            current: currentIndex == index,
+            complete: currentIndex >= 0 && safeIndex >= index,
+            current: currentIndex >= 0 && safeIndex == index,
           ),
       ],
     );
@@ -1001,21 +1191,35 @@ class _StatePanel extends StatelessWidget {
   }
 }
 
-String _nextActionLabel(String status) {
-  switch (status) {
-    case 'ARRIVED_PICKUP':
-      return 'Arrived at pickup';
-    case 'PICKED_UP':
-      return 'Picked up';
-    case 'ON_THE_WAY':
-      return 'On the way';
-    case 'ARRIVED_DROPOFF':
-      return 'Arrived at dropoff';
-    case 'DELIVERED':
-      return 'Mark delivered';
-    default:
-      return deliveryStatusLabel(status);
+String _disabledActionReason(DriverDelivery delivery, String nextStatus) {
+  final guidance = buildDriverNextActionGuidance(delivery);
+  if (guidance.timingGate?.isBlocked == true) {
+    final gate = guidance.timingGate!;
+    return [
+      if (gate.body != null) gate.body!,
+      if (gate.remainingLabel != null) gate.remainingLabel!,
+    ].join('\n');
   }
+
+  return switch (nextStatus) {
+    'PICKED_UP' => 'Complete "Arrive at pickup" before marking picked up.',
+    'ON_THE_WAY' => 'Mark picked up before starting delivery.',
+    'ARRIVED_DROPOFF' => 'Start delivery before arriving at drop-off.',
+    'DELIVERED' => 'Arrive at drop-off before marking delivered.',
+    _ => 'This action is not available yet.',
+  };
+}
+
+String _deliveryWindowDetail(DriverDelivery delivery) {
+  final start = delivery.confirmedDeliveryWindowStart;
+  final end = delivery.confirmedDeliveryWindowEnd;
+  if (start == null && end == null) {
+    return 'Not set';
+  }
+  if (start != null && end != null) {
+    return '${formatDriverDateTime(start)} – ${formatDriverDateTime(end)}';
+  }
+  return formatDriverDateTime(start ?? end!);
 }
 
 String _partySummary(DriverDeliveryParty party) {
@@ -1026,28 +1230,23 @@ String _partySummary(DriverDeliveryParty party) {
   return details.join(' - ');
 }
 
-String _locationSummary(DriverSafeLocation location) {
+String _locationDetail(DriverSafeLocation location) {
   final summary = location.exactSummary;
-  if (location.hasExactCoordinates) {
-    return '$summary (${location.latitude!.toStringAsFixed(5)}, ${location.longitude!.toStringAsFixed(5)})';
+  final lines = <String>[summary];
+
+  if (location.isApproximate == true) {
+    lines.add('Approximate address — confirm with learner if needed.');
+  }
+  if (!location.hasExactCoordinates) {
+    lines.add('Exact coordinates are missing.');
+  } else {
+    lines.add(
+      '${location.latitude!.toStringAsFixed(5)}, '
+      '${location.longitude!.toStringAsFixed(5)}',
+    );
   }
 
-  return summary;
-}
-
-String _pickupWindowText(DriverDelivery delivery) {
-  final start = delivery.pickupWindowStart;
-  final end = delivery.pickupWindowEnd;
-
-  if (start == null && end == null) {
-    return 'Not set';
-  }
-
-  if (start != null && end != null) {
-    return '${_formatDateTime(start)} - ${_formatDateTime(end)}';
-  }
-
-  return _formatDateTime(start ?? end!);
+  return lines.join('\n');
 }
 
 String _formatDateTime(DateTime dateTime) {

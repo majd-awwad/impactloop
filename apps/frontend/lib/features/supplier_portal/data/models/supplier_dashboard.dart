@@ -3,6 +3,7 @@ import 'supplier_dashboard_insights.dart';
 import 'supplier_dashboard_material.dart';
 import 'supplier_dashboard_pickup.dart';
 import 'supplier_dashboard_stats.dart';
+import 'supplier_project_support.dart';
 
 class SupplierDefaultLocation {
   const SupplierDefaultLocation({
@@ -95,6 +96,7 @@ class SupplierDashboard {
     this.message,
     this.supplier,
     required this.stats,
+    required this.projectSupport,
     required this.recentMaterials,
     required this.upcomingPickups,
     required this.recentActivity,
@@ -107,6 +109,7 @@ class SupplierDashboard {
   final String? message;
   final SupplierDashboardProfile? supplier;
   final SupplierDashboardStats stats;
+  final SupplierProjectSupport projectSupport;
   final List<SupplierDashboardMaterial> recentMaterials;
   final List<SupplierDashboardPickup> upcomingPickups;
   final List<SupplierDashboardActivity> recentActivity;
@@ -126,6 +129,9 @@ class SupplierDashboard {
           : null,
       stats: SupplierDashboardStats.fromJson(
         json['stats'] as Map<String, dynamic>? ?? const {},
+      ),
+      projectSupport: SupplierProjectSupport.fromJson(
+        json['projectSupport'] as Map<String, dynamic>? ?? const {},
       ),
       recentMaterials: (json['recentMaterials'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()

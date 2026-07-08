@@ -1,5 +1,6 @@
 import { AppError } from '../../utils/app-error.js';
 import { ACTIVE_DELIVERY_STATUSES } from '../deliveries/deliveries.service.js';
+import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
 import { notifyReservationCancelledByLearner } from '../notifications/reservation-notifications.js';
 import {
   deriveHandoverCode,
@@ -19,9 +20,8 @@ import {
   resolveReservationFollowUp,
 } from './reservation-follow-up.js';
 import {
-  LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
-  MIN_PICKUP_NOTICE_MINUTES,
-} from './reservation-timing-policy.js';
+  assertValidPickupWindow,
+} from './pickup-window-validation.js';
 import {
   canRequestPickupReschedule,
   mapPendingRescheduleSummary,
@@ -35,16 +35,40 @@ import {
   createLearnerSupplierIssueReport,
   createNoDriverAvailableReport,
 } from './reservations.incidents.repository.js';
+import { resolveIncidentReviewStatus } from './incident-review-status.js';
 import { resolveLearnerConfirmation as resolveLearnerConfirmationInRepository } from './reservations.learner-confirmation.repository.js';
 import {
   expireStalePendingReservationsByIds,
   expireStalePendingReservationsForMaterialIds,
 } from './reservations.pending-expiry.repository.js';
+import {
+  expireStaleMissedPickupsByIds,
+  expireStaleMissedPickupsForMaterialIds,
+  expireStaleMissedPickupsForRequester,
+} from './reservations.missed-pickup-expiry.repository.js';
+import {
+  escalateStaleNoDriverDeliveriesByIds,
+  escalateStaleNoDriverDeliveriesForRequester,
+} from './reservations.no-driver-auto-escalation.repository.js';
+import {
+  escalateStaleAssignedDriverPickupsByIds,
+  escalateStaleAssignedDriverPickupsForRequester,
+} from './reservations.stale-assigned-driver-auto-escalation.repository.js';
+import { isAssignedDriverPickupOverdue } from './reservation-assigned-driver-pickup-overdue.js';
 import { notifyReservationCreated } from '../notifications/reservation-notifications.js';
+import {
+  buildReservationQuote,
+  mapPricingFields,
+} from './reservation-pricing.service.js';
+import {
+  decimalToNumber,
+  getMaterialQuantityState,
+} from './reservations.quantity.js';
 import type {
   CreateReservationInput,
   CreateReservationMessageInput,
   LearnerConfirmationInput,
+  ReservationQuoteInput as ReservationQuoteBody,
 } from './reservations.validation.js';
 
 const PICKUP_LOCATION_REVEAL_STATUSES = new Set(['ACCEPTED', 'COMPLETED']);
@@ -149,6 +173,7 @@ const mapReservation = (
   safeDropoffAllowed: reservation.safeDropoffAllowed,
   deliveryNote: reservation.deliveryNote,
   createdAt: reservation.createdAt.toISOString(),
+  ...mapPricingFields(reservation),
 });
 
 const LEARNER_DELIVERY_CODE_VISIBLE_STATUSES = new Set([
@@ -156,6 +181,34 @@ const LEARNER_DELIVERY_CODE_VISIBLE_STATUSES = new Set([
   'ON_THE_WAY',
   'ARRIVED_DROPOFF',
 ]);
+
+const resolveReservationOperationalDelivery = (
+  reservation: reservationsRepository.LearnerReservationListRecord,
+) => {
+  const directDelivery = reservation.deliveries[0] ?? null;
+  const groupDelivery = reservation.deliveryGroup?.delivery ?? null;
+  const effectiveDelivery = directDelivery ?? groupDelivery;
+
+  return {
+    effectiveDelivery,
+    deliveryCount: effectiveDelivery ? 1 : 0,
+    groupItemCount: reservation.deliveryGroup?.reservations.length ?? 0,
+    groupDeliveryFee:
+      reservation.deliveryGroup?.deliveryFee != null
+        ? Number(reservation.deliveryGroup.deliveryFee)
+        : null,
+    groupTotal:
+      reservation.deliveryGroup != null
+        ? Number(
+            reservation.deliveryGroup.reservations.reduce(
+              (sum, item) =>
+                sum + Number(item.materialSubtotal ?? 0),
+              Number(reservation.deliveryGroup!.deliveryFee),
+            ),
+          )
+        : null,
+  };
+};
 
 const mapLearnerReservation = (
   reservation: reservationsRepository.LearnerReservationListRecord,
@@ -166,20 +219,23 @@ const mapLearnerReservation = (
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
   });
-  const latestDelivery = reservation.deliveries[0] ?? null;
-  const deliveryCount = reservation.deliveries.length;
+  const {
+    effectiveDelivery: latestDelivery,
+    deliveryCount,
+    groupItemCount,
+    groupDeliveryFee,
+    groupTotal,
+  } = resolveReservationOperationalDelivery(reservation);
   const pickupHandoverPhase = resolveSelfPickupHandoverPhase({
     status: reservation.status,
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
     fulfillmentMethod: reservation.fulfillmentMethod,
-    deliveryRequested: reservation.deliveryRequested,
     deliveryCount,
   });
   const canLearnerReschedule = canRequestPickupReschedule({
     status: reservation.status,
     fulfillmentMethod: reservation.fulfillmentMethod,
-    deliveryRequested: reservation.deliveryRequested,
     deliveryCount,
     pickupWindowStart: reservation.pickupWindowStart,
     pickupWindowEnd: reservation.pickupWindowEnd,
@@ -192,10 +248,16 @@ const mapLearnerReservation = (
   const hasOpenIncident = reservation.noShowReports.some(
     (report) => report.status === 'PENDING_REVIEW',
   );
+  const incidentReviewStatus = resolveIncidentReviewStatus(
+    reservation.noShowReports,
+  );
+  const pendingIncidentReasonCode =
+    reservation.noShowReports.find((report) => report.status === 'PENDING_REVIEW')
+      ?.reasonCode ?? null;
   const canLearnerReportSupplier = canLearnerReportSupplierIssue({
     status: reservation.status,
     fulfillmentMethod: reservation.fulfillmentMethod,
-    deliveryRequested: reservation.deliveryRequested,
+    deliveryCount,
     pickupWindowEnd: reservation.pickupWindowEnd,
     hasPendingReport: hasOpenIncident,
   });
@@ -208,6 +270,11 @@ const mapLearnerReservation = (
     assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
     hasDelivery: deliveryCount > 0,
     hasPendingReport: hasOpenIncident,
+  });
+  const assignedDriverPickupOverdue = isAssignedDriverPickupOverdue({
+    supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+    pickupWindowEnd: reservation.pickupWindowEnd,
+    deliveryStatus: latestDelivery?.status ?? null,
   });
   const canLearnerRequestDelivery =
     reservation.status === 'ACCEPTED' &&
@@ -259,7 +326,6 @@ const mapLearnerReservation = (
     schedulingConflictReason: reservation.schedulingConflictReason,
     supplierNote: reservation.supplierNote,
     rejectionReason: reservation.rejectionReason,
-    deliveryRequested: reservation.deliveryRequested,
     selfPickupCode:
       reservation.status === 'ACCEPTED' &&
       reservation.fulfillmentMethod === 'PICKUP'
@@ -283,9 +349,12 @@ const mapLearnerReservation = (
     canLearnerReschedule,
     canLearnerReportSupplier,
     canReportNoDriverAvailable: canReportNoDriverAvailableFlag,
+    assignedDriverPickupOverdue,
     canLearnerRequestDelivery,
     canSendMessage:
       reservationAllowsMessaging(reservation.status) && !hasOpenIncident,
+    incidentReviewStatus,
+    pendingIncidentReasonCode,
     latestMessage: latestMessage ?? null,
     material: {
       id: reservation.material.id,
@@ -307,6 +376,10 @@ const mapLearnerReservation = (
     pickupLocationFull: PICKUP_LOCATION_REVEAL_STATUSES.has(reservation.status)
       ? mapPickupLocationFull(reservation.material.location)
       : null,
+    groupItemCount: groupItemCount > 0 ? groupItemCount : null,
+    groupDeliveryFee,
+    groupTotal,
+    ...mapPricingFields(reservation),
   };
 };
 
@@ -339,6 +412,12 @@ export const listMyReservations = async (requesterId: string) => {
     reservations =
       await reservationsRepository.findLearnerReservations(requesterId);
   }
+
+  await expireStaleMissedPickupsForRequester(requesterId);
+  await escalateStaleNoDriverDeliveriesForRequester(requesterId);
+  await escalateStaleAssignedDriverPickupsForRequester(requesterId);
+  reservations =
+    await reservationsRepository.findLearnerReservations(requesterId);
 
   const legacyPickupReservations = reservations.filter(
     (reservation) =>
@@ -397,6 +476,20 @@ export const getMyReservationById = async (
     }
   }
 
+  if (reservation.status === 'ACCEPTED') {
+    await expireStaleMissedPickupsByIds([reservationId], requesterId);
+    await escalateStaleNoDriverDeliveriesByIds([reservationId]);
+    await escalateStaleAssignedDriverPickupsByIds([reservationId]);
+    reservation = await reservationsRepository.findLearnerReservationById(
+      requesterId,
+      reservationId,
+    );
+
+    if (!reservation) {
+      throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+    }
+  }
+
   if (
     reservation.status === 'ACCEPTED' &&
     reservation.fulfillmentMethod === 'PICKUP' &&
@@ -430,12 +523,27 @@ export const getMyReservationById = async (
 
 export const expireStalePendingReservationsForMaterials = async (
   materialIds: string[],
-) => expireStalePendingReservationsForMaterialIds(materialIds);
+) => {
+  await expireStalePendingReservationsForMaterialIds(materialIds);
+  await expireStaleMissedPickupsForMaterialIds(materialIds);
+};
 
 export const createReservation = async (
   requesterId: string,
   input: CreateReservationInput,
 ) => {
+  if (input.fulfillmentMethod === 'PICKUP') {
+    for (const window of input.learnerPreferredPickupWindows ?? []) {
+      assertValidPickupWindow(
+        {
+          start: new Date(window.start),
+          end: new Date(window.end),
+        },
+        'learner_preferred',
+      );
+    }
+  }
+
   const result = await reservationsRepository.createLearnerReservation({
     requesterId,
     materialId: input.materialId,
@@ -445,8 +553,12 @@ export const createReservation = async (
     learnerPreferredPickupWindows: input.learnerPreferredPickupWindows,
     learnerPreferredDeliveryWindows: input.learnerPreferredDeliveryWindows,
     deliveryAddressText: input.deliveryAddressText,
+    dropoffCity: input.dropoffCity,
+    dropoffArea: input.dropoffArea,
     safeDropoffAllowed: input.safeDropoffAllowed,
     deliveryNote: input.deliveryNote,
+    buildItemId: input.buildItemId,
+    combineWithDeliveryGroupId: input.combineWithDeliveryGroupId,
   });
 
   switch (result.outcome) {
@@ -492,9 +604,116 @@ export const createReservation = async (
         400,
         'VALIDATION_ERROR',
       );
+    case 'BUILD_ITEM_NOT_FOUND':
+      throw new AppError('Project build item not found', 404, 'NOT_FOUND');
+    case 'BUILD_ITEM_MATERIAL_MISMATCH':
+      throw new AppError(
+        'Reservation material does not match the linked build item material',
+        400,
+        'BUILD_ITEM_MATERIAL_MISMATCH',
+      );
+    case 'ACTIVE_BUILD_ITEM_RESERVATION':
+      throw new AppError(
+        'This build checklist item already has an active linked reservation',
+        409,
+        'ACTIVE_BUILD_ITEM_RESERVATION',
+      );
+    case 'DELIVERY_PRICING_ERROR':
+      throw new AppError(
+        result.message ?? 'Delivery fee could not be calculated for this location.',
+        400,
+        'DELIVERY_PRICING_ERROR',
+      );
+    case 'GROUP_NOT_AVAILABLE':
+      throw new AppError(
+        result.message ?? 'Combined delivery is no longer available.',
+        409,
+        'GROUP_NOT_AVAILABLE',
+      );
+    case 'VALIDATION_ERROR':
+      throw new AppError(
+        result.message ?? 'Invalid reservation request.',
+        400,
+        'VALIDATION_ERROR',
+      );
     default:
       throw new AppError('Unable to create reservation.', 500, 'INTERNAL_ERROR');
   }
+};
+
+export const quoteReservation = async (
+  requesterId: string,
+  input: ReservationQuoteBody,
+) => {
+  const material = await reservationsRepository.findMaterialForReservationQuote(
+    input.materialId,
+  );
+
+  if (!material) {
+    throw new AppError('Material not found.', 404, 'NOT_FOUND');
+  }
+
+  if (material.ownerId === requesterId) {
+    throw new AppError(
+      'You cannot reserve your own material.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if (material.status === 'UNAVAILABLE' || material.status === 'REUSED') {
+    throw new AppError(
+      'This material is no longer available.',
+      409,
+      'CONFLICT',
+    );
+  }
+
+  const quantityState = await getMaterialQuantityState(prisma, material.id);
+
+  if (!quantityState) {
+    throw new AppError('Material not found.', 404, 'NOT_FOUND');
+  }
+
+  const availableQuantity = decimalToNumber(quantityState.availableQuantity);
+
+  const result = await buildReservationQuote(
+    {
+      id: material.id,
+      isFree: material.isFree,
+      price: material.price,
+      currency: material.currency,
+      pickupCity: material.location.city,
+      supplierProfileId: material.supplierProfileId,
+      deliveryAllowed: material.deliveryAllowed,
+      pickupAllowed: material.pickupAllowed,
+      status: material.status,
+    },
+    availableQuantity,
+    {
+      learnerId: requesterId,
+      materialId: input.materialId,
+      quantity: input.quantity,
+      fulfillmentMethod: input.fulfillmentMethod,
+      dropoffCity: input.dropoffCity,
+      dropoffArea: input.dropoffArea,
+      learnerPreferredDeliveryWindows: input.learnerPreferredDeliveryWindows,
+      combineWithDeliveryGroupId: input.combineWithDeliveryGroupId,
+    },
+  );
+
+  if (!result.ok) {
+    const status =
+      result.code === 'INVALID_QUANTITY'
+        ? 400
+        : result.code === 'GROUP_NOT_AVAILABLE'
+          ? 409
+          : 400;
+
+    throw new AppError(result.message, status, result.code, result.details);
+  }
+
+  return result.quote;
 };
 
 export const cancelReservation = async (
@@ -595,28 +814,31 @@ export const requestLearnerPickupReschedule = async (
   reservationId: string,
   input: import('./reservations.validation.js').RequestPickupRescheduleInput,
 ) => {
-  const end = new Date(input.pickupWindowEnd);
-  const now = Date.now();
-  if (end.getTime() <= Date.now()) {
+  const startRaw = input.pickupWindowStart?.trim();
+  const endRaw = input.pickupWindowEnd?.trim();
+
+  if (!startRaw || !endRaw) {
     throw new AppError(
-      'Pickup window end must be in the future.',
+      'A new pickup window is required for reschedule requests.',
       400,
-      'VALIDATION_ERROR',
+      'PICKUP_WINDOW_REQUIRED',
     );
   }
 
-  if (end.getTime() < now + MIN_PICKUP_NOTICE_MINUTES * 60_000) {
-    throw new AppError(
-      LEARNER_PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
-      400,
-      'VALIDATION_ERROR',
-    );
-  }
+  assertValidPickupWindow(
+    {
+      start: new Date(startRaw),
+      end: new Date(endRaw),
+    },
+    'learner_preferred',
+  );
+
+  const end = new Date(endRaw);
 
   const result = await reservationsRescheduleRepository.requestLearnerPickupReschedule({
     requesterId,
     reservationId,
-    pickupWindowStart: new Date(input.pickupWindowStart),
+    pickupWindowStart: new Date(startRaw),
     pickupWindowEnd: end,
     reason: input.reason,
     note: input.note,
@@ -696,6 +918,10 @@ export const resolveLearnerConfirmation = async (
   switch (result.outcome) {
     case 'ACCEPTED':
     case 'CANCELLED': {
+      if (result.outcome === 'ACCEPTED') {
+        await notifyNewJobForReservationWaitingDelivery(reservationId);
+      }
+
       const reservation = await mapLearnerReservationById(
         requesterId,
         reservationId,

@@ -10,11 +10,10 @@ import {
   decimalToNumber,
 } from './reservations.quantity.js';
 import {
-  buildDeliveryHandoverCodeData,
   buildSelfPickupCodeData,
-  createDeliveryId,
   ensureSelfPickupCodeStored,
 } from '../../utils/handover-codes.js';
+import { ensureDeliveryForAcceptedReservation } from '../delivery-groups/delivery-group-operations.service.js';
 
 const learnerConfirmationInclude = {
   material: {
@@ -32,77 +31,6 @@ const learnerConfirmationInclude = {
 export type LearnerConfirmationReservationRecord = Prisma.ReservationGetPayload<{
   include: typeof learnerConfirmationInclude;
 }>;
-
-const createDeliveryForReservation = async (
-  tx: Prisma.TransactionClient,
-  input: {
-    reservationId: string;
-    requesterId: string;
-    changedByUserId: string;
-    materialLocation: {
-      country: string;
-      city: string;
-      area: string | null;
-      addressLine: string | null;
-      latitude: number | null;
-      longitude: number | null;
-      isApproximate: boolean;
-    };
-    deliveryAddressText: string;
-    deliveryNote: string | null;
-  },
-) => {
-  const pickupLocation = await tx.location.create({
-    data: {
-      country: input.materialLocation.country,
-      city: input.materialLocation.city,
-      area: input.materialLocation.area,
-      addressLine: input.materialLocation.addressLine,
-      latitude: input.materialLocation.latitude,
-      longitude: input.materialLocation.longitude,
-      visibility: 'PRIVATE',
-      isApproximate: input.materialLocation.isApproximate,
-      locationType: 'DELIVERY_PICKUP',
-    },
-  });
-
-  const dropoffLocation = await tx.location.create({
-    data: {
-      country: input.materialLocation.country,
-      city: input.materialLocation.city,
-      addressLine: input.deliveryAddressText,
-      visibility: 'PRIVATE',
-      isApproximate: true,
-      locationType: 'DELIVERY_DROPOFF',
-    },
-  });
-
-  const deliveryId = createDeliveryId();
-  const handoverCodes = await buildDeliveryHandoverCodeData(deliveryId);
-
-  const delivery = await tx.delivery.create({
-    data: {
-      id: deliveryId,
-      ...handoverCodes.data,
-      reservationId: input.reservationId,
-      pickupLocationId: pickupLocation.id,
-      dropoffLocationId: dropoffLocation.id,
-      requestedByUserId: input.requesterId,
-      status: 'WAITING_FOR_DRIVER',
-      learnerNote: input.deliveryNote,
-      statusHistory: {
-        create: {
-          oldStatus: null,
-          newStatus: 'WAITING_FOR_DRIVER',
-          changedByUserId: input.changedByUserId,
-          note: 'Delivery created when learner confirmed delivery window',
-        },
-      },
-    },
-  });
-
-  return delivery;
-};
 
 export const resolveLearnerConfirmation = async (input: {
   requesterId: string;
@@ -255,32 +183,24 @@ export const resolveLearnerConfirmation = async (input: {
         confirmedDeliveryWindowEnd: feasible.confirmed.end,
         earliestDeliveryStart: feasible.earliestDeliveryStart,
         schedulingConflictReason: null,
-        deliveryRequested: true,
       },
       include: learnerConfirmationInclude,
     });
 
-    await createDeliveryForReservation(tx, {
-      reservationId: existing.id,
-      requesterId: input.requesterId,
-      changedByUserId: input.requesterId,
-      materialLocation: {
-        country: existing.material.location.country,
-        city: existing.material.location.city,
-        area: existing.material.location.area,
-        addressLine: existing.material.location.addressLine,
-        latitude:
-          existing.material.location.latitude == null
-            ? null
-            : decimalToNumber(existing.material.location.latitude),
-        longitude:
-          existing.material.location.longitude == null
-            ? null
-            : decimalToNumber(existing.material.location.longitude),
-        isApproximate: existing.material.location.isApproximate,
+    await ensureDeliveryForAcceptedReservation(tx, {
+      reservation: {
+        id: existing.id,
+        requesterId: input.requesterId,
+        deliveryGroupId: existing.deliveryGroupId,
+        deliveryAddressText: existing.deliveryAddressText,
+        dropoffCity: existing.dropoffCity,
+        dropoffArea: existing.dropoffArea,
+        deliveryNote: existing.deliveryNote,
+        material: existing.material,
       },
-      deliveryAddressText: existing.deliveryAddressText.trim(),
-      deliveryNote: existing.deliveryNote,
+      changedByUserId: input.requesterId,
+      statusHistoryNote:
+        'Delivery created when learner confirmed delivery window',
     });
 
     await tx.reservationStatusHistory.create({

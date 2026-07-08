@@ -7,7 +7,9 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../../shared/widgets/notification_bell_button.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../notifications/application/notifications_routes.dart';
 
 class DriverPortalShell extends ConsumerWidget {
   const DriverPortalShell({super.key, required this.child});
@@ -20,48 +22,50 @@ class DriverPortalShell extends ConsumerWidget {
     final user = ref.watch(authControllerProvider).user;
     final path = GoRouterState.of(context).matchedLocation;
 
-    return Scaffold(
-      backgroundColor: palette.pageBackground,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const EntryNavBar(
-              showSignIn: false,
-              showCreateAccount: false,
-              homeRoute: '/driver/jobs',
-            ),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxWidth < 820;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useSidebar = constraints.maxWidth >= 820;
 
-                  if (compact) {
-                    return Column(
-                      children: [
-                        _DriverTopTabs(currentPath: path),
-                        Expanded(child: child),
-                      ],
-                    );
-                  }
-
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _DriverSidebar(
-                        currentPath: path,
-                        driverName: user?.displayName ?? 'Driver',
-                        email: user?.email ?? '',
-                      ),
-                      Expanded(child: child),
-                    ],
-                  );
-                },
-              ),
+        return Scaffold(
+          backgroundColor: palette.pageBackground,
+          body: SafeArea(
+            bottom: useSidebar,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                EntryNavBar(
+                  showSignIn: false,
+                  showCreateAccount: false,
+                  homeRoute: '/driver/jobs',
+                  phoneTitle: 'Driver',
+                  showPublicNavLinks: false,
+                  trailingActions: const [
+                    NotificationBellButton(compact: true),
+                  ],
+                ),
+                Expanded(
+                  child: useSidebar
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _DriverSidebar(
+                              currentPath: path,
+                              driverName: user?.displayName ?? 'Driver',
+                              email: user?.email ?? '',
+                            ),
+                            Expanded(child: child),
+                          ],
+                        )
+                      : child,
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+          bottomNavigationBar: useSidebar
+              ? null
+              : _DriverBottomNav(currentPath: path),
+        );
+      },
     );
   }
 }
@@ -116,7 +120,14 @@ class _DriverSidebar extends StatelessWidget {
             icon: Icons.local_shipping_outlined,
             label: 'Jobs',
             route: '/driver/jobs',
-            selected: currentPath == '/driver/jobs',
+            selected: _isJobsPath(currentPath),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          _DriverNavButton(
+            icon: Icons.notifications_none_rounded,
+            label: 'Notifications',
+            route: driverNotificationsRoute,
+            selected: isDriverNotificationsPath(currentPath),
           ),
           const Spacer(),
           _DriverProfileSummary(name: driverName, email: email),
@@ -126,34 +137,48 @@ class _DriverSidebar extends StatelessWidget {
   }
 }
 
-class _DriverTopTabs extends StatelessWidget {
-  const _DriverTopTabs({required this.currentPath});
+class _DriverBottomNav extends StatelessWidget {
+  const _DriverBottomNav({required this.currentPath});
 
   final String currentPath;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
-        0,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _DriverNavButton(
-              icon: Icons.local_shipping_outlined,
+    final palette = MaterialsUiPalette.of(context);
+    final selectedIndex = isDriverNotificationsPath(currentPath) ? 1 : 0;
+
+    return Material(
+      color: palette.cardSurface,
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: NavigationBar(
+          selectedIndex: selectedIndex,
+          onDestinationSelected: (index) {
+            if (index == 0) {
+              context.go('/driver/jobs');
+            } else {
+              context.go(driverNotificationsRoute);
+            }
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.local_shipping_outlined),
               label: 'Jobs',
-              route: '/driver/jobs',
-              selected: currentPath == '/driver/jobs',
             ),
-          ),
-        ],
+            NavigationDestination(
+              icon: Icon(Icons.notifications_none_rounded),
+              label: 'Notifications',
+            ),
+          ],
+        ),
       ),
     );
   }
+}
+
+bool _isJobsPath(String path) {
+  return path == '/driver/jobs' || path.startsWith('/driver/deliveries/');
 }
 
 class _DriverNavButton extends StatelessWidget {

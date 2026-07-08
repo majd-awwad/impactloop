@@ -152,19 +152,11 @@ Used by: `ReservationStatusHistory.statusGroup`
 
 ---
 
-## `PickupType`
-
-`SELF_PICKUP`, `DELIVERY_ALLOWED`
-
-Used by: `Reservation.pickupType`
-
----
-
 ## `DeliveryStatus`
 
 `WAITING_FOR_DRIVER`, `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`, `DELIVERED`, `CANCELLED`, `FAILED_PICKUP`, `FAILED_DELIVERY`
 
-Used by: `Delivery.status`, `DeliveryStatusHistory.oldStatus`, `DeliveryStatusHistory.newStatus`, legacy `Reservation.deliveryStatus`
+Used by: `Delivery.status`, `DeliveryStatusHistory.oldStatus`, `DeliveryStatusHistory.newStatus`
 
 Active delivery statuses: `WAITING_FOR_DRIVER`, `DRIVER_ASSIGNED`, `ARRIVED_PICKUP`, `PICKED_UP`, `ON_THE_WAY`, `ARRIVED_DROPOFF`.
 
@@ -252,7 +244,7 @@ Used by: `LearningProject.difficulty`
 
 ## `LearningProjectStatus`
 
-`DRAFT`, `PENDING_REVIEW`, `PUBLISHED`, `REJECTED`, `ARCHIVED`
+`DRAFT`, `PENDING_REVIEW`, `PUBLISHED`, `CHANGES_REQUESTED`, `REJECTED`, `HIDDEN`, `ARCHIVED`
 
 Used by: `LearningProject.status`
 
@@ -281,6 +273,22 @@ Used by: `ProjectRequiredComponent.reviewStatus`, `ProjectStep.reviewStatus`
 `YOUTUBE`, `GITHUB`, `ARTICLE`, `PDF`, `OTHER`
 
 Used by: `ProjectLink.linkType`
+
+---
+
+## `ProjectBuildStatus`
+
+`IN_PROGRESS`, `COMPLETED`, `ARCHIVED`
+
+Used by: `ProjectBuild.status`
+
+---
+
+## `ProjectBuildItemStatus`
+
+`MISSING`, `ALREADY_OWNED`, `AVAILABLE`, `RESERVED`, `ALTERNATIVE`
+
+Used by: `ProjectBuildItem.status`
 
 ---
 

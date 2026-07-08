@@ -44,6 +44,7 @@ function deliveryReservationPayload(
     fulfillmentMethod: 'DELIVERY',
     learnerPreferredDeliveryWindows: [futurePreferredWindow()],
     deliveryAddressText: '12 Learner Street, Nablus',
+    dropoffCity: 'Nablus',
     safeDropoffAllowed: false,
     ...overrides,
   };
@@ -365,7 +366,6 @@ describe('learner confirmation', () => {
     assert.equal(updated.status, 'ACCEPTED');
     assert.equal(updated.confirmedDeliveryWindowStart, deliveryStart.toISOString());
     assert.equal(updated.confirmedDeliveryWindowEnd, deliveryEnd.toISOString());
-    assert.equal(updated.deliveryRequested, true);
     assert.ok(updated.activeDelivery);
     assert.equal(updated.activeDelivery?.status, 'WAITING_FOR_DRIVER');
 

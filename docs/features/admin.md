@@ -26,7 +26,7 @@ Admin is an operational support role. It is not available through public registr
 | Audit logs route | **Implemented** | `/admin/audit-logs` reads paginated `admin_activity_logs` with filters/details |
 | Delivery/reservation admin ops | **Partial** | Read-only monitoring pages exist; reassignment/cancellation operations are not implemented |
 | AI usage/log viewer | **Not implemented** | Material-matching AI is not implemented |
-| Project moderation | **Implemented for ADMIN** | `/admin/learning-projects` review queue with approve/request changes/reject/hide/restore/archive actions |
+| Project moderation | **Implemented for ADMIN** | `/admin/learning-projects` review queue with approve/request changes/reject/hide/restore/archive actions plus per-component enrichment on pending review |
 
 **Overall:** **Partial**. Admin portal and APIs cover several MVP operations, including learning project moderation, impact, audit logs, and read-only reservation/delivery monitors. AI logs and operational delivery/reservation actions remain future work.
 
@@ -79,7 +79,7 @@ Mounted at `/api/admin` and guarded by `ADMIN`.
 | Materials | `GET /materials/summary`, `GET /materials`, `GET /materials/:id`, `PATCH /materials/:id/hide|mark-unavailable|restore` |
 | Material reports | `GET /material-reports`, `GET /material-reports/:id`, `PATCH /material-reports/:id/resolve|reject|hide-material` |
 | People | `GET /people/summary`, `GET /people`, `GET /people/:id`, `PATCH /people/:id/suspend|reactivate` |
-| Learning projects | `GET /learning-projects`, `GET /learning-projects/:id`, `PATCH /learning-projects/:id/approve|request-changes|reject|hide|restore|archive` |
+| Learning projects | `GET /learning-projects`, `GET /learning-projects/:id`, `PATCH /learning-projects/:id/components/:componentId`, `PATCH /learning-projects/:id/approve|request-changes|reject|hide|restore|archive` |
 
 Full route details: [api-catalog](../backend/api-catalog.md#admin--apiadmin).
 
@@ -88,7 +88,7 @@ Full route details: [api-catalog](../backend/api-catalog.md#admin--apiadmin).
 - Admin can invite `DRIVER`, `MODERATOR`, and `ADMIN`.
 - Admin can review category and price requests; moderator cannot yet.
 - Admin can review material reports; a general reports module is not present.
-- Admin can review and publish/hide/archive learning projects; moderator cannot yet.
+- Admin can review and publish/hide/archive learning projects; admins can enrich learner-submitted components on pending review before publish; moderator cannot yet.
 - Admin people management cannot delete users or manually edit roles.
 - Admin suspension/reactivation is guarded against self-suspension, admin suspension, and last-active-admin risk.
 

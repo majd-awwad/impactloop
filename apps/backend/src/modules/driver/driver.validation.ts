@@ -59,3 +59,14 @@ export const createDeliveryLocationPingSchema = z.object({
 export type CreateDeliveryLocationPingInput = z.infer<
   typeof createDeliveryLocationPingSchema
 >;
+
+export const listAvailableDeliveriesQuerySchema = z.object({
+  city: z.string().trim().min(1).max(100).optional(),
+  area: z.string().trim().min(1).max(100).optional(),
+  maxDistanceKm: z.coerce.number().positive().max(500).optional(),
+  sortBy: z.enum(['nearest', 'newest']).optional(),
+});
+
+export type ListAvailableDeliveriesQuery = z.infer<
+  typeof listAvailableDeliveriesQuerySchema
+>;

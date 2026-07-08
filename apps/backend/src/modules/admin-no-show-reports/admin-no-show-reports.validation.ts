@@ -25,3 +25,17 @@ export const reviewNoShowReportSchema = z.object({
 });
 
 export type ReviewNoShowReportInput = z.infer<typeof reviewNoShowReportSchema>;
+
+export const requestSupplierRescheduleSchema = z.object({
+  adminNote: z.string().trim().max(1000).optional(),
+});
+
+export type RequestSupplierRescheduleInput = z.infer<
+  typeof requestSupplierRescheduleSchema
+>;
+
+export const cancelReleaseHoldSchema = z.object({
+  adminNote: z.string().trim().max(1000).optional(),
+});
+
+export type CancelReleaseHoldInput = z.infer<typeof cancelReleaseHoldSchema>;

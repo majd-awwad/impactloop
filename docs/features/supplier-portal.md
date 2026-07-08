@@ -38,7 +38,7 @@ Add-material uses category-scoped material type/name autocomplete backed by `GET
 
 **Price governance:** paid listings are checked against accepted price rules or review workflows before publish. The current AI support is price-reference assistance for rule/request review; broader AI description/category/use suggestions are planned future scope.
 
-**Pickup and delivery on create:** Organization suppliers see a read-only profile pickup map; individual/student suppliers can use profile default or override per material. Backend always requires a profile default pickup, copies it into a dedicated `locations` row per material (or creates override row for individual/student). Organization suppliers cannot send `useDefaultPickupLocation: false` or `pickupLocation`. Suppliers can also set `deliveryAllowed`; accepted learner reservations for those materials can request internal delivery. Supplier reservation responses include `deliveryRequested`, `activeDelivery` (`id`, `status`), and `canSupplierComplete`; the UI uses these fields to show manual completion only for accepted self-pickup reservations. Reservations with `deliveryRequested` or any `Delivery` row, including cancelled or failed delivery attempts, remain driver-delivery handled and do not expose supplier manual completion.
+**Pickup and delivery on create:** Organization suppliers see a read-only profile pickup map; individual/student suppliers can use profile default or override per material. Backend always requires a profile default pickup, copies it into a dedicated `locations` row per material (or creates override row for individual/student). Organization suppliers cannot send `useDefaultPickupLocation: false` or `pickupLocation`. Suppliers can also set `deliveryAllowed`; accepted learner reservations for those materials can request internal delivery. Supplier reservation responses include `fulfillmentMethod`, `fulfillmentLabel`, `activeDelivery` (`id`, `status`), and `canSupplierComplete`; the UI uses these fields to show manual completion only for accepted self-pickup reservations. Reservations with `fulfillmentMethod = DELIVERY` or any `Delivery` row, including cancelled or failed delivery attempts, remain driver-delivery handled and do not expose supplier manual completion.
 
 **Duplicate submit protection on create:** Add Material generates one `Idempotency-Key` per form session and sends it with `POST /api/supplier/materials`. The page locks publish/request-review actions while publishing, keeps the same key across failed retries, invalidates supplier material/dashboard/notification providers on success, and navigates to `/supplier/materials`. Backend idempotency is the durable protection: same user + scope + key + identical body returns the original created material instead of inserting another row. Similar valid listings are allowed when they use a new form/key.
 
@@ -104,12 +104,13 @@ Static images: `GET /uploads/materials/*`
 ## Reusable components
 
 - Shared: `AppMaterialCard` (where discovery-shaped data shown), material badges — see [reusable-widgets](../frontend/reusable-widgets.md)
-- Supplier-specific: `SupplierMaterialCard`, dashboard charts, shell widgets — **not** for cross-feature reuse
+- Supplier-specific: `SupplierMaterialCard`, `SupplierProjectImpactPanel`, dashboard charts, shell widgets — **not** for cross-feature reuse
 
 ## Known gaps / Needs verification
 
 - **Learner** cannot create reservations via API — test data from `prisma/seeds/seed-supplier-reservations.ts`.
 - Accept reservation recomputes material status from holds; material may stay `AVAILABLE` when partial stock remains.
 - Admin impact metrics still count whole `REUSED` materials; partial depletion may need reservation-level impact later.
+- Supplier dashboard `GET /dashboard` includes reuse stats (`stats.impact.reusedMaterials`) and **project-linked impact** (`projectSupport`) derived from completed build-linked reservations. Counts only `Reservation.status = COMPLETED` on linked `project_build_items`; does not expose learner identity.
 - `POST /api/price-rule-requests` has auth but no `SUPPLIER` role guard in route file.
 - Supplier followers, follower impact, saves/likes analytics, category demand insights, and "related projects for this material" are planned/future.

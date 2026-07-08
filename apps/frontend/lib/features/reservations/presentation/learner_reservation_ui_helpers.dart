@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_theme_colors.dart';
+import '../../deliveries/presentation/delivery_status_presentation.dart';
 import '../data/models/learner_reservation.dart';
 import '../data/models/reservation_preferred_window.dart';
 
@@ -36,6 +37,33 @@ extension LearnerReservationStatusFilterX on LearnerReservationStatusFilter {
   }
 }
 
+const missedPickupExpiryReason = 'PICKUP_WINDOW_MISSED';
+const noDriverCancelReason = 'NO_DRIVER_UNAVAILABLE';
+const stalePickupCancelReason = 'PICKUP_NOT_COMPLETED';
+const adminPickupReconfirmReasons = {
+  'NO_DRIVER_ADMIN_REQUEST',
+  'STALE_PICKUP_ADMIN_REQUEST',
+};
+
+bool isMissedPickupExpiry(LearnerReservation reservation) =>
+    reservation.isExpired &&
+    reservation.rejectionReason == missedPickupExpiryReason;
+
+bool learnerReservationNeedsAction(LearnerReservation reservation) {
+  if (reservation.isAwaitingConfirmation) {
+    return true;
+  }
+
+  if (reservation.isReadOnlyFinalState) {
+    return false;
+  }
+
+  return reservation.isAccepted &&
+      (reservation.isOverdue ||
+          reservation.needsFollowUp ||
+          reservation.assignedDriverPickupOverdue);
+}
+
 bool reservationMatchesStatusFilter(
   LearnerReservation reservation,
   LearnerReservationStatusFilter filter,
@@ -49,7 +77,7 @@ bool reservationMatchesStatusFilter(
           reservation.isAwaitingConfirmation ||
           reservation.status == 'AWAITING_RESOLUTION';
     case LearnerReservationStatusFilter.needsAction:
-      return reservation.isAwaitingConfirmation;
+      return learnerReservationNeedsAction(reservation);
     case LearnerReservationStatusFilter.pending:
       return reservation.isPending;
     case LearnerReservationStatusFilter.accepted:
@@ -147,11 +175,46 @@ class LearnerReservationStatusStyle {
   }
 }
 
+String incidentReviewStatusLabel(String? status) {
+  switch (status) {
+    case 'PENDING_REVIEW':
+      return 'Pending admin review';
+    case 'VERIFIED':
+      return 'Report verified';
+    case 'REJECTED':
+      return 'Report dismissed';
+    case 'RESOLVED_NO_STRIKE':
+      return 'Resolved without strike';
+    default:
+      return 'Pending admin review';
+  }
+}
+
+String? incidentReviewStatusMessage(String? status) {
+  switch (status) {
+    case 'PENDING_REVIEW':
+      return 'This reservation was reported and is awaiting admin review.';
+    case 'VERIFIED':
+      return 'Your report was verified by an admin.';
+    case 'REJECTED':
+      return 'Your report was reviewed and dismissed.';
+    case 'RESOLVED_NO_STRIKE':
+      return 'This incident was resolved without a strike.';
+    default:
+      return null;
+  }
+}
+
 String reservationStatusLabel(
   String status, {
   String? fulfillmentMethod,
   String? deliveryStatus,
   DateTime? pickupWindowEnd,
+  String? incidentReviewStatus,
+  bool isOverdue = false,
+  bool needsFollowUp = false,
+  String? rejectionReason,
+  String? pendingRescheduleReason,
 }) {
   switch (status) {
     case 'PENDING':
@@ -159,10 +222,17 @@ String reservationStatusLabel(
     case 'AWAITING_LEARNER_CONFIRMATION':
       return 'Needs your confirmation';
     case 'AWAITING_SUPPLIER_CONFIRMATION':
+      if (pendingRescheduleReason != null &&
+          adminPickupReconfirmReasons.contains(pendingRescheduleReason)) {
+        return 'Waiting for supplier to choose a new pickup window';
+      }
       return 'Waiting for supplier response';
     case 'ACCEPTED':
       if (fulfillmentMethod == 'DELIVERY') {
         return 'Accepted';
+      }
+      if (isOverdue || needsFollowUp) {
+        return 'Pickup window passed';
       }
       return 'Accepted / Ready for pickup';
     case 'REJECTED':
@@ -179,28 +249,142 @@ String reservationStatusLabel(
       }
       return 'Cancelled';
     case 'EXPIRED':
+      if (rejectionReason == missedPickupExpiryReason) {
+        return 'Pickup missed';
+      }
+      if (rejectionReason == noDriverCancelReason) {
+        return 'Cancelled — no driver available';
+      }
+      if (rejectionReason == stalePickupCancelReason) {
+        return 'Admin cancelled due to unresolved pickup';
+      }
+      if (rejectionReason == null || rejectionReason.trim().isEmpty) {
+        return 'Expired — no response';
+      }
       return 'Expired';
     case 'NO_SHOW':
       return 'Pickup missed';
     case 'FULFILLMENT_FAILED':
       return 'Fulfillment failed';
     case 'AWAITING_RESOLUTION':
-      return 'Pending admin review';
+      return incidentReviewStatusLabel(incidentReviewStatus);
     default:
       return status;
   }
+}
+
+String? resolveLearnerChipDeliveryStatus({
+  required LearnerReservation reservation,
+  String? linkedDeliveryStatus,
+}) =>
+    linkedDeliveryStatus ?? reservation.activeDelivery?.status;
+
+bool learnerNoDriverIncidentAwaitingResolution({
+  required String reservationStatus,
+  required String fulfillmentMethod,
+  String? deliveryStatus,
+  String? activeDeliveryStatus,
+}) {
+  if (reservationStatus != 'AWAITING_RESOLUTION') {
+    return false;
+  }
+
+  if (fulfillmentMethod.toUpperCase() != 'DELIVERY') {
+    return false;
+  }
+
+  final effectiveStatus =
+      deliveryStatus ?? activeDeliveryStatus;
+  return effectiveStatus?.toUpperCase() == 'AWAITING_RESOLUTION';
+}
+
+class LearnerReservationStatusChipLabels {
+  const LearnerReservationStatusChipLabels({
+    required this.primary,
+    this.secondary,
+  });
+
+  final String primary;
+  final String? secondary;
+}
+
+LearnerReservationStatusChipLabels learnerReservationStatusChipLabels(
+  LearnerReservation reservation, {
+  String? linkedDeliveryStatus,
+}) {
+  final deliveryStatus = resolveLearnerChipDeliveryStatus(
+    reservation: reservation,
+    linkedDeliveryStatus: linkedDeliveryStatus,
+  );
+
+  final primary =
+      learnerDeliveryPrimaryStatusLabel(
+        reservationStatus: reservation.status,
+        fulfillmentMethod: reservation.fulfillmentMethod,
+        deliveryStatus: deliveryStatus,
+        incidentReviewStatus: reservation.incidentReviewStatus,
+      ) ??
+      reservationStatusLabel(
+        reservation.status,
+        fulfillmentMethod: reservation.fulfillmentMethod,
+        deliveryStatus: deliveryStatus,
+        pickupWindowEnd: reservation.pickupWindowEnd,
+        incidentReviewStatus: reservation.incidentReviewStatus,
+        isOverdue: reservation.isOverdue,
+        needsFollowUp: reservation.needsFollowUp,
+        rejectionReason: reservation.rejectionReason,
+        pendingRescheduleReason: reservation.pendingRescheduleReason,
+      );
+
+  final secondary = learnerDeliverySecondaryStatusLabel(
+    reservationStatus: reservation.status,
+    fulfillmentMethod: reservation.fulfillmentMethod,
+    deliveryStatus: deliveryStatus,
+    incidentReviewStatus: reservation.incidentReviewStatus,
+    noDriverOverdue: reservation.canReportNoDriverAvailable,
+    assignedDriverPickupOverdue: reservation.assignedDriverPickupOverdue,
+    pendingIncidentReasonCode: reservation.pendingIncidentReasonCode,
+    activeDeliveryStatus: reservation.activeDelivery?.status,
+  );
+
+  if (secondary != null && secondary != primary) {
+    return LearnerReservationStatusChipLabels(
+      primary: primary,
+      secondary: secondary,
+    );
+  }
+
+  if (reservation.status != 'AWAITING_RESOLUTION' &&
+      reservation.isDeliveryFulfillment &&
+      deliveryStatus != null) {
+    final fallback = deliveryStatusLabel(deliveryStatus);
+    if (fallback != primary) {
+      return LearnerReservationStatusChipLabels(
+        primary: primary,
+        secondary: fallback,
+      );
+    }
+  }
+
+  return LearnerReservationStatusChipLabels(primary: primary);
 }
 
 String? learnerDeliverySecondaryStatusLabel({
   required String reservationStatus,
   required String fulfillmentMethod,
   String? deliveryStatus,
+  String? incidentReviewStatus,
+  bool noDriverOverdue = false,
+  bool assignedDriverPickupOverdue = false,
+  String? pendingIncidentReasonCode,
+  String? activeDeliveryStatus,
 }) {
   if (fulfillmentMethod.toUpperCase() != 'DELIVERY') {
     return null;
   }
 
-  final normalizedDeliveryStatus = deliveryStatus?.toUpperCase();
+  final normalizedDeliveryStatus =
+      (deliveryStatus ?? activeDeliveryStatus)?.toUpperCase();
 
   if (reservationStatus == 'COMPLETED' ||
       normalizedDeliveryStatus == 'DELIVERED') {
@@ -208,6 +392,13 @@ String? learnerDeliverySecondaryStatusLabel({
   }
 
   if (reservationStatus == 'AWAITING_RESOLUTION') {
+    switch (pendingIncidentReasonCode) {
+      case 'NO_DRIVER_AVAILABLE':
+        return 'No driver available';
+      case 'NO_RESPONSE_AFTER_PICKUP_WINDOW':
+        return 'Driver pickup overdue';
+    }
+
     switch (normalizedDeliveryStatus) {
       case 'FAILED_DELIVERY':
       case 'LEARNER_NO_SHOW':
@@ -217,7 +408,7 @@ String? learnerDeliverySecondaryStatusLabel({
       case 'DRIVER_NO_SHOW':
         return 'Driver no-show';
       default:
-        return 'Pending admin review';
+        return null;
     }
   }
 
@@ -227,10 +418,17 @@ String? learnerDeliverySecondaryStatusLabel({
 
   switch (normalizedDeliveryStatus) {
     case 'WAITING_FOR_DRIVER':
-      return 'Waiting for driver';
+      return noDriverOverdue
+          ? 'Driver not assigned in time'
+          : 'Waiting for driver';
     case 'DRIVER_ASSIGNED':
+      return assignedDriverPickupOverdue
+          ? 'Driver pickup overdue'
+          : 'Driver assigned';
     case 'ARRIVED_PICKUP':
-      return 'Driver assigned';
+      return assignedDriverPickupOverdue
+          ? 'Pickup not completed'
+          : 'At supplier pickup';
     case 'PICKED_UP':
     case 'ON_THE_WAY':
     case 'ARRIVED_DROPOFF':
@@ -244,6 +442,7 @@ String? learnerDeliveryPrimaryStatusLabel({
   required String reservationStatus,
   required String fulfillmentMethod,
   String? deliveryStatus,
+  String? incidentReviewStatus,
 }) {
   if (fulfillmentMethod.toUpperCase() != 'DELIVERY') {
     return null;
@@ -261,7 +460,7 @@ String? learnerDeliveryPrimaryStatusLabel({
   }
 
   if (reservationStatus == 'AWAITING_RESOLUTION') {
-    return 'Pending admin review';
+    return incidentReviewStatusLabel(incidentReviewStatus);
   }
 
   if (normalizedDeliveryStatus == 'PICKED_UP' ||
@@ -291,7 +490,7 @@ String? formatPreferredWindowsSummary(LearnerReservation reservation) {
   }
 
   final prefix =
-      reservation.isDeliveryFulfillment ? 'Preferred delivery' : 'Preferred pickup';
+      reservation.isDeliveryFulfillment ? 'Preferred delivery' : 'Requested pickup';
   final dateFormat = DateFormat('MMM d');
   final timeFormat = DateFormat('h:mm a');
 
@@ -507,7 +706,7 @@ String? formatPickupWindow(LearnerReservation reservation) {
   final timeFormat = DateFormat('h:mm a');
 
   if (end == null) {
-    return 'Pickup: ${dateFormat.format(start)}, ${timeFormat.format(start)}';
+    return 'Confirmed pickup: ${dateFormat.format(start)}, ${timeFormat.format(start)}';
   }
 
   final sameDay = start.year == end.year &&
@@ -515,11 +714,11 @@ String? formatPickupWindow(LearnerReservation reservation) {
       start.day == end.day;
 
   if (sameDay) {
-    return 'Pickup: ${dateFormat.format(start)}, '
+    return 'Confirmed pickup: ${dateFormat.format(start)}, '
         '${timeFormat.format(start)} – ${timeFormat.format(end)}';
   }
 
-  return 'Pickup: ${dateFormat.format(start)}, ${timeFormat.format(start)} – '
+  return 'Confirmed pickup: ${dateFormat.format(start)}, ${timeFormat.format(start)} – '
       '${dateFormat.format(end)}, ${timeFormat.format(end)}';
 }
 
@@ -537,7 +736,8 @@ String? reservationStatusMessage(LearnerReservation reservation) {
   }
 
   if (reservation.isAwaitingResolution) {
-    return 'This reservation was reported and is awaiting admin review.';
+    return incidentReviewStatusMessage(reservation.incidentReviewStatus) ??
+        'This reservation was reported and is awaiting admin review.';
   }
 
   if (reservation.isAccepted) {
@@ -565,6 +765,13 @@ String? reservationStatusMessage(LearnerReservation reservation) {
   }
 
   if (reservation.isExpired) {
+    if (isMissedPickupExpiry(reservation)) {
+      return 'This reservation expired after the pickup window passed without follow-up. Create a new reservation if you still need the material.';
+    }
+    if (reservation.rejectionReason == null ||
+        reservation.rejectionReason!.trim().isEmpty) {
+      return 'This request expired because the supplier did not respond in time.';
+    }
     return 'This reservation expired.';
   }
 
@@ -617,7 +824,7 @@ String formatDeliveryAvailability(
         : 'Delivery reservation';
   }
 
-  if (reservation.deliveryRequested) {
+  if (reservation.activeDelivery != null && !reservation.isDeliveryFulfillment) {
     return 'Delivery requested';
   }
 
@@ -630,6 +837,20 @@ String formatDeliveryAvailability(
 
 bool shouldShowAcceptedPickupInfo(LearnerReservation reservation) =>
     reservation.isAccepted;
+
+String combinedDeliverySummary(LearnerReservation reservation) {
+  final parts = <String>[
+    'Combined delivery',
+    if (reservation.groupItemCount != null && reservation.groupItemCount! > 0)
+      '${reservation.groupItemCount} items in this group',
+    if (reservation.groupTotal != null)
+      'Group total ${reservation.currency ?? 'NIS'} ${reservation.groupTotal!.toStringAsFixed(2)}',
+    if (reservation.deliveryFee == 0)
+      'Delivery fee charged once for the group',
+  ];
+
+  return parts.join(' · ');
+}
 
 bool shouldShowSelfPickupMap(
   LearnerReservation reservation, {

@@ -71,7 +71,29 @@ void main() {
           },
         ],
         'tags': ['electronics'],
-        'ratingSummary': null,
+        'ratingSummary': {'average': 4.5, 'count': 2},
+        'recentReviews': [
+          {
+            'id': 'review-1',
+            'projectId': '22222222-2222-2222-2222-222222222222',
+            'rating': 5,
+            'comment': 'Clear steps and easy to source.',
+            'reviewerName': 'Mira',
+            'isViewerReview': true,
+            'createdAt': '2026-01-02T00:00:00.000Z',
+            'updatedAt': '2026-01-02T00:00:00.000Z',
+          },
+        ],
+        'viewerReview': {
+          'id': 'review-1',
+          'projectId': '22222222-2222-2222-2222-222222222222',
+          'rating': 5,
+          'comment': 'Clear steps and easy to source.',
+          'reviewerName': 'Mira',
+          'isViewerReview': true,
+          'createdAt': '2026-01-02T00:00:00.000Z',
+          'updatedAt': '2026-01-02T00:00:00.000Z',
+        },
         'createdAt': '2026-01-01T00:00:00.000Z',
       });
 
@@ -87,7 +109,15 @@ void main() {
       ]);
       expect(project.links.first.label.en, 'Reference guide');
       expect(project.links.first.urlLabel.en, 'https://example.com/guide');
-      expect(project.hasRatings, isFalse);
+      expect(project.hasRatings, isTrue);
+      expect(project.ratingValue, 4.5);
+      expect(project.ratingCount, 2);
+      expect(
+        project.recentReviews.single.comment,
+        'Clear steps and easy to source.',
+      );
+      expect(project.viewerReview?.rating, 5);
+      expect(project.viewerReview?.isViewerReview, isTrue);
     });
 
     test('maps ratingSummary when present', () {
@@ -117,6 +147,69 @@ void main() {
       expect(LearningHubApiMapper.formatDurationMinutes(60), '1 hr');
       expect(LearningHubApiMapper.formatDurationMinutes(120), '2 hrs');
       expect(LearningHubApiMapper.formatDurationMinutes(90), '1 hr 30 min');
+    });
+
+    test('maps learner submission moderation fields and actions', () {
+      final submission = LearningHubApiMapper.submissionFromJson({
+        'id': '44444444-4444-4444-4444-444444444444',
+        'title': 'Needs edits',
+        'shortDescription': 'Short project summary.',
+        'description': 'Full project description.',
+        'status': 'CHANGES_REQUESTED',
+        'category': {'id': 'cat-1', 'nameEn': 'Robotics', 'nameAr': 'روبوتات'},
+        'difficulty': 'INTERMEDIATE',
+        'estimatedDurationMinutes': 180,
+        'submittedAt': '2026-01-01T00:00:00.000Z',
+        'reviewedAt': '2026-01-02T00:00:00.000Z',
+        'reviewNote': 'Clarify the component list.',
+        'changesRequestedReason': 'Clarify the component list.',
+        'availableActions': {
+          'canView': true,
+          'canEdit': true,
+          'canResubmit': true,
+          'canViewPublic': false,
+        },
+        'requiredComponents': [
+          {
+            'id': 'component-1',
+            'componentName': 'Arduino Uno',
+            'quantity': '2',
+            'unit': 'pieces',
+            'componentRole': 'REQUIRED_MATERIAL',
+            'categoryId': 'material-cat',
+            'materialType': 'Microcontroller',
+            'searchKeywords': ['arduino', 'uno'],
+            'canBeSubstituted': true,
+            'notes': 'Any compatible board works.',
+          },
+        ],
+        'steps': [
+          {
+            'id': 'step-1',
+            'stepNumber': 1,
+            'title': 'Wire board',
+            'description': 'Connect wires.',
+          },
+        ],
+        'links': [
+          {'id': 'link-1', 'url': 'https://example.com', 'title': 'Guide'},
+        ],
+      });
+
+      expect(submission.id, '44444444-4444-4444-4444-444444444444');
+      expect(submission.status.label(), 'Changes requested');
+      expect(submission.activeFeedback, 'Clarify the component list.');
+      expect(submission.reviewedAt, DateTime.parse('2026-01-02T00:00:00.000Z'));
+      expect(submission.statusDatePrefix, 'Reviewed');
+      expect(submission.availableActions.canEdit, isTrue);
+      expect(submission.availableActions.canResubmit, isTrue);
+      expect(submission.requiredComponents.single.name, 'Arduino Uno');
+      expect(submission.requiredComponents.single.searchKeywords, [
+        'arduino',
+        'uno',
+      ]);
+      expect(submission.steps.single.title, 'Wire board');
+      expect(submission.links.single.url, 'https://example.com');
     });
   });
 }

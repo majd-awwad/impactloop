@@ -196,7 +196,8 @@ class AdminNoShowReportDetail extends AdminNoShowReportItem {
                 .toList(growable: false)
           : const [],
       targetVerifiedNoShowCount:
-          (json['targetVerifiedNoShowCount'] as num?)?.toInt(),
+          (json['targetVerifiedNoShowCount'] as num?)?.toInt() ??
+          (json['targetVerifiedStrikeCount'] as num?)?.toInt(),
     );
   }
 }
@@ -314,6 +315,32 @@ class AdminNoShowReportsApi {
         data: {
           if (reviewNote != null && reviewNote.trim().isNotEmpty)
             'reviewNote': reviewNote.trim(),
+        },
+      ),
+      (_) {},
+    );
+  }
+
+  Future<void> requestSupplierReschedule(String id, {String? adminNote}) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/admin/no-show-reports/$id/request-supplier-reschedule',
+        data: {
+          if (adminNote != null && adminNote.trim().isNotEmpty)
+            'adminNote': adminNote.trim(),
+        },
+      ),
+      (_) {},
+    );
+  }
+
+  Future<void> cancelAndReleaseHold(String id, {String? adminNote}) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/admin/no-show-reports/$id/cancel-release-hold',
+        data: {
+          if (adminNote != null && adminNote.trim().isNotEmpty)
+            'adminNote': adminNote.trim(),
         },
       ),
       (_) {},

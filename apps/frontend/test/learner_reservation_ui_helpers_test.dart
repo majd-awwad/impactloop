@@ -3,6 +3,42 @@ import 'package:frontend/features/reservations/data/models/learner_reservation.d
 import 'package:frontend/features/reservations/presentation/learner_reservation_ui_helpers.dart';
 
 void main() {
+  test('reservationMatchesStatusFilter includes overdue accepted in needs action', () {
+    final overdueAccepted = LearnerReservation.fromJson({
+      'id': 'res-overdue',
+      'status': 'ACCEPTED',
+      'quantityRequested': 1,
+      'isOverdue': true,
+      'needsFollowUp': true,
+      'pickupWindowStart': '2026-01-01T08:00:00.000Z',
+      'pickupWindowEnd': '2026-01-01T10:00:00.000Z',
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'material': {
+        'id': 'mat-1',
+        'title': 'Wood panels',
+        'materialType': 'Wood',
+        'status': 'RESERVED',
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+
+    expect(
+      reservationMatchesStatusFilter(
+        overdueAccepted,
+        LearnerReservationStatusFilter.needsAction,
+      ),
+      isTrue,
+    );
+    expect(
+      reservationMatchesStatusFilter(
+        overdueAccepted,
+        LearnerReservationStatusFilter.accepted,
+      ),
+      isTrue,
+    );
+  });
+
   test('formatPickupWindow renders readable same-day window', () {
     final reservation = LearnerReservation.fromJson({
       'id': 'res-1',
@@ -24,7 +60,7 @@ void main() {
     final text = formatPickupWindow(reservation);
 
     expect(text, isNotNull);
-    expect(text, contains('Pickup:'));
+    expect(text, contains('Confirmed pickup:'));
     expect(text, contains('Jun 27'));
     expect(text, contains('–'));
   });
@@ -79,7 +115,7 @@ void main() {
     final summary = formatPreferredWindowsSummary(reservation);
 
     expect(summary, isNotNull);
-    expect(summary, contains('Preferred pickup'));
+    expect(summary, contains('Requested pickup'));
   });
 
   test('reservationMatchesStatusFilter groups cancelled terminal states', () {
@@ -114,6 +150,72 @@ void main() {
     );
   });
 
+  test('reservationStatusLabel maps missed pickup expiry', () {
+    expect(
+      reservationStatusLabel(
+        'EXPIRED',
+        rejectionReason: missedPickupExpiryReason,
+      ),
+      'Pickup missed',
+    );
+    expect(
+      reservationStatusLabel('EXPIRED', rejectionReason: 'OTHER'),
+      'Expired',
+    );
+    expect(
+      reservationStatusLabel('EXPIRED'),
+      'Expired — no response',
+    );
+    expect(reservationStatusLabel('REJECTED'), 'Rejected');
+    expect(
+      reservationStatusLabel(
+        'EXPIRED',
+        rejectionReason: noDriverCancelReason,
+      ),
+      'Cancelled — no driver available',
+    );
+  });
+
+  test('reservationStatusLabel maps overdue accepted pickup', () {
+    expect(
+      reservationStatusLabel(
+        'ACCEPTED',
+        fulfillmentMethod: 'PICKUP',
+        isOverdue: true,
+      ),
+      'Pickup window passed',
+    );
+    expect(
+      reservationStatusLabel(
+        'ACCEPTED',
+        fulfillmentMethod: 'PICKUP',
+        needsFollowUp: true,
+      ),
+      'Pickup window passed',
+    );
+    expect(
+      reservationStatusLabel('ACCEPTED', fulfillmentMethod: 'PICKUP'),
+      'Accepted / Ready for pickup',
+    );
+  });
+
+  test('reservationStatusLabel maps verified incident review', () {
+    expect(
+      reservationStatusLabel(
+        'AWAITING_RESOLUTION',
+        incidentReviewStatus: 'VERIFIED',
+      ),
+      'Report verified',
+    );
+    expect(
+      reservationStatusLabel(
+        'AWAITING_RESOLUTION',
+        incidentReviewStatus: 'PENDING_REVIEW',
+      ),
+      'Pending admin review',
+    );
+  });
+
   test('reservationStatusLabel maps awaiting confirmation', () {
     expect(
       reservationStatusLabel('AWAITING_LEARNER_CONFIRMATION'),
@@ -131,9 +233,92 @@ void main() {
         reservationStatus: 'ACCEPTED',
         fulfillmentMethod: 'DELIVERY',
         deliveryStatus: 'WAITING_FOR_DRIVER',
+        noDriverOverdue: true,
       ),
-      'Waiting for driver',
+      'Driver not assigned in time',
     );
+    expect(
+      learnerDeliverySecondaryStatusLabel(
+        reservationStatus: 'AWAITING_RESOLUTION',
+        fulfillmentMethod: 'DELIVERY',
+        deliveryStatus: 'AWAITING_RESOLUTION',
+        incidentReviewStatus: 'PENDING_REVIEW',
+        pendingIncidentReasonCode: 'NO_DRIVER_AVAILABLE',
+      ),
+      'No driver available',
+    );
+    expect(
+      learnerDeliverySecondaryStatusLabel(
+        reservationStatus: 'AWAITING_RESOLUTION',
+        fulfillmentMethod: 'DELIVERY',
+        activeDeliveryStatus: 'AWAITING_RESOLUTION',
+        incidentReviewStatus: 'PENDING_REVIEW',
+        pendingIncidentReasonCode: 'NO_RESPONSE_AFTER_PICKUP_WINDOW',
+      ),
+      'Driver pickup overdue',
+    );
+    expect(
+      learnerDeliverySecondaryStatusLabel(
+        reservationStatus: 'ACCEPTED',
+        fulfillmentMethod: 'DELIVERY',
+        deliveryStatus: 'DRIVER_ASSIGNED',
+        assignedDriverPickupOverdue: true,
+      ),
+      'Driver pickup overdue',
+    );
+    expect(
+      learnerDeliverySecondaryStatusLabel(
+        reservationStatus: 'ACCEPTED',
+        fulfillmentMethod: 'DELIVERY',
+        deliveryStatus: 'ARRIVED_PICKUP',
+        assignedDriverPickupOverdue: true,
+      ),
+      'Pickup not completed',
+    );
+  });
+
+  test('reservationStatusLabel maps stale pickup admin reconfirm and cancel', () {
+    expect(
+      reservationStatusLabel(
+        'AWAITING_SUPPLIER_CONFIRMATION',
+        fulfillmentMethod: 'DELIVERY',
+        pendingRescheduleReason: 'STALE_PICKUP_ADMIN_REQUEST',
+      ),
+      'Waiting for supplier to choose a new pickup window',
+    );
+    expect(
+      reservationStatusLabel(
+        'EXPIRED',
+        fulfillmentMethod: 'DELIVERY',
+        rejectionReason: 'PICKUP_NOT_COMPLETED',
+      ),
+      'Admin cancelled due to unresolved pickup',
+    );
+  });
+
+  test('learnerReservationStatusChipLabels avoids duplicate admin review chips', () {
+    final reservation = LearnerReservation.fromJson({
+      'id': 'res-no-driver',
+      'status': 'AWAITING_RESOLUTION',
+      'fulfillmentMethod': 'DELIVERY',
+      'incidentReviewStatus': 'PENDING_REVIEW',
+      'pendingIncidentReasonCode': 'NO_DRIVER_AVAILABLE',
+      'quantityRequested': 1,
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'activeDelivery': {'id': 'del-1', 'status': 'AWAITING_RESOLUTION'},
+      'material': {
+        'id': 'mat-1',
+        'title': 'Panels',
+        'materialType': 'Wood',
+        'status': 'RESERVED',
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+
+    final chips = learnerReservationStatusChipLabels(reservation);
+    expect(chips.primary, 'Pending admin review');
+    expect(chips.secondary, 'No driver available');
   });
 
   test('reservationMatchesStatusFilter includes awaiting confirmation in active', () {

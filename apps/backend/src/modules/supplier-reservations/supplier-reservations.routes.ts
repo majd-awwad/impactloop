@@ -21,6 +21,7 @@ import {
   rescheduleSupplierReservationHandler,
   acceptLearnerRescheduleProposalHandler,
   reportSupplierNoDriverHandler,
+  submitNoDriverPickupWindowHandler,
   submitSupplierNoShowReportHandler,
 } from './supplier-reservations.controller.js';
 import {
@@ -33,6 +34,7 @@ import {
   reportSupplierNoDriverSchema,
   rescheduleSupplierReservationSchema,
   reservationIdParamsSchema,
+  submitNoDriverPickupWindowSchema,
   submitNoShowReportSchema,
 } from './supplier-reservations.validation.js';
 
@@ -132,6 +134,15 @@ supplierReservationsRouter.post(
   validate(reservationIdParamsSchema, 'params'),
   validate(markLearnerNoShowSchema),
   asyncHandler(markSupplierLearnerNoShowHandler),
+);
+
+supplierReservationsRouter.post(
+  '/:id/submit-no-driver-pickup-window',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(reservationIdParamsSchema, 'params'),
+  validate(submitNoDriverPickupWindowSchema),
+  asyncHandler(submitNoDriverPickupWindowHandler),
 );
 
 supplierReservationsRouter.post(

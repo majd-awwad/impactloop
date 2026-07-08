@@ -10,6 +10,7 @@ import '../../../learning_hub/application/learning_hub_providers.dart';
 import '../../../learning_hub/domain/learning_projects_result.dart';
 import '../../../learning_hub/domain/models/learning_project.dart';
 import '../../../learning_hub/presentation/theme/learning_project_visuals.dart';
+import '../../../learning_hub/presentation/widgets/project_engagement_strip.dart';
 import 'empty_activity_card.dart';
 import 'home_section_header.dart';
 
@@ -32,7 +33,7 @@ class LearningSpotlightSection extends ConsumerWidget {
           subtitle:
               'Start with project guides built from real reusable materials.',
           action: HomeSectionActionButton(
-            onPressed: () => context.push('/learning'),
+            onPressed: () => context.go('/learning'),
             icon: const Icon(Icons.arrow_forward_rounded),
             label: 'Browse all',
           ),
@@ -54,7 +55,7 @@ class LearningSpotlightSection extends ConsumerWidget {
                 description:
                     'When learning projects are published, featured guides will appear here.',
                 actionLabel: 'Open Learning Hub',
-                onAction: () => context.push('/learning'),
+                onAction: () => context.go('/learning'),
               );
             }
 
@@ -92,7 +93,7 @@ class _LearningSpotlightLoading extends StatelessWidget {
     final palette = MaterialsUiPalette.of(context);
 
     return Container(
-      height: 326,
+      height: 374,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: palette.panelSurface,
@@ -183,7 +184,7 @@ class _LearningSpotlightCard extends StatelessWidget {
         onTap: () => context.push('/learning/${project.id}'),
         borderRadius: AppRadius.lgAll,
         child: SizedBox(
-          height: 326,
+          height: 374,
           child: Container(
             decoration: BoxDecoration(
               color: palette.cardSurface,
@@ -346,6 +347,11 @@ class _LearningSpotlightCard extends StatelessWidget {
                                     '${project.ratingValue.toStringAsFixed(1)} (${project.ratingCount})',
                               ),
                           ],
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        ProjectEngagementStrip(
+                          project: project,
+                          density: ProjectEngagementDensity.compact,
                         ),
                       ],
                     ),
