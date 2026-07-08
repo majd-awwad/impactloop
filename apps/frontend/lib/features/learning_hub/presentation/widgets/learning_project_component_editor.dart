@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
@@ -202,6 +203,8 @@ class _ComponentCardState extends State<_ComponentCard> {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final colors = AppThemeColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final component = widget.component;
     final unitValue = LearningProjectDraftComponent.unitOptions.contains(
       component.unit,
@@ -344,11 +347,20 @@ class _ComponentCardState extends State<_ComponentCard> {
                 ),
                 selected: selected,
                 onSelected: (_) => _emit(component.copyWith(role: role)),
-                selectedColor: palette.lime,
-                checkmarkColor: palette.textPrimary,
-                backgroundColor: palette.cardSurface,
+                selectedColor: colors.primarySoft,
+                checkmarkColor: colors.primary,
+                backgroundColor: colors.cardSurface,
+                labelStyle:
+                    (textTheme.labelMedium ?? AppTextStyles.label(context))
+                        .copyWith(
+                          color: selected
+                              ? colors.primary
+                              : colors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                shape: const StadiumBorder(),
                 side: BorderSide(
-                  color: selected ? palette.lime : palette.borderSubtle,
+                  color: selected ? colors.primary : colors.borderSubtle,
                 ),
               );
             }).toList(),
@@ -385,42 +397,61 @@ class _ComponentCardState extends State<_ComponentCard> {
                 _scheduleEmit(component.copyWith(showAdvanced: expanded));
               },
               children: [
+                const SizedBox(height: AppSpacing.sm),
                 if (widget.materialCategories.isNotEmpty) ...[
-                  AppDropdownField<String>(
-                    label: 'Material category',
-                    value: LearningProjectDraftComponent.materialCategoryDropdownValue(
-                      component.materialCategoryId,
-                    ),
-                    hint: 'Optional',
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: LearningProjectDraftComponent.noMaterialCategoryValue,
-                        child: Text('None'),
-                      ),
-                      for (final category in widget.materialCategories)
-                        DropdownMenuItem<String>(
-                          value: category.id,
-                          child: Text(
-                            LocalizedText(
-                              en: category.nameEn,
-                              ar: category.nameAr.isEmpty
-                                  ? category.nameEn
-                                  : category.nameAr,
-                            ).resolve(context),
+                  Theme(
+                    data: Theme.of(context).copyWith(
+                      inputDecorationTheme: Theme.of(context)
+                          .inputDecorationTheme
+                          .copyWith(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.fieldHorizontal,
+                              vertical: AppSpacing.md,
+                            ),
                           ),
+                    ),
+                    child: AppDropdownField<String>(
+                      label: 'Material category',
+                      value:
+                          LearningProjectDraftComponent.materialCategoryDropdownValue(
+                            component.materialCategoryId,
+                          ),
+                      hint: 'Optional',
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: LearningProjectDraftComponent
+                              .noMaterialCategoryValue,
+                          child: Text('None'),
                         ),
-                    ],
-                    onChanged: (value) {
-                      if (value == null ||
-                          value == LearningProjectDraftComponent.noMaterialCategoryValue) {
-                        _emit(component.copyWith(clearMaterialCategoryId: true));
-                        return;
-                      }
+                        for (final category in widget.materialCategories)
+                          DropdownMenuItem<String>(
+                            value: category.id,
+                            child: Text(
+                              LocalizedText(
+                                en: category.nameEn,
+                                ar: category.nameAr.isEmpty
+                                    ? category.nameEn
+                                    : category.nameAr,
+                              ).resolve(context),
+                            ),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null ||
+                            value ==
+                                LearningProjectDraftComponent
+                                    .noMaterialCategoryValue) {
+                          _emit(
+                            component.copyWith(clearMaterialCategoryId: true),
+                          );
+                          return;
+                        }
 
-                      _emit(component.copyWith(materialCategoryId: value));
-                    },
+                        _emit(component.copyWith(materialCategoryId: value));
+                      },
+                    ),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.md),
                 ],
                 AppTextField(
                   controller: _materialTypeController,
@@ -429,18 +460,26 @@ class _ComponentCardState extends State<_ComponentCard> {
                   onChanged: (value) =>
                       _emit(component.copyWith(materialTypeHint: value)),
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.md),
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final useStackedKeywordInput =
                         !constraints.hasBoundedWidth ||
                         constraints.maxWidth < 420;
-                    final addKeywordButton = ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 96),
+                    final addKeywordButton = SizedBox(
+                      width: 88,
+                      height: AppSpacing.buttonHeight - AppSpacing.sm,
                       child: OutlinedButton(
                         onPressed: _commitKeywordDraft,
                         style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(0, AppSpacing.buttonHeight),
+                          minimumSize: const Size(
+                            0,
+                            AppSpacing.buttonHeight - AppSpacing.sm,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                          ),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                         child: Text(
                           const LocalizedText(
@@ -480,7 +519,7 @@ class _ComponentCardState extends State<_ComponentCard> {
                         Expanded(child: keywordField),
                         const SizedBox(width: AppSpacing.sm),
                         Padding(
-                          padding: const EdgeInsets.only(top: 22),
+                          padding: const EdgeInsets.only(top: AppSpacing.md),
                           child: addKeywordButton,
                         ),
                       ],
