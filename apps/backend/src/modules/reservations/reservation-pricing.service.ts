@@ -404,13 +404,13 @@ export const resolveReservationPricingForCreate = async (
 };
 
 export const mapPricingFields = (reservation: {
-  unitPriceAtReservation: Prisma.Decimal | null;
-  materialSubtotal: Prisma.Decimal | null;
-  deliveryFee: Prisma.Decimal | null;
-  totalAmount: Prisma.Decimal | null;
-  pricingCurrency: string | null;
-  deliveryZone: string | null;
-  deliveryGroupId: string | null;
+  unitPriceAtReservation?: Prisma.Decimal | null;
+  materialSubtotal?: Prisma.Decimal | null;
+  deliveryFee?: Prisma.Decimal | null;
+  totalAmount?: Prisma.Decimal | null;
+  pricingCurrency?: string | null;
+  deliveryZone?: string | null;
+  deliveryGroupId?: string | null;
   quantityRequested: Prisma.Decimal;
 }) => {
   const groupedDelivery =
@@ -437,7 +437,7 @@ export const mapPricingFields = (reservation: {
         : null,
     currency: reservation.pricingCurrency ?? 'NIS',
     deliveryZone: reservation.deliveryZone,
-    deliveryGroupId: reservation.deliveryGroupId,
+    deliveryGroupId: reservation.deliveryGroupId ?? null,
     groupedDelivery,
     quantity: decimalToNumber(reservation.quantityRequested),
   };

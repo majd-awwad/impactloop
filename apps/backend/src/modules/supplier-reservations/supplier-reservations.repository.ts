@@ -101,8 +101,89 @@ export const reservationInclude = {
   },
 } satisfies Prisma.ReservationInclude;
 
+const supplierReservationListScalarSelect = {
+  id: true,
+  status: true,
+  quantityRequested: true,
+  message: true,
+  fulfillmentMethod: true,
+  learnerPreferredPickupWindows: true,
+  learnerPreferredDeliveryWindows: true,
+  deliveryAddressText: true,
+  safeDropoffAllowed: true,
+  deliveryNote: true,
+  createdAt: true,
+  updatedAt: true,
+  pickupWindowStart: true,
+  pickupWindowEnd: true,
+  supplierProposedPickupWindowStart: true,
+  supplierProposedPickupWindowEnd: true,
+  learnerProposedPickupWindowStart: true,
+  learnerProposedPickupWindowEnd: true,
+  pendingRescheduleRequestedBy: true,
+  pendingRescheduleReason: true,
+  pendingRescheduleNote: true,
+  supplierPickupWindowStart: true,
+  supplierPickupWindowEnd: true,
+  confirmedDeliveryWindowStart: true,
+  confirmedDeliveryWindowEnd: true,
+  earliestDeliveryStart: true,
+  schedulingConflictReason: true,
+  supplierNote: true,
+  rejectionReason: true,
+  completedAt: true,
+} satisfies Prisma.ReservationSelect;
+
+const supplierReservationListSelect = {
+  ...supplierReservationListScalarSelect,
+  material: {
+    include: {
+      category: { select: { nameEn: true } },
+      location: true,
+      images: {
+        orderBy: { sortOrder: 'asc' as const },
+      },
+    },
+  },
+  requester: {
+    select: {
+      id: true,
+      displayName: true,
+      profileImageUrl: true,
+    },
+  },
+  deliveries: {
+    select: {
+      id: true,
+      status: true,
+      assignedDriverProfileId: true,
+    },
+    orderBy: { requestedAt: 'desc' as const },
+    take: 1,
+  },
+  _count: {
+    select: {
+      deliveries: true,
+    },
+  },
+  noShowReports: {
+    select: {
+      id: true,
+      targetUserId: true,
+      targetRole: true,
+      status: true,
+      reasonCode: true,
+      createdAt: true,
+    },
+  },
+} satisfies Prisma.ReservationSelect;
+
 export type SupplierReservationRecord = Prisma.ReservationGetPayload<{
   include: typeof reservationInclude;
+}>;
+
+export type SupplierReservationListRecord = Prisma.ReservationGetPayload<{
+  select: typeof supplierReservationListSelect;
 }>;
 
 export const supplierCanCompleteReservation = (input: {
@@ -134,7 +215,7 @@ export const findSupplierReservations = async (
       ownerId,
       ...(statuses?.length ? { status: { in: statuses } } : {}),
     },
-    include: reservationInclude,
+    select: supplierReservationListSelect,
     orderBy: { createdAt: 'desc' },
   });
 };
