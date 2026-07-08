@@ -296,7 +296,7 @@ class _RequestDeliveryDialogState
                       const SizedBox(height: AppSpacing.sm),
                       if (_inputMode == _DropoffInputMode.saved)
                         DropdownButtonFormField<String>(
-                          value: selectedId,
+                          initialValue: selectedId,
                           decoration: const InputDecoration(
                             labelText: 'Saved dropoff address',
                           ),

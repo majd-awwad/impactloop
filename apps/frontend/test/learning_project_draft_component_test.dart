@@ -46,7 +46,7 @@ void main() {
     test('resolvedKeywords includes pending keyword draft on save', () {
       const component = LearningProjectDraftComponent(
         name: 'LED',
-        keywords: const ['diode'],
+        keywords: ['diode'],
         keywordDraft: 'light',
       );
 

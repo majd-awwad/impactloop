@@ -333,7 +333,7 @@ class _AdminLearningProjectComponentEditorDialogState
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _componentRole,
+                  initialValue: _componentRole,
                   isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Role',
@@ -379,7 +379,7 @@ class _AdminLearningProjectComponentEditorDialogState
                     );
 
                     return DropdownButtonFormField<String?>(
-                      value: selectedCategoryId,
+                      initialValue: selectedCategoryId,
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Material category',

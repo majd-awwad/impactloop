@@ -353,10 +353,6 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     return null;
   }
 
-  List<Map<String, dynamic>> _parseSteps(String raw) {
-    return LearningProjectStepText.parseStepsFromText(raw);
-  }
-
   List<Map<String, dynamic>> _parseLinks(String raw) {
     return _nonEmptyLines(raw).map((url) => {'url': url}).toList();
   }

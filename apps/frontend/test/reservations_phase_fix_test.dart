@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/features/reservations/data/models/reservation_preferred_window.dart';
 import 'package:frontend/features/supplier_portal/data/models/supplier_incoming_request.dart';
 
 void main() {
@@ -18,9 +17,6 @@ void main() {
   });
 
   test('SupplierPickupWindow sends selected learner preferred delivery window', () {
-    final start = DateTime.utc(2026, 6, 10, 8);
-    final end = DateTime.utc(2026, 6, 10, 10);
-
     final payload = SupplierPickupWindow(
       start: DateTime.utc(2026, 6, 9, 8),
       end: DateTime.utc(2026, 6, 9, 9),
