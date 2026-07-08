@@ -29,7 +29,7 @@ class AppPrimaryButton extends StatelessWidget {
                 width: AppSpacing.lg,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: colors.textOnPrimary,
+                  color: colors.primary,
                 ),
               )
             : Text(label),

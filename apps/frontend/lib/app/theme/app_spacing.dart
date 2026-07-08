@@ -7,6 +7,12 @@ abstract final class AppSpacing {
   static const double xl = 32;
   static const double xxl = 48;
 
+  static const double fieldHorizontal = 16;
+  static const double fieldVertical = 14;
+  static const double buttonHeight = 50;
+  static const double cardPadding = 20;
+  static const double sectionGap = 28;
+
   static const double authLayoutBreakpoint = 700;
 
   static const double authFormMaxWidth = 440;
