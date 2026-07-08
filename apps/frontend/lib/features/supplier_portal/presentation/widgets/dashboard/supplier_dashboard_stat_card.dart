@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../theme/supplier_theme_extension.dart';
 import 'supplier_dashboard_colors.dart';
@@ -25,6 +26,8 @@ class SupplierDashboardStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final textTheme = Theme.of(context).textTheme;
+    final accent = colors.accent;
 
     return Container(
       height: 164,
@@ -38,11 +41,11 @@ class SupplierDashboardStatCard extends StatelessWidget {
           Container(
             height: 3,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: AppRadius.pillAll,
               gradient: LinearGradient(
                 colors: [
-                  accentColor,
-                  accentColor.withValues(alpha: 0.35),
+                  accent,
+                  accent.withValues(alpha: 0.35),
                 ],
               ),
             ),
@@ -55,13 +58,13 @@ class SupplierDashboardStatCard extends StatelessWidget {
                 height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
+                  color: colors.accentSoft,
+                  borderRadius: AppRadius.mdAll,
                   border: Border.all(
-                    color: accentColor.withValues(alpha: 0.28),
+                    color: accent.withValues(alpha: 0.28),
                   ),
                 ),
-                child: Icon(icon, color: accentColor, size: 20),
+                child: Icon(icon, color: accent, size: 20),
               ),
               const Spacer(),
               if (highlight)
@@ -71,14 +74,13 @@ class SupplierDashboardStatCard extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(999),
+                    color: colors.accentSoft,
+                    borderRadius: AppRadius.pillAll,
                   ),
                   child: Text(
                     context.s.statActionBadge,
-                    style: context.supplierChip().copyWith(
-                      color: accentColor,
-                      fontSize: 10,
+                    style: textTheme.labelSmall?.copyWith(
+                      color: accent,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -88,15 +90,16 @@ class SupplierDashboardStatCard extends StatelessWidget {
           const Spacer(),
           Text(
             value,
-            style: context.supplierTitle().copyWith(
+            style: textTheme.headlineMedium?.copyWith(
+              color: colors.textPrimary,
               fontSize: 28,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: context.supplierLabel().copyWith(
+            style: textTheme.labelLarge?.copyWith(
               color: colors.textPrimary,
               fontWeight: FontWeight.w600,
             ),
@@ -105,8 +108,7 @@ class SupplierDashboardStatCard extends StatelessWidget {
             helperText,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: context.supplierBody().copyWith(
-              fontSize: 12,
+            style: textTheme.bodySmall?.copyWith(
               color: colors.textSecondary,
             ),
           ),
@@ -221,43 +223,38 @@ class SupplierDashboardSecondaryMetricsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final textTheme = Theme.of(context).textTheme;
 
     final metrics = [
       _SecondaryMetric(
         label: context.s.statTotalMaterials,
         value: '$totalMaterials',
         icon: Icons.layers_outlined,
-        accentColor: SupplierDashboardColors.totalMaterials,
       ),
       _SecondaryMetric(
         label: context.s.statAvailableMaterials,
         value: '$availableMaterials',
         icon: Icons.check_circle_outline,
-        accentColor: SupplierDashboardColors.available,
       ),
       _SecondaryMetric(
         label: context.s.statReservedMaterials,
         value: '$reservedMaterials',
         icon: Icons.lock_outline,
-        accentColor: SupplierDashboardColors.reserved,
       ),
       _SecondaryMetric(
         label: context.s.statTotalViews,
         value: '$totalViews',
         icon: Icons.visibility_outlined,
-        accentColor: SupplierDashboardColors.views,
       ),
       _SecondaryMetric(
         label: context.s.statTotalLikes,
         value: '$totalLikes',
         icon: Icons.favorite_outline,
-        accentColor: SupplierDashboardColors.likes,
       ),
       _SecondaryMetric(
         label: context.s.statFollowers,
         value: '$followersCount',
         icon: Icons.people_outline,
-        accentColor: SupplierDashboardColors.followers,
       ),
     ];
 
@@ -272,40 +269,33 @@ class SupplierDashboardSecondaryMetricsRow extends StatelessWidget {
                 vertical: 8,
               ),
               decoration: BoxDecoration(
-                color: colors.surfaceSolid.withValues(
-                  alpha: colors.isDark ? 0.72 : 1,
-                ),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: colors.border.withValues(
-                    alpha: colors.isDark ? 0.35 : 0.55,
-                  ),
-                ),
+                color: colors.surfaceSolid,
+                borderRadius: AppRadius.mdAll,
+                border: Border.all(color: colors.border),
                 boxShadow: [
                   BoxShadow(
-                    color: colors.cardShadow,
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+                    color: colors.cardShadow.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(metric.icon, size: 14, color: metric.accentColor),
+                  Icon(metric.icon, size: 14, color: colors.accent),
                   const SizedBox(width: 6),
                   Text(
                     metric.value,
-                    style: context.supplierLabel().copyWith(
-                      fontSize: 13,
+                    style: textTheme.labelMedium?.copyWith(
+                      color: colors.textPrimary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     metric.label,
-                    style: context.supplierBody().copyWith(
-                      fontSize: 11,
+                    style: textTheme.labelSmall?.copyWith(
                       color: colors.textSecondary,
                     ),
                   ),
@@ -323,11 +313,9 @@ class _SecondaryMetric {
     required this.label,
     required this.value,
     required this.icon,
-    required this.accentColor,
   });
 
   final String label;
   final String value;
   final IconData icon;
-  final Color accentColor;
 }

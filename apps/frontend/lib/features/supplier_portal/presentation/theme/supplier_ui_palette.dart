@@ -69,7 +69,35 @@ class SupplierUiPalette {
     final isDark =
         Theme.of(context).brightness == Brightness.dark ||
         appColors.pageBackground == AppThemeColors.dark.pageBackground;
-    return isDark ? dark : light;
+
+    return SupplierUiPalette(
+      background: appColors.pageBackground,
+      landingBackground: appColors.pageBackground,
+      backgroundElevated: appColors.surfaceElevated,
+      surface: appColors.surface,
+      surfaceSolid: appColors.cardSurface,
+      navBar: appColors.surfaceElevated,
+      accent: appColors.primary,
+      accentMuted: appColors.textSecondary,
+      accentSoft: appColors.primarySoft,
+      border: appColors.borderSubtle,
+      borderFocused: appColors.primary,
+      textPrimary: appColors.textPrimary,
+      textSecondary: appColors.textSecondary,
+      textMuted: appColors.textMuted,
+      textDisabled: appColors.textMuted.withValues(alpha: 0.68),
+      textOnAccent: appColors.textOnPrimary,
+      chipSelected: appColors.primarySoft,
+      chipUnselected: appColors.surfaceMuted,
+      error: appColors.danger,
+      link: appColors.primary,
+      blueAccent: appColors.info,
+      amberAccent: appColors.warning,
+      redAccent: appColors.danger,
+      purpleAccent: appColors.textMuted,
+      cardShadow: appColors.shadow,
+      isDark: isDark,
+    );
   }
 
   static const SupplierUiPalette dark = SupplierUiPalette(

@@ -19,6 +19,7 @@ class SupplierDashboardChartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       width: double.infinity,
@@ -27,13 +28,18 @@ class SupplierDashboardChartCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: context.supplierSectionTitle()),
+          Text(
+            title,
+            style: textTheme.titleMedium?.copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             subtitle,
-            style: context.supplierBody().copyWith(
+            style: textTheme.bodyMedium?.copyWith(
               color: colors.textSecondary,
-              fontSize: 13,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -57,6 +63,7 @@ class SupplierDashboardChartEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       width: double.infinity,
@@ -65,11 +72,9 @@ class SupplierDashboardChartEmptyState extends StatelessWidget {
         vertical: AppSpacing.xl,
       ),
       decoration: BoxDecoration(
-        color: colors.backgroundElevated.withValues(alpha: 0.45),
+        color: colors.backgroundElevated,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(
-          color: colors.border.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         children: [
@@ -78,7 +83,7 @@ class SupplierDashboardChartEmptyState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: context.supplierBody().copyWith(
+            style: textTheme.bodyMedium?.copyWith(
               color: colors.textSecondary,
             ),
           ),
@@ -96,6 +101,7 @@ class SupplierDashboardChartLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final textTheme = Theme.of(context).textTheme;
 
     return Wrap(
       spacing: AppSpacing.md,
@@ -110,14 +116,13 @@ class SupplierDashboardChartLegend extends StatelessWidget {
                   height: 10,
                   decoration: BoxDecoration(
                     color: item.color,
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: AppRadius.smAll,
                   ),
                 ),
                 const SizedBox(width: 6),
                 Text(
                   '${item.label} (${item.value})',
-                  style: context.supplierBody().copyWith(
-                    fontSize: 12,
+                  style: textTheme.labelSmall?.copyWith(
                     color: colors.textSecondary,
                   ),
                 ),
