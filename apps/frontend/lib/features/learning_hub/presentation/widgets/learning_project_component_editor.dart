@@ -430,25 +430,18 @@ class _ComponentCardState extends State<_ComponentCard> {
                       _emit(component.copyWith(materialTypeHint: value)),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: AppTextField(
-                        controller: _keywordController,
-                        label: 'Add keyword',
-                        hint: 'hc-sr04',
-                        textInputAction: TextInputAction.done,
-                        onChanged: (value) =>
-                            _emit(component.copyWith(keywordDraft: value)),
-                        onFieldSubmitted: (_) => _commitKeywordDraft(),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 22),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final useStackedKeywordInput =
+                        !constraints.hasBoundedWidth ||
+                        constraints.maxWidth < 420;
+                    final addKeywordButton = ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 96),
                       child: OutlinedButton(
                         onPressed: _commitKeywordDraft,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, AppSpacing.buttonHeight),
+                        ),
                         child: Text(
                           const LocalizedText(
                             en: 'Add',
@@ -456,8 +449,43 @@ class _ComponentCardState extends State<_ComponentCard> {
                           ).resolve(context),
                         ),
                       ),
-                    ),
-                  ],
+                    );
+                    final keywordField = AppTextField(
+                      controller: _keywordController,
+                      label: 'Add keyword',
+                      hint: 'hc-sr04',
+                      textInputAction: TextInputAction.done,
+                      onChanged: (value) =>
+                          _emit(component.copyWith(keywordDraft: value)),
+                      onFieldSubmitted: (_) => _commitKeywordDraft(),
+                    );
+
+                    if (useStackedKeywordInput) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          keywordField,
+                          const SizedBox(height: AppSpacing.sm),
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: addKeywordButton,
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: keywordField),
+                        const SizedBox(width: AppSpacing.sm),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 22),
+                          child: addKeywordButton,
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 if (component.keywords.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.sm),

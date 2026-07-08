@@ -98,13 +98,13 @@ class _WelcomeHero extends StatelessWidget {
     return [
       _HeroActionButton(
         compact: compact,
-        maxWidth: 352,
+        maxWidth: 220,
         child: FilledButton.icon(
           onPressed: () => context.go('/materials'),
           style: FilledButton.styleFrom(
             backgroundColor: palette.mint,
             foregroundColor: palette.ctaForeground,
-            minimumSize: const Size(0, 52),
+            minimumSize: const Size(0, 48),
             padding: const EdgeInsetsDirectional.symmetric(
               horizontal: AppSpacing.lg,
               vertical: AppSpacing.sm,
@@ -117,14 +117,14 @@ class _WelcomeHero extends StatelessWidget {
       ),
       _HeroActionButton(
         compact: compact,
-        maxWidth: 300,
+        maxWidth: 248,
         child: OutlinedButton.icon(
           onPressed: () => context.go('/learning'),
           style: OutlinedButton.styleFrom(
             foregroundColor: palette.textPrimary,
             backgroundColor: palette.cardSurface.withValues(alpha: 0.7),
             side: BorderSide(color: palette.borderStrong),
-            minimumSize: const Size(0, 52),
+            minimumSize: const Size(0, 48),
             padding: const EdgeInsetsDirectional.symmetric(
               horizontal: AppSpacing.lg,
               vertical: AppSpacing.sm,
@@ -285,7 +285,7 @@ class _HeroActionButton extends StatelessWidget {
       return SizedBox(width: double.infinity, height: 52, child: child);
     }
 
-    return SizedBox(width: maxWidth, height: 52, child: child);
+    return SizedBox(width: maxWidth, height: 48, child: child);
   }
 }
 

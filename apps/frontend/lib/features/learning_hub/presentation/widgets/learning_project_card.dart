@@ -19,7 +19,7 @@ class LearningProjectCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return SizedBox(
-      height: 456,
+      height: 412,
       child: InkWell(
         borderRadius: AppRadius.lgAll,
         onTap: () => context.push('/learning/${project.id}'),
@@ -62,7 +62,7 @@ class LearningProjectCard extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       SizedBox(
-                        height: 36,
+                        height: 30,
                         child: Align(
                           alignment: AlignmentDirectional.centerStart,
                           child: SingleChildScrollView(
@@ -91,9 +91,9 @@ class LearningProjectCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(height: AppSpacing.xs),
                       SizedBox(
-                        height: 36,
+                        height: 34,
                         child: ProjectEngagementStrip(
                           project: project,
                           density: ProjectEngagementDensity.compact,
@@ -122,7 +122,7 @@ class _ProjectCardHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return SizedBox(
-      height: 190,
+      height: 180,
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: const BorderRadiusDirectional.only(

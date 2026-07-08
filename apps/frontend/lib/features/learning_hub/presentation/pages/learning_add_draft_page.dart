@@ -1061,16 +1061,16 @@ class _LearningChoiceGroup extends StatelessWidget {
               label: Text(option.label.resolve(context)),
               selected: selected,
               onSelected: (_) => onSelected(option.value),
-              selectedColor: palette.lime,
-              checkmarkColor: AppColorTokens.emeraldDeep,
+              selectedColor: palette.limeSoft,
+              checkmarkColor: palette.lime,
               backgroundColor: palette.cardSurfaceAlt,
               side: BorderSide(
-                color: selected ? palette.lime : palette.borderSubtle,
+                color: selected
+                    ? palette.lime.withValues(alpha: 0.42)
+                    : palette.borderSubtle,
               ),
               labelStyle: AppTextStyles.label(context).copyWith(
-                color: selected
-                    ? AppColorTokens.emeraldDeep
-                    : palette.textPrimary,
+                color: selected ? palette.lime : palette.textPrimary,
                 fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
               ),
             );

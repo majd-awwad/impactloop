@@ -922,7 +922,7 @@ class _LearningPaginationControls extends StatelessWidget {
       alignment: AlignmentDirectional.center,
       child: Container(
         padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.sm,
+          horizontal: AppSpacing.xs,
           vertical: AppSpacing.xs,
         ),
         decoration: BoxDecoration(
@@ -955,32 +955,35 @@ class _LearningPaginationControls extends StatelessWidget {
             );
 
             if (compact) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  pageLabel,
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    children: [
-                      Expanded(child: previous),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(child: next),
-                    ],
-                  ),
-                ],
+              return ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    pageLabel,
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      children: [
+                        Expanded(child: previous),
+                        const SizedBox(width: AppSpacing.xs),
+                        Expanded(child: next),
+                      ],
+                    ),
+                  ],
+                ),
               );
             }
 
             return ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
+              constraints: const BoxConstraints(maxWidth: 348),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(width: 126, child: previous),
-                  const SizedBox(width: AppSpacing.md),
+                  SizedBox(width: 102, child: previous),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(child: pageLabel),
-                  const SizedBox(width: AppSpacing.md),
-                  SizedBox(width: 126, child: next),
+                  const SizedBox(width: AppSpacing.sm),
+                  SizedBox(width: 102, child: next),
                 ],
               ),
             );
@@ -1020,10 +1023,10 @@ class _PaginationButton extends StatelessWidget {
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.xs,
         ),
-        minimumSize: const Size(0, 36),
+        minimumSize: const Size(0, 32),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
-      icon: Icon(icon, size: 18),
+      icon: Icon(icon, size: 16),
       label: Text(label.resolve(context)),
     );
   }
@@ -1177,55 +1180,103 @@ class _SubmitProjectCallout extends StatelessWidget {
               ),
             ],
           );
+          final mySubmissionsButton = onMySubmissions == null
+              ? null
+              : _CalloutActionButton(
+                  compact: compact,
+                  maxWidth: 176,
+                  child: OutlinedButton.icon(
+                    onPressed: onMySubmissions,
+                    icon: const Icon(Icons.assignment_outlined),
+                    label: Text(
+                      const LocalizedText(
+                        en: 'My submissions',
+                        ar: 'إرسالاتي',
+                      ).resolve(context),
+                    ),
+                  ),
+                );
+          final addDraftButton = _CalloutActionButton(
+            compact: compact,
+            maxWidth: 196,
+            child: FilledButton.icon(
+              onPressed: onSubmitProject,
+              icon: const Icon(Icons.edit_note_rounded),
+              label: Text(
+                const LocalizedText(
+                  en: 'Add project draft',
+                  ar: 'إضافة مسودة مشروع',
+                ).resolve(context),
+              ),
+            ),
+          );
+          final actionChildren = <Widget>[];
+          if (mySubmissionsButton != null) {
+            actionChildren.add(mySubmissionsButton);
+          }
+          actionChildren.add(addDraftButton);
+
+          if (compact) {
+            final compactChildren = <Widget>[
+              copy,
+              const SizedBox(height: AppSpacing.md),
+            ];
+            if (mySubmissionsButton != null) {
+              compactChildren.add(mySubmissionsButton);
+              compactChildren.add(const SizedBox(height: AppSpacing.sm));
+            }
+            compactChildren.add(addDraftButton);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: compactChildren,
+            );
+          }
+
           final actions = Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
-            alignment: compact ? WrapAlignment.start : WrapAlignment.end,
-            children: [
-              if (onMySubmissions != null)
-                OutlinedButton.icon(
-                  onPressed: onMySubmissions,
-                  icon: const Icon(Icons.assignment_outlined),
-                  label: Text(
-                    const LocalizedText(
-                      en: 'My submissions',
-                      ar: 'إرسالاتي',
-                    ).resolve(context),
-                  ),
-                ),
-              FilledButton.icon(
-                onPressed: onSubmitProject,
-                icon: const Icon(Icons.edit_note_rounded),
-                label: Text(
-                  const LocalizedText(
-                    en: 'Add project draft',
-                    ar: 'إضافة مسودة مشروع',
-                  ).resolve(context),
-                ),
-              ),
-            ],
+            alignment: WrapAlignment.end,
+            children: actionChildren,
           );
-
-          if (compact) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                copy,
-                const SizedBox(height: AppSpacing.md),
-                actions,
-              ],
-            );
-          }
 
           return Row(
             children: [
               Expanded(child: copy),
               const SizedBox(width: AppSpacing.lg),
-              Flexible(child: actions),
+              Flexible(
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 392),
+                    child: actions,
+                  ),
+                ),
+              ),
             ],
           );
         },
       ),
+    );
+  }
+}
+
+class _CalloutActionButton extends StatelessWidget {
+  const _CalloutActionButton({
+    required this.compact,
+    required this.maxWidth,
+    required this.child,
+  });
+
+  final bool compact;
+  final double maxWidth;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: compact ? double.infinity : maxWidth,
+      child: child,
     );
   }
 }
