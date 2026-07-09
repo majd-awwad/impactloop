@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../theme/supplier_theme_extension.dart';
-import 'supplier_my_materials_colors.dart';
 import 'supplier_responsive_chip_row.dart';
 
 enum SupplierMaterialStatusFilter {
@@ -41,18 +40,12 @@ extension SupplierMaterialStatusFilterX on SupplierMaterialStatusFilter {
       };
 
   Color accentColor(BuildContext context) => switch (this) {
-        SupplierMaterialStatusFilter.all =>
-          SupplierMyMaterialsColors.statTotal(context),
-        SupplierMaterialStatusFilter.available =>
-          SupplierMyMaterialsColors.statAvailable(context),
-        SupplierMaterialStatusFilter.pending =>
-          SupplierMyMaterialsColors.statPending(context),
-        SupplierMaterialStatusFilter.reserved =>
-          SupplierMyMaterialsColors.statReserved(context),
-        SupplierMaterialStatusFilter.reused =>
-          SupplierMyMaterialsColors.statReused(context),
-        SupplierMaterialStatusFilter.unavailable =>
-          SupplierMyMaterialsColors.statUnavailable(context),
+        SupplierMaterialStatusFilter.all => context.supplierColors.accent,
+        SupplierMaterialStatusFilter.available => context.supplierColors.accent,
+        SupplierMaterialStatusFilter.pending => context.supplierColors.accent,
+        SupplierMaterialStatusFilter.reserved => context.supplierColors.accent,
+        SupplierMaterialStatusFilter.reused => context.supplierColors.accent,
+        SupplierMaterialStatusFilter.unavailable => context.supplierColors.accent,
       };
 }
 
@@ -86,12 +79,9 @@ extension SupplierMaterialPriceFilterX on SupplierMaterialPriceFilter {
       };
 
   Color accentColor(BuildContext context) => switch (this) {
-        SupplierMaterialPriceFilter.all =>
-          SupplierMyMaterialsColors.statTotal(context),
-        SupplierMaterialPriceFilter.free =>
-          SupplierMyMaterialsColors.statAvailable(context),
-        SupplierMaterialPriceFilter.paid =>
-          SupplierMyMaterialsColors.statReserved(context),
+        SupplierMaterialPriceFilter.all => context.supplierColors.accent,
+        SupplierMaterialPriceFilter.free => context.supplierColors.accent,
+        SupplierMaterialPriceFilter.paid => context.supplierColors.accent,
       };
 }
 
@@ -130,7 +120,6 @@ class SupplierMaterialFilterChips extends StatelessWidget {
                 (filter) => _FilterChip(
                   label: filter.label(l),
                   selected: statusFilter == filter,
-                  accent: filter.accentColor(context),
                   onTap: () => onStatusSelected(filter),
                 ),
               )
@@ -151,7 +140,6 @@ class SupplierMaterialFilterChips extends StatelessWidget {
                 (filter) => _FilterChip(
                   label: filter.label(l),
                   selected: priceFilter == filter,
-                  accent: filter.accentColor(context),
                   onTap: () => onPriceSelected(filter),
                 ),
               )
@@ -166,17 +154,18 @@ class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
     required this.selected,
-    required this.accent,
     required this.onTap,
   });
 
   final String label;
   final bool selected;
-  final Color accent;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final textTheme = Theme.of(context).textTheme;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -185,45 +174,24 @@ class _FilterChip extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: 14,
-            vertical: 8,
+            horizontal: AppSpacing.md - AppSpacing.xs,
+            vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: selected
-                ? SupplierMyMaterialsColors.chipSelectedBackground(
-                    context,
-                    accent,
-                  )
-                : SupplierMyMaterialsColors.chipUnselectedBackground(
-                    context,
-                    accent,
-                  ),
+            color: selected ? colors.accentSoft : colors.chipUnselected,
             borderRadius: AppRadius.pillAll,
             border: Border.all(
               color: selected
-                  ? SupplierMyMaterialsColors.chipSelectedBorder(
-                      context,
-                      accent,
-                    )
-                  : SupplierMyMaterialsColors.chipUnselectedBorder(
-                      context,
-                      accent,
-                    ),
-              width: selected ? 1.5 : 1,
+                  ? colors.accent.withValues(alpha: 0.34)
+                  : colors.border,
             ),
           ),
           child: Text(
             label,
             softWrap: false,
-            style: context.supplierBody().copyWith(
-              color: selected
-                  ? SupplierMyMaterialsColors.chipSelectedText(context, accent)
-                  : SupplierMyMaterialsColors.chipUnselectedText(
-                      context,
-                      accent,
-                    ),
+            style: textTheme.labelMedium?.copyWith(
+              color: selected ? colors.accent : colors.textSecondary,
               fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              fontSize: 13,
             ),
           ),
         ),

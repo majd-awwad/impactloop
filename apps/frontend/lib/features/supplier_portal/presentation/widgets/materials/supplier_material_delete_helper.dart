@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../app/theme/app_radius.dart';
+import '../../../../../app/theme/app_spacing.dart';
+import '../../../../../app/theme/app_theme_colors.dart';
 import '../../../../../app/router/navigation_extensions.dart';
 import '../../../../../core/errors/api_exception.dart';
 import '../../../application/supplier_my_materials_providers.dart';
@@ -19,22 +22,49 @@ Future<bool> showSupplierDeleteMaterialDialog(
   final result = await showDialog<bool>(
     context: context,
     builder: (dialogContext) {
-      final colors = dialogContext.supplierColors;
+      final colors = AppThemeColors.of(dialogContext);
+      final textTheme = Theme.of(dialogContext).textTheme;
 
       return AlertDialog(
-        backgroundColor: colors.surfaceSolid,
-        title: Text(title, style: dialogContext.supplierSectionTitle()),
-        content: Text(body, style: dialogContext.supplierBody()),
+        backgroundColor: colors.cardSurface,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+        title: Text(
+          title,
+          style: textTheme.titleMedium?.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          body,
+          style: textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
+        ),
+        actionsPadding: const EdgeInsetsDirectional.fromSTEB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
+            style: TextButton.styleFrom(
+              foregroundColor: colors.textSecondary,
+              textStyle: textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             child: Text(cancelLabel),
           ),
           OutlinedButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: OutlinedButton.styleFrom(
-              foregroundColor: colors.error,
-              side: BorderSide(color: colors.error),
+              foregroundColor: colors.danger,
+              side: BorderSide(color: colors.danger.withValues(alpha: 0.55)),
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+              textStyle: textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             child: Text(confirmLabel),
           ),

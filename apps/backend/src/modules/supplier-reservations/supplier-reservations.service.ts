@@ -228,15 +228,14 @@ const mapNoShowReportSummary = (
 };
 
 export const mapSupplierReservation = (
-  reservation: supplierReservationsRepository.SupplierReservationRecord,
+  reservation: supplierReservationsRepository.SupplierReservationListRecord,
   latestMessage?: ReturnType<typeof mapReservationMessage> | null,
 ) => {
   const directDelivery = reservation.deliveries[0] ?? null;
-  const groupDelivery = reservation.deliveryGroup?.delivery ?? null;
-  const latestDelivery = directDelivery ?? groupDelivery;
+  const latestDelivery = directDelivery;
   const hasDelivery = latestDelivery != null;
   const deliveryCount = hasDelivery ? 1 : 0;
-  const groupItemCount = reservation.deliveryGroup?.reservations.length ?? 0;
+  const groupItemCount = 0;
   const followUp = resolveReservationFollowUp({
     status: reservation.status,
     pickupWindowStart: reservation.pickupWindowStart,
@@ -338,13 +337,11 @@ export const mapSupplierReservation = (
           status: latestDelivery.status,
         }
       : null,
-    deliveryGroupId: reservation.deliveryGroupId,
-    groupedDelivery: reservation.deliveryGroupId != null,
+    deliveryGroupId: null,
+    groupedDelivery: false,
     groupItemCount: groupItemCount > 0 ? groupItemCount : null,
     combinedDeliveryLabel:
-      reservation.deliveryGroupId != null && groupItemCount > 0
-        ? 'Combined delivery'
-        : null,
+      groupItemCount > 0 ? 'Combined delivery' : null,
     supplierHandoverCode:
       reservation.status === 'ACCEPTED' &&
       reservation.fulfillmentMethod === 'DELIVERY' &&

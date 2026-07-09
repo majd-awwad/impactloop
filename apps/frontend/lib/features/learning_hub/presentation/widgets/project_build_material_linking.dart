@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../domain/models/project_build.dart';
 import '../../../../shared/models/localized_text.dart';
@@ -133,6 +133,7 @@ class _ProjectBuildMaterialCandidatesSheetState
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final componentName = widget.item.component.name.resolve(context);
 
     return DraggableScrollableSheet(
@@ -144,7 +145,9 @@ class _ProjectBuildMaterialCandidatesSheetState
         return Container(
           decoration: BoxDecoration(
             color: palette.pageBackground,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.lg),
+            ),
             border: Border.all(color: palette.borderSubtle),
           ),
           child: Column(
@@ -173,17 +176,19 @@ class _ProjectBuildMaterialCandidatesSheetState
                   children: [
                     Text(
                       'Possible options',
-                      style: AppTextStyles.title(
-                        context,
-                      ).copyWith(color: palette.textPrimary),
+                      style: textTheme.titleLarge?.copyWith(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       'Platform materials that may work for "$componentName". '
                       'These are suggestions, not perfect matches.',
-                      style: AppTextStyles.body(
-                        context,
-                      ).copyWith(color: palette.textSecondary, height: 1.4),
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: palette.textSecondary,
+                        height: 1.45,
+                      ),
                     ),
                   ],
                 ),
@@ -270,9 +275,11 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final colors = AppThemeColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final borderColor = isReadyForBuild
-        ? palette.lime.withValues(alpha: 0.55)
-        : const Color(0xFF4A5F78);
+        ? palette.lime.withValues(alpha: 0.42)
+        : palette.borderSubtle;
 
     return Container(
       width: double.infinity,
@@ -295,7 +302,7 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
               Text(
                 'Linked option',
-                style: AppTextStyles.label(context).copyWith(
+                style: textTheme.labelLarge?.copyWith(
                   color: palette.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
@@ -305,16 +312,17 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             material.title,
-            style: AppTextStyles.subtitle(
-              context,
-            ).copyWith(color: palette.textPrimary),
+            style: textTheme.titleMedium?.copyWith(
+              color: palette.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             '${material.supplierName} · ${material.locationLabel} · ${material.priceLabel}',
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: palette.textSecondary),
+            style: textTheme.bodyMedium?.copyWith(
+              color: palette.textSecondary,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
@@ -341,8 +349,8 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               material.availabilityWarning!,
-              style: AppTextStyles.body(context).copyWith(
-                color: Colors.amber.shade900,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.warningText,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -351,9 +359,9 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               linkedReservation!.statusLabel,
-              style: AppTextStyles.body(context).copyWith(
+              style: textTheme.bodyMedium?.copyWith(
                 color: linkedReservation!.needsAction
-                    ? Colors.amber.shade900
+                    ? colors.warningText
                     : palette.textSecondary,
               ),
             ),
@@ -363,9 +371,9 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
             isReadyForBuild
                 ? readinessLabel
                 : 'Material selected — not ready yet. Reserve or acquire this material before using it in your build.',
-            style: AppTextStyles.body(context).copyWith(
-              color: isReadyForBuild ? palette.limeSoft : palette.textSecondary,
-              height: 1.4,
+            style: textTheme.bodyMedium?.copyWith(
+              color: isReadyForBuild ? palette.lime : palette.textSecondary,
+              height: 1.45,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -424,6 +432,7 @@ class _CandidateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -446,23 +455,25 @@ class _CandidateCard extends StatelessWidget {
                   children: [
                     Text(
                       candidate.title,
-                      style: AppTextStyles.subtitle(
-                        context,
-                      ).copyWith(color: palette.textPrimary),
+                      style: textTheme.titleMedium?.copyWith(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       '${candidate.supplierName} · ${candidate.locationLabel}',
-                      style: AppTextStyles.body(
-                        context,
-                      ).copyWith(color: palette.textSecondary),
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: palette.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       '${candidate.priceLabel} · ${_formatCondition(candidate.condition)}',
-                      style: AppTextStyles.label(
-                        context,
-                      ).copyWith(color: palette.textPrimary),
+                      style: textTheme.labelMedium?.copyWith(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ],
                 ),
@@ -479,7 +490,7 @@ class _CandidateCard extends StatelessWidget {
                     (hint) => Chip(
                       label: Text(hint),
                       visualDensity: VisualDensity.compact,
-                      backgroundColor: palette.mutedChip,
+                      backgroundColor: palette.cardSurfaceAlt,
                       side: BorderSide(color: palette.borderSubtle),
                     ),
                   )
@@ -556,6 +567,7 @@ class _InfoChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
@@ -574,9 +586,10 @@ class _InfoChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.textSecondary),
+            style: textTheme.labelSmall?.copyWith(
+              color: palette.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -596,6 +609,7 @@ class _CandidatesEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
@@ -615,9 +629,10 @@ class _CandidatesEmptyState extends StatelessWidget {
           Text(
             'No available platform materials found for this component yet.',
             textAlign: TextAlign.center,
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: palette.textSecondary, height: 1.45),
+            style: textTheme.bodyMedium?.copyWith(
+              color: palette.textSecondary,
+              height: 1.45,
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
           OutlinedButton.icon(

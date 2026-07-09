@@ -30,6 +30,8 @@ Current Flutter widget reuse inventory. Prefer documented shared/app widgets bef
 
 Theme details are documented in [07-theme-system.md](../07-theme-system.md). State/provider placement is documented in [state-management.md](state-management.md).
 
+New reusable UI should prefer `Theme.of(context).textTheme`, `Theme.of(context).colorScheme` where appropriate, `AppThemeColors.of(context)`, `AppSpacing`, and `AppRadius` before local styling. Raw `Color(0x...)` values do not belong in presentation widgets; add raw values only to `app_color_tokens.dart`.
+
 ## Shared Widgets
 
 `apps/frontend/lib/shared/widgets/` is the current cross-feature reusable widget area.
@@ -58,14 +60,14 @@ No `showSuccessSnackBar` exists in current code.
 
 | Widget/type | File | Current purpose |
 |-------------|------|-----------------|
-| `ImpactMaterialGridCard` | `app_material_card.dart` | Compact marketplace-style public material grid card. It accepts display-ready material values, optional image URL, tap callback, variant, fallback icon, and renders image-first media, category/price overlays, plain metadata rows, one status badge, and a details affordance. |
-| `ImpactMaterialCompactCard` | `app_material_card.dart` | Mobile-first horizontal public material card. It accepts the same display-ready values as the grid card and uses a small left media block, concise metadata, price/status badges, and a details arrow for narrow layouts. |
+| `ImpactMaterialGridCard` | `app_material_card.dart` | Compact marketplace-style public material grid card. It accepts display-ready material values, optional image URL, tap callback, variant, fallback icon, and renders image-first media, category/price overlays, metadata rows, status badge, and details affordance using central theme-derived material presentation tokens. |
+| `ImpactMaterialCompactCard` | `app_material_card.dart` | Mobile-first horizontal public material card. It accepts the same display-ready values as the grid card and uses compact media, metadata, price/status badges, and details affordance for narrow layouts. |
 | `AppMaterialCard` | `app_material_card.dart` | Backward-compatible wrapper around `ImpactMaterialGridCard` for existing discovery-shaped material card call sites. |
 | `AppMaterialCardVariant` | `app_material_card.dart` | `standard` and `compact` card sizing. |
-| `MaterialStatusBadge` / `MaterialStatusBadgeTone` | `material_status_badge.dart` | Available/reserved/reused/draft status badge. |
-| `MaterialConditionBadge` / `MaterialConditionBadgeTone` | `material_condition_badge.dart` | Like-new/good/fair/mixed condition badge. |
-| `MaterialPriceBadge` | `material_price_badge.dart` | Free/paid price badge. |
-| `MaterialsUiPalette` and material constants | `materials_ui_palette.dart` | Shared material-card/discovery palette and badge/card sizing constants. |
+| `MaterialStatusBadge` / `MaterialStatusBadgeTone` | `material_status_badge.dart` | Available/reserved/reused/draft status badge derived from `AppThemeColors`, shared spacing/radius, and text theme. |
+| `MaterialConditionBadge` / `MaterialConditionBadgeTone` | `material_condition_badge.dart` | Like-new/good/fair/mixed condition badge derived from `AppThemeColors`, shared spacing/radius, and text theme. |
+| `MaterialPriceBadge` | `material_price_badge.dart` | Free/paid price badge derived from `AppThemeColors`, shared spacing/radius, and text theme. |
+| `MaterialsUiPalette` and material constants | `materials_ui_palette.dart` | Shared material-card/discovery bridge palette and badge/card sizing constants derived from the central app theme. |
 
 `AppMaterialCard` must stay API- and router-independent. Map API DTOs into labels, tones, booleans, and callbacks before passing them to the widget.
 
@@ -108,7 +110,7 @@ Feature-specific widgets include:
 - auth branding assets and buttons
 - `AuthUiPalette`
 
-Auth widgets use auth-specific layout and palette rules. Keep them auth-scoped unless a widget is deliberately promoted and decoupled from auth copy, registration flow, and auth palette.
+Auth widgets use auth-specific layout and bridge-palette rules derived from `AppThemeColors`. Keep them auth-scoped unless a widget is deliberately promoted and decoupled from auth copy, registration flow, and auth palette.
 
 Candidate for future reuse:
 
@@ -122,7 +124,7 @@ Candidate for future reuse:
 
 Source: `apps/frontend/lib/features/supplier_portal/presentation/widgets/` and `presentation/theme/`
 
-Supplier widgets are supplier-feature UI and should not be reused across other features yet. They include:
+Supplier widgets are supplier-feature UI and should not be reused across other features yet. The supplier palette/decorations are scoped bridge layers derived from `AppThemeColors` where possible, not independent shared design systems. Supplier widgets include:
 
 - request dialogs and cards
 - pickup schedule cards/dialogs/filter chips/status styles
@@ -141,7 +143,7 @@ Candidate for future reuse:
 | supplier dashboard/stat cards | Tied to supplier metrics and supplier theme extension. |
 | `SupplierDarkFormField` | Supplier theme-specific; shared form fields already exist. |
 
-Treat supplier theme as scoped/legacy-compatible; see [07-theme-system.md](../07-theme-system.md).
+Treat supplier theme as scoped/legacy-compatible; see [07-theme-system.md](../07-theme-system.md). Do not import supplier palette/helpers into non-supplier UI.
 
 ### Material Discovery
 
@@ -167,7 +169,7 @@ Source: `apps/frontend/lib/features/learning_hub/presentation/widgets/`
 
 Feature widgets include project cards, hero, category chips, text helpers, component/step/link sections, project build actions panel, project link list, and mock rating summary card.
 
-Do not reuse these outside learning hub yet. The learning hub list/detail, add-draft submit flow, and admin moderation are API-backed, but these widgets are still coupled to learning-specific models/palette.
+Do not reuse these outside learning hub yet. The learning hub list/detail, add-draft submit flow, and admin moderation are API-backed, but these widgets are still coupled to learning-specific models and `LearningUiPalette`, which should remain an AppThemeColors-derived bridge layer.
 
 ### Home And Landing
 
@@ -192,7 +194,7 @@ Use `shared/widgets/` when all are true:
 - It is needed by more than one feature or is clearly a cross-feature primitive.
 - It does not import feature-specific providers, repositories, routes, DTOs, l10n, or palettes.
 - It accepts display values and callbacks instead of fetching data.
-- It works in light/dark mode through `Theme.of(context)`, `AppThemeColors`, or a shared palette.
+- It works in light/dark mode through `Theme.of(context).textTheme`, `Theme.of(context).colorScheme`, `AppThemeColors`, shared spacing/radius, or a documented shared palette.
 - It is documented in this file.
 
 Use `app/widgets/` when the widget is app shell/entry/brand infrastructure rather than feature business UI.
@@ -200,7 +202,7 @@ Use `app/widgets/` when the widget is app shell/entry/brand infrastructure rathe
 Keep the widget inside a feature when:
 
 - It uses feature-specific state, models, providers, or route assumptions.
-- It needs a feature palette such as auth or supplier.
+- It needs a feature palette such as auth, learning, or supplier.
 - It contains feature copy or user-flow assumptions.
 - It has only one current feature consumer.
 
@@ -210,5 +212,10 @@ Keep the widget inside a feature when:
 - Reuse `ImpactMaterialGridCard` for tablet/desktop public material grids, `ImpactMaterialCompactCard` for narrow mobile lists, and material badges for public/discovery-shaped material displays. Existing `AppMaterialCard` call sites can remain as compatibility wrappers.
 - Do not import supplier widgets into learner/public features.
 - Do not import auth widgets into non-auth features.
+- Do not import learning-specific widgets or palettes into non-learning features without promotion.
 - Do not add API calls to reusable widgets.
 - Promote candidates only when a second real usage appears and the widget can be decoupled cleanly.
+
+## Current Limitations
+
+The UI rescue work moved several shared and feature bridge palettes toward the central theme, but the frontend is not fully redesigned. Large page files still contain local layout/styling, especially in admin pages, material detail/discovery screens, Learning Hub pages, and supplier profile/detail surfaces. Continue cleanup in scoped slices and prefer shared widgets before adding new local decorations.

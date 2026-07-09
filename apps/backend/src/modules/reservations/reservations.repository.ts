@@ -45,7 +45,43 @@ const reservationInclude = {
   },
 } satisfies Prisma.ReservationInclude;
 
-const learnerReservationListInclude = {
+// Explicit scalar select keeps list queries working when the database has not
+// yet received newer pricing / delivery-group columns from schema migrations.
+const learnerReservationListScalarSelect = {
+  id: true,
+  status: true,
+  quantityRequested: true,
+  message: true,
+  fulfillmentMethod: true,
+  learnerPreferredPickupWindows: true,
+  learnerPreferredDeliveryWindows: true,
+  deliveryAddressText: true,
+  safeDropoffAllowed: true,
+  deliveryNote: true,
+  createdAt: true,
+  updatedAt: true,
+  pickupWindowStart: true,
+  pickupWindowEnd: true,
+  supplierProposedPickupWindowStart: true,
+  supplierProposedPickupWindowEnd: true,
+  learnerProposedPickupWindowStart: true,
+  learnerProposedPickupWindowEnd: true,
+  pendingRescheduleRequestedBy: true,
+  pendingRescheduleReason: true,
+  pendingRescheduleNote: true,
+  supplierPickupWindowStart: true,
+  supplierPickupWindowEnd: true,
+  confirmedDeliveryWindowStart: true,
+  confirmedDeliveryWindowEnd: true,
+  earliestDeliveryStart: true,
+  schedulingConflictReason: true,
+  supplierNote: true,
+  rejectionReason: true,
+  selfPickupCodeHash: true,
+} satisfies Prisma.ReservationSelect;
+
+const learnerReservationListSelect = {
+  ...learnerReservationListScalarSelect,
   material: {
     select: {
       id: true,
@@ -97,33 +133,10 @@ const learnerReservationListInclude = {
     select: {
       id: true,
       status: true,
+      assignedDriverProfileId: true,
     },
     orderBy: { requestedAt: 'desc' },
     take: 1,
-  },
-  deliveryGroup: {
-    select: {
-      id: true,
-      deliveryFee: true,
-      currency: true,
-      status: true,
-      delivery: {
-        select: {
-          id: true,
-          status: true,
-        },
-      },
-      reservations: {
-        where: {
-          status: 'ACCEPTED',
-          fulfillmentMethod: 'DELIVERY',
-        },
-        select: {
-          id: true,
-          materialSubtotal: true,
-        },
-      },
-    },
   },
   noShowReports: {
     select: {
@@ -133,7 +146,7 @@ const learnerReservationListInclude = {
       reasonCode: true,
     },
   },
-} satisfies Prisma.ReservationInclude;
+} satisfies Prisma.ReservationSelect;
 
 const learnerCancelInclude = {
   material: {
@@ -152,7 +165,7 @@ export type LearnerReservationRecord = Prisma.ReservationGetPayload<{
 }>;
 
 export type LearnerReservationListRecord = Prisma.ReservationGetPayload<{
-  include: typeof learnerReservationListInclude;
+  select: typeof learnerReservationListSelect;
 }>;
 
 export type LearnerCancelledReservationRecord = Prisma.ReservationGetPayload<{
@@ -162,7 +175,7 @@ export type LearnerCancelledReservationRecord = Prisma.ReservationGetPayload<{
 export const findLearnerReservations = async (requesterId: string) => {
   return prisma.reservation.findMany({
     where: { requesterId },
-    include: learnerReservationListInclude,
+    select: learnerReservationListSelect,
     orderBy: { createdAt: 'desc' },
   });
 };
@@ -176,7 +189,7 @@ export const findLearnerReservationById = async (
       id: reservationId,
       requesterId,
     },
-    include: learnerReservationListInclude,
+    select: learnerReservationListSelect,
   });
 };
 

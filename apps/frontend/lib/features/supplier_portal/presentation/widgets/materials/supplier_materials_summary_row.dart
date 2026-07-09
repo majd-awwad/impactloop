@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
+import '../../../../../app/theme/app_theme_colors.dart';
 import '../../../data/models/supplier_my_materials_models.dart';
 import '../../theme/supplier_theme_extension.dart';
 import 'supplier_my_materials_colors.dart';
@@ -115,7 +116,8 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.supplierColors;
+    final colors = AppThemeColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final background = SupplierMyMaterialsColors.statBackground(
       context,
       accent,
@@ -126,11 +128,16 @@ class _StatTile extends StatelessWidget {
       height: 96,
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: colors.isDark
-            ? colors.surfaceSolid.withValues(alpha: 0.74)
-            : colors.surfaceSolid,
+        color: colors.cardSurface,
         borderRadius: AppRadius.lgAll,
         border: Border.all(color: border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -161,11 +168,8 @@ class _StatTile extends StatelessWidget {
               children: [
                 Text(
                   '$value',
-                  style: context.supplierSectionTitle().copyWith(
-                    color: colors.isDark
-                        ? accent
-                        : SupplierMyMaterialsColors.darkenForLightMode(accent),
-                    fontSize: 24,
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: accent,
                     fontWeight: FontWeight.w800,
                     height: 1,
                   ),
@@ -173,9 +177,8 @@ class _StatTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   label,
-                  style: context.supplierBody().copyWith(
+                  style: textTheme.labelMedium?.copyWith(
                     color: colors.textMuted,
-                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     height: 1.2,
                   ),

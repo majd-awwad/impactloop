@@ -186,27 +186,13 @@ const resolveReservationOperationalDelivery = (
   reservation: reservationsRepository.LearnerReservationListRecord,
 ) => {
   const directDelivery = reservation.deliveries[0] ?? null;
-  const groupDelivery = reservation.deliveryGroup?.delivery ?? null;
-  const effectiveDelivery = directDelivery ?? groupDelivery;
 
   return {
-    effectiveDelivery,
-    deliveryCount: effectiveDelivery ? 1 : 0,
-    groupItemCount: reservation.deliveryGroup?.reservations.length ?? 0,
-    groupDeliveryFee:
-      reservation.deliveryGroup?.deliveryFee != null
-        ? Number(reservation.deliveryGroup.deliveryFee)
-        : null,
-    groupTotal:
-      reservation.deliveryGroup != null
-        ? Number(
-            reservation.deliveryGroup.reservations.reduce(
-              (sum, item) =>
-                sum + Number(item.materialSubtotal ?? 0),
-              Number(reservation.deliveryGroup!.deliveryFee),
-            ),
-          )
-        : null,
+    effectiveDelivery: directDelivery,
+    deliveryCount: directDelivery ? 1 : 0,
+    groupItemCount: 0,
+    groupDeliveryFee: null,
+    groupTotal: null,
   };
 };
 

@@ -102,7 +102,29 @@ export const DRIVER_IN_PROGRESS_ASSIGNED_STATUSES = [
 
 export const MAX_ACTIVE_DRIVER_DELIVERIES = 3;
 
-const deliveryInclude = {
+const deliveryScalarSelect = {
+  id: true,
+  reservationId: true,
+  status: true,
+  requestedAt: true,
+  assignedAt: true,
+  arrivedPickupAt: true,
+  pickedUpAt: true,
+  onTheWayAt: true,
+  arrivedDropoffAt: true,
+  deliveredAt: true,
+  cancelledAt: true,
+  failedAt: true,
+  learnerNote: true,
+  driverNote: true,
+  failureReason: true,
+  supplierHandoverCodeHash: true,
+  learnerDeliveryCodeHash: true,
+  createdAt: true,
+} satisfies Prisma.DeliverySelect;
+
+const deliverySelect = {
+  ...deliveryScalarSelect,
   reservation: {
     select: {
       id: true,
@@ -155,10 +177,10 @@ const deliveryInclude = {
     orderBy: { capturedAt: 'desc' as const },
     take: 1,
   },
-} satisfies Prisma.DeliveryInclude;
+} satisfies Prisma.DeliverySelect;
 
 export type DeliveryRecord = Prisma.DeliveryGetPayload<{
-  include: typeof deliveryInclude;
+  select: typeof deliverySelect;
 }>;
 
 const resolveSupplierDisplayName = (
@@ -415,7 +437,7 @@ export const requestDeliveryForReservation = async (
             },
           },
         },
-        include: deliveryInclude,
+        select: deliverySelect,
       });
 
       return { outcome: 'CREATED' as const, delivery };
@@ -481,7 +503,7 @@ export const requestDeliveryForReservation = async (
 export const listMyDeliveries = async (learnerId: string) => {
   let deliveries = await prisma.delivery.findMany({
     where: { requestedByUserId: learnerId },
-    include: deliveryInclude,
+    select: deliverySelect,
     orderBy: { createdAt: 'desc' },
   });
 
@@ -493,7 +515,7 @@ export const listMyDeliveries = async (learnerId: string) => {
     await escalateStaleAssignedDriverPickupsByIds(reservationIds);
     deliveries = await prisma.delivery.findMany({
       where: { requestedByUserId: learnerId },
-      include: deliveryInclude,
+      select: deliverySelect,
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -520,7 +542,7 @@ export const getMyDelivery = async (learnerId: string, deliveryId: string) => {
       id: deliveryId,
       requestedByUserId: learnerId,
     },
-    include: deliveryInclude,
+    select: deliverySelect,
   });
 
   if (!delivery) {
@@ -534,7 +556,7 @@ export const getMyDelivery = async (learnerId: string, deliveryId: string) => {
       id: deliveryId,
       requestedByUserId: learnerId,
     },
-    include: deliveryInclude,
+    select: deliverySelect,
   });
 
   if (!delivery) {
@@ -562,7 +584,7 @@ export const getLearnerDeliveryTracking = async (
       id: deliveryId,
       requestedByUserId: learnerId,
     },
-    include: deliveryInclude,
+    select: deliverySelect,
   });
 
   if (!delivery) {

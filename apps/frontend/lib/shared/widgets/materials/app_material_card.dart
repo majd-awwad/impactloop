@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
-import '../../../app/theme/app_text_styles.dart';
-import '../../../app/theme/app_theme_colors.dart';
 import 'material_condition_badge.dart';
 import 'material_price_badge.dart';
 import 'material_status_badge.dart';
@@ -237,6 +235,7 @@ class ImpactMaterialCompactCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Semantics(
       button: onTap != null,
@@ -250,18 +249,18 @@ class ImpactMaterialCompactCard extends StatelessWidget {
             onTap: onTap,
             borderRadius: AppRadius.lgAll,
             child: Ink(
-            decoration: BoxDecoration(
-              color: palette.cardSurface,
-              borderRadius: AppRadius.lgAll,
-              border: Border.all(color: palette.borderStrong),
-              boxShadow: [
-                BoxShadow(
-                  color: palette.cardShadow.withValues(alpha: 0.10),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
+              decoration: BoxDecoration(
+                color: palette.cardSurface,
+                borderRadius: AppRadius.lgAll,
+                border: Border.all(color: palette.borderSubtle),
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.cardShadow.withValues(alpha: 0.08),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -273,22 +272,20 @@ class ImpactMaterialCompactCard extends StatelessWidget {
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsetsDirectional.fromSTEB(
-                        15,
-                        12,
-                        12,
-                        12,
+                        AppSpacing.md,
+                        AppSpacing.sm + AppSpacing.xs,
+                        AppSpacing.sm + AppSpacing.xs,
+                        AppSpacing.sm + AppSpacing.xs,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             title,
-                            style: AppTextStyles.title(context).copyWith(
+                            style: textTheme.titleMedium?.copyWith(
                               color: palette.textPrimary,
-                              fontSize: 15.5,
                               fontWeight: FontWeight.w600,
-                              height: 1.12,
-                              letterSpacing: 0,
+                              height: 1.18,
                             ),
                             textAlign: TextAlign.start,
                             maxLines: title.runes.length > 34 ? 2 : 1,
@@ -297,12 +294,10 @@ class ImpactMaterialCompactCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             '$category · $conditionLabel',
-                            style: AppTextStyles.label(context).copyWith(
+                            style: textTheme.labelMedium?.copyWith(
                               color: palette.textSecondary,
-                              fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              height: 1.16,
-                              letterSpacing: 0,
+                              height: 1.2,
                             ),
                             textAlign: TextAlign.start,
                             maxLines: 1,
@@ -466,43 +461,7 @@ class _CompactPriceBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final colors = AppThemeColors.of(context);
-    final background = isFree
-        ? (isDark ? materialPriceFreeBackground : colors.successSoft)
-        : (isDark ? materialPricePaidBackground : colors.cardSurfaceAlt);
-    final border = isFree
-        ? (isDark ? materialPriceFreeBorder : colors.borderStrong)
-        : (isDark ? materialPricePaidBorder : colors.borderSubtle);
-    final foreground = isFree
-        ? (isDark ? materialPriceFreeForeground : colors.success)
-        : (isDark ? materialPricePaidForeground : colors.textSecondary);
-
-    return Container(
-      constraints: const BoxConstraints(minHeight: 22),
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 7,
-        vertical: 3,
-      ),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: border),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.label(context).copyWith(
-          color: foreground,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          height: 1,
-          letterSpacing: 0,
-        ),
-        textAlign: TextAlign.start,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
+    return MaterialPriceBadge(label: label, isFree: isFree, dense: true);
   }
 }
 
@@ -514,6 +473,7 @@ class _CompactLocationLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Row(
       children: [
@@ -522,12 +482,10 @@ class _CompactLocationLine extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: AppTextStyles.label(context).copyWith(
+            style: textTheme.labelMedium?.copyWith(
               color: palette.textSecondary,
-              fontSize: 12,
               fontWeight: FontWeight.w500,
-              height: 1.16,
-              letterSpacing: 0,
+              height: 1.2,
             ),
             textAlign: TextAlign.start,
             maxLines: 1,
@@ -546,17 +504,17 @@ class _CompactViewAffordance extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           'View',
-          style: AppTextStyles.label(context).copyWith(
+          style: textTheme.labelSmall?.copyWith(
             color: color,
-            fontSize: 11.5,
             fontWeight: FontWeight.w800,
             height: 1,
-            letterSpacing: 0,
           ),
         ),
         const SizedBox(width: 2),
@@ -574,8 +532,8 @@ class _ImpactMaterialGridCardState extends State<ImpactMaterialGridCard> {
     final palette = MaterialsUiPalette.of(context);
     final compact = widget.variant == AppMaterialCardVariant.compact;
     final borderColor = _hovered
-        ? palette.mint.withValues(alpha: 0.58)
-        : palette.borderStrong;
+        ? palette.mint.withValues(alpha: 0.46)
+        : palette.borderSubtle;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -594,9 +552,9 @@ class _ImpactMaterialGridCardState extends State<ImpactMaterialGridCard> {
             boxShadow: [
               BoxShadow(
                 color: palette.cardShadow.withValues(
-                  alpha: _hovered ? 0.24 : 0.14,
+                  alpha: _hovered ? 0.18 : 0.08,
                 ),
-                blurRadius: _hovered ? 24 : 16,
+                blurRadius: _hovered ? 24 : 18,
                 offset: Offset(0, _hovered ? 12 : 8),
               ),
             ],
@@ -818,7 +776,8 @@ class _GridCardContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final padding = compact ? AppSpacing.sm : AppSpacing.md;
+    final textTheme = Theme.of(context).textTheme;
+    final padding = compact ? AppSpacing.sm + AppSpacing.xs : AppSpacing.md;
 
     return Padding(
       padding: EdgeInsetsDirectional.fromSTEB(
@@ -832,11 +791,11 @@ class _GridCardContent extends StatelessWidget {
         children: [
           Text(
             title,
-            style: AppTextStyles.title(context).copyWith(
+            style: textTheme.titleMedium?.copyWith(
               color: palette.textPrimary,
-              fontSize: compact ? 15 : 16.5,
+              fontSize: compact ? 15 : null,
+              fontWeight: FontWeight.w700,
               height: 1.16,
-              letterSpacing: 0,
             ),
             textAlign: TextAlign.start,
             maxLines: 2,
@@ -844,13 +803,12 @@ class _GridCardContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            '$category + $conditionLabel',
-            style: AppTextStyles.label(context).copyWith(
+            '$category - $conditionLabel',
+            style: textTheme.labelMedium?.copyWith(
               color: palette.textSecondary,
               fontSize: compact ? 11.5 : 12.5,
               fontWeight: FontWeight.w600,
               height: 1.2,
-              letterSpacing: 0,
             ),
             textAlign: TextAlign.start,
             maxLines: 1,
@@ -889,11 +847,10 @@ class _GridCardContent extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'Details',
-                style: AppTextStyles.label(context).copyWith(
+                style: textTheme.labelMedium?.copyWith(
                   color: palette.mint,
                   fontSize: compact ? 12 : 13,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
                 ),
               ),
               const SizedBox(width: AppSpacing.xs),
@@ -924,6 +881,7 @@ class _PlainMetaLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Row(
       children: [
@@ -932,12 +890,11 @@ class _PlainMetaLine extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: AppTextStyles.label(context).copyWith(
+            style: textTheme.labelMedium?.copyWith(
               color: palette.textSecondary,
               fontSize: compact ? 11.5 : 12.5,
               fontWeight: FontWeight.w600,
               height: 1.2,
-              letterSpacing: 0,
             ),
             textAlign: TextAlign.start,
             maxLines: 1,
@@ -958,6 +915,7 @@ class _OverlayChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
@@ -971,12 +929,10 @@ class _OverlayChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.label(context).copyWith(
+        style: textTheme.labelSmall?.copyWith(
           color: palette.textPrimary,
-          fontSize: 11.5,
           fontWeight: FontWeight.w800,
           height: 1.1,
-          letterSpacing: 0,
         ),
         textAlign: TextAlign.start,
         maxLines: 1,
@@ -1002,6 +958,7 @@ class _EngagementCountBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final foreground = isLiked ? palette.mint : palette.textMuted;
 
     return Tooltip(
@@ -1022,7 +979,7 @@ class _EngagementCountBadge extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 '$viewsCount',
-                style: AppTextStyles.label(context).copyWith(
+                style: textTheme.labelSmall?.copyWith(
                   color: palette.textMuted,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
@@ -1040,7 +997,7 @@ class _EngagementCountBadge extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 '$likesCount',
-                style: AppTextStyles.label(context).copyWith(
+                style: textTheme.labelSmall?.copyWith(
                   color: foreground,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
@@ -1069,6 +1026,7 @@ class _CompactEngagementBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final foreground = isLiked ? palette.mint : palette.textMuted;
 
     return Tooltip(
@@ -1081,7 +1039,7 @@ class _CompactEngagementBadge extends StatelessWidget {
             const SizedBox(width: 3),
             Text(
               '$viewsCount',
-              style: AppTextStyles.label(context).copyWith(
+              style: textTheme.labelSmall?.copyWith(
                 color: palette.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
@@ -1099,7 +1057,7 @@ class _CompactEngagementBadge extends StatelessWidget {
             const SizedBox(width: 3),
             Text(
               '$likesCount',
-              style: AppTextStyles.label(context).copyWith(
+              style: textTheme.labelSmall?.copyWith(
                 color: foreground,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,

@@ -4,7 +4,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/config/api_config.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
@@ -17,16 +16,17 @@ class ProjectLinkList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: palette.cardSurface,
-        borderRadius: AppRadius.xlAll,
+        borderRadius: AppRadius.lgAll,
         border: Border.all(color: palette.borderSubtle),
         boxShadow: [
           BoxShadow(
-            color: palette.cardShadow,
+            color: palette.cardShadow.withValues(alpha: 0.08),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -41,8 +41,11 @@ class ProjectLinkList extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: palette.darkSurfaceSoft,
+                  color: palette.limeSoft,
                   borderRadius: AppRadius.pillAll,
+                  border: Border.all(
+                    color: palette.lime.withValues(alpha: 0.28),
+                  ),
                 ),
                 child: Icon(Icons.open_in_new, color: palette.lime),
               ),
@@ -52,9 +55,10 @@ class ProjectLinkList extends StatelessWidget {
                   en: 'Helpful links',
                   ar: 'روابط مفيدة',
                 ).resolve(context),
-                style: AppTextStyles.display(
-                  context,
-                ).copyWith(color: palette.textPrimary),
+                style: textTheme.titleLarge?.copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
                 textAlign: TextAlign.start,
               ),
             ],
@@ -79,6 +83,7 @@ class _LinkTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final uri = _safeExternalUri(item.url);
     final canOpen = uri != null;
     final titleColor = canOpen
@@ -107,7 +112,7 @@ class _LinkTile extends StatelessWidget {
           child: Container(
             padding: const EdgeInsetsDirectional.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: palette.darkSurfaceSoft,
+              color: palette.cardSurfaceAlt,
               borderRadius: AppRadius.lgAll,
               border: Border.all(color: palette.borderSubtle),
             ),
@@ -126,17 +131,18 @@ class _LinkTile extends StatelessWidget {
                     children: [
                       Text(
                         item.label.resolve(context),
-                        style: AppTextStyles.title(
-                          context,
-                        ).copyWith(fontSize: 18, color: titleColor),
+                        style: textTheme.titleMedium?.copyWith(
+                          color: titleColor,
+                          fontWeight: FontWeight.w700,
+                        ),
                         textAlign: TextAlign.start,
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         item.urlLabel.resolve(context),
-                        style: AppTextStyles.subtitle(
-                          context,
-                        ).copyWith(color: subtitleColor),
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: subtitleColor,
+                        ),
                         textAlign: TextAlign.start,
                       ),
                     ],

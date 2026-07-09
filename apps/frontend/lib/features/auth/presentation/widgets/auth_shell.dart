@@ -49,7 +49,6 @@ class AuthShell extends StatelessWidget {
         viewportSize.width >= _splitBreakpoint && viewportSize.height >= 760;
     final useCompactSpacing = viewportSize.height < 820;
     final colors = AuthUiPalette.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -59,13 +58,11 @@ class AuthShell extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: isDark
-                ? [colors.background, colors.panelDark, colors.background]
-                : [
-                    colors.background,
-                    colors.surfaceElevated,
-                    colors.background,
-                  ],
+            colors: [
+              colors.background,
+              colors.surfaceElevated,
+              colors.background,
+            ],
             stops: const [0, 0.5, 1],
           ),
         ),
@@ -112,7 +109,7 @@ class AuthShell extends StatelessWidget {
     final colors = AuthUiPalette.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final size = compact ? 96.0 : 180.0;
-    final alpha = isDark ? 0.12 : 0.16;
+    final alpha = isDark ? 0.10 : 0.12;
 
     return [
       Positioned(
@@ -120,7 +117,7 @@ class AuthShell extends StatelessWidget {
         right: compact ? -20 : -40,
         child: _Blob(
           size: size,
-          color: colors.accentMint.withValues(alpha: alpha),
+          color: colors.primary.withValues(alpha: alpha),
         ),
       ),
       Positioned(
@@ -128,7 +125,7 @@ class AuthShell extends StatelessWidget {
         left: compact ? -40 : -80,
         child: _Blob(
           size: size * 0.85,
-          color: colors.accentAmber.withValues(alpha: isDark ? 0.08 : 0.12),
+          color: colors.surfaceElevated.withValues(alpha: isDark ? 0.18 : 0.5),
         ),
       ),
       Positioned(
@@ -136,7 +133,7 @@ class AuthShell extends StatelessWidget {
         left: compact ? 40 : 80,
         child: _Blob(
           size: size * 0.55,
-          color: colors.primary.withValues(alpha: alpha),
+          color: colors.primary.withValues(alpha: alpha * 0.8),
         ),
       ),
     ];
@@ -370,20 +367,18 @@ class _FormStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AuthUiPalette.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final subtle = tone == AuthFormStageTone.subtle;
-    final stageAlpha = subtle
-        ? (isDark ? 0.28 : 0.34)
-        : (isDark ? 0.68 : 0.86);
 
     return Container(
       padding: EdgeInsets.all(compact ? AppSpacing.md : AppSpacing.lg),
       decoration: BoxDecoration(
-        color: colors.surfaceElevated.withValues(alpha: stageAlpha),
-        borderRadius: AppRadius.xlAll,
+        color: subtle
+            ? colors.surfaceElevated.withValues(alpha: 0.72)
+            : colors.surfaceElevated,
+        borderRadius: AppRadius.lgAll,
         border: Border.all(
-          color: colors.border.withValues(alpha: subtle ? 0.55 : 1),
+          color: colors.border.withValues(alpha: subtle ? 0.7 : 1),
         ),
       ),
       child: Align(

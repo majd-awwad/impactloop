@@ -605,7 +605,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
-                  value: selectedReason,
+                  initialValue: selectedReason,
                   decoration: const InputDecoration(labelText: 'Reason'),
                   items: reasonOptions.entries
                       .map(

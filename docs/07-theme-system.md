@@ -1,6 +1,6 @@
 # ImpactLoop Theme System
 
-Current Flutter theme inventory. This documents code reality only; it does not mean the UI theme refactor is complete.
+Current Flutter theme inventory and direction. This documents code reality only; it does not mean the UI is fully redesigned or visually complete.
 
 **Inspected source files:**
 - `apps/frontend/lib/app/app.dart`
@@ -20,6 +20,7 @@ Current Flutter theme inventory. This documents code reality only; it does not m
 - `apps/frontend/lib/app/theme/landing_colors.dart`
 - `apps/frontend/lib/shared/widgets/materials/materials_ui_palette.dart`
 - `apps/frontend/lib/features/auth/presentation/widgets/auth_ui_palette.dart`
+- `apps/frontend/lib/features/learning_hub/presentation/theme/learning_ui_palette.dart`
 - `apps/frontend/lib/features/supplier_portal/presentation/theme/supplier_ui_palette.dart`
 - `apps/frontend/lib/features/supplier_portal/presentation/theme/supplier_theme_extension.dart`
 - `apps/frontend/lib/features/supplier_portal/presentation/theme/supplier_decoration_set.dart`
@@ -33,14 +34,15 @@ Current Flutter theme inventory. This documents code reality only; it does not m
 |-------|--------|--------------|
 | Raw token source | `app_color_tokens.dart` | Centralizes `Color(0x...)` values for app, legacy auth, learning, supplier, and material palettes. |
 | Central app theme | `app_theme.dart` | Builds `ThemeData` for light and dark Material 3 themes and installs `AppThemeColors` as a theme extension. |
-| Semantic app colors | `app_theme_colors.dart` | Light/dark semantic `ThemeExtension` consumed through `AppThemeColors.of(context)`. |
+| Semantic app colors | `app_theme_colors.dart` | Primary semantic color source for new UI, consumed through `AppThemeColors.of(context)`. |
 | Static compatibility colors | `app_colors.dart` | Static app color aliases still used by `AppTheme`, `AppTextStyles`, and `AppDecorations`; not fully replaced by `AppThemeColors`. |
 | Shared spacing/radius/text/decorations | `app_spacing.dart`, `app_radius.dart`, `app_text_styles.dart`, `app_decorations.dart` | Shared primitives, with some auth-specific values still present. |
 | Legacy dark auth compatibility | `auth_dark_colors.dart`, `auth_dark_decorations.dart`, `auth_dark_text_styles.dart` | Auth entry compatibility layer; comments explicitly direct new theme-aware UI toward `AppThemeColors` or feature palettes. |
 | Landing palette | `landing_colors.dart` | Light/dark landing surface palette derived from `AppThemeColors`. |
-| Materials palette | `shared/widgets/materials/materials_ui_palette.dart` | Material discovery/card palette with dark constants and light values derived mostly from `AppThemeColors`. |
-| Auth palette | `features/auth/presentation/widgets/auth_ui_palette.dart` | Auth-scoped light/dark palette derived from `AppThemeColors`; feature-specific, not global. |
-| Supplier palette | `features/supplier_portal/presentation/theme/supplier_ui_palette.dart` | Supplier-scoped palette preserving supplier portal visuals; dark mode reuses legacy auth tokens. |
+| Materials palette | `shared/widgets/materials/materials_ui_palette.dart` | Shared material-card/discovery bridge palette derived from `AppThemeColors` for cards, badges, and material metadata surfaces. |
+| Auth palette | `features/auth/presentation/widgets/auth_ui_palette.dart` | Auth-scoped bridge palette derived from `AppThemeColors`; feature-specific, not global. |
+| Learning palette | `features/learning_hub/presentation/theme/learning_ui_palette.dart` | Learning Hub bridge palette derived from `AppThemeColors` for project cards, chips, detail widgets, and build panels. |
+| Supplier palette | `features/supplier_portal/presentation/theme/supplier_ui_palette.dart` | Supplier-scoped bridge palette derived from `AppThemeColors` at runtime while preserving compatibility helpers for older supplier widgets. |
 
 ## Light And Dark Mode
 
@@ -57,9 +59,9 @@ Theme-aware code currently uses a mix of:
 - `Theme.of(context).brightness`
 - `Theme.of(context).colorScheme`
 - `AppThemeColors.of(context)`
-- Feature palette helpers such as `MaterialsUiPalette.of(context)` and `SupplierUiPalette.of(context)`
+- Feature palette helpers such as `AuthUiPalette.of(context)`, `MaterialsUiPalette.of(context)`, `LearningUiPalette.of(context)`, and `SupplierUiPalette.of(context)`
 
-This is not a single completed theme abstraction yet.
+`AppThemeColors` is the primary semantic source for new presentation work. Feature palettes remain useful when a feature needs local names or compatibility with existing widgets, but they should derive from `AppThemeColors` where possible.
 
 ## Where New Colors Go
 
@@ -68,7 +70,7 @@ Use this order:
 1. Add new raw hex values only in `apps/frontend/lib/app/theme/app_color_tokens.dart`.
 2. If the color is app-wide semantic UI, expose it through `AppThemeColors.light` and `AppThemeColors.dark`.
 3. If `ThemeData` controls the widget globally, wire it in `app_theme.dart`.
-4. If the color belongs only to one feature, add a feature palette entry derived from tokens or `AppThemeColors`.
+4. If the color belongs only to one feature, add a feature palette entry derived from `AppThemeColors` or, only when necessary, from `AppColorTokens`.
 
 Do not add raw `Color(0x...)` values directly in pages or widgets. The current accepted raw-color location is `app_color_tokens.dart`.
 
@@ -107,6 +109,7 @@ Preferred usage in reusable or cross-feature widgets:
 
 ```dart
 final colors = AppThemeColors.of(context);
+final textTheme = Theme.of(context).textTheme;
 ```
 
 Use `Theme.of(context).colorScheme` when the widget should follow Material component semantics, especially errors and snackbar surfaces.
@@ -119,37 +122,37 @@ Use `Theme.of(context).colorScheme` when the widget should follow Material compo
 
 ## Supplier-Specific Theme
 
-Supplier portal theme is separate and scoped to `features/supplier_portal/presentation/theme/`.
-
 Current source reality:
 
-- `SupplierUiPalette` chooses light or dark based on app brightness and `AppThemeColors`.
-- Supplier dark values reuse legacy auth tokens.
-- Supplier light values use supplier-specific tokens.
+- `SupplierUiPalette.of(context)` derives current supplier colors from `AppThemeColors`.
 - `SupplierThemeX` exposes `context.supplierColors`, `context.supplierDecorations`, supplier text styles, supplier l10n, and RTL helpers.
 - `SupplierDecorationSet` builds supplier-specific page, shell, card, nav, form, profile, and map decorations.
+- Supplier My Materials helpers now derive active colors, spacing, radius, and button styles from `AppThemeColors`, `AppSpacing`, `AppRadius`, and `Theme.of(context).textTheme`.
 - `SupplierColorScheme` is only a typedef to `SupplierUiPalette`.
 
-Treat supplier theme as scoped/legacy-compatible, not unified with the central app theme.
+Treat supplier theme as a scoped compatibility/theme-bridge layer, not an independent design system and not a cross-feature palette.
 
 ## Feature-Specific Palettes
 
 | Palette | Source | Status |
 |---------|--------|--------|
-| `AuthUiPalette` | `features/auth/presentation/widgets/auth_ui_palette.dart` | Feature-specific auth palette; candidate to keep scoped unless auth widgets are promoted. |
+| `AuthUiPalette` | `features/auth/presentation/widgets/auth_ui_palette.dart` | Auth-scoped bridge palette derived from `AppThemeColors`; keep scoped unless auth widgets are promoted. |
 | `LandingColors` | `app/theme/landing_colors.dart` | App-level landing palette derived from `AppThemeColors`. |
-| `MaterialsUiPalette` | `shared/widgets/materials/materials_ui_palette.dart` | Shared material-card/discovery palette; used by shared material widgets. |
-| `SupplierUiPalette` | `features/supplier_portal/presentation/theme/supplier_ui_palette.dart` | Supplier-only palette; separate from central theme. |
-| Learning tokens | `app_color_tokens.dart`, `features/learning_hub/presentation/theme/learning_ui_palette.dart`, `features/learning_hub/data/learning_hub_mock_data.dart` | Learning Hub list/detail and submit flows are API-backed; legacy mock data remains for the unused sample catalog only. |
+| `MaterialsUiPalette` | `shared/widgets/materials/materials_ui_palette.dart` | Shared material-card/discovery bridge palette derived from `AppThemeColors`; used by shared material widgets and badges. |
+| `LearningUiPalette` | `features/learning_hub/presentation/theme/learning_ui_palette.dart` | Learning Hub bridge palette derived from `AppThemeColors`; scoped to project cards, chips, detail/build panels, and Learning Hub pages. |
+| `SupplierUiPalette` | `features/supplier_portal/presentation/theme/supplier_ui_palette.dart` | Supplier-only bridge palette derived from `AppThemeColors`; preserve scoped helpers for compatibility. |
 
 ## Practical Rules
 
-- New shared widgets should use `Theme.of(context).colorScheme` and `AppThemeColors.of(context)` first.
-- New feature-specific palettes may exist only when a feature has enough distinct visual semantics to justify them.
+- New shared widgets should use `Theme.of(context).textTheme`, `Theme.of(context).colorScheme` where appropriate, `AppThemeColors.of(context)`, `AppSpacing`, and `AppRadius` first.
+- Prefer existing shared widgets (`AppTextField`, `AppDropdownField`, `AppPrimaryButton`, material cards/badges, snackbar helpers) before custom local styling.
+- New feature-specific palettes may exist only when a feature has enough distinct visual semantics or compatibility needs to justify them.
+- Feature palettes must stay scoped. Do not import auth, supplier, or learning palettes into unrelated features.
 - Do not import supplier theme into non-supplier features.
 - Do not import auth palette into non-auth features.
 - Do not use `AppMaterialCard` with raw API DTOs; map values before the widget layer.
-- When touching legacy auth or supplier UI, preserve current visuals unless the task explicitly asks for unification.
+- When touching legacy auth, supplier, learning, or material UI, prefer moving local colors/radii/shadows toward `AppThemeColors`, `AppSpacing`, `AppRadius`, and text theme without changing behavior.
+- Do not add raw `Color(0x...)` values in presentation widgets; new raw colors belong in `app_color_tokens.dart`.
 
 ## Not Complete Yet
 
@@ -157,6 +160,7 @@ Remaining legacy or uncertain areas:
 
 - `AppColors` remains in active use beside `AppThemeColors`.
 - Legacy dark auth theme files still exist and are feature-scoped.
-- Supplier portal has a separate palette and decorations system.
-- Feature palettes exist for auth, materials, landing, supplier, and learning rather than a single unified semantic system.
+- Feature palettes exist for auth, materials, landing, supplier, and learning as scoped bridge/compatibility layers rather than one removed abstraction.
+- Large full-page files still contain local layout and styling, especially in admin pages, material detail/discovery screens, Learning Hub pages, and supplier profile/detail pages.
+- Some page-level widgets still override shared styling locally; continue cleanup in small slices rather than full-page rewrites.
 - Some providers and feature controllers live under `presentation/controllers`, not only `application/`; see `docs/frontend/state-management.md`.
