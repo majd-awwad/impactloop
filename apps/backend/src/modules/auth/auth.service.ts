@@ -497,7 +497,7 @@ export const resetPasswordWithToken = async (
 export const changePasswordForUser = async (
   userId: string,
   input: ChangePasswordInput,
-): Promise<void> => {
+): Promise<AuthResult> => {
   const user = await authRepository.findUserPasswordHashById(userId);
 
   if (!user) {
@@ -519,10 +519,28 @@ export const changePasswordForUser = async (
 
   const passwordHash = await hashPassword(input.newPassword);
 
-  await authRepository.updateUserPasswordHash({
+  await authRepository.changePasswordAndRevokeRefreshTokens({
     userId: user.id,
     passwordHash,
   });
+
+  const freshUser = await authRepository.findUserByIdWithRoles(user.id);
+
+  if (!freshUser) {
+    throw new AppError('User not found', 404, 'NOT_FOUND');
+  }
+
+  const session = await createAuthSession(freshUser);
+
+  const emailResult = await getAuthEmailProvider().sendPasswordChangedEmail({
+    recipientEmail: freshUser.email,
+  });
+
+  if (emailResult.status === 'FAILED') {
+    logAuthEmailFailure('Password changed email', emailResult.sendError);
+  }
+
+  return session;
 };
 
 export const becomeSupplier = async (

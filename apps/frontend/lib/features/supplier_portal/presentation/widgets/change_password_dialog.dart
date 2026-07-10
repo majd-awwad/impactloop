@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../auth/application/auth_providers.dart';
+import '../../../auth/application/auth_controller.dart';
 import '../../../../core/errors/api_exception.dart';
 import 'supplier_dark_form_field.dart';
 import 'supplier_feedback.dart';
@@ -70,7 +70,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
     });
 
     try {
-      await ref.read(authRepositoryProvider).changePassword(
+      await ref.read(authControllerProvider.notifier).changePassword(
             currentPassword: _currentPasswordController.text,
             newPassword: _newPasswordController.text,
             confirmNewPassword: _confirmPasswordController.text,

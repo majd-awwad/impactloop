@@ -100,12 +100,16 @@ export const changePassword = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  await changePasswordForUser(req.auth!.sub, req.body as ChangePasswordInput);
+  const result = await changePasswordForUser(
+    req.auth!.sub,
+    req.body as ChangePasswordInput,
+  );
 
-  res.json(
-    successResponse('Password updated successfully.', {
-      success: true,
-    }),
+  sendAuthSessionResponse(
+    req,
+    res,
+    'Password updated successfully.',
+    result,
   );
 };
 

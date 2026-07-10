@@ -94,12 +94,12 @@ class AuthApi {
     );
   }
 
-  Future<void> changePassword({
+  Future<({AuthTokens tokens, User user})> changePassword({
     required String currentPassword,
     required String newPassword,
     required String confirmNewPassword,
   }) {
-    return unwrapApiVoidResponse(
+    return unwrapApiResponse(
       _client.patch<Map<String, dynamic>>(
         '$_authBasePath/change-password',
         data: {
@@ -108,6 +108,18 @@ class AuthApi {
           'confirmNewPassword': confirmNewPassword,
         },
       ),
+      (json) {
+        final userJson = json['user'];
+
+        if (userJson is! Map<String, dynamic>) {
+          throw const FormatException('Missing user in auth response');
+        }
+
+        return (
+          tokens: AuthTokens.fromJson(json),
+          user: User.fromJson(userJson),
+        );
+      },
     );
   }
 

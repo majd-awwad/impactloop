@@ -380,6 +380,28 @@ export const updateUserPasswordHash = async (input: {
   });
 };
 
+export const changePasswordAndRevokeRefreshTokens = async (input: {
+  userId: string;
+  passwordHash: string;
+}): Promise<void> => {
+  const usedAt = new Date();
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: input.userId },
+      data: { passwordHash: input.passwordHash },
+    }),
+    prisma.authToken.updateMany({
+      where: {
+        userId: input.userId,
+        tokenType: 'REFRESH_TOKEN',
+        usedAt: null,
+      },
+      data: { usedAt },
+    }),
+  ]);
+};
+
 export const setUserActiveRole = async (
   userId: string,
   activeRole: UserRole,

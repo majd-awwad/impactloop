@@ -12,13 +12,13 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 | Question | Status | Source |
 |----------|--------|--------|
-| Is `account_status = PENDING_VERIFICATION` enforced on login? | **Needs verification** | [auth-flow](flows/auth-flow.md), [auth](features/auth.md) |
-| Web session: `WebCookieTokenStorage` no-op — is refresh cookie-only on all Flutter web targets? | **Needs verification** | [auth](features/auth.md), `apps/frontend/lib/core/auth/` |
-| Does register always create a `locations` row for supplier `pickupArea`? | **Needs verification** | [auth-flow](flows/auth-flow.md), `auth.repository.ts` |
-| Duplicate email on register — exact HTTP code/message mapping in Flutter? | **Needs verification** | [auth-flow](flows/auth-flow.md) |
-| Change password — does it revoke existing refresh sessions? | **Needs verification** | [auth-flow](flows/auth-flow.md) |
-| Which widget calls `bootstrapSession` after `/auth/checking`? | **Needs verification** | [auth-flow](flows/auth-flow.md), `app_router.dart` |
-| Email/phone verification vs `account_status` gate | **Needs verification** | [auth](features/auth.md) |
+| Is `account_status = PENDING_VERIFICATION` enforced on login? | **Resolved** — no; only `SUSPENDED` and `DISABLED` block login/refresh/`authMiddleware` | `auth.service.ts` `assertAccountCanLogin`, `auth.middleware.ts` |
+| Web session: `WebCookieTokenStorage` no-op — is refresh cookie-only on all Flutter web targets? | **Resolved in code** — yes; manual browser verification still recommended | `token_storage.dart`, `auth-token-delivery.ts`, `dio_platform_adapter_web.dart` |
+| Does register always create a `locations` row for supplier `pickupArea`? | **Resolved** — yes, `defaultPickupLocation` created in register transaction | `auth.repository.ts` |
+| Duplicate email on register — exact HTTP code/message mapping in Flutter? | **Resolved** — `409 CONFLICT`, message `Email is already registered` | `auth.service.ts`, `auth-flow.md` |
+| Change password — does it revoke existing refresh sessions? | **Resolved** — yes; all refresh tokens revoked in a transaction, then one fresh session issued for the current client | `auth.service.ts` `changePasswordForUser` |
+| Which widget calls `bootstrapSession` after `/auth/checking`? | **Resolved** — `authNetworkBootstrapProvider` from `app.dart` | `auth_providers.dart`, `app.dart` |
+| Email/phone verification vs `account_status` gate | **Resolved** — neither email nor phone verification is implemented; gates do not check `emailVerifiedAt`/`phoneVerifiedAt` | `auth.service.ts`, schema `AuthTokenType` |
 
 ---
 

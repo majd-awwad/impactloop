@@ -109,15 +109,15 @@ Invitee completes display name, email, password, and optional phone fields. Targ
 4. Reject if email/phone already registered (`409 CONFLICT`).
 5. `acceptInvitationTransaction`: create `users` + `user_roles`, mark invitation used.
 6. If target role is `DRIVER`, create `driver_profiles`.
-7. `createAuthSessionForUser` returns access + refresh tokens (same as login response).
+7. Response returns `{ role }` only — **no** access/refresh tokens (user must log in separately).
 
 ### Database changes
 
-Insert `users`, `user_roles`; insert `driver_profiles` for driver invitations; update `role_invitations` (`status`, `used_at`, `used_by_user_id`); insert `auth_tokens` for refresh.
+Insert `users`, `user_roles`; insert `driver_profiles` for driver invitations; update `role_invitations` (`status`, `used_at`, `used_by_user_id`). No `auth_tokens` row on accept.
 
 ### Success state
 
-`201` with auth session payload (user + tokens).
+`201` with `{ role }`. Flutter `InviteAcceptPage` links to `/login`.
 
 ### Error states
 

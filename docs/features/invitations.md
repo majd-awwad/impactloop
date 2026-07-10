@@ -33,7 +33,7 @@ Public registration remains limited to `LEARNER` and `SUPPLIER`. Invitation toke
 3. Invitee opens `/invite/accept?token=...`.
 4. Flutter validates the token through `GET /api/invitations/validate/:token`.
 5. Invitee submits account details.
-6. `POST /api/invitations/accept` creates the user, assigns the invited role, marks the invitation accepted, and creates an auth session.
+6. `POST /api/invitations/accept` creates the user, assigns the invited role, marks the invitation accepted, and creates driver profile when applicable. **It does not issue auth tokens** — Flutter shows success and routes to `/login`.
 7. `DRIVER` invitation acceptance also creates a driver profile.
 
 See [invitation-flow](../flows/invitation-flow.md).
