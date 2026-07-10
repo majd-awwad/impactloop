@@ -1,6 +1,9 @@
 import type { DeliveryStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
-import { DRIVER_NOTIFICATION_TYPES } from './driver-delivery-notification-types.js';
+import {
+  DRIVER_DELIVERY_NOTIFICATION_TYPES,
+  DRIVER_NOTIFICATION_TYPES,
+} from './driver-delivery-notification-types.js';
 import { createNotificationIfMissing } from './notifications.repository.js';
 
 /** Reminder fires within this window before pickup/drop-off start. */
@@ -380,13 +383,21 @@ export const clearUnreadNewJobNotificationsForDelivery = async (
   });
 };
 
-/** Disabled — not in the allowed driver notification set. */
-export const notifyDriverDeliveryMovedToAdminReview = async (_input: {
+export const notifyDriverDeliveryMovedToAdminReview = async (input: {
   deliveryId: string;
   driverUserId: string;
-}) => {
-  // Intentionally no-op.
-};
+}) =>
+  notifySafely(async () => {
+    await createNotificationIfMissing({
+      userId: input.driverUserId,
+      notificationType:
+        DRIVER_DELIVERY_NOTIFICATION_TYPES.DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW,
+      title: 'Delivery moved to admin review',
+      body: 'Delivery moved to admin review because pickup was not completed within the pickup window.',
+      relatedEntityType: 'DELIVERY',
+      relatedEntityId: input.deliveryId,
+    });
+  });
 
 export const resetDriverDeliveryReminderSyncThrottleForTests = () => {
   // Kept for test compatibility.
