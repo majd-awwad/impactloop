@@ -82,6 +82,10 @@ String notificationActionLabel(AppNotification notification) {
     if (notification.notificationType == 'DRIVER_NEW_JOB') {
       return 'View jobs';
     }
+    if (notification.notificationType == 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW' ||
+        notification.notificationType == 'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN') {
+      return 'View details';
+    }
     return 'View delivery';
   }
   if (notification.relatedEntityType == 'RESERVATION') {
@@ -99,4 +103,23 @@ bool notificationHasNavigationTarget(AppNotification notification) {
           notification.relatedEntityType == 'LEARNING_PROJECT') &&
       notification.relatedEntityId != null &&
       notification.relatedEntityId!.isNotEmpty;
+}
+
+/// Driver delivery notifications open the delivery detail route, which shows
+/// inactive-context messaging when the job is no longer active.
+String? driverDeliveryNotificationRoute(AppNotification notification) {
+  if (notification.relatedEntityType != 'DELIVERY' ||
+      notification.relatedEntityId == null ||
+      notification.relatedEntityId!.isEmpty) {
+    return null;
+  }
+
+  final rawId = notification.relatedEntityId!;
+  final deliveryId = rawId.contains(':') ? rawId.split(':').first : rawId;
+
+  if (notification.notificationType == 'DRIVER_NEW_JOB') {
+    return '/driver/jobs';
+  }
+
+  return '/driver/deliveries/$deliveryId';
 }

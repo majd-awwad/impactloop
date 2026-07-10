@@ -244,15 +244,11 @@ class _NotificationsBody extends ConsumerWidget {
     if (notification.relatedEntityType == 'DELIVERY' &&
         notification.relatedEntityId != null &&
         notification.relatedEntityId!.isNotEmpty) {
-      final rawId = notification.relatedEntityId!;
-      final deliveryId = rawId.contains(':') ? rawId.split(':').first : rawId;
-
       if (currentUser?.isDriverMode == true &&
           currentUser?.hasRole('DRIVER') == true) {
-        if (notification.notificationType == 'DRIVER_NEW_JOB') {
-          context.go('/driver/jobs');
-        } else {
-          context.go('/driver/deliveries/$deliveryId');
+        final route = driverDeliveryNotificationRoute(notification);
+        if (route != null) {
+          context.go(route);
         }
         return;
       }
