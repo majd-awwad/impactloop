@@ -1,4 +1,4 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { Prisma, ReservationStatus } from '../../generated/prisma/client.js';
 
 import {
   buildDeliveryHandoverCodeData,
@@ -8,7 +8,7 @@ import { applyReservationCompletionToMaterial } from '../reservations/reservatio
 
 export const DELIVERABLE_GROUP_RESERVATION_STATUSES = [
   'ACCEPTED',
-] as const satisfies readonly Prisma.ReservationStatus[];
+] as const satisfies readonly ReservationStatus[];
 
 const groupReservationInclude = {
   material: {
@@ -358,7 +358,7 @@ export const completeReservationsForDeliveredDelivery = async (
       reservationId: string;
       deliveryGroupId: string | null;
       reservation: {
-        status: Prisma.ReservationStatus;
+        status: ReservationStatus;
         materialId: string;
         quantityRequested: Prisma.Decimal;
       };

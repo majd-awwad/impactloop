@@ -218,12 +218,19 @@ export const resolveAdminNoShowReport = async (
   return mapReport(result.report);
 };
 
+type PickupRecoveryResolutionError =
+  | Exclude<
+      Awaited<ReturnType<typeof requestSupplierRescheduleForPickupRecoveryReport>>,
+      { outcome: 'REQUESTED' }
+    >
+  | Exclude<
+      Awaited<ReturnType<typeof cancelAndReleaseHoldForPickupRecoveryReport>>,
+      { outcome: 'CANCELLED' }
+    >;
+
 const mapNoDriverResolutionError = (
-  result: Exclude<
-    Awaited<ReturnType<typeof requestSupplierRescheduleForPickupRecoveryReport>>,
-    { outcome: 'REQUESTED' }
-  >,
-) => {
+  result: PickupRecoveryResolutionError,
+): never => {
   if (result.outcome === 'NOT_FOUND') {
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
@@ -270,23 +277,24 @@ export const requestSupplierRescheduleAdminNoShowReport = async (
     adminNote: input.adminNote,
   });
 
-  if (result.outcome !== 'REQUESTED') {
-    mapNoDriverResolutionError(result);
-  }
+  switch (result.outcome) {
+    case 'REQUESTED':
+      if (result.recoveryKind === 'NO_DRIVER') {
+        await notifyNoDriverSupplierRescheduleRequested(
+          result.reservationId,
+          input.adminNote,
+        );
+      } else {
+        await notifyStalePickupSupplierRescheduleRequested(
+          result.reservationId,
+          input.adminNote,
+        );
+      }
 
-  if (result.recoveryKind === 'NO_DRIVER') {
-    await notifyNoDriverSupplierRescheduleRequested(
-      result.reservationId,
-      input.adminNote,
-    );
-  } else {
-    await notifyStalePickupSupplierRescheduleRequested(
-      result.reservationId,
-      input.adminNote,
-    );
+      return mapReport(result.report);
+    default:
+      return mapNoDriverResolutionError(result);
   }
-
-  return mapReport(result.report);
 };
 
 export const cancelReleaseHoldAdminNoShowReport = async (
@@ -300,11 +308,12 @@ export const cancelReleaseHoldAdminNoShowReport = async (
     adminNote: input.adminNote,
   });
 
-  if (result.outcome !== 'CANCELLED') {
-    mapNoDriverResolutionError(result);
+  switch (result.outcome) {
+    case 'CANCELLED':
+      return mapReport(result.report);
+    default:
+      return mapNoDriverResolutionError(result);
   }
-
-  return mapReport(result.report);
 };
 
 export const rejectAdminNoShowReport = async (

@@ -62,9 +62,10 @@ async function createCategory(categoryType: 'PROJECT' | 'BOTH') {
 async function createProject(input: {
   createdBy: string;
   categoryId: string;
-  status?: 'PENDING_REVIEW' | 'PUBLISHED' | 'CHANGES_REQUESTED' | 'REJECTED';
+  status?: 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'CHANGES_REQUESTED' | 'REJECTED';
   title?: string;
 }) {
+  const status = input.status ?? 'CHANGES_REQUESTED';
   const project = await prisma.learningProject.create({
     data: {
       createdBy: input.createdBy,
@@ -74,13 +75,15 @@ async function createProject(input: {
       description: `${TEST_MARKER} full description for learner submission lifecycle.`,
       difficulty: 'BEGINNER',
       estimatedDurationMinutes: 90,
-      status: input.status ?? 'CHANGES_REQUESTED',
-      submittedAt: new Date(Date.now() - 60_000),
-      reviewedAt: new Date(),
-      reviewNote: 'Please clarify the components.',
-      changesRequestedReason: 'Please clarify the components.',
+      status,
+      submittedAt:
+        status === 'DRAFT' ? null : new Date(Date.now() - 60_000),
+      reviewedAt: status === 'DRAFT' ? null : new Date(),
+      reviewNote: status === 'DRAFT' ? null : 'Please clarify the components.',
+      changesRequestedReason:
+        status === 'DRAFT' ? null : 'Please clarify the components.',
       rejectionReason:
-        input.status === 'REJECTED' ? 'Not suitable for the hub.' : null,
+        status === 'REJECTED' ? 'Not suitable for the hub.' : null,
     },
   });
   ids.projects.push(project.id);
@@ -339,5 +342,213 @@ describe('learner learning project submissions', () => {
     assert.equal(stored.reviewedBy, null);
     assert.equal(stored.reviewedAt, null);
     assert.ok(stored.submittedAt);
+  });
+
+  test('editable learner project can change categoryId', async () => {
+    const owner = await createLearnerUser('owner-category-change');
+    const originalCategory = await createCategory('PROJECT');
+    const nextCategory = await createCategory('PROJECT');
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: originalCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} category change`,
+    });
+
+    const updated = await updateMyLearningProjectSubmissionById(
+      project.id,
+      owner.id,
+      {
+        title: `${TEST_MARKER} category change`,
+        shortDescription: `${TEST_MARKER} category change short description.`,
+        description: `${TEST_MARKER} category change full description.`,
+        categoryId: nextCategory.id,
+        difficulty: 'BEGINNER',
+      },
+    );
+
+    assert.equal(updated.category?.id, nextCategory.id);
+
+    const stored = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+    });
+    assert.equal(stored.categoryId, nextCategory.id);
+  });
+
+  test('category and another editable field change together', async () => {
+    const owner = await createLearnerUser('owner-category-and-title');
+    const originalCategory = await createCategory('PROJECT');
+    const nextCategory = await createCategory('PROJECT');
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: originalCategory.id,
+      status: 'DRAFT',
+      title: `${TEST_MARKER} before category title`,
+    });
+
+    const updated = await updateMyLearningProjectSubmissionById(
+      project.id,
+      owner.id,
+      {
+        title: `${TEST_MARKER} after category title`,
+        shortDescription: `${TEST_MARKER} updated short description.`,
+        description: `${TEST_MARKER} updated full description.`,
+        categoryId: nextCategory.id,
+        difficulty: 'ADVANCED',
+      },
+    );
+
+    assert.equal(updated.category?.id, nextCategory.id);
+    assert.equal(updated.title, `${TEST_MARKER} after category title`);
+    assert.equal(updated.difficulty, 'ADVANCED');
+  });
+
+  test('invalid project category rejects edit before persistence', async () => {
+    const owner = await createLearnerUser('owner-invalid-category');
+    const projectCategory = await createCategory('PROJECT');
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      title: `${TEST_MARKER} invalid category guard`,
+    });
+
+    await assert.rejects(
+      () =>
+        updateMyLearningProjectSubmissionById(project.id, owner.id, {
+          title: `${TEST_MARKER} should not persist`,
+          shortDescription: `${TEST_MARKER} should not persist short.`,
+          description: `${TEST_MARKER} should not persist full.`,
+          categoryId: 'missing-project-category-id',
+          difficulty: 'BEGINNER',
+        }),
+      (error) =>
+        error instanceof AppError &&
+        error.statusCode === 400 &&
+        error.code === 'INVALID_CATEGORY',
+    );
+
+    const stored = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+    });
+    assert.equal(stored.title, `${TEST_MARKER} invalid category guard`);
+    assert.equal(stored.categoryId, projectCategory.id);
+  });
+
+  test('another learner cannot update a submission', async () => {
+    const owner = await createLearnerUser('owner-update-guard');
+    const other = await createLearnerUser('other-update-guard');
+    const projectCategory = await createCategory('PROJECT');
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      title: `${TEST_MARKER} owner only update`,
+    });
+
+    await assert.rejects(
+      () =>
+        updateMyLearningProjectSubmissionById(project.id, other.id, {
+          title: `${TEST_MARKER} stolen update`,
+          shortDescription: `${TEST_MARKER} stolen short.`,
+          description: `${TEST_MARKER} stolen full.`,
+          categoryId: projectCategory.id,
+          difficulty: 'BEGINNER',
+        }),
+      (error) => error instanceof AppError && error.statusCode === 404,
+    );
+  });
+
+  test('concurrent status change prevents stale learner edit', async () => {
+    const owner = await createLearnerUser('owner-concurrent-edit');
+    const projectCategory = await createCategory('PROJECT');
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} concurrent edit`,
+    });
+
+    await prisma.learningProject.update({
+      where: { id: project.id },
+      data: { status: 'PUBLISHED' },
+    });
+
+    await assert.rejects(
+      () =>
+        updateMyLearningProjectSubmissionById(project.id, owner.id, {
+          title: `${TEST_MARKER} stale edit`,
+          shortDescription: `${TEST_MARKER} stale short.`,
+          description: `${TEST_MARKER} stale full.`,
+          categoryId: projectCategory.id,
+          difficulty: 'BEGINNER',
+        }),
+      (error) =>
+        error instanceof AppError &&
+        error.statusCode === 409 &&
+        error.code === 'PROJECT_NOT_EDITABLE',
+    );
+
+    const stored = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+    });
+    assert.equal(stored.title, `${TEST_MARKER} concurrent edit`);
+    assert.equal(stored.status, 'PUBLISHED');
+  });
+
+  test('changes-requested save preserves moderation metadata and status', async () => {
+    const owner = await createLearnerUser('owner-changes-requested-save');
+    const projectCategory = await createCategory('PROJECT');
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} moderation preserved`,
+    });
+
+    const updated = await updateMyLearningProjectSubmissionById(
+      project.id,
+      owner.id,
+      {
+        title: `${TEST_MARKER} moderation preserved updated`,
+        shortDescription: `${TEST_MARKER} moderation preserved short.`,
+        description: `${TEST_MARKER} moderation preserved full.`,
+        categoryId: projectCategory.id,
+        difficulty: 'INTERMEDIATE',
+      },
+    );
+
+    assert.equal(updated.status, 'CHANGES_REQUESTED');
+    assert.equal(updated.changesRequestedReason, 'Please clarify the components.');
+    assert.equal(updated.reviewNote, 'Please clarify the components.');
+    assert.ok(updated.reviewedAt);
+    assert.equal(updated.availableActions.canResubmit, true);
+  });
+
+  test('editing without changing category still works', async () => {
+    const owner = await createLearnerUser('owner-same-category');
+    const projectCategory = await createCategory('PROJECT');
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'PENDING_REVIEW',
+      title: `${TEST_MARKER} same category`,
+    });
+
+    const updated = await updateMyLearningProjectSubmissionById(
+      project.id,
+      owner.id,
+      {
+        title: `${TEST_MARKER} same category updated`,
+        shortDescription: `${TEST_MARKER} same category short.`,
+        description: `${TEST_MARKER} same category full.`,
+        categoryId: projectCategory.id,
+        difficulty: 'BEGINNER',
+      },
+    );
+
+    assert.equal(updated.category?.id, projectCategory.id);
+    assert.equal(updated.status, 'PENDING_REVIEW');
+    assert.equal(updated.reviewNote, null);
+    assert.equal(updated.changesRequestedReason, null);
+    assert.equal(updated.rejectionReason, null);
   });
 });

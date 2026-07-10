@@ -29,6 +29,10 @@ import {
 } from '../reservations/reservation-timing-policy.js';
 import { evaluateHandoverWindow, isAfterAllowedEnd } from '../../utils/handover-timing.js';
 import {
+  isSupplierGeneralIncidentReasonCode,
+  type SupplierNoShowReportReasonCode,
+} from './supplier-reservations.validation.js';
+import {
   assertRescheduleAllowedOutsideHandover,
   clearPendingRescheduleFields,
 } from '../reservations/reservation-reschedule.js';
@@ -1017,7 +1021,7 @@ export const cancelSupplierAcceptedReservation = async (input: {
 export const createSupplierNoShowReport = async (input: {
   reservationId: string;
   ownerId: string;
-  reasonCode: 'LEARNER_DID_NOT_ARRIVE' | 'DRIVER_DID_NOT_ARRIVE' | 'NO_RESPONSE_AFTER_PICKUP_WINDOW' | 'OTHER';
+  reasonCode: SupplierNoShowReportReasonCode;
   note?: string;
 }) => {
   return prisma.$transaction(async (tx) => {
@@ -1064,19 +1068,22 @@ export const createSupplierNoShowReport = async (input: {
     }
 
     const latestDelivery = existing.deliveries[0] ?? null;
+    const isGeneralIncident = isSupplierGeneralIncidentReasonCode(input.reasonCode);
     let targetUserId = existing.requesterId;
     let targetRole: 'LEARNER' | 'DRIVER' = 'LEARNER';
 
-    if (latestDelivery) {
-      const driverUserId = latestDelivery?.assignedDriverProfile?.userId;
-      if (driverUserId) {
-        targetUserId = driverUserId;
-        targetRole = 'DRIVER';
+    if (!isGeneralIncident) {
+      if (latestDelivery) {
+        const driverUserId = latestDelivery?.assignedDriverProfile?.userId;
+        if (driverUserId) {
+          targetUserId = driverUserId;
+          targetRole = 'DRIVER';
+        } else if (input.reasonCode === 'DRIVER_DID_NOT_ARRIVE') {
+          return { driverNotAssigned: true as const };
+        }
       } else if (input.reasonCode === 'DRIVER_DID_NOT_ARRIVE') {
         return { driverNotAssigned: true as const };
       }
-    } else if (input.reasonCode === 'DRIVER_DID_NOT_ARRIVE') {
-      return { driverNotAssigned: true as const };
     }
 
     const duplicate = await tx.noShowReport.findUnique({
@@ -1113,7 +1120,7 @@ export const createSupplierNoShowReport = async (input: {
         (existing.pickupWindowEnd != null &&
           isAfterAllowedEnd(new Date(), existing.pickupWindowEnd)));
 
-    if (isSelfPickupOverdue) {
+    if (isSelfPickupOverdue && !isGeneralIncident) {
       await tx.reservation.update({
         where: { id: existing.id },
         data: { status: 'AWAITING_RESOLUTION' },

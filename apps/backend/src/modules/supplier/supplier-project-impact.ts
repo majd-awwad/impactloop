@@ -112,7 +112,7 @@ export const getSupplierProjectSupportSummary = async (
       reservationIds.add(item.linkedReservationId);
     }
 
-    const completedAt = reservation.completedAt;
+    const completedAt = reservation?.completedAt;
     if (!completedAt) {
       continue;
     }

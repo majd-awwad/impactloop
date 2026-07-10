@@ -93,6 +93,7 @@ async function createPendingReservation(ctx: TestContext) {
   const reservation = await createReservation(ctx.learnerId, {
     materialId: material.id,
     quantityRequested: 1,
+    fulfillmentMethod: 'PICKUP',
   });
   ctx.createdReservationIds.push(reservation.id);
   return reservation;

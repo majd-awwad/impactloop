@@ -152,7 +152,10 @@ async function createLearningProject(input: {
   authorId: string;
   categoryId: string;
   includeComponent?: boolean;
-  componentOverrides?: Parameters<typeof createProjectComponent>[0];
+  componentOverrides?: Omit<
+    Parameters<typeof createProjectComponent>[0],
+    'projectId' | 'materialCategoryId'
+  >;
 }) {
   const project = await prisma.learningProject.create({
     data: {

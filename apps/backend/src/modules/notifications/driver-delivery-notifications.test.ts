@@ -155,6 +155,7 @@ async function requestDelivery(ctx: TestContext, reservationId: string) {
       addressLine: 'Secret exact dropoff street 42',
       latitude: 32.22,
       longitude: 35.25,
+      visibility: 'PRIVATE',
       isApproximate: false,
     },
   });

@@ -1283,7 +1283,6 @@ export const updateMyLearningProjectSubmission = async (input: {
     }
 
     const projectUpdateData: Prisma.LearningProjectUpdateManyMutationInput = {
-      categoryId: input.categoryId,
       title: input.title,
       shortDescription: input.shortDescription,
       description: input.description,
@@ -1310,6 +1309,11 @@ export const updateMyLearningProjectSubmission = async (input: {
     if (projectUpdate.count === 0) {
       return null;
     }
+
+    await tx.learningProject.update({
+      where: { id: input.id },
+      data: { categoryId: input.categoryId },
+    });
 
     if (input.requiredComponents !== undefined) {
       const existingIds = new Set(

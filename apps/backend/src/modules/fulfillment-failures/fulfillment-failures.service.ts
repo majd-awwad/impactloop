@@ -48,7 +48,7 @@ const loadDriverDelivery = async (deliveryId: string) => {
   return mapDriverDeliveryForResponse(delivery);
 };
 
-const throwWindowNotExpired = (message: string) => {
+const throwWindowNotExpired = (message: string): never => {
   throw new AppError(message, 409, 'CONFLICT');
 };
 
@@ -147,6 +147,10 @@ export const markSupplierDriverNoShow = async (
     note: input.note,
   });
 
+  if (result.outcome === 'UPDATED') {
+    return loadSupplierReservation(ownerId, result.reservation.id);
+  }
+
   switch (result.outcome) {
     case 'NOT_FOUND':
       throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
@@ -171,7 +175,11 @@ export const markSupplierDriverNoShow = async (
     case 'WINDOW_NOT_EXPIRED':
       throwWindowNotExpired(supplierPickupWindowNotExpiredMessage());
     default:
-      return loadSupplierReservation(ownerId, result.reservation.id);
+      throw new AppError(
+        'Unexpected driver no-show result.',
+        500,
+        'INTERNAL_ERROR',
+      );
   }
 };
 
@@ -186,6 +194,10 @@ export const markDriverPickupFailed = async (
     reason: input.reason,
     note: input.note,
   });
+
+  if (result.outcome === 'UPDATED') {
+    return loadDriverDelivery(deliveryId);
+  }
 
   switch (result.outcome) {
     case 'NOT_FOUND':
@@ -207,7 +219,11 @@ export const markDriverPickupFailed = async (
     case 'WINDOW_NOT_EXPIRED':
       throwWindowNotExpired(supplierPickupWindowNotExpiredMessage());
     default:
-      return loadDriverDelivery(result.delivery.id);
+      throw new AppError(
+        'Unexpected pickup failed result.',
+        500,
+        'INTERNAL_ERROR',
+      );
   }
 };
 
@@ -222,6 +238,10 @@ export const markDriverDeliveryFailed = async (
     reason: input.reason,
     note: input.note,
   });
+
+  if (result.outcome === 'UPDATED') {
+    return loadDriverDelivery(deliveryId);
+  }
 
   switch (result.outcome) {
     case 'NOT_FOUND':
@@ -243,7 +263,11 @@ export const markDriverDeliveryFailed = async (
     case 'WINDOW_NOT_EXPIRED':
       throwWindowNotExpired(deliveryWindowNotExpiredMessage());
     default:
-      return loadDriverDelivery(result.delivery.id);
+      throw new AppError(
+        'Unexpected delivery failed result.',
+        500,
+        'INTERNAL_ERROR',
+      );
   }
 };
 
