@@ -333,14 +333,6 @@ export const resolveReservationPricingForCreate = async (
   const preferredWindows = input.learnerPreferredDeliveryWindows ?? [];
   const initialWindow = computeInitialGroupWindow(preferredWindows);
 
-  if (!initialWindow) {
-    return {
-      ok: false,
-      code: 'VALIDATION_ERROR',
-      message: 'At least one preferred delivery window is required.',
-    };
-  }
-
   let deliveryFee = toDecimal(deliveryPricing.deliveryFee);
   let deliveryGroupId: string | null = null;
   let groupedDelivery = false;
@@ -348,13 +340,10 @@ export const resolveReservationPricingForCreate = async (
     | { type: 'JOIN'; groupId: string; sharedWindow: { start: Date; end: Date } }
     | { type: 'CREATE'; window: { start: Date; end: Date }; deliveryFee: number; zone: string }
     | { type: 'NONE' } = {
-    type: 'CREATE',
-    window: initialWindow,
-    deliveryFee: deliveryPricing.deliveryFee,
-    zone: deliveryPricing.zone,
+    type: 'NONE',
   };
 
-  if (input.combineWithDeliveryGroupId) {
+  if (input.combineWithDeliveryGroupId && initialWindow) {
     const validation = await validateDeliveryGroupForCombine(tx, {
       groupId: input.combineWithDeliveryGroupId,
       learnerId: input.learnerId,
@@ -380,6 +369,19 @@ export const resolveReservationPricingForCreate = async (
       type: 'JOIN',
       groupId: validation.group.id,
       sharedWindow: validation.sharedWindow,
+    };
+  } else if (initialWindow) {
+    groupAction = {
+      type: 'CREATE',
+      window: initialWindow,
+      deliveryFee: deliveryPricing.deliveryFee,
+      zone: deliveryPricing.zone,
+    };
+  } else if (input.combineWithDeliveryGroupId) {
+    return {
+      ok: false,
+      code: 'GROUP_NOT_AVAILABLE',
+      message: 'Combined delivery requires a preferred delivery window.',
     };
   }
 

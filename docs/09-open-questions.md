@@ -59,7 +59,7 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 | Are all public API paths consistent on omitting lat/lng/address? | **Needs verification** — public Materials Discovery list/detail verified; non-material public API paths still need separate review | [locations](features/locations.md), `materials.service.ts` |
 | Is `visibility` / `ORDER_ONLY` enforced beyond storage? | **Needs verification** | [locations](features/locations.md), `supplier.validation.ts` |
 | Are authenticated saved locations implemented? | **Resolved** — backend `GET/POST/PATCH/DELETE /api/locations/saved`; Flutter `/profile/locations` manages saved locations and Materials Discovery reads them for nearest sort selection | [locations](features/locations.md), [material-discovery](features/material-discovery.md) |
-| When should precise location reveal to learner after accepted reservation? | Open — precise pickup reveal **not implemented** | [locations](features/locations.md), [reservations](features/reservations.md) |
+| When should precise location reveal to learner after accepted reservation? | **Resolved for reservations** — learner-owned `GET /api/reservations/my` and detail return `pickupLocationFull` only for `ACCEPTED`/`COMPLETED`; public material APIs still omit exact pickup location | [locations](features/locations.md), [reservations](features/reservations.md) |
 
 ---
 
@@ -67,11 +67,12 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 | Question | Status | Source |
 |----------|--------|--------|
-| Should learner reservation create be idempotent for same learner/material after rejected/cancelled/expired history? | Open — MVP rejects active duplicates only | [learner-reservation-flow](flows/learner-reservation-flow.md) |
-| Should future inventory support partial allocation instead of whole-material hold? | Open — MVP exclusive reservation only | [learner-reservation-flow](flows/learner-reservation-flow.md) |
-| Notification generation on reservation state changes? | Open | [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
-| Pickup window validation schema — exact rules? | **Needs verification** | [supplier-reservation-flow](flows/supplier-reservation-flow.md) |
-| Cancel/expiry flows for reservations? | **Partial** — learner cancel + overdue accepted pickup close/report + automatic lazy `PENDING` → `EXPIRED` implemented; no background cron | [supplier-reservation-flow](flows/supplier-reservation-flow.md), [reservations](features/reservations.md) |
+| Should learner reservation create be idempotent for repeated submits? | Open — current backend prevents duplicate active reservations in a serializable transaction, but has no idempotency key or retry-safe "return the same reservation" behavior | [learner-reservation-flow](flows/learner-reservation-flow.md) |
+| Should learner re-reserve the same material after rejected/cancelled/expired/completed history? | **Resolved** — terminal history does not block backend re-reservation or Material Detail reserve eligibility when the material remains currently reservable | [learner-reservation-flow](flows/learner-reservation-flow.md), [reservations](features/reservations.md) |
+| Should future inventory support partial allocation instead of whole-material hold? | **Resolved for MVP** — partial-quantity holds are implemented; multiple learners can hold different quantities while stock remains | [learner-reservation-flow](flows/learner-reservation-flow.md), [reservations](features/reservations.md) |
+| Notification generation on reservation state changes? | **Partial** — persisted notifications cover create, supplier accept/proposal, decline, learner cancel, expiry, and admin reschedule requests; missing learner accept/submit-delivery-window, supplier accept learner reschedule, supplier cancel, supplier complete, and driver completion notifications | [supplier-reservation-flow](flows/supplier-reservation-flow.md), [reservations](features/reservations.md) |
+| Pickup window validation schema — exact rules? | **Resolved** — preferred windows are optional; when provided, start/end must be future, end after start, learner/custom supplier starts at least 30 minutes away, and selected learner preferred windows must still have at least 30 minutes remaining | [supplier-reservation-flow](flows/supplier-reservation-flow.md), [reservations](features/reservations.md) |
+| Cancel/expiry flows for reservations? | **Resolved current behavior** — learner cancel only `PENDING`/`AWAITING_LEARNER_CONFIRMATION`; supplier can cancel `AWAITING_SUPPLIER_CONFIRMATION` or overdue accepted self-pickup; `PENDING` and missed-pickup expiry are lazy, not scheduled | [supplier-reservation-flow](flows/supplier-reservation-flow.md), [reservations](features/reservations.md) |
 
 ---
 
@@ -130,10 +131,10 @@ From [learner-reservation-flow](flows/learner-reservation-flow.md), [delivery-fl
 
 | Question | Status | Source |
 |----------|--------|--------|
-| Learner reservation create: should repeated reserve attempts be idempotent? | Open | [learner-reservation-flow](flows/learner-reservation-flow.md) |
-| Learner reservation cancel: can learners cancel before supplier acceptance? | Open | [learner-reservation-flow](flows/learner-reservation-flow.md) |
-| Reservation entry point: should reservations start from Material Discovery only, Learning Hub, or both? | Open | [learner-reservation-flow](flows/learner-reservation-flow.md) |
-| Delivery completion: should pickup/delivery completion use the same supplier reservation complete endpoint or separate driver endpoints? | Open | [delivery-flow](flows/delivery-flow.md) |
+| Learner reservation create: should repeated reserve attempts be idempotent? | Open — duplicate active guard exists; idempotency keys do not | [learner-reservation-flow](flows/learner-reservation-flow.md) |
+| Learner reservation cancel: can learners cancel before supplier acceptance? | **Resolved** — yes for `PENDING` and `AWAITING_LEARNER_CONFIRMATION`; not for `ACCEPTED` or delivery-backed reservations | [learner-reservation-flow](flows/learner-reservation-flow.md) |
+| Reservation entry point: should reservations start from Material Discovery only, Learning Hub, or both? | **Resolved for current code** — Material Discovery is the primary reservation entry point; Learning Hub build checklist items can link a reservation via optional `buildItemId` or repair link endpoint | [learner-reservation-flow](flows/learner-reservation-flow.md), [features/reservations](features/reservations.md) |
+| Delivery completion: should pickup/delivery completion use the same supplier reservation complete endpoint or separate driver endpoints? | **Resolved** — self-pickup uses supplier reservation complete with learner code; delivery-backed reservations complete through driver delivery status `DELIVERED` | [delivery-flow](flows/delivery-flow.md), [features/reservations](features/reservations.md) |
 | AI matching credits: is AI material matching one-shot, conversational, or both? | Open | [ai-material-matching-flow](flows/ai-material-matching-flow.md) |
 | AI matching credits: what wallet/free-credit rules apply? | Open | [ai-material-matching-flow](flows/ai-material-matching-flow.md) |
 
@@ -143,7 +144,7 @@ From [learner-reservation-flow](flows/learner-reservation-flow.md), [delivery-fl
 
 | Question | Status | Source |
 |----------|--------|--------|
-| Flutter test coverage beyond isolated model tests? | **Needs verification** | [08-implementation-status](08-implementation-status.md) |
+| Flutter test coverage beyond isolated model tests? | **Partial** — reservation models/helpers/payloads and selected UI helpers have tests; full learner/supplier widget or E2E lifecycle coverage and manual regression docs are still missing | [08-implementation-status](08-implementation-status.md), [reservations](features/reservations.md) |
 | Supplier notifications — exact query derivation | **Needs verification** | [backend/modules-map](backend/modules-map.md) |
 
 ---

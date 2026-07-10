@@ -583,17 +583,6 @@ export const acceptSupplierReservation = async (
       );
     }
 
-    const learnerDeliveryWindows = mapPreferredWindowsForResponse(
-      existing.learnerPreferredDeliveryWindows,
-    );
-
-    if (!learnerDeliveryWindows.length) {
-      throw new AppError(
-        'Learner delivery windows are required.',
-        400,
-        'VALIDATION_ERROR',
-      );
-    }
   }
 
   const result = await supplierReservationsRepository.acceptSupplierReservation({

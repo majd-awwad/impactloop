@@ -6,11 +6,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 
 class PreferredWindowDraft {
-  PreferredWindowDraft({
-    this.date,
-    this.startTime,
-    this.endTime,
-  });
+  PreferredWindowDraft({this.date, this.startTime, this.endTime});
 
   DateTime? date;
   TimeOfDay? startTime;
@@ -43,6 +39,8 @@ class PreferredWindowDraft {
       endTime!.minute,
     );
   }
+
+  bool get isBlank => date == null && startTime == null && endTime == null;
 
   String? validationError({
     required DateTime now,
@@ -130,9 +128,9 @@ class PreferredWindowInput extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textSecondary,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary),
         ),
         const SizedBox(height: AppSpacing.sm),
         for (var index = 0; index < windows.length; index++) ...[
@@ -199,14 +197,11 @@ class _PreferredWindowRow extends StatelessWidget {
     }
   }
 
-  Future<void> _pickTime(
-    BuildContext context, {
-    required bool isStart,
-  }) async {
+  Future<void> _pickTime(BuildContext context, {required bool isStart}) async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: (isStart ? window.startTime : window.endTime) ??
-          TimeOfDay.now(),
+      initialTime:
+          (isStart ? window.startTime : window.endTime) ?? TimeOfDay.now(),
     );
 
     if (picked != null) {
@@ -285,7 +280,9 @@ class _PreferredWindowRow extends StatelessWidget {
                 child: _PickerField(
                   label: 'Start',
                   value: _formatTime(window.startTime),
-                  onTap: enabled ? () => _pickTime(context, isStart: true) : null,
+                  onTap: enabled
+                      ? () => _pickTime(context, isStart: true)
+                      : null,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -293,7 +290,9 @@ class _PreferredWindowRow extends StatelessWidget {
                 child: _PickerField(
                   label: 'End',
                   value: _formatTime(window.endTime),
-                  onTap: enabled ? () => _pickTime(context, isStart: false) : null,
+                  onTap: enabled
+                      ? () => _pickTime(context, isStart: false)
+                      : null,
                 ),
               ),
             ],

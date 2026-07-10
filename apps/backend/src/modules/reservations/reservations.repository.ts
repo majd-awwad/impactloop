@@ -1,4 +1,4 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 
 import {
@@ -410,12 +410,12 @@ export const createLearnerReservation = async (input: {
         fulfillmentMethod: input.fulfillmentMethod,
         learnerPreferredPickupWindows:
           input.fulfillmentMethod === 'PICKUP'
-            ? input.learnerPreferredPickupWindows
-            : null,
+            ? (input.learnerPreferredPickupWindows ?? Prisma.JsonNull)
+            : Prisma.JsonNull,
         learnerPreferredDeliveryWindows:
           input.fulfillmentMethod === 'DELIVERY'
-            ? input.learnerPreferredDeliveryWindows
-            : null,
+            ? (input.learnerPreferredDeliveryWindows ?? Prisma.JsonNull)
+            : Prisma.JsonNull,
         deliveryAddressText:
           input.fulfillmentMethod === 'DELIVERY'
             ? input.deliveryAddressText?.trim() ?? null

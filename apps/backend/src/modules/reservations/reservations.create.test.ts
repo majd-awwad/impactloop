@@ -370,6 +370,27 @@ describe('createReservation', () => {
     }
   });
 
+  test('validation allows missing preferred windows for pickup and delivery', () => {
+    const pickupResult = createReservationSchema.safeParse({
+      materialId: 'material-id',
+      quantityRequested: 1,
+      fulfillmentMethod: 'PICKUP',
+    });
+
+    assert.equal(pickupResult.success, true);
+
+    const deliveryResult = createReservationSchema.safeParse({
+      materialId: 'material-id',
+      quantityRequested: 1,
+      fulfillmentMethod: 'DELIVERY',
+      deliveryAddressText: '12 Learner Street',
+      dropoffCity: 'Nablus',
+      safeDropoffAllowed: false,
+    });
+
+    assert.equal(deliveryResult.success, true);
+  });
+
   test('learner can reserve part of available material and listing stays available', async () => {
     const material = await createMaterial(ctx, 'AVAILABLE', 4);
 
@@ -402,6 +423,22 @@ describe('createReservation', () => {
     });
     assert.ok(history);
     assert.equal(history?.changedBy, ctx.learnerId);
+  });
+
+  test('learner can create pickup reservation without preferred windows', async () => {
+    const material = await createMaterial(ctx, 'AVAILABLE', 2);
+
+    const reservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, 1, {
+        learnerPreferredPickupWindows: undefined,
+      }),
+    );
+    ctx.createdReservationIds.push(reservation.id);
+
+    assert.equal(reservation.status, 'PENDING');
+    assert.equal(reservation.fulfillmentMethod, 'PICKUP');
+    assert.equal(reservation.learnerPreferredPickupWindows.length, 0);
   });
 
   test('owner cannot reserve own material', async () => {
@@ -678,6 +715,26 @@ describe('createReservation', () => {
 
     assert.equal(listed?.fulfillmentMethod, 'DELIVERY');
     assert.equal(listed?.deliveryAddressText, '12 Learner Street, Nablus');
+  });
+
+  test('learner can create delivery reservation without preferred windows', async () => {
+    const material = await createMaterial(ctx, 'AVAILABLE', 2, {
+      deliveryAllowed: true,
+    });
+
+    const reservation = await createReservation(
+      ctx.learnerId,
+      deliveryReservationPayload(material.id, 1, {
+        learnerPreferredDeliveryWindows: undefined,
+      }),
+    );
+    ctx.createdReservationIds.push(reservation.id);
+
+    assert.equal(reservation.status, 'PENDING');
+    assert.equal(reservation.fulfillmentMethod, 'DELIVERY');
+    assert.equal(reservation.learnerPreferredDeliveryWindows.length, 0);
+    assert.equal(reservation.deliveryAddressText, '12 Learner Street, Nablus');
+    assert.equal(reservation.deliveryFee != null, true);
   });
 
   test('pending reservation holds quantity and blocks over-reservation', async () => {

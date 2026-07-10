@@ -14,7 +14,7 @@ Supplier opens **Incoming requests** (`/supplier/reservations`) or arrives via n
 
 ### User path
 
-Switch tabs: pending / accepted / declined / completed (wording per UI). See cards with learner info, material summary, quantity, message.
+Switch tabs: pending / needs learner / needs supplier / accepted / declined / completed / cancelled (wording per UI). See cards with learner info, material summary, quantity, message, scheduling state, and delivery state when present.
 
 ### Frontend path
 
@@ -22,7 +22,7 @@ Switch tabs: pending / accepted / declined / completed (wording per UI). See car
 
 ### Backend path
 
-`listSupplierReservations` → map tab to reservation statuses (`accepted` tab → `ACCEPTED` + `AWAITING_LEARNER_CONFIRMATION`; `declined` → `REJECTED`) → `findSupplierReservations(ownerId, statuses)`.
+`listSupplierReservations` maps tabs to reservation statuses: `pending` -> `PENDING`, `needs_learner` -> `AWAITING_LEARNER_CONFIRMATION`, `needs_supplier` -> `AWAITING_SUPPLIER_CONFIRMATION`, `accepted` -> `ACCEPTED`, `declined` -> `REJECTED`, `completed` -> `COMPLETED`, and `cancelled` -> `CANCELLED` + `EXPIRED`.
 
 ### Database changes
 
@@ -123,12 +123,13 @@ Supplier marks self-pickup complete (incoming requests or pickup schedule UI). D
 
 ### Frontend path
 
-`complete_pickup_dialog.dart` / providers → `PATCH .../complete` (no body).
+`complete_pickup_dialog.dart` / providers → `PATCH .../complete` with the learner's 6-digit self-pickup confirmation code.
 
 ### Backend path
 
 Transaction:
 
+- Requires an accepted self-pickup reservation and a valid 6-digit learner confirmation code.
 - `reservations.status`: `ACCEPTED` → `COMPLETED`; `completedAt`
 - History: ACCEPTED → COMPLETED
 - `material.quantity` decreases by `quantityRequested`
@@ -150,7 +151,7 @@ Complete invalidates incoming requests, supplier notifications, supplier dashboa
 
 ### Error states
 
-409 if not accepted.
+400/409 if not accepted, if the reservation is delivery-backed, or if the pickup code is invalid, wrong, or expired.
 
 ---
 
@@ -164,19 +165,20 @@ Complete invalidates incoming requests, supplier notifications, supplier dashboa
 
 ## Not implemented
 
-- Automatic `PENDING` reservation expiry — **Implemented (lazy)** on learner/supplier reservation reads and material availability reads; supplier `cancelled` tab includes `EXPIRED`.
-- Supplier **`mark-delivery-pickup-expired` UI** — **Implemented** on incoming request cards.
-- Dedicated learner reservation detail route (`/learner/reservations/:id`).
-- Self-pickup map on learner reservation UI — **Implemented**.
-- Realtime delivery tracking stream / background GPS.
-- Generic persisted notifications on reservation state changes — **Implemented** (`/api/notifications` + `/notifications` Flutter page).
+- Scheduled background expiry cron. Current expiry is lazy on learner/supplier/material read paths.
+- True reservation-create idempotency keys.
+- Terminal-state re-reservation reachability from the main learner material detail CTA needs verification/fix.
+- Realtime delivery tracking stream / background GPS, ETA, delivery cancellation/retry, and payment.
+- Reservation-related reviews after completion.
+- Full persisted notification coverage for every reservation state transition. Generic notifications are implemented for create, supplier accept/proposal, decline, learner cancel, expiry, and admin reschedule requests.
 - QR polish.
 
 ---
 
 ## Open questions
 
-- Notification generation when reservation state changes?
+- Product policy for learner/supplier cancellation after delivery handoff or after an accepted self-pickup window has not yet become overdue.
+- Whether terminal-state re-reservation should be a material-detail action or a reservation-detail action.
 
 ### Files involved
 

@@ -612,7 +612,7 @@ LearnerReservation? _reservationForMaterial(
       continue;
     }
 
-    if (!reservation.isPending && !reservation.isAccepted) {
+    if (!reservation.blocksNewMaterialReservation) {
       continue;
     }
 
@@ -2539,16 +2539,6 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
         });
         return;
       }
-
-      final windows = _deliveryWindowsPayload();
-      if (windows.isEmpty) {
-        setState(() {
-          _quote = null;
-          _quoteError = null;
-          _quoteLoading = false;
-        });
-        return;
-      }
     }
 
     setState(() {
@@ -2652,6 +2642,10 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
     final windows = <ReservationPreferredWindow>[];
 
     for (final draft in drafts) {
+      if (draft.isBlank) {
+        continue;
+      }
+
       final error = draft.validationError(
         now: now,
         minimumRemainingTime: minimumRemainingTime,
@@ -2778,10 +2772,6 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
         return false;
       }
 
-      if (_deliveryWindowsPayload().isEmpty) {
-        return false;
-      }
-
       return _quote != null && !_quoteLoading && _quoteError == null;
     }
 
@@ -2795,10 +2785,6 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
 
     if (_isDelivery && _dropoffCityController.text.trim().isEmpty) {
       return 'Enter drop-off city to calculate delivery fee.';
-    }
-
-    if (_isDelivery && _deliveryWindowsPayload().isEmpty) {
-      return 'Add at least one delivery window to calculate delivery fee.';
     }
 
     if (!_quoteLoading && _quote == null && _quoteError == null) {
@@ -3159,7 +3145,7 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
                           PreferredWindowInput(
                             windows: _pickupWindows,
                             enabled: !_isSubmitting,
-                            label: 'Preferred pickup windows',
+                            label: 'Preferred pickup windows (optional)',
                             onChanged: (windows) {
                               setState(
                                 () => _pickupWindows
@@ -3173,7 +3159,7 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
                           PreferredWindowInput(
                             windows: _deliveryWindows,
                             enabled: !_isSubmitting,
-                            label: 'Preferred delivery windows',
+                            label: 'Preferred delivery windows (optional)',
                             onChanged: (windows) {
                               setState(
                                 () => _deliveryWindows
