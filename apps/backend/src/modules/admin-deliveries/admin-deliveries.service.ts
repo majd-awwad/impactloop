@@ -3,6 +3,7 @@ import { AppError } from '../../utils/app-error.js';
 
 import * as repository from './admin-deliveries.repository.js';
 import type { AdminDeliveriesListQuery } from './admin-deliveries.validation.js';
+import { notifyDriverDeliveryUnassignedByAdmin } from '../notifications/driver-notification-events.service.js';
 
 type OwnerWithSupplier = {
   id: string;
@@ -187,6 +188,22 @@ const mapLocationDetail = (
   isApproximate: location.isApproximate,
 });
 
+const canReopenDriverAssignment = (
+  delivery: repository.AdminDeliveryDetailRecord,
+) =>
+  delivery.status === 'DRIVER_ASSIGNED' &&
+  delivery.assignedDriverProfile != null &&
+  !repository.hasPickupStarted(delivery) &&
+  (!delivery.deliveryGroup ||
+    (delivery.deliveryGroup.status === 'ASSIGNED' &&
+      delivery.deliveryGroup.assignedDriverProfileId ===
+        delivery.assignedDriverProfileId &&
+      !delivery.deliveryGroup.reservations.some(
+        (reservation) =>
+          reservation.fulfillmentMethod === 'DELIVERY' &&
+          reservation.status !== 'ACCEPTED',
+      )));
+
 const mapDetail = (delivery: repository.AdminDeliveryDetailRecord) => {
   const locationPings = delivery.locationPings.map((ping) => ({
     id: ping.id,
@@ -211,6 +228,7 @@ const mapDetail = (delivery: repository.AdminDeliveryDetailRecord) => {
     learnerNote: delivery.learnerNote,
     driverNote: delivery.driverNote,
     failureReason: delivery.failureReason,
+    canReopenDriverAssignment: canReopenDriverAssignment(delivery),
     reservation: {
       id: delivery.reservation.id,
       status: delivery.reservation.status,
@@ -314,4 +332,73 @@ export const getAdminDeliveryById = async (id: string) => {
   }
 
   return mapDetail(delivery);
+};
+
+export const reopenAdminDeliveryDriverAssignment = async (
+  deliveryId: string,
+  adminUserId: string,
+) => {
+  const result = await repository.reopenDriverAssignmentForAdmin({
+    deliveryId,
+    adminUserId,
+  });
+
+  switch (result.outcome) {
+    case 'REOPENED': {
+      await notifyDriverDeliveryUnassignedByAdmin({
+        deliveryId: result.deliveryId,
+        driverUserId: result.removedDriverUserId,
+        materialTitle: result.materialTitle,
+      });
+      const delivery = await repository.findAdminDeliveryById(result.deliveryId);
+      if (!delivery) {
+        throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+      }
+      return mapDetail(delivery);
+    }
+    case 'NOT_FOUND':
+      throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+    case 'ALREADY_WAITING':
+      throw new AppError(
+        'Delivery is already waiting for a driver.',
+        409,
+        'CONFLICT',
+      );
+    case 'NOT_ASSIGNED':
+      throw new AppError(
+        'Delivery is not currently assigned to a driver.',
+        409,
+        'CONFLICT',
+      );
+    case 'PICKUP_STARTED':
+      throw new AppError(
+        'Pickup has already started; this delivery cannot be reopened to drivers.',
+        409,
+        'CONFLICT',
+      );
+    case 'TERMINAL_OR_FAILED':
+      throw new AppError(
+        'Terminal, failed, or admin-review deliveries cannot be reopened to drivers.',
+        409,
+        'CONFLICT',
+      );
+    case 'GROUP_INCOMPATIBLE':
+      throw new AppError(
+        'Grouped delivery state is not eligible to reopen to drivers.',
+        409,
+        'CONFLICT',
+      );
+    case 'ACTIVE_ASSIGNMENT_MISSING':
+      throw new AppError(
+        'The current driver assignment is no longer active.',
+        409,
+        'CONFLICT',
+      );
+    case 'CONCURRENT_UPDATE':
+      throw new AppError(
+        'Delivery assignment changed. Refresh and try again.',
+        409,
+        'CONFLICT',
+      );
+  }
 };

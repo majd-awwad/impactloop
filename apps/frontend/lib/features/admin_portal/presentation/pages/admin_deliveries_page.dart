@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -436,8 +438,20 @@ class _FiltersPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return _buildFilters(context, constraints.maxWidth);
+      },
+    );
+  }
+
+  Widget _buildFilters(BuildContext context, double maxWidth) {
     final palette = context.adminPalette;
-    final dropdownWidth = compact ? double.infinity : 170.0;
+    final boundedWidth =
+        maxWidth.isFinite ? maxWidth : MediaQuery.sizeOf(context).width;
+    final stacked = compact || boundedWidth < 900;
+    final innerWidth = math.max(170.0, boundedWidth - 28);
+    final dropdownWidth = stacked ? innerWidth : 170.0;
     final statusValue =
         safeDropdownValue(filters.status, statuses) ?? 'ALL';
 
@@ -526,7 +540,7 @@ class _FiltersPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (compact) ...[
+          if (stacked) ...[
             searchField,
             const SizedBox(height: 10),
             statusFilter,
@@ -535,39 +549,32 @@ class _FiltersPanel extends StatelessWidget {
             const SizedBox(height: 10),
             timeFilter,
             const SizedBox(height: 10),
-            Row(
-              children: [
-                refreshButton,
-                const SizedBox(width: 8),
-                Expanded(child: resetButton),
-              ],
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [refreshButton, resetButton],
+              ),
             ),
           ] else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Expanded(flex: 3, child: searchField),
-                const SizedBox(width: 10),
+                SizedBox(width: 280, child: searchField),
                 statusFilter,
-                const SizedBox(width: 10),
                 assignmentFilter,
-                const SizedBox(width: 10),
                 timeFilter,
-                const SizedBox(width: 6),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: refreshButton,
-                ),
-                const SizedBox(width: 6),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: resetButton,
-                ),
+                refreshButton,
+                resetButton,
               ],
             ),
           if (filters.timeRange == kTimeRangeCustom) ...[
             const SizedBox(height: 10),
-            if (compact)
+            if (stacked)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -853,10 +860,74 @@ class _DeliveryRow extends StatelessWidget {
   }
 }
 
-class _DeliveryDetailDialog extends StatelessWidget {
+class _DeliveryDetailDialog extends ConsumerStatefulWidget {
   const _DeliveryDetailDialog({required this.detail});
 
   final AdminDeliveryDetail detail;
+
+  @override
+  ConsumerState<_DeliveryDetailDialog> createState() =>
+      _DeliveryDetailDialogState();
+}
+
+class _DeliveryDetailDialogState extends ConsumerState<_DeliveryDetailDialog> {
+  late AdminDeliveryDetail detail;
+  var _isReopening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    detail = widget.detail;
+  }
+
+  Future<void> _reopenDriverAssignment() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reopen to drivers?'),
+        content: const Text(
+          'The current driver will lose this assignment and the delivery will return to the available driver job pool. Reservation details, quantities, fees, and windows will stay unchanged.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reopen'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || _isReopening) {
+      return;
+    }
+
+    setState(() => _isReopening = true);
+
+    try {
+      final updated = await ref
+          .read(adminDeliveriesApiProvider)
+          .reopenDriverAssignment(detail.id);
+      if (!mounted) return;
+      setState(() {
+        detail = updated;
+        _isReopening = false;
+      });
+      ref.invalidate(adminDeliveriesListProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Delivery reopened to drivers.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _isReopening = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.displayMessage)),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1103,8 +1174,18 @@ class _DeliveryDetailDialog extends StatelessWidget {
         ),
       ),
       actions: [
+        if (detail.canShowReopenDriverAssignmentAction)
+          FilledButton(
+            onPressed: _isReopening ? null : _reopenDriverAssignment,
+            child: _isReopening
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Reopen to drivers'),
+          ),
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isReopening ? null : () => Navigator.pop(context),
           child: const Text('Close'),
         ),
       ],
@@ -1209,12 +1290,13 @@ class _PaginationRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
 
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         OutlinedButton(onPressed: onPrevious, child: const Text('Previous')),
-        const SizedBox(width: 8),
         OutlinedButton(onPressed: onNext, child: const Text('Next')),
-        const SizedBox(width: 12),
         Text(
           'Page $page of $totalPages · $total total',
           style: AdminTypography.kpiHelper(palette),

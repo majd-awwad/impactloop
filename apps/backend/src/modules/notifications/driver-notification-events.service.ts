@@ -318,6 +318,25 @@ export const notifyDriverDropoffTime = async (deliveryId: string) =>
     });
   });
 
+export const notifyDriverDeliveryUnassignedByAdmin = async (input: {
+  deliveryId: string;
+  driverUserId: string;
+  materialTitle: string;
+}) =>
+  notifySafely(async () => {
+    const material = input.materialTitle.trim() || 'Delivery';
+
+    await createNotificationIfMissing({
+      userId: input.driverUserId,
+      notificationType:
+        DRIVER_NOTIFICATION_TYPES.DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN,
+      title: 'Delivery assignment removed',
+      body: `${material} was reopened to the driver pool by an admin.`,
+      relatedEntityType: 'DELIVERY',
+      relatedEntityId: input.deliveryId,
+    });
+  });
+
 /**
  * Idempotent due-only sync for pickup/drop-off reminders.
  * Safe to call from GET /api/notifications — never creates NEW JOB rows.

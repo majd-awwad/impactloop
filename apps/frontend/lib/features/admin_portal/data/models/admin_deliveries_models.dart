@@ -245,6 +245,7 @@ class AdminDeliveryDetail {
     required this.dropoff,
     required this.timeline,
     required this.locationHistory,
+    required this.canReopenDriverAssignment,
     this.assignedAt,
     this.arrivedPickupAt,
     this.pickedUpAt,
@@ -282,6 +283,10 @@ class AdminDeliveryDetail {
   final AdminDeliveryDropoffDetail dropoff;
   final List<AdminDeliveryTimelineItem> timeline;
   final AdminDeliveryLocationHistory locationHistory;
+  final bool canReopenDriverAssignment;
+
+  bool get canShowReopenDriverAssignmentAction =>
+      canReopenDriverAssignment && status == 'DRIVER_ASSIGNED' && driver != null;
 
   factory AdminDeliveryDetail.fromJson(Map<String, dynamic> json) {
     return AdminDeliveryDetail(
@@ -329,6 +334,8 @@ class AdminDeliveryDetail {
       locationHistory: AdminDeliveryLocationHistory.fromJson(
         json['locationHistory'] as Map<String, dynamic>? ?? const {},
       ),
+      canReopenDriverAssignment:
+          json['canReopenDriverAssignment'] as bool? ?? false,
     );
   }
 }

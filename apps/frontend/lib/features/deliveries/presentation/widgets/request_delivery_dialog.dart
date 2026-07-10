@@ -296,6 +296,7 @@ class _RequestDeliveryDialogState
                       const SizedBox(height: AppSpacing.sm),
                       if (_inputMode == _DropoffInputMode.saved)
                         DropdownButtonFormField<String>(
+                          isExpanded: true,
                           initialValue: selectedId,
                           decoration: const InputDecoration(
                             labelText: 'Saved dropoff address',
@@ -307,6 +308,7 @@ class _RequestDeliveryDialogState
                                   child: Text(
                                     '${address.label} · ${address.location.summary}',
                                     overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
                                   ),
                                 ),
                               )

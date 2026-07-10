@@ -105,12 +105,16 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 
 ---
 
-## Delivery, driver, AI agent (not implemented)
+## Delivery, driver, AI agent
 
 | Question | Status | Source |
 |----------|--------|--------|
 | Driver profile model — `reservations.driver_profile_id` has no `DriverProfile` table? | **Resolved** — `DriverProfile` exists; `reservations.driver_profile_id` is legacy compatibility, `deliveries.assigned_driver_profile_id` is the real relation | [tables-catalog](database/tables-catalog.md), `schema.prisma` |
-| Delivery cost calculation and who sets `delivery_cost`? | Open — **not implemented** | [delivery](features/delivery.md) |
+| Delivery cost calculation and who sets `delivery_cost`? | **Resolved for current code** — reserve-time pricing stores delivery fee/currency/zone metadata and grouped delivery can preserve one delivery fee; payment/settlement is still open and not implemented | [delivery](features/delivery.md), [reservations](features/reservations.md) |
+| Should delivery support general learner/supplier/admin cancellation outside pickup-recovery incident reports? | Open — current code only implements admin `cancel-release-hold` for pickup-recovery incident reports | [delivery](features/delivery.md), [delivery-flow](flows/delivery-flow.md) |
+| Should admins explicitly reassign a delivery to a selected replacement driver? | Open — admins can reopen an eligible pre-pickup assigned delivery to `WAITING_FOR_DRIVER`, but no endpoint/UI exists to assign a selected replacement driver directly | [delivery](features/delivery.md), [delivery-flow](flows/delivery-flow.md) |
+| What should happen after post-pickup delivery failure? | Open — current code moves the reservation/delivery to `AWAITING_RESOLUTION` and keeps custody/hold semantics; no redelivery/retry/completion recovery workflow exists | [delivery](features/delivery.md), [delivery-flow](flows/delivery-flow.md) |
+| Should delivery tracking become realtime or include ETA/routes? | Open — current learner tracking is 20-second polling of latest driver ping only; no WebSocket/SSE, ETA, or route calculation | [delivery](features/delivery.md), [delivery-flow](flows/delivery-flow.md) |
 | AI material matching credit model — roadmap tables not in schema | **Not implemented** | [ai-agent](features/ai-agent.md), `05-roadmap.md` |
 
 ---
@@ -132,6 +136,7 @@ From [learner-reservation-flow](flows/learner-reservation-flow.md), [delivery-fl
 | Question | Status | Source |
 |----------|--------|--------|
 | Learner reservation create: should repeated reserve attempts be idempotent? | Open — duplicate active guard exists; idempotency keys do not | [learner-reservation-flow](flows/learner-reservation-flow.md) |
+| Delivery mutation idempotency: should delivery request/accept/status/failure/admin actions accept `Idempotency-Key`? | Open — duplicate guards and transactional races exist, but formal HTTP idempotency keys are not implemented for delivery lifecycle mutations | [delivery-flow](flows/delivery-flow.md) |
 | Learner reservation cancel: can learners cancel before supplier acceptance? | **Resolved** — yes for `PENDING` and `AWAITING_LEARNER_CONFIRMATION`; not for `ACCEPTED` or delivery-backed reservations | [learner-reservation-flow](flows/learner-reservation-flow.md) |
 | Reservation entry point: should reservations start from Material Discovery only, Learning Hub, or both? | **Resolved for current code** — Material Discovery is the primary reservation entry point; Learning Hub build checklist items can link a reservation via optional `buildItemId` or repair link endpoint | [learner-reservation-flow](flows/learner-reservation-flow.md), [features/reservations](features/reservations.md) |
 | Delivery completion: should pickup/delivery completion use the same supplier reservation complete endpoint or separate driver endpoints? | **Resolved** — self-pickup uses supplier reservation complete with learner code; delivery-backed reservations complete through driver delivery status `DELIVERED` | [delivery-flow](flows/delivery-flow.md), [features/reservations](features/reservations.md) |
@@ -145,6 +150,7 @@ From [learner-reservation-flow](flows/learner-reservation-flow.md), [delivery-fl
 | Question | Status | Source |
 |----------|--------|--------|
 | Flutter test coverage beyond isolated model tests? | **Partial** — reservation models/helpers/payloads and selected UI helpers have tests; full learner/supplier widget or E2E lifecycle coverage and manual regression docs are still missing | [08-implementation-status](08-implementation-status.md), [reservations](features/reservations.md) |
+| Delivery manual regression coverage? | **Needs verification** — backend tests cover many delivery paths and Flutter unit/widget tests cover selected models/helpers, but no single manual checklist was found for the full learner/supplier/driver/admin delivery lifecycle | [delivery](features/delivery.md), [delivery-flow](flows/delivery-flow.md) |
 | Supplier notifications — exact query derivation | **Needs verification** | [backend/modules-map](backend/modules-map.md) |
 
 ---
