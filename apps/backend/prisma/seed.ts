@@ -233,7 +233,7 @@ const LEARNERS = [
     displayName: 'Majd Learner',
     city: 'Hebron',
     area: 'University District',
-    interests: ['Electronics', 'Robotics', 'Arduino', 'Recycling'],
+    interests: ['arduino', 'robotics', 'sensors', 'circuits'],
     skillLevel: 'INTERMEDIATE',
   },
   {
@@ -241,7 +241,7 @@ const LEARNERS = [
     displayName: 'Israa Learner',
     city: 'Ramallah',
     area: 'Al-Tireh',
-    interests: ['Fabric', 'Art & Crafts', 'Recycling', 'Textiles'],
+    interests: ['art_crafts', 'fabric_textiles', 'recycling'],
     skillLevel: 'BEGINNER',
   },
   {
@@ -249,8 +249,66 @@ const LEARNERS = [
     displayName: 'ImpactLoop Learner',
     city: 'Nablus',
     area: 'Rafidia',
-    interests: ['Woodworking', 'Home DIY', 'Recycling', 'Sustainability'],
+    interests: ['woodworking', 'home_diy', 'recycling'],
     skillLevel: 'BEGINNER',
+  },
+] as const;
+
+/** Reservation workflow copies — primary listing keys stay AVAILABLE for recommendations. */
+const WORKFLOW_MATERIAL_COPIES = [
+  { key: 'wf-majd-arduino-uno-r3', sourceKey: 'majd-arduino-uno-r3', titleSuffix: '(Spare Batch)' },
+  { key: 'wf-majd-dc-gear-motors', sourceKey: 'majd-dc-gear-motors', titleSuffix: '(Spare Batch)' },
+  { key: 'wf-majd-breadboard-kit', sourceKey: 'majd-breadboard-kit', titleSuffix: '(Spare Batch)' },
+  { key: 'wf-israa-fabric-scraps', sourceKey: 'israa-fabric-scraps', titleSuffix: '(Spare Batch)' },
+  { key: 'wf-israa-cardboard-sheets', sourceKey: 'israa-cardboard-sheets', titleSuffix: '(Spare Batch)' },
+  { key: 'wf-israa-acrylic-paint', sourceKey: 'israa-acrylic-paint', titleSuffix: '(Spare Batch)' },
+  { key: 'wf-supplier-plywood-panels', sourceKey: 'supplier-plywood-panels', titleSuffix: '(Spare Batch)' },
+  { key: 'wf-supplier-acrylic-sheets', sourceKey: 'supplier-acrylic-sheets', titleSuffix: '(Spare Batch)' },
+  { key: 'wf-supplier-pvc-pipes', sourceKey: 'supplier-pvc-pipes', titleSuffix: '(Spare Batch)' },
+] as const;
+
+const LEARNER_ENGAGEMENT = [
+  {
+    email: 'majd@learner.com',
+    likes: [
+      'majd-arduino-uno-r3',
+      'majd-ultrasonic-hcsr04',
+      'majd-jumper-wires',
+      'majd-dc-gear-motors',
+      'majd-servo-sg90',
+      'majd-breadboard-kit',
+    ],
+    views: ['majd-resistor-box', 'majd-led-pack', 'majd-battery-holders', 'majd-laptop-cooling-fans'],
+    follows: ['obstacle-avoidance-robot', 'simple-led-circuit'],
+  },
+  {
+    email: 'israa@learner.com',
+    likes: [
+      'israa-fabric-scraps',
+      'israa-cardboard-sheets',
+      'israa-felt-sheets',
+      'israa-wax-molds',
+      'israa-acrylic-paint',
+      'israa-bottle-caps',
+      'israa-glass-jars',
+    ],
+    views: ['israa-denim-offcuts', 'israa-cardboard-tubes', 'israa-wooden-sticks', 'israa-foam-board'],
+    follows: ['fabric-pencil-case', 'recycled-desk-organizer'],
+  },
+  {
+    email: 'learner@learner.com',
+    likes: [
+      'supplier-plywood-panels',
+      'supplier-mdf-offcuts',
+      'supplier-pine-strips',
+      'supplier-acrylic-sheets',
+      'supplier-pvc-pipes',
+      'supplier-screws-nuts',
+      'supplier-hinges-set',
+      'supplier-drill-bits',
+    ],
+    views: ['supplier-aluminum-angles', 'supplier-rubber-wheels'],
+    follows: ['mini-wooden-phone-stand', 'mini-greenhouse-prototype'],
   },
 ] as const;
 
@@ -1691,7 +1749,7 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
         learnerProfile: {
           create: {
             learnerType: 'STUDENT',
-            bio: `${SEED_MARKER} Learner interested in ${learner.interests.join(', ')}.`,
+            bio: `Learner interested in ${learner.interests.join(', ')} reuse projects.`,
             interests: [...learner.interests],
             skillLevel: learner.skillLevel,
           },
@@ -1744,8 +1802,8 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
           create: {
             supplierType: supplier.supplierType,
             publicName: supplier.publicName,
-            description: `${SEED_MARKER} ${supplier.description}`,
-            verificationStatus: 'VERIFIED',
+            description: supplier.description,
+            verificationStatus: 'APPROVED',
             verificationSubmittedAt: dateAt(-20, 10),
             verificationReviewedAt: dateAt(-18, 15),
             defaultPickupLocation: {
@@ -1884,7 +1942,7 @@ const createMaterials = async (context: SeedContext) => {
         materialTypeId: typeInfo.materialTypeId,
         priceRuleId: typeInfo.priceRuleId,
         title: material.title,
-        description: `${SEED_MARKER} ${material.description}`,
+        description: material.description,
         materialType: material.materialType,
         quantity: material.quantity,
         unit: material.unit,
@@ -1921,6 +1979,82 @@ const createMaterials = async (context: SeedContext) => {
       locationId: supplier.pickupLocationId,
       price: material.price,
       isFree: material.isFree,
+    });
+  }
+
+  const materialByKey = new Map(MATERIALS.map((entry) => [entry.key, entry]));
+
+  for (const copy of WORKFLOW_MATERIAL_COPIES) {
+    const source = materialByKey.get(copy.sourceKey);
+    if (!source) {
+      throw new Error(`Missing source material for workflow copy: ${copy.sourceKey}`);
+    }
+
+    const workflowMaterial: MaterialSeed & { key: string } = {
+      ...source,
+      key: copy.key,
+      title: `${source.title} ${copy.titleSuffix}`.trim(),
+      description: `${source.description} Separate listing used for reservation workflow testing.`,
+      viewsCount: Math.max(1, Math.floor(source.viewsCount / 4)),
+    };
+
+    workflowMaterial.imageUrls.forEach((url, index) =>
+      assertImage(`${workflowMaterial.title} image ${index + 1}`, url),
+    );
+
+    const supplier = context.suppliers.get(workflowMaterial.supplierEmail);
+    const categoryId = context.categories.get(workflowMaterial.categoryKey);
+    if (!supplier || !categoryId) {
+      throw new Error(`Missing dependency for workflow material: ${workflowMaterial.title}`);
+    }
+
+    const typeInfo = await ensureMaterialTypeWithPriceRule(context, workflowMaterial);
+
+    const created = await prisma.material.create({
+      data: {
+        ownerId: supplier.userId,
+        supplierProfileId: supplier.profileId,
+        categoryId,
+        materialTypeId: typeInfo.materialTypeId,
+        priceRuleId: typeInfo.priceRuleId,
+        title: workflowMaterial.title,
+        description: workflowMaterial.description,
+        materialType: workflowMaterial.materialType,
+        quantity: workflowMaterial.quantity,
+        unit: workflowMaterial.unit,
+        condition: workflowMaterial.condition,
+        sourceType: workflowMaterial.sourceType,
+        status: 'AVAILABLE',
+        isFree: workflowMaterial.isFree,
+        price: workflowMaterial.price,
+        currency: CURRENCY,
+        locationId: supplier.pickupLocationId,
+        pickupAllowed: workflowMaterial.pickupAllowed,
+        deliveryAllowed: workflowMaterial.deliveryAllowed,
+        pickupNotes: 'Pickup details are confirmed after reservation acceptance.',
+        suggestedUses: workflowMaterial.suggestedUses,
+        viewsCount: workflowMaterial.viewsCount,
+        images: {
+          create: workflowMaterial.imageUrls.map((imageUrl, index) => ({
+            imageUrl,
+            sortOrder: index,
+            isCover: index === 0,
+          })),
+        },
+        tags: {
+          create: workflowMaterial.tags.map((tag) => ({ tag })),
+        },
+      },
+      select: { id: true },
+    });
+
+    context.materials.set(workflowMaterial.key, {
+      id: created.id,
+      ownerId: supplier.userId,
+      supplierProfileId: supplier.profileId,
+      locationId: supplier.pickupLocationId,
+      price: workflowMaterial.price,
+      isFree: workflowMaterial.isFree,
     });
   }
 };
@@ -2031,6 +2165,82 @@ const createProjects = async (context: SeedContext) => {
   }
 };
 
+type LearnerEngagementCounts = {
+  email: string;
+  materialLikes: number;
+  materialViews: number;
+  projectFollows: number;
+};
+
+const createLearnerEngagement = async (
+  context: SeedContext,
+): Promise<LearnerEngagementCounts[]> => {
+  const counts: LearnerEngagementCounts[] = [];
+  let viewOffsetMinutes = 0;
+
+  for (const persona of LEARNER_ENGAGEMENT) {
+    const userId = context.users.get(persona.email);
+    if (!userId) {
+      continue;
+    }
+
+    let materialLikes = 0;
+    let materialViews = 0;
+    let projectFollows = 0;
+
+    for (const materialKey of persona.likes) {
+      const material = context.materials.get(materialKey);
+      if (!material) {
+        continue;
+      }
+
+      await prisma.materialLike.create({
+        data: { userId, materialId: material.id },
+      });
+      materialLikes += 1;
+    }
+
+    for (const materialKey of persona.views) {
+      const material = context.materials.get(materialKey);
+      if (!material) {
+        continue;
+      }
+
+      viewOffsetMinutes += 1;
+      await prisma.materialView.create({
+        data: {
+          materialId: material.id,
+          viewerUserId: userId,
+          viewSource: 'seed',
+          createdAt: new Date(Date.now() - viewOffsetMinutes * 60_000),
+        },
+      });
+      materialViews += 1;
+    }
+
+    for (const projectKey of persona.follows) {
+      const projectId = context.projects.get(projectKey);
+      if (!projectId) {
+        continue;
+      }
+
+      await prisma.projectFollow.create({
+        data: { userId, projectId },
+      });
+      projectFollows += 1;
+    }
+
+    counts.push({
+      email: persona.email,
+      materialLikes,
+      materialViews,
+      projectFollows,
+    });
+  }
+
+  return counts;
+};
+
 type ReservationSeed = {
   key: string;
   materialKey: string;
@@ -2059,7 +2269,7 @@ type ReservationSeed = {
 const RESERVATIONS: ReservationSeed[] = [
   {
     key: 'r-majd-arduino-pending',
-    materialKey: 'majd-arduino-uno-r3',
+    materialKey: 'wf-majd-arduino-uno-r3',
     learnerEmail: 'majd@learner.com',
     status: 'PENDING',
     quantity: 1,
@@ -2071,7 +2281,7 @@ const RESERVATIONS: ReservationSeed[] = [
   },
   {
     key: 'r-majd-motors-accepted',
-    materialKey: 'majd-dc-gear-motors',
+    materialKey: 'wf-majd-dc-gear-motors',
     learnerEmail: 'majd@learner.com',
     status: 'ACCEPTED',
     quantity: 2,
@@ -2084,7 +2294,7 @@ const RESERVATIONS: ReservationSeed[] = [
   },
   {
     key: 'r-majd-breadboard-completed',
-    materialKey: 'majd-breadboard-kit',
+    materialKey: 'wf-majd-breadboard-kit',
     learnerEmail: 'majd@learner.com',
     status: 'COMPLETED',
     quantity: 1,
@@ -2097,7 +2307,7 @@ const RESERVATIONS: ReservationSeed[] = [
   },
   {
     key: 'r-israa-fabric-pending',
-    materialKey: 'israa-fabric-scraps',
+    materialKey: 'wf-israa-fabric-scraps',
     learnerEmail: 'israa@learner.com',
     status: 'PENDING',
     quantity: 1,
@@ -2109,7 +2319,7 @@ const RESERVATIONS: ReservationSeed[] = [
   },
   {
     key: 'r-israa-cardboard-reschedule',
-    materialKey: 'israa-cardboard-sheets',
+    materialKey: 'wf-israa-cardboard-sheets',
     learnerEmail: 'israa@learner.com',
     status: 'AWAITING_LEARNER_CONFIRMATION',
     quantity: 4,
@@ -2123,7 +2333,7 @@ const RESERVATIONS: ReservationSeed[] = [
   },
   {
     key: 'r-israa-paint-completed',
-    materialKey: 'israa-acrylic-paint',
+    materialKey: 'wf-israa-acrylic-paint',
     learnerEmail: 'israa@learner.com',
     status: 'COMPLETED',
     quantity: 1,
@@ -2136,7 +2346,7 @@ const RESERVATIONS: ReservationSeed[] = [
   },
   {
     key: 'r-learner-plywood-accepted',
-    materialKey: 'supplier-plywood-panels',
+    materialKey: 'wf-supplier-plywood-panels',
     learnerEmail: 'learner@learner.com',
     status: 'ACCEPTED',
     quantity: 1,
@@ -2149,7 +2359,7 @@ const RESERVATIONS: ReservationSeed[] = [
   },
   {
     key: 'r-learner-acrylic-awaiting-supplier',
-    materialKey: 'supplier-acrylic-sheets',
+    materialKey: 'wf-supplier-acrylic-sheets',
     learnerEmail: 'learner@learner.com',
     status: 'AWAITING_SUPPLIER_CONFIRMATION',
     quantity: 3,
@@ -2199,7 +2409,7 @@ const RESERVATIONS: ReservationSeed[] = [
   },
   {
     key: 'r-learner-pvc-resolution',
-    materialKey: 'supplier-pvc-pipes',
+    materialKey: 'wf-supplier-pvc-pipes',
     learnerEmail: 'learner@learner.com',
     status: 'AWAITING_RESOLUTION',
     quantity: 4,
@@ -2254,7 +2464,7 @@ const createReservations = async (context: SeedContext) => {
         requesterId,
         ownerId: material.ownerId,
         quantityRequested: spec.quantity,
-        message: `${SEED_MARKER} ${spec.message}`,
+        message: spec.message,
         fulfillmentMethod: spec.fulfillmentMethod,
         deliveryAddressText:
           spec.fulfillmentMethod === 'DELIVERY' ? 'Default learner dropoff location' : null,
@@ -2573,8 +2783,8 @@ const createProjectBuilds = async (context: SeedContext) => {
       learnerEmail: 'majd@learner.com',
       projectKey: 'obstacle-avoidance-robot',
       links: [
-        { componentIncludes: 'Arduino', materialKey: 'majd-arduino-uno-r3', reservationKey: 'r-majd-arduino-pending', status: 'RESERVED' as const },
-        { componentIncludes: 'DC gear motors', materialKey: 'majd-dc-gear-motors', reservationKey: 'r-majd-motors-accepted', status: 'RESERVED' as const },
+        { componentIncludes: 'Arduino', materialKey: 'wf-majd-arduino-uno-r3', reservationKey: 'r-majd-arduino-pending', status: 'RESERVED' as const },
+        { componentIncludes: 'DC gear motors', materialKey: 'wf-majd-dc-gear-motors', reservationKey: 'r-majd-motors-accepted', status: 'RESERVED' as const },
         { componentIncludes: 'Jumper wires', materialKey: 'majd-jumper-wires', status: 'AVAILABLE' as const },
       ],
     },
@@ -2582,7 +2792,7 @@ const createProjectBuilds = async (context: SeedContext) => {
       learnerEmail: 'israa@learner.com',
       projectKey: 'fabric-pencil-case',
       links: [
-        { componentIncludes: 'Fabric scraps', materialKey: 'israa-fabric-scraps', reservationKey: 'r-israa-fabric-pending', status: 'RESERVED' as const },
+        { componentIncludes: 'Fabric scraps', materialKey: 'wf-israa-fabric-scraps', reservationKey: 'r-israa-fabric-pending', status: 'RESERVED' as const },
         { componentIncludes: 'Denim offcuts', materialKey: 'israa-denim-offcuts', status: 'AVAILABLE' as const },
       ],
     },
@@ -2590,8 +2800,8 @@ const createProjectBuilds = async (context: SeedContext) => {
       learnerEmail: 'learner@learner.com',
       projectKey: 'mini-greenhouse-prototype',
       links: [
-        { componentIncludes: 'Clear acrylic', materialKey: 'supplier-acrylic-sheets', reservationKey: 'r-learner-acrylic-awaiting-supplier', status: 'RESERVED' as const },
-        { componentIncludes: 'PVC pipe', materialKey: 'supplier-pvc-pipes', reservationKey: 'r-learner-pvc-resolution', status: 'RESERVED' as const },
+        { componentIncludes: 'Clear acrylic', materialKey: 'wf-supplier-acrylic-sheets', reservationKey: 'r-learner-acrylic-awaiting-supplier', status: 'RESERVED' as const },
+        { componentIncludes: 'PVC pipe', materialKey: 'wf-supplier-pvc-pipes', reservationKey: 'r-learner-pvc-resolution', status: 'RESERVED' as const },
       ],
     },
   ];
@@ -2621,7 +2831,7 @@ const createProjectBuilds = async (context: SeedContext) => {
           buildId: build.id,
           requiredComponentId: component.id,
           status: link?.status ?? 'MISSING',
-          learnerNote: link ? 'Linked by realistic seed.' : 'Still missing in realistic seed.',
+          learnerNote: link ? 'Linked for build checklist testing.' : 'Still missing.',
           linkedMaterialId: link ? context.materials.get(link.materialKey)?.id ?? null : null,
           linkedReservationId: link?.reservationKey
             ? context.reservations.get(link.reservationKey) ?? null
@@ -2840,25 +3050,56 @@ const main = async () => {
   await createUsers(passwordHash, context);
   await createMaterials(context);
   await createProjects(context);
+  const engagementCounts = await createLearnerEngagement(context);
   await createReservations(context);
   await createDeliveries(context);
   await createProjectBuilds(context);
   await createAdminAndNotificationData(context);
 
+  const materialStatusCounts = await prisma.material.groupBy({
+    by: ['status'],
+    _count: { _all: true },
+  });
+  const materialStatusSummary = Object.fromEntries(
+    materialStatusCounts.map((entry) => [entry.status, entry._count._all]),
+  );
+  const availableMaterials =
+    materialStatusCounts.find((entry) => entry.status === 'AVAILABLE')?._count._all ?? 0;
+  const nonAvailableMaterials =
+    Object.entries(materialStatusSummary)
+      .filter(([status]) => status !== 'AVAILABLE')
+      .reduce((total, [, count]) => total + count, 0);
+
   const summary = {
     seedMarker: SEED_MARKER,
     resetApplied: true,
     passwordForAllAccounts: SEED_PASSWORD,
+    supplierVerificationStatus: 'APPROVED',
+    learnerInterests: LEARNERS.map((learner) => ({
+      email: learner.email,
+      interests: [...learner.interests],
+    })),
+    engagementCounts,
     learners: LEARNERS.map((learner) => learner.email),
     suppliers: SUPPLIERS.map((supplier) => supplier.email),
     drivers: DRIVERS.map((driver) => driver.email),
     admins: ADMINS.map((admin) => admin.email),
     materialCategories: MATERIAL_CATEGORIES.length,
     projectCategories: PROJECT_CATEGORIES.length,
-    materialsSeeded: MATERIALS.length,
+    primaryMaterialsSeeded: MATERIALS.length,
+    workflowMaterialCopiesSeeded: WORKFLOW_MATERIAL_COPIES.length,
+    materialsSeeded: MATERIALS.length + WORKFLOW_MATERIAL_COPIES.length,
+    materialStatusSummary,
+    availableMaterials,
+    nonAvailableMaterials,
     materialsPerSupplier: SUPPLIERS.map((supplier) => ({
       supplier: supplier.email,
-      count: MATERIALS.filter((material) => material.supplierEmail === supplier.email).length,
+      primaryCount: MATERIALS.filter((material) => material.supplierEmail === supplier.email)
+        .length,
+      workflowCopyCount: WORKFLOW_MATERIAL_COPIES.filter((copy) => {
+        const source = MATERIALS.find((material) => material.key === copy.sourceKey);
+        return source?.supplierEmail === supplier.email;
+      }).length,
     })),
     learningProjectsSeeded: PROJECTS.length,
     reservationsSeeded: RESERVATIONS.length,
