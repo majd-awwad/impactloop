@@ -40,6 +40,7 @@ const CORS_ALLOWED_HEADERS = [
   'Content-Type',
   'Accept',
   'Authorization',
+  'Cache-Control',
   'X-Request-Id',
   'X-Client-Platform',
   'Idempotency-Key',
