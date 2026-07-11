@@ -507,7 +507,7 @@ export const changePasswordForUser = async (
   userId: string,
   input: ChangePasswordInput,
 ): Promise<AuthResult> => {
-  const user = await authRepository.findUserPasswordHashById(userId);
+  const user = await authRepository.findUserByIdWithRoles(userId);
 
   if (!user) {
     throw new AppError('User not found', 404, 'NOT_FOUND');
@@ -533,16 +533,10 @@ export const changePasswordForUser = async (
     passwordHash,
   });
 
-  const freshUser = await authRepository.findUserByIdWithRoles(user.id);
-
-  if (!freshUser) {
-    throw new AppError('User not found', 404, 'NOT_FOUND');
-  }
-
-  const session = await createAuthSession(freshUser);
+  const session = await createAuthSession(user);
 
   const emailResult = await getAuthEmailProvider().sendPasswordChangedEmail({
-    recipientEmail: freshUser.email,
+    recipientEmail: user.email,
   });
 
   if (emailResult.status === 'FAILED') {
@@ -734,13 +728,13 @@ export const switchActiveRole = async (
     throw new AppError('Invalid active role', 400, 'VALIDATION_ERROR');
   }
 
-  await authRepository.setUserActiveRole(userId, requestedRole);
+  const persistedActiveRole = await authRepository.setUserActiveRole(
+    userId,
+    requestedRole,
+  );
 
-  const freshUser = await authRepository.findUserByIdWithRoles(userId);
-
-  if (!freshUser) {
-    throw new AppError('User not found', 404, 'NOT_FOUND');
-  }
-
-  return createAuthSession(freshUser);
+  return createAuthSession({
+    ...user,
+    activeRole: persistedActiveRole,
+  });
 };

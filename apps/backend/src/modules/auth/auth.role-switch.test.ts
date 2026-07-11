@@ -15,6 +15,9 @@ import {
 
 const TEST_MARKER = 'test-role-switch';
 
+const PG_CONCURRENT_QUERY_WARNING =
+  'Calling client.query() when the client is already executing a query is deprecated';
+
 const ids = {
   users: [] as string[],
 };
@@ -569,6 +572,136 @@ describe('auth role switching', () => {
         assert.equal(error.statusCode, 403);
         return true;
       },
+    );
+  });
+
+  test('switchActiveRole persists active role and returns correct roles/profiles', async () => {
+    const supplier = await createUser({
+      suffix: 'switch-persist',
+      roles: ['LEARNER', 'SUPPLIER'],
+      withLearnerProfile: true,
+      withSupplierProfile: true,
+      supplierType: 'INDIVIDUAL_SUPPLIER',
+      activeRole: 'SUPPLIER',
+    });
+
+    const { user } = await switchActiveRole(supplier.id, 'LEARNER');
+
+    assert.equal(user.activeRole, 'LEARNER');
+    assert.deepEqual(user.roles.sort(), ['LEARNER', 'SUPPLIER']);
+    assert.ok(user.learnerProfile);
+    assert.ok(user.supplierProfile);
+
+    const stored = await prisma.user.findUnique({
+      where: { id: supplier.id },
+      select: { activeRole: true },
+    });
+    assert.equal(stored?.activeRole, 'LEARNER');
+  });
+
+  test('switchActiveRole does not emit pg concurrent client.query deprecation warning', async () => {
+    const supplier = await createUser({
+      suffix: 'switch-no-deprecation',
+      roles: ['LEARNER', 'SUPPLIER'],
+      withLearnerProfile: true,
+      withSupplierProfile: true,
+      supplierType: 'INDIVIDUAL_SUPPLIER',
+      activeRole: 'SUPPLIER',
+    });
+    const deprecationWarnings: string[] = [];
+    const onWarning = (warning: Error) => {
+      if (warning.name === 'DeprecationWarning') {
+        deprecationWarnings.push(warning.message);
+      }
+    };
+
+    process.on('warning', onWarning);
+
+    try {
+      await switchActiveRole(supplier.id, 'LEARNER');
+    } finally {
+      process.off('warning', onWarning);
+    }
+
+    assert.equal(
+      deprecationWarnings.some((message) =>
+        message.includes(PG_CONCURRENT_QUERY_WARNING),
+      ),
+      false,
+      `Unexpected deprecation warnings: ${deprecationWarnings.join('; ')}`,
+    );
+  });
+
+  test('becomeSupplier does not emit pg concurrent client.query deprecation warning', async () => {
+    const learner = await createUser({
+      suffix: 'become-supplier-no-deprecation',
+      roles: ['LEARNER'],
+      withLearnerProfile: true,
+      activeRole: 'LEARNER',
+    });
+    const deprecationWarnings: string[] = [];
+    const onWarning = (warning: Error) => {
+      if (warning.name === 'DeprecationWarning') {
+        deprecationWarnings.push(warning.message);
+      }
+    };
+
+    process.on('warning', onWarning);
+
+    try {
+      await becomeSupplier(learner.id, {
+        userId: learner.id,
+        supplierType: 'STUDENT_SUPPLIER',
+        publicName: 'No Deprecation Workshop',
+        pickupArea: 'Nablus, Rafidia',
+      });
+    } finally {
+      process.off('warning', onWarning);
+    }
+
+    assert.equal(
+      deprecationWarnings.some((message) =>
+        message.includes(PG_CONCURRENT_QUERY_WARNING),
+      ),
+      false,
+      `Unexpected deprecation warnings: ${deprecationWarnings.join('; ')}`,
+    );
+  });
+
+  test('becomeLearner does not emit pg concurrent client.query deprecation warning', async () => {
+    const supplier = await createUser({
+      suffix: 'become-learner-no-deprecation',
+      roles: ['SUPPLIER'],
+      withSupplierProfile: true,
+      supplierType: 'STUDENT_SUPPLIER',
+      activeRole: 'SUPPLIER',
+    });
+    const deprecationWarnings: string[] = [];
+    const onWarning = (warning: Error) => {
+      if (warning.name === 'DeprecationWarning') {
+        deprecationWarnings.push(warning.message);
+      }
+    };
+
+    process.on('warning', onWarning);
+
+    try {
+      await becomeLearner(supplier.id, {
+        userId: supplier.id,
+        learnerType: 'University student',
+        skillLevel: 'Beginner',
+        interests: ['electronics'],
+      });
+    } finally {
+      process.off('warning', onWarning);
+    }
+
+    assert.equal(
+      deprecationWarnings.some((message) =>
+        message.includes(PG_CONCURRENT_QUERY_WARNING),
+      ),
+      false,
+      `Unexpected deprecation warnings: ${deprecationWarnings.join('; ')}`,
     );
   });
 });
