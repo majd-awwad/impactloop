@@ -22,6 +22,7 @@ import {
 import {
   buildMaterialRecommendationFeature,
   buildUserSignalProfile,
+  getOrBuildMaterialFeaturePool,
   preScoreMaterialPool,
   resetMaterialFeaturePoolCacheForTests,
 } from './learner-home.material-features.js';
@@ -675,6 +676,96 @@ describe('learner-home feature-based scoring', () => {
 
     assert.ok(feature.interestKeys.has('arduino'));
     assert.ok(feature.specificTerms.size > 0);
+  });
+
+  test('static features keep availability, status, indexes, and card data fresh', () => {
+    resetMaterialFeaturePoolCacheForTests();
+    const initial = baseMaterial({
+      id: 'freshness-feature',
+      title: 'Arduino Uno Board',
+      description: 'Arduino microcontroller board for robotics projects.',
+      materialType: 'Microcontroller',
+      categoryId: 'cat-electronics',
+      categoryNameEn: 'Electronics',
+      categoryNameAr: 'Electronics',
+      tags: ['arduino', 'microcontroller'],
+      city: 'Nablus',
+      availableQuantity: 5,
+      mapped: { cardVersion: 'initial', availableQuantity: 5 },
+    });
+    const firstPool = getOrBuildMaterialFeaturePool([initial]);
+    const firstScore = preScoreMaterialPool({
+      materials: [initial],
+      interests: ['arduino'],
+      savedComponents: [],
+      savedLocation: { city: null, area: null },
+      behavior: createEmptyBehaviorContext(),
+      behaviorAffinityProfile: buildBehaviorAffinityProfile(createEmptyBehaviorContext()),
+    });
+
+    const availabilityChanged = baseMaterial({
+      ...initial,
+      availableQuantity: 2,
+      city: 'Ramallah',
+      mapped: { cardVersion: 'fresh', availableQuantity: 2 },
+    });
+    const secondPool = getOrBuildMaterialFeaturePool([availabilityChanged]);
+    const secondScore = preScoreMaterialPool({
+      materials: [availabilityChanged],
+      interests: ['arduino'],
+      savedComponents: [],
+      savedLocation: { city: null, area: null },
+      behavior: createEmptyBehaviorContext(),
+      behaviorAffinityProfile: buildBehaviorAffinityProfile(createEmptyBehaviorContext()),
+    });
+
+    assert.strictEqual(firstScore[0]?.material, initial);
+    assert.strictEqual(secondPool.features, firstPool.features);
+    assert.equal(firstPool.index.byCity.has('nablus'), true);
+    assert.equal(secondPool.index.byCity.has('ramallah'), true);
+    assert.strictEqual(secondScore[0]?.material, availabilityChanged);
+    assert.equal(secondScore[0]?.material.availableQuantity, 2);
+    assert.equal(secondScore[0]?.material.mapped.cardVersion, 'fresh');
+    assert.ok((secondScore[0]?.scores.suggested.score ?? 0) > 0);
+
+    const unavailable = baseMaterial({
+      ...availabilityChanged,
+      status: 'RESERVED',
+      availableQuantity: 0,
+      mapped: { cardVersion: 'unavailable', availableQuantity: 0 },
+    });
+    const unavailableScore = preScoreMaterialPool({
+      materials: [unavailable],
+      interests: ['arduino'],
+      savedComponents: [],
+      savedLocation: { city: null, area: null },
+      behavior: createEmptyBehaviorContext(),
+      behaviorAffinityProfile: buildBehaviorAffinityProfile(createEmptyBehaviorContext()),
+    });
+
+    assert.strictEqual(unavailableScore[0]?.material, unavailable);
+    assert.ok((unavailableScore[0]?.scores.suggested.score ?? 0) <= 0);
+    assert.equal('candidate' in firstPool.features[0]!, false);
+    assert.equal('availableQuantity' in firstPool.features[0]!, false);
+    assert.equal('status' in firstPool.features[0]!, false);
+    assert.equal('mapped' in firstPool.features[0]!, false);
+    assert.equal('isLiked' in firstPool.features[0]!, false);
+
+    const contentChanged = baseMaterial({
+      ...availabilityChanged,
+      title: 'Fabric Textile Scraps',
+      description: 'Fabric and textile scraps for sewing projects.',
+      materialType: 'Textiles',
+      categoryId: 'cat-textiles',
+      categoryNameEn: 'Fabric & Textile',
+      categoryNameAr: 'Fabric & Textile',
+      tags: ['fabric', 'textiles'],
+    });
+    const contentChangedPool = getOrBuildMaterialFeaturePool([contentChanged]);
+
+    assert.notStrictEqual(contentChangedPool.features[0], firstPool.features[0]);
+    assert.equal(contentChangedPool.features[0]?.interestKeys.has('arduino'), false);
+    assert.ok(contentChangedPool.features[0]?.interestKeys.has('fabric_textiles'));
   });
 
   test('user signal profiles stay isolated between learners', () => {

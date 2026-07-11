@@ -60,21 +60,23 @@ const GENERIC_MATERIAL_TYPES = new Set([
 
 export type MaterialRecommendationFeature = {
   materialId: string;
-  ownerId: string;
-  candidate: LearnerHomeMaterialCandidate;
+  sourceSignature: string;
   haystackParts: MaterialMatchHaystack;
   normalizedTitle: string;
   normalizedCategory: string;
   normalizedMaterialType: string;
-  categoryId: string;
-  normalizedCity: string;
-  normalizedArea: string;
   tags: Set<string>;
   specificTags: Set<string>;
   specificTerms: Set<string>;
   interestKeys: Set<string>;
   interestMatches: Map<string, LearnerInterestMatch>;
   titleTokens: Set<string>;
+};
+
+type MaterialScoringFeature = MaterialRecommendationFeature & {
+  candidate: LearnerHomeMaterialCandidate;
+  ownerId: string;
+  categoryId: string;
   popularityScore: number;
   recencyScore: number;
 };
@@ -142,7 +144,6 @@ type FeaturePoolCacheEntry = {
   expiresAt: number;
   poolSignature: string;
   features: MaterialRecommendationFeature[];
-  index: MaterialFeatureIndex;
 };
 
 let featurePoolCache: FeaturePoolCacheEntry | null = null;
@@ -340,9 +341,21 @@ const signalsOverlap = (
   );
 };
 
+const buildMaterialSourceSignature = (material: LearnerHomeMaterialCandidate) =>
+  JSON.stringify([
+    material.id,
+    material.title,
+    material.description,
+    material.materialType,
+    material.categoryId,
+    material.categoryNameEn,
+    material.categoryNameAr,
+    [...material.tags].sort(),
+  ]);
+
 const buildPoolSignature = (materials: LearnerHomeMaterialCandidate[]) =>
   materials
-    .map((material) => material.id)
+    .map(buildMaterialSourceSignature)
     .sort()
     .join('|');
 
@@ -391,37 +404,25 @@ export const buildMaterialRecommendationFeature = (
 
   return {
     materialId: material.id,
-    ownerId: material.ownerId,
-    candidate: material,
+    sourceSignature: buildMaterialSourceSignature(material),
     haystackParts,
     normalizedTitle: normalizeText(material.title),
     normalizedCategory: normalizeText(
       `${material.categoryNameEn} ${material.categoryNameAr}`,
     ),
     normalizedMaterialType: normalizeText(material.materialType),
-    categoryId: material.categoryId,
-    normalizedCity: normalizeText(material.city),
-    normalizedArea: normalizeText(material.area ?? ''),
     tags: new Set(material.tags.map((tag) => normalizeText(tag))),
     specificTags,
     specificTerms,
     interestKeys,
     interestMatches,
     titleTokens: buildTitleTokens(material.title),
-    popularityScore: scorePopularity(
-      material.viewsCount,
-      material.likesCount,
-      MATERIAL_SCORE_WEIGHTS.popularityMax,
-    ),
-    recencyScore: scoreRecency(
-      material.createdAt,
-      MATERIAL_SCORE_WEIGHTS.recencyMax,
-    ),
   };
 };
 
 export const buildMaterialFeatureIndex = (
   features: MaterialRecommendationFeature[],
+  materials: LearnerHomeMaterialCandidate[],
   poolSignature: string,
 ): MaterialFeatureIndex => {
   const byMaterialId = new Map(
@@ -431,6 +432,8 @@ export const buildMaterialFeatureIndex = (
   const byTerm = new Map<string, Set<string>>();
   const byCategoryId = new Map<string, Set<string>>();
   const byCity = new Map<string, Set<string>>();
+
+  const materialById = new Map(materials.map((material) => [material.id, material]));
 
   for (const feature of features) {
     for (const key of feature.interestKeys) {
@@ -442,9 +445,13 @@ export const buildMaterialFeatureIndex = (
     for (const tag of feature.specificTags) {
       indexTerm(byTerm, tag, feature.materialId);
     }
-    indexTerm(byCategoryId, feature.categoryId, feature.materialId);
-    if (feature.normalizedCity.length > 0) {
-      indexTerm(byCity, feature.normalizedCity, feature.materialId);
+    const material = materialById.get(feature.materialId);
+    if (!material) continue;
+
+    indexTerm(byCategoryId, material.categoryId, feature.materialId);
+    const normalizedCity = normalizeText(material.city);
+    if (normalizedCity.length > 0) {
+      indexTerm(byCity, normalizedCity, feature.materialId);
     }
   }
 
@@ -471,22 +478,37 @@ export const getOrBuildMaterialFeaturePool = (
   ) {
     return {
       features: featurePoolCache.features,
-      index: featurePoolCache.index,
+      index: buildMaterialFeatureIndex(
+        featurePoolCache.features,
+        materials,
+        poolSignature,
+      ),
     };
   }
 
-  const features = materials.map((material) =>
-    buildMaterialRecommendationFeature(material),
+  const cachedFeaturesById = new Map(
+    featurePoolCache && featurePoolCache.expiresAt > now
+      ? featurePoolCache.features.map((feature) => [feature.materialId, feature])
+      : [],
   );
-  const index = buildMaterialFeatureIndex(features, poolSignature);
+  const features = materials.map((material) => {
+    const cachedFeature = cachedFeaturesById.get(material.id);
+    const sourceSignature = buildMaterialSourceSignature(material);
+
+    return cachedFeature?.sourceSignature === sourceSignature
+      ? cachedFeature
+      : buildMaterialRecommendationFeature(material);
+  });
   featurePoolCache = {
     expiresAt: now + FEATURE_CACHE_TTL_MS,
     poolSignature,
     features,
-    index,
   };
 
-  return { features, index };
+  return {
+    features,
+    index: buildMaterialFeatureIndex(features, materials, poolSignature),
+  };
 };
 
 export const resetMaterialFeaturePoolCacheForTests = () => {
@@ -588,7 +610,7 @@ export const buildUserSignalProfile = (input: {
 };
 
 const pickBestInterestMatch = (
-  feature: MaterialRecommendationFeature,
+  feature: MaterialScoringFeature,
   user: UserSignalProfile,
 ): LearnerInterestMatch | null => {
   let bestMatch: LearnerInterestMatch | null = null;
@@ -614,7 +636,7 @@ const pickBestInterestMatch = (
 };
 
 const findMatchingSavedComponentFeature = (
-  feature: MaterialRecommendationFeature,
+  feature: MaterialScoringFeature,
   user: UserSignalProfile,
 ): LearnerHomeSavedProjectComponent | null => {
   for (const saved of user.savedComponentFeatures) {
@@ -648,7 +670,7 @@ const findMatchingSavedComponentFeature = (
 };
 
 const matchAffinityTerms = (
-  feature: MaterialRecommendationFeature,
+  feature: MaterialScoringFeature,
   user: UserSignalProfile,
 ) => {
   const matched: string[] = [];
@@ -661,7 +683,7 @@ const matchAffinityTerms = (
 };
 
 const scoreLikedSimilarity = (
-  feature: MaterialRecommendationFeature,
+  feature: MaterialScoringFeature,
   user: UserSignalProfile,
 ) => {
   if (user.likedFeatures.length === 0) {
@@ -747,7 +769,7 @@ const scoreLikedSimilarity = (
 };
 
 const scoreBehaviorFromFeatures = (
-  feature: MaterialRecommendationFeature,
+  feature: MaterialScoringFeature,
   user: UserSignalProfile,
   likedSimilarity: ReturnType<typeof scoreLikedSimilarity>,
 ) => {
@@ -870,7 +892,7 @@ type MaterialScoringContext = {
 };
 
 const buildMaterialScoringContext = (
-  feature: MaterialRecommendationFeature,
+  feature: MaterialScoringFeature,
   user: UserSignalProfile,
 ): MaterialScoringContext => {
   const likedSimilarity = scoreLikedSimilarity(feature, user);
@@ -883,7 +905,7 @@ const buildMaterialScoringContext = (
 };
 
 const buildSuggestedScore = (
-  feature: MaterialRecommendationFeature,
+  feature: MaterialScoringFeature,
   user: UserSignalProfile,
   ctx: MaterialScoringContext,
 ): ScoredMaterialResult => {
@@ -995,7 +1017,7 @@ const buildSuggestedScore = (
 };
 
 const buildSavedProjectsScore = (
-  feature: MaterialRecommendationFeature,
+  feature: MaterialScoringFeature,
   user: UserSignalProfile,
   suggested: ScoredMaterialResult,
   ctx: MaterialScoringContext,
@@ -1041,7 +1063,7 @@ const buildSavedProjectsScore = (
 };
 
 const buildFreeScore = (
-  feature: MaterialRecommendationFeature,
+  feature: MaterialScoringFeature,
   user: UserSignalProfile,
   ctx: MaterialScoringContext,
 ): ScoredMaterialResult => {
@@ -1095,7 +1117,7 @@ const buildFreeScore = (
 };
 
 const buildMaterialScoreRecord = (
-  feature: MaterialRecommendationFeature,
+  feature: MaterialScoringFeature,
   user: UserSignalProfile,
 ): MaterialScoreRecord => {
   const ctx = buildMaterialScoringContext(feature, user);
@@ -1121,7 +1143,32 @@ export const scoreMaterialPoolWithFeatures = (input: {
   const { features } = getOrBuildMaterialFeaturePool(input.materials);
   const user = buildUserSignalProfile(input);
 
-  return features.map((feature) => buildMaterialScoreRecord(feature, user));
+  const featureByMaterialId = new Map(
+    features.map((feature) => [feature.materialId, feature]),
+  );
+
+  return input.materials.flatMap((candidate) => {
+    const feature = featureByMaterialId.get(candidate.id);
+    if (!feature) return [];
+
+    const scoringFeature: MaterialScoringFeature = {
+      ...feature,
+      candidate,
+      ownerId: candidate.ownerId,
+      categoryId: candidate.categoryId,
+      popularityScore: scorePopularity(
+        candidate.viewsCount,
+        candidate.likesCount,
+        MATERIAL_SCORE_WEIGHTS.popularityMax,
+      ),
+      recencyScore: scoreRecency(
+        candidate.createdAt,
+        MATERIAL_SCORE_WEIGHTS.recencyMax,
+      ),
+    };
+
+    return [buildMaterialScoreRecord(scoringFeature, user)];
+  });
 };
 
 export type PreScoredMaterialEntry = {

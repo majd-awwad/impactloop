@@ -5,6 +5,12 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
 import { getAuthenticatedUser } from '../auth/auth.service.js';
+import {
+  getOrBuildMaterialFeaturePool,
+  resetMaterialFeaturePoolCacheForTests,
+} from '../learner-home/learner-home.material-features.js';
+import { getLearnerHome } from '../learner-home/learner-home.service.js';
+import type { LearnerHomeMaterialCandidate } from '../learner-home/learner-home.types.js';
 
 import {
   updateLearnerProfileForUser,
@@ -185,6 +191,65 @@ describe('profile updates', () => {
       'circuits',
     ]);
     assert.equal(updated.learnerProfile?.bio, 'Updated learner bio');
+  });
+
+  test('interest updates invalidate only the acting learner home cache', async () => {
+    const learnerA = await createLearnerUser();
+    const learnerB = await createLearnerUser();
+    const learnerAHome = await getLearnerHome(learnerA.id);
+    const learnerBHome = await getLearnerHome(learnerB.id);
+    const featureCandidate: LearnerHomeMaterialCandidate = {
+      id: 'profile-cache-feature',
+      ownerId: learnerA.id,
+      title: 'Arduino feature fixture',
+      description: 'Shared feature cache fixture',
+      materialType: 'Electronics component',
+      categoryId: 'profile-cache-category',
+      categoryNameEn: 'Electronics',
+      categoryNameAr: 'Electronics',
+      status: 'AVAILABLE',
+      isFree: true,
+      deliveryAllowed: false,
+      pickupAllowed: true,
+      viewsCount: 0,
+      likesCount: 0,
+      city: 'Nablus',
+      area: null,
+      tags: ['arduino'],
+      createdAt: new Date(),
+      availableQuantity: 1,
+      mapped: {},
+    };
+    resetMaterialFeaturePoolCacheForTests();
+    const sharedFeaturesBefore = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+
+    await updateLearnerProfileForUser(learnerA.id, {
+      learnerType: 'University student',
+      skillLevel: 'Beginner',
+      interests: ['Fabric & Textiles'],
+      bio: 'Updated interests',
+    });
+
+    const sharedFeaturesAfter = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+    const learnerAAfterUpdate = await getLearnerHome(learnerA.id);
+
+    assert.notStrictEqual(learnerAAfterUpdate, learnerAHome);
+    assert.strictEqual(await getLearnerHome(learnerB.id), learnerBHome);
+    assert.strictEqual(sharedFeaturesAfter.features, sharedFeaturesBefore.features);
+
+    await assert.rejects(() =>
+      updateLearnerProfileForUser(learnerA.id, {
+        learnerType: 'University student',
+        skillLevel: 'Beginner',
+        interests: ['unsupported-interest'],
+      }),
+    );
+    assert.strictEqual(await getLearnerHome(learnerA.id), learnerAAfterUpdate);
+    resetMaterialFeaturePoolCacheForTests();
   });
 
   test('getAuthenticatedUser includes phoneVerifiedAt and lastLoginAt', async () => {

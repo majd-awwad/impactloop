@@ -17,6 +17,7 @@ import {
   declineSupplierReservation,
 } from '../supplier-reservations/supplier-reservations.service.js';
 import { getMaterialById } from '../materials/materials.service.js';
+import { getLearnerHome } from '../learner-home/learner-home.service.js';
 
 import { createReservation } from './reservations.service.js';
 import { listMyReservations } from './reservations.service.js';
@@ -423,6 +424,34 @@ describe('createReservation', () => {
     });
     assert.ok(history);
     assert.equal(history?.changedBy, ctx.learnerId);
+  });
+
+  test('create and cancel clear cached learner homes for every learner', async () => {
+    const material = await createMaterial(ctx, 'AVAILABLE', 2);
+    const learnerHome = await getLearnerHome(ctx.learnerId);
+    const otherLearnerHome = await getLearnerHome(ctx.otherLearnerId);
+
+    const reservation = await createReservation(
+      ctx.learnerId,
+      pickupReservationPayload(material.id, 1),
+    );
+    ctx.createdReservationIds.push(reservation.id);
+
+    const learnerHomeAfterCreate = await getLearnerHome(ctx.learnerId);
+    const otherLearnerHomeAfterCreate = await getLearnerHome(ctx.otherLearnerId);
+    assert.notStrictEqual(learnerHomeAfterCreate, learnerHome);
+    assert.notStrictEqual(otherLearnerHomeAfterCreate, otherLearnerHome);
+
+    await cancelReservation(ctx.learnerId, reservation.id);
+
+    assert.notStrictEqual(
+      await getLearnerHome(ctx.learnerId),
+      learnerHomeAfterCreate,
+    );
+    assert.notStrictEqual(
+      await getLearnerHome(ctx.otherLearnerId),
+      otherLearnerHomeAfterCreate,
+    );
   });
 
   test('learner can create pickup reservation without preferred windows', async () => {

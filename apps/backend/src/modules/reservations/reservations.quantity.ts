@@ -13,6 +13,10 @@ export const ACTIVE_HOLD_STATUSES = [
   'ACCEPTED',
 ] as const satisfies readonly ReservationStatus[];
 
+export const isActiveReservationBehaviorStatus = (
+  status: ReservationStatus,
+): boolean => (ACTIVE_HOLD_STATUSES as readonly ReservationStatus[]).includes(status);
+
 /** Delivery states where material may still be with the driver after admin review is needed. */
 export const MATERIAL_IN_CUSTODY_DELIVERY_STATUSES = [
   'PICKED_UP',

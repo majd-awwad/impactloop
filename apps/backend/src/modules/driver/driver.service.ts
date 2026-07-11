@@ -44,6 +44,7 @@ import {
   completeReservationsForDeliveredDelivery,
   syncDeliveryGroupOnDriverAssign,
 } from '../delivery-groups/delivery-group-operations.service.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 
 const terminalStatuses = [
   'DELIVERED',
@@ -883,6 +884,9 @@ export const updateDriverDeliveryStatus = async (
     case 'UPDATED':
       if (input.status === 'PICKED_UP') {
         await notifyDriverDropoffTime(deliveryId);
+      }
+      if (input.status === 'DELIVERED') {
+        invalidateLearnerHomeForReservationTransition('ACCEPTED', 'COMPLETED');
       }
       return mapAssignedDelivery(result.delivery);
     case 'NOT_FOUND':

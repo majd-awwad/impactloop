@@ -10,6 +10,7 @@ import { escalateStaleAssignedDriverPickupInTransaction } from './reservations.i
 import { NO_DRIVER_AUTO_ESCALATION_HOURS } from './reservation-timing-policy.js';
 import { runSerializableTransaction } from './reservations.quantity.js';
 import { notifyDriverDeliveryMovedToAdminReview } from '../notifications/driver-delivery-notifications.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 
 const staleAssignedDriverEscalationSelect = {
   id: true,
@@ -160,6 +161,12 @@ export const escalateStaleAssignedDriverPickupsByIds = async (
     escalateStaleAssignedDriverPickupsInTransaction(tx, candidates),
   );
 
+  if (result.reservationIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition(
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    );
+  }
   await notifyEscalatedDrivers(result.driverNotifications);
 
   return result.reservationIds;
@@ -180,6 +187,12 @@ export const escalateStaleAssignedDriverPickupsForRequester = async (
     escalateStaleAssignedDriverPickupsInTransaction(tx, candidates),
   );
 
+  if (result.reservationIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition(
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    );
+  }
   await notifyEscalatedDrivers(result.driverNotifications);
 
   return result.reservationIds;
@@ -200,6 +213,12 @@ export const escalateStaleAssignedDriverPickupsForOwner = async (
     escalateStaleAssignedDriverPickupsInTransaction(tx, candidates),
   );
 
+  if (result.reservationIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition(
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    );
+  }
   await notifyEscalatedDrivers(result.driverNotifications);
 
   return result.reservationIds;

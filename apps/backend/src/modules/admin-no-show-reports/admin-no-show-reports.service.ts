@@ -19,6 +19,7 @@ import {
   notifyNoDriverSupplierRescheduleRequested,
   notifyStalePickupSupplierRescheduleRequested,
 } from '../notifications/reservation-notifications.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 
 const mapReport = (report: repository.AdminNoShowReportRecord) => ({
   id: report.id,
@@ -279,6 +280,10 @@ export const requestSupplierRescheduleAdminNoShowReport = async (
 
   switch (result.outcome) {
     case 'REQUESTED':
+      invalidateLearnerHomeForReservationTransition(
+        'AWAITING_RESOLUTION',
+        'AWAITING_SUPPLIER_CONFIRMATION',
+      );
       if (result.recoveryKind === 'NO_DRIVER') {
         await notifyNoDriverSupplierRescheduleRequested(
           result.reservationId,
@@ -310,6 +315,10 @@ export const cancelReleaseHoldAdminNoShowReport = async (
 
   switch (result.outcome) {
     case 'CANCELLED':
+      invalidateLearnerHomeForReservationTransition(
+        'AWAITING_RESOLUTION',
+        'EXPIRED',
+      );
       return mapReport(result.report);
     default:
       return mapNoDriverResolutionError(result);

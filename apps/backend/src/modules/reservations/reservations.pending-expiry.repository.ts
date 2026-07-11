@@ -7,6 +7,7 @@ import {
   type PendingReservationExpiryRecord,
 } from './reservation-pending-expiry.js';
 import { notifyReservationsExpired } from '../notifications/reservation-notifications.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
@@ -95,6 +96,9 @@ export const expireStalePendingReservationsByIds = async (
     expireStalePendingReservationsInTransaction(tx, pending, changedBy),
   );
 
+  if (expiredIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition('PENDING', 'EXPIRED');
+  }
   void notifyReservationsExpired(expiredIds);
 
   return expiredIds;
@@ -124,6 +128,9 @@ export const expireStalePendingReservationsForMaterialIds = async (
     expireStalePendingReservationsInTransaction(tx, pending, changedBy),
   );
 
+  if (expiredIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition('PENDING', 'EXPIRED');
+  }
   void notifyReservationsExpired(expiredIds);
 
   return expiredIds;
@@ -149,6 +156,9 @@ export const expireStalePendingReservationsForOwner = async (
     expireStalePendingReservationsInTransaction(tx, pending, changedBy),
   );
 
+  if (expiredIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition('PENDING', 'EXPIRED');
+  }
   void notifyReservationsExpired(expiredIds);
 
   return expiredIds;

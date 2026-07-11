@@ -272,16 +272,28 @@ export const createLearnerReservation = async (input: {
       };
     }
 
-    await expireStalePendingReservationsForLearnerMaterial(tx, {
-      requesterId: input.requesterId,
-      materialId: material.id,
-    });
-
-    await expireStaleMissedPickupsForMaterialIdsInTransaction(
+    const expiredPendingReservationIds = await expireStalePendingReservationsForLearnerMaterial(
       tx,
-      [material.id],
-      input.requesterId,
+      {
+        requesterId: input.requesterId,
+        materialId: material.id,
+      },
     );
+
+    const expiredMissedPickupReservationIds =
+      await expireStaleMissedPickupsForMaterialIdsInTransaction(
+        tx,
+        [material.id],
+        input.requesterId,
+      );
+
+    const availabilityChanged =
+      expiredPendingReservationIds.length > 0 ||
+      expiredMissedPickupReservationIds.length > 0;
+    const withAvailabilityChange = <T extends object>(result: T) => ({
+      ...result,
+      availabilityChanged,
+    });
 
     const openLearnerReservationCount = await tx.reservation.count({
       where: {
@@ -292,7 +304,9 @@ export const createLearnerReservation = async (input: {
     });
 
     if (openLearnerReservationCount > 0) {
-      return { outcome: 'OPEN_RESERVATION_EXISTS' as const };
+      return withAvailabilityChange({
+        outcome: 'OPEN_RESERVATION_EXISTS' as const,
+      });
     }
 
     let linkedBuildItemId: string | null = null;
@@ -305,9 +319,9 @@ export const createLearnerReservation = async (input: {
       });
 
       if (!buildItemValidation.ok) {
-        return {
+        return withAvailabilityChange({
           outcome: buildItemValidation.code,
-        };
+        });
       }
 
       linkedBuildItemId = buildItemValidation.buildItemId;
@@ -342,7 +356,7 @@ export const createLearnerReservation = async (input: {
     );
 
     if (!pricingResult.ok) {
-      return {
+      return withAvailabilityChange({
         outcome: pricingResult.code as
           | 'INVALID_QUANTITY'
           | 'VALIDATION_ERROR'
@@ -353,7 +367,7 @@ export const createLearnerReservation = async (input: {
           pricingResult.code === 'INVALID_QUANTITY'
             ? decimalToNumber(quantityState.availableQuantity)
             : undefined,
-      };
+      });
     }
 
     const { snapshot, groupAction } = pricingResult;
@@ -363,10 +377,10 @@ export const createLearnerReservation = async (input: {
     if (groupAction.type === 'CREATE') {
       const supplierProfileId = material.supplierProfileId;
       if (!supplierProfileId) {
-        return {
+        return withAvailabilityChange({
           outcome: 'DELIVERY_PRICING_ERROR' as const,
           message: 'Delivery fee could not be calculated for this location.',
-        };
+        });
       }
 
       const createdGroup = await tx.deliveryGroup.create({
@@ -471,7 +485,10 @@ export const createLearnerReservation = async (input: {
       include: reservationInclude,
     });
 
-    return { outcome: 'CREATED' as const, reservation: updatedReservation };
+    return withAvailabilityChange({
+      outcome: 'CREATED' as const,
+      reservation: updatedReservation,
+    });
   });
 };
 

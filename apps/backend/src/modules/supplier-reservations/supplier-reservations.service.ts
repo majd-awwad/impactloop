@@ -64,6 +64,7 @@ import {
   notifyReservationDeclined,
 } from '../notifications/reservation-notifications.js';
 import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 import type {
   AcceptSupplierReservationInput,
   CancelSupplierReservationInput,
@@ -665,6 +666,7 @@ export const declineSupplierReservation = async (
     );
   }
 
+  invalidateLearnerHomeForReservationTransition('PENDING', 'REJECTED');
   void notifyReservationDeclined(result.reservation.id);
 
   return mapSupplierReservation(result.reservation);
@@ -713,6 +715,7 @@ export const completeSupplierReservation = async (
     );
   }
 
+  invalidateLearnerHomeForReservationTransition('ACCEPTED', 'COMPLETED');
   return mapSupplierReservation(result.reservation);
 };
 
@@ -852,6 +855,7 @@ export const cancelSupplierAcceptedReservation = async (
     );
   }
 
+  invalidateLearnerHomeForReservationTransition('ACCEPTED', 'CANCELLED');
   return mapSupplierReservation(result.reservation);
 };
 
@@ -915,6 +919,7 @@ export const submitSupplierNoShowReport = async (
     throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
   }
 
+  invalidateLearnerHomeForReservationTransition('ACCEPTED', 'NO_SHOW');
   return mapSupplierReservation(reservation);
 };
 
@@ -954,6 +959,10 @@ export const reportSupplierNoDriverAvailable = async (
         'CONFLICT',
       );
     case 'CREATED':
+      invalidateLearnerHomeForReservationTransition(
+        'ACCEPTED',
+        'AWAITING_RESOLUTION',
+      );
       break;
     default:
       throw new AppError('Unable to submit no-driver report.', 500, 'INTERNAL_ERROR');

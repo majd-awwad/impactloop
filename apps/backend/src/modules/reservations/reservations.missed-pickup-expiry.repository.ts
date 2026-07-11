@@ -7,6 +7,7 @@ import {
 } from './reservation-missed-pickup-expiry.js';
 import { MISSED_PICKUP_EXPIRY_REASON } from './reservation-timing-policy.js';
 import { notifyReservationsExpired } from '../notifications/reservation-notifications.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
@@ -132,6 +133,9 @@ export const expireStaleMissedPickupsByIds = async (
     expireStaleMissedPickupsInTransaction(tx, candidates, changedBy),
   );
 
+  if (expiredIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition('ACCEPTED', 'EXPIRED');
+  }
   void notifyReservationsExpired(expiredIds);
 
   return expiredIds;
@@ -157,6 +161,9 @@ export const expireStaleMissedPickupsForMaterialIds = async (
     expireStaleMissedPickupsInTransaction(tx, candidates, changedBy),
   );
 
+  if (expiredIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition('ACCEPTED', 'EXPIRED');
+  }
   void notifyReservationsExpired(expiredIds);
 
   return expiredIds;
@@ -178,6 +185,9 @@ export const expireStaleMissedPickupsForOwner = async (
     expireStaleMissedPickupsInTransaction(tx, candidates, changedBy),
   );
 
+  if (expiredIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition('ACCEPTED', 'EXPIRED');
+  }
   void notifyReservationsExpired(expiredIds);
 
   return expiredIds;
@@ -199,6 +209,9 @@ export const expireStaleMissedPickupsForRequester = async (
     expireStaleMissedPickupsInTransaction(tx, candidates, changedBy),
   );
 
+  if (expiredIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition('ACCEPTED', 'EXPIRED');
+  }
   void notifyReservationsExpired(expiredIds);
 
   return expiredIds;

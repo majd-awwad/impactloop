@@ -47,6 +47,8 @@ import type {
   LearnerAffinityProfile,
   LearnerBehaviorContext,
 } from './learner-home.types.js';
+import type { ReservationStatus } from '../../generated/prisma/client.js';
+import { isActiveReservationBehaviorStatus } from '../reservations/reservations.quantity.js';
 
 const SECTION_LIMITS = {
   suggested_materials: 4,
@@ -65,6 +67,35 @@ const learnerHomeCache = new Map<
   string,
   { expiresAt: number; payload: LearnerHomeResponse }
 >();
+
+export const invalidateLearnerHomeCache = (userId: string): void => {
+  learnerHomeCache.delete(userId);
+};
+
+/** Clears every cached learner-home response after a change to shared material availability. */
+export const invalidateAllLearnerHomeResponseCaches = (): void => {
+  learnerHomeCache.clear();
+};
+
+/**
+ * An active-to-active reservation transition keeps the material hold in place.
+ * Every other transition can change shared availability, so cached home responses
+ * must be rebuilt for all learners.
+ */
+export const invalidateLearnerHomeForReservationTransition = (
+  previousStatus: ReservationStatus | null,
+  nextStatus: ReservationStatus,
+): void => {
+  if (
+    previousStatus != null &&
+    isActiveReservationBehaviorStatus(previousStatus) &&
+    isActiveReservationBehaviorStatus(nextStatus)
+  ) {
+    return;
+  }
+
+  invalidateAllLearnerHomeResponseCaches();
+};
 
 const SECTION_META: Record<
   LearnerHomeSectionKey,
