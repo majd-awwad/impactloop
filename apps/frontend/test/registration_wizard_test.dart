@@ -4,7 +4,7 @@ import 'package:frontend/features/auth/data/models/register_request.dart';
 import 'package:frontend/features/auth/data/models/registration_draft.dart';
 import 'package:frontend/features/auth/presentation/models/registration_intent.dart';
 import 'package:frontend/features/auth/presentation/models/registration_wizard_step.dart';
-import 'package:frontend/features/auth/presentation/utils/registration_onboarding_helpers.dart';
+import 'package:frontend/features/profile/data/models/learner_interest_options.dart';
 
 void main() {
   group('registrationWizardSteps', () {
@@ -61,113 +61,51 @@ void main() {
   });
 
   group('registration UX defaults', () {
-    test('supplier goals do not include learner-only goals', () {
-      final goals = registrationGoalOptionsForIntent(
-        RegistrationIntent.supplier,
-      );
+    test('taxonomy fallback includes core learner interests', () {
+      final labels = fallbackLearnerInterestOptions.labelByKey;
 
-      expect(goals, contains('Share surplus materials'));
-      expect(goals, contains('Manage pickup requests'));
-      expect(goals, isNot(contains('Build projects')));
-      expect(goals, isNot(contains('Find components')));
+      expect(labels.keys, contains('electronics'));
+      expect(labels.keys, contains('arduino'));
+      expect(labels.keys, contains('robotics'));
+      expect(labels.keys, contains('fabric_textiles'));
+      expect(labels.keys, contains('home_diy'));
+      expect(labels['audio_media'], 'Audio & Media');
     });
 
-    test('learner interests cover general reuse and non-technical topics', () {
-      expect(registrationInterestOptions, contains('Home improvement'));
-      expect(registrationInterestOptions, contains('Fashion and textiles'));
-      expect(registrationInterestOptions, contains('Community projects'));
-      expect(registrationInterestOptions, contains('Electronics'));
-    });
-
-    test('student learners are suggested as student suppliers', () {
-      expect(
-        suggestedSupplierTypeForLearnerType('University student'),
-        'Student supplier',
-      );
-      expect(
-        suggestedSupplierTypeForLearnerType('School student'),
-        'Student supplier',
-      );
-    });
-
-    test('self learners and makers are suggested as individual suppliers', () {
-      expect(
-        suggestedSupplierTypeForLearnerType('Self learner'),
-        'Individual supplier',
-      );
-      expect(
-        suggestedSupplierTypeForLearnerType('Maker / hobbyist'),
-        'Individual supplier',
-      );
-    });
-  });
-
-  group('registration payload mapping', () {
-    test('maps onboarding interests to learnerProfile.interests', () {
-      const interests = ['Arduino', 'Robotics'];
-      final request = RegisterRequest.fromFormValues(
-        intent: RegistrationIntent.learner,
-        displayName: 'Learner User',
-        email: 'learner@example.com',
-        password: 'password123',
-        learnerProfile: LearnerProfileDraft(
-          learnerType: 'University student',
-          skillLevel: 'Beginner',
-          interests: interests,
+    test('maps onboarding interests to learnerProfile.interests keys', () {
+      const interests = ['arduino', 'robotics'];
+      final request = RegisterRequest.fromDraft(
+        RegistrationDraft(
+          displayName: 'Test User',
+          email: 'test@example.com',
+          password: 'TestPassword123!',
+          intent: RegistrationIntent.learner,
+          onboardingInterests: interests,
+          learnerProfile: const LearnerProfileDraft(
+            learnerType: 'Self learner',
+            skillLevel: 'Beginner',
+            interests: interests,
+          ),
         ),
       );
 
-      final json = request.toJson();
-      final learnerJson = json['learnerProfile'] as Map<String, dynamic>;
+      final learnerJson = request.learnerProfile!.toJson();
       expect(learnerJson['interests'], interests);
-      expect(learnerJson.containsKey('bio'), isFalse);
     });
 
-    test('maps onboarding city and area to supplier pickupArea', () {
-      final pickupArea = formatPickupArea(city: 'Nablus', area: 'Rafidia');
+    test('normalizes legacy labels and custom interests for display', () {
+      final keys = normalizeSelectedInterestKeys([
+        'Art & crafts',
+        'Solar energy',
+        'custom:cnc_machining',
+      ]);
 
-      final request = RegisterRequest.fromFormValues(
-        intent: RegistrationIntent.supplier,
-        displayName: 'Supplier User',
-        email: 'supplier@example.com',
-        password: 'password123',
-        supplierProfile: SupplierProfileDraft(
-          supplierType: 'Workshop',
-          publicName: 'Workshop Hub',
-          pickupArea: pickupArea,
-        ),
-      );
-
-      expect(request.supplierProfile?.pickupArea, 'Nablus, Rafidia');
+      expect(keys, contains('art_crafts'));
+      expect(keys, contains('custom:solar_energy'));
+      expect(keys, contains('custom:cnc_machining'));
       expect(
-        request.toJson()['supplierProfile']['pickupArea'],
-        'Nablus, Rafidia',
-      );
-    });
-
-    test('does not send onboarding goals in register payload', () {
-      final request = RegisterRequest.fromFormValues(
-        intent: RegistrationIntent.learner,
-        displayName: 'Learner User',
-        email: 'learner@example.com',
-        password: 'password123',
-        learnerProfile: const LearnerProfileDraft(
-          learnerType: 'University student',
-          skillLevel: 'Beginner',
-        ),
-      );
-
-      final json = request.toJson();
-      expect(json.containsKey('onboardingGoals'), isFalse);
-      expect(json.containsKey('onboardingInterests'), isFalse);
-    });
-  });
-
-  group('registrationIntentFromQuery', () {
-    test('parses supplier intent from register deep link', () {
-      expect(
-        registrationIntentFromQuery('supplier'),
-        RegistrationIntent.supplier,
+        learnerInterestLabel('custom:solar_energy'),
+        'Solar Energy',
       );
     });
   });

@@ -45,6 +45,7 @@ import {
 import { getAuthEmailProvider } from './email/index.js';
 
 import type { ChangePasswordInput, LoginInput, RegisterInput } from './auth.validation.js';
+import { registerSchema } from './auth.validation.js';
 
 export type LearnerProfileSummary = {
   learnerType: string;
@@ -310,30 +311,31 @@ export const createAuthSessionForUser = createAuthSession;
 export const registerUser = async (
   input: RegisterInput,
 ): Promise<AuthResult> => {
-  const existingUser = await authRepository.findUserIdByEmail(input.email);
+  const parsed = registerSchema.parse(input);
+  const existingUser = await authRepository.findUserIdByEmail(parsed.email);
 
   if (existingUser) {
     throw new AppError('Email is already registered', 409, 'CONFLICT');
   }
 
-  if (input.phone) {
-    const existingPhone = await authRepository.findUserIdByPhone(input.phone);
+  if (parsed.phone) {
+    const existingPhone = await authRepository.findUserIdByPhone(parsed.phone);
 
     if (existingPhone) {
       throw new AppError('Phone number is already registered', 409, 'CONFLICT');
     }
   }
 
-  const passwordHash = await hashPassword(input.password);
+  const passwordHash = await hashPassword(parsed.password);
 
   const user = await authRepository.createUserWithOnboarding({
-    displayName: input.displayName,
-    email: input.email,
-    phone: input.phone,
+    displayName: parsed.displayName,
+    email: parsed.email,
+    phone: parsed.phone,
     passwordHash,
-    roles: input.roles,
-    learnerProfile: input.learnerProfile,
-    supplierProfile: input.supplierProfile,
+    roles: parsed.roles,
+    learnerProfile: parsed.learnerProfile,
+    supplierProfile: parsed.supplierProfile,
   });
 
   return createAuthSession(user);

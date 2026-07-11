@@ -141,16 +141,19 @@ async function ensureSeedLocation(
   return location.id;
 }
 
-async function ensureSeedCategory(prisma: PrismaClient) {
+async function resolveMaterialCategoryId(
+  prisma: PrismaClient,
+  categoryNameEn: string,
+) {
   const category = await prisma.category.findFirst({
-    where: { categoryType: 'MATERIAL' },
+    where: { nameEn: categoryNameEn },
     select: { id: true },
     orderBy: { createdAt: 'asc' },
   });
 
   if (!category) {
     throw new Error(
-      'No MATERIAL category found. Run taxonomy seed first (prisma db seed).',
+      `Category "${categoryNameEn}" not found. Run taxonomy seed first (prisma db seed).`,
     );
   }
 
@@ -178,11 +181,18 @@ async function replaceSeedMaterialImage(
 
 async function ensureSeedMaterials(
   prisma: PrismaClient,
-  context: Pick<SeedContext, 'supplierUserId' | 'supplierProfileId' | 'categoryId' | 'locationId'>,
+  context: Pick<
+    SeedContext,
+    'supplierUserId' | 'supplierProfileId' | 'locationId'
+  >,
 ) {
   const materialIds = new Map<string, string>();
 
   for (const material of SEED_MATERIALS) {
+    const categoryId = await resolveMaterialCategoryId(
+      prisma,
+      material.categoryNameEn,
+    );
     const marker = `${SEED_RESERVATION_PREFIX} material:${material.key}`;
     const existing = await prisma.material.findFirst({
       where: {
@@ -193,6 +203,14 @@ async function ensureSeedMaterials(
     });
 
     if (existing) {
+      await prisma.material.update({
+        where: { id: existing.id },
+        data: {
+          categoryId,
+          title: material.title,
+          materialType: material.materialType,
+        },
+      });
       await replaceSeedMaterialImage(prisma, existing.id, material.imageUrl);
       materialIds.set(material.key, existing.id);
       continue;
@@ -202,7 +220,7 @@ async function ensureSeedMaterials(
       data: {
         ownerId: context.supplierUserId,
         supplierProfileId: context.supplierProfileId,
-        categoryId: context.categoryId,
+        categoryId,
         title: material.title,
         description: marker,
         materialType: material.materialType,
@@ -313,7 +331,6 @@ export async function seedSupplierReservations(prisma: PrismaClient) {
   const supplier = await ensureSeedSupplier(prisma);
   const supplierProfileId = supplier.supplierProfile!.id;
   const learnerIds = await ensureSeedLearners(prisma);
-  const categoryId = await ensureSeedCategory(prisma);
   const locationId = await ensureSeedLocation(
     prisma,
     supplier.id,
@@ -322,14 +339,12 @@ export async function seedSupplierReservations(prisma: PrismaClient) {
   const materialIds = await ensureSeedMaterials(prisma, {
     supplierUserId: supplier.id,
     supplierProfileId,
-    categoryId,
     locationId,
   });
 
   await createSeedReservations(prisma, {
     supplierUserId: supplier.id,
     supplierProfileId,
-    categoryId,
     locationId,
     learnerIds,
     materialIds,

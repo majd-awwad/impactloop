@@ -114,6 +114,16 @@ const categories: SeedCategoryInput[] = [
     nameAr: 'أقمشة ومنسوجات',
   },
   {
+    key: 'art-craft-molding',
+    nameEn: 'Art, Craft & Molding',
+    nameAr: 'فن وحرف وقوالب',
+  },
+  {
+    key: 'packaging-recycling',
+    nameEn: 'Packaging',
+    nameAr: 'تغليف',
+  },
+  {
     key: 'tools-hardware',
     nameEn: 'Tools & Hardware',
     nameAr: 'أدوات وقطع',
@@ -256,8 +266,8 @@ const materials: SeedMaterialInput[] = [
   {
     title: 'Cardboard Sheets',
     description:
-      'Large cardboard sheets from packaging surplus for model making and prototyping.',
-    categoryKey: 'wood-panels',
+      'Large cardboard sheets from packaging surplus for craft projects, model making, and prototyping.',
+    categoryKey: 'art-craft-molding',
     quantity: 24,
     unit: 'sheets',
     condition: 'USED',
@@ -269,8 +279,27 @@ const materials: SeedMaterialInput[] = [
     deliveryAllowed: false,
     imageUrl:
       'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1200&q=80',
-    tags: ['cardboard', 'packaging', 'prototype'],
-    materialType: 'Packaging boards',
+    tags: ['cardboard', 'craft', 'prototyping', 'art project'],
+    materialType: 'Craft boards',
+  },
+  {
+    title: 'Wax Molds Set',
+    description:
+      'Reusable wax and candle molds for craft workshops and handmade art projects.',
+    categoryKey: 'art-craft-molding',
+    quantity: 8,
+    unit: 'sets',
+    condition: 'GOOD',
+    status: 'AVAILABLE',
+    isFree: false,
+    price: 18,
+    locationKey: 'ramallah-al-tireh',
+    pickupAllowed: true,
+    deliveryAllowed: false,
+    imageUrl:
+      'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=1200&q=80',
+    tags: ['wax mold', 'craft project', 'handmade', 'art project'],
+    materialType: 'Wax molds',
   },
   {
     title: 'Fabric Scraps',
@@ -288,7 +317,7 @@ const materials: SeedMaterialInput[] = [
     deliveryAllowed: true,
     imageUrl:
       'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=80',
-    tags: ['fabric', 'textiles', 'upcycling'],
+    tags: ['fabric', 'textiles', 'sewing', 'upcycling'],
     materialType: 'Fabric remnants',
   },
   {

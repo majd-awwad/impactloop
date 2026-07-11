@@ -173,7 +173,7 @@ describe('profile updates', () => {
     const updated = await updateLearnerProfileForUser(user.id, {
       learnerType: 'Self learner',
       skillLevel: 'Advanced',
-      interests: ['Electronics', '3D printing'],
+      interests: ['electronics', 'circuits'],
       bio: 'Updated learner bio',
     });
 
@@ -181,8 +181,8 @@ describe('profile updates', () => {
     assert.equal(updated.learnerProfile?.learnerType, 'Self learner');
     assert.equal(updated.learnerProfile?.skillLevel, 'Advanced');
     assert.deepEqual(updated.learnerProfile?.interests, [
-      'Electronics',
-      '3D printing',
+      'electronics',
+      'circuits',
     ]);
     assert.equal(updated.learnerProfile?.bio, 'Updated learner bio');
   });

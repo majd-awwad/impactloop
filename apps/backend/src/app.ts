@@ -22,6 +22,7 @@ import { supplierRouter } from './modules/supplier/supplier.routes.js';
 import { locationsRouter } from './modules/locations/locations.routes.js';
 import { savedDropoffAddressesRouter } from './modules/saved-dropoff-addresses/saved-dropoff-addresses.routes.js';
 import { profileRouter } from './modules/profile/profile.routes.js';
+import { learnerHomeRouter } from './modules/learner-home/learner-home.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
 import {
   ensureMaterialUploadsDir,
@@ -83,6 +84,7 @@ app.use(
   '/api/learner/saved-dropoff-addresses',
   savedDropoffAddressesRouter,
 );
+app.use('/api/learner', learnerHomeRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/supplier', supplierRouter);
 app.use('/api/admin', adminRouter);

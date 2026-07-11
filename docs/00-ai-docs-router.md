@@ -104,7 +104,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Locations | [features/locations.md](features/locations.md) | — | **Partial** — forward/reverse geocode + profile/material usage; public redaction **Needs verification** |
 | Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Implemented** — admin UI + accept UI exist; email delivery depends on provider |
 | Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static UI; no API |
-| Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — suggested materials + learning spotlight **API-backed** |
+| Home (learner) | [features/home-learner.md](features/home-learner.md) | `GET /api/learner/home` | **Partial** — personalized home feed (7 sections) **API-backed** |
 
 ### Phase 2C — gaps and open questions
 

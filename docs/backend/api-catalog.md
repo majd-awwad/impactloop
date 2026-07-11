@@ -78,10 +78,13 @@ Supplier **derived action inbox** remains at `GET /api/supplier/notifications` (
 |--------|------|------|-------------|
 | PATCH | `/api/profile` | Bearer JWT | `profile/profile.routes.ts` |
 | PATCH | `/api/profile/learner` | Bearer JWT + `LEARNER` role | `profile/profile.routes.ts` |
+| GET | `/api/profile/learner/interests/options` | Public (read-only) | `profile/profile.routes.ts` |
 
 `PATCH /api/profile` body (partial, at least one field): `{ displayName?, phone?, profileImageUrl? }`. Changing `phone` clears `phoneVerifiedAt`. `profileImageUrl` accepts `/uploads/profiles/...` or safe `https://` URLs only.
 
-`PATCH /api/profile/learner` body: `{ learnerType, skillLevel, interests?, bio? }`. Upserts `learner_profiles` for users with the `LEARNER` role.
+`PATCH /api/profile/learner` body: `{ learnerType, skillLevel, interests?, bio? }`. Upserts `learner_profiles` for users with the `LEARNER` role. `interests` must be known taxonomy keys (e.g. `arduino`, `audio_media`); legacy display labels are normalized on save when mappable.
+
+`GET /api/profile/learner/interests/options` returns grouped selectable interests for registration/profile edit: `{ groups: [{ key, label, items: [{ key, label }] }] }`. Does not expose scoring weights.
 
 Both routes return `{ user }` using the same summary shape as `/api/auth/me`.
 
@@ -186,6 +189,18 @@ Admin incident review (`/api/admin/no-show-reports` and `/api/admin/reservation-
 Public material list/detail responses include `quantity` (remaining stock), `availableQuantity` (remaining minus active holds), and `unit`.
 
 `POST /api/reservations/:id/delivery` creates an internal delivery attempt for an accepted learner-owned **pickup** reservation (`fulfillmentMethod = PICKUP`). Body: either `{ savedDropoffAddressId, learnerNote? }` or `{ dropoffLocation, learnerNote?, saveDropoffAddressLabel? }`. Inline `dropoffLocation` includes country/city plus optional area/address/latitude/longitude; optional `saveDropoffAddressLabel` persists the address for reuse (max 10 per learner). The route creates copied pickup/dropoff locations, a `Delivery` row with `WAITING_FOR_DRIVER`, and delivery status history. It rejects non-accepted reservations, delivery-fulfillment reservations, delivery-disabled materials, and reservations with an active delivery.
+
+## Learner home — `/api/learner`
+
+| Method | Path | Auth | Roles | Source file |
+|--------|------|------|-------|-------------|
+| GET | `/api/learner/home` | Bearer JWT | `LEARNER` | `learner-home/learner-home.routes.ts` |
+
+Returns a personalized learner home feed: `profileCompletion` (`hasInterests`, `hasSavedLocation`, `hasSavedProjects`) plus ordered sections (`suggested_materials`, `materials_for_saved_projects`, `suggested_projects`, `continue_projects`, `saved_projects`, `free_materials_near_you`, `popular_projects`). Each recommended item includes `score`, `reasons[]`, and a typed payload (`material`, `project`, or `continue_project` with nested `build`). Ranking uses deterministic weighted scoring from learner interests, saved projects/components, default saved location, material availability, popularity, and recency — no AI or vector search.
+
+| GET | `/api/learner/home/sections/:sectionKey` | Bearer JWT | `LEARNER` | `learner-home/learner-home.routes.ts` |
+
+Returns one ranked section for Browse-all pages. Supported `sectionKey` values match the home feed section keys. Query: `limit` (optional, default 20, max 50). Response includes `key`, `title`, `subtitle`, `items[]`, `emptyState`, `nextCursor` (always `null` in this slice). Uses the same scoring as `GET /api/learner/home`. Invalid `sectionKey` → `400 INVALID_SECTION_KEY`.
 
 ## Learner saved dropoff addresses — `/api/learner/saved-dropoff-addresses`
 

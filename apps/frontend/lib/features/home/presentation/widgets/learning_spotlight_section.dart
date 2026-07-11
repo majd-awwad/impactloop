@@ -173,6 +173,23 @@ class _LearningSpotlightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return HomeLearningProjectCard(project: project);
+  }
+}
+
+/// Vertical learning project card used on the learner home feed.
+class HomeLearningProjectCard extends StatelessWidget {
+  const HomeLearningProjectCard({
+    super.key,
+    required this.project,
+    this.reason,
+  });
+
+  final LearningProject project;
+  final String? reason;
+
+  @override
+  Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasImage =
@@ -349,6 +366,19 @@ class _LearningSpotlightCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: AppSpacing.sm),
+                        if (reason != null && reason!.trim().isNotEmpty) ...[
+                          Text(
+                            reason!.trim(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.label(context).copyWith(
+                              color: palette.mint,
+                              fontSize: 12,
+                              height: 1.25,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                        ],
                         ProjectEngagementStrip(
                           project: project,
                           density: ProjectEngagementDensity.compact,

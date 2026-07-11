@@ -66,7 +66,7 @@ describe('auth registration', () => {
       learnerProfile: {
         learnerType: 'University student',
         skillLevel: 'Beginner',
-        interests: ['Home improvement', 'Science experiments'],
+        interests: ['Home improvement', 'Recycling'],
       },
       supplierProfile: {
         supplierType: 'Student supplier',
@@ -79,6 +79,10 @@ describe('auth registration', () => {
     assert.deepEqual(session.user.roles.sort(), ['LEARNER', 'SUPPLIER']);
     assert.equal(session.user.activeRole, 'LEARNER');
     assert.equal(session.user.learnerProfile?.learnerType, 'University student');
+    assert.deepEqual(session.user.learnerProfile?.interests, [
+      'home_diy',
+      'recycling',
+    ]);
     assert.equal(session.user.supplierProfile?.supplierType, 'STUDENT_SUPPLIER');
     assert.equal(session.user.supplierProfile?.verificationStatus, 'NOT_REQUIRED');
   });
