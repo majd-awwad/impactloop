@@ -351,10 +351,24 @@ export const requestDeliveryForReservation = async (
           id: reservationId,
           requesterId: learnerId,
         },
-        include: {
+        select: {
+          id: true,
+          status: true,
+          fulfillmentMethod: true,
           material: {
-            include: {
-              location: true,
+            select: {
+              deliveryAllowed: true,
+              location: {
+                select: {
+                  country: true,
+                  city: true,
+                  area: true,
+                  addressLine: true,
+                  latitude: true,
+                  longitude: true,
+                  isApproximate: true,
+                },
+              },
             },
           },
         },

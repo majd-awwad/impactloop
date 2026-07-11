@@ -32,6 +32,9 @@ import type { Request, Response } from 'express';
 
 const TEST_MARKER = 'test-change-password';
 
+const PG_CONCURRENT_QUERY_WARNING =
+  'Calling client.query() when the client is already executing a query is deprecated';
+
 const ids = {
   users: [] as string[],
 };
@@ -70,11 +73,6 @@ async function createLearnerUser(password = 'OldPassword123!') {
       roles: {
         create: [{ role: 'LEARNER', isPrimary: true }],
       },
-    },
-    include: {
-      roles: true,
-      learnerProfile: true,
-      supplierProfile: true,
     },
   });
 
@@ -334,6 +332,37 @@ describe('change password session revocation', () => {
     assert.equal(await countActiveRefreshTokens(user.id), 1);
     assert.ok(session.accessToken);
     assert.equal(provider.passwordChangedEmails.length, 1);
+  });
+
+  test('change password does not emit pg concurrent client.query deprecation warning', async () => {
+    const user = await createLearnerUser();
+    const deprecationWarnings: string[] = [];
+
+    const onWarning = (warning: Error) => {
+      if (warning.name === 'DeprecationWarning') {
+        deprecationWarnings.push(warning.message);
+      }
+    };
+
+    process.on('warning', onWarning);
+
+    try {
+      await changePasswordForUser(user.id, {
+        currentPassword: 'OldPassword123!',
+        newPassword: 'NewPassword123!',
+        confirmNewPassword: 'NewPassword123!',
+      });
+    } finally {
+      process.off('warning', onWarning);
+    }
+
+    assert.equal(
+      deprecationWarnings.some((message) =>
+        message.includes(PG_CONCURRENT_QUERY_WARNING),
+      ),
+      false,
+      `Unexpected deprecation warnings: ${deprecationWarnings.join('; ')}`,
+    );
   });
 });
 

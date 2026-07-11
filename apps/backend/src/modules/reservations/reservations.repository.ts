@@ -172,6 +172,24 @@ export type LearnerCancelledReservationRecord = Prisma.ReservationGetPayload<{
   include: typeof learnerCancelInclude;
 }>;
 
+const loadLearnerReservationRecord = async (
+  reservationId: string,
+): Promise<LearnerReservationRecord> => {
+  return prisma.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
+    include: reservationInclude,
+  });
+};
+
+const loadLearnerCancelledReservationRecord = async (
+  reservationId: string,
+): Promise<LearnerCancelledReservationRecord> => {
+  return prisma.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
+    include: learnerCancelInclude,
+  });
+};
+
 export const findLearnerReservations = async (requesterId: string) => {
   return prisma.reservation.findMany({
     where: { requesterId },
@@ -209,7 +227,7 @@ export const createLearnerReservation = async (input: {
   buildItemId?: string;
   combineWithDeliveryGroupId?: string;
 }) => {
-  return runSerializableTransaction(async (tx) => {
+  const result = await runSerializableTransaction(async (tx) => {
     const material = await tx.material.findUnique({
       where: { id: input.materialId },
       select: {
@@ -414,7 +432,7 @@ export const createLearnerReservation = async (input: {
     const message = input.message?.trim() || null;
     const deliveryNote = input.deliveryNote?.trim() || null;
 
-    const reservation = await tx.reservation.create({
+    const createdReservation = await tx.reservation.create({
       data: {
         materialId: material.id,
         requesterId: input.requesterId,
@@ -456,12 +474,12 @@ export const createLearnerReservation = async (input: {
         deliveryGroupId,
         status: 'PENDING',
       },
-      include: reservationInclude,
+      select: { id: true },
     });
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: createdReservation.id,
         statusGroup: 'RESERVATION',
         oldStatus: null,
         newStatus: 'PENDING',
@@ -476,27 +494,33 @@ export const createLearnerReservation = async (input: {
       await setBuildItemLinkedReservationId(
         tx,
         linkedBuildItemId,
-        reservation.id,
+        createdReservation.id,
       );
     }
 
-    const updatedReservation = await tx.reservation.findUniqueOrThrow({
-      where: { id: reservation.id },
-      include: reservationInclude,
-    });
-
     return withAvailabilityChange({
       outcome: 'CREATED' as const,
-      reservation: updatedReservation,
+      reservationId: createdReservation.id,
     });
   });
+
+  if (result.outcome !== 'CREATED') {
+    return result;
+  }
+
+  const reservation = await loadLearnerReservationRecord(result.reservationId);
+
+  return {
+    ...result,
+    reservation,
+  };
 };
 
 export const cancelLearnerReservation = async (input: {
   requesterId: string;
   reservationId: string;
 }) => {
-  return runSerializableTransaction(async (tx) => {
+  const result = await runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
@@ -525,18 +549,18 @@ export const cancelLearnerReservation = async (input: {
 
     const now = new Date();
 
-    const reservation = await tx.reservation.update({
+    await tx.reservation.update({
       where: { id: existing.id },
       data: {
         status: 'CANCELLED',
         cancelledAt: now,
       },
-      include: learnerCancelInclude,
+      select: { id: true },
     });
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: existing.id,
         statusGroup: 'RESERVATION',
         oldStatus: existing.status,
         newStatus: 'CANCELLED',
@@ -547,8 +571,21 @@ export const cancelLearnerReservation = async (input: {
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
-    return { outcome: 'CANCELLED' as const, reservation };
+    return { outcome: 'CANCELLED' as const, reservationId: existing.id };
   });
+
+  if (result.outcome !== 'CANCELLED') {
+    return result;
+  }
+
+  const reservation = await loadLearnerCancelledReservationRecord(
+    result.reservationId,
+  );
+
+  return {
+    outcome: 'CANCELLED' as const,
+    reservation,
+  };
 };
 
 export const findMaterialForReservationQuote = async (materialId: string) => {

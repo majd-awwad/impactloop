@@ -15,22 +15,42 @@ import {
 } from '../../utils/handover-codes.js';
 import { ensureDeliveryForAcceptedReservation } from '../delivery-groups/delivery-group-operations.service.js';
 
-const learnerConfirmationInclude = {
-  material: {
-    include: {
-      location: true,
-    },
-  },
+const learnerConfirmationExistingSelect = {
+  id: true,
+  status: true,
+  fulfillmentMethod: true,
+  materialId: true,
+  requesterId: true,
+  deliveryGroupId: true,
+  deliveryAddressText: true,
+  dropoffCity: true,
+  dropoffArea: true,
+  deliveryNote: true,
+  supplierProposedPickupWindowStart: true,
+  supplierProposedPickupWindowEnd: true,
+  supplierPickupWindowStart: true,
+  supplierPickupWindowEnd: true,
   _count: {
     select: {
       deliveries: true,
     },
   },
-} satisfies Prisma.ReservationInclude;
-
-export type LearnerConfirmationReservationRecord = Prisma.ReservationGetPayload<{
-  include: typeof learnerConfirmationInclude;
-}>;
+  material: {
+    select: {
+      location: {
+        select: {
+          country: true,
+          city: true,
+          area: true,
+          addressLine: true,
+          latitude: true,
+          longitude: true,
+          isApproximate: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.ReservationSelect;
 
 export const resolveLearnerConfirmation = async (input: {
   requesterId: string;
@@ -44,7 +64,7 @@ export const resolveLearnerConfirmation = async (input: {
         id: input.reservationId,
         requesterId: input.requesterId,
       },
-      include: learnerConfirmationInclude,
+      select: learnerConfirmationExistingSelect,
     });
 
     if (!existing) {
@@ -61,18 +81,18 @@ export const resolveLearnerConfirmation = async (input: {
       }
 
       const now = new Date();
-      const reservation = await tx.reservation.update({
+      await tx.reservation.update({
         where: { id: existing.id },
         data: {
           status: 'CANCELLED',
           cancelledAt: now,
         },
-        include: learnerConfirmationInclude,
+        select: { id: true },
       });
 
       await tx.reservationStatusHistory.create({
         data: {
-          reservationId: reservation.id,
+          reservationId: existing.id,
           statusGroup: 'RESERVATION',
           oldStatus: 'AWAITING_LEARNER_CONFIRMATION',
           newStatus: 'CANCELLED',
@@ -83,7 +103,7 @@ export const resolveLearnerConfirmation = async (input: {
 
       await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
-      return { outcome: 'CANCELLED' as const, reservation };
+      return { outcome: 'CANCELLED' as const };
     }
 
     if (input.action === 'ACCEPT_PROPOSED_PICKUP') {
@@ -104,7 +124,7 @@ export const resolveLearnerConfirmation = async (input: {
 
       const pickupCodeData = await buildSelfPickupCodeData(existing.id);
 
-      const reservation = await tx.reservation.update({
+      await tx.reservation.update({
         where: { id: existing.id },
         data: {
           status: 'ACCEPTED',
@@ -120,12 +140,12 @@ export const resolveLearnerConfirmation = async (input: {
           learnerProposedPickupWindowEnd: null,
           ...pickupCodeData.data,
         },
-        include: learnerConfirmationInclude,
+        select: { id: true },
       });
 
       await tx.reservationStatusHistory.create({
         data: {
-          reservationId: reservation.id,
+          reservationId: existing.id,
           statusGroup: 'RESERVATION',
           oldStatus: 'AWAITING_LEARNER_CONFIRMATION',
           newStatus: 'ACCEPTED',
@@ -136,7 +156,7 @@ export const resolveLearnerConfirmation = async (input: {
 
       await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
-      return { outcome: 'ACCEPTED' as const, reservation };
+      return { outcome: 'ACCEPTED' as const };
     }
 
     if (input.action !== 'SUBMIT_DELIVERY_WINDOW') {
@@ -175,7 +195,7 @@ export const resolveLearnerConfirmation = async (input: {
       };
     }
 
-    const reservation = await tx.reservation.update({
+    await tx.reservation.update({
       where: { id: existing.id },
       data: {
         status: 'ACCEPTED',
@@ -184,7 +204,7 @@ export const resolveLearnerConfirmation = async (input: {
         earliestDeliveryStart: feasible.earliestDeliveryStart,
         schedulingConflictReason: null,
       },
-      include: learnerConfirmationInclude,
+      select: { id: true },
     });
 
     await ensureDeliveryForAcceptedReservation(tx, {
@@ -205,7 +225,7 @@ export const resolveLearnerConfirmation = async (input: {
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: existing.id,
         statusGroup: 'RESERVATION',
         oldStatus: 'AWAITING_LEARNER_CONFIRMATION',
         newStatus: 'ACCEPTED',
@@ -216,18 +236,6 @@ export const resolveLearnerConfirmation = async (input: {
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
-    const updated = await tx.reservation.findFirstOrThrow({
-      where: { id: existing.id },
-      include: {
-        ...learnerConfirmationInclude,
-        deliveries: {
-          select: { id: true, status: true },
-          orderBy: { requestedAt: 'desc' },
-          take: 1,
-        },
-      },
-    });
-
-    return { outcome: 'ACCEPTED' as const, reservation: updated };
+    return { outcome: 'ACCEPTED' as const };
   });
 };
