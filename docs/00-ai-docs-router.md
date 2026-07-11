@@ -38,11 +38,13 @@ Read:
 - [04-api-conventions.md](04-api-conventions.md)
 - [backend/api-catalog.md](backend/api-catalog.md)
 - [backend/modules-map.md](backend/modules-map.md)
+- [backend/observability.md](backend/observability.md) if error handling, logging, or request correlation changed
 
 Update:
 
 - [backend/api-catalog.md](backend/api-catalog.md) if endpoint/request/response changed
 - [backend/modules-map.md](backend/modules-map.md) if module responsibilities changed
+- [backend/observability.md](backend/observability.md) if error handling, logging, or request correlation changed
 - [08-implementation-status.md](08-implementation-status.md) if feature ship status changed
 - Matching [features/](features/) and [flows/](flows/) doc when API or flow behavior changed (see [Feature & flow docs](#feature--flow-docs))
 

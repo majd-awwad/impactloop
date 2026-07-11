@@ -1,10 +1,10 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
-import morgan from 'morgan';
 import { env } from './config/env.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
 import { notFoundMiddleware } from './middlewares/not-found.middleware.js';
+import { requestContextMiddleware } from './middlewares/request-context.middleware.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { categoriesRouter } from './modules/categories/categories.routes.js';
 import { healthRouter } from './modules/health/health.routes.js';
@@ -41,6 +41,7 @@ export const app = express();
 
 const isProduction = env.nodeEnv === 'production';
 
+app.use(requestContextMiddleware);
 app.use(
   helmet({
     crossOriginResourcePolicy: isProduction ? { policy: 'same-origin' } : false,
@@ -54,9 +55,17 @@ app.use(
         : false
       : true,
     credentials: true,
+    exposedHeaders: ['X-Request-Id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'X-Request-Id',
+      'X-Client-Platform',
+      'Idempotency-Key',
+    ],
   }),
 );
-app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.use('/uploads/materials', express.static(MATERIAL_UPLOADS_DIR));
 app.use('/uploads/profiles', express.static(PROFILE_UPLOADS_DIR));
 app.use(

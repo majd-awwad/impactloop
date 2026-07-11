@@ -171,6 +171,26 @@ const parseBoolean = (value: string | undefined, fallback = false): boolean => {
   return normalized === '1' || normalized === 'true' || normalized === 'yes';
 };
 
+const LOG_LEVELS = new Set(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']);
+
+const parseLogLevel = (value: string | undefined, nodeEnv: string): string => {
+  const normalized = value?.trim().toLowerCase();
+
+  if (normalized && LOG_LEVELS.has(normalized)) {
+    return normalized;
+  }
+
+  if (nodeEnv === 'test') {
+    return 'silent';
+  }
+
+  if (nodeEnv === 'production') {
+    return 'info';
+  }
+
+  return 'debug';
+};
+
 const parseSmtpPort = (value: string | undefined): number => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 587;
@@ -178,6 +198,12 @@ const parseSmtpPort = (value: string | undefined): number => {
 
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
+  serviceName: process.env.SERVICE_NAME?.trim() || 'impactloop-api',
+  logLevel: parseLogLevel(process.env.LOG_LEVEL, process.env.NODE_ENV ?? 'development'),
+  logPretty:
+    (process.env.NODE_ENV ?? 'development') === 'development' &&
+    parseBoolean(process.env.LOG_PRETTY, true),
+  mockEmailLogLinks: parseBoolean(process.env.MOCK_EMAIL_LOG_LINKS, false),
   port: parsePort(process.env.PORT),
   corsOrigins: (process.env.CORS_ORIGIN ?? '')
     .split(',')
