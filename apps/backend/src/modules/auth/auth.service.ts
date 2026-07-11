@@ -359,9 +359,16 @@ export const loginUser = async (input: LoginInput): Promise<AuthResult> => {
     throw new AppError('Invalid email or password', 401, 'UNAUTHENTICATED');
   }
 
-  const updatedUser = await authRepository.updateLastLoginAt(user.id);
+  const loginTimestamp = new Date();
+  const persistedLastLoginAt = await authRepository.updateLastLoginAt(
+    user.id,
+    loginTimestamp,
+  );
 
-  return createAuthSession(updatedUser);
+  return createAuthSession({
+    ...user,
+    lastLoginAt: persistedLastLoginAt,
+  });
 };
 
 export const refreshAuthSession = async (

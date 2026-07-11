@@ -193,12 +193,19 @@ export const findUserByEmailWithRoles = async (
 
 export const updateLastLoginAt = async (
   userId: string,
-): Promise<UserWithRolesAndProfiles> => {
-  return prisma.user.update({
+  lastLoginAt: Date,
+): Promise<Date> => {
+  const updated = await prisma.user.update({
     where: { id: userId },
-    data: { lastLoginAt: new Date() },
-    include: userWithRolesAndProfilesInclude,
+    data: { lastLoginAt },
+    select: { lastLoginAt: true },
   });
+
+  if (!updated.lastLoginAt) {
+    throw new Error('User not found');
+  }
+
+  return updated.lastLoginAt;
 };
 
 export const createAuthTokenRecord = async (input: {
