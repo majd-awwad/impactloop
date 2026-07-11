@@ -1,21 +1,18 @@
 import * as learnerHomeRepository from './learner-home.repository.js';
 import {
+  BROWSE_MATERIAL_POOL_CAP,
+  HOME_MATERIAL_POOL_CAP,
+} from './learner-home.repository.js';
+import {
   dedupeMaterialSections,
   dedupeMaterialItems,
   dedupeSectionItemsById,
   getProjectItemId,
 } from './learner-home.deduplication.js';
 import {
-  applyDiversityCap,
-  normalizeInterests,
-  resolveSuggestedMaterialsSubtitle,
-  resolveSuggestedProjectsSubtitle,
-  scoreFreeNearbyMaterial,
-  scoreMaterialForSavedProjects,
-  scorePopularProject,
-  scoreSuggestedMaterial,
-  scoreSuggestedProject,
-} from './learner-home.scoring.js';
+  preScoreMaterialPool,
+  type PreScoredMaterialEntry,
+} from './learner-home.material-features.js';
 import {
   selectTieredSuggestedMaterials,
   sortAllRankedMaterials,
@@ -29,6 +26,15 @@ import {
   resolveFreeMaterialsSectionTitle,
   selectSuggestedProjectItems,
 } from './learner-home.section-builders.js';
+import { createLearnerHomeProfiler } from './learner-home.scoring-debug.js';
+import {
+  applyDiversityCap,
+  normalizeInterests,
+  resolveSuggestedMaterialsSubtitle,
+  resolveSuggestedProjectsSubtitle,
+  scorePopularProject,
+  scoreSuggestedProject,
+} from './learner-home.scoring.js';
 import type {
   LearnerHomeContinueProjectItem,
   LearnerHomeMaterialItem,
@@ -53,6 +59,12 @@ const SECTION_LIMITS = {
 } as const;
 
 const RANK_POOL_SIZE = 48;
+
+const LEARNER_HOME_CACHE_TTL_MS = 45_000;
+const learnerHomeCache = new Map<
+  string,
+  { expiresAt: number; payload: LearnerHomeResponse }
+>();
 
 const SECTION_META: Record<
   LearnerHomeSectionKey,
@@ -202,27 +214,88 @@ type LearnerHomeContext = {
   hasActivity: boolean;
 };
 
-const loadLearnerHomeContext = async (userId: string): Promise<LearnerHomeContext> => {
+type LearnerHomeLoadOptions = {
+  materialPoolCap?: number;
+  profiler?: ReturnType<typeof createLearnerHomeProfiler>;
+};
+
+const loadLearnerHomeContext = async (
+  userId: string,
+  options: LearnerHomeLoadOptions = {},
+): Promise<LearnerHomeContext> => {
+  const profiler = options.profiler;
+  const materialPoolCap = options.materialPoolCap ?? HOME_MATERIAL_POOL_CAP;
+
   const [
     rawInterests,
     savedLocation,
     savedComponents,
-    materials,
-    projects,
     savedProjectsCount,
     behavior,
+    projects,
   ] = await Promise.all([
-    learnerHomeRepository.loadLearnerInterests(userId),
-    learnerHomeRepository.loadDefaultSavedLocation(userId),
-    learnerHomeRepository.loadSavedProjectComponents(userId),
-    learnerHomeRepository.loadMaterialCandidates(),
-    learnerHomeRepository.loadProjectCandidates(userId),
-    learnerHomeRepository.countSavedProjects(userId),
-    learnerHomeRepository.loadLearnerBehaviorContext(userId),
+    profiler
+      ? profiler.time('loadLearnerInterests', () =>
+          learnerHomeRepository.loadLearnerInterests(userId),
+        )
+      : learnerHomeRepository.loadLearnerInterests(userId),
+    profiler
+      ? profiler.time('loadDefaultSavedLocation', () =>
+          learnerHomeRepository.loadDefaultSavedLocation(userId),
+        )
+      : learnerHomeRepository.loadDefaultSavedLocation(userId),
+    profiler
+      ? profiler.time('loadSavedProjectComponents', () =>
+          learnerHomeRepository.loadSavedProjectComponents(userId),
+        )
+      : learnerHomeRepository.loadSavedProjectComponents(userId),
+    profiler
+      ? profiler.time('countSavedProjects', () =>
+          learnerHomeRepository.countSavedProjects(userId),
+        )
+      : learnerHomeRepository.countSavedProjects(userId),
+    profiler
+      ? profiler.time('loadLearnerBehaviorContext', () =>
+          learnerHomeRepository.loadLearnerBehaviorContext(userId),
+        )
+      : learnerHomeRepository.loadLearnerBehaviorContext(userId),
+    profiler
+      ? profiler.time('loadProjectCandidates', () =>
+          learnerHomeRepository.loadProjectCandidates(userId),
+        )
+      : learnerHomeRepository.loadProjectCandidates(userId),
   ]);
 
   const interests = normalizeInterests(rawInterests);
-  const behaviorAffinityProfile = buildBehaviorAffinityProfile(behavior);
+  let behaviorAffinityProfile!: LearnerAffinityProfile;
+  const assignBehaviorAffinityProfile = () => {
+    behaviorAffinityProfile = buildBehaviorAffinityProfile(behavior);
+  };
+
+  if (profiler) {
+    profiler.mark('buildBehaviorAffinityProfile', assignBehaviorAffinityProfile);
+  } else {
+    assignBehaviorAffinityProfile();
+  }
+
+  const materials = await (profiler
+    ? profiler.time('loadMaterialCandidates', () =>
+        learnerHomeRepository.loadMaterialCandidatesForLearner({
+          interests,
+          savedComponents,
+          behavior,
+          savedLocation,
+          poolCap: materialPoolCap,
+        }),
+      )
+    : learnerHomeRepository.loadMaterialCandidatesForLearner({
+        interests,
+        savedComponents,
+        behavior,
+        savedLocation,
+        poolCap: materialPoolCap,
+      }));
+
   const savedProjectIds = new Set(
     projects.filter((project) => project.mapped.isSaved).map((project) => project.id),
   );
@@ -241,40 +314,25 @@ const loadLearnerHomeContext = async (userId: string): Promise<LearnerHomeContex
   };
 };
 
-type RankedMaterialEntry = {
-  type: 'material';
-  score: number;
-  reasons: string[];
-  tier: number;
-  hasPrimaryRelevance: boolean;
-  fallbackOnly: boolean;
-  material: Record<string, unknown>;
-  ownerId: string;
-};
+const preScoreMaterials = (context: LearnerHomeContext): PreScoredMaterialEntry[] =>
+  preScoreMaterialPool({
+    materials: context.materials,
+    interests: context.interests,
+    savedComponents: context.savedComponents,
+    savedLocation: context.savedLocation,
+    behavior: context.behavior,
+    behaviorAffinityProfile: context.behaviorAffinityProfile,
+  });
 
-const toMaterialItem = ({
-  ownerId: _ownerId,
-  tier: _tier,
-  hasPrimaryRelevance: _hasPrimaryRelevance,
-  fallbackOnly: _fallbackOnly,
-  ...item
-}: RankedMaterialEntry): LearnerHomeMaterialItem => item;
-
-const rankMaterialEntries = (
-  materials: LearnerHomeContext['materials'],
-  scorer: (material: (typeof materials)[number]) => {
-    score: number;
-    reasons: string[];
-    tier?: number;
-    hasPrimaryRelevance?: boolean;
-    fallbackOnly?: boolean;
-  },
+const rankPreScoredMaterialEntries = (
+  entries: PreScoredMaterialEntry[],
+  scoreKey: keyof PreScoredMaterialEntry['scores'],
   useTieredSuggestedRanking: boolean,
   browseAllTierSort: boolean,
 ): RankedMaterialEntry[] => {
-  const ranked = materials
-    .map((material) => {
-      const scored = scorer(material);
+  const ranked = entries
+    .map((entry) => {
+      const scored = entry.scores[scoreKey];
       return {
         type: 'material' as const,
         score: scored.score,
@@ -282,8 +340,8 @@ const rankMaterialEntries = (
         tier: scored.tier ?? 5,
         hasPrimaryRelevance: scored.hasPrimaryRelevance ?? false,
         fallbackOnly: scored.fallbackOnly ?? false,
-        material: material.mapped,
-        ownerId: material.ownerId,
+        material: entry.material.mapped,
+        ownerId: entry.ownerId,
       };
     })
     .filter((entry) => entry.score > 0);
@@ -310,23 +368,36 @@ const rankMaterialEntries = (
   );
 };
 
-const rankMaterials = (
-  materials: LearnerHomeContext['materials'],
-  scorer: (material: (typeof materials)[number]) => {
-    score: number;
-    reasons: string[];
-    tier?: number;
-    hasPrimaryRelevance?: boolean;
-    fallbackOnly?: boolean;
-  },
+type RankedMaterialEntry = {
+  type: 'material';
+  score: number;
+  reasons: string[];
+  tier: number;
+  hasPrimaryRelevance: boolean;
+  fallbackOnly: boolean;
+  material: Record<string, unknown>;
+  ownerId: string;
+};
+
+const toMaterialItem = ({
+  ownerId: _ownerId,
+  tier: _tier,
+  hasPrimaryRelevance: _hasPrimaryRelevance,
+  fallbackOnly: _fallbackOnly,
+  ...item
+}: RankedMaterialEntry): LearnerHomeMaterialItem => item;
+
+const rankMaterialsFromPreScored = (
+  entries: PreScoredMaterialEntry[],
+  scoreKey: keyof PreScoredMaterialEntry['scores'],
   limit: number,
   useDiversityCap: boolean,
   useTieredSuggestedRanking = false,
   browseAllTierSort = false,
 ): LearnerHomeMaterialItem[] => {
-  const selected = rankMaterialEntries(
-    materials,
-    scorer,
+  const selected = rankPreScoredMaterialEntries(
+    entries,
+    scoreKey,
     useTieredSuggestedRanking,
     browseAllTierSort,
   ).slice(0, limit);
@@ -340,21 +411,15 @@ const rankMaterials = (
   return dedupeMaterialItems(selected.map(toMaterialItem), limit);
 };
 
-const rankMaterialsPage = (
-  materials: LearnerHomeContext['materials'],
-  scorer: (material: (typeof materials)[number]) => {
-    score: number;
-    reasons: string[];
-    tier?: number;
-    hasPrimaryRelevance?: boolean;
-    fallbackOnly?: boolean;
-  },
+const rankMaterialsPageFromPreScored = (
+  entries: PreScoredMaterialEntry[],
+  scoreKey: keyof PreScoredMaterialEntry['scores'],
   limit: number,
   offset: number,
 ): { items: LearnerHomeMaterialItem[]; hasMore: boolean; nextOffset: number | null } => {
-  const sorted = rankMaterialEntries(
-    materials,
-    scorer,
+  const sorted = rankPreScoredMaterialEntries(
+    entries,
+    scoreKey,
     true,
     true,
   );
@@ -368,6 +433,95 @@ const rankMaterialsPage = (
     hasMore,
     nextOffset: hasMore ? nextOffset : null,
   };
+};
+
+const buildRankedHomeMaterialSections = (
+  context: LearnerHomeContext,
+  preScoredMaterials: PreScoredMaterialEntry[],
+  profiler?: ReturnType<typeof createLearnerHomeProfiler>,
+) => {
+  let rankedMaterialsForSavedProjects: LearnerHomeMaterialItem[] = [];
+  const rankSaved = () => {
+    rankedMaterialsForSavedProjects =
+      context.savedComponents.length === 0
+        ? []
+        : rankMaterialsFromPreScored(
+            preScoredMaterials,
+            'savedProjects',
+            RANK_POOL_SIZE,
+            false,
+            true,
+            true,
+          );
+  };
+
+  if (profiler) {
+    profiler.mark('rankSavedProjectMaterials', rankSaved);
+  } else {
+    rankSaved();
+  }
+
+  let rankedSuggestedMaterials: LearnerHomeMaterialItem[] = [];
+  const rankSuggested = () => {
+    rankedSuggestedMaterials = rankMaterialsFromPreScored(
+      preScoredMaterials,
+      'suggested',
+      RANK_POOL_SIZE,
+      false,
+      true,
+    );
+  };
+
+  if (profiler) {
+    profiler.mark('rankSuggestedMaterials', rankSuggested);
+  } else {
+    rankSuggested();
+  }
+
+  let rankedFreeMaterials: LearnerHomeMaterialItem[] = [];
+  const rankFree = () => {
+    rankedFreeMaterials = rankMaterialsFromPreScored(
+      preScoredMaterials,
+      'free',
+      RANK_POOL_SIZE,
+      false,
+      true,
+      true,
+    );
+  };
+
+  if (profiler) {
+    profiler.mark('rankFreeMaterials', rankFree);
+  } else {
+    rankFree();
+  }
+
+  let deduped = {
+    materialsForSavedProjects: rankedMaterialsForSavedProjects,
+    suggestedMaterials: rankedSuggestedMaterials,
+    freeMaterialsNearYou: rankedFreeMaterials,
+  };
+
+  const dedupe = () => {
+    deduped = dedupeMaterialSections({
+      materialsForSavedProjects: rankedMaterialsForSavedProjects,
+      suggestedMaterials: rankedSuggestedMaterials,
+      freeMaterialsNearYou: rankedFreeMaterials,
+      limits: {
+        materialsForSavedProjects: SECTION_LIMITS.materials_for_saved_projects,
+        suggestedMaterials: SECTION_LIMITS.suggested_materials,
+        freeMaterialsNearYou: SECTION_LIMITS.free_materials_near_you,
+      },
+    });
+  };
+
+  if (profiler) {
+    profiler.mark('dedupeMaterialSections', dedupe);
+  } else {
+    dedupe();
+  }
+
+  return deduped;
 };
 
 const rankProjects = (
@@ -518,6 +672,7 @@ const buildSectionItems = async (
   sectionKey: LearnerHomeSectionKey,
   limit: number,
   offset = 0,
+  preScoredMaterials?: PreScoredMaterialEntry[],
 ): Promise<{
   title: string;
   subtitle: string;
@@ -527,19 +682,11 @@ const buildSectionItems = async (
 }> => {
   switch (sectionKey) {
     case 'suggested_materials': {
-      const scoreMaterial = (material: (typeof context.materials)[number]) =>
-        scoreSuggestedMaterial({
-          material,
-          interests: context.interests,
-          savedComponents: context.savedComponents,
-          savedLocation: context.savedLocation,
-          behaviorAffinityProfile: context.behaviorAffinityProfile,
-          behavior: context.behavior,
-        });
-
-      const paged = rankMaterialsPage(
-        context.materials,
-        scoreMaterial,
+      const scoredMaterials =
+        preScoredMaterials ?? preScoreMaterials(context);
+      const paged = rankMaterialsPageFromPreScored(
+        scoredMaterials,
+        'suggested',
         limit,
         offset,
       );
@@ -556,24 +703,19 @@ const buildSectionItems = async (
         nextOffset: paged.nextOffset,
       };
     }
-    case 'materials_for_saved_projects':
+    case 'materials_for_saved_projects': {
+      const scoredMaterials =
+        preScoredMaterials ?? preScoreMaterials(context);
+
       return {
         title: SECTION_META.materials_for_saved_projects.title,
         subtitle: SECTION_SUBTITLES.materials_for_saved_projects,
         items:
           context.savedComponents.length === 0
             ? []
-            : rankMaterials(
-                context.materials,
-                (material) =>
-                  scoreMaterialForSavedProjects({
-                    material,
-                    interests: context.interests,
-                    savedComponents: context.savedComponents,
-                    savedLocation: context.savedLocation,
-                    behaviorAffinityProfile: context.behaviorAffinityProfile,
-                    behavior: context.behavior,
-                  }),
+            : rankMaterialsFromPreScored(
+                scoredMaterials,
+                'savedProjects',
                 limit,
                 false,
                 true,
@@ -582,17 +724,13 @@ const buildSectionItems = async (
         hasMore: false,
         nextOffset: null,
       };
+    }
     case 'free_materials_near_you': {
-      const items = rankMaterials(
-        context.materials,
-        (material) =>
-          scoreFreeNearbyMaterial({
-            material,
-            savedLocation: context.savedLocation,
-            interests: context.interests,
-            behaviorAffinityProfile: context.behaviorAffinityProfile,
-            behavior: context.behavior,
-          }),
+      const scoredMaterials =
+        preScoredMaterials ?? preScoreMaterials(context);
+      const items = rankMaterialsFromPreScored(
+        scoredMaterials,
+        'free',
         limit,
         false,
         true,
@@ -662,8 +800,40 @@ export const getLearnerHomeSection = async (
   limit: number,
   offset = 0,
 ): Promise<LearnerHomeSectionDetails> => {
-  const context = await loadLearnerHomeContext(userId);
-  const built = await buildSectionItems(context, userId, sectionKey, limit, offset);
+  const profiler = createLearnerHomeProfiler('getLearnerHomeSection');
+  const startedAt = performance.now();
+  const materialPoolCap =
+    sectionKey === 'suggested_materials'
+      ? BROWSE_MATERIAL_POOL_CAP
+      : HOME_MATERIAL_POOL_CAP;
+  const context = await profiler.time('loadLearnerHomeContext', () =>
+    loadLearnerHomeContext(userId, { profiler, materialPoolCap }),
+  );
+  let preScoredMaterials: PreScoredMaterialEntry[] | undefined;
+
+  if (
+    sectionKey === 'suggested_materials' ||
+    sectionKey === 'materials_for_saved_projects' ||
+    sectionKey === 'free_materials_near_you'
+  ) {
+    preScoredMaterials = await profiler.time('preScoreMaterials', async () =>
+      preScoreMaterials(context),
+    );
+  }
+
+  const built = await profiler.time(`buildSection:${sectionKey}`, () =>
+    buildSectionItems(
+      context,
+      userId,
+      sectionKey,
+      limit,
+      offset,
+      preScoredMaterials,
+    ),
+  );
+
+  profiler.record('totalGetLearnerHomeSection', performance.now() - startedAt);
+  profiler.report({ userId, scope: 'getLearnerHomeSection' });
 
   return {
     key: sectionKey,
@@ -678,70 +848,54 @@ export const getLearnerHomeSection = async (
 };
 
 export const getLearnerHome = async (userId: string): Promise<LearnerHomeResponse> => {
-  const context = await loadLearnerHomeContext(userId);
+  const cached = learnerHomeCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.payload;
+  }
 
-  const rankedMaterialsForSavedProjects =
-    context.savedComponents.length === 0
-      ? []
-      : rankMaterials(
-          context.materials,
-          (material) =>
-            scoreMaterialForSavedProjects({
-              material,
-              interests: context.interests,
-              savedComponents: context.savedComponents,
-              savedLocation: context.savedLocation,
-              behaviorAffinityProfile: context.behaviorAffinityProfile,
-              behavior: context.behavior,
-            }),
-          RANK_POOL_SIZE,
-          false,
-          true,
-          true,
+  const profiler = createLearnerHomeProfiler('getLearnerHome');
+  const startedAt = performance.now();
+  const context = await profiler.time('loadLearnerHomeContext', () =>
+    loadLearnerHomeContext(userId, {
+      profiler,
+      materialPoolCap: HOME_MATERIAL_POOL_CAP,
+    }),
+  );
+
+  const [dedupedMaterials, continueProjectsSection, savedProjectsSection] =
+    await Promise.all([
+      profiler.time('rankMaterialSections', async () => {
+        const preScoredMaterials = await profiler.time(
+          'preScoreMaterials',
+          async () => preScoreMaterials(context),
         );
 
-  const rankedSuggestedMaterials = rankMaterials(
-    context.materials,
-    (material) =>
-          scoreSuggestedMaterial({
-            material,
-            interests: context.interests,
-            savedComponents: context.savedComponents,
-            savedLocation: context.savedLocation,
-            behaviorAffinityProfile: context.behaviorAffinityProfile,
-            behavior: context.behavior,
-          }),
-    RANK_POOL_SIZE,
-    false,
-    true,
-  );
-
-  const rankedFreeMaterials = rankMaterials(
-    context.materials,
-    (material) =>
-      scoreFreeNearbyMaterial({
-        material,
-        savedLocation: context.savedLocation,
-        interests: context.interests,
-        behaviorAffinityProfile: context.behaviorAffinityProfile,
-        behavior: context.behavior,
+        return buildRankedHomeMaterialSections(
+          context,
+          preScoredMaterials,
+          profiler,
+        );
       }),
-    RANK_POOL_SIZE,
-    false,
-    true,
-    true,
-  );
+      profiler.time('buildContinueProjectsItems', async () => ({
+        key: 'continue_projects' as const,
+        ...SECTION_META.continue_projects,
+        items: await buildContinueProjectsItems(
+          userId,
+          SECTION_LIMITS.continue_projects,
+        ),
+      })),
+      profiler.time('buildSavedProjectsItems', async () => ({
+        key: 'saved_projects' as const,
+        ...SECTION_META.saved_projects,
+        items: await buildSavedProjectsItems(
+          userId,
+          SECTION_LIMITS.saved_projects,
+        ),
+      })),
+    ]);
 
-  const dedupedMaterials = dedupeMaterialSections({
-    materialsForSavedProjects: rankedMaterialsForSavedProjects,
-    suggestedMaterials: rankedSuggestedMaterials,
-    freeMaterialsNearYou: rankedFreeMaterials,
-    limits: {
-      materialsForSavedProjects: SECTION_LIMITS.materials_for_saved_projects,
-      suggestedMaterials: SECTION_LIMITS.suggested_materials,
-      freeMaterialsNearYou: SECTION_LIMITS.free_materials_near_you,
-    },
-  });
+  profiler.record('totalGetLearnerHome', performance.now() - startedAt);
+  profiler.report({ userId, scope: 'getLearnerHome' });
 
   const profileCompletion = {
     hasInterests: context.interests.length > 0,
@@ -750,18 +904,6 @@ export const getLearnerHome = async (userId: string): Promise<LearnerHomeRespons
       (context.savedLocation.area?.trim().length ?? 0) > 0,
     hasSavedProjects: context.savedProjectsCount > 0,
     hasActivity: context.hasActivity,
-  };
-
-  const continueProjectsSection: LearnerHomeSection = {
-    key: 'continue_projects',
-    ...SECTION_META.continue_projects,
-    items: await buildContinueProjectsItems(userId, SECTION_LIMITS.continue_projects),
-  };
-
-  const savedProjectsSection: LearnerHomeSection = {
-    key: 'saved_projects',
-    ...SECTION_META.saved_projects,
-    items: await buildSavedProjectsItems(userId, SECTION_LIMITS.saved_projects),
   };
 
   const freeItems = dedupedMaterials.freeMaterialsNearYou;
@@ -804,8 +946,15 @@ export const getLearnerHome = async (userId: string): Promise<LearnerHomeRespons
     },
   ];
 
-  return {
+  const response = {
     profileCompletion,
     sections,
   };
+
+  learnerHomeCache.set(userId, {
+    expiresAt: Date.now() + LEARNER_HOME_CACHE_TTL_MS,
+    payload: response,
+  });
+
+  return response;
 };

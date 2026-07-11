@@ -440,6 +440,47 @@ export const hasStrongMaterialReason = (reason: string) => {
   );
 };
 
+export type MaterialScoringSharedState = {
+  relevance: MaterialRelevanceAssessment;
+  behaviorMatch: ReturnType<typeof scoreMaterialBehaviorMatch>;
+  interestMatch: LearnerInterestMatch | null;
+  locationMatch: boolean;
+  matchedComponent: LearnerHomeSavedProjectComponent | null;
+};
+
+export const buildMaterialScoringSharedState = (input: {
+  material: LearnerHomeMaterialCandidate;
+  interests: string[];
+  savedComponents: LearnerHomeSavedProjectComponent[];
+  savedLocation: LearnerHomeSavedLocationContext;
+  behaviorAffinityProfile?: LearnerAffinityProfile;
+  behavior?: LearnerBehaviorContext;
+}): MaterialScoringSharedState => {
+  const behavior = input.behavior ?? createEmptyBehaviorContext();
+  const behaviorAffinityProfile =
+    input.behaviorAffinityProfile ?? createEmptyAffinityProfile();
+  const relevance = assessSuggestedMaterialRelevance({
+    material: input.material,
+    interests: input.interests,
+    savedComponents: input.savedComponents,
+    savedLocation: input.savedLocation,
+    behaviorAffinityProfile,
+    behavior,
+  });
+
+  return {
+    relevance,
+    behaviorMatch: scoreMaterialBehaviorMatch({
+      material: input.material,
+      behaviorAffinityProfile,
+      behavior,
+    }),
+    interestMatch: relevance.interestMatch,
+    locationMatch: relevance.locationMatch,
+    matchedComponent: relevance.matchedComponent,
+  };
+};
+
 export const scoreSuggestedMaterial = (input: {
   material: LearnerHomeMaterialCandidate;
   interests: string[];
@@ -448,6 +489,7 @@ export const scoreSuggestedMaterial = (input: {
   behaviorAffinityProfile?: LearnerAffinityProfile;
   behavior?: LearnerBehaviorContext;
   includeAudit?: boolean;
+  shared?: MaterialScoringSharedState;
 }): ScoredMaterialResult => {
   const reasons: string[] = [];
   let relevanceScore = 0;
@@ -466,20 +508,24 @@ export const scoreSuggestedMaterial = (input: {
     };
   }
 
-  const relevance = assessSuggestedMaterialRelevance({
-    material: input.material,
-    interests: input.interests,
-    savedComponents: input.savedComponents,
-    savedLocation: input.savedLocation,
-    behaviorAffinityProfile,
-    behavior,
-  });
+  const relevance =
+    input.shared?.relevance ??
+    assessSuggestedMaterialRelevance({
+      material: input.material,
+      interests: input.interests,
+      savedComponents: input.savedComponents,
+      savedLocation: input.savedLocation,
+      behaviorAffinityProfile,
+      behavior,
+    });
 
-  const behaviorMatch = scoreMaterialBehaviorMatch({
-    material: input.material,
-    behaviorAffinityProfile,
-    behavior,
-  });
+  const behaviorMatch =
+    input.shared?.behaviorMatch ??
+    scoreMaterialBehaviorMatch({
+      material: input.material,
+      behaviorAffinityProfile,
+      behavior,
+    });
 
   const fallbackOnly =
     relevance.allowsWeakOnlyFallback &&
@@ -637,11 +683,12 @@ export const scoreMaterialForSavedProjects = (input: {
   savedLocation: LearnerHomeSavedLocationContext;
   behaviorAffinityProfile?: LearnerAffinityProfile;
   behavior?: LearnerBehaviorContext;
+  shared?: MaterialScoringSharedState;
+  suggestedBase?: ScoredMaterialResult;
 }): ScoredMaterialResult => {
-  const matchedComponent = findMatchingSavedComponent(
-    input.material,
-    input.savedComponents,
-  );
+  const matchedComponent =
+    input.shared?.matchedComponent ??
+    findMatchingSavedComponent(input.material, input.savedComponents);
 
   if (!matchedComponent) {
     return {
@@ -653,25 +700,28 @@ export const scoreMaterialForSavedProjects = (input: {
     };
   }
 
-  const base = scoreSuggestedMaterial(input);
+  const base = input.suggestedBase ?? scoreSuggestedMaterial(input);
   if (base.score <= UNAVAILABLE_MATERIAL_PENALTY / 2) {
     return base;
   }
 
   const matchedInterest =
-    input.interests.length > 0
+    input.shared?.interestMatch ??
+    (input.interests.length > 0
       ? matchLearnerInterestsAgainstMaterial(
           materialInterestInput(input.material),
           input.interests,
         )
-      : null;
+      : null);
   const behavior = input.behavior ?? createEmptyBehaviorContext();
-  const behaviorMatch = scoreMaterialBehaviorMatch({
-    material: input.material,
-    behaviorAffinityProfile:
-      input.behaviorAffinityProfile ?? createEmptyAffinityProfile(),
-    behavior,
-  });
+  const behaviorMatch =
+    input.shared?.behaviorMatch ??
+    scoreMaterialBehaviorMatch({
+      material: input.material,
+      behaviorAffinityProfile:
+        input.behaviorAffinityProfile ?? createEmptyAffinityProfile(),
+      behavior,
+    });
 
   const tier = resolveSavedProjectMaterialTier({
     matchedComponent,
@@ -704,6 +754,7 @@ export const scoreFreeNearbyMaterial = (input: {
   interests?: string[];
   behaviorAffinityProfile?: LearnerAffinityProfile;
   behavior?: LearnerBehaviorContext;
+  shared?: MaterialScoringSharedState;
 }): ScoredMaterialResult => {
   if (
     input.material.status !== 'AVAILABLE' ||
@@ -724,18 +775,23 @@ export const scoreFreeNearbyMaterial = (input: {
     input.behaviorAffinityProfile ?? createEmptyAffinityProfile();
   const interests = input.interests ?? [];
   const interestMatch =
-    interests.length > 0
+    input.shared?.interestMatch ??
+    (interests.length > 0
       ? matchLearnerInterestsAgainstMaterial(
           materialInterestInput(input.material),
           interests,
         )
-      : null;
-  const behaviorMatch = scoreMaterialBehaviorMatch({
-    material: input.material,
-    behaviorAffinityProfile,
-    behavior,
-  });
-  const nearLocation = locationMatches(input.material, input.savedLocation);
+      : null);
+  const behaviorMatch =
+    input.shared?.behaviorMatch ??
+    scoreMaterialBehaviorMatch({
+      material: input.material,
+      behaviorAffinityProfile,
+      behavior,
+    });
+  const nearLocation =
+    input.shared?.locationMatch ??
+    locationMatches(input.material, input.savedLocation);
   const hasPersonalSignal =
     Boolean(interestMatch) ||
     (hasLearnerActivity(behavior) && behaviorMatch.score > 0);

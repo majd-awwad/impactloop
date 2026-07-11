@@ -249,6 +249,18 @@ Test, staging, and production never print token-bearing links, even if the flag 
 4. Use `logger.child({ operation: 'my_operation', resourceId })` for scoped logs.
 5. Keep audit events in `logAdminActivity`, not operational logs.
 
+## Learner home profiling (development/debug)
+
+`GET /api/learner/home` and `GET /api/learner/home/sections/:sectionKey` emit a single debug log per request when `NODE_ENV=development` or `LOG_LEVEL=debug|trace`.
+
+Log fields:
+
+- `learnerHomeScope` — `getLearnerHome` or `getLearnerHomeSection`
+- `timingsMs` — per-step durations (context load, candidate pool, scoring, section builders)
+- `slowestStep` / `slowestStepMs` — hottest step in that request
+
+These logs are allowlisted and safe for local profiling. They are not emitted at `info` in production.
+
 ## Environment variables
 
 See `apps/backend/env.example`:

@@ -601,7 +601,7 @@ const matchesCategoryNames = (
     );
   });
 
-const matchCustomInterestKeyAgainstMaterial = (
+export const matchCustomInterestKeyAgainstMaterial = (
   parts: MaterialMatchHaystack,
   key: string,
 ): LearnerInterestMatch | null => {

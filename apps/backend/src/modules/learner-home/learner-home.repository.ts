@@ -12,6 +12,16 @@ import {
   findLikedProjectIds,
   findSavedProjectIds,
 } from '../learning-projects/learning-projects.repository.js';
+import {
+  buildLearnerAffinityProfile,
+  extractAffinityTermsFromMaterial,
+  getAffinityProfileTerms,
+} from './learner-home.affinity.js';
+import {
+  getInterestSearchTermsForKey,
+  normalizeInterestToken,
+  resolveInterestKey,
+} from './learner-interest-taxonomy.js';
 
 import type {
   LearnerHomeMaterialCandidate,
@@ -22,6 +32,20 @@ import type {
   LearnerBehaviorMaterialSignal,
   LearnerBehaviorProjectSignal,
 } from './learner-home.types.js';
+
+export const HOME_MATERIAL_POOL_CAP = 120;
+export const BROWSE_MATERIAL_POOL_CAP = 400;
+
+const MAX_CANDIDATE_SEARCH_TERMS = 28;
+const MAX_CATEGORY_FILTER_IDS = 24;
+
+export type MaterialCandidateLoadInput = {
+  interests: string[];
+  savedComponents: LearnerHomeSavedProjectComponent[];
+  behavior: LearnerBehaviorContext;
+  savedLocation: LearnerHomeSavedLocationContext;
+  poolCap: number;
+};
 
 const publicProjectWhere: Prisma.LearningProjectWhereInput = {
   status: 'PUBLISHED',
@@ -154,17 +178,6 @@ const projectBuildInclude = {
           materialType: true,
           quantity: true,
           unit: true,
-          componentRole: true,
-          isRequired: true,
-          canBeSubstituted: true,
-          notes: true,
-          category: {
-            select: {
-              id: true,
-              nameEn: true,
-              nameAr: true,
-            },
-          },
         },
       },
     },
@@ -207,7 +220,6 @@ const mapMaterialCandidate = (
   const mapped = {
     id: material.id,
     title: material.title,
-    description: material.description,
     category: {
       id: material.category.id,
       nameEn: material.category.nameEn,
@@ -334,24 +346,246 @@ export const loadSavedProjectComponents = async (
   );
 };
 
-export const loadMaterialPool = async (take = 160) =>
+const tokenizeCandidateTerm = (value: string) =>
+  normalizeInterestToken(value)
+    .split(/[\s,;/|]+/)
+    .filter((token) => token.length >= 3);
+
+export const collectMaterialCandidateSearchTerms = (
+  input: Pick<
+    MaterialCandidateLoadInput,
+    'interests' | 'savedComponents' | 'behavior'
+  >,
+) => {
+  const terms = new Set<string>();
+
+  for (const interest of input.interests) {
+    const key = resolveInterestKey(interest);
+    if (!key) {
+      continue;
+    }
+
+    for (const term of getInterestSearchTermsForKey(key)) {
+      if (term.length >= 3) {
+        terms.add(term);
+      }
+    }
+  }
+
+  for (const component of input.savedComponents) {
+    for (const source of [
+      component.componentName,
+      component.materialType,
+      ...component.searchKeywords,
+    ]) {
+      const normalized = normalizeInterestToken(source);
+      if (normalized.length >= 3) {
+        terms.add(normalized);
+      }
+
+      for (const token of tokenizeCandidateTerm(source)) {
+        terms.add(token);
+      }
+    }
+  }
+
+  const behaviorMaterials = [
+    ...input.behavior.likedMaterials,
+    ...input.behavior.reservedMaterials,
+    ...input.behavior.viewedMaterials,
+  ];
+
+  for (const signal of behaviorMaterials) {
+    for (const term of extractAffinityTermsFromMaterial(signal)) {
+      if (term.length >= 3) {
+        terms.add(term);
+      }
+    }
+
+    for (const tag of signal.tags) {
+      const normalized = normalizeInterestToken(tag);
+      if (normalized.length >= 3) {
+        terms.add(normalized);
+      }
+    }
+
+    for (const token of tokenizeCandidateTerm(signal.title)) {
+      terms.add(token);
+    }
+
+    const materialType = normalizeInterestToken(signal.materialType);
+    if (materialType.length >= 4) {
+      terms.add(materialType);
+    }
+  }
+
+  const affinityTerms = getAffinityProfileTerms(
+    buildLearnerAffinityProfile({
+      interests: input.interests,
+      behavior: input.behavior,
+    }),
+  );
+
+  for (const term of affinityTerms) {
+    if (term.length >= 3) {
+      terms.add(normalizeInterestToken(term));
+    }
+  }
+
+  return [...terms]
+    .filter((term) => term.length >= 3)
+    .slice(0, MAX_CANDIDATE_SEARCH_TERMS);
+};
+
+export const collectMaterialCandidateCategoryIds = (
+  savedComponents: LearnerHomeSavedProjectComponent[],
+) =>
+  [
+    ...new Set(
+      savedComponents
+        .map((component) => component.categoryId)
+        .filter((categoryId): categoryId is string => Boolean(categoryId)),
+    ),
+  ].slice(0, MAX_CATEGORY_FILTER_IDS);
+
+const buildMaterialRelevanceWhere = (
+  input: Pick<
+    MaterialCandidateLoadInput,
+    'interests' | 'savedComponents' | 'behavior' | 'savedLocation'
+  >,
+): Prisma.MaterialWhereInput | null => {
+  const terms = collectMaterialCandidateSearchTerms(input);
+  const categoryIds = collectMaterialCandidateCategoryIds(input.savedComponents);
+  const orFilters: Prisma.MaterialWhereInput[] = [];
+
+  if (categoryIds.length > 0) {
+    orFilters.push({
+      categoryId: {
+        in: categoryIds,
+      },
+    });
+  }
+
+  for (const term of terms) {
+    orFilters.push({
+      title: {
+        contains: term,
+        mode: 'insensitive',
+      },
+    });
+    orFilters.push({
+      materialType: {
+        contains: term,
+        mode: 'insensitive',
+      },
+    });
+    orFilters.push({
+      tags: {
+        some: {
+          tag: {
+            contains: term,
+            mode: 'insensitive',
+          },
+        },
+      },
+    });
+    orFilters.push({
+      category: {
+        OR: [
+          {
+            nameEn: {
+              contains: term,
+              mode: 'insensitive',
+            },
+          },
+          {
+            nameAr: {
+              contains: term,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
+    });
+  }
+
+  if (input.savedLocation.city?.trim()) {
+    orFilters.push({
+      location: {
+        city: {
+          equals: input.savedLocation.city.trim(),
+          mode: 'insensitive',
+        },
+      },
+    });
+  }
+
+  if (input.savedLocation.area?.trim()) {
+    orFilters.push({
+      location: {
+        area: {
+          equals: input.savedLocation.area.trim(),
+          mode: 'insensitive',
+        },
+      },
+    });
+  }
+
+  if (orFilters.length === 0) {
+    return null;
+  }
+
+  return {
+    AND: [availableMaterialWhere, { OR: orFilters }],
+  };
+};
+
+export const mergeMaterialPoolRows = <T extends { id: string }>(
+  pools: T[][],
+  poolCap: number,
+) => {
+  const merged = new Map<string, T>();
+
+  for (const pool of pools) {
+    for (const row of pool) {
+      if (!merged.has(row.id)) {
+        merged.set(row.id, row);
+      }
+
+      if (merged.size >= poolCap) {
+        return [...merged.values()];
+      }
+    }
+  }
+
+  return [...merged.values()];
+};
+
+type MaterialPoolRow = Awaited<ReturnType<typeof loadMaterialPool>>[number];
+
+export const loadMaterialPool = async (
+  take = 160,
+  where: Prisma.MaterialWhereInput = availableMaterialWhere,
+  orderBy: Prisma.MaterialOrderByWithRelationInput[] = [
+    { viewsCount: 'desc' },
+    { createdAt: 'desc' },
+  ],
+) =>
   prisma.material.findMany({
-    where: availableMaterialWhere,
+    where,
     include: materialPoolInclude,
-    orderBy: [{ viewsCount: 'desc' }, { createdAt: 'desc' }],
+    orderBy,
     take,
   });
 
-export const loadMaterialCandidates = async () => {
-  const materials = await loadMaterialPool();
+const mapMaterialPoolRows = async (materials: MaterialPoolRow[]) => {
   const heldByMaterialId = await getHeldQuantitiesByMaterialIds(
     materials.map((material) => material.id),
   );
 
   return materials
     .map((material) => {
-      const heldQuantity =
-        heldByMaterialId.get(material.id) ?? toDecimal(0);
+      const heldQuantity = heldByMaterialId.get(material.id) ?? toDecimal(0);
       const availableQuantity = decimalToNumber(
         computeAvailableQuantity(material.quantity, heldQuantity),
       );
@@ -360,6 +594,73 @@ export const loadMaterialCandidates = async () => {
     })
     .filter((material) => material.availableQuantity > 0);
 };
+
+const countAvailableMaterials = async () =>
+  prisma.material.count({
+    where: availableMaterialWhere,
+  });
+
+export const loadMaterialCandidatesForLearner = async (
+  input: MaterialCandidateLoadInput,
+) => {
+  const poolCap = Math.max(1, input.poolCap);
+  const availableCount = await countAvailableMaterials();
+
+  if (availableCount <= poolCap) {
+    const rows = await loadMaterialPool(poolCap);
+    return mapMaterialPoolRows(rows);
+  }
+
+  const relevanceTake = Math.min(poolCap, Math.ceil(poolCap * 0.75));
+  const popularTake = Math.min(poolCap, Math.ceil(poolCap * 0.6));
+  const freeTake = Math.min(poolCap, Math.ceil(poolCap * 0.3));
+  const relevanceWhere = buildMaterialRelevanceWhere(input);
+
+  const [relevanceRows, popularRows, freeRows] = await Promise.all([
+    relevanceWhere
+      ? loadMaterialPool(relevanceTake, relevanceWhere)
+      : Promise.resolve([] as MaterialPoolRow[]),
+    loadMaterialPool(popularTake, availableMaterialWhere),
+    loadMaterialPool(freeTake, {
+      AND: [availableMaterialWhere, { isFree: true }],
+    }),
+  ]);
+
+  let mergedRows = mergeMaterialPoolRows(
+    [relevanceRows, popularRows, freeRows],
+    poolCap,
+  );
+
+  if (mergedRows.length < poolCap) {
+    const fallbackRows = await loadMaterialPool(
+      poolCap - mergedRows.length,
+      availableMaterialWhere,
+    );
+    mergedRows = mergeMaterialPoolRows(
+      [mergedRows, fallbackRows],
+      poolCap,
+    );
+  }
+
+  return mapMaterialPoolRows(mergedRows);
+};
+
+export const loadMaterialCandidates = async () =>
+  loadMaterialCandidatesForLearner({
+    interests: [],
+    savedComponents: [],
+    behavior: {
+      likedMaterials: [],
+      viewedMaterials: [],
+      reservedMaterials: [],
+      savedProjects: [],
+      likedProjects: [],
+      followedProjects: [],
+      inProgressBuildProjects: [],
+    },
+    savedLocation: { city: null, area: null },
+    poolCap: HOME_MATERIAL_POOL_CAP,
+  });
 
 export const loadProjectPool = async (take = 120) =>
   prisma.learningProject.findMany({

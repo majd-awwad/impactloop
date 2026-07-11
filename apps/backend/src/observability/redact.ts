@@ -76,6 +76,12 @@ const ALLOWED_LOG_KEYS = new Set([
   'resetLink',
   'inviteLink',
   'mockDevLink',
+  'learnerHomeScope',
+  'timingsMs',
+  'slowestStep',
+  'slowestStepMs',
+  'candidatePoolCap',
+  'candidatePoolSize',
 ]);
 
 const isSensitiveKey = (key: string): boolean => SENSITIVE_KEY_PATTERN.test(key);

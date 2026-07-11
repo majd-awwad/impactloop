@@ -19,6 +19,18 @@ import {
   scoreMaterialForSavedProjects,
   scoreSuggestedMaterial,
 } from './learner-home.scoring.js';
+import {
+  buildMaterialRecommendationFeature,
+  buildUserSignalProfile,
+  preScoreMaterialPool,
+  resetMaterialFeaturePoolCacheForTests,
+} from './learner-home.material-features.js';
+import {
+  BROWSE_MATERIAL_POOL_CAP,
+  HOME_MATERIAL_POOL_CAP,
+  collectMaterialCandidateSearchTerms,
+  mergeMaterialPoolRows,
+} from './learner-home.repository.js';
 import { parseLearnerHomeSectionQuery } from './learner-home.validation.js';
 import type {
   LearnerBehaviorContext,
@@ -406,5 +418,320 @@ describe('learner-home browse-all controls', () => {
     assert.equal(interestMatch.tier, SUGGESTED_MATERIAL_TIERS.interestStrong);
     assert.equal(freeFallback.tier, FREE_MATERIAL_TIERS.freeFallback);
     assert.ok(interestMatch.tier < freeFallback.tier);
+  });
+});
+
+describe('learner-home candidate pool', () => {
+  test('collectMaterialCandidateSearchTerms includes interests and liked-material signals', () => {
+    const behavior = createEmptyBehaviorContext();
+    behavior.likedMaterials = [
+      materialSignal({
+        title: 'Arduino Starter Kit',
+        materialType: 'microcontroller board',
+        tags: ['arduino', 'electronics'],
+      }),
+    ];
+
+    const terms = collectMaterialCandidateSearchTerms({
+      interests: ['robotics'],
+      savedComponents: [],
+      behavior,
+    });
+
+    assert.ok(terms.some((term) => term.includes('robot')));
+    assert.ok(terms.some((term) => term.includes('arduino')));
+  });
+
+  test('mergeMaterialPoolRows caps merged candidate ids', () => {
+    const merged = mergeMaterialPoolRows(
+      [
+        [{ id: 'a' }, { id: 'b' }],
+        [{ id: 'c' }, { id: 'd' }],
+      ],
+      3,
+    );
+
+    assert.equal(merged.length, 3);
+    assert.deepEqual(
+      merged.map((row) => row.id),
+      ['a', 'b', 'c'],
+    );
+  });
+
+  test('home and browse caps stay within requested bounds', () => {
+    assert.equal(HOME_MATERIAL_POOL_CAP, 120);
+    assert.ok(HOME_MATERIAL_POOL_CAP >= 80 && HOME_MATERIAL_POOL_CAP <= 160);
+    assert.equal(BROWSE_MATERIAL_POOL_CAP, 400);
+    assert.ok(
+      BROWSE_MATERIAL_POOL_CAP >= 300 && BROWSE_MATERIAL_POOL_CAP <= 500,
+    );
+  });
+
+  test('new learners still get fallback terms from popular pool merge helper', () => {
+    const merged = mergeMaterialPoolRows(
+      [[], [{ id: 'popular-1' }, { id: 'popular-2' }]],
+      2,
+    );
+
+    assert.deepEqual(
+      merged.map((row) => row.id),
+      ['popular-1', 'popular-2'],
+    );
+  });
+
+  test('behavior terms stay learner-specific and do not leak across users', () => {
+    const learnerA = createEmptyBehaviorContext();
+    learnerA.likedMaterials = [
+      materialSignal({
+        title: 'Learner A Wax Kit',
+        tags: ['wax-only-a'],
+      }),
+    ];
+
+    const learnerB = createEmptyBehaviorContext();
+    learnerB.likedMaterials = [
+      materialSignal({
+        title: 'Learner B Fabric Scraps',
+        tags: ['fabric-only-b'],
+      }),
+    ];
+
+    const termsA = collectMaterialCandidateSearchTerms({
+      interests: [],
+      savedComponents: [],
+      behavior: learnerA,
+    });
+    const termsB = collectMaterialCandidateSearchTerms({
+      interests: [],
+      savedComponents: [],
+      behavior: learnerB,
+    });
+
+    assert.ok(termsA.some((term) => term.includes('wax')));
+    assert.ok(termsB.some((term) => term.includes('fabric')));
+    assert.equal(
+      termsA.some((term) => term.includes('fabric-only-b')),
+      false,
+    );
+    assert.equal(termsB.some((term) => term.includes('wax-only-a')), false);
+  });
+});
+
+describe('learner-home feature-based scoring', () => {
+  test('preScoreMaterialPool preserves interest ranking over free fallback', () => {
+    resetMaterialFeaturePoolCacheForTests();
+    const wax = baseMaterial({
+      id: 'wax-feature',
+      title: 'Wax Mold Kit',
+      description: 'Reusable wax molds for handmade craft projects.',
+      tags: ['wax mold', 'craft project'],
+      categoryNameEn: 'Art, Craft & Molding',
+    });
+    const free = baseMaterial({
+      id: 'free-feature',
+      title: 'Random Free Item',
+      description: 'Generic surplus item',
+      tags: [],
+      isFree: true,
+      deliveryAllowed: true,
+    });
+
+    const pool = preScoreMaterialPool({
+      materials: [free, wax],
+      interests: ['art_crafts'],
+      savedComponents: [],
+      savedLocation: { city: null, area: null },
+      behavior: createEmptyBehaviorContext(),
+      behaviorAffinityProfile: buildBehaviorAffinityProfile(createEmptyBehaviorContext()),
+    });
+
+    const waxScore = pool.find((entry) => entry.material.id === 'wax-feature')?.scores
+      .suggested;
+    const freeScore = pool.find((entry) => entry.material.id === 'free-feature')?.scores
+      .suggested;
+
+    assert.ok(waxScore && freeScore);
+    assert.ok((waxScore.tier ?? 5) < (freeScore.tier ?? 5));
+    assert.ok(waxScore.score > freeScore.score);
+  });
+
+  test('liked Arduino boosts similar materials in feature scoring', () => {
+    resetMaterialFeaturePoolCacheForTests();
+    const behavior = createEmptyBehaviorContext();
+    behavior.likedMaterials = [
+      materialSignal({
+        materialId: 'liked-arduino-1',
+        title: 'Arduino Uno Board',
+        description: 'Microcontroller starter board',
+        materialType: 'Electronics',
+        categoryNameEn: 'Electronics',
+        categoryNameAr: 'Electronics',
+        tags: ['arduino', 'electronics'],
+      }),
+    ];
+    const profile = buildBehaviorAffinityProfile(behavior);
+
+    const pool = preScoreMaterialPool({
+      materials: [
+        baseMaterial({
+          id: 'breadboard-1',
+          title: 'Breadboard Kit',
+          description: 'Half-size solderless breadboard for Arduino prototyping',
+          materialType: 'Electronics',
+          categoryId: 'cat-electronics',
+          categoryNameEn: 'Electronics',
+          categoryNameAr: 'Electronics',
+          tags: ['breadboard', 'arduino'],
+        }),
+        baseMaterial({
+          id: 'fabric-1',
+          title: 'Fabric Scraps',
+          description: 'Sorted fabric scraps for sewing',
+          materialType: 'Textiles',
+          categoryId: 'cat-textiles',
+          categoryNameEn: 'Fabric & Textile',
+          categoryNameAr: 'Fabric & Textile',
+          tags: ['fabric', 'textiles'],
+        }),
+      ],
+      interests: [],
+      savedComponents: [],
+      savedLocation: { city: null, area: null },
+      behavior,
+      behaviorAffinityProfile: profile,
+    });
+
+    const breadboard = pool.find((entry) => entry.material.id === 'breadboard-1')?.scores
+      .suggested;
+    const fabric = pool.find((entry) => entry.material.id === 'fabric-1')?.scores.suggested;
+
+    assert.ok(breadboard && fabric);
+    assert.ok(breadboard.score > fabric.score);
+    assert.ok(
+      breadboard.reasons.some((reason) =>
+        reason.toLowerCase().includes('liked'),
+      ),
+    );
+    assert.equal(
+      fabric.reasons.some((reason) => reason.toLowerCase().includes('liked')),
+      false,
+    );
+  });
+
+  test('category bleed does not create false liked-material similarity', () => {
+    resetMaterialFeaturePoolCacheForTests();
+    const behavior = createEmptyBehaviorContext();
+    behavior.likedMaterials = [
+      materialSignal({
+        materialId: 'liked-arduino-1',
+        title: 'Arduino Uno Board',
+        description: 'Microcontroller starter board',
+        materialType: 'Electronics',
+        categoryNameEn: 'Electronics',
+        categoryNameAr: 'Art, Craft & Molding',
+        tags: ['arduino', 'electronics'],
+      }),
+    ];
+    const profile = buildBehaviorAffinityProfile(behavior);
+
+    const pool = preScoreMaterialPool({
+      materials: [
+        baseMaterial({
+          id: 'fabric-bleed-1',
+          title: 'Fabric Scraps',
+          description: 'Sorted fabric scraps for sewing',
+          materialType: 'Textiles',
+          categoryNameEn: 'Fabric & Textile',
+          categoryNameAr: 'Art, Craft & Molding',
+          tags: ['fabric', 'textiles'],
+        }),
+      ],
+      interests: [],
+      savedComponents: [],
+      savedLocation: { city: null, area: null },
+      behavior,
+      behaviorAffinityProfile: profile,
+    });
+
+    const fabric = pool[0]?.scores.suggested;
+    assert.ok(fabric);
+    assert.equal(fabric.score, 0);
+    assert.equal(
+      fabric.reasons.some((reason) => reason.toLowerCase().includes('liked')),
+      false,
+    );
+  });
+
+  test('material features expose interest keys without per-request taxonomy scans', () => {
+    resetMaterialFeaturePoolCacheForTests();
+    const feature = buildMaterialRecommendationFeature(
+      baseMaterial({
+        id: 'arduino-feature',
+        title: 'Arduino Uno Board',
+        materialType: 'microcontroller',
+        tags: ['arduino'],
+      }),
+    );
+
+    assert.ok(feature.interestKeys.has('arduino'));
+    assert.ok(feature.specificTerms.size > 0);
+  });
+
+  test('user signal profiles stay isolated between learners', () => {
+    const learnerA = buildUserSignalProfile({
+      interests: [],
+      savedComponents: [],
+      savedLocation: { city: null, area: null },
+      behavior: {
+        ...createEmptyBehaviorContext(),
+        likedMaterials: [
+          materialSignal({
+            materialId: 'learner-a-liked',
+            title: 'Learner A Wax Kit',
+            tags: ['wax-only-a'],
+          }),
+        ],
+      },
+      behaviorAffinityProfile: buildBehaviorAffinityProfile({
+        ...createEmptyBehaviorContext(),
+        likedMaterials: [
+          materialSignal({
+            materialId: 'learner-a-liked',
+            title: 'Learner A Wax Kit',
+            tags: ['wax-only-a'],
+          }),
+        ],
+      }),
+    });
+    const learnerB = buildUserSignalProfile({
+      interests: [],
+      savedComponents: [],
+      savedLocation: { city: null, area: null },
+      behavior: {
+        ...createEmptyBehaviorContext(),
+        likedMaterials: [
+          materialSignal({
+            materialId: 'learner-b-liked',
+            title: 'Learner B Fabric Scraps',
+            tags: ['fabric-only-b'],
+          }),
+        ],
+      },
+      behaviorAffinityProfile: buildBehaviorAffinityProfile({
+        ...createEmptyBehaviorContext(),
+        likedMaterials: [
+          materialSignal({
+            materialId: 'learner-b-liked',
+            title: 'Learner B Fabric Scraps',
+            tags: ['fabric-only-b'],
+          }),
+        ],
+      }),
+    });
+
+    assert.ok(learnerA.likedMaterialIds.has('learner-a-liked'));
+    assert.ok(learnerB.likedMaterialIds.has('learner-b-liked'));
+    assert.equal(learnerA.likedMaterialIds.has('learner-b-liked'), false);
+    assert.equal(learnerB.likedMaterialIds.has('learner-a-liked'), false);
   });
 });

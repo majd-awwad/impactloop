@@ -52,6 +52,27 @@ export const AFFINITY_RELEVANCE_THRESHOLD = 0.25;
 
 const canonicalizeAffinityTerm = (rawTerm: string) => resolveTermToInterestKey(rawTerm);
 
+const resolveCategoryAffinitySources = (
+  categoryNameEn: string,
+  categoryNameAr: string,
+) => {
+  const enKey = canonicalizeAffinityTerm(categoryNameEn);
+  const arKey = canonicalizeAffinityTerm(categoryNameAr);
+  const trimmedEn = categoryNameEn.trim();
+  const trimmedAr = categoryNameAr.trim();
+
+  if (!trimmedAr || !arKey) {
+    return [trimmedEn, trimmedAr].filter((value) => value.length > 0);
+  }
+
+  if (!enKey || arKey === enKey) {
+    return [trimmedEn, trimmedAr].filter((value) => value.length > 0);
+  }
+
+  // Mismatched bilingual category labels: trust English for affinity extraction.
+  return trimmedEn ? [trimmedEn] : [];
+};
+
 const tokenizeAffinitySource = (value: string) =>
   normalizeInterestToken(value)
     .split(/[\s,;/|]+/)
@@ -73,8 +94,10 @@ export const extractAffinityTermsFromMaterial = (
     signal.title,
     signal.description,
     signal.materialType,
-    signal.categoryNameEn,
-    signal.categoryNameAr,
+    ...resolveCategoryAffinitySources(
+      signal.categoryNameEn,
+      signal.categoryNameAr,
+    ),
     ...signal.tags,
   ];
 
@@ -110,8 +133,10 @@ export const extractAffinityTermsFromProject = (
   const sources = [
     signal.title,
     signal.shortDescription,
-    signal.categoryNameEn,
-    signal.categoryNameAr,
+    ...resolveCategoryAffinitySources(
+      signal.categoryNameEn,
+      signal.categoryNameAr,
+    ),
     ...signal.tags,
   ];
 
@@ -310,6 +335,17 @@ export const matchesAffinityProfile = (
 };
 
 const GENERIC_BROAD_INTEREST_KEYS = new Set(['electronics']);
+
+/** Taxonomy terms too broad to justify liked-material similarity on their own. */
+const LIKED_SIMILARITY_WEAK_SHARED_TERMS = new Set([
+  'electronics',
+  'art_crafts',
+  'audio_media',
+  'woodworking',
+]);
+
+export const isQualifiedLikedSimilaritySharedTerm = (term: string) =>
+  !LIKED_SIMILARITY_WEAK_SHARED_TERMS.has(term);
 
 const GENERIC_MATERIAL_TYPES = new Set([
   'general',
@@ -519,7 +555,7 @@ export const scoreMaterialSimilarityToLikedMaterials = (input: {
     const hasQualifiedOverlap =
       hasTagOverlap ||
       hasCategoryMatch ||
-      [...sharedTerms].some((term) => !GENERIC_BROAD_INTEREST_KEYS.has(term));
+      [...sharedTerms].some(isQualifiedLikedSimilaritySharedTerm);
 
     if (
       !hasQualifiedOverlap ||
