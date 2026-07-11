@@ -170,9 +170,11 @@ class ImpactMaterialGridCard extends StatefulWidget {
   }) {
     final imageHeight = width * 0.75;
     final compact = variant == AppMaterialCardVariant.compact || width < 260;
-    final contentHeight = compact ? 178.0 : 190.0;
+    final contentHeight = compact ? 188.0 : 190.0;
     return imageHeight + contentHeight;
   }
+
+  static double recommendationReasonBandHeight = AppSpacing.xs + 16;
 
   @override
   State<ImpactMaterialGridCard> createState() => _ImpactMaterialGridCardState();
@@ -814,21 +816,28 @@ class _GridCardContent extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: AppSpacing.sm),
-          _PlainMetaLine(
-            icon: Icons.location_on_outlined,
-            label: locationLabel,
-            compact: compact,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.sm),
+                _PlainMetaLine(
+                  icon: Icons.location_on_outlined,
+                  label: locationLabel,
+                  compact: compact,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                _PlainMetaLine(
+                  icon: deliveryAvailable
+                      ? Icons.local_shipping_outlined
+                      : Icons.storefront_outlined,
+                  label: '$quantityLabel - $availabilityLabel',
+                  compact: compact,
+                ),
+                const Spacer(),
+              ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          _PlainMetaLine(
-            icon: deliveryAvailable
-                ? Icons.local_shipping_outlined
-                : Icons.storefront_outlined,
-            label: '$quantityLabel - $availabilityLabel',
-            compact: compact,
-          ),
-          const Spacer(),
           Row(
             children: [
               Flexible(

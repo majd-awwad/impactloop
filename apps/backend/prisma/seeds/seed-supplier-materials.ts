@@ -48,20 +48,6 @@ async function ensureLocation(
   return created.id;
 }
 
-async function resolveElectronicsCategoryId(prisma: PrismaClient) {
-  const category = await prisma.category.findFirst({
-    where: { nameEn: 'Electronics' },
-    select: { id: true },
-    orderBy: { createdAt: 'asc' },
-  });
-
-  if (!category) {
-    throw new Error('Category "Electronics" not found. Run main seed first.');
-  }
-
-  return category.id;
-}
-
 async function syncMaterialImages(
   prisma: PrismaClient,
   materialId: string,
@@ -103,14 +89,33 @@ async function removeMyMaterialsSeed(prisma: PrismaClient, ownerId: string) {
   return seededMaterials.length;
 }
 
+async function resolveCategoryIdByName(
+  prisma: PrismaClient,
+  categoryNameEn: string,
+) {
+  const category = await prisma.category.findFirst({
+    where: { nameEn: categoryNameEn },
+    select: { id: true },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  if (!category) {
+    throw new Error(
+      `Category "${categoryNameEn}" not found. Run main seed first.`,
+    );
+  }
+
+  return category.id;
+}
+
 async function upsertMyMaterial(
   prisma: PrismaClient,
   ownerId: string,
   supplierProfileId: string,
-  categoryId: string,
   locationId: string,
   spec: SupplierMyMaterialSeedSpec,
 ) {
+  const categoryId = await resolveCategoryIdByName(prisma, spec.categoryNameEn);
   const marker = myMaterialsSeedMarker(spec.key);
   const description = `${marker}\n${spec.summary}`;
 
@@ -163,22 +168,6 @@ async function upsertMyMaterial(
   return material.title;
 }
 
-async function alignSupplierElectronicsFocus(
-  prisma: PrismaClient,
-  ownerId: string,
-  electronicsCategoryId: string,
-) {
-  const updated = await prisma.material.updateMany({
-    where: {
-      ownerId,
-      categoryId: { not: electronicsCategoryId },
-    },
-    data: { categoryId: electronicsCategoryId },
-  });
-
-  return updated.count;
-}
-
 async function ensureMissingMaterialImages(
   prisma: PrismaClient,
   ownerId: string,
@@ -225,24 +214,11 @@ export async function seedSupplierMaterials(prisma: PrismaClient) {
     };
   }
 
-  const electronicsCategoryId = await resolveElectronicsCategoryId(prisma);
-
   if (shouldForceReseed()) {
     const removedCount = await removeMyMaterialsSeed(prisma, supplier.id);
     if (removedCount > 0) {
       console.log(
         `Removed ${removedCount} existing my-materials seed listings.`,
-      );
-    }
-
-    const alignedCount = await alignSupplierElectronicsFocus(
-      prisma,
-      supplier.id,
-      electronicsCategoryId,
-    );
-    if (alignedCount > 0) {
-      console.log(
-        `Aligned ${alignedCount} supplier materials to Electronics category.`,
       );
     }
   }
@@ -264,7 +240,6 @@ export async function seedSupplierMaterials(prisma: PrismaClient) {
       prisma,
       supplier.id,
       supplier.supplierProfile.id,
-      electronicsCategoryId,
       locationId,
       spec,
     );
@@ -273,17 +248,6 @@ export async function seedSupplierMaterials(prisma: PrismaClient) {
     categoryCounts.set(
       spec.categoryNameEn,
       (categoryCounts.get(spec.categoryNameEn) ?? 0) + 1,
-    );
-  }
-
-  const alignedCount = await alignSupplierElectronicsFocus(
-    prisma,
-    supplier.id,
-    electronicsCategoryId,
-  );
-  if (alignedCount > 0) {
-    console.log(
-      `Aligned ${alignedCount} supplier materials to Electronics category.`,
     );
   }
 

@@ -15,8 +15,8 @@ import '../widgets/coming_soon_card.dart';
 import '../widgets/empty_activity_card.dart';
 import '../widgets/home_action_card.dart';
 import '../widgets/home_section_header.dart';
-import '../widgets/learning_spotlight_section.dart';
-import '../widgets/suggested_materials_section.dart';
+import '../widgets/learner_home_feed_sections.dart';
+import '../../application/learner_home_provider.dart';
 
 class LearnerHomePage extends ConsumerWidget {
   const LearnerHomePage({super.key});
@@ -51,11 +51,7 @@ class LearnerHomePage extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.xl),
                         _QuickActionsSection(),
                         const SizedBox(height: AppSpacing.xl),
-                        const SuggestedMaterialsSection(),
-                        const SizedBox(height: AppSpacing.xl),
-                        const LearningSpotlightSection(),
-                        const SizedBox(height: AppSpacing.xl),
-                        _FutureActivitySection(),
+                        const _PersonalizedFeedSection(),
                         const SizedBox(height: AppSpacing.xl),
                         _FutureToolsSection(),
                       ],
@@ -387,43 +383,28 @@ class _QuickActionsSection extends ConsumerWidget {
   }
 }
 
-class _FutureActivitySection extends StatelessWidget {
+class _PersonalizedFeedSection extends ConsumerWidget {
+  const _PersonalizedFeedSection();
+
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const HomeSectionHeader(
-          title: 'Activity updates',
-          subtitle:
-              'Reservation and delivery status live in My Reservations. Saved projects are not available yet.',
+  Widget build(BuildContext context, WidgetRef ref) {
+    final feedState = ref.watch(learnerHomeFeedProvider);
+
+    return feedState.when(
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsetsDirectional.all(AppSpacing.xl),
+          child: CircularProgressIndicator(),
         ),
-        const SizedBox(height: AppSpacing.md),
-        _ResponsiveGrid(
-          minItemWidth: 280,
-          itemHeight: 216,
-          children: [
-            HomeActionCard(
-              icon: Icons.local_shipping_outlined,
-              title: 'Track reservations and delivery',
-              description:
-                  'View pickup, delivery, and reservation updates from My Reservations.',
-              badge: 'Open My Reservations',
-              onPressed: () => context.go(learnerReservationsRoute),
-            ),
-            ComingSoonCard(
-              icon: Icons.bookmark_border_rounded,
-              title: 'Saved projects',
-              description:
-                  'Projects you save for later will appear here after saved projects are added.',
-              onTap: () => showInfoSnackBar(
-                context,
-                'This feature will be connected later.',
-              ),
-            ),
-          ],
-        ),
-      ],
+      ),
+      error: (error, _) => EmptyActivityCard(
+        icon: Icons.cloud_off_outlined,
+        title: 'Could not load recommendations',
+        description: 'Pull to refresh or try again in a moment.',
+        actionLabel: 'Retry',
+        onAction: () => ref.invalidate(learnerHomeFeedProvider),
+      ),
+      data: (feed) => LearnerHomeFeedSections(feed: feed),
     );
   }
 }

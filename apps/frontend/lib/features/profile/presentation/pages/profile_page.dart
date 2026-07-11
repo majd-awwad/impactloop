@@ -15,6 +15,7 @@ import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
 import '../../../auth/presentation/widgets/portal_switch_menu.dart';
 import '../../../auth/data/models/user.dart';
+import '../../data/models/learner_interest_options.dart';
 
 const _profileDesktopBreakpoint = 600.0;
 const _profileDesktopMaxWidth = 1080.0;
@@ -1018,7 +1019,7 @@ class _InterestChips extends StatelessWidget {
                   border: Border.all(color: colors.borderSubtle),
                 ),
                 child: Text(
-                  interest,
+                  learnerInterestLabel(interest),
                   style: AppTextStyles.label(context).copyWith(
                     color: colors.textSecondary,
                     fontSize: 12,

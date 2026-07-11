@@ -22,6 +22,7 @@ export const SEED_MATERIALS = [
     key: 'arduino-uno',
     title: 'Arduino Uno',
     description: 'Seed material for reservation testing.',
+    categoryNameEn: 'Electronics',
     materialType: 'Microcontroller board',
     unit: 'piece',
     quantity: 5,
@@ -34,6 +35,7 @@ export const SEED_MATERIALS = [
     key: 'cotton-fabric',
     title: 'Cotton fabric scraps',
     description: 'Seed fabric scraps for pickup schedule testing.',
+    categoryNameEn: 'Fabric & Textile',
     materialType: 'Fabric',
     unit: 'kg',
     quantity: 12,
@@ -46,6 +48,7 @@ export const SEED_MATERIALS = [
     key: 'wood-scraps',
     title: 'Wood scraps',
     description: 'Seed wood offcuts for upcoming pickup tests.',
+    categoryNameEn: 'Wood & Timber',
     materialType: 'Wood',
     unit: 'kg',
     quantity: 20,
@@ -58,6 +61,7 @@ export const SEED_MATERIALS = [
     key: 'cardboard-boxes',
     title: 'Cardboard boxes',
     description: 'Seed cardboard boxes for completed pickup tests.',
+    categoryNameEn: 'Packaging',
     materialType: 'Packaging',
     unit: 'boxes',
     quantity: 10,
@@ -70,6 +74,7 @@ export const SEED_MATERIALS = [
     key: 'epoxy-resin',
     title: 'Epoxy resin bottles',
     description: 'Seed resin bottles for mixed reservation tests.',
+    categoryNameEn: 'Art, Craft & Molding',
     materialType: 'Chemicals',
     unit: 'bottle',
     quantity: 4,
@@ -272,7 +277,6 @@ export const SEED_RESERVATIONS: SeedReservationSpec[] = [
 export type SeedContext = {
   supplierUserId: string;
   supplierProfileId: string;
-  categoryId: string;
   locationId: string;
   learnerIds: Map<string, string>;
   materialIds: Map<string, string>;
