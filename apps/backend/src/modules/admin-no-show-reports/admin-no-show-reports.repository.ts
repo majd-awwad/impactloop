@@ -36,6 +36,10 @@ export type AdminNoShowReportRecord = Prisma.NoShowReportGetPayload<{
   include: typeof reportInclude;
 }>;
 
+const reportMutationSelect = {
+  id: true,
+} satisfies Prisma.NoShowReportSelect;
+
 export const listNoShowReportsForAdmin = async (input: {
   status?: 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'RESOLVED_NO_STRIKE';
   page: number;
@@ -130,7 +134,7 @@ export const resolveNoShowReportWithoutStrike = async (input: {
   adminUserId: string;
   reviewNote?: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const outcome = await prisma.$transaction(async (tx) => {
     const existing = await tx.noShowReport.findUnique({
       where: { id: input.reportId },
     });
@@ -140,10 +144,10 @@ export const resolveNoShowReportWithoutStrike = async (input: {
     }
 
     if (existing.status !== 'PENDING_REVIEW') {
-      return { conflict: true as const, report: existing };
+      return { conflict: true as const };
     }
 
-    const report = await tx.noShowReport.update({
+    const updated = await tx.noShowReport.update({
       where: { id: existing.id },
       data: {
         status: 'RESOLVED_NO_STRIKE',
@@ -151,11 +155,27 @@ export const resolveNoShowReportWithoutStrike = async (input: {
         reviewedAt: new Date(),
         reviewNote: input.reviewNote?.trim() || null,
       },
-      include: reportInclude,
+      select: reportMutationSelect,
     });
 
-    return { report };
+    return { reportId: updated.id };
   });
+
+  if (!outcome) {
+    return null;
+  }
+
+  if ('conflict' in outcome) {
+    return outcome;
+  }
+
+  const report = await findNoShowReportByIdForAdmin(outcome.reportId);
+
+  if (!report) {
+    return null;
+  }
+
+  return { report };
 };
 
 export const rejectNoShowReport = async (input: {
