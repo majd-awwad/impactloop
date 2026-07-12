@@ -1284,6 +1284,12 @@ export const findReservationsForSupplierMaterial = async (
   });
 };
 
+const supplierMaterialStatusMutationSelect = {
+  id: true,
+  status: true,
+  updatedAt: true,
+} satisfies Prisma.MaterialSelect;
+
 export const updateSupplierOwnedMaterialStatus = async (
   scope: SupplierMaterialScope,
   materialId: string,
@@ -1312,7 +1318,7 @@ export const updateSupplierOwnedMaterialStatus = async (
           }
         : {}),
     },
-    include: supplierMaterialListInclude,
+    select: supplierMaterialStatusMutationSelect,
   });
 };
 
