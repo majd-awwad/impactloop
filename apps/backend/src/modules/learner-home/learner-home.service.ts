@@ -44,6 +44,7 @@ import type {
   LearnerHomeSectionDetails,
   LearnerHomeSectionItem,
   LearnerHomeSectionKey,
+  LearnerHomeSavedProjectComponent,
   LearnerAffinityProfile,
   LearnerBehaviorContext,
 } from './learner-home.types.js';
@@ -233,9 +234,7 @@ type LearnerHomeContext = {
   savedLocation: Awaited<
     ReturnType<typeof learnerHomeRepository.loadDefaultSavedLocation>
   >;
-  savedComponents: Awaited<
-    ReturnType<typeof learnerHomeRepository.loadSavedProjectComponents>
-  >;
+  savedComponents: LearnerHomeSavedProjectComponent[];
   materials: Awaited<ReturnType<typeof learnerHomeRepository.loadMaterialCandidates>>;
   projects: Awaited<ReturnType<typeof learnerHomeRepository.loadProjectCandidates>>;
   savedProjectIds: Set<string>;
@@ -260,7 +259,6 @@ const loadLearnerHomeContext = async (
   const [
     rawInterests,
     savedLocation,
-    savedComponents,
     hasSavedProjects,
     behavior,
     projects,
@@ -275,11 +273,6 @@ const loadLearnerHomeContext = async (
           learnerHomeRepository.loadDefaultSavedLocation(userId),
         )
       : learnerHomeRepository.loadDefaultSavedLocation(userId),
-    profiler
-      ? profiler.time('loadSavedProjectComponents', () =>
-          learnerHomeRepository.loadSavedProjectComponents(userId),
-        )
-      : learnerHomeRepository.loadSavedProjectComponents(userId),
     profiler
       ? profiler.time('hasSavedProjects', () =>
           learnerHomeRepository.hasSavedProjects(userId),
@@ -296,6 +289,8 @@ const loadLearnerHomeContext = async (
         )
       : learnerHomeRepository.loadProjectCandidates(userId),
   ]);
+
+  const savedComponents = behavior.savedProjectComponents ?? [];
 
   const interests = normalizeInterests(rawInterests);
   let behaviorAffinityProfile!: LearnerAffinityProfile;

@@ -30,6 +30,7 @@ import {
   BROWSE_MATERIAL_POOL_CAP,
   HOME_MATERIAL_POOL_CAP,
   collectMaterialCandidateSearchTerms,
+  mapSavedProjectComponentsFromBehaviorRows,
   mergeMaterialPoolRows,
 } from './learner-home.repository.js';
 import { parseLearnerHomeSectionQuery } from './learner-home.validation.js';
@@ -423,6 +424,38 @@ describe('learner-home browse-all controls', () => {
 });
 
 describe('learner-home candidate pool', () => {
+  test('saved project components reuse the ordered behavior rows', () => {
+    const components = mapSavedProjectComponentsFromBehaviorRows([
+      {
+        project: {
+          id: 'project-1',
+          title: 'Arduino Build',
+          requiredComponents: [
+            {
+              id: 'component-1',
+              categoryId: 'category-1',
+              componentName: 'Arduino Uno',
+              materialType: 'Microcontroller',
+              searchKeywords: ['arduino', 'board'],
+            },
+          ],
+        },
+      },
+    ]);
+
+    assert.deepEqual(components, [
+      {
+        projectId: 'project-1',
+        projectTitle: 'Arduino Build',
+        componentId: 'component-1',
+        componentName: 'Arduino Uno',
+        categoryId: 'category-1',
+        materialType: 'Microcontroller',
+        searchKeywords: ['arduino', 'board'],
+      },
+    ]);
+  });
+
   test('collectMaterialCandidateSearchTerms includes interests and liked-material signals', () => {
     const behavior = createEmptyBehaviorContext();
     behavior.likedMaterials = [

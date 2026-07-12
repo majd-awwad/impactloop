@@ -302,38 +302,24 @@ export const loadDefaultSavedLocation = async (
   };
 };
 
-export const loadSavedProjectComponents = async (
-  userId: string,
-): Promise<LearnerHomeSavedProjectComponent[]> => {
-  const saves = await prisma.projectSave.findMany({
-    where: {
-      userId,
-      project: publicProjectWhere,
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-    take: 12,
-    select: {
-      project: {
-        select: {
-          id: true,
-          title: true,
-          requiredComponents: {
-            select: {
-              id: true,
-              categoryId: true,
-              componentName: true,
-              materialType: true,
-              searchKeywords: true,
-            },
-          },
-        },
-      },
-    },
-  });
+type SavedProjectComponentSourceRows = Array<{
+  project: {
+    id: string;
+    title: string;
+    requiredComponents: Array<{
+      id: string;
+      categoryId: string | null;
+      componentName: string;
+      materialType: string;
+      searchKeywords: Prisma.JsonValue | null;
+    }>;
+  };
+}>;
 
-  return saves.flatMap((save) =>
+export const mapSavedProjectComponentsFromBehaviorRows = (
+  saves: SavedProjectComponentSourceRows,
+): LearnerHomeSavedProjectComponent[] =>
+  saves.flatMap((save) =>
     save.project.requiredComponents.map((component) => ({
       projectId: save.project.id,
       projectTitle: save.project.title,
@@ -344,7 +330,6 @@ export const loadSavedProjectComponents = async (
       searchKeywords: parseSearchKeywords(component.searchKeywords),
     })),
   );
-};
 
 const tokenizeCandidateTerm = (value: string) =>
   normalizeInterestToken(value)
@@ -900,8 +885,11 @@ const projectBehaviorSelect = {
   },
   requiredComponents: {
     select: {
+      id: true,
+      categoryId: true,
       componentName: true,
       materialType: true,
+      searchKeywords: true,
       category: {
         select: {
           nameEn: true,
@@ -1090,6 +1078,9 @@ export const loadLearnerBehaviorContext = async (
       mapMaterialBehaviorSignal(row.material),
     ),
     viewedMaterials,
+    savedProjectComponents: mapSavedProjectComponentsFromBehaviorRows(
+      savedProjectRows.slice(0, 12),
+    ),
     reservedMaterials: dedupeMaterialSignals(
       reservedMaterialRows.map((row) => mapMaterialBehaviorSignal(row.material)),
     ),
