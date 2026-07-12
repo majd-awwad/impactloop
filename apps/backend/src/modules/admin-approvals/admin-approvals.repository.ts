@@ -180,13 +180,18 @@ export const updatePriceRuleRequestDecision = async (input: {
   moderatorNote: string | null;
   approvedMaxAllowedUnitPriceNis: number | null;
 }) => {
-  return prisma.priceRuleRequest.update({
+  const updated = await prisma.priceRuleRequest.update({
     where: { id: input.id },
     data: {
       status: input.status,
       moderatorNote: input.moderatorNote,
       adminApprovedMaxUnitPriceNis: input.approvedMaxAllowedUnitPriceNis,
     },
+    select: { id: true },
+  });
+
+  return prisma.priceRuleRequest.findUniqueOrThrow({
+    where: { id: updated.id },
     include: priceRequestInclude,
   });
 };
