@@ -257,7 +257,7 @@ Log fields:
 
 - `learnerHomeScope` — `getLearnerHome` or `getLearnerHomeSection`
 - `timingsMs` — per-step durations (context load, candidate pool, scoring, section builders)
-- `slowestStep` / `slowestStepMs` — hottest step in that request
+- `slowestStep` / `slowestStepMs` — hottest actionable child step in that request; aggregate full-operation timers (for example, `totalGetLearnerHome`) remain in `timingsMs` but are excluded
 
 These logs are allowlisted and safe for local profiling. They are not emitted at `info` in production.
 

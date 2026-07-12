@@ -854,13 +854,16 @@ export const loadInProgressBuilds = async (userId: string, limit = 6) =>
     take: limit,
   });
 
-export const countSavedProjects = async (userId: string) =>
-  prisma.projectSave.count({
+export const hasSavedProjects = async (userId: string) =>
+  Boolean(await prisma.projectSave.findFirst({
     where: {
       userId,
       project: publicProjectWhere,
     },
-  });
+    select: {
+      id: true,
+    },
+  }));
 
 const materialBehaviorSelect = {
   id: true,

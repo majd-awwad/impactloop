@@ -782,9 +782,7 @@ const scoreBehaviorFromFeatures = (
   const reasons: string[] = [];
 
   if (
-    hasMeaningfulBehaviorAffinity(
-      new Map([...user.behaviorAffinityKeys.entries()]),
-    ) &&
+    hasMeaningfulBehaviorAffinity(user.behaviorAffinityKeys) &&
     matchedAffinityTerms.length > 0
   ) {
     const topWeight = Math.max(

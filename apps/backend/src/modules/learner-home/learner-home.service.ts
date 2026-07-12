@@ -239,7 +239,7 @@ type LearnerHomeContext = {
   materials: Awaited<ReturnType<typeof learnerHomeRepository.loadMaterialCandidates>>;
   projects: Awaited<ReturnType<typeof learnerHomeRepository.loadProjectCandidates>>;
   savedProjectIds: Set<string>;
-  savedProjectsCount: number;
+  hasSavedProjects: boolean;
   behavior: LearnerBehaviorContext;
   behaviorAffinityProfile: LearnerAffinityProfile;
   hasActivity: boolean;
@@ -261,7 +261,7 @@ const loadLearnerHomeContext = async (
     rawInterests,
     savedLocation,
     savedComponents,
-    savedProjectsCount,
+    hasSavedProjects,
     behavior,
     projects,
   ] = await Promise.all([
@@ -281,10 +281,10 @@ const loadLearnerHomeContext = async (
         )
       : learnerHomeRepository.loadSavedProjectComponents(userId),
     profiler
-      ? profiler.time('countSavedProjects', () =>
-          learnerHomeRepository.countSavedProjects(userId),
+      ? profiler.time('hasSavedProjects', () =>
+          learnerHomeRepository.hasSavedProjects(userId),
         )
-      : learnerHomeRepository.countSavedProjects(userId),
+      : learnerHomeRepository.hasSavedProjects(userId),
     profiler
       ? profiler.time('loadLearnerBehaviorContext', () =>
           learnerHomeRepository.loadLearnerBehaviorContext(userId),
@@ -338,7 +338,7 @@ const loadLearnerHomeContext = async (
     materials,
     projects,
     savedProjectIds,
-    savedProjectsCount,
+    hasSavedProjects,
     behavior,
     behaviorAffinityProfile,
     hasActivity: hasLearnerActivity(behavior),
@@ -933,7 +933,7 @@ export const getLearnerHome = async (userId: string): Promise<LearnerHomeRespons
     hasSavedLocation:
       (context.savedLocation.city?.trim().length ?? 0) > 0 ||
       (context.savedLocation.area?.trim().length ?? 0) > 0,
-    hasSavedProjects: context.savedProjectsCount > 0,
+    hasSavedProjects: context.hasSavedProjects,
     hasActivity: context.hasActivity,
   };
 
