@@ -204,8 +204,8 @@ export const suspendUserAccount = async (input: {
   userId: string;
   actorId: string;
   reason: string;
-}) =>
-  prisma.user.update({
+}) => {
+  const updated = await prisma.user.update({
     where: { id: input.userId },
     data: {
       accountStatus: 'SUSPENDED',
@@ -215,22 +215,34 @@ export const suspendUserAccount = async (input: {
       reactivatedAt: null,
       reactivatedById: null,
     },
+    select: { id: true },
+  });
+
+  return prisma.user.findUniqueOrThrow({
+    where: { id: updated.id },
     include: userListInclude,
   });
+};
 
 export const reactivateUserAccount = async (input: {
   userId: string;
   actorId: string;
-}) =>
-  prisma.user.update({
+}) => {
+  const updated = await prisma.user.update({
     where: { id: input.userId },
     data: {
       accountStatus: 'ACTIVE',
       reactivatedAt: new Date(),
       reactivatedById: input.actorId,
     },
+    select: { id: true },
+  });
+
+  return prisma.user.findUniqueOrThrow({
+    where: { id: updated.id },
     include: userListInclude,
   });
+};
 
 export const updateUserAccountStatus = async (
   userId: string,

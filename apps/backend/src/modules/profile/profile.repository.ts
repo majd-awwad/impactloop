@@ -2,17 +2,6 @@ import { prisma } from '../../database/prisma.js';
 
 import type { UpdateLearnerProfileInput, UpdateProfileInput } from './profile.validation.js';
 
-const userWithRolesAndProfilesInclude = {
-  roles: true,
-  learnerProfile: true,
-  supplierProfile: {
-    include: {
-      defaultPickupLocation: true,
-      organizationProfile: true,
-    },
-  },
-} as const;
-
 export const findUserProfileContext = async (userId: string) => {
   return prisma.user.findUnique({
     where: { id: userId },
@@ -73,7 +62,7 @@ export const updateUserProfile = async (
   return prisma.user.update({
     where: { id: userId },
     data,
-    include: userWithRolesAndProfilesInclude,
+    select: { id: true },
   });
 };
 
