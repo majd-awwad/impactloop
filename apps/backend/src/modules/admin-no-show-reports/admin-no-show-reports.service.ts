@@ -156,7 +156,7 @@ export const verifyAdminNoShowReport = async (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if ('conflict' in result && result.conflict) {
+  if (!('report' in result)) {
     throw new AppError(
       'Only pending no-show reports can be verified.',
       409,
@@ -208,7 +208,7 @@ export const resolveAdminNoShowReport = async (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if ('conflict' in result && result.conflict) {
+  if (!('report' in result)) {
     throw new AppError(
       'Only pending reports can be resolved without strike.',
       409,
@@ -340,7 +340,7 @@ export const rejectAdminNoShowReport = async (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if ('conflict' in result && result.conflict) {
+  if (!('report' in result)) {
     throw new AppError(
       'Only pending no-show reports can be rejected.',
       409,
