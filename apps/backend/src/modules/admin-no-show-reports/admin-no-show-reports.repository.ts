@@ -40,6 +40,12 @@ const reportMutationSelect = {
   id: true,
 } satisfies Prisma.NoShowReportSelect;
 
+const verifyMutationSelect = {
+  id: true,
+  targetUserId: true,
+  targetRole: true,
+} satisfies Prisma.NoShowReportSelect;
+
 export const listNoShowReportsForAdmin = async (input: {
   status?: 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'RESOLVED_NO_STRIKE';
   page: number;
@@ -78,7 +84,7 @@ export const verifyNoShowReport = async (input: {
   adminUserId: string;
   reviewNote?: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const outcome = await prisma.$transaction(async (tx) => {
     const existing = await tx.noShowReport.findUnique({
       where: { id: input.reportId },
     });
@@ -88,10 +94,10 @@ export const verifyNoShowReport = async (input: {
     }
 
     if (existing.status !== 'PENDING_REVIEW') {
-      return { conflict: true as const, report: existing };
+      return { conflict: true as const };
     }
 
-    const report = await tx.noShowReport.update({
+    const updated = await tx.noShowReport.update({
       where: { id: existing.id },
       data: {
         status: 'VERIFIED',
@@ -99,34 +105,55 @@ export const verifyNoShowReport = async (input: {
         reviewedAt: new Date(),
         reviewNote: input.reviewNote?.trim() || null,
       },
-      include: reportInclude,
+      select: verifyMutationSelect,
     });
 
     const verifiedCount =
-      report.targetUserId &&
+      updated.targetUserId &&
       (STRIKE_ELIGIBLE_TARGET_ROLES as readonly string[]).includes(
-        report.targetRole,
+        updated.targetRole,
       )
-        ? await countVerifiedStrikesForUser(report.targetUserId, tx)
+        ? await countVerifiedStrikesForUser(updated.targetUserId, tx)
         : 0;
 
     let targetSuspended = false;
 
-    if (report.targetUserId) {
+    if (updated.targetUserId) {
       targetSuspended = await suspendUserForVerifiedStrikes(tx, {
-        targetUserId: report.targetUserId,
+        targetUserId: updated.targetUserId,
         adminUserId: input.adminUserId,
         verifiedCount,
       });
     }
 
     return {
-      report,
+      reportId: updated.id,
       verifiedCount,
       shouldWarnAdmin: verifiedCount >= SUSPENSION_VERIFIED_THRESHOLD,
       targetSuspended,
     };
   });
+
+  if (!outcome) {
+    return null;
+  }
+
+  if ('conflict' in outcome) {
+    return outcome;
+  }
+
+  const report = await findNoShowReportByIdForAdmin(outcome.reportId);
+
+  if (!report) {
+    return null;
+  }
+
+  return {
+    report,
+    verifiedCount: outcome.verifiedCount,
+    shouldWarnAdmin: outcome.shouldWarnAdmin,
+    targetSuspended: outcome.targetSuspended,
+  };
 };
 
 export const resolveNoShowReportWithoutStrike = async (input: {
@@ -183,7 +210,7 @@ export const rejectNoShowReport = async (input: {
   adminUserId: string;
   reviewNote?: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const outcome = await prisma.$transaction(async (tx) => {
     const existing = await tx.noShowReport.findUnique({
       where: { id: input.reportId },
     });
@@ -193,10 +220,10 @@ export const rejectNoShowReport = async (input: {
     }
 
     if (existing.status !== 'PENDING_REVIEW') {
-      return { conflict: true as const, report: existing };
+      return { conflict: true as const };
     }
 
-    const report = await tx.noShowReport.update({
+    const updated = await tx.noShowReport.update({
       where: { id: existing.id },
       data: {
         status: 'REJECTED',
@@ -204,9 +231,25 @@ export const rejectNoShowReport = async (input: {
         reviewedAt: new Date(),
         reviewNote: input.reviewNote?.trim() || null,
       },
-      include: reportInclude,
+      select: reportMutationSelect,
     });
 
-    return { report };
+    return { reportId: updated.id };
   });
+
+  if (!outcome) {
+    return null;
+  }
+
+  if ('conflict' in outcome) {
+    return outcome;
+  }
+
+  const report = await findNoShowReportByIdForAdmin(outcome.reportId);
+
+  if (!report) {
+    return null;
+  }
+
+  return { report };
 };
