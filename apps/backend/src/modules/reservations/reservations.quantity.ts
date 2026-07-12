@@ -54,6 +54,47 @@ export const isZeroOrNegativeDecimal = (value: Prisma.Decimal) =>
 export const clampDecimalAtZero = (value: Prisma.Decimal) =>
   value.lt(0) ? new Prisma.Decimal(0) : value;
 
+export const loadReservationIdsWithAnyDelivery = async (
+  tx: Prisma.TransactionClient,
+  reservationIds: string[],
+): Promise<Set<string>> => {
+  if (reservationIds.length === 0) {
+    return new Set();
+  }
+
+  const deliveries = await tx.delivery.findMany({
+    where: {
+      reservationId: { in: reservationIds },
+    },
+    select: {
+      reservationId: true,
+    },
+  });
+
+  return new Set(deliveries.map((delivery) => delivery.reservationId));
+};
+
+export const loadReservationIdsWithCustodyDeliveries = async (
+  tx: Prisma.TransactionClient,
+  reservationIds: string[],
+): Promise<Set<string>> => {
+  if (reservationIds.length === 0) {
+    return new Set();
+  }
+
+  const deliveries = await tx.delivery.findMany({
+    where: {
+      reservationId: { in: reservationIds },
+      status: { in: [...MATERIAL_IN_CUSTODY_DELIVERY_STATUSES] },
+    },
+    select: {
+      reservationId: true,
+    },
+  });
+
+  return new Set(deliveries.map((delivery) => delivery.reservationId));
+};
+
 export const sumHeldQuantityForMaterial = async (
   tx: Prisma.TransactionClient,
   materialId: string,
@@ -76,22 +117,28 @@ export const sumHeldQuantityForMaterial = async (
     ACTIVE_HOLD_STATUSES.every((status) => statuses.includes(status));
 
   if (usesDefaultHoldStatuses) {
-    const awaitingResolutionAggregate = await tx.reservation.aggregate({
+    const awaitingResolutionReservations = await tx.reservation.findMany({
       where: {
         materialId,
         status: 'AWAITING_RESOLUTION',
-        deliveries: {
-          some: {
-            status: { in: [...MATERIAL_IN_CUSTODY_DELIVERY_STATUSES] },
-          },
-        },
       },
-      _sum: {
+      select: {
+        id: true,
         quantityRequested: true,
       },
     });
 
-    held = held.plus(toDecimal(awaitingResolutionAggregate._sum.quantityRequested));
+    const reservationIdsWithCustodyDeliveries =
+      await loadReservationIdsWithCustodyDeliveries(
+        tx,
+        awaitingResolutionReservations.map((reservation) => reservation.id),
+      );
+
+    for (const reservation of awaitingResolutionReservations) {
+      if (reservationIdsWithCustodyDeliveries.has(reservation.id)) {
+        held = held.plus(toDecimal(reservation.quantityRequested));
+      }
+    }
   }
 
   return held;

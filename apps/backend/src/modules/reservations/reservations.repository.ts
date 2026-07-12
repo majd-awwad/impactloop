@@ -175,10 +175,43 @@ export type LearnerCancelledReservationRecord = Prisma.ReservationGetPayload<{
 const loadLearnerReservationRecord = async (
   reservationId: string,
 ): Promise<LearnerReservationRecord> => {
-  return prisma.reservation.findUniqueOrThrow({
+  const reservation = await prisma.reservation.findUniqueOrThrow({
     where: { id: reservationId },
-    include: reservationInclude,
   });
+
+  const material = await prisma.material.findUniqueOrThrow({
+    where: { id: reservation.materialId },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      unit: true,
+      quantity: true,
+    },
+  });
+
+  const requester = await prisma.user.findUniqueOrThrow({
+    where: { id: reservation.requesterId },
+    select: {
+      id: true,
+      displayName: true,
+    },
+  });
+
+  const owner = await prisma.user.findUniqueOrThrow({
+    where: { id: reservation.ownerId },
+    select: {
+      id: true,
+      displayName: true,
+    },
+  });
+
+  return {
+    ...reservation,
+    material,
+    requester,
+    owner,
+  };
 };
 
 const loadLearnerCancelledReservationRecord = async (
@@ -228,7 +261,7 @@ export const createLearnerReservation = async (input: {
   combineWithDeliveryGroupId?: string;
 }) => {
   const result = await runSerializableTransaction(async (tx) => {
-    const material = await tx.material.findUnique({
+    const materialRecord = await tx.material.findUnique({
       where: { id: input.materialId },
       select: {
         id: true,
@@ -240,17 +273,29 @@ export const createLearnerReservation = async (input: {
         price: true,
         currency: true,
         supplierProfileId: true,
-        location: {
-          select: {
-            city: true,
-          },
-        },
+        locationId: true,
       },
     });
 
-    if (!material) {
+    if (!materialRecord) {
       return { outcome: 'NOT_FOUND' as const };
     }
+
+    const materialLocation = await tx.location.findUnique({
+      where: { id: materialRecord.locationId },
+      select: {
+        city: true,
+      },
+    });
+
+    if (!materialLocation) {
+      return { outcome: 'NOT_FOUND' as const };
+    }
+
+    const material = {
+      ...materialRecord,
+      location: materialLocation,
+    };
 
     if (material.ownerId === input.requesterId) {
       return { outcome: 'SELF_RESERVATION' as const };
