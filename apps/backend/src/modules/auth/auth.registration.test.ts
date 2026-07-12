@@ -105,12 +105,16 @@ describe('auth registration', () => {
         interests: ['Recycling'],
       },
     };
+    const registrationInput = {
+      ...input,
+      roles: [...input.roles],
+    };
 
-    const session = await registerUser(input);
+    const session = await registerUser(registrationInput);
     ids.users.push(session.user.id);
 
     await assert.rejects(
-      () => registerUser(input),
+      () => registerUser(registrationInput),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.statusCode, 409);

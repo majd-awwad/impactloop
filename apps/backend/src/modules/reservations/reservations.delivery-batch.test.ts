@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import type { Prisma } from '../../generated/prisma/client.js';
+import {
+  ReservationFulfillmentMethod,
+  type Prisma,
+} from '../../generated/prisma/client.js';
 
 import { expireStaleMissedPickupsInTransaction } from './reservations.missed-pickup-expiry.repository.js';
 import {
@@ -147,7 +150,7 @@ describe('reservation delivery batch lookups', () => {
       id: `missed-${index + 1}`,
       status: 'ACCEPTED' as const,
       materialId: `material-${index + 1}`,
-      fulfillmentMethod: 'PICKUP',
+      fulfillmentMethod: ReservationFulfillmentMethod.PICKUP,
       pickupWindowEnd,
     }));
 

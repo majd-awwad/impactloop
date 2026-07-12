@@ -148,13 +148,15 @@ describe('auth login', () => {
 
   test('successful login does not reload user relations after lastLoginAt update', async () => {
     const { user, password } = await createLoginTestUser();
-    const originalFindUnique = prisma.user.findUnique.bind(prisma.user);
+    const originalFindUnique = prisma.user.findUnique;
     let findUniqueCallCount = 0;
 
-    prisma.user.findUnique = ((...args: Parameters<typeof originalFindUnique>) => {
-      findUniqueCallCount += 1;
-      return originalFindUnique(...args);
-    }) as typeof prisma.user.findUnique;
+    prisma.user.findUnique = new Proxy(originalFindUnique, {
+      apply(target, thisArg, args) {
+        findUniqueCallCount += 1;
+        return Reflect.apply(target, thisArg, args);
+      },
+    });
 
     try {
       const session = await loginUser({
