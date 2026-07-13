@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/location/current_location_service.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../reservations/application/learner_reservation_cache.dart';
@@ -246,6 +247,10 @@ class _RequestDeliveryDialogState
                     TextButton(
                       onPressed: () =>
                           ref.invalidate(savedDropoffAddressesProvider),
+                      style: AppStatusButtonStyle.text(
+                        context,
+                        AppStatusTone.primary,
+                      ),
                       child: const Text('Retry'),
                     ),
                   ],
@@ -359,6 +364,10 @@ class _RequestDeliveryDialogState
                 const SizedBox(height: AppSpacing.sm),
                 OutlinedButton.icon(
                   onPressed: _capturingLocation ? null : _useCurrentLocation,
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.info,
+                  ),
                   icon: _capturingLocation
                       ? const SizedBox(
                           width: 16,
@@ -416,10 +425,15 @@ class _RequestDeliveryDialogState
       actions: [
         TextButton(
           onPressed: _submitting ? null : widget.onCancel,
+          style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
           child: const Text('Cancel'),
         ),
         FilledButton(
           onPressed: _submitting ? null : _submit,
+          style: AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.primary,
+          ),
           child: _submitting
               ? const SizedBox(
                   width: 18,

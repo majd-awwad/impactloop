@@ -252,6 +252,7 @@ class _DeliverySummaryPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
             onPressed: () => context.popOrGo('/learner/reservations'),
+            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
             icon: const Icon(Icons.assignment_turned_in_outlined),
             label: const Text('Back to reservations'),
           ),
@@ -289,6 +290,7 @@ class _TrackingStatusCard extends StatelessWidget {
           FilledButton.icon(
             onPressed: () =>
                 context.push('/learner/deliveries/${delivery.id}/track'),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.info),
             icon: const Icon(Icons.map_outlined),
             label: const Text('Track delivery'),
           ),
@@ -296,12 +298,14 @@ class _TrackingStatusCard extends StatelessWidget {
         if (delivery.canTrack)
           TextButton.icon(
             onPressed: onRefresh,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.info),
             icon: const Icon(Icons.refresh_outlined, size: 18),
             label: const Text('Refresh status'),
           )
         else
           TextButton.icon(
             onPressed: onRefresh,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.info),
             icon: const Icon(Icons.refresh_outlined, size: 18),
             label: const Text('Refresh status'),
           ),
@@ -559,7 +563,14 @@ class _StatePanel extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.lg),
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            FilledButton(
+              onPressed: onAction,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              child: Text(actionLabel!),
+            ),
           ],
         ],
       ),

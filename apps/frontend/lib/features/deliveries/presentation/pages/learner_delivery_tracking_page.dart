@@ -435,6 +435,7 @@ class _TrackingContent extends StatelessWidget {
           alignment: AlignmentDirectional.centerStart,
           child: TextButton.icon(
             onPressed: refreshing ? null : onRefresh,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.info),
             icon: refreshing
                 ? const SizedBox(
                     width: 16,
@@ -448,6 +449,7 @@ class _TrackingContent extends StatelessWidget {
         TextButton.icon(
           onPressed: () =>
               context.go('/learner/deliveries/${tracking.deliveryId}'),
+          style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
           icon: const Icon(Icons.assignment_outlined),
           label: const Text('View delivery details'),
         ),
@@ -640,7 +642,14 @@ class _StatePanel extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.md),
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            FilledButton(
+              onPressed: onAction,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              child: Text(actionLabel!),
+            ),
           ],
         ],
       ),
