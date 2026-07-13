@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_dashboard_providers.dart';
 import '../../data/models/admin_dashboard_models.dart';
 import '../l10n/admin_l10n.dart';
@@ -81,7 +82,10 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: 12),
             FilledButton(
               onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: palette.primaryTeal),
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
               child: Text(l.t('Retry', 'إعادة المحاولة')),
             ),
           ],

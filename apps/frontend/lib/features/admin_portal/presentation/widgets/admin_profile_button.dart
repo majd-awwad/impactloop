@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../theme/admin_decoration_set.dart';
 import 'admin_settings_controls.dart';
@@ -132,9 +133,9 @@ class AdminProfileButton extends ConsumerWidget {
                   },
                   icon: const Icon(Icons.logout_rounded),
                   label: const Text('Logout'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: palette.red.withValues(alpha: 0.16),
-                    foregroundColor: palette.red,
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    AppStatusTone.danger,
                   ),
                 ),
               ],
