@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_reservations_api.dart';
 import '../../data/models/admin_reservations_models.dart';
@@ -147,10 +148,7 @@ bool _reservationDeliveryStatusesMatch({
   return reservationStatus.toUpperCase() == normalizedDelivery.toUpperCase();
 }
 
-String _statusBadgeText(
-  String status, {
-  String? scope,
-}) {
+String _statusBadgeText(String status, {String? scope}) {
   final label = _statusLabel(status);
   if (scope == null || scope.isEmpty) return label;
   return '$scope · $label';
@@ -163,10 +161,8 @@ AppStatusTone _reservationStatusTone(
     ? deliveryStatusAppTone(status)
     : learnerReservationStatusTone(status);
 
-Color _reservationStatusAccent(
-  BuildContext context,
-  String status,
-) => AppStatusStyle.of(context, _reservationStatusTone(status)).foreground;
+Color _reservationStatusAccent(BuildContext context, String status) =>
+    AppStatusStyle.of(context, _reservationStatusTone(status)).foreground;
 
 class _ReservationStatusBadge extends StatelessWidget {
   const _ReservationStatusBadge({
@@ -915,8 +911,7 @@ class _ReservationRow extends StatelessWidget {
       reservationStatus: item.status,
       deliveryStatus: deliveryStatus,
     );
-    final deliveryLabel =
-        deliveryStatus != null && deliveryStatus.isNotEmpty
+    final deliveryLabel = deliveryStatus != null && deliveryStatus.isNotEmpty
         ? _statusLabel(deliveryStatus)
         : item.hasDelivery
         ? 'Linked'
@@ -1223,8 +1218,9 @@ class _ReservationDetailDialog extends ConsumerWidget {
       _adminReservationDetailProvider(reservationId),
     );
 
-    return AlertDialog(
+    return AppDialogShell(
       title: const Text('Reservation details'),
+      maxWidth: 600,
       content: SizedBox(
         width: 560,
         child: detailAsync.when(
@@ -1240,17 +1236,9 @@ class _ReservationDetailDialog extends ConsumerWidget {
             onRetry: () =>
                 ref.invalidate(_adminReservationDetailProvider(reservationId)),
           ),
-          data: (detail) => SingleChildScrollView(
-            child: _ReservationDetailBody(detail: detail),
-          ),
+          data: (detail) => _ReservationDetailBody(detail: detail),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
     );
   }
 }

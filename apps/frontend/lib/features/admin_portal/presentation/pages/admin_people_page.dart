@@ -5,10 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/account_status_presentation.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_people_api.dart';
 import '../theme/admin_decoration_set.dart';
-import '../theme/admin_palette.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart' show AdminTypography;
 
@@ -45,8 +46,8 @@ class _PeopleFiltersNotifier extends Notifier<_PeopleFilters> {
 
 final _peopleFiltersProvider =
     NotifierProvider<_PeopleFiltersNotifier, _PeopleFilters>(
-  _PeopleFiltersNotifier.new,
-);
+      _PeopleFiltersNotifier.new,
+    );
 
 final adminPeopleSummaryProvider = FutureProvider.autoDispose((ref) {
   return ref.watch(adminPeopleApiProvider).fetchSummary();
@@ -54,14 +55,17 @@ final adminPeopleSummaryProvider = FutureProvider.autoDispose((ref) {
 
 final adminPeopleListProvider = FutureProvider.autoDispose((ref) async {
   final filters = ref.watch(_peopleFiltersProvider);
-  return ref.watch(adminPeopleApiProvider).fetchPeople(
+  return ref
+      .watch(adminPeopleApiProvider)
+      .fetchPeople(
         tab: filters.tab,
         search: filters.search,
         status: filters.status == 'ALL' ? null : filters.status,
       );
 });
 
-String _formatStatus(String status) => status.replaceAll('_', ' ').toLowerCase();
+String _formatStatus(String status) =>
+    status.replaceAll('_', ' ').toLowerCase();
 
 String _formatRole(String? role) =>
     role?.replaceAll('_', ' ').toLowerCase() ?? 'unknown';
@@ -71,7 +75,9 @@ String _suspensionPreviewLine(String? reason) {
   if (trimmed == null || trimmed.isEmpty) {
     return 'Suspended: reason not recorded';
   }
-  final preview = trimmed.length > 80 ? '${trimmed.substring(0, 80)}…' : trimmed;
+  final preview = trimmed.length > 80
+      ? '${trimmed.substring(0, 80)}…'
+      : trimmed;
   return 'Suspended: $preview';
 }
 
@@ -143,7 +149,9 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialTabIfNeeded());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _applyInitialTabIfNeeded(),
+    );
   }
 
   @override
@@ -152,7 +160,9 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
     if (oldWidget.initialRole != widget.initialRole ||
         oldWidget.initialTab != widget.initialTab) {
       _appliedInitialTab = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialTabIfNeeded());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _applyInitialTabIfNeeded(),
+      );
     }
   }
 
@@ -176,7 +186,8 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
 
   void _applyInitialTabIfNeeded() {
     if (!mounted || _appliedInitialTab) return;
-    final hasQuery = (widget.initialRole?.trim().isNotEmpty ?? false) ||
+    final hasQuery =
+        (widget.initialRole?.trim().isNotEmpty ?? false) ||
         (widget.initialTab?.trim().isNotEmpty ?? false);
     if (!hasQuery) return;
     _appliedInitialTab = true;
@@ -198,21 +209,22 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
       await action();
       if (!mounted) return;
       _refresh();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(successMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(successMessage)));
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     }
   }
 
   Future<void> _showDetails(AdminPeopleListItem item) async {
     try {
-      final detail =
-          await ref.read(adminPeopleApiProvider).fetchPersonDetail(item.userId);
+      final detail = await ref
+          .read(adminPeopleApiProvider)
+          .fetchPersonDetail(item.userId);
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -220,9 +232,9 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
       );
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     }
   }
 
@@ -230,7 +242,7 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
     final reasonController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => AppDialogShell(
         title: const Text('Suspend account'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -252,12 +264,12 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
             ),
           ],
         ),
-        actions: [
-          TextButton(
+        footer: AppDialogFooter.decision(
+          secondaryAction: TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
-          FilledButton(
+          primaryAction: FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: AppStatusButtonStyle.filled(
               dialogContext,
@@ -265,7 +277,7 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
             ),
             child: const Text('Suspend account'),
           ),
-        ],
+        ),
       ),
     );
 
@@ -279,16 +291,19 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
     if (reason.length < 3) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A suspension reason of at least 3 characters is required.')),
+        const SnackBar(
+          content: Text(
+            'A suspension reason of at least 3 characters is required.',
+          ),
+        ),
       );
       return;
     }
 
     await _runAction(
-      () => ref.read(adminPeopleApiProvider).suspendPerson(
-            userId: item.userId,
-            reason: reason,
-          ),
+      () => ref
+          .read(adminPeopleApiProvider)
+          .suspendPerson(userId: item.userId, reason: reason),
       successMessage: 'Account suspended.',
     );
   }
@@ -296,17 +311,17 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
   Future<void> _confirmReactivate(AdminPeopleListItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => AppDialogShell(
         title: const Text('Reactivate account'),
         content: Text(
           'Restore access for ${item.displayName}? Their existing data and history were kept while suspended.',
         ),
-        actions: [
-          TextButton(
+        footer: AppDialogFooter.decision(
+          secondaryAction: TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
-          FilledButton(
+          primaryAction: FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: AppStatusButtonStyle.filled(
               dialogContext,
@@ -314,14 +329,16 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
             ),
             child: const Text('Reactivate account'),
           ),
-        ],
+        ),
       ),
     );
 
     if (confirmed != true) return;
 
     await _runAction(
-      () => ref.read(adminPeopleApiProvider).reactivatePerson(userId: item.userId),
+      () => ref
+          .read(adminPeopleApiProvider)
+          .reactivatePerson(userId: item.userId),
       successMessage: 'Account reactivated.',
     );
   }
@@ -454,7 +471,10 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
                       dropdownMenuEntries: const [
                         DropdownMenuEntry(value: 'ALL', label: 'All statuses'),
                         DropdownMenuEntry(value: 'ACTIVE', label: 'Active'),
-                        DropdownMenuEntry(value: 'SUSPENDED', label: 'Suspended'),
+                        DropdownMenuEntry(
+                          value: 'SUSPENDED',
+                          label: 'Suspended',
+                        ),
                         DropdownMenuEntry(
                           value: 'PENDING_VERIFICATION',
                           label: 'Pending verification',
@@ -463,7 +483,9 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
                       ],
                       onSelected: (value) {
                         if (value != null) {
-                          ref.read(_peopleFiltersProvider.notifier).setStatus(value);
+                          ref
+                              .read(_peopleFiltersProvider.notifier)
+                              .setStatus(value);
                         }
                       },
                     ),
@@ -658,8 +680,14 @@ class _PersonCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item.displayName, style: AdminTypography.sectionTitle(palette)),
-                      Text(item.email, style: AdminTypography.pageSubtitle(palette)),
+                      Text(
+                        item.displayName,
+                        style: AdminTypography.sectionTitle(palette),
+                      ),
+                      Text(
+                        item.email,
+                        style: AdminTypography.pageSubtitle(palette),
+                      ),
                       Text(
                         'Joined $created',
                         style: AdminTypography.kpiHelper(palette),
@@ -669,7 +697,10 @@ class _PersonCard extends StatelessWidget {
                 ),
                 if (item.isProtectedAdmin)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: palette.amber.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(999),
@@ -688,10 +719,9 @@ class _PersonCard extends StatelessWidget {
             if (item.accountStatus == 'SUSPENDED') ...[
               Text(
                 _suspensionPreviewLine(item.suspensionReasonPreview),
-                style: AdminTypography.kpiHelper(palette).copyWith(
-                  color: palette.amber,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: AdminTypography.kpiHelper(
+                  palette,
+                ).copyWith(color: palette.amber, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
             ],
@@ -713,8 +743,13 @@ class _PersonCard extends StatelessWidget {
                     label: _formatRole(item.primaryRole),
                     color: palette.primaryTeal,
                   ),
-                for (final role in item.roles.where((role) => role != item.primaryRole))
-                  _Badge(label: _formatRole(role), color: palette.textSecondary),
+                for (final role in item.roles.where(
+                  (role) => role != item.primaryRole,
+                ))
+                  _Badge(
+                    label: _formatRole(role),
+                    color: palette.textSecondary,
+                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -774,10 +809,9 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AdminTypography.kpiHelper(palette).copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
+        style: AdminTypography.kpiHelper(
+          palette,
+        ).copyWith(color: color, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -797,78 +831,73 @@ class _PersonDetailDialog extends StatelessWidget {
     final accountStatus = detail['accountStatus'] as String? ?? '';
     final isSuspended = accountStatus == 'SUSPENDED';
 
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(detail['displayName'] as String? ?? 'Account details'),
+      maxWidth: 560,
       content: SizedBox(
         width: 520,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _DetailRow('Email', detail['email']),
-              _DetailRow('Status', _formatStatus(accountStatus)),
-              _DetailRow('Roles', roles.map(_formatRole).join(', ')),
-              _DetailRow('Phone', detail['phone']),
-              _DetailRow('Created', _formatDetailDate(detail['createdAt'])),
-              _DetailRow('Last login', _formatDetailDate(detail['lastLoginAt'])),
-              if (((detail['verifiedStrikeCount'] as num?)?.toInt() ?? 0) > 0)
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _DetailRow('Email', detail['email']),
+            _DetailRow('Status', _formatStatus(accountStatus)),
+            _DetailRow('Roles', roles.map(_formatRole).join(', ')),
+            _DetailRow('Phone', detail['phone']),
+            _DetailRow('Created', _formatDetailDate(detail['createdAt'])),
+            _DetailRow('Last login', _formatDetailDate(detail['lastLoginAt'])),
+            if (((detail['verifiedStrikeCount'] as num?)?.toInt() ?? 0) > 0)
+              _DetailRow(
+                'Verified strikes',
+                '${detail['verifiedStrikeCount']}',
+              ),
+            if (isSuspended) ...[
+              const SizedBox(height: 12),
+              Text('Suspension', style: AdminTypography.sectionTitle(palette)),
+              const SizedBox(height: 6),
+              _DetailRow('Status', 'Suspended'),
+              _AlwaysShowDetailRow(
+                'Reason',
+                _suspensionReasonText(detail['suspensionReason']),
+              ),
+              _DetailRow(
+                'Suspended by',
+                _formatSuspendedBy(detail['suspendedBy']),
+              ),
+              _DetailRow(
+                'Suspended at',
+                _formatDetailDate(detail['suspendedAt']),
+              ),
+              if (detail['reactivatedAt'] != null) ...[
                 _DetailRow(
-                  'Verified strikes',
-                  '${detail['verifiedStrikeCount']}',
-                ),
-              if (isSuspended) ...[
-                const SizedBox(height: 12),
-                Text('Suspension', style: AdminTypography.sectionTitle(palette)),
-                const SizedBox(height: 6),
-                _DetailRow('Status', 'Suspended'),
-                _AlwaysShowDetailRow(
-                  'Reason',
-                  _suspensionReasonText(detail['suspensionReason']),
+                  'Last reactivated at',
+                  _formatDetailDate(detail['reactivatedAt']),
                 ),
                 _DetailRow(
-                  'Suspended by',
-                  _formatSuspendedBy(detail['suspendedBy']),
-                ),
-                _DetailRow(
-                  'Suspended at',
-                  _formatDetailDate(detail['suspendedAt']),
-                ),
-                if (detail['reactivatedAt'] != null) ...[
-                  _DetailRow(
-                    'Last reactivated at',
-                    _formatDetailDate(detail['reactivatedAt']),
-                  ),
-                  _DetailRow(
-                    'Reactivated by',
-                    _formatSuspendedBy(detail['reactivatedBy']),
-                  ),
-                ],
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    'Suspension blocks important actions but does not delete this account or its data.',
-                    style: AdminTypography.kpiHelper(palette),
-                  ),
+                  'Reactivated by',
+                  _formatSuspendedBy(detail['reactivatedBy']),
                 ),
               ],
-              if (detail['isProtectedAdmin'] == true)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    'This admin account is protected. Status and role changes are not available in People Management.',
-                    style: AdminTypography.kpiHelper(palette).copyWith(color: palette.amber),
-                  ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Suspension blocks important actions but does not delete this account or its data.',
+                  style: AdminTypography.kpiHelper(palette),
                 ),
+              ),
             ],
-          ),
+            if (detail['isProtectedAdmin'] == true)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  'This admin account is protected. Status and role changes are not available in People Management.',
+                  style: AdminTypography.kpiHelper(
+                    palette,
+                  ).copyWith(color: palette.amber),
+                ),
+              ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
     );
   }
 }
