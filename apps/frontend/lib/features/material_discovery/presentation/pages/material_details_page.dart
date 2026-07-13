@@ -13,6 +13,7 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -1779,15 +1780,18 @@ class _LearnerReservationStateCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          MaterialStatusBadge(
+          AppStatusBadge(
             label: _reservationStatusLabel(reservation.status),
-            tone: _reservationStatusTone(reservation.status),
+            tone: learnerReservationStatusTone(
+              reservation.status,
+              incidentReviewStatus: reservation.incidentReviewStatus,
+            ),
           ),
           if (delivery != null) ...[
             const SizedBox(height: AppSpacing.sm),
-            MaterialStatusBadge(
+            AppStatusBadge(
               label: deliveryStatusLabel(delivery!.status),
-              tone: deliveryStatusTone(delivery!.status),
+              tone: deliveryStatusAppTone(delivery!.status),
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
@@ -1863,21 +1867,6 @@ String _reservationActionLabel(String status) {
 }
 
 String _reservationStatusLabel(String status) => reservationStatusLabel(status);
-
-MaterialStatusBadgeTone _reservationStatusTone(String status) {
-  switch (status) {
-    case 'PENDING':
-    case 'ACCEPTED':
-      return MaterialStatusBadgeTone.reserved;
-    case 'COMPLETED':
-      return MaterialStatusBadgeTone.reused;
-    case 'REJECTED':
-    case 'CANCELLED':
-    case 'EXPIRED':
-    default:
-      return MaterialStatusBadgeTone.draft;
-  }
-}
 
 String _reservationDetailText(LearnerReservation reservation) {
   if (reservation.isPending) {
