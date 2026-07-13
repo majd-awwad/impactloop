@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
 import '../../data/admin_supplier_verifications_api.dart';
 import '../../data/models/admin_supplier_verifications_models.dart';
 import '../l10n/admin_l10n.dart';
@@ -212,22 +213,34 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
             _SummaryChip(
               label: l.t('Pending', 'قيد الانتظار'),
               count: summary.pending,
-              color: palette.amber,
+              color: AppStatusStyle.of(
+                context,
+                supplierVerificationStatusTone('PENDING'),
+              ).foreground,
             ),
             _SummaryChip(
               label: l.t('Approved', 'موافق عليه'),
               count: summary.approved,
-              color: palette.green,
+              color: AppStatusStyle.of(
+                context,
+                supplierVerificationStatusTone('APPROVED'),
+              ).foreground,
             ),
             _SummaryChip(
               label: l.t('Rejected', 'مرفوض'),
               count: summary.rejected,
-              color: palette.red,
+              color: AppStatusStyle.of(
+                context,
+                supplierVerificationStatusTone('REJECTED'),
+              ).foreground,
             ),
             _SummaryChip(
               label: l.t('Changes requested', 'طلب تعديلات'),
               count: summary.changesRequested,
-              color: palette.blue,
+              color: AppStatusStyle.of(
+                context,
+                supplierVerificationStatusTone('CHANGES_REQUESTED'),
+              ).foreground,
             ),
           ],
         ),
@@ -561,29 +574,10 @@ class _StatusBadge extends StatelessWidget {
   final String status;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final normalized = status.toUpperCase();
-    final color = switch (normalized) {
-      'APPROVED' => palette.green,
-      'REJECTED' => palette.red,
-      'CHANGES_REQUESTED' => palette.blue,
-      _ => palette.amber,
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
-      ),
-      child: Text(
-        _formatStatusLabel(status),
-        style: AdminTypography.kpiHelper(palette).copyWith(color: color),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppStatusBadge(
+    label: _formatStatusLabel(status),
+    tone: supplierVerificationStatusTone(status),
+  );
 }
 
 class _SummaryChip extends StatelessWidget {

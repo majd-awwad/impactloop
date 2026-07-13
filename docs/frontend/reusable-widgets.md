@@ -50,6 +50,7 @@ New reusable UI should prefer `Theme.of(context).textTheme`, `Theme.of(context).
 | `AppInlineError` | `app_inline_error.dart` | Inline body-small error text using `Theme.of(context).colorScheme.error`. |
 | `AppStatusBadge` / `AppStatusTone` / `AppStatusStyle` / `AppStatusButtonStyle` | `app_status_badge.dart` | Theme-aware semantic status presentation and action styles for primary, success, warning, danger, info, and neutral states. |
 | `learningProjectStatusTone` | `learning_project_status_presentation.dart` | Canonical Learning Project lifecycle mapping: pending review and changes requested are warning; published is success; rejected and hidden are danger; draft and archived are neutral. |
+| `supplierVerificationStatusTone` | `supplier_verification_status_presentation.dart` | Canonical supplier-verification mapping: pending, changes requested, and unverified are warning; approved and verified are success; rejected is danger; not-required is neutral. |
 | `AppSectionCard` | `app_section_card.dart` | Theme-aware, content-agnostic section surface with optional semantic tone and emphasis. |
 | `AppEmptyStateCard` | `app_empty_state_card.dart` | Theme-aware empty/unavailable state surface with an icon, title, supporting copy, optional semantic tone, and display-only actions. |
 | `showErrorSnackBar` | `app_feedback.dart` | Error snackbar using normalized API-friendly message text. |
