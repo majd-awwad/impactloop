@@ -57,7 +57,7 @@ abstract final class SupplierMaterialLabelHelper {
       case 'RESERVED':
         return (
           label: const LocalizedText(en: 'Reserved', ar: 'محجوز'),
-          tone: MaterialStatusBadgeTone.reserved,
+          tone: MaterialStatusBadgeTone.success,
         );
       case 'REUSED':
         return (
@@ -67,7 +67,7 @@ abstract final class SupplierMaterialLabelHelper {
       case 'UNAVAILABLE':
         return (
           label: const LocalizedText(en: 'Unavailable', ar: 'غير متاح'),
-          tone: MaterialStatusBadgeTone.draft,
+          tone: MaterialStatusBadgeTone.neutral,
         );
       case 'AVAILABLE':
       default:

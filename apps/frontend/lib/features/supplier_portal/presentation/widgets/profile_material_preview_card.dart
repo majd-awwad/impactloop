@@ -11,7 +11,6 @@ import '../theme/supplier_theme_extension.dart';
 import 'material_engagement_chip.dart';
 import 'materials/supplier_material_card.dart';
 import 'materials/supplier_material_label_helper.dart';
-import 'materials/supplier_my_materials_colors.dart';
 
 const profileMaterialPreviewCardHeight = supplierMaterialCardHeight;
 const _imageHeight = 160.0;
@@ -166,7 +165,7 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
                           Text(
                             categoryLabel,
                             style: context.supplierChip().copyWith(
-                                  color: SupplierMyMaterialsColors.lightTeal,
+                                  color: colors.accent,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -289,93 +288,10 @@ class _ProfilePreviewStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isArabic = context.isSupplierArabic;
-    final normalized = status.toUpperCase();
-
-    if (normalized == 'UNAVAILABLE' ||
-        normalized == 'RESERVED' ||
-        normalized == 'PENDING_RESERVATION') {
-      final palette = _semanticPalette(normalized);
-      final label = SupplierMaterialLabelHelper.resolveText(
-        SupplierMaterialLabelHelper.statusMeta(status).label,
-        isArabic,
-      );
-      return _SemanticBadge(label: label, palette: palette);
-    }
-
     final meta = SupplierMaterialLabelHelper.statusMeta(status);
     return MaterialStatusBadge(
       label: SupplierMaterialLabelHelper.resolveText(meta.label, isArabic),
       tone: meta.tone,
     );
   }
-
-  _SemanticPalette _semanticPalette(String status) {
-    switch (status) {
-      case 'UNAVAILABLE':
-        return const _SemanticPalette(
-          background: Color(0xFFFEE2E2),
-          foreground: Color(0xFFB91C1C),
-          border: Color(0xFFFECACA),
-        );
-      case 'PENDING_RESERVATION':
-        return const _SemanticPalette(
-          background: Color(0xFFFFEDD5),
-          foreground: Color(0xFFC2410C),
-          border: Color(0xFFFED7AA),
-        );
-      case 'RESERVED':
-        return const _SemanticPalette(
-          background: Color(0xFFE0E7FF),
-          foreground: Color(0xFF4338CA),
-          border: Color(0xFFA5B4FC),
-        );
-      default:
-        return const _SemanticPalette(
-          background: Color(0xFFF1F5F9),
-          foreground: Color(0xFF64748B),
-          border: Color(0xFFCBD5E1),
-        );
-    }
-  }
-}
-
-class _SemanticBadge extends StatelessWidget {
-  const _SemanticBadge({required this.label, required this.palette});
-
-  final String label;
-  final _SemanticPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: palette.background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: palette.border),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: palette.foreground,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
-
-class _SemanticPalette {
-  const _SemanticPalette({
-    required this.background,
-    required this.foreground,
-    required this.border,
-  });
-
-  final Color background;
-  final Color foreground;
-  final Color border;
 }
