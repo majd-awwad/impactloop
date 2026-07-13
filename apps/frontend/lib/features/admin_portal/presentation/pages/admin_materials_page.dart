@@ -1903,6 +1903,10 @@ class _MaterialDetailDialog extends StatelessWidget {
                   if (onUnavailable != null)
                     OutlinedButton(
                       onPressed: onUnavailable,
+                      style: AppStatusButtonStyle.outlined(
+                        context,
+                        AppStatusTone.danger,
+                      ),
                       child: const Text('Mark unavailable'),
                     ),
                   if (onRestore != null)
