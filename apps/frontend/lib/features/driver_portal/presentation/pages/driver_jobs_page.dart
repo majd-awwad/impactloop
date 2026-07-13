@@ -8,6 +8,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
@@ -891,7 +892,7 @@ class _AvailableJobsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _StatePanel(
+    return AppEmptyStateCard(
       icon: Icons.local_shipping_outlined,
       title: copy.title,
       subtitle: copy.subtitle,

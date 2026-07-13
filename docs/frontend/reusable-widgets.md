@@ -50,6 +50,7 @@ New reusable UI should prefer `Theme.of(context).textTheme`, `Theme.of(context).
 | `AppInlineError` | `app_inline_error.dart` | Inline body-small error text using `Theme.of(context).colorScheme.error`. |
 | `AppStatusBadge` / `AppStatusTone` / `AppStatusStyle` / `AppStatusButtonStyle` | `app_status_badge.dart` | Theme-aware semantic status presentation and action styles for primary, success, warning, danger, info, and neutral states. |
 | `AppSectionCard` | `app_section_card.dart` | Theme-aware, content-agnostic section surface with optional semantic tone and emphasis. |
+| `AppEmptyStateCard` | `app_empty_state_card.dart` | Theme-aware empty/unavailable state surface with an icon, title, supporting copy, optional semantic tone, and display-only actions. |
 | `showErrorSnackBar` | `app_feedback.dart` | Error snackbar using normalized API-friendly message text. |
 | `showInfoSnackBar` | `app_feedback.dart` | Informational snackbar. |
 | `UserAvatar` | `user_avatar.dart` | Circular user avatar from `profileImageUrl` with `ApiConfig.resolveMediaUrl`; falls back to display-name initial on empty URL or image load error. |

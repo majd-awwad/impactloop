@@ -10,6 +10,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
@@ -1603,42 +1604,20 @@ class _HubStatePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = LearningUiPalette.of(context);
-
     return Center(
       child: Padding(
         padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 40, color: palette.textSecondary),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                title.resolve(context),
-                style: AppTextStyles.title(
-                  context,
-                ).copyWith(color: palette.textPrimary),
-                textAlign: TextAlign.center,
+        child: AppEmptyStateCard(
+          icon: icon,
+          title: title.resolve(context),
+          subtitle: subtitle.resolve(context),
+          actions: [
+            if (actionLabel != null && onAction != null)
+              OutlinedButton(
+                onPressed: onAction,
+                child: Text(actionLabel!.resolve(context)),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                subtitle.resolve(context),
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: palette.textSecondary),
-                textAlign: TextAlign.center,
-              ),
-              if (actionLabel != null && onAction != null) ...[
-                const SizedBox(height: AppSpacing.lg),
-                OutlinedButton(
-                  onPressed: onAction,
-                  child: Text(actionLabel!.resolve(context)),
-                ),
-              ],
-            ],
-          ),
+          ],
         ),
       ),
     );

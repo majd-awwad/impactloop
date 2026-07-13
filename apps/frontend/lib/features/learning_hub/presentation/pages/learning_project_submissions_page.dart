@@ -9,6 +9,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
+import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_area.dart';
@@ -1315,36 +1316,16 @@ class _StatePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = LearningUiPalette.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 42, color: palette.textSecondary),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.title(
-                  context,
-                ).copyWith(color: palette.textPrimary),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: palette.textSecondary),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              FilledButton(onPressed: onAction, child: Text(actionLabel)),
-            ],
-          ),
+        child: AppEmptyStateCard(
+          icon: icon,
+          title: title,
+          subtitle: subtitle,
+          actions: [
+            FilledButton(onPressed: onAction, child: Text(actionLabel)),
+          ],
         ),
       ),
     );
