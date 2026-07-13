@@ -7,6 +7,7 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../materials/data/models/category.dart';
 import '../../domain/models/learning_project.dart';
 import '../../domain/models/learning_project_draft_component.dart';
@@ -55,6 +56,7 @@ class LearningProjectComponentEditor extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         OutlinedButton.icon(
           onPressed: onAdd,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary),
           icon: const Icon(Icons.add_rounded),
           label: Text(
             const LocalizedText(
