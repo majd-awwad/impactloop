@@ -4,6 +4,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/models/localized_text.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../materials/data/models/category.dart';
@@ -217,8 +218,12 @@ class MaterialsDiscoveryView extends StatelessWidget {
             if (hasMore) ...[
               const SizedBox(height: AppSpacing.lg),
               Center(
-                child: FilledButton.icon(
+                child: OutlinedButton.icon(
                   onPressed: isLoadingMore ? null : onLoadMore,
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.neutral,
+                  ),
                   icon: isLoadingMore
                       ? const SizedBox(
                           width: 18,
@@ -610,6 +615,10 @@ class _RefetchErrorBanner extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             TextButton(
               onPressed: onRetry,
+              style: AppStatusButtonStyle.text(
+                context,
+                AppStatusTone.primary,
+              ),
               child: Text(
                 const LocalizedText(
                   en: 'Retry',

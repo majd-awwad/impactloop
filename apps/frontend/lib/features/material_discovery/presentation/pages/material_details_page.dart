@@ -226,6 +226,8 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
                 ar: 'العودة إلى المواد',
               ),
               primaryActionIcon: Icons.arrow_back_rounded,
+              primaryActionTone: AppStatusTone.neutral,
+              primaryActionProminent: false,
               onPrimaryAction: () => context.go('/materials'),
             ),
           );
@@ -668,6 +670,8 @@ class _MaterialDetailsStatePanel extends StatelessWidget {
     required this.onPrimaryAction,
     this.secondaryActionLabel,
     this.onSecondaryAction,
+    this.primaryActionTone = AppStatusTone.primary,
+    this.primaryActionProminent = true,
   });
 
   final IconData icon;
@@ -678,6 +682,8 @@ class _MaterialDetailsStatePanel extends StatelessWidget {
   final VoidCallback onPrimaryAction;
   final LocalizedText? secondaryActionLabel;
   final VoidCallback? onSecondaryAction;
+  final AppStatusTone primaryActionTone;
+  final bool primaryActionProminent;
 
   @override
   Widget build(BuildContext context) {
@@ -719,14 +725,27 @@ class _MaterialDetailsStatePanel extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
-              FilledButton.icon(
-                onPressed: onPrimaryAction,
-                icon: Icon(primaryActionIcon),
-                label: Text(primaryActionLabel.resolve(context)),
-              ),
+              if (primaryActionProminent)
+                FilledButton.icon(
+                  onPressed: onPrimaryAction,
+                  style: AppStatusButtonStyle.filled(context, primaryActionTone),
+                  icon: Icon(primaryActionIcon),
+                  label: Text(primaryActionLabel.resolve(context)),
+                )
+              else
+                OutlinedButton.icon(
+                  onPressed: onPrimaryAction,
+                  style: AppStatusButtonStyle.outlined(context, primaryActionTone),
+                  icon: Icon(primaryActionIcon),
+                  label: Text(primaryActionLabel.resolve(context)),
+                ),
               if (secondaryActionLabel != null && onSecondaryAction != null)
                 OutlinedButton(
                   onPressed: onSecondaryAction,
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.neutral,
+                  ),
                   child: Text(secondaryActionLabel!.resolve(context)),
                 ),
             ],
@@ -1362,6 +1381,10 @@ class _MaterialProjectHandoffPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           OutlinedButton.icon(
             onPressed: () => _openLearningHub(context),
+            style: AppStatusButtonStyle.outlined(
+              context,
+              AppStatusTone.neutral,
+            ),
             icon: const Icon(Icons.arrow_forward_rounded),
             label: Text(
               const LocalizedText(
@@ -1744,6 +1767,7 @@ class _PostReservationStatusCta extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           TextButton.icon(
             onPressed: () => context.go('/learner/reservations'),
+            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
             icon: const Icon(Icons.assignment_turned_in_outlined),
             label: const Text('View all reservations'),
           ),
@@ -1811,6 +1835,10 @@ class _LearnerReservationStateCard extends StatelessWidget {
             TextButton.icon(
               onPressed: () =>
                   context.push('/learner/deliveries/${activeDelivery.id}'),
+              style: AppStatusButtonStyle.text(
+                context,
+                AppStatusTone.neutral,
+              ),
               icon: const Icon(Icons.local_shipping_outlined),
               label: const Text('View delivery status'),
             )
@@ -1818,6 +1846,10 @@ class _LearnerReservationStateCard extends StatelessWidget {
             TextButton.icon(
               onPressed: () =>
                   context.push('/learner/reservations/${reservation.id}'),
+              style: AppStatusButtonStyle.text(
+                context,
+                AppStatusTone.neutral,
+              ),
               icon: const Icon(Icons.assignment_turned_in_outlined),
               label: Text(
                 reservation.isAccepted && deliveryAvailable
