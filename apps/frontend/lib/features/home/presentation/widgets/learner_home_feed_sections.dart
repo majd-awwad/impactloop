@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../domain/learner_home_models.dart';
 import '../learner_home_browse_routes.dart';
@@ -93,7 +94,14 @@ class _ProfilePromptBanner extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                TextButton(onPressed: onPressed, child: Text(actionLabel)),
+                TextButton(
+                  onPressed: onPressed,
+                  style: AppStatusButtonStyle.text(
+                    context,
+                    AppStatusTone.neutral,
+                  ),
+                  child: Text(actionLabel),
+                ),
               ],
             ),
           ),
