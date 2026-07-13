@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/account_status_presentation.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_people_api.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
@@ -89,19 +91,6 @@ String _suspensionReasonText(dynamic raw) {
     return 'Reason not recorded for this older suspension.';
   }
   return reason;
-}
-
-Color _statusColor(AdminPalette palette, String status) {
-  switch (status) {
-    case 'ACTIVE':
-      return palette.green;
-    case 'SUSPENDED':
-      return palette.amber;
-    case 'DISABLED':
-      return palette.red;
-    default:
-      return palette.textMuted;
-  }
 }
 
 const _peopleTabs = <(String, String)>[
@@ -638,7 +627,8 @@ class _PersonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    final statusColor = _statusColor(palette, item.accountStatus);
+    final statusTone = accountStatusTone(item.accountStatus);
+    final statusColor = AppStatusStyle.of(context, statusTone).foreground;
     final created = DateFormat.yMMMd().format(item.createdAt);
 
     return Container(
@@ -704,9 +694,9 @@ class _PersonCard extends StatelessWidget {
               spacing: 6,
               runSpacing: 6,
               children: [
-                _Badge(
+                AppStatusBadge(
                   label: _formatStatus(item.accountStatus),
-                  color: statusColor,
+                  tone: statusTone,
                 ),
                 if (item.verifiedStrikeCount > 0)
                   _Badge(
