@@ -685,6 +685,7 @@ class _ReservationCardActions extends ConsumerWidget {
       label: 'View material',
       onPressed: () => context.push('/materials/${reservation.material.id}'),
       desktopRail: desktopColumn,
+      tone: AppStatusTone.neutral,
     );
 
     final viewDelivery = _resolveDeliveryAction(
@@ -710,6 +711,7 @@ class _ReservationCardActions extends ConsumerWidget {
               reservation: reservation,
             ),
             desktopRail: desktopColumn,
+            tone: AppStatusTone.primary,
           )
         : null;
 
@@ -721,7 +723,7 @@ class _ReservationCardActions extends ConsumerWidget {
                 : () => _confirmCancel(context, ref),
             desktopRail: desktopColumn,
             loading: isCancelling,
-            danger: true,
+            tone: AppStatusTone.danger,
           )
         : null;
 
@@ -825,6 +827,7 @@ _ReservationActionButton? _resolveDeliveryAction({
     label: delivery?.canTrack == true ? 'Track delivery' : 'View delivery',
     onPressed: () => onNavigate(deliveryId),
     desktopRail: desktopColumn,
+    tone: AppStatusTone.info,
   );
 }
 
@@ -834,33 +837,31 @@ class _ReservationActionButton extends StatelessWidget {
     required this.onPressed,
     this.desktopRail = false,
     this.loading = false,
-    this.danger = false,
+    this.tone = AppStatusTone.neutral,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool desktopRail;
   final bool loading;
-  final bool danger;
+  final AppStatusTone tone;
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
+    final statusStyle = AppStatusStyle.of(context, tone);
 
     if (desktopRail) {
-      if (danger) {
+      if (tone == AppStatusTone.danger) {
         return SizedBox(
           height: 34,
           child: TextButton(
             onPressed: onPressed,
-            style: TextButton.styleFrom(
-              foregroundColor: colors.danger,
-              padding: EdgeInsets.zero,
-              minimumSize: Size.zero,
+            style: AppStatusButtonStyle.text(context, tone).copyWith(
+              padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+              minimumSize: const WidgetStatePropertyAll(Size.zero),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              textStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
+              textStyle: const WidgetStatePropertyAll(
+                TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
               ),
             ),
             child: loading
@@ -869,7 +870,7 @@ class _ReservationActionButton extends StatelessWidget {
                     height: 14,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: colors.danger,
+                      color: statusStyle.foreground,
                     ),
                   )
                 : Text(label),
@@ -882,13 +883,12 @@ class _ReservationActionButton extends StatelessWidget {
         width: double.infinity,
         child: OutlinedButton(
           onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: colors.success,
-            side: BorderSide(color: colors.success.withValues(alpha: 0.45)),
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
-            textStyle: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+          style: AppStatusButtonStyle.outlined(context, tone).copyWith(
+            padding: const WidgetStatePropertyAll(
+              EdgeInsetsDirectional.symmetric(horizontal: 8),
+            ),
+            textStyle: const WidgetStatePropertyAll(
+              TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
           child: Text(label),
@@ -896,41 +896,26 @@ class _ReservationActionButton extends StatelessWidget {
       );
     }
 
-    if (danger) {
-      return OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: colors.danger,
-          side: BorderSide(color: colors.danger.withValues(alpha: 0.4)),
-          padding: const EdgeInsetsDirectional.symmetric(
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: AppStatusButtonStyle.outlined(context, tone).copyWith(
+        padding: const WidgetStatePropertyAll(
+          EdgeInsetsDirectional.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,
           ),
         ),
-        child: loading
-            ? SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: colors.danger,
-                ),
-              )
-            : Text(label),
-      );
-    }
-
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: colors.success,
-        side: BorderSide(color: colors.success.withValues(alpha: 0.45)),
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
       ),
-      child: Text(label),
+      child: loading
+          ? SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: statusStyle.foreground,
+              ),
+            )
+          : Text(label),
     );
   }
 }
@@ -974,27 +959,27 @@ class _CancelReservationDialogState extends State<_CancelReservationDialog> {
 
     final keepButton = OutlinedButton(
       onPressed: _isSubmitting ? null : widget.onKeep,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 44),
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.lg,
+      style: AppStatusButtonStyle.outlined(
+        context,
+        AppStatusTone.neutral,
+      ).copyWith(
+        minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsetsDirectional.symmetric(horizontal: AppSpacing.lg),
         ),
-        side: BorderSide(color: palette.borderStrong),
-        foregroundColor: palette.textSecondary,
       ),
       child: const Text('Keep request'),
     );
 
     final cancelButton = FilledButton(
       onPressed: _isSubmitting ? null : _handleCancel,
-      style: FilledButton.styleFrom(
-        backgroundColor: colors.danger,
-        foregroundColor: colors.textOnPrimary,
-        minimumSize: const Size(0, 44),
+      style: AppStatusButtonStyle.filled(
+        context,
+        AppStatusTone.danger,
         padding: const EdgeInsetsDirectional.symmetric(
           horizontal: AppSpacing.md,
         ),
-      ),
+      ).copyWith(minimumSize: const WidgetStatePropertyAll(Size(0, 44))),
       child: _isSubmitting
           ? SizedBox(
               width: 18,
@@ -1295,6 +1280,10 @@ class _LearnerRequestRescheduleButtonState
                     note = rawNote.isEmpty ? null : rawNote;
                     Navigator.of(dialogContext).pop(true);
                   },
+                  style: AppStatusButtonStyle.filled(
+                    dialogContext,
+                    AppStatusTone.warning,
+                  ),
                   child: const Text('Send request'),
                 ),
               ],
@@ -1351,6 +1340,10 @@ class _LearnerRequestRescheduleButtonState
       alignment: Alignment.centerLeft,
       child: OutlinedButton(
         onPressed: _submitting ? null : _submit,
+        style: AppStatusButtonStyle.outlined(
+          context,
+          AppStatusTone.warning,
+        ),
         child: _submitting
             ? const SizedBox(
                 width: 18,
@@ -1439,6 +1432,10 @@ class _LearnerReportSupplierButtonState
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.danger,
+              ),
               child: const Text('Submit report'),
             ),
           ],
@@ -1482,6 +1479,10 @@ class _LearnerReportSupplierButtonState
       alignment: Alignment.centerLeft,
       child: OutlinedButton(
         onPressed: _submitting ? null : _submit,
+        style: AppStatusButtonStyle.outlined(
+          context,
+          AppStatusTone.danger,
+        ),
         child: _submitting
             ? const SizedBox(
                 width: 18,
@@ -1540,6 +1541,10 @@ class _LearnerReportNoDriverButtonState
               if (noteController.text.trim().isEmpty) return;
               Navigator.of(context).pop(true);
             },
+            style: AppStatusButtonStyle.filled(
+              context,
+              AppStatusTone.danger,
+            ),
             child: const Text('Submit report'),
           ),
         ],
@@ -1581,6 +1586,10 @@ class _LearnerReportNoDriverButtonState
       alignment: Alignment.centerLeft,
       child: OutlinedButton(
         onPressed: _submitting ? null : _submit,
+        style: AppStatusButtonStyle.outlined(
+          context,
+          AppStatusTone.danger,
+        ),
         child: _submitting
             ? const SizedBox(
                 width: 18,

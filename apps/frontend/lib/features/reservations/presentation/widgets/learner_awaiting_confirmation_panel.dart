@@ -7,6 +7,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../material_discovery/presentation/widgets/preferred_window_input.dart';
@@ -184,6 +185,10 @@ class _LearnerAwaitingConfirmationPanelState
               children: [
                 FilledButton(
                   onPressed: _isSubmitting ? null : _acceptProposedPickup,
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    AppStatusTone.success,
+                  ),
                   child: _isSubmitting
                       ? const SizedBox(
                           width: 18,
@@ -194,11 +199,9 @@ class _LearnerAwaitingConfirmationPanelState
                 ),
                 OutlinedButton(
                   onPressed: _isSubmitting ? null : _cancelReservation,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: colors.danger,
-                    side: BorderSide(
-                      color: colors.danger.withValues(alpha: 0.4),
-                    ),
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.danger,
                   ),
                   child: const Text('Cancel reservation'),
                 ),
@@ -291,6 +294,10 @@ class _LearnerAwaitingConfirmationPanelState
               children: [
                 FilledButton(
                   onPressed: _isSubmitting ? null : _submitDeliveryWindow,
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    AppStatusTone.primary,
+                  ),
                   child: _isSubmitting
                       ? const SizedBox(
                           width: 18,
@@ -301,11 +308,9 @@ class _LearnerAwaitingConfirmationPanelState
                 ),
                 OutlinedButton(
                   onPressed: _isSubmitting ? null : _cancelReservation,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: colors.danger,
-                    side: BorderSide(
-                      color: colors.danger.withValues(alpha: 0.4),
-                    ),
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.danger,
                   ),
                   child: const Text('Cancel reservation'),
                 ),
