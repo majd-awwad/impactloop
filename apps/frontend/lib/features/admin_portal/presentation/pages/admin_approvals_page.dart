@@ -1398,7 +1398,7 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
     final controller = TextEditingController(text: widget.item.requestedName);
     final result = await showDialog<String?>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Approve category request'),
         content: TextField(
           controller: controller,
@@ -1407,17 +1407,13 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
             border: OutlineInputBorder(),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
+        footer: AppDialogFooter.form(
+          primaryAction: FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
             style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
             child: const Text('Approve'),
           ),
-        ],
+        ),
       ),
     );
     controller.dispose();
@@ -1468,7 +1464,7 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Reject category request'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1496,17 +1492,17 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
             ),
           ],
         ),
-        actions: [
-          TextButton(
+        footer: AppDialogFooter.decision(
+          secondaryAction: TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
-          FilledButton(
+          primaryAction: FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
             child: const Text('Reject'),
           ),
-        ],
+        ),
       ),
     );
 
@@ -1581,77 +1577,75 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
         ? 'No suggested existing category'
         : item.similarCategories.join(', ');
 
-    return AlertDialog(
+    return AppDialogShell(
       title: const Text('Category request'),
+      maxWidth: 660,
+      closeEnabled: !_submitting,
       content: SizedBox(
         width: 620,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.requestedName,
-                style: AdminTypography.pageTitle(palette),
-              ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(item.requestedName, style: AdminTypography.pageTitle(palette)),
+            const SizedBox(height: 8),
+            Text(
+              'Status: ${item.status}',
+              style: AdminTypography.pageSubtitle(palette),
+            ),
+            const SizedBox(height: 12),
+            _dialogKv('Supplier', supplierLabel),
+            _dialogKv('Material', item.materialTitle ?? '—'),
+            _dialogKv('Description', item.materialDescription ?? '—'),
+            _dialogKv(
+              'Quantity',
+              item.quantity == null
+                  ? '—'
+                  : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'
+                        .trim(),
+            ),
+            _dialogKv('Condition', _formatCondition(item.condition)),
+            _dialogKv('Location', item.locationLabel ?? '—'),
+            _dialogKv('Reason', item.categoryRequestReason ?? '—'),
+            _dialogKv('Similar categories', similarHint),
+            if (item.adminNote?.trim().isNotEmpty == true) ...[
               const SizedBox(height: 8),
-              Text(
-                'Status: ${item.status}',
-                style: AdminTypography.pageSubtitle(palette),
-              ),
-              const SizedBox(height: 12),
-              _dialogKv('Supplier', supplierLabel),
-              _dialogKv('Material', item.materialTitle ?? '—'),
-              _dialogKv('Description', item.materialDescription ?? '—'),
-              _dialogKv(
-                'Quantity',
-                item.quantity == null
-                    ? '—'
-                    : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'
-                          .trim(),
-              ),
-              _dialogKv('Condition', _formatCondition(item.condition)),
-              _dialogKv('Location', item.locationLabel ?? '—'),
-              _dialogKv('Reason', item.categoryRequestReason ?? '—'),
-              _dialogKv('Similar categories', similarHint),
-              if (item.adminNote?.trim().isNotEmpty == true) ...[
-                const SizedBox(height: 8),
-                Text('Admin note', style: AdminTypography.kpiHelper(palette)),
-                const SizedBox(height: 4),
-                Text(item.adminNote!.trim()),
-              ],
+              Text('Admin note', style: AdminTypography.kpiHelper(palette)),
+              const SizedBox(height: 4),
+              Text(item.adminNote!.trim()),
             ],
-          ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Close'),
-        ),
-        TextButton(
-          onPressed: _submitting ? null : _reject,
-          style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
-          child: const Text('Reject'),
-        ),
-        FilledButton(
-          onPressed: (_submitting || item.status.toUpperCase() != 'PENDING')
-              ? null
-              : _approve,
-          style: AppStatusButtonStyle.filled(
-            context,
-            AppStatusTone.success,
-            visualDensity: VisualDensity.compact,
+      footer: Wrap(
+        alignment: WrapAlignment.end,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          TextButton(
+            onPressed: _submitting ? null : _reject,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
+            child: const Text('Reject'),
           ),
-          child: _submitting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Approve'),
-        ),
-      ],
+          FilledButton(
+            onPressed: (_submitting || item.status.toUpperCase() != 'PENDING')
+                ? null
+                : _approve,
+            style: AppStatusButtonStyle.filled(
+              context,
+              AppStatusTone.success,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: _submitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Approve'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1730,7 +1724,7 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Reject price request'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1756,17 +1750,17 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
             ),
           ],
         ),
-        actions: [
-          TextButton(
+        footer: AppDialogFooter.decision(
+          secondaryAction: TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
-          FilledButton(
+          primaryAction: FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
             child: const Text('Reject'),
           ),
-        ],
+        ),
       ),
     );
 
@@ -1827,8 +1821,10 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
     final palette = context.adminPalette;
     final item = widget.item;
 
-    return AlertDialog(
+    return AppDialogShell(
       title: const Text('Price request'),
+      maxWidth: 600,
+      closeEnabled: !_submitting,
       content: SizedBox(
         width: 560,
         child: Column(
@@ -1879,34 +1875,35 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Close'),
-        ),
-        TextButton(
-          onPressed: _submitting ? null : _reject,
-          style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
-          child: const Text('Reject'),
-        ),
-        FilledButton(
-          onPressed: (_submitting || item.status.toUpperCase() != 'PENDING')
-              ? null
-              : _approve,
-          style: AppStatusButtonStyle.filled(
-            context,
-            AppStatusTone.success,
-            visualDensity: VisualDensity.compact,
+      footer: Wrap(
+        alignment: WrapAlignment.end,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          TextButton(
+            onPressed: _submitting ? null : _reject,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
+            child: const Text('Reject'),
           ),
-          child: _submitting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Approve'),
-        ),
-      ],
+          FilledButton(
+            onPressed: (_submitting || item.status.toUpperCase() != 'PENDING')
+                ? null
+                : _approve,
+            style: AppStatusButtonStyle.filled(
+              context,
+              AppStatusTone.success,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: _submitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Approve'),
+          ),
+        ],
+      ),
     );
   }
 
