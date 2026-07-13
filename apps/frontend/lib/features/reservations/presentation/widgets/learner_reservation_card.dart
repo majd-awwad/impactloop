@@ -49,6 +49,7 @@ class LearnerReservationCard extends ConsumerWidget {
     final statusStyle = LearnerReservationStatusStyle.forStatus(
       context,
       reservation.status,
+      incidentReviewStatus: reservation.incidentReviewStatus,
     );
     final compact = MediaQuery.sizeOf(context).width < 720;
     final userId = ref.watch(authControllerProvider).user?.id ?? '';

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../shared/widgets/app_status_badge.dart';
+import '../../../shared/widgets/incident_report_status_presentation.dart';
 import '../../deliveries/presentation/delivery_status_presentation.dart';
 import '../data/models/learner_reservation.dart';
 import '../data/models/reservation_preferred_window.dart';
@@ -102,9 +103,13 @@ class LearnerReservationStatusStyle {
 
   static LearnerReservationStatusStyle forStatus(
     BuildContext context,
-    String status,
-  ) {
-    final tone = learnerReservationStatusTone(status);
+    String status, {
+    String? incidentReviewStatus,
+  }) {
+    final tone = learnerReservationStatusTone(
+      status,
+      incidentReviewStatus: incidentReviewStatus,
+    );
     final style = AppStatusStyle.of(context, tone);
 
     return LearnerReservationStatusStyle(
@@ -115,12 +120,19 @@ class LearnerReservationStatusStyle {
 }
 
 /// Maps booking lifecycle states to the app-wide semantic status contract.
-AppStatusTone learnerReservationStatusTone(String status) {
+AppStatusTone learnerReservationStatusTone(
+  String status, {
+  String? incidentReviewStatus,
+}) {
   switch (status) {
     case 'PENDING':
     case 'AWAITING_LEARNER_CONFIRMATION':
     case 'AWAITING_SUPPLIER_CONFIRMATION':
+      return AppStatusTone.warning;
     case 'AWAITING_RESOLUTION':
+      if (incidentReviewStatus?.trim().isNotEmpty == true) {
+        return incidentReportStatusTone(incidentReviewStatus);
+      }
       return AppStatusTone.warning;
     case 'ACCEPTED':
     case 'COMPLETED':

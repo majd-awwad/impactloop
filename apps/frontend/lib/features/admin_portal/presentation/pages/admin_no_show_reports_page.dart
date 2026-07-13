@@ -5,6 +5,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/incident_report_status_presentation.dart';
 import '../../data/admin_no_show_reports_api.dart';
 import '../theme/admin_decoration_set.dart';
 import '../widgets/admin_empty_state.dart';
@@ -560,9 +561,9 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
             ),
           ],
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Status: ${monitoringStatusLabel(report.status)}',
-            style: AdminTypography.pageSubtitle(palette),
+          AppStatusBadge(
+            label: adminIncidentReportStatusLabel(report.status),
+            tone: incidentReportStatusTone(report.status),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
