@@ -757,6 +757,10 @@ class _FiltersPanelState extends State<_FiltersPanel> {
               alignment: AlignmentDirectional.centerStart,
               child: OutlinedButton.icon(
                 onPressed: widget.onReset,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 icon: const Icon(Icons.filter_alt_off, size: 18),
                 label: const Text('Reset'),
               ),
@@ -1439,6 +1443,10 @@ class _ReservationDetailBody extends StatelessWidget {
                     context.push('/admin/no-show-reports');
                   }
                 },
+                style: AppStatusButtonStyle.text(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 icon: const Icon(Icons.open_in_new_rounded, size: 18),
                 label: const Text('Open report'),
               ),
@@ -1494,6 +1502,10 @@ class _ReservationDetailBody extends StatelessWidget {
                     context.push('/admin/deliveries');
                   }
                 },
+                style: AppStatusButtonStyle.text(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 icon: const Icon(Icons.local_shipping_outlined, size: 18),
                 label: const Text('View delivery details'),
               ),
@@ -1539,9 +1551,17 @@ class _PaginationRow extends StatelessWidget {
 
     return Row(
       children: [
-        OutlinedButton(onPressed: onPrevious, child: const Text('Previous')),
+        OutlinedButton(
+          onPressed: onPrevious,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+          child: const Text('Previous'),
+        ),
         const SizedBox(width: 8),
-        OutlinedButton(onPressed: onNext, child: const Text('Next')),
+        OutlinedButton(
+          onPressed: onNext,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+          child: const Text('Next'),
+        ),
         const SizedBox(width: 12),
         Text(
           'Page $page of $totalPages · $total total',

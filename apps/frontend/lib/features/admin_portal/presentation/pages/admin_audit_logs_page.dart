@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_audit_logs_api.dart';
 import '../../data/models/admin_audit_logs_models.dart';
 import '../theme/admin_decoration_set.dart';
@@ -848,6 +849,10 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                   ),
                   OutlinedButton.icon(
                     onPressed: widget.onReset,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.neutral,
+                    ),
                     icon: const Icon(Icons.filter_alt_off, size: 18),
                     label: const Text('Reset'),
                   ),
@@ -859,6 +864,10 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                 alignment: AlignmentDirectional.centerStart,
                 child: OutlinedButton.icon(
                   onPressed: widget.onReset,
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.neutral,
+                  ),
                   icon: const Icon(Icons.filter_alt_off, size: 18),
                   label: const Text('Reset'),
                 ),
@@ -1044,6 +1053,10 @@ class _AuditLogRow extends StatelessWidget {
             alignment: AlignmentDirectional.centerEnd,
             child: TextButton(
               onPressed: onDetails,
+              style: AppStatusButtonStyle.text(
+                context,
+                AppStatusTone.neutral,
+              ),
               child: const Text('Details'),
             ),
           ),
@@ -1190,9 +1203,17 @@ class _PaginationRow extends StatelessWidget {
 
     return Row(
       children: [
-        OutlinedButton(onPressed: onPrevious, child: const Text('Previous')),
+        OutlinedButton(
+          onPressed: onPrevious,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+          child: const Text('Previous'),
+        ),
         const SizedBox(width: 8),
-        OutlinedButton(onPressed: onNext, child: const Text('Next')),
+        OutlinedButton(
+          onPressed: onNext,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+          child: const Text('Next'),
+        ),
         const SizedBox(width: 12),
         Text(
           'Page $page of $totalPages · $total total',
@@ -1232,7 +1253,14 @@ class _ErrorPanel extends StatelessWidget {
           Text(message, style: AdminTypography.pageSubtitle(palette)),
           if (onRetry != null) ...[
             const SizedBox(height: 12),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
+            FilledButton(
+              onPressed: onRetry,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              child: const Text('Retry'),
+            ),
           ],
         ],
       ),
