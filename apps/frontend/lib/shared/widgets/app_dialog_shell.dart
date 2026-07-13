@@ -13,9 +13,10 @@ class AppDialogShell extends StatelessWidget {
   const AppDialogShell({
     super.key,
     required this.title,
-    required this.child,
+    required this.content,
     this.footer,
     this.onClose,
+    this.closeEnabled = true,
     this.maxWidth = 560,
     this.maxHeightFactor = 0.9,
     this.contentPadding = const EdgeInsetsDirectional.fromSTEB(
@@ -27,9 +28,10 @@ class AppDialogShell extends StatelessWidget {
   });
 
   final Widget title;
-  final Widget child;
+  final Widget content;
   final Widget? footer;
   final VoidCallback? onClose;
+  final bool closeEnabled;
   final double maxWidth;
   final double maxHeightFactor;
   final EdgeInsetsGeometry contentPadding;
@@ -43,7 +45,7 @@ class AppDialogShell extends StatelessWidget {
       backgroundColor: colors.panelSurface,
       elevation: 8,
       shadowColor: colors.shadow,
-      insetPadding: const EdgeInsetsDirectional.symmetric(
+      insetPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.lg,
       ),
@@ -77,14 +79,15 @@ class AppDialogShell extends StatelessWidget {
                   Align(
                     alignment: AlignmentDirectional.topEnd,
                     child: AppCloseButton(
-                      onPressed:
-                          onClose ?? () => Navigator.of(context).maybePop(),
+                      onPressed: closeEnabled
+                          ? (onClose ?? () => Navigator.of(context).maybePop())
+                          : null,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
-              Flexible(child: SingleChildScrollView(child: child)),
+              Flexible(child: SingleChildScrollView(child: content)),
               if (footer != null) ...[
                 const SizedBox(height: AppSpacing.md),
                 Divider(color: colors.borderSubtle),

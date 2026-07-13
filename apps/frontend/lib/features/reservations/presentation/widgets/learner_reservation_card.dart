@@ -7,6 +7,8 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
@@ -290,8 +292,8 @@ class _ReservationStatusRow extends StatelessWidget {
     final deliveryTone = chipLabels.secondary != null && delivery != null
         ? deliveryStatusAppTone(delivery!.status)
         : chipLabels.secondary != null &&
-                reservation.activeDelivery?.status != null
-            ? deliveryStatusAppTone(reservation.activeDelivery!.status)
+              reservation.activeDelivery?.status != null
+        ? deliveryStatusAppTone(reservation.activeDelivery!.status)
         : null;
 
     return Wrap(
@@ -299,10 +301,7 @@ class _ReservationStatusRow extends StatelessWidget {
       runSpacing: AppSpacing.xs,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        AppStatusBadge(
-          label: chipLabels.primary,
-          tone: statusStyle.tone,
-        ),
+        AppStatusBadge(label: chipLabels.primary, tone: statusStyle.tone),
         if (chipLabels.secondary case final secondaryLabel?)
           AppStatusBadge(
             label: secondaryLabel,
@@ -958,15 +957,13 @@ class _CancelReservationDialogState extends State<_CancelReservationDialog> {
 
     final keepButton = OutlinedButton(
       onPressed: _isSubmitting ? null : widget.onKeep,
-      style: AppStatusButtonStyle.outlined(
-        context,
-        AppStatusTone.neutral,
-      ).copyWith(
-        minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
-        padding: const WidgetStatePropertyAll(
-          EdgeInsetsDirectional.symmetric(horizontal: AppSpacing.lg),
-        ),
-      ),
+      style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral)
+          .copyWith(
+            minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+            padding: const WidgetStatePropertyAll(
+              EdgeInsetsDirectional.symmetric(horizontal: AppSpacing.lg),
+            ),
+          ),
       child: const Text('Keep request'),
     );
 
@@ -1194,54 +1191,49 @@ class _LearnerRequestRescheduleButtonState
               });
             }
 
-            return AlertDialog(
+            return AppDialogShell(
               title: const Text('Request reschedule'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      controller: reasonController,
-                      maxLength: 500,
-                      decoration: const InputDecoration(
-                        labelText: 'Reason (required)',
-                      ),
+              onClose: () => Navigator.of(dialogContext).pop(false),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: reasonController,
+                    maxLength: 500,
+                    decoration: const InputDecoration(
+                      labelText: 'Reason (required)',
                     ),
-                    TextField(
-                      controller: noteController,
-                      maxLength: 1000,
-                      decoration: const InputDecoration(
-                        labelText: 'Note (optional)',
-                      ),
+                  ),
+                  TextField(
+                    controller: noteController,
+                    maxLength: 1000,
+                    decoration: const InputDecoration(
+                      labelText: 'Note (optional)',
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    OutlinedButton(
-                      onPressed: pickStart,
-                      child: Text(
-                        start == null
-                            ? 'Pick proposed start'
-                            : 'Start: ${start!.toLocal()}',
-                      ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton(
+                    onPressed: pickStart,
+                    child: Text(
+                      start == null
+                          ? 'Pick proposed start'
+                          : 'Start: ${start!.toLocal()}',
                     ),
-                    const SizedBox(height: AppSpacing.xs),
-                    OutlinedButton(
-                      onPressed: pickEnd,
-                      child: Text(
-                        end == null
-                            ? 'Pick proposed end'
-                            : 'End: ${end!.toLocal()}',
-                      ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  OutlinedButton(
+                    onPressed: pickEnd,
+                    child: Text(
+                      end == null
+                          ? 'Pick proposed end'
+                          : 'End: ${end!.toLocal()}',
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
+              footer: AppDialogFooter.form(
+                primaryAction: FilledButton(
                   onPressed: () {
                     if (reasonController.text.trim().isEmpty ||
                         start == null ||
@@ -1265,7 +1257,9 @@ class _LearnerRequestRescheduleButtonState
                       return;
                     }
 
-                    if (end!.isBefore(DateTime.now().add(minRemainingPickupWindow))) {
+                    if (end!.isBefore(
+                      DateTime.now().add(minRemainingPickupWindow),
+                    )) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
                         const SnackBar(
                           content: Text(learnerPickupWindowTooCloseMessage),
@@ -1285,7 +1279,7 @@ class _LearnerRequestRescheduleButtonState
                   ),
                   child: const Text('Send request'),
                 ),
-              ],
+              ),
             );
           },
         );
@@ -1339,10 +1333,7 @@ class _LearnerRequestRescheduleButtonState
       alignment: Alignment.centerLeft,
       child: OutlinedButton(
         onPressed: _submitting ? null : _submit,
-        style: AppStatusButtonStyle.outlined(
-          context,
-          AppStatusTone.warning,
-        ),
+        style: AppStatusButtonStyle.outlined(context, AppStatusTone.warning),
         child: _submitting
             ? const SizedBox(
                 width: 18,
@@ -1383,61 +1374,53 @@ class _LearnerReportSupplierButtonState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setState) => AppDialogShell(
           title: const Text('Report supplier issue'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Report a supplier issue for admin review. The reservation will be closed pending review.',
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedReason,
-                  decoration: const InputDecoration(labelText: 'Reason'),
-                  items: _learnerSupplierReportReasons.entries
-                      .map(
-                        (entry) => DropdownMenuItem(
-                          value: entry.key,
-                          child: Text(entry.value),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => selectedReason = value);
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: noteController,
-                  maxLength: 1000,
-                  minLines: 3,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Note (optional)',
-                    hintText: 'Describe what happened',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: AppStatusButtonStyle.filled(
-                context,
-                AppStatusTone.danger,
+          onClose: () => Navigator.of(context).pop(false),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Report a supplier issue for admin review. The reservation will be closed pending review.',
               ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: selectedReason,
+                decoration: const InputDecoration(labelText: 'Reason'),
+                items: _learnerSupplierReportReasons.entries
+                    .map(
+                      (entry) => DropdownMenuItem(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => selectedReason = value);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                maxLength: 1000,
+                minLines: 3,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  labelText: 'Note (optional)',
+                  hintText: 'Describe what happened',
+                ),
+              ),
+            ],
+          ),
+          footer: AppDialogFooter.form(
+            primaryAction: FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
               child: const Text('Submit report'),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1478,10 +1461,7 @@ class _LearnerReportSupplierButtonState
       alignment: Alignment.centerLeft,
       child: OutlinedButton(
         onPressed: _submitting ? null : _submit,
-        style: AppStatusButtonStyle.outlined(
-          context,
-          AppStatusTone.danger,
-        ),
+        style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
         child: _submitting
             ? const SizedBox(
                 width: 18,
@@ -1512,8 +1492,9 @@ class _LearnerReportNoDriverButtonState
     final noteController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Report no driver available'),
+        onClose: () => Navigator.of(context).pop(false),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1530,23 +1511,16 @@ class _LearnerReportNoDriverButtonState
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
+        footer: AppDialogFooter.form(
+          primaryAction: FilledButton(
             onPressed: () {
               if (noteController.text.trim().isEmpty) return;
               Navigator.of(context).pop(true);
             },
-            style: AppStatusButtonStyle.filled(
-              context,
-              AppStatusTone.danger,
-            ),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
             child: const Text('Submit report'),
           ),
-        ],
+        ),
       ),
     );
     final note = noteController.text.trim();
@@ -1585,10 +1559,7 @@ class _LearnerReportNoDriverButtonState
       alignment: Alignment.centerLeft,
       child: OutlinedButton(
         onPressed: _submitting ? null : _submit,
-        style: AppStatusButtonStyle.outlined(
-          context,
-          AppStatusTone.danger,
-        ),
+        style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
         child: _submitting
             ? const SizedBox(
                 width: 18,

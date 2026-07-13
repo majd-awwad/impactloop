@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import '../../app/theme/app_radius.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
+import 'app_dialog_footer.dart';
+import 'app_dialog_shell.dart';
 import 'app_status_badge.dart';
 import 'materials/materials_ui_palette.dart';
 
@@ -126,8 +128,9 @@ class _HandoverCodeInputDialogState extends State<HandoverCodeInputDialog> {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
 
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(widget.title),
+      onClose: () => Navigator.of(context).pop(),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -159,20 +162,13 @@ class _HandoverCodeInputDialogState extends State<HandoverCodeInputDialog> {
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
+      footer: AppDialogFooter.form(
+        primaryAction: FilledButton(
           onPressed: _submit,
-          style: AppStatusButtonStyle.filled(
-            context,
-            widget.confirmTone,
-          ),
+          style: AppStatusButtonStyle.filled(context, widget.confirmTone),
           child: Text(widget.confirmLabel),
         ),
-      ],
+      ),
     );
   }
 }
