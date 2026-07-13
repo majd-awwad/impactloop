@@ -43,6 +43,10 @@ Reservation is the booking layer. Learning Hub build checklist items can link re
 
 **Overall:** **Partial**. Core booking, scheduling, handover codes, cancel/reschedule, lazy expiry, quantity accounting, incident reporting, delivery handoff, terminal-state re-reservation from Material Detail, and saved dropoff addresses are implemented. Remaining gaps are true idempotency keys, complete reservation-lifecycle notification coverage, reservation-related reviews, automated legacy quantity cleanup, manual/E2E coverage, and QR polish.
 
+### Learner My Reservations filters
+
+`/learner/reservations` keeps a compact seven-filter set: **All**, **Active**, **Needs action**, **Pending**, **Accepted**, **Completed**, and **Closed**. **Active** includes every non-terminal reservation status. **Needs action** is limited to learner-confirmation and returned learner-follow-up signals, while **Pending** contains the supplier/system-response states `PENDING` and `AWAITING_SUPPLIER_CONFIRMATION`. **Closed** groups `CANCELLED`, `REJECTED`, `EXPIRED`, `NO_SHOW`, and `FULFILLMENT_FAILED`; it is deliberately not labelled “Cancelled” because it contains more than cancellations.
+
 ## Existing Related Files
 
 ### Backend

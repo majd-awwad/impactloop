@@ -14,7 +14,7 @@ enum LearnerReservationStatusFilter {
   pending,
   accepted,
   completed,
-  cancelled,
+  closed,
 }
 
 extension LearnerReservationStatusFilterX on LearnerReservationStatusFilter {
@@ -32,8 +32,8 @@ extension LearnerReservationStatusFilterX on LearnerReservationStatusFilter {
         return 'Accepted';
       case LearnerReservationStatusFilter.completed:
         return 'Completed';
-      case LearnerReservationStatusFilter.cancelled:
-        return 'Cancelled';
+      case LearnerReservationStatusFilter.closed:
+        return 'Closed';
     }
   }
 }
@@ -76,19 +76,22 @@ bool reservationMatchesStatusFilter(
       return reservation.isPending ||
           reservation.isAccepted ||
           reservation.isAwaitingConfirmation ||
+          reservation.isAwaitingSupplierConfirmation ||
           reservation.status == 'AWAITING_RESOLUTION';
     case LearnerReservationStatusFilter.needsAction:
       return learnerReservationNeedsAction(reservation);
     case LearnerReservationStatusFilter.pending:
-      return reservation.isPending;
+      return reservation.isPending || reservation.isAwaitingSupplierConfirmation;
     case LearnerReservationStatusFilter.accepted:
       return reservation.isAccepted;
     case LearnerReservationStatusFilter.completed:
       return reservation.isCompleted;
-    case LearnerReservationStatusFilter.cancelled:
+    case LearnerReservationStatusFilter.closed:
       return reservation.isCancelled ||
           reservation.isRejected ||
-          reservation.isExpired;
+          reservation.isExpired ||
+          reservation.status == 'NO_SHOW' ||
+          reservation.status == 'FULFILLMENT_FAILED';
   }
 }
 
