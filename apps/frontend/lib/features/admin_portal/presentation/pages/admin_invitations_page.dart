@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/invitation_status_presentation.dart';
 import '../../data/admin_invitations_providers.dart';
@@ -48,9 +50,9 @@ Future<void> _copyInvitationLink(
   try {
     final url = (directUrl != null && directUrl.trim().isNotEmpty)
         ? directUrl.trim()
-        : await ref.read(adminInvitationsRepositoryProvider).issueInvitationLink(
-              invitationId,
-            );
+        : await ref
+              .read(adminInvitationsRepositoryProvider)
+              .issueInvitationLink(invitationId);
 
     if (url.isEmpty) {
       messenger.showSnackBar(
@@ -70,7 +72,9 @@ Future<void> _copyInvitationLink(
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          error is ApiException ? error.message : 'Could not copy invitation link.',
+          error is ApiException
+              ? error.message
+              : 'Could not copy invitation link.',
         ),
       ),
     );
@@ -83,7 +87,8 @@ class AdminInvitationsPage extends ConsumerStatefulWidget {
   final String? initialStatus;
 
   @override
-  ConsumerState<AdminInvitationsPage> createState() => _AdminInvitationsPageState();
+  ConsumerState<AdminInvitationsPage> createState() =>
+      _AdminInvitationsPageState();
 }
 
 class _AdminInvitationsPageState extends ConsumerState<AdminInvitationsPage> {
@@ -99,7 +104,10 @@ class _AdminInvitationsPageState extends ConsumerState<AdminInvitationsPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(error.toString(), style: AdminTypography.pageSubtitle(palette)),
+            Text(
+              error.toString(),
+              style: AdminTypography.pageSubtitle(palette),
+            ),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: () => ref.invalidate(adminInvitationsProvider),
@@ -117,10 +125,7 @@ class _AdminInvitationsPageState extends ConsumerState<AdminInvitationsPage> {
 }
 
 class _InvitationsBody extends ConsumerStatefulWidget {
-  const _InvitationsBody({
-    required this.invitations,
-    this.initialStatus,
-  });
+  const _InvitationsBody({required this.invitations, this.initialStatus});
 
   final List<AdminInvitationItem> invitations;
   final String? initialStatus;
@@ -148,7 +153,9 @@ class _InvitationsBodyState extends ConsumerState<_InvitationsBody> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _applyInitialStatusIfNeeded(),
+    );
   }
 
   @override
@@ -156,7 +163,9 @@ class _InvitationsBodyState extends ConsumerState<_InvitationsBody> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialStatus != widget.initialStatus) {
       _appliedInitialStatus = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _applyInitialStatusIfNeeded(),
+      );
     }
   }
 
@@ -188,28 +197,30 @@ class _InvitationsBodyState extends ConsumerState<_InvitationsBody> {
   List<AdminInvitationItem> get _filteredInvitations {
     final query = _searchController.text.trim().toLowerCase();
 
-    return widget.invitations.where((item) {
-      if (query.isNotEmpty &&
-          !item.recipientEmail.toLowerCase().contains(query)) {
-        return false;
-      }
+    return widget.invitations
+        .where((item) {
+          if (query.isNotEmpty &&
+              !item.recipientEmail.toLowerCase().contains(query)) {
+            return false;
+          }
 
-      if (_roleFilter != 'ALL' && item.role != _roleFilter) {
-        return false;
-      }
+          if (_roleFilter != 'ALL' && item.role != _roleFilter) {
+            return false;
+          }
 
-      if (_statusFilter != 'ALL') {
-        if (_statusFilter == 'PENDING') {
-          if (!_matchesActiveFilter(item)) return false;
-        } else if (_statusFilter == 'ACCEPTED') {
-          if (item.status != 'USED') return false;
-        } else if (item.status != _statusFilter) {
-          return false;
-        }
-      }
+          if (_statusFilter != 'ALL') {
+            if (_statusFilter == 'PENDING') {
+              if (!_matchesActiveFilter(item)) return false;
+            } else if (_statusFilter == 'ACCEPTED') {
+              if (item.status != 'USED') return false;
+            } else if (item.status != _statusFilter) {
+              return false;
+            }
+          }
 
-      return true;
-    }).toList(growable: false);
+          return true;
+        })
+        .toList(growable: false);
   }
 
   Future<void> _openCreateDialog(BuildContext context) async {
@@ -531,10 +542,8 @@ class _InvitationsList extends ConsumerWidget {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: invitations.length,
-        separatorBuilder: (_, separatorIndex) => Divider(
-          height: 1,
-          color: palette.cardBorder,
-        ),
+        separatorBuilder: (_, separatorIndex) =>
+            Divider(height: 1, color: palette.cardBorder),
         itemBuilder: (context, index) {
           final item = invitations[index];
           final canAct = item.status != 'USED' && item.status != 'REVOKED';
@@ -605,18 +614,11 @@ class _InvitationsList extends ConsumerWidget {
                       TextButton(
                         onPressed: () => showDialog<void>(
                           context: context,
-                          builder: (context) => AlertDialog(
-                            title: Text(l.t(
-                              'Email error',
-                              'خطأ البريد الإلكتروني',
-                            )),
+                          builder: (context) => AppDialogShell(
+                            title: Text(
+                              l.t('Email error', 'خطأ البريد الإلكتروني'),
+                            ),
                             content: SelectableText(item.sendError!),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: Text(l.t('Close', 'إغلاق')),
-                              ),
-                            ],
                           ),
                         ),
                         style: AppStatusButtonStyle.text(
@@ -653,11 +655,7 @@ class _InvitationsList extends ConsumerWidget {
     );
   }
 
-  Future<void> _resend(
-    BuildContext context,
-    WidgetRef ref,
-    String id,
-  ) async {
+  Future<void> _resend(BuildContext context, WidgetRef ref, String id) async {
     final repository = ref.read(adminInvitationsRepositoryProvider);
     final messenger = ScaffoldMessenger.of(context);
 
@@ -689,11 +687,7 @@ class _InvitationsList extends ConsumerWidget {
     }
   }
 
-  Future<void> _revoke(
-    BuildContext context,
-    WidgetRef ref,
-    String id,
-  ) async {
+  Future<void> _revoke(BuildContext context, WidgetRef ref, String id) async {
     final repository = ref.read(adminInvitationsRepositoryProvider);
     final messenger = ScaffoldMessenger.of(context);
 
@@ -727,7 +721,10 @@ class _SummaryChip extends StatelessWidget {
     final palette = context.adminPalette;
 
     return Container(
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 14,
+        vertical: 10,
+      ),
       decoration: BoxDecoration(
         color: palette.cardBackground,
         borderRadius: BorderRadius.circular(14),
@@ -742,7 +739,10 @@ class _SummaryChip extends StatelessWidget {
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
-          Text('$count', style: AdminTypography.kpiValue(palette).copyWith(fontSize: 18)),
+          Text(
+            '$count',
+            style: AdminTypography.kpiValue(palette).copyWith(fontSize: 18),
+          ),
           const SizedBox(width: 6),
           Text(label, style: AdminTypography.kpiHelper(palette)),
         ],
@@ -760,10 +760,8 @@ class _StatusBadge extends StatelessWidget {
   final String status;
 
   @override
-  Widget build(BuildContext context) => AppStatusBadge(
-    label: status,
-    tone: invitationStatusTone(status),
-  );
+  Widget build(BuildContext context) =>
+      AppStatusBadge(label: status, tone: invitationStatusTone(status));
 }
 
 class _RoleBadge extends StatelessWidget {
@@ -776,17 +774,19 @@ class _RoleBadge extends StatelessWidget {
     final palette = context.adminPalette;
 
     return Container(
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
         color: palette.blue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         role,
-        style: AdminTypography.kpiHelper(palette).copyWith(
-          color: palette.blue,
-          fontWeight: FontWeight.w700,
-        ),
+        style: AdminTypography.kpiHelper(
+          palette,
+        ).copyWith(color: palette.blue, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -802,7 +802,8 @@ class _InvitationDetailDialog extends ConsumerStatefulWidget {
       _InvitationDetailDialogState();
 }
 
-class _InvitationDetailDialogState extends ConsumerState<_InvitationDetailDialog> {
+class _InvitationDetailDialogState
+    extends ConsumerState<_InvitationDetailDialog> {
   String? _invitationUrl;
   bool _loadingLink = false;
 
@@ -824,9 +825,9 @@ class _InvitationDetailDialogState extends ConsumerState<_InvitationDetailDialog
       });
       await Clipboard.setData(ClipboardData(text: url));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invitation link copied.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Invitation link copied.')));
     } catch (error) {
       if (!mounted) return;
       setState(() => _loadingLink = false);
@@ -849,83 +850,75 @@ class _InvitationDetailDialogState extends ConsumerState<_InvitationDetailDialog
     final item = widget.item;
     final createdBy = item.createdBy?.label;
 
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(l.t('Invitation details', 'تفاصيل الدعوة')),
+      maxWidth: 560,
       content: SizedBox(
         width: 520,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _DetailRow(l.t('Email', 'البريد'), item.recipientEmail),
-              _DetailRow(l.t('Role', 'الدور'), item.role),
-              _DetailRow(l.t('Status', 'الحالة'), item.status),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _DetailRow(l.t('Email', 'البريد'), item.recipientEmail),
+            _DetailRow(l.t('Role', 'الدور'), item.role),
+            _DetailRow(l.t('Status', 'الحالة'), item.status),
+            _DetailRow(
+              l.t('Created at', 'تاريخ الإنشاء'),
+              _formatDate(item.createdAt),
+            ),
+            _DetailRow(
+              l.t('Expires at', 'تاريخ الانتهاء'),
+              _formatDate(item.expiresAt),
+            ),
+            if (createdBy != null && createdBy.isNotEmpty)
+              _DetailRow(l.t('Created by', 'أنشأها'), createdBy),
+            if (item.acceptedAt != null)
               _DetailRow(
-                l.t('Created at', 'تاريخ الإنشاء'),
-                _formatDate(item.createdAt),
+                l.t('Accepted at', 'تاريخ القبول'),
+                _formatDate(item.acceptedAt),
               ),
+            if (item.revokedAt != null)
               _DetailRow(
-                l.t('Expires at', 'تاريخ الانتهاء'),
-                _formatDate(item.expiresAt),
+                l.t('Revoked at', 'تاريخ الإلغاء'),
+                _formatDate(item.revokedAt),
               ),
-              if (createdBy != null && createdBy.isNotEmpty)
-                _DetailRow(l.t('Created by', 'أنشأها'), createdBy),
-              if (item.acceptedAt != null)
-                _DetailRow(
-                  l.t('Accepted at', 'تاريخ القبول'),
-                  _formatDate(item.acceptedAt),
-                ),
-              if (item.revokedAt != null)
-                _DetailRow(
-                  l.t('Revoked at', 'تاريخ الإلغاء'),
-                  _formatDate(item.revokedAt),
-                ),
-              const SizedBox(height: 12),
-              if (item.isActivePending) ...[
-                if (_invitationUrl != null) ...[
-                  Text(
-                    l.t('Invitation link', 'رابط الدعوة'),
-                    style: AdminTypography.kpiLabel(palette),
-                  ),
-                  const SizedBox(height: 6),
-                  SelectableText(
-                    _invitationUrl!,
-                    style: AdminTypography.kpiHelper(palette),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                FilledButton.icon(
-                  onPressed: _loadingLink ? null : _loadAndCopyLink,
-                  icon: _loadingLink
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.link, size: 18),
-                  label: Text(l.t('Copy link', 'نسخ الرابط')),
-                ),
-              ] else
+            const SizedBox(height: 12),
+            if (item.isActivePending) ...[
+              if (_invitationUrl != null) ...[
                 Text(
-                  l.t(
-                    'This invitation is no longer active.',
-                    'هذه الدعوة لم تعد نشطة.',
-                  ),
-                  style: AdminTypography.kpiHelper(palette).copyWith(
-                    color: palette.amber,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  l.t('Invitation link', 'رابط الدعوة'),
+                  style: AdminTypography.kpiLabel(palette),
                 ),
-            ],
-          ),
+                const SizedBox(height: 6),
+                SelectableText(
+                  _invitationUrl!,
+                  style: AdminTypography.kpiHelper(palette),
+                ),
+                const SizedBox(height: 8),
+              ],
+              FilledButton.icon(
+                onPressed: _loadingLink ? null : _loadAndCopyLink,
+                icon: _loadingLink
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.link, size: 18),
+                label: Text(l.t('Copy link', 'نسخ الرابط')),
+              ),
+            ] else
+              Text(
+                l.t(
+                  'This invitation is no longer active.',
+                  'هذه الدعوة لم تعد نشطة.',
+                ),
+                style: AdminTypography.kpiHelper(
+                  palette,
+                ).copyWith(color: palette.amber, fontWeight: FontWeight.w600),
+              ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l.t('Close', 'إغلاق')),
-        ),
-      ],
     );
   }
 }
@@ -959,10 +952,7 @@ class _DetailRow extends StatelessWidget {
 }
 
 class _CreateInvitationDialog extends ConsumerStatefulWidget {
-  const _CreateInvitationDialog({
-    required this.onCreated,
-    this.onDuplicate,
-  });
+  const _CreateInvitationDialog({required this.onCreated, this.onDuplicate});
 
   final VoidCallback onCreated;
   final ValueChanged<AdminInvitationItem>? onDuplicate;
@@ -972,7 +962,8 @@ class _CreateInvitationDialog extends ConsumerStatefulWidget {
       _CreateInvitationDialogState();
 }
 
-class _CreateInvitationDialogState extends ConsumerState<_CreateInvitationDialog> {
+class _CreateInvitationDialogState
+    extends ConsumerState<_CreateInvitationDialog> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _noteController = TextEditingController();
@@ -998,7 +989,9 @@ class _CreateInvitationDialogState extends ConsumerState<_CreateInvitationDialog
     });
 
     try {
-      final result = await ref.read(adminInvitationsRepositoryProvider).createInvitation(
+      final result = await ref
+          .read(adminInvitationsRepositoryProvider)
+          .createInvitation(
             AdminInvitationCreateRequest(
               role: _role,
               recipientEmail: _emailController.text.trim(),
@@ -1065,8 +1058,10 @@ class _CreateInvitationDialogState extends ConsumerState<_CreateInvitationDialog
   Widget build(BuildContext context) {
     final l = AdminL10n.of(context);
 
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(l.t('Send Email Invitation', 'إرسال دعوة بالبريد')),
+      maxWidth: 520,
+      closeEnabled: !_submitting,
       content: SizedBox(
         width: 480,
         child: Form(
@@ -1095,10 +1090,15 @@ class _CreateInvitationDialogState extends ConsumerState<_CreateInvitationDialog
                 decoration: InputDecoration(labelText: l.t('Role', 'الدور')),
                 items: const [
                   DropdownMenuItem(value: 'DRIVER', child: Text('Driver')),
-                  DropdownMenuItem(value: 'MODERATOR', child: Text('Moderator')),
+                  DropdownMenuItem(
+                    value: 'MODERATOR',
+                    child: Text('Moderator'),
+                  ),
                   DropdownMenuItem(value: 'ADMIN', child: Text('Admin')),
                 ],
-                onChanged: _submitting ? null : (value) => setState(() => _role = value!),
+                onChanged: _submitting
+                    ? null
+                    : (value) => setState(() => _role = value!),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<int>(
@@ -1126,18 +1126,17 @@ class _CreateInvitationDialogState extends ConsumerState<_CreateInvitationDialog
               ),
               if (_sendError != null) ...[
                 const SizedBox(height: 12),
-                Text(_sendError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                Text(
+                  _sendError!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               ],
             ],
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-          child: Text(l.t('Close', 'إغلاق')),
-        ),
-        FilledButton(
+      footer: AppDialogFooter.form(
+        primaryAction: FilledButton(
           onPressed: _submitting ? null : _submit,
           child: _submitting
               ? const SizedBox(
@@ -1147,7 +1146,7 @@ class _CreateInvitationDialogState extends ConsumerState<_CreateInvitationDialog
                 )
               : Text(l.t('Send invitation', 'إرسال الدعوة')),
         ),
-      ],
+      ),
     );
   }
 }
