@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_theme_colors.dart';
+import '../../../../shared/widgets/app_close_button.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../domain/models/project_build.dart';
@@ -172,24 +173,35 @@ class _ProjectBuildMaterialCandidatesSheetState
                   AppSpacing.lg,
                   AppSpacing.sm,
                 ),
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Possible options',
-                      style: textTheme.titleLarge?.copyWith(
-                        color: palette.textPrimary,
-                        fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Possible options',
+                            style: textTheme.titleLarge?.copyWith(
+                              color: palette.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Platform materials that may work for "$componentName". '
+                            'These are suggestions, not perfect matches.',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: palette.textSecondary,
+                              height: 1.45,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Platform materials that may work for "$componentName". '
-                      'These are suggestions, not perfect matches.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: palette.textSecondary,
-                        height: 1.45,
-                      ),
+                    const SizedBox(width: AppSpacing.sm),
+                    AppCloseButton(
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
@@ -321,9 +333,7 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             '${material.supplierName} · ${material.locationLabel} · ${material.priceLabel}',
-            style: textTheme.bodyMedium?.copyWith(
-              color: palette.textSecondary,
-            ),
+            style: textTheme.bodyMedium?.copyWith(color: palette.textSecondary),
           ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
@@ -385,19 +395,28 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               if (linkedReservation == null && onReserveMaterial != null)
                 FilledButton.icon(
                   onPressed: isBusy ? null : onReserveMaterial,
-                  style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    AppStatusTone.primary,
+                  ),
                   icon: const Icon(Icons.event_available_outlined),
                   label: const Text('Reserve this material'),
                 ),
               OutlinedButton.icon(
                 onPressed: isBusy ? null : onViewMaterial,
-                style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 icon: const Icon(Icons.open_in_new_rounded),
                 label: const Text('View material'),
               ),
               TextButton.icon(
                 onPressed: isBusy ? null : onUnlink,
-                style: AppStatusButtonStyle.text(context, AppStatusTone.warning),
+                style: AppStatusButtonStyle.text(
+                  context,
+                  AppStatusTone.warning,
+                ),
                 icon: const Icon(Icons.link_off_rounded),
                 label: const Text('Unlink'),
               ),
@@ -508,7 +527,10 @@ class _CandidateCard extends StatelessWidget {
             children: [
               FilledButton.icon(
                 onPressed: isLinking ? null : onLink,
-                style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
+                style: AppStatusButtonStyle.filled(
+                  context,
+                  AppStatusTone.primary,
+                ),
                 icon: isLinking
                     ? const SizedBox.square(
                         dimension: 16,
@@ -519,7 +541,10 @@ class _CandidateCard extends StatelessWidget {
               ),
               OutlinedButton(
                 onPressed: isLinking ? null : onView,
-                style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 child: const Text('View material'),
               ),
             ],
@@ -643,7 +668,10 @@ class _CandidatesEmptyState extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           OutlinedButton.icon(
             onPressed: onBrowseAll,
-            style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+            style: AppStatusButtonStyle.outlined(
+              context,
+              AppStatusTone.neutral,
+            ),
             icon: const Icon(Icons.travel_explore_rounded),
             label: Text('Browse all materials for "$componentName"'),
           ),
@@ -674,7 +702,14 @@ class _CandidatesErrorState extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             const Text('Could not load material options right now.'),
             const SizedBox(height: AppSpacing.lg),
-            FilledButton(onPressed: onRetry, style: AppStatusButtonStyle.filled(context, AppStatusTone.primary), child: const Text('Try again')),
+            FilledButton(
+              onPressed: onRetry,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              child: const Text('Try again'),
+            ),
             TextButton(
               onPressed: onBrowseAll,
               style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),

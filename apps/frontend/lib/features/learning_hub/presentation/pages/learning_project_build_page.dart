@@ -7,6 +7,8 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../application/learning_hub_providers.dart';
@@ -82,8 +84,9 @@ class _LearningProjectBuildPageState
     final controller = TextEditingController(text: item.learnerNote ?? '');
     final note = await showDialog<String?>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Checklist note'),
+        onClose: () => Navigator.of(context).pop(),
         content: TextField(
           controller: controller,
           maxLines: 4,
@@ -93,18 +96,14 @@ class _LearningProjectBuildPageState
             hintText: 'Example: ask supplier for this size',
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
+        footer: AppDialogFooter.form(
+          primaryAction: FilledButton(
             onPressed: () {
               Navigator.of(context).pop(controller.text.trim());
             },
             child: const Text('Save note'),
           ),
-        ],
+        ),
       ),
     );
     controller.dispose();
@@ -353,7 +352,8 @@ class _BuildContent extends StatelessWidget {
                           onShowMaterialCandidates(item),
                       onUnlinkMaterial: () => onUnlinkMaterial(item),
                       onViewLinkedMaterial: () => onViewLinkedMaterial(item),
-                      onReserveLinkedMaterial: () => onReserveLinkedMaterial(item),
+                      onReserveLinkedMaterial: () =>
+                          onReserveLinkedMaterial(item),
                     ),
                   );
                 }),
@@ -558,9 +558,7 @@ class _BuildItemCard extends StatelessWidget {
                     selectedColor: style.background,
                     backgroundColor: palette.mutedChip,
                     side: BorderSide(
-                      color: selected
-                          ? style.border
-                          : palette.borderSubtle,
+                      color: selected ? style.border : palette.borderSubtle,
                     ),
                     labelStyle: AppTextStyles.label(context).copyWith(
                       color: selected

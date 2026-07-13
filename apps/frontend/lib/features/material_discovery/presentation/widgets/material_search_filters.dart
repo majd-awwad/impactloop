@@ -4,6 +4,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/models/localized_text.dart';
+import '../../../../shared/widgets/app_close_button.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../locations/data/saved_location.dart';
@@ -108,44 +109,67 @@ class _MaterialSearchFiltersState extends State<MaterialSearchFilters> {
                     AppSpacing.md,
                     AppSpacing.lg,
                   ),
-                  child: _MaterialDiscoveryFilterPanel(
-                    searchController: widget.searchController,
-                    cityController: widget.cityController,
-                    areaController: widget.areaController,
-                    latitudeController: widget.latitudeController,
-                    longitudeController: widget.longitudeController,
-                    searchValue: widget.searchValue,
-                    savedLocations: widget.savedLocations,
-                    savedLocationsLoading: widget.savedLocationsLoading,
-                    selectedSavedLocationId: widget.selectedSavedLocationId,
-                    onSearchChanged: widget.onSearchChanged,
-                    onCityChanged: widget.onCityChanged,
-                    onAreaChanged: widget.onAreaChanged,
-                    onLatitudeChanged: widget.onLatitudeChanged,
-                    onLongitudeChanged: widget.onLongitudeChanged,
-                    onSavedLocationSelected: widget.onSavedLocationSelected,
-                    categories: widget.categories,
-                    selectedCategoryIndex: widget.selectedCategoryIndex,
-                    onCategorySelected: widget.onCategorySelected,
-                    quickFilters: widget.quickFilters,
-                    selectedQuickFilterIndex: widget.selectedQuickFilterIndex,
-                    onQuickFilterSelected: widget.onQuickFilterSelected,
-                    sortOptions: widget.sortOptions,
-                    selectedSortIndex: widget.selectedSortIndex,
-                    onSortSelected: widget.onSortSelected,
-                    conditionFilters: widget.conditionFilters,
-                    selectedConditionIndex: widget.selectedConditionIndex,
-                    onConditionSelected: widget.onConditionSelected,
-                    hasActiveFilters: widget.hasActiveFilters,
-                    onClearFilters: widget.onClearFilters,
-                    showLocationFields: showLocationFields,
-                    onToggleLocationFields: () {
-                      setSheetState(() {
-                        showLocationFields = !showLocationFields;
-                      });
-                    },
-                    includeSearchField: false,
-                    dense: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              LocalizedText(
+                                en: 'Filters',
+                                ar: 'الفلاتر',
+                              ).resolve(context),
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                          ),
+                          AppCloseButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      _MaterialDiscoveryFilterPanel(
+                        searchController: widget.searchController,
+                        cityController: widget.cityController,
+                        areaController: widget.areaController,
+                        latitudeController: widget.latitudeController,
+                        longitudeController: widget.longitudeController,
+                        searchValue: widget.searchValue,
+                        savedLocations: widget.savedLocations,
+                        savedLocationsLoading: widget.savedLocationsLoading,
+                        selectedSavedLocationId: widget.selectedSavedLocationId,
+                        onSearchChanged: widget.onSearchChanged,
+                        onCityChanged: widget.onCityChanged,
+                        onAreaChanged: widget.onAreaChanged,
+                        onLatitudeChanged: widget.onLatitudeChanged,
+                        onLongitudeChanged: widget.onLongitudeChanged,
+                        onSavedLocationSelected: widget.onSavedLocationSelected,
+                        categories: widget.categories,
+                        selectedCategoryIndex: widget.selectedCategoryIndex,
+                        onCategorySelected: widget.onCategorySelected,
+                        quickFilters: widget.quickFilters,
+                        selectedQuickFilterIndex:
+                            widget.selectedQuickFilterIndex,
+                        onQuickFilterSelected: widget.onQuickFilterSelected,
+                        sortOptions: widget.sortOptions,
+                        selectedSortIndex: widget.selectedSortIndex,
+                        onSortSelected: widget.onSortSelected,
+                        conditionFilters: widget.conditionFilters,
+                        selectedConditionIndex: widget.selectedConditionIndex,
+                        onConditionSelected: widget.onConditionSelected,
+                        hasActiveFilters: widget.hasActiveFilters,
+                        onClearFilters: widget.onClearFilters,
+                        showLocationFields: showLocationFields,
+                        onToggleLocationFields: () {
+                          setSheetState(() {
+                            showLocationFields = !showLocationFields;
+                          });
+                        },
+                        includeSearchField: false,
+                        dense: true,
+                      ),
+                    ],
                   ),
                 );
               },
@@ -178,17 +202,18 @@ class _MaterialSearchFiltersState extends State<MaterialSearchFilters> {
             children: [
               OutlinedButton.icon(
                 onPressed: _openMobileFiltersSheet,
-                style: AppStatusButtonStyle.outlined(
-                  context,
-                  AppStatusTone.neutral,
-                ).copyWith(
-                  padding: const WidgetStatePropertyAll(
-                    EdgeInsetsDirectional.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
+                style:
+                    AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.neutral,
+                    ).copyWith(
+                      padding: const WidgetStatePropertyAll(
+                        EdgeInsetsDirectional.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
                 icon: const Icon(Icons.tune_rounded, size: 18),
                 label: Text(
                   LocalizedText(en: 'Filters', ar: 'الفلاتر').resolve(context),
@@ -659,17 +684,15 @@ class _MaterialDiscoveryFilterPanel extends StatelessWidget {
             alignment: AlignmentDirectional.centerStart,
             child: TextButton.icon(
               onPressed: onClearFilters,
-              style: AppStatusButtonStyle.text(
-                context,
-                AppStatusTone.neutral,
-              ).copyWith(
-                padding: const WidgetStatePropertyAll(
-                  EdgeInsetsDirectional.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
+              style: AppStatusButtonStyle.text(context, AppStatusTone.neutral)
+                  .copyWith(
+                    padding: const WidgetStatePropertyAll(
+                      EdgeInsetsDirectional.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
+                    ),
                   ),
-                ),
-              ),
               icon: const Icon(Icons.restart_alt_rounded),
               label: Text(
                 LocalizedText(
