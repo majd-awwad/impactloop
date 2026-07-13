@@ -1,7 +1,6 @@
 import 'package:intl/intl.dart';
 
 import '../../../shared/widgets/app_status_badge.dart';
-import '../../../shared/widgets/materials/material_status_badge.dart';
 
 String? formatDeliveryPickupWindow({
   required DateTime? pickupWindowStart,
@@ -92,14 +91,3 @@ AppStatusTone deliveryStatusAppTone(String status) {
       return AppStatusTone.neutral;
   }
 }
-
-/// Compatibility adapter for material-badge call sites not yet migrated.
-MaterialStatusBadgeTone deliveryStatusTone(String status) =>
-    switch (deliveryStatusAppTone(status)) {
-      AppStatusTone.primary => MaterialStatusBadgeTone.available,
-      AppStatusTone.success => MaterialStatusBadgeTone.success,
-      AppStatusTone.warning => MaterialStatusBadgeTone.reserved,
-      AppStatusTone.danger => MaterialStatusBadgeTone.danger,
-      AppStatusTone.info => MaterialStatusBadgeTone.info,
-      AppStatusTone.neutral => MaterialStatusBadgeTone.neutral,
-    };
