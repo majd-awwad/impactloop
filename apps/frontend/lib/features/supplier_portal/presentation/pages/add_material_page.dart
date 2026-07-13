@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../materials/application/material_listing_providers.dart';
 import '../../../materials/data/material_listing_data_providers.dart';
 import '../../../materials/data/models/category.dart';
@@ -805,6 +806,10 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               onPressed: _isSubmitting || _submittedSuccessfully || !canPublish
                   ? null
                   : _publish,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
               icon: _isSubmitting
                   ? const SizedBox(
                       width: 18,
