@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_deliveries_api.dart';
 import '../../data/models/admin_deliveries_models.dart';
+import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
 import '../widgets/admin_audit_stat_card.dart';
@@ -251,7 +253,7 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
               data: (data) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _SummaryRow(summary: data.summary, palette: palette),
+                  _SummaryRow(summary: data.summary),
                   const SizedBox(height: 16),
                   _FiltersPanel(
                     compact: compact,
@@ -326,48 +328,50 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.summary, required this.palette});
+  const _SummaryRow({required this.summary});
 
   final AdminDeliveriesSummary summary;
-  final AdminPalette palette;
 
   @override
   Widget build(BuildContext context) {
+    Color accentFor(AppStatusTone tone) =>
+        AppStatusStyle.of(context, tone).foreground;
+
     final stats = [
       (
         'Total',
         summary.total.toString(),
         'All delivery records',
         Icons.local_shipping_outlined,
-        palette.blue,
+        accentFor(AppStatusTone.info),
       ),
       (
         'Pending / unassigned',
         summary.pendingUnassigned.toString(),
         'Waiting for driver',
         Icons.hourglass_empty_outlined,
-        palette.amber,
+        accentFor(AppStatusTone.warning),
       ),
       (
         'Assigned / in progress',
         summary.assignedInProgress.toString(),
         'Active deliveries',
         Icons.delivery_dining_outlined,
-        palette.primaryTeal,
+        accentFor(AppStatusTone.info),
       ),
       (
         'Delivered',
         summary.delivered.toString(),
         'Completed successfully',
         Icons.check_circle_outline,
-        palette.green,
+        accentFor(AppStatusTone.success),
       ),
       (
         'Failed / cancelled',
         summary.failedCancelled.toString(),
         'Did not complete',
         Icons.cancel_outlined,
-        palette.red,
+        accentFor(AppStatusTone.danger),
       ),
     ];
 
@@ -760,7 +764,10 @@ class _DeliveryRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 6),
-              AdminStatusBadge(status: item.status),
+              AppStatusBadge(
+                label: deliveryStatusLabel(item.status),
+                tone: deliveryStatusAppTone(item.status),
+              ),
             ],
           ),
         ),
