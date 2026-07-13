@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../controllers/supplier_requests_providers.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'supplier_feedback.dart';
@@ -36,6 +37,10 @@ Future<String?> _promptIncidentNote(
             if (value.isEmpty) return;
             Navigator.of(context).pop(value);
           },
+          style: AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.danger,
+          ),
           child: const Text('Submit report'),
         ),
       ],
@@ -65,6 +70,10 @@ Future<void> handleMarkDeliveryPickupExpired(
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
+          style: AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.danger,
+          ),
           child: const Text('Mark expired'),
         ),
       ],
