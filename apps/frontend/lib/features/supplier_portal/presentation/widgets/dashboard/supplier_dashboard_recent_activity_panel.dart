@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
+import '../../../../../shared/widgets/app_section_card.dart';
 import '../../../data/models/supplier_dashboard_activity.dart';
 import '../../../data/models/supplier_dashboard_pickup.dart';
 import '../../../data/models/supplier_dashboard_stats.dart';
@@ -28,10 +29,7 @@ class SupplierDashboardRecentActivityPanel extends StatelessWidget {
     final colors = context.supplierColors;
     final items = _buildCuratedItems(context);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: context.supplierDecorations.dashboardCard,
+    return AppSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

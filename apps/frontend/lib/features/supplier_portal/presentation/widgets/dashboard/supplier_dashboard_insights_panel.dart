@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_spacing.dart';
+import '../../../../../shared/widgets/app_section_card.dart';
 import '../../../data/models/supplier_dashboard.dart';
 import '../../../data/models/supplier_dashboard_insights.dart';
 import '../../theme/supplier_theme_extension.dart';
@@ -75,10 +76,7 @@ class _WhiteDashboardCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: context.supplierDecorations.dashboardCard,
+    return AppSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
