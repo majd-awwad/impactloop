@@ -380,11 +380,14 @@ class _ProfileContent extends ConsumerWidget {
     const settings = _SettingsSection();
     final logout = OutlinedButton.icon(
       onPressed: () => _logout(context, ref),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: colors.danger,
-        side: BorderSide(color: colors.danger.withValues(alpha: 0.42)),
-        minimumSize: const Size(0, 48),
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+      style: AppStatusButtonStyle.outlined(
+        context,
+        AppStatusTone.danger,
+      ).copyWith(
+        minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+        ),
       ),
       icon: const Icon(Icons.logout_rounded),
       label: const Text('Logout'),

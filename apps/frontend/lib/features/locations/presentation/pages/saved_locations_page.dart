@@ -11,6 +11,7 @@ import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../profile/presentation/widgets/profile_image_picker.dart';
 import '../../application/saved_locations_providers.dart';
@@ -343,6 +344,10 @@ class _SavedLocationCard extends StatelessWidget {
             children: [
               OutlinedButton.icon(
                 onPressed: onEdit,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
                 label: const Text('Edit'),
               ),
@@ -350,6 +355,10 @@ class _SavedLocationCard extends StatelessWidget {
                 onPressed: location.isDefault || _isSettingDefault
                     ? null
                     : onSetDefault,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.primary,
+                ),
                 icon: _isSettingDefault
                     ? const SizedBox(
                         width: 18,
@@ -369,7 +378,10 @@ class _SavedLocationCard extends StatelessWidget {
                       )
                     : const Icon(Icons.delete_outline, size: 18),
                 label: const Text('Delete'),
-                style: TextButton.styleFrom(foregroundColor: colors.danger),
+                style: AppStatusButtonStyle.text(
+                  context,
+                  AppStatusTone.danger,
+                ),
               ),
             ],
           ),
@@ -864,6 +876,10 @@ class _SavedLocationFormDialogState
         ),
         FilledButton(
           onPressed: _isSubmitting ? null : _submit,
+          style: AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.primary,
+          ),
           child: _isSubmitting
               ? const SizedBox(
                   width: 18,
@@ -1351,6 +1367,10 @@ class _DeleteSavedLocationDialog extends StatelessWidget {
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
+          style: AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.danger,
+          ),
           child: const Text('Delete'),
         ),
       ],
