@@ -40,6 +40,9 @@ New reusable UI should prefer `Theme.of(context).textTheme`, `Theme.of(context).
 
 | Widget/helper | File | Current purpose |
 |---------------|------|-----------------|
+| `AppDialogShell` | `app_dialog_shell.dart` | Theme-aware responsive dialog chrome with a directional top-end close button, scrollable body, and optional footer. Use for form and information dialogs. |
+| `AppCloseButton` | `app_close_button.dart` | Localized, semantic close button for dialogs and modal sheets. It uses Flutter's localized close tooltip unless copy is supplied. |
+| `AppDialogFooter` | `app_dialog_footer.dart` | Standard footer layouts: `.form` renders one full-width primary action; `.decision` retains a secondary action such as Cancel beside the primary action. |
 | `AppTextField` | `app_text_field.dart` | Themed single-line or controlled multiline `TextFormField`; supports validation, forced error text, autofill, submit, change callbacks, and optional `suffixIcon`. |
 | `AppPasswordField` | `app_password_field.dart` | Password variant of `AppTextField` with per-field visibility toggle (or optional shared `obscureOverride` / `onToggleVisibility`), tooltip, and semantic labels. |
 | `AppFieldGap` | `app_text_field.dart` | Standard vertical field gap using `AppSpacing.md`. |

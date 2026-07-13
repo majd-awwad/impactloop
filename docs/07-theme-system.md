@@ -149,6 +149,8 @@ Treat supplier theme as a scoped compatibility/theme-bridge layer, not an indepe
 ## Practical Rules
 
 - New shared widgets should use `Theme.of(context).textTheme`, `Theme.of(context).colorScheme` where appropriate, `AppThemeColors.of(context)`, `AppSpacing`, and `AppRadius` first.
+- Shared dialogs use `AppDialogShell`, `AppCloseButton`, and `AppDialogFooter` from `shared/widgets/`. Form dialogs use the shell's directional top-end close button and one primary footer action. Decision dialogs retain an explicit secondary Cancel action through `AppDialogFooter.decision`.
+- Dialog and modal placement must use directional alignment and padding (`AlignmentDirectional`, `EdgeInsetsDirectional`) so close controls remain at the logical end in RTL.
 - Prefer existing shared widgets (`AppTextField`, `AppDropdownField`, `AppPrimaryButton`, material cards/badges, snackbar helpers) before custom local styling.
 - New feature-specific palettes may exist only when a feature has enough distinct visual semantics or compatibility needs to justify them.
 - Feature palettes must stay scoped. Do not import auth, supplier, or learning palettes into unrelated features.
