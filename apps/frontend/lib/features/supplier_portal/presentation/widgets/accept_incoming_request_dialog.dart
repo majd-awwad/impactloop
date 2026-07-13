@@ -471,10 +471,9 @@ class _AcceptIncomingRequestDialogState
                       Expanded(
                         child: FilledButton(
                           onPressed: _submit,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: actionStyle.foreground,
-                            foregroundColor: colors.textOnAccent,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          style: AppStatusButtonStyle.filled(
+                            context,
+                            AppStatusTone.success,
                           ),
                           child: Text(
                             widget.submitLabel ?? context.s.acceptRequest,
