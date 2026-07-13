@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_section_card.dart';
 import '../../data/supplier_location_service.dart';
 import '../../data/models/reverse_geocode_result.dart';
 import '../../data/models/supplier_profile.dart';
@@ -849,14 +850,11 @@ class _SupplierProfileError extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.s;
     final colors = context.supplierColors;
-    final decorations = context.supplierDecorations;
 
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: decorations.dashboardCard,
+        child: AppSectionCard(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
