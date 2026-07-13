@@ -369,6 +369,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           if (widget.delivery.canDriverReportPickupFailed)
             OutlinedButton.icon(
               onPressed: isSubmitting ? null : _reportPickupFailed,
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.danger,
+              ),
               icon: const Icon(Icons.report_problem_outlined),
               label: const Text('Report pickup failed'),
             ),
@@ -376,6 +380,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: isSubmitting ? null : _reportDeliveryFailed,
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.danger,
+              ),
               icon: const Icon(Icons.no_accounts_outlined),
               label: const Text('Report delivery failed'),
             ),
@@ -384,6 +392,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: isSubmitting ? null : _reportDriverIssue,
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.danger,
+              ),
               icon: const Icon(Icons.car_crash_outlined),
               label: const Text('Report driver issue'),
             ),
@@ -564,6 +576,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
               if (noteController.text.trim().isEmpty) return;
               Navigator.of(context).pop(true);
             },
+            style: AppStatusButtonStyle.filled(
+              context,
+              AppStatusTone.danger,
+            ),
             child: const Text('Submit report'),
           ),
         ],
@@ -643,6 +659,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                 if (noteController.text.trim().isEmpty) return;
                 Navigator.of(context).pop(true);
               },
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.danger,
+              ),
               child: const Text('Submit report'),
             ),
           ],
