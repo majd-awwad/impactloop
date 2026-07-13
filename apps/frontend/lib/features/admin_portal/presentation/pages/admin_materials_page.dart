@@ -1532,6 +1532,10 @@ class _ReportCard extends StatelessWidget {
                         children: [
                           OutlinedButton.icon(
                             onPressed: onViewMaterial,
+                            style: AppStatusButtonStyle.outlined(
+                              context,
+                              AppStatusTone.neutral,
+                            ),
                             icon: const Icon(Icons.open_in_new, size: 18),
                             label: const Text('View material'),
                           ),
@@ -1889,6 +1893,10 @@ class _MaterialDetailDialog extends StatelessWidget {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
+                    style: AppStatusButtonStyle.text(
+                      context,
+                      AppStatusTone.neutral,
+                    ),
                     child: const Text('Close'),
                   ),
                   if (onHide != null)

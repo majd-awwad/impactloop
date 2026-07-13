@@ -131,6 +131,10 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
+              style: AppStatusButtonStyle.text(
+                dialogContext,
+                AppStatusTone.neutral,
+              ),
               child: const Text('Close'),
             ),
           ],
@@ -204,6 +208,10 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
                   ),
                   TextButton(
                     onPressed: _invalidateQueue,
+                    style: AppStatusButtonStyle.text(
+                      context,
+                      AppStatusTone.primary,
+                    ),
                     child: const Text('Retry'),
                   ),
                 ],
