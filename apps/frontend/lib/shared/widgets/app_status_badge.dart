@@ -106,3 +106,36 @@ class AppStatusBadge extends StatelessWidget {
     );
   }
 }
+
+/// Semantic button styles for actions that confirm, reject, or advance a flow.
+abstract final class AppStatusButtonStyle {
+  static ButtonStyle filled(
+    BuildContext context,
+    AppStatusTone tone, {
+    EdgeInsetsGeometry? padding,
+    VisualDensity? visualDensity,
+  }) {
+    final status = AppStatusStyle.of(context, tone);
+
+    return FilledButton.styleFrom(
+      backgroundColor: status.foreground,
+      foregroundColor: AppThemeColors.of(context).textOnAccent,
+      padding: padding,
+      visualDensity: visualDensity,
+    );
+  }
+
+  static ButtonStyle outlined(BuildContext context, AppStatusTone tone) {
+    final status = AppStatusStyle.of(context, tone);
+
+    return OutlinedButton.styleFrom(
+      foregroundColor: status.foreground,
+      side: BorderSide(color: status.border),
+    );
+  }
+
+  static ButtonStyle text(BuildContext context, AppStatusTone tone) =>
+      TextButton.styleFrom(
+        foregroundColor: AppStatusStyle.of(context, tone).foreground,
+      );
+}

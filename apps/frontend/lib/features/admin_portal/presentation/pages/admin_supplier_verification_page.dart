@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_supplier_verifications_api.dart';
 import '../../data/models/admin_supplier_verifications_models.dart';
 import '../l10n/admin_l10n.dart';
@@ -133,6 +134,9 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
             ? 'Reject verification'
             : 'Request changes',
         required: true,
+        tone: action == 'reject'
+            ? AppStatusTone.danger
+            : AppStatusTone.warning,
       );
       if (note == null || !mounted) return;
 
@@ -523,10 +527,19 @@ class _ActionButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     final children = [
       TextButton(onPressed: onView, child: const Text('View')),
-      TextButton(onPressed: onApprove, child: const Text('Approve')),
-      TextButton(onPressed: onReject, child: const Text('Reject')),
+      TextButton(
+        onPressed: onApprove,
+        style: AppStatusButtonStyle.text(context, AppStatusTone.success),
+        child: const Text('Approve'),
+      ),
+      TextButton(
+        onPressed: onReject,
+        style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
+        child: const Text('Reject'),
+      ),
       TextButton(
         onPressed: onRequestChanges,
+        style: AppStatusButtonStyle.text(context, AppStatusTone.warning),
         child: Text(compact ? 'Changes' : 'Request changes'),
       ),
     ];
@@ -693,6 +706,7 @@ class _VerificationDetailsDialogState
       context,
       title: 'Approval note (optional)',
       required: false,
+      tone: AppStatusTone.success,
     );
     if (!mounted) return;
 
@@ -711,6 +725,7 @@ class _VerificationDetailsDialogState
       context,
       title: 'Rejection reason',
       required: true,
+      tone: AppStatusTone.danger,
     );
     if (note == null || !mounted) return;
 
@@ -729,6 +744,7 @@ class _VerificationDetailsDialogState
       context,
       title: 'Changes requested',
       required: true,
+      tone: AppStatusTone.warning,
     );
     if (note == null || !mounted) return;
 
@@ -826,15 +842,20 @@ class _VerificationDetailsDialogState
         ),
         TextButton(
           onPressed: _isSubmitting ? null : _requestChanges,
+          style: AppStatusButtonStyle.text(context, AppStatusTone.warning),
           child: const Text('Request changes'),
         ),
         TextButton(
           onPressed: _isSubmitting ? null : _reject,
+          style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
           child: const Text('Reject'),
         ),
         FilledButton(
           onPressed: _isSubmitting ? null : _approve,
-          style: FilledButton.styleFrom(backgroundColor: palette.primaryTeal),
+          style: AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.success,
+          ),
           child: _isSubmitting
               ? const SizedBox(
                   width: 18,
@@ -886,6 +907,10 @@ Future<bool> _confirmApprove(BuildContext context) async {
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
+          style: AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.success,
+          ),
           child: const Text('Approve'),
         ),
       ],
@@ -899,12 +924,14 @@ Future<String?> _promptAdminNote(
   BuildContext context, {
   required String title,
   required bool required,
+  required AppStatusTone tone,
 }) {
   return showDialog<String?>(
     context: context,
     builder: (dialogContext) => _AdminNoteDialog(
       title: title,
       required: required,
+      tone: tone,
     ),
   );
 }
@@ -913,10 +940,12 @@ class _AdminNoteDialog extends StatefulWidget {
   const _AdminNoteDialog({
     required this.title,
     required this.required,
+    required this.tone,
   });
 
   final String title;
   final bool required;
+  final AppStatusTone tone;
 
   @override
   State<_AdminNoteDialog> createState() => _AdminNoteDialogState();
@@ -978,6 +1007,7 @@ class _AdminNoteDialogState extends State<_AdminNoteDialog> {
         ),
         FilledButton(
           onPressed: _submit,
+          style: AppStatusButtonStyle.filled(context, widget.tone),
           child: const Text('Confirm'),
         ),
       ],

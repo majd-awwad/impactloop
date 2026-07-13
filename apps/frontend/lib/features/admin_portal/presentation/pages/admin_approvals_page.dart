@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../materials/application/material_listing_providers.dart';
 import '../../../materials/data/models/category.dart';
 import '../../data/admin_approvals_api.dart';
@@ -801,8 +802,6 @@ class _ApprovalActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-
     return Align(
       alignment: AlignmentDirectional.centerEnd,
       child: Wrap(
@@ -812,11 +811,19 @@ class _ApprovalActionRow extends StatelessWidget {
         children: [
           TextButton(onPressed: onDetails, child: const Text('Details')),
           if (isPending) ...[
-            OutlinedButton(onPressed: onReject, child: Text(rejectLabel)),
+            OutlinedButton(
+              onPressed: onReject,
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.danger,
+              ),
+              child: Text(rejectLabel),
+            ),
             FilledButton(
               onPressed: onApprove,
-              style: FilledButton.styleFrom(
-                backgroundColor: palette.primaryTeal,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.success,
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               ),
@@ -915,7 +922,11 @@ Future<void> _quickApproveCategory(
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.of(context).pop(controller.text.trim()), child: const Text('Approve')),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
+          child: const Text('Approve'),
+        ),
       ],
     ),
   );
@@ -991,7 +1002,11 @@ Future<void> _quickRejectCategory(
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Reject')),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
+          child: const Text('Reject'),
+        ),
       ],
     ),
   );
@@ -1076,7 +1091,11 @@ Future<void> _quickApprovePrice(
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Approve')),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
+          child: const Text('Approve'),
+        ),
       ],
     ),
   );
@@ -1148,7 +1167,11 @@ Future<void> _quickRejectPrice(
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Reject')),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
+          child: const Text('Reject'),
+        ),
       ],
     ),
   );
@@ -1271,7 +1294,11 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(controller.text.trim()), child: const Text('Approve')),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
+            child: const Text('Approve'),
+          ),
         ],
       ),
     );
@@ -1338,7 +1365,11 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Reject')),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
+            child: const Text('Reject'),
+          ),
         ],
       ),
     );
@@ -1436,11 +1467,16 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
       ),
       actions: [
         TextButton(onPressed: _submitting ? null : () => Navigator.of(context).pop(), child: const Text('Close')),
-        TextButton(onPressed: _submitting ? null : _reject, child: const Text('Reject')),
+        TextButton(
+          onPressed: _submitting ? null : _reject,
+          style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
+          child: const Text('Reject'),
+        ),
         FilledButton(
           onPressed: (_submitting || item.status.toUpperCase() != 'PENDING') ? null : _approve,
-          style: FilledButton.styleFrom(
-            backgroundColor: palette.primaryTeal,
+          style: AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.success,
             visualDensity: VisualDensity.compact,
           ),
           child: _submitting
@@ -1537,7 +1573,11 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Reject')),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
+            child: const Text('Reject'),
+          ),
         ],
       ),
     );
@@ -1630,11 +1670,16 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
       ),
       actions: [
         TextButton(onPressed: _submitting ? null : () => Navigator.of(context).pop(), child: const Text('Close')),
-        TextButton(onPressed: _submitting ? null : _reject, child: const Text('Reject')),
+        TextButton(
+          onPressed: _submitting ? null : _reject,
+          style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
+          child: const Text('Reject'),
+        ),
         FilledButton(
           onPressed: (_submitting || item.status.toUpperCase() != 'PENDING') ? null : _approve,
-          style: FilledButton.styleFrom(
-            backgroundColor: palette.primaryTeal,
+          style: AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.success,
             visualDensity: VisualDensity.compact,
           ),
           child: _submitting
