@@ -952,9 +952,7 @@ class _IncomingRequestActionButtonMetrics {
       padding: padding,
     ).copyWith(
       minimumSize: const WidgetStatePropertyAll(minimumSize),
-      tapTargetSize: const WidgetStatePropertyAll(
-        MaterialTapTargetSize.shrinkWrap,
-      ),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       textStyle: const WidgetStatePropertyAll(
         TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),

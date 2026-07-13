@@ -119,7 +119,7 @@ abstract final class AppStatusButtonStyle {
 
     return FilledButton.styleFrom(
       backgroundColor: status.foreground,
-      foregroundColor: AppThemeColors.of(context).textOnAccent,
+      foregroundColor: AppThemeColors.of(context).textOnPrimary,
       padding: padding,
       visualDensity: visualDensity,
     );
