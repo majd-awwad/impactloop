@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../data/admin_materials_api.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
@@ -123,23 +125,6 @@ String _formatReportReason(String reason) {
 String _formatStatusLabel(String status) =>
     status.replaceAll('_', ' ').toLowerCase();
 
-_BadgeTone _statusTone(String status, {int pendingReports = 0}) {
-  if (pendingReports > 0) return _BadgeTone.warning;
-  switch (status) {
-    case 'AVAILABLE':
-      return _BadgeTone.success;
-    case 'UNAVAILABLE':
-      return _BadgeTone.muted;
-    case 'RESERVED':
-    case 'PENDING_RESERVATION':
-      return _BadgeTone.info;
-    case 'REUSED':
-      return _BadgeTone.teal;
-    default:
-      return _BadgeTone.neutral;
-  }
-}
-
 Color _toneColor(AdminPalette palette, _BadgeTone tone) {
   switch (tone) {
     case _BadgeTone.success:
@@ -163,22 +148,11 @@ Color _toneColor(AdminPalette palette, _BadgeTone tone) {
   }
 }
 
-Color _cardAccent(AdminPalette palette, AdminMaterialListItem item) {
-  if (item.pendingReportCount > 0) return palette.amber;
-  switch (item.status) {
-    case 'AVAILABLE':
-      return palette.green;
-    case 'UNAVAILABLE':
-      return Color.lerp(palette.textMuted, palette.red, 0.45) ?? palette.textMuted;
-    case 'RESERVED':
-    case 'PENDING_RESERVATION':
-      return palette.purple;
-    case 'REUSED':
-      return palette.brightTeal;
-    default:
-      return palette.primaryTeal;
-  }
-}
+Color _cardAccent(BuildContext context, AdminMaterialListItem item) =>
+    AppStatusStyle.of(
+      context,
+      materialLifecycleStatusTone(item.status).appStatusTone,
+    ).foreground;
 
 class AdminMaterialsPage extends ConsumerStatefulWidget {
   const AdminMaterialsPage({super.key, this.initialStatus});
@@ -1270,7 +1244,7 @@ class _MaterialCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    final accent = _cardAccent(palette, item);
+    final accent = _cardAccent(context, item);
     final date = DateFormat.yMMMd().format(item.createdAt);
     final priceLabel = item.isFree
         ? 'Free'
@@ -1335,12 +1309,9 @@ class _MaterialCard extends StatelessWidget {
               spacing: 6,
               runSpacing: 6,
               children: [
-                _SemanticBadge(
+                MaterialStatusBadge(
                   label: _formatStatusLabel(item.status),
-                  tone: _statusTone(
-                    item.status,
-                    pendingReports: item.pendingReportCount,
-                  ),
+                  tone: materialLifecycleStatusTone(item.status),
                 ),
                 _SemanticBadge(
                   label: item.isFree ? 'Free' : 'Paid',
@@ -1695,13 +1666,12 @@ class _MaterialDetailDialog extends StatelessWidget {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      _SemanticBadge(
+                      MaterialStatusBadge(
                         label: _formatStatusLabel(
                           detail['status'] as String? ?? 'UNKNOWN',
                         ),
-                        tone: _statusTone(
+                        tone: materialLifecycleStatusTone(
                           detail['status'] as String? ?? '',
-                          pendingReports: pendingCount,
                         ),
                       ),
                       _SemanticBadge(

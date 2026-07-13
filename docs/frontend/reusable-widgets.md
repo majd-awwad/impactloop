@@ -66,7 +66,7 @@ No `showSuccessSnackBar` exists in current code.
 | `ImpactMaterialCompactCard` | `app_material_card.dart` | Mobile-first horizontal public material card. It accepts the same display-ready values as the grid card and uses compact media, metadata, price/status badges, and details affordance for narrow layouts. |
 | `AppMaterialCard` | `app_material_card.dart` | Backward-compatible wrapper around `ImpactMaterialGridCard` for existing discovery-shaped material card call sites. |
 | `AppMaterialCardVariant` | `app_material_card.dart` | `standard` and `compact` card sizing. |
-| `MaterialStatusBadge` / `MaterialStatusBadgeTone` | `material_status_badge.dart` | Available/reserved/reused/draft status badge derived from `AppThemeColors`, shared spacing/radius, and text theme. |
+| `MaterialStatusBadge` / `MaterialStatusBadgeTone` / `materialLifecycleStatusTone` | `material_status_badge.dart` | Material lifecycle badge and canonical status mapper: available is primary, reservation states are warning, reused is success, unavailable is danger, and unknown/draft values are neutral. |
 | `MaterialConditionBadge` / `MaterialConditionBadgeTone` | `material_condition_badge.dart` | Like-new/good/fair/mixed condition badge derived from `AppThemeColors`, shared spacing/radius, and text theme. |
 | `MaterialPriceBadge` | `material_price_badge.dart` | Free/paid price badge derived from `AppThemeColors`, shared spacing/radius, and text theme. |
 | `MaterialsUiPalette` and material constants | `materials_ui_palette.dart` | Shared material-card/discovery bridge palette and badge/card sizing constants derived from the central app theme. |

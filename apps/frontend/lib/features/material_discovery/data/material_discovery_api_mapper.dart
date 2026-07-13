@@ -468,24 +468,28 @@ class MaterialDiscoveryApiMapper {
             en: 'Pending reservation',
             ar: 'بانتظار الحجز',
           ),
-          tone: MaterialStatusBadgeTone.reserved,
+          tone: materialLifecycleStatusTone(value),
         );
       case 'RESERVED':
         return (
           label: const LocalizedText(en: 'Reserved', ar: 'محجوز'),
-          tone: MaterialStatusBadgeTone.reserved,
+          tone: materialLifecycleStatusTone(value),
         );
       case 'REUSED':
         return (
           label: const LocalizedText(en: 'Reused', ar: 'أعيد استخدامها'),
-          tone: MaterialStatusBadgeTone.reused,
+          tone: materialLifecycleStatusTone(value),
         );
       case 'UNAVAILABLE':
         return (
           label: const LocalizedText(en: 'Unavailable', ar: 'غير متاح'),
-          tone: MaterialStatusBadgeTone.draft,
+          tone: materialLifecycleStatusTone(value),
         );
       case 'AVAILABLE':
+        return (
+          label: const LocalizedText(en: 'Available', ar: 'متاح'),
+          tone: materialLifecycleStatusTone(value),
+        );
       default:
         return (
           label: const LocalizedText(en: 'Available', ar: 'متاح'),

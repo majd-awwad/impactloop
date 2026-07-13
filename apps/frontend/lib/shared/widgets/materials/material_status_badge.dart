@@ -26,6 +26,25 @@ extension MaterialStatusBadgeToneX on MaterialStatusBadgeTone {
   };
 }
 
+/// Maps material lifecycle values to the shared semantic status contract.
+MaterialStatusBadgeTone materialLifecycleStatusTone(String status) {
+  switch (status) {
+    case 'AVAILABLE':
+      return MaterialStatusBadgeTone.available;
+    case 'PENDING_RESERVATION':
+    case 'RESERVED':
+      return MaterialStatusBadgeTone.reserved;
+    case 'REUSED':
+      return MaterialStatusBadgeTone.reused;
+    case 'UNAVAILABLE':
+      return MaterialStatusBadgeTone.danger;
+    case 'DRAFT':
+      return MaterialStatusBadgeTone.draft;
+    default:
+      return MaterialStatusBadgeTone.neutral;
+  }
+}
+
 class MaterialStatusBadge extends StatelessWidget {
   const MaterialStatusBadge({
     super.key,

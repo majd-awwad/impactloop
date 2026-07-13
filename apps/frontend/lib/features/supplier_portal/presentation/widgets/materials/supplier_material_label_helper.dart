@@ -52,24 +52,28 @@ abstract final class SupplierMaterialLabelHelper {
             en: 'Pending reservation',
             ar: 'بانتظار الحجز',
           ),
-          tone: MaterialStatusBadgeTone.reserved,
+          tone: materialLifecycleStatusTone(status),
         );
       case 'RESERVED':
         return (
           label: const LocalizedText(en: 'Reserved', ar: 'محجوز'),
-          tone: MaterialStatusBadgeTone.success,
+          tone: materialLifecycleStatusTone(status),
         );
       case 'REUSED':
         return (
           label: const LocalizedText(en: 'Reused', ar: 'أعيد استخدامها'),
-          tone: MaterialStatusBadgeTone.reused,
+          tone: materialLifecycleStatusTone(status),
         );
       case 'UNAVAILABLE':
         return (
           label: const LocalizedText(en: 'Unavailable', ar: 'غير متاح'),
-          tone: MaterialStatusBadgeTone.neutral,
+          tone: materialLifecycleStatusTone(status),
         );
       case 'AVAILABLE':
+        return (
+          label: const LocalizedText(en: 'Available', ar: 'متاح'),
+          tone: materialLifecycleStatusTone(status),
+        );
       default:
         return (
           label: const LocalizedText(en: 'Available', ar: 'متاح'),
