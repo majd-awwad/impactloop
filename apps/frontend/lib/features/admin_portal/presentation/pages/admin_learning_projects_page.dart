@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_learning_projects_api.dart';
 import '../../data/models/admin_learning_projects_models.dart';
 import '../l10n/admin_l10n.dart';
@@ -935,7 +936,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
     await _detailFuture;
   }
 
-  Future<String?> _promptReason(String title) async {
+  Future<String?> _promptReason(String title, AppStatusTone tone) async {
     final controller = TextEditingController();
     final result = await showDialog<String>(
       context: context,
@@ -960,6 +961,7 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
               if (value.length < 3) return;
               Navigator.of(context).pop(value);
             },
+            style: AppStatusButtonStyle.filled(context, tone),
             child: const Text('Confirm'),
           ),
         ],
@@ -1027,6 +1029,10 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                   ),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(true),
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.success,
+                    ),
                     child: const Text('Approve anyway'),
                   ),
                 ],
@@ -1046,6 +1052,10 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                   ),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(true),
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.success,
+                    ),
                     child: const Text('Approve'),
                   ),
                 ],
@@ -1078,21 +1088,33 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
           }
           break;
         case 'request-changes':
-          final reason = await _promptReason('Request changes');
+          final reason = await _promptReason(
+            'Request changes',
+            AppStatusTone.warning,
+          );
           if (reason == null || !mounted) return;
           await api.requestChanges(id: detail.id, reason: reason);
         case 'reject':
-          final reason = await _promptReason('Reject project');
+          final reason = await _promptReason(
+            'Reject project',
+            AppStatusTone.danger,
+          );
           if (reason == null || !mounted) return;
           await api.rejectProject(id: detail.id, reason: reason);
         case 'hide':
-          final reason = await _promptReason('Hide / unpublish project');
+          final reason = await _promptReason(
+            'Hide / unpublish project',
+            AppStatusTone.danger,
+          );
           if (reason == null || !mounted) return;
           await api.hideProject(id: detail.id, reason: reason);
         case 'restore':
           await api.restoreProject(detail.id);
         case 'archive':
-          final reason = await _promptReason('Archive project');
+          final reason = await _promptReason(
+            'Archive project',
+            AppStatusTone.danger,
+          );
           if (reason == null || !mounted) return;
           await api.archiveProject(id: detail.id, reason: reason);
       }
@@ -1441,32 +1463,56 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                       if (actions.canApprove)
                         FilledButton(
                           onPressed: () => _runAction('approve', detail),
+                          style: AppStatusButtonStyle.filled(
+                            context,
+                            AppStatusTone.success,
+                          ),
                           child: const Text('Approve'),
                         ),
                       if (actions.canRequestChanges)
                         OutlinedButton(
                           onPressed: () =>
                               _runAction('request-changes', detail),
+                          style: AppStatusButtonStyle.outlined(
+                            context,
+                            AppStatusTone.warning,
+                          ),
                           child: const Text('Request changes'),
                         ),
                       if (actions.canReject)
                         OutlinedButton(
                           onPressed: () => _runAction('reject', detail),
+                          style: AppStatusButtonStyle.outlined(
+                            context,
+                            AppStatusTone.danger,
+                          ),
                           child: const Text('Reject'),
                         ),
                       if (actions.canHide)
                         OutlinedButton(
                           onPressed: () => _runAction('hide', detail),
+                          style: AppStatusButtonStyle.outlined(
+                            context,
+                            AppStatusTone.danger,
+                          ),
                           child: const Text('Hide / unpublish'),
                         ),
                       if (actions.canRestore)
                         OutlinedButton(
                           onPressed: () => _runAction('restore', detail),
+                          style: AppStatusButtonStyle.outlined(
+                            context,
+                            AppStatusTone.primary,
+                          ),
                           child: const Text('Restore / republish'),
                         ),
                       if (actions.canArchive)
                         OutlinedButton(
                           onPressed: () => _runAction('archive', detail),
+                          style: AppStatusButtonStyle.outlined(
+                            context,
+                            AppStatusTone.danger,
+                          ),
                           child: const Text('Archive project'),
                         ),
                     ],
