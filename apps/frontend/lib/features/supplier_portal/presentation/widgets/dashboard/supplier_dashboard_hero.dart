@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
+import '../../../../../shared/widgets/app_status_badge.dart';
 import '../../../data/models/supplier_dashboard.dart';
 import '../../theme/supplier_theme_extension.dart';
 
@@ -68,12 +69,9 @@ class SupplierDashboardHero extends StatelessWidget {
             children: [
               FilledButton.icon(
                 onPressed: () => context.push('/supplier/materials/new'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: colors.accent,
-                  foregroundColor: colors.textOnAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.pillAll,
-                  ),
+                style: AppStatusButtonStyle.filled(
+                  context,
+                  AppStatusTone.primary,
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg,
                     vertical: AppSpacing.sm,
