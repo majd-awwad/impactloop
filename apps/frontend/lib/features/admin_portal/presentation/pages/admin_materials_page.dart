@@ -426,7 +426,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       reasonLabel: 'Reason for hiding',
       reasonRequired: true,
       confirmLabel: 'Hide material',
-      confirmColor: context.adminPalette.amber,
+      confirmTone: AppStatusTone.danger,
       onConfirm: (reason) => ref.read(adminMaterialsApiProvider).hideMaterial(
             id: item.materialId,
             reason: reason,
@@ -444,7 +444,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       reasonLabel: 'Reason for hiding',
       reasonRequired: true,
       confirmLabel: 'Hide material',
-      confirmColor: context.adminPalette.amber,
+      confirmTone: AppStatusTone.danger,
       onConfirm: (reason) => ref.read(adminMaterialsApiProvider).hideMaterial(
             id: detail['id'] as String,
             reason: reason,
@@ -462,7 +462,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       reasonLabel: 'Reason (optional)',
       reasonRequired: false,
       confirmLabel: 'Mark unavailable',
-      confirmColor: context.adminPalette.textSecondary,
+      confirmTone: AppStatusTone.danger,
       onConfirm: (reason) => ref.read(adminMaterialsApiProvider).markUnavailable(
             id: item.materialId,
             reason: reason.isEmpty ? null : reason,
@@ -480,7 +480,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       reasonLabel: 'Reason (optional)',
       reasonRequired: false,
       confirmLabel: 'Mark unavailable',
-      confirmColor: context.adminPalette.textSecondary,
+      confirmTone: AppStatusTone.danger,
       onConfirm: (reason) => ref.read(adminMaterialsApiProvider).markUnavailable(
             id: detail['id'] as String,
             reason: reason.isEmpty ? null : reason,
@@ -496,7 +496,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
           'This will make the material visible again if it is safe to restore.',
       materialTitle: item.title,
       confirmLabel: 'Restore material',
-      confirmColor: context.adminPalette.green,
+      confirmTone: AppStatusTone.primary,
       onConfirm: () =>
           ref.read(adminMaterialsApiProvider).restoreMaterial(item.materialId),
       successMessage: 'Material restored.',
@@ -510,7 +510,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
           'This will make the material visible again if it is safe to restore.',
       materialTitle: detail['title'] as String? ?? 'Material',
       confirmLabel: 'Restore material',
-      confirmColor: context.adminPalette.green,
+      confirmTone: AppStatusTone.primary,
       onConfirm: () => ref
           .read(adminMaterialsApiProvider)
           .restoreMaterial(detail['id'] as String),
@@ -526,7 +526,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       reasonLabel: 'Admin note',
       reasonRequired: true,
       confirmLabel: 'Reject report',
-      confirmColor: context.adminPalette.red,
+      confirmTone: AppStatusTone.danger,
       onConfirm: (note) => ref.read(adminMaterialsApiProvider).rejectReport(
             id: report.reportId,
             adminNote: note,
@@ -544,7 +544,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       reasonLabel: 'Admin note',
       reasonRequired: true,
       confirmLabel: 'Hide material',
-      confirmColor: context.adminPalette.red,
+      confirmTone: AppStatusTone.danger,
       onConfirm: (note) => ref.read(adminMaterialsApiProvider).hideMaterialFromReport(
             id: report.reportId,
             adminNote: note,
@@ -560,7 +560,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     required String reasonLabel,
     required bool reasonRequired,
     required String confirmLabel,
-    required Color confirmColor,
+    required AppStatusTone confirmTone,
     required Future<void> Function(String reason) onConfirm,
     required String successMessage,
   }) async {
@@ -573,8 +573,12 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setState) {
+            final confirmStyle = AppStatusStyle.of(context, confirmTone);
             return AlertDialog(
-              icon: Icon(Icons.warning_amber_rounded, color: confirmColor),
+              icon: Icon(
+                Icons.warning_amber_rounded,
+                color: confirmStyle.foreground,
+              ),
               title: Text(title),
               content: SizedBox(
                 width: 420,
@@ -619,7 +623,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: confirmColor),
+                  style: AppStatusButtonStyle.filled(context, confirmTone),
                   onPressed: submitting
                       ? null
                       : () async {
@@ -678,7 +682,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     required String message,
     required String materialTitle,
     required String confirmLabel,
-    required Color confirmColor,
+    required AppStatusTone confirmTone,
     required Future<void> Function() onConfirm,
     required String successMessage,
   }) async {
@@ -720,7 +724,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: confirmColor),
+                  style: AppStatusButtonStyle.filled(context, confirmTone),
                   onPressed: submitting
                       ? null
                       : () async {
