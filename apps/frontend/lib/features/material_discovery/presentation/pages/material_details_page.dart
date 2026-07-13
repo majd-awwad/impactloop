@@ -2116,6 +2116,10 @@ class _ReportMaterialSection extends ConsumerWidget {
                     }
                     Navigator.pop(dialogContext, true);
                   },
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    AppStatusTone.danger,
+                  ),
                   child: const Text('Submit report'),
                 ),
               ],
@@ -2160,20 +2164,18 @@ class _ReportMaterialSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final palette = MaterialsUiPalette.of(context);
     return Align(
       alignment: AlignmentDirectional.centerStart,
       child: TextButton.icon(
         onPressed: () => _openReportDialog(context, ref),
-        icon: Icon(Icons.flag_outlined, color: palette.textSecondary, size: 18),
+        style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
+        icon: const Icon(Icons.flag_outlined, size: 18),
         label: Text(
           const LocalizedText(
             en: 'Report material',
             ar: 'الإبلاغ عن المادة',
           ).resolve(context),
-          style: AppTextStyles.label(
-            context,
-          ).copyWith(color: palette.textSecondary),
+          style: AppTextStyles.label(context),
         ),
       ),
     );
