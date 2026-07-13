@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_close_button.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/review_status_presentation.dart';
@@ -74,8 +77,8 @@ class _MaterialsFiltersNotifier extends Notifier<_MaterialsFilters> {
 
 final _materialsFiltersProvider =
     NotifierProvider<_MaterialsFiltersNotifier, _MaterialsFilters>(
-  _MaterialsFiltersNotifier.new,
-);
+      _MaterialsFiltersNotifier.new,
+    );
 
 final adminMaterialsSummaryProvider = FutureProvider.autoDispose((ref) {
   return ref.watch(adminMaterialsApiProvider).fetchSummary();
@@ -83,21 +86,25 @@ final adminMaterialsSummaryProvider = FutureProvider.autoDispose((ref) {
 
 final adminMaterialsListProvider = FutureProvider.autoDispose((ref) async {
   final filters = ref.watch(_materialsFiltersProvider);
-  return ref.watch(adminMaterialsApiProvider).fetchMaterials(
+  return ref
+      .watch(adminMaterialsApiProvider)
+      .fetchMaterials(
         search: filters.search,
         status: filters.status,
         reportStatus: filters.reportStatus,
         isFree: filters.priceFilter == 'FREE'
             ? true
             : filters.priceFilter == 'PAID'
-                ? false
-                : null,
+            ? false
+            : null,
       );
 });
 
 final adminMaterialReportsProvider = FutureProvider.autoDispose((ref) async {
   final filters = ref.watch(_materialsFiltersProvider);
-  return ref.watch(adminMaterialsApiProvider).fetchReports(
+  return ref
+      .watch(adminMaterialsApiProvider)
+      .fetchReports(
         search: filters.search,
         status: filters.tab == 'REPORTS' ? 'PENDING' : null,
       );
@@ -178,7 +185,9 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _applyInitialStatusIfNeeded(),
+    );
   }
 
   @override
@@ -186,7 +195,9 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialStatus != widget.initialStatus) {
       _appliedInitialStatus = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _applyInitialStatusIfNeeded(),
+      );
     }
   }
 
@@ -219,14 +230,14 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       await action();
       if (!mounted) return;
       _refresh();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(successMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(successMessage)));
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     }
   }
 
@@ -323,7 +334,9 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
               ],
               selected: {filters.tab},
               onSelectionChanged: (value) {
-                ref.read(_materialsFiltersProvider.notifier).setTab(value.first);
+                ref
+                    .read(_materialsFiltersProvider.notifier)
+                    .setTab(value.first);
               },
             ),
             const SizedBox(height: 16),
@@ -411,26 +424,24 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       );
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     }
   }
 
   void _showHideDialog(AdminMaterialListItem item) {
     _showReasonDialog(
       title: 'Hide material',
-      warning:
-          'This material will no longer appear in public discovery.',
+      warning: 'This material will no longer appear in public discovery.',
       materialTitle: item.title,
       reasonLabel: 'Reason for hiding',
       reasonRequired: true,
       confirmLabel: 'Hide material',
       confirmTone: AppStatusTone.danger,
-      onConfirm: (reason) => ref.read(adminMaterialsApiProvider).hideMaterial(
-            id: item.materialId,
-            reason: reason,
-          ),
+      onConfirm: (reason) => ref
+          .read(adminMaterialsApiProvider)
+          .hideMaterial(id: item.materialId, reason: reason),
       successMessage: 'Material hidden.',
     );
   }
@@ -438,17 +449,15 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
   void _showHideDialogFromDetail(Map<String, dynamic> detail) {
     _showReasonDialog(
       title: 'Hide material',
-      warning:
-          'This material will no longer appear in public discovery.',
+      warning: 'This material will no longer appear in public discovery.',
       materialTitle: detail['title'] as String? ?? 'Material',
       reasonLabel: 'Reason for hiding',
       reasonRequired: true,
       confirmLabel: 'Hide material',
       confirmTone: AppStatusTone.danger,
-      onConfirm: (reason) => ref.read(adminMaterialsApiProvider).hideMaterial(
-            id: detail['id'] as String,
-            reason: reason,
-          ),
+      onConfirm: (reason) => ref
+          .read(adminMaterialsApiProvider)
+          .hideMaterial(id: detail['id'] as String, reason: reason),
       successMessage: 'Material hidden.',
     );
   }
@@ -463,7 +472,9 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       reasonRequired: false,
       confirmLabel: 'Mark unavailable',
       confirmTone: AppStatusTone.danger,
-      onConfirm: (reason) => ref.read(adminMaterialsApiProvider).markUnavailable(
+      onConfirm: (reason) => ref
+          .read(adminMaterialsApiProvider)
+          .markUnavailable(
             id: item.materialId,
             reason: reason.isEmpty ? null : reason,
           ),
@@ -481,7 +492,9 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       reasonRequired: false,
       confirmLabel: 'Mark unavailable',
       confirmTone: AppStatusTone.danger,
-      onConfirm: (reason) => ref.read(adminMaterialsApiProvider).markUnavailable(
+      onConfirm: (reason) => ref
+          .read(adminMaterialsApiProvider)
+          .markUnavailable(
             id: detail['id'] as String,
             reason: reason.isEmpty ? null : reason,
           ),
@@ -527,10 +540,9 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       reasonRequired: true,
       confirmLabel: 'Reject report',
       confirmTone: AppStatusTone.danger,
-      onConfirm: (note) => ref.read(adminMaterialsApiProvider).rejectReport(
-            id: report.reportId,
-            adminNote: note,
-          ),
+      onConfirm: (note) => ref
+          .read(adminMaterialsApiProvider)
+          .rejectReport(id: report.reportId, adminNote: note),
       successMessage: 'Report rejected.',
     );
   }
@@ -545,10 +557,9 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       reasonRequired: true,
       confirmLabel: 'Hide material',
       confirmTone: AppStatusTone.danger,
-      onConfirm: (note) => ref.read(adminMaterialsApiProvider).hideMaterialFromReport(
-            id: report.reportId,
-            adminNote: note,
-          ),
+      onConfirm: (note) => ref
+          .read(adminMaterialsApiProvider)
+          .hideMaterialFromReport(id: report.reportId, adminNote: note),
       successMessage: 'Material hidden and report resolved.',
     );
   }
@@ -573,13 +584,10 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setState) {
-            final confirmStyle = AppStatusStyle.of(context, confirmTone);
-            return AlertDialog(
-              icon: Icon(
-                Icons.warning_amber_rounded,
-                color: confirmStyle.foreground,
-              ),
+            return AppDialogShell(
               title: Text(title),
+              maxWidth: 460,
+              closeEnabled: !submitting,
               content: SizedBox(
                 width: 420,
                 child: Column(
@@ -617,12 +625,14 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: submitting ? null : () => Navigator.pop(dialogContext),
+              footer: AppDialogFooter.decision(
+                secondaryAction: TextButton(
+                  onPressed: submitting
+                      ? null
+                      : () => Navigator.pop(dialogContext),
                   child: const Text('Cancel'),
                 ),
-                FilledButton(
+                primaryAction: FilledButton(
                   style: AppStatusButtonStyle.filled(context, confirmTone),
                   onPressed: submitting
                       ? null
@@ -668,7 +678,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                         )
                       : Text(confirmLabel),
                 ),
-              ],
+              ),
             );
           },
         );
@@ -694,8 +704,10 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
+            return AppDialogShell(
               title: Text(title),
+              maxWidth: 440,
+              closeEnabled: !submitting,
               content: SizedBox(
                 width: 400,
                 child: Column(
@@ -718,12 +730,14 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: submitting ? null : () => Navigator.pop(dialogContext),
+              footer: AppDialogFooter.decision(
+                secondaryAction: TextButton(
+                  onPressed: submitting
+                      ? null
+                      : () => Navigator.pop(dialogContext),
                   child: const Text('Cancel'),
                 ),
-                FilledButton(
+                primaryAction: FilledButton(
                   style: AppStatusButtonStyle.filled(context, confirmTone),
                   onPressed: submitting
                       ? null
@@ -759,7 +773,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                         )
                       : Text(confirmLabel),
                 ),
-              ],
+              ),
             );
           },
         );
@@ -795,7 +809,9 @@ class _SummaryMetricCard extends StatelessWidget {
         color: palette.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: highlight ? accent.withValues(alpha: 0.55) : palette.cardBorder,
+          color: highlight
+              ? accent.withValues(alpha: 0.55)
+              : palette.cardBorder,
           width: highlight ? 1.5 : 1,
         ),
         boxShadow: [
@@ -823,10 +839,7 @@ class _SummaryMetricCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: AdminTypography.kpiHelper(palette)),
-                Text(
-                  '$value',
-                  style: AdminTypography.kpiValue(palette),
-                ),
+                Text('$value', style: AdminTypography.kpiValue(palette)),
               ],
             ),
           ),
@@ -924,11 +937,7 @@ class _FiltersBar extends StatelessWidget {
                   key: ValueKey('price-${filters.priceFilter}'),
                   label: 'Price',
                   value: filters.priceFilter,
-                  options: const {
-                    'ALL': 'All',
-                    'FREE': 'Free',
-                    'PAID': 'Paid',
-                  },
+                  options: const {'ALL': 'All', 'FREE': 'Free', 'PAID': 'Paid'},
                   onChanged: onPriceFilterChanged,
                 ),
                 _FilterDropdown(
@@ -990,10 +999,7 @@ class _FilterDropdown extends StatelessWidget {
       initialSelection: value,
       dropdownMenuEntries: options.entries
           .map(
-            (entry) => DropdownMenuEntry(
-              value: entry.key,
-              label: entry.value,
-            ),
+            (entry) => DropdownMenuEntry(value: entry.key, label: entry.value),
           )
           .toList(),
       onSelected: (selected) {
@@ -1017,7 +1023,8 @@ class _MaterialsTab extends ConsumerWidget {
   final Future<void> Function(
     Future<void> Function() action, {
     String successMessage,
-  }) onAction;
+  })
+  onAction;
   final void Function(String id) onViewDetails;
   final void Function(AdminMaterialListItem item) onHide;
   final void Function(AdminMaterialListItem item) onUnavailable;
@@ -1075,7 +1082,8 @@ class _ReportsTab extends ConsumerWidget {
   final Future<void> Function(
     Future<void> Function() action, {
     String successMessage,
-  }) onAction;
+  })
+  onAction;
   final void Function(String materialId) onViewMaterial;
   final void Function(AdminMaterialReportListItem report) onReject;
   final void Function(AdminMaterialReportListItem report) onHideFromReport;
@@ -1095,8 +1103,7 @@ class _ReportsTab extends ConsumerWidget {
           return const AdminEmptyState(
             icon: Icons.flag_outlined,
             title: 'No reports yet',
-            subtitle:
-                'Reported materials will appear here for admin review.',
+            subtitle: 'Reported materials will appear here for admin review.',
           );
         }
         return Column(
@@ -1147,10 +1154,9 @@ class _CardActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    final labelStyle = AdminTypography.kpiHelper(palette).copyWith(
-      fontSize: 13,
-      fontWeight: FontWeight.w600,
-    );
+    final labelStyle = AdminTypography.kpiHelper(
+      palette,
+    ).copyWith(fontSize: 13, fontWeight: FontWeight.w600);
 
     switch (variant) {
       case _CardActionVariant.restore:
@@ -1174,7 +1180,10 @@ class _CardActionButton extends StatelessWidget {
         return OutlinedButton.icon(
           onPressed: onPressed,
           icon: Icon(icon, size: _iconSize, color: palette.textSecondary),
-          label: Text(label, style: labelStyle.copyWith(color: palette.textSecondary)),
+          label: Text(
+            label,
+            style: labelStyle.copyWith(color: palette.textSecondary),
+          ),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size(0, _height),
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1271,9 +1280,7 @@ class _MaterialCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          border: Border(
-            left: BorderSide(color: accent, width: 4),
-          ),
+          border: Border(left: BorderSide(color: accent, width: 4)),
         ),
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
         child: Column(
@@ -1514,7 +1521,8 @@ class _ReportCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      if (report.note != null && report.note!.trim().isNotEmpty) ...[
+                      if (report.note != null &&
+                          report.note!.trim().isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Text(
                           report.note!,
@@ -1524,7 +1532,10 @@ class _ReportCard extends StatelessWidget {
                         ),
                       ],
                       const SizedBox(height: 6),
-                      Text('Submitted $created', style: AdminTypography.kpiHelper(palette)),
+                      Text(
+                        'Submitted $created',
+                        style: AdminTypography.kpiHelper(palette),
+                      ),
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 8,
@@ -1545,7 +1556,10 @@ class _ReportCard extends StatelessWidget {
                               context,
                               AppStatusTone.success,
                             ),
-                            icon: const Icon(Icons.check_circle_outline, size: 18),
+                            icon: const Icon(
+                              Icons.check_circle_outline,
+                              size: 18,
+                            ),
                             label: const Text('Resolve'),
                           ),
                           OutlinedButton.icon(
@@ -1603,10 +1617,9 @@ class _SemanticBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AdminTypography.kpiHelper(palette).copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
+        style: AdminTypography.kpiHelper(
+          palette,
+        ).copyWith(color: color, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -1654,285 +1667,306 @@ class _MaterialDetailDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-              decoration: BoxDecoration(
-                color: palette.bannerBackground,
-                border: Border(bottom: BorderSide(color: palette.cardBorder)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    detail['title'] as String? ?? 'Material details',
-                    style: AdminTypography.pageTitle(palette).copyWith(fontSize: 18),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      MaterialStatusBadge(
-                        label: _formatStatusLabel(
-                          detail['status'] as String? ?? 'UNKNOWN',
-                        ),
-                        tone: materialLifecycleStatusTone(
-                          detail['status'] as String? ?? '',
-                        ),
-                      ),
-                      _SemanticBadge(
-                        label: isFree ? 'Free' : 'Paid',
-                        tone: isFree ? _BadgeTone.success : _BadgeTone.paid,
-                      ),
-                      if (pendingCount > 0)
-                        _SemanticBadge(
-                          label: '$pendingCount pending report(s)',
-                          tone: _BadgeTone.warning,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+                decoration: BoxDecoration(
+                  color: palette.bannerBackground,
+                  border: Border(bottom: BorderSide(color: palette.cardBorder)),
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (moderation.detailLockMessage != null) ...[
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: palette.bannerBackground,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: palette.cardBorder),
-                        ),
-                        child: Text(
-                          moderation.detailLockMessage!,
-                          style: AdminTypography.pageSubtitle(palette).copyWith(
-                            color: palette.textMuted,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            detail['title'] as String? ?? 'Material details',
+                            style: AdminTypography.pageTitle(
+                              palette,
+                            ).copyWith(fontSize: 18),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    if (images.isNotEmpty) ...[
-                      _DetailSection(
-                        title: 'Images',
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: images.take(4).map((raw) {
-                            final image = Map<String, dynamic>.from(raw as Map);
-                            final url = image['imageUrl'] as String?;
-                            if (url == null) return const SizedBox.shrink();
-                            return ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.network(
-                                ApiConfig.resolveMediaUrl(url),
-                                width: 96,
-                                height: 96,
-                                fit: BoxFit.cover,
-                              ),
-                            );
-                          }).toList(),
+                        AppCloseButton(
+                          onPressed: () => Navigator.of(context).pop(),
                         ),
-                      ),
-                    ],
-                    _DetailSection(
-                      title: 'Material overview',
-                      child: _DetailGrid(entries: [
-                        _DetailEntry('Description', detail['description']),
-                        _DetailEntry('Category', category['nameEn']),
-                        _DetailEntry('Condition', detail['condition']),
-                        _DetailEntry('Source', detail['sourceType']),
-                        _DetailEntry(
-                          'Quantity',
-                          '${detail['quantity']} ${detail['unit']}',
-                        ),
-                        _DetailEntry(
-                          'Created',
-                          _formatDate(detail['createdAt'] as String?),
-                        ),
-                        _DetailEntry(
-                          'Updated',
-                          _formatDate(detail['updatedAt'] as String?),
-                        ),
-                      ]),
+                      ],
                     ),
-                    _DetailSection(
-                      title: 'Supplier',
-                      child: _DetailGrid(entries: [
-                        _DetailEntry('Name', supplier['displayName']),
-                        _DetailEntry('Email', supplier['email']),
-                        _DetailEntry(
-                          'Verification',
-                          supplier['verificationStatus'],
-                        ),
-                        if (supplier['organization'] is Map)
-                          _DetailEntry(
-                            'Organization',
-                            (supplier['organization']
-                                    as Map)['organizationName']
-                                as String?,
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        MaterialStatusBadge(
+                          label: _formatStatusLabel(
+                            detail['status'] as String? ?? 'UNKNOWN',
                           ),
-                      ]),
-                    ),
-                    _DetailSection(
-                      title: 'Location & fulfillment',
-                      child: _DetailGrid(entries: [
-                        _DetailEntry(
-                          'Location',
-                          '${location['city'] ?? ''}${location['area'] == null ? '' : ', ${location['area']}'}',
-                        ),
-                        _DetailEntry(
-                          'Pickup allowed',
-                          '${detail['pickupAllowed'] ?? false}',
-                        ),
-                        _DetailEntry(
-                          'Delivery allowed',
-                          '${detail['deliveryAllowed'] ?? false}',
-                        ),
-                        _DetailEntry('Pickup notes', detail['pickupNotes']),
-                      ]),
-                    ),
-                    _DetailSection(
-                      title: 'Pricing',
-                      child: _DetailGrid(entries: [
-                        _DetailEntry('Type', isFree ? 'Free' : 'Paid'),
-                        if (!isFree)
-                          _DetailEntry(
-                            'Price',
-                            '${detail['price']} ${detail['currency']}',
+                          tone: materialLifecycleStatusTone(
+                            detail['status'] as String? ?? '',
                           ),
-                        _DetailEntry(
-                          'Max at check',
-                          detail['maxAllowedPriceAtCheck']?.toString(),
                         ),
-                      ]),
-                    ),
-                    _DetailSection(
-                      title: 'Reports',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$pendingCount pending • $totalReports total',
-                            style: AdminTypography.pageSubtitle(palette),
+                        _SemanticBadge(
+                          label: isFree ? 'Free' : 'Paid',
+                          tone: isFree ? _BadgeTone.success : _BadgeTone.paid,
+                        ),
+                        if (pendingCount > 0)
+                          _SemanticBadge(
+                            label: '$pendingCount pending report(s)',
+                            tone: _BadgeTone.warning,
                           ),
-                          if (latestReports.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            ...latestReports.take(3).map((raw) {
-                              final report =
-                                  Map<String, dynamic>.from(raw as Map);
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: palette.bannerBackground,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: palette.cardBorder),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _formatReportReason(
-                                          report['reason'] as String? ?? '',
-                                        ),
-                                        style: AdminTypography.kpiLabel(palette),
-                                      ),
-                                      if (report['note'] != null)
-                                        Text(
-                                          '${report['note']}',
-                                          style:
-                                              AdminTypography.kpiHelper(palette),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }),
-                          ],
-                        ],
-                      ),
-                    ),
-                    _DetailSection(
-                      title: 'Moderation',
-                      child: _DetailGrid(entries: [
-                        _DetailEntry('Status', detail['status']),
-                        _DetailEntry(
-                          'Moderation reason',
-                          detail['moderationReason'],
-                        ),
-                        _DetailEntry(
-                          'Moderated at',
-                          _formatDate(detail['moderatedAt'] as String?),
-                        ),
-                      ]),
+                      ],
                     ),
                   ],
                 ),
               ),
-            ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: palette.cardBorder)),
-              ),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: AppStatusButtonStyle.text(
-                      context,
-                      AppStatusTone.neutral,
-                    ),
-                    child: const Text('Close'),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (moderation.detailLockMessage != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: palette.bannerBackground,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: palette.cardBorder),
+                          ),
+                          child: Text(
+                            moderation.detailLockMessage!,
+                            style: AdminTypography.pageSubtitle(
+                              palette,
+                            ).copyWith(color: palette.textMuted),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (images.isNotEmpty) ...[
+                        _DetailSection(
+                          title: 'Images',
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: images.take(4).map((raw) {
+                              final image = Map<String, dynamic>.from(
+                                raw as Map,
+                              );
+                              final url = image['imageUrl'] as String?;
+                              if (url == null) return const SizedBox.shrink();
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.network(
+                                  ApiConfig.resolveMediaUrl(url),
+                                  width: 96,
+                                  height: 96,
+                                  fit: BoxFit.cover,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                      _DetailSection(
+                        title: 'Material overview',
+                        child: _DetailGrid(
+                          entries: [
+                            _DetailEntry('Description', detail['description']),
+                            _DetailEntry('Category', category['nameEn']),
+                            _DetailEntry('Condition', detail['condition']),
+                            _DetailEntry('Source', detail['sourceType']),
+                            _DetailEntry(
+                              'Quantity',
+                              '${detail['quantity']} ${detail['unit']}',
+                            ),
+                            _DetailEntry(
+                              'Created',
+                              _formatDate(detail['createdAt'] as String?),
+                            ),
+                            _DetailEntry(
+                              'Updated',
+                              _formatDate(detail['updatedAt'] as String?),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _DetailSection(
+                        title: 'Supplier',
+                        child: _DetailGrid(
+                          entries: [
+                            _DetailEntry('Name', supplier['displayName']),
+                            _DetailEntry('Email', supplier['email']),
+                            _DetailEntry(
+                              'Verification',
+                              supplier['verificationStatus'],
+                            ),
+                            if (supplier['organization'] is Map)
+                              _DetailEntry(
+                                'Organization',
+                                (supplier['organization']
+                                        as Map)['organizationName']
+                                    as String?,
+                              ),
+                          ],
+                        ),
+                      ),
+                      _DetailSection(
+                        title: 'Location & fulfillment',
+                        child: _DetailGrid(
+                          entries: [
+                            _DetailEntry(
+                              'Location',
+                              '${location['city'] ?? ''}${location['area'] == null ? '' : ', ${location['area']}'}',
+                            ),
+                            _DetailEntry(
+                              'Pickup allowed',
+                              '${detail['pickupAllowed'] ?? false}',
+                            ),
+                            _DetailEntry(
+                              'Delivery allowed',
+                              '${detail['deliveryAllowed'] ?? false}',
+                            ),
+                            _DetailEntry('Pickup notes', detail['pickupNotes']),
+                          ],
+                        ),
+                      ),
+                      _DetailSection(
+                        title: 'Pricing',
+                        child: _DetailGrid(
+                          entries: [
+                            _DetailEntry('Type', isFree ? 'Free' : 'Paid'),
+                            if (!isFree)
+                              _DetailEntry(
+                                'Price',
+                                '${detail['price']} ${detail['currency']}',
+                              ),
+                            _DetailEntry(
+                              'Max at check',
+                              detail['maxAllowedPriceAtCheck']?.toString(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _DetailSection(
+                        title: 'Reports',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$pendingCount pending • $totalReports total',
+                              style: AdminTypography.pageSubtitle(palette),
+                            ),
+                            if (latestReports.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              ...latestReports.take(3).map((raw) {
+                                final report = Map<String, dynamic>.from(
+                                  raw as Map,
+                                );
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: palette.bannerBackground,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: palette.cardBorder,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _formatReportReason(
+                                            report['reason'] as String? ?? '',
+                                          ),
+                                          style: AdminTypography.kpiLabel(
+                                            palette,
+                                          ),
+                                        ),
+                                        if (report['note'] != null)
+                                          Text(
+                                            '${report['note']}',
+                                            style: AdminTypography.kpiHelper(
+                                              palette,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ],
+                          ],
+                        ),
+                      ),
+                      _DetailSection(
+                        title: 'Moderation',
+                        child: _DetailGrid(
+                          entries: [
+                            _DetailEntry('Status', detail['status']),
+                            _DetailEntry(
+                              'Moderation reason',
+                              detail['moderationReason'],
+                            ),
+                            _DetailEntry(
+                              'Moderated at',
+                              _formatDate(detail['moderatedAt'] as String?),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  if (onHide != null)
-                    OutlinedButton(
-                      onPressed: onHide,
-                      style: AppStatusButtonStyle.outlined(
-                        context,
-                        AppStatusTone.danger,
-                      ),
-                      child: const Text('Hide'),
-                    ),
-                  if (onUnavailable != null)
-                    OutlinedButton(
-                      onPressed: onUnavailable,
-                      style: AppStatusButtonStyle.outlined(
-                        context,
-                        AppStatusTone.danger,
-                      ),
-                      child: const Text('Mark unavailable'),
-                    ),
-                  if (onRestore != null)
-                    FilledButton(
-                      onPressed: onRestore,
-                      style: AppStatusButtonStyle.filled(
-                        context,
-                        AppStatusTone.primary,
-                      ),
-                      child: const Text('Restore'),
-                    ),
-                ],
+                ),
               ),
-            ),
-          ],
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: palette.cardBorder)),
+                ),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    if (onHide != null)
+                      OutlinedButton(
+                        onPressed: onHide,
+                        style: AppStatusButtonStyle.outlined(
+                          context,
+                          AppStatusTone.danger,
+                        ),
+                        child: const Text('Hide'),
+                      ),
+                    if (onUnavailable != null)
+                      OutlinedButton(
+                        onPressed: onUnavailable,
+                        style: AppStatusButtonStyle.outlined(
+                          context,
+                          AppStatusTone.danger,
+                        ),
+                        child: const Text('Mark unavailable'),
+                      ),
+                    if (onRestore != null)
+                      FilledButton(
+                        onPressed: onRestore,
+                        style: AppStatusButtonStyle.filled(
+                          context,
+                          AppStatusTone.primary,
+                        ),
+                        child: const Text('Restore'),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -1992,11 +2026,16 @@ class _DetailGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final visible = entries
-        .where((entry) =>
-            entry.value != null && entry.value.toString().trim().isNotEmpty)
+        .where(
+          (entry) =>
+              entry.value != null && entry.value.toString().trim().isNotEmpty,
+        )
         .toList();
     if (visible.isEmpty) {
-      return Text('No details available.', style: AdminTypography.kpiHelper(palette));
+      return Text(
+        'No details available.',
+        style: AdminTypography.kpiHelper(palette),
+      );
     }
     return Column(
       children: visible
