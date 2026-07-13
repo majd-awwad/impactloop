@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/review_status_presentation.dart';
 import '../../../materials/application/material_listing_providers.dart';
@@ -36,27 +38,39 @@ class _ApprovalsFilters {
 class _ApprovalsFiltersNotifier extends Notifier<_ApprovalsFilters> {
   @override
   _ApprovalsFilters build() {
-    return const _ApprovalsFilters(tab: 'CATEGORY', status: 'PENDING', search: '');
+    return const _ApprovalsFilters(
+      tab: 'CATEGORY',
+      status: 'PENDING',
+      search: '',
+    );
   }
 
   void setTab(String tab) => state = state.copyWith(tab: tab, search: '');
   void setStatus(String status) => state = state.copyWith(status: status);
   void setSearch(String search) => state = state.copyWith(search: search);
-  void reset() => state = const _ApprovalsFilters(tab: 'CATEGORY', status: 'PENDING', search: '');
+  void reset() => state = const _ApprovalsFilters(
+    tab: 'CATEGORY',
+    status: 'PENDING',
+    search: '',
+  );
 }
 
 final _approvalsFiltersProvider =
     NotifierProvider<_ApprovalsFiltersNotifier, _ApprovalsFilters>(
-  _ApprovalsFiltersNotifier.new,
-);
+      _ApprovalsFiltersNotifier.new,
+    );
 
 final adminApprovalsSummaryProvider = FutureProvider.autoDispose((ref) {
   return ref.watch(adminApprovalsApiProvider).fetchSummary();
 });
 
-final adminApprovalsCategoryRequestsProvider = FutureProvider.autoDispose((ref) {
+final adminApprovalsCategoryRequestsProvider = FutureProvider.autoDispose((
+  ref,
+) {
   final filters = ref.watch(_approvalsFiltersProvider);
-  return ref.watch(adminApprovalsApiProvider).fetchCategoryRequests(
+  return ref
+      .watch(adminApprovalsApiProvider)
+      .fetchCategoryRequests(
         status: filters.status,
         search: filters.search,
         page: 1,
@@ -66,7 +80,9 @@ final adminApprovalsCategoryRequestsProvider = FutureProvider.autoDispose((ref) 
 
 final adminApprovalsPriceRequestsProvider = FutureProvider.autoDispose((ref) {
   final filters = ref.watch(_approvalsFiltersProvider);
-  return ref.watch(adminApprovalsApiProvider).fetchPriceRequests(
+  return ref
+      .watch(adminApprovalsApiProvider)
+      .fetchPriceRequests(
         status: filters.status,
         search: filters.search,
         page: 1,
@@ -86,17 +102,14 @@ class AdminApprovalsPage extends ConsumerStatefulWidget {
 class _AdminApprovalsPageState extends ConsumerState<AdminApprovalsPage> {
   var _appliedInitialStatus = false;
 
-  static const _validStatusFilters = {
-    'PENDING',
-    'APPROVED',
-    'REJECTED',
-    'ALL',
-  };
+  static const _validStatusFilters = {'PENDING', 'APPROVED', 'REJECTED', 'ALL'};
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _applyInitialStatusIfNeeded(),
+    );
   }
 
   @override
@@ -104,7 +117,9 @@ class _AdminApprovalsPageState extends ConsumerState<AdminApprovalsPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialStatus != widget.initialStatus) {
       _appliedInitialStatus = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _applyInitialStatusIfNeeded(),
+      );
     }
   }
 
@@ -167,7 +182,12 @@ class _SummaryRow extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            Expanded(child: Text(error.toString(), style: AdminTypography.pageSubtitle(palette))),
+            Expanded(
+              child: Text(
+                error.toString(),
+                style: AdminTypography.pageSubtitle(palette),
+              ),
+            ),
             const SizedBox(width: 10),
             FilledButton(
               onPressed: () => ref.invalidate(adminApprovalsSummaryProvider),
@@ -205,8 +225,16 @@ class _SummaryRow extends ConsumerWidget {
                 reviewStatusTone('REJECTED'),
               ).foreground,
             ),
-            _SummaryChip(label: 'Category', count: summary.categoryPending, color: palette.blue),
-            _SummaryChip(label: 'Price', count: summary.pricePending, color: palette.purple),
+            _SummaryChip(
+              label: 'Category',
+              count: summary.categoryPending,
+              color: palette.blue,
+            ),
+            _SummaryChip(
+              label: 'Price',
+              count: summary.pricePending,
+              color: palette.purple,
+            ),
           ],
         );
       },
@@ -229,7 +257,10 @@ class _SummaryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     return Container(
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 14,
+        vertical: 10,
+      ),
       decoration: BoxDecoration(
         color: palette.cardBackground,
         borderRadius: BorderRadius.circular(14),
@@ -244,7 +275,10 @@ class _SummaryChip extends StatelessWidget {
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
-          Text('$count', style: AdminTypography.kpiValue(palette).copyWith(fontSize: 18)),
+          Text(
+            '$count',
+            style: AdminTypography.kpiValue(palette).copyWith(fontSize: 18),
+          ),
           const SizedBox(width: 6),
           Text(label, style: AdminTypography.kpiHelper(palette)),
         ],
@@ -263,8 +297,16 @@ class _TabsRow extends ConsumerWidget {
       width: double.infinity,
       child: SegmentedButton<String>(
         segments: const [
-          ButtonSegment(value: 'CATEGORY', label: Text('Category Requests'), icon: Icon(Icons.category_outlined)),
-          ButtonSegment(value: 'PRICE', label: Text('Price Requests'), icon: Icon(Icons.price_check_outlined)),
+          ButtonSegment(
+            value: 'CATEGORY',
+            label: Text('Category Requests'),
+            icon: Icon(Icons.category_outlined),
+          ),
+          ButtonSegment(
+            value: 'PRICE',
+            label: Text('Price Requests'),
+            icon: Icon(Icons.price_check_outlined),
+          ),
         ],
         selected: {selected},
         onSelectionChanged: (value) {
@@ -420,7 +462,8 @@ class _CategoryRequestsPanel extends ConsumerWidget {
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: OutlinedButton(
-              onPressed: () => ref.invalidate(adminApprovalsCategoryRequestsProvider),
+              onPressed: () =>
+                  ref.invalidate(adminApprovalsCategoryRequestsProvider),
               child: const Text('Retry'),
             ),
           ),
@@ -475,7 +518,8 @@ class _PriceRequestsPanel extends ConsumerWidget {
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: OutlinedButton(
-              onPressed: () => ref.invalidate(adminApprovalsPriceRequestsProvider),
+              onPressed: () =>
+                  ref.invalidate(adminApprovalsPriceRequestsProvider),
               child: const Text('Retry'),
             ),
           ),
@@ -523,7 +567,11 @@ class _CategoryRequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final dateFormat = DateFormat.yMMMd();
-    final supplierLabel = _supplierLabel(item.supplierOrganization, item.supplierName, item.supplierEmail);
+    final supplierLabel = _supplierLabel(
+      item.supplierOrganization,
+      item.supplierName,
+      item.supplierEmail,
+    );
     final similarHint = item.similarCategories.isEmpty
         ? 'No suggested existing category'
         : 'Similar existing categories: ${item.similarCategories.join(', ')}';
@@ -550,7 +598,8 @@ class _CategoryRequestCard extends StatelessWidget {
                 'Quantity',
                 item.quantity == null
                     ? '—'
-                    : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'.trim(),
+                    : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'
+                          .trim(),
               ),
               _InfoRow('Condition', _formatCondition(item.condition)),
               _InfoRow('Location', item.locationLabel ?? '—'),
@@ -561,7 +610,10 @@ class _CategoryRequestCard extends StatelessWidget {
           Text(similarHint, style: AdminTypography.kpiHelper(palette)),
           if (item.adminNote?.trim().isNotEmpty == true) ...[
             const SizedBox(height: 8),
-            Text('Admin note: ${item.adminNote!.trim()}', style: AdminTypography.kpiHelper(palette)),
+            Text(
+              'Admin note: ${item.adminNote!.trim()}',
+              style: AdminTypography.kpiHelper(palette),
+            ),
           ],
           const SizedBox(height: 12),
           _ApprovalActionRow(
@@ -595,7 +647,11 @@ class _PriceRequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final dateFormat = DateFormat.yMMMd();
-    final supplierLabel = _supplierLabel(item.supplierOrganization, item.supplierName, item.supplierEmail);
+    final supplierLabel = _supplierLabel(
+      item.supplierOrganization,
+      item.supplierName,
+      item.supplierEmail,
+    );
     final unit = item.unit ?? 'unit';
     final supplierPrice = item.supplierPriceNis == null
         ? '—'
@@ -634,7 +690,8 @@ class _PriceRequestCard extends StatelessWidget {
                 'Quantity',
                 item.quantity == null
                     ? '—'
-                    : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'.trim(),
+                    : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'
+                          .trim(),
               ),
               _InfoRow('Condition', _formatCondition(item.condition)),
               _InfoRow('Category', item.categoryName ?? '—'),
@@ -642,7 +699,10 @@ class _PriceRequestCard extends StatelessWidget {
           ),
           if (item.adminNote?.trim().isNotEmpty == true) ...[
             const SizedBox(height: 8),
-            Text('Admin note: ${item.adminNote!.trim()}', style: AdminTypography.kpiHelper(palette)),
+            Text(
+              'Admin note: ${item.adminNote!.trim()}',
+              style: AdminTypography.kpiHelper(palette),
+            ),
           ],
           const SizedBox(height: 12),
           _ApprovalActionRow(
@@ -710,7 +770,9 @@ class _ApprovalCardHeader extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: AdminTypography.pageTitle(palette).copyWith(fontSize: 18),
+                style: AdminTypography.pageTitle(
+                  palette,
+                ).copyWith(fontSize: 18),
               ),
             ),
             const SizedBox(width: 10),
@@ -727,7 +789,10 @@ class _ApprovalCardHeader extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             _TypeBadge(label: typeLabel, color: typeColor),
-            Text('Submitted $submittedLabel', style: AdminTypography.kpiHelper(palette)),
+            Text(
+              'Submitted $submittedLabel',
+              style: AdminTypography.kpiHelper(palette),
+            ),
           ],
         ),
       ],
@@ -753,10 +818,9 @@ class _TypeBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AdminTypography.kpiHelper(palette).copyWith(
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
+        style: AdminTypography.kpiHelper(
+          palette,
+        ).copyWith(fontWeight: FontWeight.w700, color: color),
       ),
     );
   }
@@ -794,10 +858,16 @@ class _InfoBlock extends StatelessWidget {
               children: [
                 SizedBox(
                   width: 108,
-                  child: Text(rows[i].label, style: AdminTypography.kpiHelper(palette)),
+                  child: Text(
+                    rows[i].label,
+                    style: AdminTypography.kpiHelper(palette),
+                  ),
                 ),
                 Expanded(
-                  child: Text(rows[i].value, style: AdminTypography.pageSubtitle(palette)),
+                  child: Text(
+                    rows[i].value,
+                    style: AdminTypography.pageSubtitle(palette),
+                  ),
                 ),
               ],
             ),
@@ -850,7 +920,10 @@ class _ApprovalActionRow extends StatelessWidget {
                 context,
                 AppStatusTone.success,
                 visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
               ),
               child: Text(approveLabel),
             ),
@@ -899,7 +972,7 @@ Future<void> _quickApproveCategory(
   final controller = TextEditingController(text: item.requestedName);
   final finalName = await showDialog<String?>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => AppDialogShell(
       title: const Text('Approve category'),
       content: TextField(
         controller: controller,
@@ -908,14 +981,13 @@ Future<void> _quickApproveCategory(
           border: OutlineInputBorder(),
         ),
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-        FilledButton(
+      footer: AppDialogFooter.form(
+        primaryAction: FilledButton(
           onPressed: () => Navigator.of(context).pop(controller.text.trim()),
           style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
           child: const Text('Approve'),
         ),
-      ],
+      ),
     ),
   );
   controller.dispose();
@@ -927,18 +999,26 @@ Future<void> _quickApproveCategory(
     ref.invalidate(adminApprovalsCategoryRequestsProvider);
     ref.invalidate(materialCategoriesProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category approved.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Category approved.')));
     }
   } on ApiException catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   }
@@ -960,7 +1040,7 @@ Future<void> _quickRejectCategory(
 
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => AppDialogShell(
       title: const Text('Reject category'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -988,14 +1068,17 @@ Future<void> _quickRejectCategory(
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-        FilledButton(
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        primaryAction: FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
           child: const Text('Reject'),
         ),
-      ],
+      ),
     ),
   );
 
@@ -1005,11 +1088,15 @@ Future<void> _quickRejectCategory(
   if (confirmed != true) return;
   if (reason.length < 3) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: const Text('Reason is required.'), backgroundColor: Theme.of(context).colorScheme.error),
+      SnackBar(
+        content: const Text('Reason is required.'),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
     );
     return;
   }
-  if (categories.isNotEmpty && (suggestedCategoryId == null || suggestedCategoryId!.trim().isEmpty)) {
+  if (categories.isNotEmpty &&
+      (suggestedCategoryId == null || suggestedCategoryId!.trim().isEmpty)) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Select a suggested existing category.'),
@@ -1020,22 +1107,34 @@ Future<void> _quickRejectCategory(
   }
 
   try {
-    await api.rejectCategoryRequest(id: item.id, adminNote: reason, suggestedCategoryId: suggestedCategoryId);
+    await api.rejectCategoryRequest(
+      id: item.id,
+      adminNote: reason,
+      suggestedCategoryId: suggestedCategoryId,
+    );
     ref.invalidate(adminApprovalsSummaryProvider);
     ref.invalidate(adminApprovalsCategoryRequestsProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category rejected.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Category rejected.')));
     }
   } on ApiException catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   }
@@ -1049,13 +1148,15 @@ Future<void> _quickApprovePrice(
   final api = ref.read(adminApprovalsApiProvider);
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => AppDialogShell(
       title: const Text('Approve supplier price'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Supplier price: ${item.supplierPriceNis?.toStringAsFixed(2) ?? '—'} NIS'),
+          Text(
+            'Supplier price: ${item.supplierPriceNis?.toStringAsFixed(2) ?? '—'} NIS',
+          ),
           const SizedBox(height: 6),
           Text(
             item.aiSuggestedMaxUnitPriceNis == null
@@ -1077,14 +1178,17 @@ Future<void> _quickApprovePrice(
           ],
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-        FilledButton(
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        primaryAction: FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
           child: const Text('Approve'),
         ),
-      ],
+      ),
     ),
   );
   if (confirmed != true) return;
@@ -1094,18 +1198,26 @@ Future<void> _quickApprovePrice(
     ref.invalidate(adminApprovalsSummaryProvider);
     ref.invalidate(adminApprovalsPriceRequestsProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Price approved.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Price approved.')));
     }
   } on ApiException catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   }
@@ -1122,7 +1234,7 @@ Future<void> _quickRejectPrice(
 
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => AppDialogShell(
       title: const Text('Reject price'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1153,14 +1265,17 @@ Future<void> _quickRejectPrice(
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-        FilledButton(
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        primaryAction: FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
           child: const Text('Reject'),
         ),
-      ],
+      ),
     ),
   );
 
@@ -1182,22 +1297,34 @@ Future<void> _quickRejectPrice(
   }
 
   try {
-    await api.rejectPriceRequest(id: item.id, adminNote: reason, maxAllowedPrice: maxAllowed);
+    await api.rejectPriceRequest(
+      id: item.id,
+      adminNote: reason,
+      maxAllowedPrice: maxAllowed,
+    );
     ref.invalidate(adminApprovalsSummaryProvider);
     ref.invalidate(adminApprovalsPriceRequestsProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Price rejected.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Price rejected.')));
     }
   } on ApiException catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   }
@@ -1281,7 +1408,10 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
             style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
@@ -1295,19 +1425,34 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
 
     setState(() => _submitting = true);
     try {
-      await widget.api.approveCategoryRequest(id: widget.item.id, finalName: result);
+      await widget.api.approveCategoryRequest(
+        id: widget.item.id,
+        finalName: result,
+      );
       if (!mounted) return;
       widget.onCompleted();
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category request approved.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Category request approved.')),
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
   }
 
@@ -1352,7 +1497,10 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
@@ -1368,11 +1516,15 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
     if (confirmed != true) return;
     if (reason.length < 3) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Reason is required.'), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: const Text('Reason is required.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
       return;
     }
-    if (categories.isNotEmpty && (selectedCategoryId == null || selectedCategoryId!.trim().isEmpty)) {
+    if (categories.isNotEmpty &&
+        (selectedCategoryId == null || selectedCategoryId!.trim().isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Select a suggested existing category.'),
@@ -1392,15 +1544,27 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
       if (!mounted) return;
       widget.onCompleted();
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category request rejected.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Category request rejected.')),
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
   }
 
@@ -1426,9 +1590,15 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(item.requestedName, style: AdminTypography.pageTitle(palette)),
+              Text(
+                item.requestedName,
+                style: AdminTypography.pageTitle(palette),
+              ),
               const SizedBox(height: 8),
-              Text('Status: ${item.status}', style: AdminTypography.pageSubtitle(palette)),
+              Text(
+                'Status: ${item.status}',
+                style: AdminTypography.pageSubtitle(palette),
+              ),
               const SizedBox(height: 12),
               _dialogKv('Supplier', supplierLabel),
               _dialogKv('Material', item.materialTitle ?? '—'),
@@ -1437,7 +1607,8 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
                 'Quantity',
                 item.quantity == null
                     ? '—'
-                    : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'.trim(),
+                    : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'
+                          .trim(),
               ),
               _dialogKv('Condition', _formatCondition(item.condition)),
               _dialogKv('Location', item.locationLabel ?? '—'),
@@ -1454,21 +1625,30 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: _submitting ? null : () => Navigator.of(context).pop(), child: const Text('Close')),
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
         TextButton(
           onPressed: _submitting ? null : _reject,
           style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
           child: const Text('Reject'),
         ),
         FilledButton(
-          onPressed: (_submitting || item.status.toUpperCase() != 'PENDING') ? null : _approve,
+          onPressed: (_submitting || item.status.toUpperCase() != 'PENDING')
+              ? null
+              : _approve,
           style: AppStatusButtonStyle.filled(
             context,
             AppStatusTone.success,
             visualDensity: VisualDensity.compact,
           ),
           child: _submitting
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Approve'),
         ),
       ],
@@ -1482,8 +1662,13 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 130, child: Text(label, style: AdminTypography.kpiHelper(palette))),
-          Expanded(child: Text(value, style: AdminTypography.pageSubtitle(palette))),
+          SizedBox(
+            width: 130,
+            child: Text(label, style: AdminTypography.kpiHelper(palette)),
+          ),
+          Expanded(
+            child: Text(value, style: AdminTypography.pageSubtitle(palette)),
+          ),
         ],
       ),
     );
@@ -1515,15 +1700,27 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
       if (!mounted) return;
       widget.onCompleted();
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Price request approved.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Price request approved.')));
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
   }
 
@@ -1560,7 +1757,10 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
@@ -1598,15 +1798,27 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
       if (!mounted) return;
       widget.onCompleted();
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Price request rejected.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Price request rejected.')));
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
   }
 
@@ -1623,11 +1835,22 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(item.materialTitle ?? 'Unknown material', style: AdminTypography.pageTitle(palette)),
+            Text(
+              item.materialTitle ?? 'Unknown material',
+              style: AdminTypography.pageTitle(palette),
+            ),
             const SizedBox(height: 8),
-            Text('Status: ${item.status}', style: AdminTypography.pageSubtitle(palette)),
+            Text(
+              'Status: ${item.status}',
+              style: AdminTypography.pageSubtitle(palette),
+            ),
             const SizedBox(height: 12),
-            _kv('Supplier price', item.supplierPriceNis == null ? '—' : '${item.supplierPriceNis!.toStringAsFixed(2)} NIS'),
+            _kv(
+              'Supplier price',
+              item.supplierPriceNis == null
+                  ? '—'
+                  : '${item.supplierPriceNis!.toStringAsFixed(2)} NIS',
+            ),
             _kv(
               'AI/base suggested price',
               item.aiSuggestedMaxUnitPriceNis == null
@@ -1657,21 +1880,30 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: _submitting ? null : () => Navigator.of(context).pop(), child: const Text('Close')),
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
         TextButton(
           onPressed: _submitting ? null : _reject,
           style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
           child: const Text('Reject'),
         ),
         FilledButton(
-          onPressed: (_submitting || item.status.toUpperCase() != 'PENDING') ? null : _approve,
+          onPressed: (_submitting || item.status.toUpperCase() != 'PENDING')
+              ? null
+              : _approve,
           style: AppStatusButtonStyle.filled(
             context,
             AppStatusTone.success,
             visualDensity: VisualDensity.compact,
           ),
           child: _submitting
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Approve'),
         ),
       ],
@@ -1684,11 +1916,15 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          SizedBox(width: 130, child: Text(label, style: AdminTypography.kpiHelper(palette))),
-          Expanded(child: Text(value, style: AdminTypography.pageSubtitle(palette))),
+          SizedBox(
+            width: 130,
+            child: Text(label, style: AdminTypography.kpiHelper(palette)),
+          ),
+          Expanded(
+            child: Text(value, style: AdminTypography.pageSubtitle(palette)),
+          ),
         ],
       ),
     );
   }
 }
-
