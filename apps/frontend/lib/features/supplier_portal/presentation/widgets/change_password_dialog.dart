@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../../core/errors/api_exception.dart';
 import 'supplier_dark_form_field.dart';
@@ -248,9 +249,9 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: _isSubmitting ? null : _submit,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colors.accent,
-                      foregroundColor: colors.background,
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.primary,
                       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                     ),
                     child: _isSubmitting
