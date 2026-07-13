@@ -5,6 +5,7 @@ import 'package:frontend/features/supplier_portal/presentation/theme/supplier_th
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_close_button.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../application/supplier_delivery_scheduling_preview.dart';
 import '../../data/models/supplier_incoming_request.dart';
@@ -114,9 +115,7 @@ class _AcceptIncomingRequestDialogState
     final colors = context.supplierColors;
     final actionStyle = AppStatusStyle.of(context, AppStatusTone.success);
     final compact = MediaQuery.sizeOf(context).width < 480;
-    final dialogWidth = compact
-        ? MediaQuery.sizeOf(context).width - 32
-        : 480.0;
+    final dialogWidth = compact ? MediaQuery.sizeOf(context).width - 32 : 480.0;
     final preferredWindows = _isDelivery
         ? widget.request.learnerPreferredDeliveryWindows
         : widget.request.learnerPreferredPickupWindows;
@@ -149,9 +148,18 @@ class _AcceptIncomingRequestDialogState
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.dialogTitle ?? context.s.acceptRequest,
-                    style: context.supplierTitle().copyWith(fontSize: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.dialogTitle ?? context.s.acceptRequest,
+                          style: context.supplierTitle().copyWith(fontSize: 20),
+                        ),
+                      ),
+                      AppCloseButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
@@ -226,9 +234,7 @@ class _AcceptIncomingRequestDialogState
                                   _selectedPreferredIndex = i;
                                   _useCustomDeliveryWindow = false;
                                   if (!_isDelivery) {
-                                    _applyPreferredWindow(
-                                      preferredWindows[i],
-                                    );
+                                    _applyPreferredWindow(preferredWindows[i]);
                                   }
                                 } else {
                                   _selectedPreferredIndex = null;
@@ -417,7 +423,9 @@ class _AcceptIncomingRequestDialogState
                           Text(
                             deliveryPreview.isFeasible
                                 ? context.s.deliveryScheduleCanAcceptDirectly
-                                : context.s.deliveryScheduleNeedsLearnerConfirmation,
+                                : context
+                                      .s
+                                      .deliveryScheduleNeedsLearnerConfirmation,
                             style: context.supplierBody().copyWith(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -452,35 +460,18 @@ class _AcceptIncomingRequestDialogState
                     maxLines: 3,
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: colors.textSecondary,
-                            side: BorderSide(
-                              color: colors.border.withValues(alpha: 0.45),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: Text(context.s.cancel),
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _submit,
+                      style: AppStatusButtonStyle.filled(
+                        context,
+                        AppStatusTone.success,
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: _submit,
-                          style: AppStatusButtonStyle.filled(
-                            context,
-                            AppStatusTone.success,
-                          ),
-                          child: Text(
-                            widget.submitLabel ?? context.s.acceptRequest,
-                          ),
-                        ),
+                      child: Text(
+                        widget.submitLabel ?? context.s.acceptRequest,
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -531,7 +522,8 @@ class _AcceptIncomingRequestDialogState
   Future<void> _pickCustomDeliveryTime({required bool isStart}) async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: (isStart ? _customDeliveryStartTime : _customDeliveryEndTime) ??
+      initialTime:
+          (isStart ? _customDeliveryStartTime : _customDeliveryEndTime) ??
           TimeOfDay.now(),
     );
     if (picked != null) {
@@ -621,9 +613,7 @@ class _AcceptIncomingRequestDialogState
 
       if (supplierStart.isBefore(now.add(minPickupLeadTime))) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(proposedPickupStartTooSoonMessage),
-          ),
+          const SnackBar(content: Text(proposedPickupStartTooSoonMessage)),
         );
         return;
       }
@@ -709,14 +699,13 @@ class _AcceptIncomingRequestDialogState
         _selectedPreferredIndex != null &&
         _selectedPreferredIndex! <
             widget.request.learnerPreferredPickupWindows.length) {
-      final selected =
-          widget.request.learnerPreferredPickupWindows[_selectedPreferredIndex!];
+      final selected = widget
+          .request
+          .learnerPreferredPickupWindows[_selectedPreferredIndex!];
 
       if (selected.end.isBefore(now.add(minRemainingPickupWindow))) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(pickupWindowTooCloseMessage),
-          ),
+          const SnackBar(content: Text(pickupWindowTooCloseMessage)),
         );
         return;
       }
@@ -756,20 +745,14 @@ class _AcceptIncomingRequestDialogState
 
     if (start.isBefore(now.add(minPickupLeadTime))) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(proposedPickupStartTooSoonMessage),
-        ),
+        const SnackBar(content: Text(proposedPickupStartTooSoonMessage)),
       );
       return;
     }
 
-    Navigator.of(context).pop(
-      SupplierPickupWindow(
-        start: start,
-        end: end,
-        note: note,
-      ),
-    );
+    Navigator.of(
+      context,
+    ).pop(SupplierPickupWindow(start: start, end: end, note: note));
   }
 
   String? _formatDate(DateTime? value) {
