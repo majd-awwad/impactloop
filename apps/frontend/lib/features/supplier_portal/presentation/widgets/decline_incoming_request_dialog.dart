@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import 'supplier_dark_form_field.dart';
 
@@ -50,6 +50,7 @@ class _DeclineIncomingRequestDialogState
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final actionStyle = AppStatusStyle.of(context, AppStatusTone.danger);
     final compact = MediaQuery.sizeOf(context).width < 480;
     final dialogWidth = compact
         ? MediaQuery.sizeOf(context).width - 32
@@ -63,7 +64,7 @@ class _DeclineIncomingRequestDialogState
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgAll,
-        side: BorderSide(color: colors.border.withValues(alpha: 0.4)),
+        side: BorderSide(color: actionStyle.border),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: dialogWidth),
@@ -141,9 +142,8 @@ class _DeclineIncomingRequestDialogState
                           ));
                         },
                         style: FilledButton.styleFrom(
-                          backgroundColor:
-                              colors.error.withValues(alpha: 0.88),
-                          foregroundColor: AppColorTokens.lightSurface,
+                          backgroundColor: actionStyle.foreground,
+                          foregroundColor: Theme.of(context).colorScheme.onError,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: Text(context.s.declineRequest),

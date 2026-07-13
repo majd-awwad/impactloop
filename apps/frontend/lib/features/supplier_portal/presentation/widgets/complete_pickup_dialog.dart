@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 class CompletePickupDialog extends StatefulWidget {
@@ -44,6 +45,7 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final actionStyle = AppStatusStyle.of(context, AppStatusTone.success);
     final compact = MediaQuery.sizeOf(context).width < 480;
     final dialogWidth = compact
         ? MediaQuery.sizeOf(context).width - 32
@@ -57,7 +59,7 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgAll,
-        side: BorderSide(color: colors.border.withValues(alpha: 0.4)),
+        side: BorderSide(color: actionStyle.border),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: dialogWidth),
@@ -130,8 +132,7 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
                     child: FilledButton(
                       onPressed: _submit,
                       style: FilledButton.styleFrom(
-                        backgroundColor:
-                            colors.accentMuted.withValues(alpha: 0.82),
+                        backgroundColor: actionStyle.foreground,
                         foregroundColor: colors.textOnAccent,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(

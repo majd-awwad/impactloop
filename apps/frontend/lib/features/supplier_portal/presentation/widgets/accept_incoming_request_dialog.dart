@@ -5,6 +5,7 @@ import 'package:frontend/features/supplier_portal/presentation/theme/supplier_th
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../application/supplier_delivery_scheduling_preview.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../../../reservations/application/reservation_timing_policy.dart';
@@ -111,6 +112,7 @@ class _AcceptIncomingRequestDialogState
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final actionStyle = AppStatusStyle.of(context, AppStatusTone.success);
     final compact = MediaQuery.sizeOf(context).width < 480;
     final dialogWidth = compact
         ? MediaQuery.sizeOf(context).width - 32
@@ -129,7 +131,7 @@ class _AcceptIncomingRequestDialogState
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgAll,
-        side: BorderSide(color: colors.border.withValues(alpha: 0.4)),
+        side: BorderSide(color: actionStyle.border),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: dialogWidth),
@@ -470,8 +472,7 @@ class _AcceptIncomingRequestDialogState
                         child: FilledButton(
                           onPressed: _submit,
                           style: FilledButton.styleFrom(
-                            backgroundColor:
-                                colors.accentMuted.withValues(alpha: 0.9),
+                            backgroundColor: actionStyle.foreground,
                             foregroundColor: colors.textOnAccent,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
