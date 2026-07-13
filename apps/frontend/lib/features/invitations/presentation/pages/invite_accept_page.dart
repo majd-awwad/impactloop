@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_navigation.dart';
 import '../../data/invite_accept_providers.dart';
 import '../../data/models/invite_accept_models.dart';
@@ -112,6 +113,10 @@ class _InviteAcceptPageState extends ConsumerState<InviteAcceptPage> {
             const SizedBox(height: 20),
             FilledButton(
               onPressed: () => context.go(loginRoute),
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
               child: const Text('Go to login'),
             ),
           ],
@@ -321,6 +326,10 @@ class _InviteForm extends StatelessWidget {
           const SizedBox(height: 20),
           FilledButton(
             onPressed: submitting ? null : onSubmit,
+            style: AppStatusButtonStyle.filled(
+              context,
+              AppStatusTone.primary,
+            ),
             child: submitting
                 ? const SizedBox(
                     width: 18,
