@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../theme/supplier_theme_extension.dart';
 
 class SupplierDeliveryIncidentActions extends StatelessWidget {
@@ -67,6 +68,10 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
       children.add(
         OutlinedButton(
           onPressed: onReportNoDriverAvailable,
+          style: AppStatusButtonStyle.outlined(
+            context,
+            AppStatusTone.danger,
+          ),
           child: const Text('Report no driver available'),
         ),
       );
@@ -75,6 +80,10 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
       children.add(
         OutlinedButton(
           onPressed: onMarkDeliveryPickupExpired,
+          style: AppStatusButtonStyle.outlined(
+            context,
+            AppStatusTone.danger,
+          ),
           child: const Text('Report no driver available'),
         ),
       );
@@ -84,6 +93,10 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
       children.add(
         OutlinedButton(
           onPressed: onReportDriverNoShow,
+          style: AppStatusButtonStyle.outlined(
+            context,
+            AppStatusTone.danger,
+          ),
           child: const Text('Report driver no-show'),
         ),
       );
