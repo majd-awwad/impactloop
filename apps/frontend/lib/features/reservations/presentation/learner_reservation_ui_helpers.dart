@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../app/theme/app_theme_colors.dart';
+import '../../../shared/widgets/app_status_badge.dart';
 import '../../deliveries/presentation/delivery_status_presentation.dart';
 import '../data/models/learner_reservation.dart';
 import '../data/models/reservation_preferred_window.dart';
@@ -94,84 +94,45 @@ bool reservationMatchesStatusFilter(
 class LearnerReservationStatusStyle {
   const LearnerReservationStatusStyle({
     required this.accentColor,
-    required this.chipBackground,
-    required this.chipForeground,
-    required this.chipBorder,
+    required this.tone,
   });
 
   final Color accentColor;
-  final Color chipBackground;
-  final Color chipForeground;
-  final Color chipBorder;
+  final AppStatusTone tone;
 
   static LearnerReservationStatusStyle forStatus(
     BuildContext context,
     String status,
   ) {
-    final colors = AppThemeColors.of(context);
+    final tone = learnerReservationStatusTone(status);
+    final style = AppStatusStyle.of(context, tone);
 
-    switch (status) {
-      case 'PENDING':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.warning.withValues(alpha: 0.85),
-          chipBackground: colors.warningSoft,
-          chipForeground: colors.warningText,
-          chipBorder: colors.warningBorder,
-        );
-      case 'AWAITING_LEARNER_CONFIRMATION':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.primary.withValues(alpha: 0.85),
-          chipBackground: colors.primarySoft,
-          chipForeground: colors.primary,
-          chipBorder: colors.primary.withValues(alpha: 0.35),
-        );
-      case 'AWAITING_SUPPLIER_CONFIRMATION':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.primary.withValues(alpha: 0.85),
-          chipBackground: colors.primarySoft,
-          chipForeground: colors.primary,
-          chipBorder: colors.primary.withValues(alpha: 0.35),
-        );
-      case 'ACCEPTED':
-      case 'COMPLETED':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.success.withValues(alpha: 0.85),
-          chipBackground: colors.successSoft,
-          chipForeground: colors.success,
-          chipBorder: colors.success.withValues(alpha: 0.35),
-        );
-      case 'REJECTED':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.danger.withValues(alpha: 0.75),
-          chipBackground: colors.dangerSoft,
-          chipForeground: colors.danger,
-          chipBorder: colors.danger.withValues(alpha: 0.35),
-        );
-      case 'CANCELLED':
-      case 'EXPIRED':
-      case 'NO_SHOW':
-      case 'FULFILLMENT_FAILED':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.borderStrong.withValues(alpha: 0.55),
-          chipBackground: colors.cardSurfaceAlt,
-          chipForeground: colors.textSecondary,
-          chipBorder: colors.borderSubtle,
-        );
-      case 'AWAITING_RESOLUTION':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.warning.withValues(alpha: 0.85),
-          chipBackground: colors.warningSoft,
-          chipForeground: colors.warningText,
-          chipBorder: colors.warningBorder,
-        );
-      default:
-        return LearnerReservationStatusStyle(
-          accentColor: colors.borderSubtle,
-          chipBackground: colors.cardSurfaceAlt,
-          chipForeground: colors.textMuted,
-          chipBorder: colors.borderSubtle,
-        );
-    }
+    return LearnerReservationStatusStyle(
+      accentColor: style.foreground.withValues(alpha: 0.85),
+      tone: tone,
+    );
+  }
+}
+
+/// Maps booking lifecycle states to the app-wide semantic status contract.
+AppStatusTone learnerReservationStatusTone(String status) {
+  switch (status) {
+    case 'PENDING':
+    case 'AWAITING_LEARNER_CONFIRMATION':
+    case 'AWAITING_SUPPLIER_CONFIRMATION':
+    case 'AWAITING_RESOLUTION':
+      return AppStatusTone.warning;
+    case 'ACCEPTED':
+    case 'COMPLETED':
+      return AppStatusTone.success;
+    case 'REJECTED':
+    case 'CANCELLED':
+    case 'EXPIRED':
+    case 'NO_SHOW':
+    case 'FULFILLMENT_FAILED':
+      return AppStatusTone.danger;
+    default:
+      return AppStatusTone.neutral;
   }
 }
 

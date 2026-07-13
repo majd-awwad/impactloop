@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 
+import '../../../shared/widgets/app_status_badge.dart';
 import '../../../shared/widgets/materials/material_status_badge.dart';
 
 String? formatDeliveryPickupWindow({
@@ -66,26 +67,39 @@ String deliveryStatusLabel(String status) {
   }
 }
 
-MaterialStatusBadgeTone deliveryStatusTone(String status) {
+/// Maps delivery lifecycle states to the app-wide semantic status contract.
+AppStatusTone deliveryStatusAppTone(String status) {
   switch (status) {
     case 'WAITING_FOR_DRIVER':
+      return AppStatusTone.warning;
     case 'DRIVER_ASSIGNED':
     case 'ARRIVED_PICKUP':
     case 'PICKED_UP':
     case 'ON_THE_WAY':
     case 'ARRIVED_DROPOFF':
-      return MaterialStatusBadgeTone.info;
+      return AppStatusTone.info;
     case 'DELIVERED':
-      return MaterialStatusBadgeTone.success;
+      return AppStatusTone.success;
     case 'AWAITING_RESOLUTION':
-      return MaterialStatusBadgeTone.warning;
+      return AppStatusTone.warning;
     case 'CANCELLED':
     case 'FAILED_PICKUP':
     case 'FAILED_DELIVERY':
     case 'DRIVER_NO_SHOW':
     case 'LEARNER_NO_SHOW':
-      return MaterialStatusBadgeTone.danger;
+      return AppStatusTone.danger;
     default:
-      return MaterialStatusBadgeTone.neutral;
+      return AppStatusTone.neutral;
   }
 }
+
+/// Compatibility adapter for material-badge call sites not yet migrated.
+MaterialStatusBadgeTone deliveryStatusTone(String status) =>
+    switch (deliveryStatusAppTone(status)) {
+      AppStatusTone.primary => MaterialStatusBadgeTone.available,
+      AppStatusTone.success => MaterialStatusBadgeTone.success,
+      AppStatusTone.warning => MaterialStatusBadgeTone.reserved,
+      AppStatusTone.danger => MaterialStatusBadgeTone.danger,
+      AppStatusTone.info => MaterialStatusBadgeTone.info,
+      AppStatusTone.neutral => MaterialStatusBadgeTone.neutral,
+    };

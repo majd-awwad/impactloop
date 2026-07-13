@@ -12,7 +12,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
-import '../../../../shared/widgets/materials/material_status_badge.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../data/deliveries_repository.dart';
 import '../../data/models/learner_delivery_tracking.dart';
@@ -307,9 +307,9 @@ class _TrackingContent extends StatelessWidget {
                 runSpacing: AppSpacing.sm,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  MaterialStatusBadge(
+                  AppStatusBadge(
                     label: deliveryStatusLabel(tracking.status),
-                    tone: deliveryStatusTone(tracking.status),
+                    tone: deliveryStatusAppTone(tracking.status),
                   ),
                   if (tracking.driverDisplayName?.trim().isNotEmpty == true)
                     Text(

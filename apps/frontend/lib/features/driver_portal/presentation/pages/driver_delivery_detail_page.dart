@@ -9,9 +9,9 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/location/current_location_service.dart';
-import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../deliveries/presentation/pickup_window_presentation.dart';
@@ -171,9 +171,9 @@ class _Header extends StatelessWidget {
             runSpacing: AppSpacing.sm,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              MaterialStatusBadge(
+              AppStatusBadge(
                 label: deliveryStatusLabel(delivery.status),
-                tone: deliveryStatusTone(delivery.status),
+                tone: deliveryStatusAppTone(delivery.status),
               ),
               Text(
                 'Assigned ${_formatDateTime(delivery.assignedAt ?? delivery.requestedAt)}',

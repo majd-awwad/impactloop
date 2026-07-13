@@ -8,6 +8,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -266,45 +267,6 @@ class _ReservationMediaTileState extends State<_ReservationMediaTile> {
   }
 }
 
-class _ReservationStatusChip extends StatelessWidget {
-  const _ReservationStatusChip({
-    required this.label,
-    required this.background,
-    required this.foreground,
-    required this.border,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-  final Color border;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 10,
-        vertical: 5,
-      ),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: border),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.label(context).copyWith(
-          color: foreground,
-          fontWeight: FontWeight.w600,
-          fontSize: 12,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
-
 class _ReservationStatusRow extends StatelessWidget {
   const _ReservationStatusRow({
     required this.reservation,
@@ -323,14 +285,11 @@ class _ReservationStatusRow extends StatelessWidget {
       reservation,
       linkedDeliveryStatus: delivery?.status,
     );
-    final deliveryStyle = chipLabels.secondary != null && delivery != null
-        ? _deliveryStatusStyle(context, delivery!.status)
+    final deliveryTone = chipLabels.secondary != null && delivery != null
+        ? deliveryStatusAppTone(delivery!.status)
         : chipLabels.secondary != null &&
                 reservation.activeDelivery?.status != null
-            ? _deliveryStatusStyle(
-                context,
-                reservation.activeDelivery!.status,
-              )
+            ? deliveryStatusAppTone(reservation.activeDelivery!.status)
         : null;
 
     return Wrap(
@@ -338,18 +297,14 @@ class _ReservationStatusRow extends StatelessWidget {
       runSpacing: AppSpacing.xs,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        _ReservationStatusChip(
+        AppStatusBadge(
           label: chipLabels.primary,
-          background: statusStyle.chipBackground,
-          foreground: statusStyle.chipForeground,
-          border: statusStyle.chipBorder,
+          tone: statusStyle.tone,
         ),
         if (chipLabels.secondary case final secondaryLabel?)
-          _ReservationStatusChip(
+          AppStatusBadge(
             label: secondaryLabel,
-            background: deliveryStyle?.background ?? statusStyle.chipBackground,
-            foreground: deliveryStyle?.foreground ?? statusStyle.chipForeground,
-            border: deliveryStyle?.border ?? statusStyle.chipBorder,
+            tone: deliveryTone ?? statusStyle.tone,
           ),
         Text(
           formatReservationDate(reservation.createdAt),
@@ -362,46 +317,6 @@ class _ReservationStatusRow extends StatelessWidget {
   }
 }
 
-class _DeliveryStatusChipStyle {
-  const _DeliveryStatusChipStyle({
-    required this.background,
-    required this.foreground,
-    required this.border,
-  });
-
-  final Color background;
-  final Color foreground;
-  final Color border;
-}
-
-_DeliveryStatusChipStyle _deliveryStatusStyle(
-  BuildContext context,
-  String status,
-) {
-  final colors = AppThemeColors.of(context);
-
-  switch (status) {
-    case 'DELIVERED':
-      return _DeliveryStatusChipStyle(
-        background: colors.successSoft,
-        foreground: colors.success,
-        border: colors.success.withValues(alpha: 0.35),
-      );
-    case 'CANCELLED':
-    case 'FAILED_PICKUP':
-    case 'FAILED_DELIVERY':
-      return _DeliveryStatusChipStyle(
-        background: colors.dangerSoft,
-        foreground: colors.danger,
-        border: colors.danger.withValues(alpha: 0.35),
-      );
-    default:
-      return _DeliveryStatusChipStyle(
-        background: colors.warningSoft,
-        foreground: colors.warningText,
-        border: colors.warningBorder,
-      );
-  }
 }
 
 class _AcceptedPickupInfoBlock extends StatelessWidget {
