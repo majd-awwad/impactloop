@@ -5,6 +5,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'supplier_delivery_incident_actions.dart';
@@ -941,20 +942,22 @@ class _IncomingRequestActionButtonMetrics {
   static const padding = EdgeInsets.symmetric(horizontal: 16, vertical: 12);
   static const minimumSize = Size(64, 44);
 
-  static ButtonStyle baseStyle({
-    required Color background,
-    required Color foreground,
-    BorderSide? side,
-  }) {
-    return FilledButton.styleFrom(
-      backgroundColor: background,
-      foregroundColor: foreground,
+  static ButtonStyle semanticStyle(
+    BuildContext context,
+    AppStatusTone tone,
+  ) {
+    return AppStatusButtonStyle.filled(
+      context,
+      tone,
       padding: padding,
-      minimumSize: minimumSize,
-      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-      side: side ?? BorderSide.none,
-      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+    ).copyWith(
+      minimumSize: const WidgetStatePropertyAll(minimumSize),
+      tapTargetSize: const WidgetStatePropertyAll(
+        MaterialTapTargetSize.shrinkWrap,
+      ),
+      textStyle: const WidgetStatePropertyAll(
+        TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
     );
   }
 }
@@ -967,12 +970,11 @@ class _AcceptButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.s;
-    final colors = context.supplierColors;
     return FilledButton.icon(
       onPressed: onPressed,
-      style: _IncomingRequestActionButtonMetrics.baseStyle(
-        background: colors.accentMuted.withValues(alpha: 0.82),
-        foreground: colors.textOnAccent,
+      style: _IncomingRequestActionButtonMetrics.semanticStyle(
+        context,
+        AppStatusTone.success,
       ),
       icon: const Icon(
         Icons.check_circle_outline,
@@ -992,24 +994,10 @@ class _DeclineButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return FilledButton.icon(
       onPressed: onPressed,
-      style:
-          _IncomingRequestActionButtonMetrics.baseStyle(
-            background: AppColorTokens.supplierDeclineButtonBackground,
-            foreground: AppColorTokens.supplierDashboardUnavailable,
-            side: const BorderSide(
-              color: AppColorTokens.supplierDeclineButtonBorder,
-            ),
-          ).copyWith(
-            overlayColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.pressed)) {
-                return AppColorTokens.supplierDeclineButtonPressedOverlay;
-              }
-              if (states.contains(WidgetState.hovered)) {
-                return AppColorTokens.supplierDeclineButtonHoverOverlay;
-              }
-              return null;
-            }),
-          ),
+      style: _IncomingRequestActionButtonMetrics.semanticStyle(
+        context,
+        AppStatusTone.danger,
+      ),
       icon: const Icon(
         Icons.close,
         size: _IncomingRequestActionButtonMetrics.iconSize,
