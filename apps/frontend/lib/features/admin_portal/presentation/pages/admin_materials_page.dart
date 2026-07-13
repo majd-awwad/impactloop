@@ -1535,28 +1535,28 @@ class _ReportCard extends StatelessWidget {
                           ),
                           FilledButton.icon(
                             onPressed: onResolve,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: palette.green,
-                              foregroundColor: Colors.white,
+                            style: AppStatusButtonStyle.filled(
+                              context,
+                              AppStatusTone.success,
                             ),
                             icon: const Icon(Icons.check_circle_outline, size: 18),
                             label: const Text('Resolve'),
                           ),
                           OutlinedButton.icon(
                             onPressed: onReject,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: palette.red,
+                            style: AppStatusButtonStyle.outlined(
+                              context,
+                              AppStatusTone.danger,
                             ),
                             icon: const Icon(Icons.cancel_outlined, size: 18),
                             label: const Text('Reject'),
                           ),
                           if (canHideMaterial)
-                            FilledButton.tonalIcon(
+                            OutlinedButton.icon(
                               onPressed: onHideMaterial,
-                              style: FilledButton.styleFrom(
-                                foregroundColor: palette.red,
-                                backgroundColor:
-                                    palette.red.withValues(alpha: 0.12),
+                              style: AppStatusButtonStyle.outlined(
+                                context,
+                                AppStatusTone.danger,
                               ),
                               icon: const Icon(
                                 Icons.visibility_off_outlined,
@@ -1890,10 +1890,11 @@ class _MaterialDetailDialog extends StatelessWidget {
                     child: const Text('Close'),
                   ),
                   if (onHide != null)
-                    FilledButton.tonal(
+                    OutlinedButton(
                       onPressed: onHide,
-                      style: FilledButton.styleFrom(
-                        foregroundColor: palette.amber,
+                      style: AppStatusButtonStyle.outlined(
+                        context,
+                        AppStatusTone.danger,
                       ),
                       child: const Text('Hide'),
                     ),
@@ -1905,9 +1906,9 @@ class _MaterialDetailDialog extends StatelessWidget {
                   if (onRestore != null)
                     FilledButton(
                       onPressed: onRestore,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: palette.green,
-                        foregroundColor: Colors.white,
+                      style: AppStatusButtonStyle.filled(
+                        context,
+                        AppStatusTone.primary,
                       ),
                       child: const Text('Restore'),
                     ),
