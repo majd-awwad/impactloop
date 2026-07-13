@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_no_show_reports_api.dart';
 import '../theme/admin_decoration_set.dart';
 import '../widgets/admin_empty_state.dart';
@@ -367,6 +368,10 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: AppStatusButtonStyle.filled(
+              context,
+              AppStatusTone.warning,
+            ),
             child: const Text('Send to supplier'),
           ),
         ],
@@ -426,6 +431,10 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: AppStatusButtonStyle.filled(
+              context,
+              AppStatusTone.danger,
+            ),
             child: const Text('Cancel and release'),
           ),
         ],
@@ -664,6 +673,10 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
                     onPressed: widget.isBusy
                         ? null
                         : widget.onRequestSupplierReschedule,
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.warning,
+                    ),
                     child: widget.isBusy &&
                             widget.busyAction == 'request-reschedule'
                         ? const SizedBox(
@@ -676,6 +689,10 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
                   OutlinedButton(
                     onPressed:
                         widget.isBusy ? null : widget.onCancelReleaseHold,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.danger,
+                    ),
                     child: widget.isBusy && widget.busyAction == 'cancel'
                         ? const SizedBox(
                             width: 18,
@@ -687,6 +704,10 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
                   if (showDriverVerify)
                     FilledButton(
                       onPressed: widget.isBusy ? null : widget.onVerify,
+                      style: AppStatusButtonStyle.filled(
+                        context,
+                        AppStatusTone.danger,
+                      ),
                       child: widget.isBusy && widget.busyAction == 'verify'
                           ? const SizedBox(
                               width: 18,
@@ -698,6 +719,10 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
                 ] else ...[
                   OutlinedButton(
                     onPressed: widget.isBusy ? null : widget.onReject,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.danger,
+                    ),
                     child: widget.isBusy && widget.busyAction == 'reject'
                         ? const SizedBox(
                             width: 18,
@@ -708,6 +733,10 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
                   ),
                   OutlinedButton(
                     onPressed: widget.isBusy ? null : widget.onResolve,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.success,
+                    ),
                     child: widget.isBusy && widget.busyAction == 'resolve'
                         ? const SizedBox(
                             width: 18,
@@ -718,6 +747,10 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
                   ),
                   FilledButton(
                     onPressed: widget.isBusy ? null : widget.onVerify,
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.danger,
+                    ),
                     child: widget.isBusy && widget.busyAction == 'verify'
                         ? const SizedBox(
                             width: 18,
