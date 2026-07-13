@@ -320,6 +320,10 @@ class _NotificationsListView extends StatelessWidget {
                     )
                   : OutlinedButton.icon(
                       onPressed: onLoadMore,
+                      style: AppStatusButtonStyle.outlined(
+                        context,
+                        AppStatusTone.neutral,
+                      ),
                       icon: const Icon(Icons.expand_more_rounded),
                       label: const Text('Load more'),
                     ),
@@ -418,11 +422,16 @@ class _NotificationsHeaderCard extends StatelessWidget {
           IconButton(
             tooltip: 'Refresh',
             onPressed: onRefresh,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.info),
             icon: const Icon(Icons.refresh_rounded),
           ),
           if (unreadCount > 0)
-            FilledButton.tonal(
+            FilledButton(
               onPressed: onMarkAllRead,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.info,
+              ),
               child: const Text('Mark all read'),
             ),
         ],
@@ -479,7 +488,14 @@ class _NotificationsStateCard extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.md),
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            FilledButton(
+              onPressed: onAction,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              child: Text(actionLabel!),
+            ),
           ],
         ],
       ),
