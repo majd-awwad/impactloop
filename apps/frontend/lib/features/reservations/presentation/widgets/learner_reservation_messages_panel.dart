@@ -5,6 +5,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/my_reservations_provider.dart';
@@ -189,6 +190,10 @@ class _LearnerReservationMessagesPanelState
             alignment: Alignment.centerRight,
             child: FilledButton(
               onPressed: _sending ? null : _sendMessage,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
               child: _sending
                   ? const SizedBox(
                       width: 16,
