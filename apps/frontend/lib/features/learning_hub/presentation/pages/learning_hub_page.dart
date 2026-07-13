@@ -12,6 +12,7 @@ import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/learning_projects_result.dart';
@@ -1085,6 +1086,10 @@ class _LearningHubRoadmapPanel extends StatelessWidget {
             children: [
               FilledButton.icon(
                 onPressed: onSubmitProject,
+                style: AppStatusButtonStyle.filled(
+                  context,
+                  AppStatusTone.primary,
+                ),
                 icon: const Icon(Icons.edit_note_rounded),
                 label: Text(
                   const LocalizedText(
@@ -1095,6 +1100,10 @@ class _LearningHubRoadmapPanel extends StatelessWidget {
               ),
               OutlinedButton.icon(
                 onPressed: () => context.go('/materials'),
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 icon: const Icon(Icons.inventory_2_outlined),
                 label: Text(
                   const LocalizedText(
@@ -1188,6 +1197,10 @@ class _SubmitProjectCallout extends StatelessWidget {
                   maxWidth: 176,
                   child: OutlinedButton.icon(
                     onPressed: onMySubmissions,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.neutral,
+                    ),
                     icon: const Icon(Icons.assignment_outlined),
                     label: Text(
                       const LocalizedText(
@@ -1202,6 +1215,10 @@ class _SubmitProjectCallout extends StatelessWidget {
             maxWidth: 196,
             child: FilledButton.icon(
               onPressed: onSubmitProject,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
               icon: const Icon(Icons.edit_note_rounded),
               label: Text(
                 const LocalizedText(
@@ -1380,6 +1397,10 @@ class _LearningHubFilters extends StatelessWidget {
                 alignment: AlignmentDirectional.centerStart,
                 child: TextButton.icon(
                   onPressed: hasActiveFilters ? onClearFilters : null,
+                  style: AppStatusButtonStyle.text(
+                    context,
+                    AppStatusTone.neutral,
+                  ),
                   icon: const Icon(Icons.refresh_rounded),
                   label: Text(
                     const LocalizedText(
