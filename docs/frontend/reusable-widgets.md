@@ -50,6 +50,7 @@ New reusable UI should prefer `Theme.of(context).textTheme`, `Theme.of(context).
 | `AppInlineError` | `app_inline_error.dart` | Inline body-small error text using `Theme.of(context).colorScheme.error`. |
 | `AppStatusBadge` / `AppStatusTone` / `AppStatusStyle` / `AppStatusButtonStyle` | `app_status_badge.dart` | Theme-aware semantic status presentation and action styles for primary, success, warning, danger, info, and neutral states. |
 | `incidentReportStatusTone` | `incident_report_status_presentation.dart` | Canonical incident-review mapping: pending review is warning; verified and resolved-without-strike are success; rejected is danger; unknown values are neutral. |
+| `deliveryStatusAppTone` | `delivery_status_presentation.dart` | Canonical delivery lifecycle mapping: waiting/admin review is warning; in-progress delivery is info; delivered is success; cancelled and failed delivery states are danger; unknown values are neutral. |
 | `accountStatusTone` | `account_status_presentation.dart` | Canonical account availability mapping: active is primary; suspended is warning; disabled is danger; unknown values are neutral. |
 | `invitationStatusTone` | `invitation_status_presentation.dart` | Canonical invitation lifecycle mapping: pending/sent is warning; accepted/used is success; failed, expired, and revoked are danger; unknown values are neutral. |
 | `reviewStatusTone` | `review_status_presentation.dart` | Canonical generic approval mapping: pending and changes requested are warning; approved is success; rejected is danger; unknown values are neutral. |
