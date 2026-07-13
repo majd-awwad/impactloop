@@ -7,6 +7,8 @@ import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
+import '../../../../shared/widgets/review_status_presentation.dart';
+import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
 import '../../data/admin_materials_api.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
@@ -14,7 +16,7 @@ import '../utils/admin_material_moderation_policy.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart' show AdminTypography;
 
-enum _BadgeTone { neutral, success, info, warning, danger, paid, verified, teal, muted }
+enum _BadgeTone { neutral, success, info, warning, danger, paid, teal, muted }
 
 class _MaterialsFilters {
   const _MaterialsFilters({
@@ -137,8 +139,6 @@ Color _toneColor(AdminPalette palette, _BadgeTone tone) {
       return palette.red;
     case _BadgeTone.paid:
       return palette.blue;
-    case _BadgeTone.verified:
-      return palette.green;
     case _BadgeTone.teal:
       return palette.brightTeal;
     case _BadgeTone.muted:
@@ -1329,11 +1329,11 @@ class _MaterialCard extends StatelessWidget {
                   label: item.condition.replaceAll('_', ' '),
                   tone: _BadgeTone.neutral,
                 ),
-                _SemanticBadge(
-                  label: item.supplierVerificationStatus.replaceAll('_', ' '),
-                  tone: item.supplierVerificationStatus == 'VERIFIED'
-                      ? _BadgeTone.verified
-                      : _BadgeTone.neutral,
+                AppStatusBadge(
+                  label: _formatStatusLabel(item.supplierVerificationStatus),
+                  tone: supplierVerificationStatusTone(
+                    item.supplierVerificationStatus,
+                  ),
                 ),
                 if (item.pendingReportCount > 0)
                   _SemanticBadge(
@@ -1508,11 +1508,9 @@ class _ReportCard extends StatelessWidget {
                             label: _formatReportReason(report.reason),
                             tone: _BadgeTone.warning,
                           ),
-                          _SemanticBadge(
-                            label: report.status,
-                            tone: report.status == 'PENDING'
-                                ? _BadgeTone.warning
-                                : _BadgeTone.neutral,
+                          AppStatusBadge(
+                            label: _formatStatusLabel(report.status),
+                            tone: reviewStatusTone(report.status),
                           ),
                         ],
                       ),
