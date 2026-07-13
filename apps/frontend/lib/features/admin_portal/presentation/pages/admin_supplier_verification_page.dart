@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
 import '../../data/admin_supplier_verifications_api.dart';
@@ -29,10 +31,14 @@ class AdminSupplierVerificationPage extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(error.toString(), style: AdminTypography.pageSubtitle(palette)),
+            Text(
+              error.toString(),
+              style: AdminTypography.pageSubtitle(palette),
+            ),
             const SizedBox(height: 12),
             FilledButton(
-              onPressed: () => ref.invalidate(adminSupplierVerificationsProvider),
+              onPressed: () =>
+                  ref.invalidate(adminSupplierVerificationsProvider),
               child: Text(l.t('Retry', 'إعادة المحاولة')),
             ),
           ],
@@ -76,7 +82,9 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
   }
 
   void _applyFilters() {
-    ref.read(adminSupplierVerificationFiltersProvider.notifier).updateFilters(
+    ref
+        .read(adminSupplierVerificationFiltersProvider.notifier)
+        .updateFilters(
           AdminSupplierVerificationFilters(
             search: _searchController.text,
             status: _statusFilter,
@@ -94,9 +102,9 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
       _statusFilter = 'ALL';
       _typeFilter = 'ALL';
     });
-    ref.read(adminSupplierVerificationFiltersProvider.notifier).updateFilters(
-          const AdminSupplierVerificationFilters(),
-        );
+    ref
+        .read(adminSupplierVerificationFiltersProvider.notifier)
+        .updateFilters(const AdminSupplierVerificationFilters());
   }
 
   Future<void> _openDetails(AdminSupplierVerificationListItem item) async {
@@ -131,13 +139,9 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
 
       final note = await _promptAdminNote(
         context,
-        title: action == 'reject'
-            ? 'Reject verification'
-            : 'Request changes',
+        title: action == 'reject' ? 'Reject verification' : 'Request changes',
         required: true,
-        tone: action == 'reject'
-            ? AppStatusTone.danger
-            : AppStatusTone.warning,
+        tone: action == 'reject' ? AppStatusTone.danger : AppStatusTone.warning,
       );
       if (note == null || !mounted) return;
 
@@ -150,10 +154,7 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
         if (!mounted) return;
         _showSnack('Supplier verification rejected.');
       } else {
-        await api.requestChanges(
-          id: item.supplierProfileId,
-          adminNote: note,
-        );
+        await api.requestChanges(id: item.supplierProfileId, adminNote: note);
         if (!mounted) return;
         _showSnack('Changes requested from supplier.');
       }
@@ -366,86 +367,86 @@ class _FiltersBar extends StatelessWidget {
   }
 
   Widget _searchField(AdminL10n l) => TextField(
-        controller: searchController,
-        decoration: InputDecoration(
-          isDense: true,
-          labelText: l.t(
-            'Search supplier, owner, or email',
-            'بحث بالمورد أو المالك أو البريد',
-          ),
-          prefixIcon: const Icon(Icons.search),
-          border: const OutlineInputBorder(),
-        ),
-      );
+    controller: searchController,
+    decoration: InputDecoration(
+      isDense: true,
+      labelText: l.t(
+        'Search supplier, owner, or email',
+        'بحث بالمورد أو المالك أو البريد',
+      ),
+      prefixIcon: const Icon(Icons.search),
+      border: const OutlineInputBorder(),
+    ),
+  );
 
   Widget _cityField(AdminL10n l) => TextField(
-        controller: cityController,
-        decoration: InputDecoration(
-          isDense: true,
-          labelText: l.t('City', 'المدينة'),
-          prefixIcon: const Icon(Icons.location_city_outlined),
-          border: const OutlineInputBorder(),
-        ),
-      );
+    controller: cityController,
+    decoration: InputDecoration(
+      isDense: true,
+      labelText: l.t('City', 'المدينة'),
+      prefixIcon: const Icon(Icons.location_city_outlined),
+      border: const OutlineInputBorder(),
+    ),
+  );
 
   Widget _statusField() => DropdownButtonFormField<String>(
-        key: ValueKey('verification-status-$statusFilter'),
-        initialValue: statusFilter,
-        isExpanded: true,
-        decoration: const InputDecoration(
-          isDense: true,
-          labelText: 'Status',
-          border: OutlineInputBorder(),
-        ),
-        items: const [
-          DropdownMenuItem(value: 'ALL', child: Text('All')),
-          DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
-          DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
-          DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
-          DropdownMenuItem(
-            value: 'CHANGES_REQUESTED',
-            child: Text('Changes requested'),
-          ),
-        ],
-        onChanged: (value) {
-          if (value != null) onStatusChanged(value);
-        },
-      );
+    key: ValueKey('verification-status-$statusFilter'),
+    initialValue: statusFilter,
+    isExpanded: true,
+    decoration: const InputDecoration(
+      isDense: true,
+      labelText: 'Status',
+      border: OutlineInputBorder(),
+    ),
+    items: const [
+      DropdownMenuItem(value: 'ALL', child: Text('All')),
+      DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
+      DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
+      DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
+      DropdownMenuItem(
+        value: 'CHANGES_REQUESTED',
+        child: Text('Changes requested'),
+      ),
+    ],
+    onChanged: (value) {
+      if (value != null) onStatusChanged(value);
+    },
+  );
 
   Widget _typeField(AdminL10n l) => DropdownButtonFormField<String>(
-        key: ValueKey('verification-type-$typeFilter'),
-        initialValue: typeFilter,
-        isExpanded: true,
-        decoration: InputDecoration(
-          isDense: true,
-          labelText: l.t('Supplier type', 'نوع المورد'),
-          border: const OutlineInputBorder(),
-        ),
-        items: const [
-          DropdownMenuItem(value: 'ALL', child: Text('All')),
-          DropdownMenuItem(value: 'WORKSHOP', child: Text('Workshop')),
-          DropdownMenuItem(value: 'FACTORY', child: Text('Factory')),
-          DropdownMenuItem(
-            value: 'EDUCATIONAL_INSTITUTION',
-            child: Text('Educational institution'),
-          ),
-        ],
-        onChanged: (value) {
-          if (value != null) onTypeChanged(value);
-        },
-      );
+    key: ValueKey('verification-type-$typeFilter'),
+    initialValue: typeFilter,
+    isExpanded: true,
+    decoration: InputDecoration(
+      isDense: true,
+      labelText: l.t('Supplier type', 'نوع المورد'),
+      border: const OutlineInputBorder(),
+    ),
+    items: const [
+      DropdownMenuItem(value: 'ALL', child: Text('All')),
+      DropdownMenuItem(value: 'WORKSHOP', child: Text('Workshop')),
+      DropdownMenuItem(value: 'FACTORY', child: Text('Factory')),
+      DropdownMenuItem(
+        value: 'EDUCATIONAL_INSTITUTION',
+        child: Text('Educational institution'),
+      ),
+    ],
+    onChanged: (value) {
+      if (value != null) onTypeChanged(value);
+    },
+  );
 
   Widget _applyButton(AdminL10n l) => FilledButton.icon(
-        onPressed: onApply,
-        icon: const Icon(Icons.filter_alt_outlined),
-        label: Text(l.t('Apply filters', 'تطبيق الفلاتر')),
-      );
+    onPressed: onApply,
+    icon: const Icon(Icons.filter_alt_outlined),
+    label: Text(l.t('Apply filters', 'تطبيق الفلاتر')),
+  );
 
   Widget _resetButton(AdminL10n l) => OutlinedButton.icon(
-        onPressed: onReset,
-        icon: const Icon(Icons.restart_alt_outlined),
-        label: Text(l.t('Reset filters', 'إعادة تعيين الفلاتر')),
-      );
+    onPressed: onReset,
+    icon: const Icon(Icons.restart_alt_outlined),
+    label: Text(l.t('Reset filters', 'إعادة تعيين الفلاتر')),
+  );
 }
 
 class _VerificationCard extends StatelessWidget {
@@ -484,7 +485,9 @@ class _VerificationCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   item.organizationName,
-                  style: AdminTypography.pageTitle(palette).copyWith(fontSize: 18),
+                  style: AdminTypography.pageTitle(
+                    palette,
+                  ).copyWith(fontSize: 18),
                 ),
               ),
               _StatusBadge(status: item.verificationStatus),
@@ -561,10 +564,7 @@ class _ActionButtons extends StatelessWidget {
       return Wrap(spacing: 4, runSpacing: 4, children: children);
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: children,
-    );
+    return Row(mainAxisSize: MainAxisSize.min, children: children);
   }
 }
 
@@ -596,7 +596,10 @@ class _SummaryChip extends StatelessWidget {
     final palette = context.adminPalette;
 
     return Container(
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 14,
+        vertical: 10,
+      ),
       decoration: BoxDecoration(
         color: palette.cardBackground,
         borderRadius: BorderRadius.circular(14),
@@ -656,7 +659,10 @@ class _VerificationDetailsDialogState
     });
   }
 
-  Future<void> _runAction(Future<void> Function() action, String success) async {
+  Future<void> _runAction(
+    Future<void> Function() action,
+    String success,
+  ) async {
     if (_isSubmitting) return;
 
     setState(() => _isSubmitting = true);
@@ -668,9 +674,9 @@ class _VerificationDetailsDialogState
       await ref.read(adminSupplierVerificationsProvider.future);
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(success)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(success)));
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
@@ -725,10 +731,8 @@ class _VerificationDetailsDialogState
 
     final api = ref.read(adminSupplierVerificationsApiProvider);
     await _runAction(
-      () => api.rejectVerification(
-        id: widget.supplierProfileId,
-        adminNote: note,
-      ),
+      () =>
+          api.rejectVerification(id: widget.supplierProfileId, adminNote: note),
       'Supplier verification rejected.',
     );
   }
@@ -744,21 +748,19 @@ class _VerificationDetailsDialogState
 
     final api = ref.read(adminSupplierVerificationsApiProvider);
     await _runAction(
-      () => api.requestChanges(
-        id: widget.supplierProfileId,
-        adminNote: note,
-      ),
+      () => api.requestChanges(id: widget.supplierProfileId, adminNote: note),
       'Changes requested from supplier.',
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
     final dateFormat = DateFormat.yMMMd().add_jm();
 
-    return AlertDialog(
+    return AppDialogShell(
       title: const Text('Supplier verification details'),
+      maxWidth: 600,
+      closeEnabled: !_isSubmitting,
       content: SizedBox(
         width: 560,
         child: FutureBuilder<AdminSupplierVerificationDetail>(
@@ -786,79 +788,81 @@ class _VerificationDetailsDialogState
             }
 
             final detail = snapshot.data!;
-            return SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _DetailRow('Organization', detail.organizationName),
-                  _DetailRow('Type', _formatSupplierType(detail.supplierType)),
-                  _DetailRow('Owner', detail.owner.displayName),
-                  _DetailRow('Email', detail.owner.email),
-                  if (detail.owner.phone?.isNotEmpty == true)
-                    _DetailRow('Phone', detail.owner.phone!),
-                  _DetailRow(
-                    'Location',
-                    _locationLabel(
-                      detail.location.city,
-                      detail.location.area,
-                      detail.location.addressLine,
-                    ),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _DetailRow('Organization', detail.organizationName),
+                _DetailRow('Type', _formatSupplierType(detail.supplierType)),
+                _DetailRow('Owner', detail.owner.displayName),
+                _DetailRow('Email', detail.owner.email),
+                if (detail.owner.phone?.isNotEmpty == true)
+                  _DetailRow('Phone', detail.owner.phone!),
+                _DetailRow(
+                  'Location',
+                  _locationLabel(
+                    detail.location.city,
+                    detail.location.area,
+                    detail.location.addressLine,
                   ),
-                  if (detail.description?.isNotEmpty == true)
-                    _DetailRow('Description', detail.description!),
-                  _DetailRow('Status', _formatStatusLabel(detail.verificationStatus)),
-                  if (detail.submittedAt != null)
-                    _DetailRow('Submitted', dateFormat.format(detail.submittedAt!)),
-                  if (detail.reviewedAt != null)
-                    _DetailRow('Reviewed', dateFormat.format(detail.reviewedAt!)),
-                  if (detail.reviewedByName != null)
-                    _DetailRow(
-                      'Reviewed by',
-                      '${detail.reviewedByName} (${detail.reviewedByEmail ?? ''})',
-                    ),
-                  if (detail.adminNote?.isNotEmpty == true)
-                    _DetailRow('Admin note', detail.adminNote!),
-                  if (detail.verificationDocumentUrl?.isNotEmpty == true)
-                    _VerificationDocumentCard(
-                      documentUrl: detail.verificationDocumentUrl!,
-                      documentName: detail.verificationDocumentName,
-                    ),
-                ],
-              ),
+                ),
+                if (detail.description?.isNotEmpty == true)
+                  _DetailRow('Description', detail.description!),
+                _DetailRow(
+                  'Status',
+                  _formatStatusLabel(detail.verificationStatus),
+                ),
+                if (detail.submittedAt != null)
+                  _DetailRow(
+                    'Submitted',
+                    dateFormat.format(detail.submittedAt!),
+                  ),
+                if (detail.reviewedAt != null)
+                  _DetailRow('Reviewed', dateFormat.format(detail.reviewedAt!)),
+                if (detail.reviewedByName != null)
+                  _DetailRow(
+                    'Reviewed by',
+                    '${detail.reviewedByName} (${detail.reviewedByEmail ?? ''})',
+                  ),
+                if (detail.adminNote?.isNotEmpty == true)
+                  _DetailRow('Admin note', detail.adminNote!),
+                if (detail.verificationDocumentUrl?.isNotEmpty == true)
+                  _VerificationDocumentCard(
+                    documentUrl: detail.verificationDocumentUrl!,
+                    documentName: detail.verificationDocumentName,
+                  ),
+              ],
             );
           },
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Close'),
-        ),
-        TextButton(
-          onPressed: _isSubmitting ? null : _requestChanges,
-          style: AppStatusButtonStyle.text(context, AppStatusTone.warning),
-          child: const Text('Request changes'),
-        ),
-        TextButton(
-          onPressed: _isSubmitting ? null : _reject,
-          style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
-          child: const Text('Reject'),
-        ),
-        FilledButton(
-          onPressed: _isSubmitting ? null : _approve,
-          style: AppStatusButtonStyle.filled(
-            context,
-            AppStatusTone.success,
+      footer: Wrap(
+        alignment: WrapAlignment.end,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          TextButton(
+            onPressed: _isSubmitting ? null : _requestChanges,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.warning),
+            child: const Text('Request changes'),
           ),
-          child: _isSubmitting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Approve'),
-        ),
-      ],
+          TextButton(
+            onPressed: _isSubmitting ? null : _reject,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
+            child: const Text('Reject'),
+          ),
+          FilledButton(
+            onPressed: _isSubmitting ? null : _approve,
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
+            child: _isSubmitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Approve'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -889,25 +893,22 @@ class _DetailRow extends StatelessWidget {
 Future<bool> _confirmApprove(BuildContext context) async {
   final result = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => AppDialogShell(
       title: const Text('Approve supplier verification?'),
       content: const Text(
         'This will mark the organization as verified and notify the supplier owner.',
       ),
-      actions: [
-        TextButton(
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
           onPressed: () => Navigator.of(context).pop(false),
           child: const Text('Cancel'),
         ),
-        FilledButton(
+        primaryAction: FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
-          style: AppStatusButtonStyle.filled(
-            context,
-            AppStatusTone.success,
-          ),
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
           child: const Text('Approve'),
         ),
-      ],
+      ),
     ),
   );
 
@@ -922,11 +923,8 @@ Future<String?> _promptAdminNote(
 }) {
   return showDialog<String?>(
     context: context,
-    builder: (dialogContext) => _AdminNoteDialog(
-      title: title,
-      required: required,
-      tone: tone,
-    ),
+    builder: (dialogContext) =>
+        _AdminNoteDialog(title: title, required: required, tone: tone),
   );
 }
 
@@ -969,7 +967,7 @@ class _AdminNoteDialogState extends State<_AdminNoteDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(widget.title),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -994,17 +992,13 @@ class _AdminNoteDialogState extends State<_AdminNoteDialog> {
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
+      footer: AppDialogFooter.form(
+        primaryAction: FilledButton(
           onPressed: _submit,
           style: AppStatusButtonStyle.filled(context, widget.tone),
           child: const Text('Confirm'),
         ),
-      ],
+      ),
     );
   }
 }
