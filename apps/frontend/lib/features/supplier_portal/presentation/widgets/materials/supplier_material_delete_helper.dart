@@ -6,6 +6,7 @@ import '../../../../../app/theme/app_spacing.dart';
 import '../../../../../app/theme/app_theme_colors.dart';
 import '../../../../../app/router/navigation_extensions.dart';
 import '../../../../../core/errors/api_exception.dart';
+import '../../../../../shared/widgets/app_status_badge.dart';
 import '../../../application/supplier_my_materials_providers.dart';
 import '../../../data/models/supplier_my_materials_models.dart';
 import '../../../data/supplier_my_materials_repository.dart';
@@ -56,15 +57,11 @@ Future<bool> showSupplierDeleteMaterialDialog(
             ),
             child: Text(cancelLabel),
           ),
-          OutlinedButton(
+          FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: colors.danger,
-              side: BorderSide(color: colors.danger.withValues(alpha: 0.55)),
-              shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-              textStyle: textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+            style: AppStatusButtonStyle.filled(
+              dialogContext,
+              AppStatusTone.danger,
             ),
             child: Text(confirmLabel),
           ),
