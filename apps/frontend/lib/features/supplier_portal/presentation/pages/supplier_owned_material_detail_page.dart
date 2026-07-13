@@ -7,6 +7,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
@@ -448,6 +449,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
             if (material.canMarkUnavailable)
               OutlinedButton(
                 onPressed: _statusSubmitting ? null : _markUnavailable,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.danger,
+                ),
                 child: _statusSubmitting
                     ? const SizedBox(
                         width: 18,
@@ -459,6 +464,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
             if (material.canRestoreAvailable)
               OutlinedButton(
                 onPressed: _statusSubmitting ? null : _restoreAvailable,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.primary,
+                ),
                 child: _statusSubmitting
                     ? const SizedBox(
                         width: 18,
