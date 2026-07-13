@@ -524,12 +524,14 @@ class _FiltersPanel extends StatelessWidget {
 
     final refreshButton = IconButton.filledTonal(
       onPressed: onRefresh,
+      style: AppStatusButtonStyle.filled(AppStatusTone.info),
       tooltip: 'Refresh',
       icon: const Icon(Icons.sync, size: 20),
     );
 
     final resetButton = OutlinedButton.icon(
       onPressed: onReset,
+      style: AppStatusButtonStyle.outlined(AppStatusTone.neutral),
       icon: const Icon(Icons.filter_alt_off, size: 18),
       label: const Text('Reset'),
     );
@@ -841,6 +843,7 @@ class _DeliveryRow extends StatelessWidget {
             alignment: AlignmentDirectional.centerEnd,
             child: TextButton(
               onPressed: onDetails,
+              style: AppStatusButtonStyle.text(AppStatusTone.neutral),
               child: const Text('Details'),
             ),
           ),
@@ -898,10 +901,12 @@ class _DeliveryDetailDialogState extends ConsumerState<_DeliveryDetailDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
+            style: AppStatusButtonStyle.text(AppStatusTone.neutral),
             child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
+            style: AppStatusButtonStyle.filled(AppStatusTone.warning),
             child: const Text('Reopen'),
           ),
         ],
@@ -1184,6 +1189,7 @@ class _DeliveryDetailDialogState extends ConsumerState<_DeliveryDetailDialog> {
         if (detail.canShowReopenDriverAssignmentAction)
           FilledButton(
             onPressed: _isReopening ? null : _reopenDriverAssignment,
+            style: AppStatusButtonStyle.filled(AppStatusTone.warning),
             child: _isReopening
                 ? const SizedBox.square(
                     dimension: 18,
@@ -1193,6 +1199,7 @@ class _DeliveryDetailDialogState extends ConsumerState<_DeliveryDetailDialog> {
           ),
         TextButton(
           onPressed: _isReopening ? null : () => Navigator.pop(context),
+          style: AppStatusButtonStyle.text(AppStatusTone.neutral),
           child: const Text('Close'),
         ),
       ],
@@ -1302,8 +1309,16 @@ class _PaginationRow extends StatelessWidget {
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        OutlinedButton(onPressed: onPrevious, child: const Text('Previous')),
-        OutlinedButton(onPressed: onNext, child: const Text('Next')),
+        OutlinedButton(
+          onPressed: onPrevious,
+          style: AppStatusButtonStyle.outlined(AppStatusTone.neutral),
+          child: const Text('Previous'),
+        ),
+        OutlinedButton(
+          onPressed: onNext,
+          style: AppStatusButtonStyle.outlined(AppStatusTone.neutral),
+          child: const Text('Next'),
+        ),
         Text(
           'Page $page of $totalPages · $total total',
           style: AdminTypography.kpiHelper(palette),
