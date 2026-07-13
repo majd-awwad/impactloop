@@ -141,10 +141,9 @@ class _DeclineIncomingRequestDialogState
                             reason: reason.isEmpty ? null : reason,
                           ));
                         },
-                        style: FilledButton.styleFrom(
-                          backgroundColor: actionStyle.foreground,
-                          foregroundColor: Theme.of(context).colorScheme.onError,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        style: AppStatusButtonStyle.filled(
+                          context,
+                          AppStatusTone.danger,
                         ),
                         child: Text(context.s.declineRequest),
                       ),
