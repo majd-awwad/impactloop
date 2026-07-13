@@ -49,6 +49,7 @@ New reusable UI should prefer `Theme.of(context).textTheme`, `Theme.of(context).
 | `AppLinkButton` | `app_link_button.dart` | Aligned text button using `AppTextStyles.link`. |
 | `AppInlineError` | `app_inline_error.dart` | Inline body-small error text using `Theme.of(context).colorScheme.error`. |
 | `AppStatusBadge` / `AppStatusTone` / `AppStatusStyle` / `AppStatusButtonStyle` | `app_status_badge.dart` | Theme-aware semantic status presentation and action styles for primary, success, warning, danger, info, and neutral states. |
+| `invitationStatusTone` | `invitation_status_presentation.dart` | Canonical invitation lifecycle mapping: pending/sent is warning; accepted/used is success; failed, expired, and revoked are danger; unknown values are neutral. |
 | `reviewStatusTone` | `review_status_presentation.dart` | Canonical generic approval mapping: pending and changes requested are warning; approved is success; rejected is danger; unknown values are neutral. |
 | `learningProjectStatusTone` | `learning_project_status_presentation.dart` | Canonical Learning Project lifecycle mapping: pending review and changes requested are warning; published is success; rejected and hidden are danger; draft and archived are neutral. |
 | `supplierVerificationStatusTone` | `supplier_verification_status_presentation.dart` | Canonical supplier-verification mapping: pending, changes requested, and unverified are warning; approved and verified are success; rejected is danger; not-required is neutral. |

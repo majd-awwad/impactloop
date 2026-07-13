@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/invitation_status_presentation.dart';
 import '../../data/admin_invitations_providers.dart';
 import '../../data/models/admin_invitations_models.dart';
 import '../l10n/admin_l10n.dart';
@@ -290,27 +292,42 @@ class _InvitationsBodyState extends ConsumerState<_InvitationsBody> {
             _SummaryChip(
               label: l.t('Sent', 'مُرسلة'),
               count: _count('SENT'),
-              color: palette.green,
+              color: AppStatusStyle.of(
+                context,
+                invitationStatusTone('SENT'),
+              ).foreground,
             ),
             _SummaryChip(
               label: l.t('Failed', 'فشلت'),
               count: _count('FAILED'),
-              color: palette.red,
+              color: AppStatusStyle.of(
+                context,
+                invitationStatusTone('FAILED'),
+              ).foreground,
             ),
             _SummaryChip(
               label: l.t('Used', 'مستخدمة'),
               count: _count('USED'),
-              color: palette.blue,
+              color: AppStatusStyle.of(
+                context,
+                invitationStatusTone('USED'),
+              ).foreground,
             ),
             _SummaryChip(
               label: l.t('Expired', 'منتهية'),
               count: _count('EXPIRED'),
-              color: palette.amber,
+              color: AppStatusStyle.of(
+                context,
+                invitationStatusTone('EXPIRED'),
+              ).foreground,
             ),
             _SummaryChip(
               label: l.t('Revoked', 'ملغاة'),
               count: _count('REVOKED'),
-              color: palette.textMuted,
+              color: AppStatusStyle.of(
+                context,
+                invitationStatusTone('REVOKED'),
+              ).foreground,
             ),
           ],
         ),
@@ -728,32 +745,10 @@ class _StatusBadge extends StatelessWidget {
   final String status;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final color = switch (status) {
-      'SENT' => palette.green,
-      'FAILED' => palette.red,
-      'USED' => palette.blue,
-      'EXPIRED' => palette.amber,
-      'REVOKED' => palette.textMuted,
-      _ => palette.primaryTeal,
-    };
-
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        status,
-        style: AdminTypography.kpiHelper(palette).copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppStatusBadge(
+    label: status,
+    tone: invitationStatusTone(status),
+  );
 }
 
 class _RoleBadge extends StatelessWidget {
