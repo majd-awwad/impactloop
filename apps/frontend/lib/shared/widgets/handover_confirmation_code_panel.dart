@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../app/theme/app_radius.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
+import 'app_status_badge.dart';
 import 'materials/materials_ui_palette.dart';
 
 class HandoverConfirmationCodePanel extends StatelessWidget {
@@ -68,17 +69,20 @@ class HandoverCodeInputDialog extends StatefulWidget {
     required this.title,
     required this.message,
     required this.confirmLabel,
+    this.confirmTone = AppStatusTone.primary,
   });
 
   final String title;
   final String message;
   final String confirmLabel;
+  final AppStatusTone confirmTone;
 
   static Future<String?> show(
     BuildContext context, {
     required String title,
     required String message,
     required String confirmLabel,
+    AppStatusTone confirmTone = AppStatusTone.primary,
   }) {
     return showDialog<String>(
       context: context,
@@ -86,6 +90,7 @@ class HandoverCodeInputDialog extends StatefulWidget {
         title: title,
         message: message,
         confirmLabel: confirmLabel,
+        confirmTone: confirmTone,
       ),
     );
   }
@@ -161,6 +166,10 @@ class _HandoverCodeInputDialogState extends State<HandoverCodeInputDialog> {
         ),
         FilledButton(
           onPressed: _submit,
+          style: AppStatusButtonStyle.filled(
+            context,
+            widget.confirmTone,
+          ),
           child: Text(widget.confirmLabel),
         ),
       ],

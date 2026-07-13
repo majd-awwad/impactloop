@@ -433,6 +433,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         message:
             'Enter the code the learner gives you when they receive the material.',
         confirmLabel: 'Mark delivered',
+        confirmTone: AppStatusTone.success,
       );
       if (confirmationCode == null || !mounted) {
         return;
