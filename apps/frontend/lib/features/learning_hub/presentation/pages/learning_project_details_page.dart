@@ -8,6 +8,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project.dart';
@@ -53,6 +54,7 @@ class LearningProjectDetailsPage extends ConsumerWidget {
                     en: 'Try again',
                     ar: 'حاول مرة أخرى',
                   ),
+                  actionTone: AppStatusTone.primary,
                   onAction: () =>
                       ref.invalidate(learningProjectProvider(projectId)),
                 ),
@@ -72,6 +74,8 @@ class LearningProjectDetailsPage extends ConsumerWidget {
                         en: 'Back to Learning Hub',
                         ar: 'العودة إلى مركز التعلم',
                       ),
+                      actionTone: AppStatusTone.neutral,
+                      actionProminent: false,
                       onAction: () => context.popOrGo('/learning'),
                     );
                   }
@@ -906,6 +910,8 @@ class _DetailsStatePanel extends StatelessWidget {
     required this.subtitle,
     this.actionLabel,
     this.onAction,
+    this.actionTone = AppStatusTone.primary,
+    this.actionProminent = true,
   });
 
   final IconData icon;
@@ -913,6 +919,8 @@ class _DetailsStatePanel extends StatelessWidget {
   final LocalizedText subtitle;
   final LocalizedText? actionLabel;
   final VoidCallback? onAction;
+  final AppStatusTone actionTone;
+  final bool actionProminent;
 
   @override
   Widget build(BuildContext context) {
@@ -947,6 +955,9 @@ class _DetailsStatePanel extends StatelessWidget {
                 const SizedBox(height: AppSpacing.lg),
                 OutlinedButton(
                   onPressed: onAction,
+                  style: actionProminent
+                      ? AppStatusButtonStyle.filled(context, actionTone)
+                      : AppStatusButtonStyle.outlined(context, actionTone),
                   child: Text(actionLabel!.resolve(context)),
                 ),
               ],
