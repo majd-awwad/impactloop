@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/review_status_presentation.dart';
 import '../../../materials/application/material_listing_providers.dart';
 import '../../../materials/data/models/category.dart';
 import '../../data/admin_approvals_api.dart';
@@ -180,9 +181,30 @@ class _SummaryRow extends ConsumerWidget {
           spacing: 10,
           runSpacing: 10,
           children: [
-            _SummaryChip(label: 'Pending', count: summary.pendingTotal, color: palette.amber),
-            _SummaryChip(label: 'Approved', count: summary.approvedTotal, color: palette.primaryTeal),
-            _SummaryChip(label: 'Rejected', count: summary.rejectedTotal, color: palette.red),
+            _SummaryChip(
+              label: 'Pending',
+              count: summary.pendingTotal,
+              color: AppStatusStyle.of(
+                context,
+                reviewStatusTone('PENDING'),
+              ).foreground,
+            ),
+            _SummaryChip(
+              label: 'Approved',
+              count: summary.approvedTotal,
+              color: AppStatusStyle.of(
+                context,
+                reviewStatusTone('APPROVED'),
+              ).foreground,
+            ),
+            _SummaryChip(
+              label: 'Rejected',
+              count: summary.rejectedTotal,
+              color: AppStatusStyle.of(
+                context,
+                reviewStatusTone('REJECTED'),
+              ).foreground,
+            ),
             _SummaryChip(label: 'Category', count: summary.categoryPending, color: palette.blue),
             _SummaryChip(label: 'Price', count: summary.pricePending, color: palette.purple),
           ],
@@ -692,7 +714,10 @@ class _ApprovalCardHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            _StatusPill(label: status.toUpperCase(), color: _statusColor(palette, status)),
+            AppStatusBadge(
+              label: status.toUpperCase(),
+              tone: reviewStatusTone(status),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -833,43 +858,6 @@ class _ApprovalActionRow extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label, required this.color});
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Container(
-      padding: const EdgeInsetsDirectional.fromSTEB(10, 6, 10, 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: palette.cardBorder),
-      ),
-      child: Text(
-        label,
-        style: AdminTypography.kpiHelper(palette).copyWith(
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
-Color _statusColor(dynamic palette, String status) {
-  switch (status.toUpperCase()) {
-    case 'APPROVED':
-      return palette.primaryTeal;
-    case 'REJECTED':
-      return palette.red;
-    default:
-      return palette.amber;
   }
 }
 
