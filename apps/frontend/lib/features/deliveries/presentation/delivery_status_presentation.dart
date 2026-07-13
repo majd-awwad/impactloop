@@ -74,13 +74,18 @@ MaterialStatusBadgeTone deliveryStatusTone(String status) {
     case 'PICKED_UP':
     case 'ON_THE_WAY':
     case 'ARRIVED_DROPOFF':
-      return MaterialStatusBadgeTone.reserved;
+      return MaterialStatusBadgeTone.info;
     case 'DELIVERED':
-      return MaterialStatusBadgeTone.reused;
+      return MaterialStatusBadgeTone.success;
+    case 'AWAITING_RESOLUTION':
+      return MaterialStatusBadgeTone.warning;
     case 'CANCELLED':
     case 'FAILED_PICKUP':
     case 'FAILED_DELIVERY':
+    case 'DRIVER_NO_SHOW':
+    case 'LEARNER_NO_SHOW':
+      return MaterialStatusBadgeTone.danger;
     default:
-      return MaterialStatusBadgeTone.draft;
+      return MaterialStatusBadgeTone.neutral;
   }
 }

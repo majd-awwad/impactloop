@@ -1,10 +1,30 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/theme/app_radius.dart';
-import '../../../app/theme/app_spacing.dart';
-import '../../../app/theme/app_theme_colors.dart';
+import '../app_status_badge.dart';
 
-enum MaterialStatusBadgeTone { available, reserved, reused, draft }
+enum MaterialStatusBadgeTone {
+  available,
+  reserved,
+  reused,
+  draft,
+  success,
+  danger,
+  info,
+  neutral,
+}
+
+extension MaterialStatusBadgeToneX on MaterialStatusBadgeTone {
+  AppStatusTone get appStatusTone => switch (this) {
+    MaterialStatusBadgeTone.available => AppStatusTone.primary,
+    MaterialStatusBadgeTone.reserved => AppStatusTone.warning,
+    MaterialStatusBadgeTone.reused || MaterialStatusBadgeTone.success =>
+      AppStatusTone.success,
+    MaterialStatusBadgeTone.danger => AppStatusTone.danger,
+    MaterialStatusBadgeTone.info => AppStatusTone.info,
+    MaterialStatusBadgeTone.draft || MaterialStatusBadgeTone.neutral =>
+      AppStatusTone.neutral,
+  };
+}
 
 class MaterialStatusBadge extends StatelessWidget {
   const MaterialStatusBadge({
@@ -17,53 +37,6 @@ class MaterialStatusBadge extends StatelessWidget {
   final MaterialStatusBadgeTone tone;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    final palette = switch (tone) {
-      MaterialStatusBadgeTone.available => (
-        background: colors.successSoft,
-        foreground: colors.primary,
-        border: colors.primary.withValues(alpha: 0.32),
-      ),
-      MaterialStatusBadgeTone.reserved => (
-        background: colors.warningSoft,
-        foreground: colors.warningText,
-        border: colors.warningBorder,
-      ),
-      MaterialStatusBadgeTone.reused => (
-        background: colors.cardSurfaceAlt,
-        foreground: colors.textMuted,
-        border: colors.borderSubtle,
-      ),
-      MaterialStatusBadgeTone.draft => (
-        background: colors.surfaceMuted,
-        foreground: colors.textSecondary,
-        border: colors.borderSubtle,
-      ),
-    };
-
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.md - AppSpacing.xs,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: palette.background,
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: palette.border),
-      ),
-      child: Text(
-        label,
-        style: textTheme.labelSmall?.copyWith(
-          color: palette.foreground,
-          fontWeight: FontWeight.w700,
-          height: 1.1,
-        ),
-        textAlign: TextAlign.start,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      AppStatusBadge(label: label, tone: tone.appStatusTone);
 }

@@ -48,6 +48,7 @@ New reusable UI should prefer `Theme.of(context).textTheme`, `Theme.of(context).
 | `AppPrimaryButton` | `app_primary_button.dart` | Full-width `FilledButton`; disables itself and shows a spinner when `isLoading` is true. |
 | `AppLinkButton` | `app_link_button.dart` | Aligned text button using `AppTextStyles.link`. |
 | `AppInlineError` | `app_inline_error.dart` | Inline body-small error text using `Theme.of(context).colorScheme.error`. |
+| `AppStatusBadge` / `AppStatusTone` / `AppStatusStyle` | `app_status_badge.dart` | Theme-aware, route-independent semantic status presentation for primary, success, warning, danger, info, and neutral states. |
 | `showErrorSnackBar` | `app_feedback.dart` | Error snackbar using normalized API-friendly message text. |
 | `showInfoSnackBar` | `app_feedback.dart` | Informational snackbar. |
 | `UserAvatar` | `user_avatar.dart` | Circular user avatar from `profileImageUrl` with `ApiConfig.resolveMediaUrl`; falls back to display-name initial on empty URL or image load error. |

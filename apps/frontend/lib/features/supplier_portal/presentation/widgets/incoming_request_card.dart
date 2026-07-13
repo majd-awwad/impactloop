@@ -1054,7 +1054,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = IncomingRequestStatusStyle.forStatus(status);
+    final style = IncomingRequestStatusStyle.forStatus(status).resolve(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
