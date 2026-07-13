@@ -131,13 +131,10 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
                   Expanded(
                     child: FilledButton(
                       onPressed: _submit,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: actionStyle.foreground,
-                        foregroundColor: colors.textOnAccent,
+                      style: AppStatusButtonStyle.filled(
+                        context,
+                        AppStatusTone.success,
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppRadius.mdAll,
-                        ),
                       ),
                       child: Text(context.s.markCompleted),
                     ),
