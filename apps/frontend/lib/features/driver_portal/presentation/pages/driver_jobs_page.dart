@@ -1009,6 +1009,10 @@ class _AvailableJobCard extends ConsumerWidget {
               onPressed: acceptDisabled || isSubmitting
                   ? null
                   : () => _acceptDelivery(context, ref),
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.success,
+              ),
               icon: isSubmitting
                   ? const SizedBox(
                       width: 18,
